@@ -85,7 +85,7 @@ const PLACEMENT_PRODUCTS: Record<
 > = {
   timed_explore: {
     label: PRODUCT_INTENT_LABELS.timedExplore,
-    eyebrow: "Easy · lightweight",
+    eyebrow: "Interactive LLM-powered Dialog",
     shortDiff:
       "A timed exploratory dialog — light and quick. You still think aloud; Helios keeps the conversation going as you show what you know.",
     mintingLabel: "Minting Timed Exploration…",
@@ -95,7 +95,7 @@ const PLACEMENT_PRODUCTS: Record<
   },
   timed_drill: {
     label: PRODUCT_INTENT_LABELS.timedDrill,
-    eyebrow: "Harder · no dialog",
+    eyebrow: "Solo monolog",
     shortDiff:
       "A timed exercise without dialog — more complex, solo work. You still think aloud as you work through and submit your solution.",
     mintingLabel: "Minting Timed Drill…",
@@ -1134,8 +1134,9 @@ export function MapOfKnowledgeClient() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
           Place yourself on the Map of Knowledge by running a short timed session on a public
           workspace. Choose a{" "}
-          <span className="text-zinc-300">timed exploratory dialog</span> (easy and lightweight) or
-          a <span className="text-amber-200/90">timed exercise without dialog</span> (more complex).
+          <span className="text-zinc-300">timed exploratory dialog</span> (interactive LLM-powered
+          dialog) or a <span className="text-amber-200/90">timed exercise without dialog</span>{" "}
+          (solo monolog).
           In both cases you still <span className="text-zinc-300">think aloud</span> — then you
           appear on the map after you practice.
         </p>

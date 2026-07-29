@@ -683,7 +683,8 @@ describe("map-of-knowledge product surfaces", () => {
     expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
-    expect(clientSrc).toMatch(/exploratory dialog|lightweight/i);
+    expect(clientSrc).toMatch(/Interactive LLM-powered Dialog|exploratory dialog/i);
+    expect(clientSrc).toMatch(/Solo monolog/i);
     expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
     expect(pageSrc).not.toMatch(/TAP or ILE/);
     // Map canvas appears before placement section

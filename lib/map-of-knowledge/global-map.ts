@@ -378,6 +378,69 @@ export function projectGlobalMapLayoutPoint(
   };
 }
 
+/** World-space Global Map 3D node after multi-algo scale (consumes x,y,z). */
+export type GlobalMapNode3DLayout = GlobalMapRegionNode & {
+  /** Scaled world position from multi-algo projected x. */
+  wx: number;
+  wy: number;
+  wz: number;
+  /** Core sphere radius in world units. */
+  display_radius: number;
+  /** Inner membership orbit radius (world). */
+  orbit_inside: number;
+  /** Outer near orbit radius (world). */
+  orbit_near: number;
+};
+
+/**
+ * Scale multi-algo projected coords so Global 3D fits a comfortable orbit radius.
+ * Pure — drives the Three.js Global Map path.
+ */
+export function globalMap3dLayoutScale(
+  nodes: ReadonlyArray<{ x: number; y: number; z: number }>,
+  targetRadius = 5,
+): number {
+  if (!nodes.length) return 1;
+  let max = 0.01;
+  for (const n of nodes) {
+    const x = Number.isFinite(n.x) ? Math.abs(n.x) : 0;
+    const y = Number.isFinite(n.y) ? Math.abs(n.y) : 0;
+    const z = Number.isFinite(n.z) ? Math.abs(n.z) : 0;
+    max = Math.max(max, x, y, z);
+  }
+  const target = Number.isFinite(targetRadius) && targetRadius > 0 ? targetRadius : 5;
+  return target / max;
+}
+
+/**
+ * Layout Global Map region nodes in true 3D using multi-algo x,y,z (not forced z=0).
+ * Pure — unit-tested; MapOfKnowledgeGlobal3D consumes the result.
+ */
+export function layoutGlobalMapNodes3D(
+  nodes: readonly GlobalMapRegionNode[],
+  targetRadius = 5,
+): { scale: number; nodes: GlobalMapNode3DLayout[] } {
+  const scale = globalMap3dLayoutScale(nodes, targetRadius);
+  return {
+    scale,
+    nodes: nodes.map((n) => {
+      const x = Number.isFinite(n.x) ? n.x : 0;
+      const y = Number.isFinite(n.y) ? n.y : 0;
+      const z = Number.isFinite(n.z) ? n.z : 0;
+      const core = Math.max(0.1, Math.min(0.85, (n.radius || 0.35) * scale * 0.5));
+      return {
+        ...n,
+        wx: x * scale,
+        wy: y * scale,
+        wz: z * scale,
+        display_radius: core,
+        orbit_inside: core * 1.85,
+        orbit_near: core * 1.85 * GLOBAL_MAP_NEAR_RADIUS_FACTOR,
+      };
+    }),
+  };
+}
+
 /** SVG pan/zoom state for Global Map interaction (screen-space transform). */
 export type GlobalMapViewTransform = {
   /** Scale factor (≥ min, ≤ max). */

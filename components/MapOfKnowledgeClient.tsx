@@ -454,35 +454,42 @@ export function MapOfKnowledgeClient() {
         </button>
       </div>
 
+      {/* 2D / 3D for Local Map and Global Map */}
+      <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
+
+      <div
+        className="inline-flex rounded-sm border border-zinc-800 p-0.5"
+        role="group"
+        aria-label={mapScope === "global" ? "Global view mode" : "Local view mode"}
+        data-map-view-mode-toggle
+        data-map-view-mode-scope={mapScope}
+      >
+        <button
+          type="button"
+          onClick={() => setViewMode("2d")}
+          className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
+            viewMode === "2d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+          data-map-view-mode="2d"
+          aria-pressed={viewMode === "2d"}
+        >
+          2D
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("3d")}
+          className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
+            viewMode === "3d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+          data-map-view-mode="3d"
+          aria-pressed={viewMode === "3d"}
+        >
+          3D
+        </button>
+      </div>
+
       {mapScope === "local" && (
         <>
-          <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
-
-          <div
-            className="inline-flex rounded-sm border border-zinc-800 p-0.5"
-            role="group"
-            aria-label="Local view mode"
-          >
-            <button
-              type="button"
-              onClick={() => setViewMode("2d")}
-              className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
-                viewMode === "2d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              2D
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("3d")}
-              className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
-                viewMode === "3d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              3D
-            </button>
-          </div>
-
           <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
 
           <label className="inline-flex items-center gap-1.5">
@@ -665,7 +672,7 @@ export function MapOfKnowledgeClient() {
       }`}
       data-map-surface
       data-map-scope={mapScope}
-      data-map-view={mapScope === "global" ? "global" : viewMode}
+      data-map-view={mapScope === "global" ? `global-${viewMode}` : viewMode}
       data-map-fullscreen={fullscreen ? "true" : "false"}
     >
       {mapToolbar}
@@ -674,7 +681,7 @@ export function MapOfKnowledgeClient() {
         {loading ? (
           <div
             className={`relative z-[1] flex items-center justify-center text-sm text-zinc-500 ${
-              fullscreen ? "h-full min-h-[240px]" : "h-[min(58vh,480px)]"
+              fullscreen ? "h-full min-h-[240px]" : "h-[min(58vh,520px)]"
             }`}
           >
             Projecting public embedding space…
@@ -684,6 +691,7 @@ export function MapOfKnowledgeClient() {
             userLocations={projectedUsers}
             regions={visibleRegions}
             projectionAlgorithm={projectionAlgorithm}
+            viewMode={viewMode}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
             selectedRegionId={globalSelectedRegionId}
@@ -710,9 +718,14 @@ export function MapOfKnowledgeClient() {
           />
         )}
       </div>
-      {mapScope === "global" && !loading && (
+      {mapScope === "global" && viewMode === "2d" && !loading && (
         <div className="sr-only" aria-live="polite">
-          Global Map: regions as dots with membership orbits; users are counted in bubbles, not plotted as free markers.
+          Global Map 2D: regions as dots with membership orbits; drag to pan, scroll to zoom.
+        </div>
+      )}
+      {mapScope === "global" && viewMode === "3d" && !loading && (
+        <div className="sr-only" aria-live="polite">
+          Global Map 3D: multi-algo region graph; drag to orbit, scroll to zoom, click a region for summary.
         </div>
       )}
       {mapScope === "local" && viewMode === "3d" && !loading && (
@@ -911,41 +924,6 @@ export function MapOfKnowledgeClient() {
             {regionsPanel}
           </div>
         </div>
-      </section>
-
-      <section id="map-stats" aria-labelledby="map-stats-heading">
-        <div className="mb-3 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-          AGGREGATED PROOF OF WORK
-        </div>
-        <h2 id="map-stats-heading" className="text-xl font-medium tracking-tight text-white sm:text-2xl">
-          Signal across every public workspace
-        </h2>
-        {loading ? (
-          <p className="mt-3 text-sm text-zinc-500">Loading public aggregates…</p>
-        ) : error ? (
-          <p className="mt-3 text-sm text-red-400">{error}</p>
-        ) : data ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Public workspaces", value: data.pow_stats.workspace_count },
-              { label: "PoW artifacts", value: data.pow_stats.total_artifacts },
-              { label: "Sessions", value: data.pow_stats.unique_sessions },
-              { label: "Last 7 days", value: data.pow_stats.last_7d },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="border border-zinc-800 bg-zinc-950/70 px-5 py-4 backdrop-blur-sm"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  {stat.label}
-                </p>
-                <p className="mt-2 text-3xl font-medium tracking-tight text-white">
-                  {stat.value.toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </section>
 
       <section id="map-place-yourself" aria-labelledby="map-place-heading">

@@ -11,8 +11,10 @@ import {
   clampGlobalMapZoom,
   enabledRegionsForLocalFocus,
   formatGlobalMapDistance,
+  globalMap3dLayoutScale,
   globalMapRegionSummary,
   globalMapViewTransformAttr,
+  layoutGlobalMapNodes3D,
   panGlobalMapView,
   projectGlobalMapLayoutPoint,
   regionCentroidDistance,
@@ -292,6 +294,57 @@ describe("Global Map focus helpers", () => {
     expect(Math.abs(a.ly - b.ly)).toBeGreaterThan(1e-6);
   });
 
+  it("layoutGlobalMapNodes3D consumes multi-algo x,y,z (z not forced to 0)", () => {
+    const nodes = [
+      {
+        id: "a",
+        name: "A",
+        workspace_id: "ws",
+        workspace_title: "WS",
+        x: 2,
+        y: 0,
+        z: 1.5,
+        radius: 0.4,
+        inside_count: 1,
+        near_count: 0,
+      },
+      {
+        id: "b",
+        name: "B",
+        workspace_id: "ws",
+        workspace_title: "WS",
+        x: 0,
+        y: 3,
+        z: -0.8,
+        radius: 0.3,
+        inside_count: 0,
+        near_count: 2,
+      },
+    ];
+    const scale = globalMap3dLayoutScale(nodes, 5);
+    expect(scale).toBeGreaterThan(0);
+    expect(Number.isFinite(scale)).toBe(true);
+
+    const laid = layoutGlobalMapNodes3D(nodes, 5);
+    expect(laid.scale).toBe(scale);
+    expect(laid.nodes).toHaveLength(2);
+    for (const n of laid.nodes) {
+      expect(Number.isFinite(n.wx)).toBe(true);
+      expect(Number.isFinite(n.wy)).toBe(true);
+      expect(Number.isFinite(n.wz)).toBe(true);
+      expect(n.display_radius).toBeGreaterThan(0);
+      expect(n.orbit_near).toBeGreaterThan(n.orbit_inside);
+    }
+    // wz must reflect source z (not collapsed to 0)
+    expect(Math.abs(laid.nodes[0].wz)).toBeGreaterThan(1e-9);
+    expect(Math.abs(laid.nodes[1].wz)).toBeGreaterThan(1e-9);
+    // Different source z → different world z
+    expect(Math.abs(laid.nodes[0].wz - laid.nodes[1].wz)).toBeGreaterThan(1e-6);
+    // Scale is applied: wx = x * scale
+    expect(Math.abs(laid.nodes[0].wx - nodes[0].x * scale)).toBeLessThan(1e-9);
+    expect(Math.abs(laid.nodes[0].wz - nodes[0].z * scale)).toBeLessThan(1e-9);
+  });
+
   it("reprojectMapLayout + Global nodes use multi-algo 3D for every option", () => {
     const vectors = [
       unitAt(0, 6, 1),
@@ -440,12 +493,43 @@ describe("Global Map UI structure", () => {
     expect(globalSrc).toContain("onOpenLocalMap");
     expect(globalSrc).toContain("strokeDasharray");
     expect(globalSrc).not.toMatch(/userLocations\.map/);
+    // Global Map supports 2D + 3D via shared viewMode
+    expect(globalSrc).toContain('viewMode = "2d"');
+    expect(globalSrc).toContain('viewMode === "3d"');
+    expect(globalSrc).toContain("MapOfKnowledgeGlobal3D");
+    expect(globalSrc).toContain('data-map-global-view="2d"');
+
+    const global3d = join(root, "components/MapOfKnowledgeGlobal3D.tsx");
+    expect(existsSync(global3d)).toBe(true);
+    const global3dSrc = readFileSync(global3d, "utf8");
+    expect(global3dSrc).toContain('from "three"');
+    expect(global3dSrc).toContain("OrbitControls");
+    expect(global3dSrc).toContain("layoutGlobalMapNodes3D");
+    expect(global3dSrc).toContain("buildGlobalMapModel");
+    expect(global3dSrc).toContain("data-map-global-3d");
+    expect(global3dSrc).toContain('data-map-global-view="3d"');
+    expect(global3dSrc).toContain("data-map-global-open-local");
+    // True multi-algo z path (world wz from layout)
+    expect(global3dSrc).toMatch(/n\.wz|wx,\s*n\.wy,\s*n\.wz/);
+
+    // MoK: 2D/3D available for Global Map (not Local-only)
+    expect(clientSrc).toContain("data-map-view-mode-toggle");
+    expect(clientSrc).toContain('data-map-view-mode="3d"');
+    expect(clientSrc).toContain("viewMode={viewMode}");
+    expect(clientSrc).not.toMatch(
+      /mapScope === ["']local["'] && \([\s\S]{0,80}data-map-view-mode-toggle/,
+    );
 
     expect(knowledgeSrc).toContain("data-knowledge-map-scope-toggle");
     expect(knowledgeSrc).toContain("MapOfKnowledgeGlobal");
     expect(knowledgeSrc).toContain("openLocalMapFocusedOnRegion");
     expect(knowledgeSrc).toContain("data-knowledge-global-map");
     expect(knowledgeSrc).toContain("workspaceKnowledgeToGlobalMapInputs");
+    // Workspace Global Map 2D/3D toggle
+    expect(knowledgeSrc).toContain("data-knowledge-global-view-mode-toggle");
+    expect(knowledgeSrc).toContain('data-knowledge-global-view-mode="3d"');
+    expect(knowledgeSrc).toContain("knowledgeGlobalViewMode");
+    expect(knowledgeSrc).toContain("viewMode={knowledgeGlobalViewMode}");
     // Project control drives 2D, Local 3D, and Global Map multi-algo 3D layout
     expect(clientSrc).toContain("data-map-projection-select");
     expect(clientSrc).toContain("data-map-3d-projection-select");

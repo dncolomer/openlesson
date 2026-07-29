@@ -23,6 +23,7 @@ import {
   type MapRegion,
   type MapUserLocation,
 } from "@/lib/map-of-knowledge";
+import { MapOfKnowledgeGlobal3D } from "@/components/MapOfKnowledgeGlobal3D";
 
 const WIDTH = 960;
 const HEIGHT = 520;
@@ -49,6 +50,11 @@ export type MapOfKnowledgeGlobalProps = {
    * Surfaces expose the shared Project control; this is for data attrs / a11y.
    */
   projectionAlgorithm?: string;
+  /**
+   * Global Map presentation: SVG plane (2d) or true multi-algo Three.js volume (3d).
+   * Shared by Map of Knowledge and workspace Knowledge.
+   */
+  viewMode?: "2d" | "3d";
 };
 
 function layoutNodes(
@@ -136,7 +142,51 @@ export function MapOfKnowledgeGlobal({
   onOpenLocalMap,
   openLocalLabel = "Open Local Map",
   projectionAlgorithm = "pca",
+  viewMode = "2d",
 }: MapOfKnowledgeGlobalProps) {
+  if (viewMode === "3d") {
+    return (
+      <MapOfKnowledgeGlobal3D
+        userLocations={userLocations}
+        regions={regions}
+        className={className}
+        fill={fill}
+        selectedRegionId={controlledSelectedId}
+        onSelectRegion={onSelectRegion}
+        onOpenLocalMap={onOpenLocalMap}
+        openLocalLabel={openLocalLabel}
+        projectionAlgorithm={projectionAlgorithm}
+      />
+    );
+  }
+
+  return (
+    <MapOfKnowledgeGlobal2D
+      userLocations={userLocations}
+      regions={regions}
+      className={className}
+      fill={fill}
+      selectedRegionId={controlledSelectedId}
+      onSelectRegion={onSelectRegion}
+      onOpenLocalMap={onOpenLocalMap}
+      openLocalLabel={openLocalLabel}
+      projectionAlgorithm={projectionAlgorithm}
+    />
+  );
+}
+
+/** SVG Global Map (2D plane + isometric multi-algo layout). */
+function MapOfKnowledgeGlobal2D({
+  userLocations,
+  regions,
+  className = "",
+  fill = false,
+  selectedRegionId: controlledSelectedId,
+  onSelectRegion,
+  onOpenLocalMap,
+  openLocalLabel = "Open Local Map",
+  projectionAlgorithm = "pca",
+}: Omit<MapOfKnowledgeGlobalProps, "viewMode">) {
   const [uncontrolledSelectedId, setUncontrolledSelectedId] = useState<string | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
   const [view, setView] = useState<GlobalMapViewTransform>(GLOBAL_MAP_VIEW_DEFAULT);
@@ -401,7 +451,9 @@ export function MapOfKnowledgeGlobal({
       className={`relative w-full overflow-hidden outline-none ${heightClass} ${className}`}
       style={{ backgroundColor: MAP_INFINITE_GRID.background }}
       data-map-global
+      data-map-global-2d
       data-map-global-surface
+      data-map-global-view="2d"
       data-map-global-interactive="true"
       data-map-global-zoom={String(clampGlobalMapZoom(view.zoom))}
       data-projection-algorithm={projectionAlgorithm}

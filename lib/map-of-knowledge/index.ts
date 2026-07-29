@@ -44,6 +44,7 @@ export {
 export type {
   GlobalMapEdge,
   GlobalMapModel,
+  GlobalMapNode3DLayout,
   GlobalMapRegionNode,
   GlobalMapRegionSummary,
   GlobalMapUserClass,
@@ -61,8 +62,10 @@ export {
   countUsersForRegion,
   enabledRegionsForLocalFocus,
   formatGlobalMapDistance,
+  globalMap3dLayoutScale,
   globalMapRegionSummary,
   globalMapViewTransformAttr,
+  layoutGlobalMapNodes3D,
   panGlobalMapView,
   projectGlobalMapLayoutPoint,
   regionCentroidDistance,

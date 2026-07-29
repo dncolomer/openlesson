@@ -1122,6 +1122,8 @@ export function KnowledgeConfigTrajectoryPanel({
     useState<ProjectionAlgorithmId>("random");
   /** Local Map (trajectory projection) vs Global Map (region graph + orbits). */
   const [knowledgeMapScope, setKnowledgeMapScope] = useState<"local" | "global">("global");
+  /** Global Map 2D (SVG) vs 3D (Three.js multi-algo volume). Local stays 2D trajectory. */
+  const [knowledgeGlobalViewMode, setKnowledgeGlobalViewMode] = useState<"2d" | "3d">("2d");
   const [globalSelectedRegionId, setGlobalSelectedRegionId] = useState<string | null>(null);
   /** Region list group expanded (Map of Knowledge–style collapsible). Collapsed by default. */
   const [regionPickerExpanded, setRegionPickerExpanded] = useState(false);
@@ -2284,9 +2286,50 @@ export function KnowledgeConfigTrajectoryPanel({
                       Global Map
                     </button>
                   </div>
+                  {knowledgeMapScope === "global" ? (
+                    <div
+                      className="inline-flex rounded-md border border-neutral-700 p-0.5"
+                      role="group"
+                      aria-label="Global Map view mode"
+                      data-knowledge-global-view-mode-toggle
+                      data-map-view-mode-toggle
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setKnowledgeGlobalViewMode("2d")}
+                        className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                          knowledgeGlobalViewMode === "2d"
+                            ? "bg-white/10 text-white"
+                            : "text-neutral-500 hover:text-neutral-300"
+                        }`}
+                        data-knowledge-global-view-mode="2d"
+                        data-map-view-mode="2d"
+                        aria-pressed={knowledgeGlobalViewMode === "2d"}
+                      >
+                        2D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKnowledgeGlobalViewMode("3d")}
+                        className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                          knowledgeGlobalViewMode === "3d"
+                            ? "bg-white/10 text-white"
+                            : "text-neutral-500 hover:text-neutral-300"
+                        }`}
+                        data-knowledge-global-view-mode="3d"
+                        data-map-view-mode="3d"
+                        aria-pressed={knowledgeGlobalViewMode === "3d"}
+                      >
+                        3D
+                      </button>
+                    </div>
+                  ) : null}
                   <p className="min-w-0 truncate text-[11px] text-neutral-500">
                     {knowledgeMapScope === "global" ? (
-                      <span className="text-neutral-400">Region graph · dual orbits</span>
+                      <span className="text-neutral-400">
+                        Region graph · dual orbits
+                        {knowledgeGlobalViewMode === "3d" ? " · 3D" : " · 2D"}
+                      </span>
                     ) : embScope.label ? (
                       <span className="text-neutral-400">{embScope.label}</span>
                     ) : (
@@ -2410,6 +2453,7 @@ export function KnowledgeConfigTrajectoryPanel({
                     regions={workspaceGlobalMap.regions}
                     userLocations={workspaceGlobalMap.users}
                     projectionAlgorithm={projectionAlgorithm}
+                    viewMode={knowledgeGlobalViewMode}
                     fill
                     className="min-h-0 flex-1"
                     selectedRegionId={globalSelectedRegionId}

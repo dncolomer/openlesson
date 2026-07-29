@@ -29,8 +29,10 @@ export async function loadPublicMapOfKnowledge(
 ): Promise<MapOfKnowledgePayload> {
   const { data: workspaces, error: wsError } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, cover_image_url, is_public")
+    .select("id, title, root_topic, description, cover_image_url, is_public, status, archived_at")
     .eq("is_public", true)
+    .eq("status", "active")
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .limit(80);
 
@@ -39,14 +41,24 @@ export async function loadPublicMapOfKnowledge(
     throw new Error(wsError.message || "Failed to load public workspaces");
   }
 
-  const publicWs = (workspaces || []).map((w) => ({
-    id: w.id as string,
-    title: (w.title as string) || null,
-    root_topic: (w.root_topic as string) || null,
-    description: (w.description as string | null) ?? null,
-    cover_image_url: (w.cover_image_url as string | null) ?? null,
-    is_public: true as const,
-  }));
+  // Defense in depth: never pass non-public / inactive rows into the payload builder.
+  const publicWs = (workspaces || [])
+    .filter(
+      (w) =>
+        w.is_public === true &&
+        (w.status == null || w.status === "active") &&
+        w.archived_at == null,
+    )
+    .map((w) => ({
+      id: w.id as string,
+      title: (w.title as string) || null,
+      root_topic: (w.root_topic as string) || null,
+      description: (w.description as string | null) ?? null,
+      cover_image_url: (w.cover_image_url as string | null) ?? null,
+      is_public: true as const,
+      status: (w.status as string | null) ?? "active",
+      archived_at: (w.archived_at as string | null) ?? null,
+    }));
 
   if (publicWs.length === 0) {
     return buildMapOfKnowledgePayload({

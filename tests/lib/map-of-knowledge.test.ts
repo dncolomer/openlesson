@@ -6,9 +6,11 @@ import {
   buildGuestPlacementResult,
   buildMapOfKnowledgePayload,
   filterEnabledRegions,
+  filterMapPlacementWorkspaces,
   filterPublicWorkspaces,
   generateAnonymousGuestIdentity,
   groupRegionsByWorkspace,
+  isEligibleMapPublicWorkspace,
   mapDotColor,
   mapDotIsGolden,
   mapDotKindFromParticipant,
@@ -46,8 +48,26 @@ describe("map-of-knowledge pure logic", () => {
       { id: "b", is_public: false },
       { id: "c", is_public: true },
       { id: "d", is_public: null },
+      { id: "e", is_public: true, status: "archived" },
+      { id: "f", is_public: true, archived_at: "2026-01-01T00:00:00Z" },
+      { id: "g", is_public: true, status: "active" },
     ];
-    expect(filterPublicWorkspaces(rows).map((r) => r.id)).toEqual(["a", "c"]);
+    expect(filterPublicWorkspaces(rows).map((r) => r.id)).toEqual(["a", "c", "g"]);
+    expect(isEligibleMapPublicWorkspace({ is_public: true, status: "active" })).toBe(true);
+    expect(isEligibleMapPublicWorkspace({ is_public: false })).toBe(false);
+    expect(isEligibleMapPublicWorkspace({ is_public: true, status: "paused" })).toBe(false);
+  });
+
+  it("placement dropdown only lists public workspaces with expert regions", () => {
+    const rows = [
+      { id: "stem", is_public: true, status: "active", region_count: 6, title: "Mathematics" },
+      { id: "toga", is_public: true, status: "active", region_count: 0, title: "Toga to Throne" },
+      { id: "priv", is_public: false, status: "active", region_count: 4, title: "Secret" },
+      { id: "empty", is_public: true, status: "active", region_count: 0, title: "English Sprint" },
+    ];
+    const placement = filterMapPlacementWorkspaces(rows);
+    expect(placement.map((r) => r.id)).toEqual(["stem"]);
+    expect(placement.some((r) => /toga|throne/i.test(r.title))).toBe(false);
   });
 
   it("projects vectors to 2D via shipped knowledge-config path", () => {
@@ -680,6 +700,9 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("toggleAllRegionsInWorkspace");
     expect(clientSrc).toContain("aria-expanded");
     expect(clientSrc).toContain("expandedRegionWorkspaces");
+    expect(clientSrc).toContain("filterMapPlacementWorkspaces");
+    expect(clientSrc).toContain("placementWorkspaces");
+    expect(clientSrc).toContain("data-map-placement-workspace-select");
   });
 
   it("groups regions by workspace for collapsible map toggles", () => {

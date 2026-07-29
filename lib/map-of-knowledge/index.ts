@@ -204,6 +204,8 @@ export interface MapPublicWorkspace {
   root_topic: string;
   description: string | null;
   cover_image_url: string | null;
+  /** Always true for payload rows from the public map loader. */
+  is_public: boolean;
   block_count: number;
   region_count: number;
   user_point_count: number;
@@ -249,6 +251,8 @@ export interface PublicWorkspaceRaw {
   description?: string | null;
   cover_image_url?: string | null;
   is_public: boolean;
+  status?: string | null;
+  archived_at?: string | null;
 }
 
 export interface PublicBlockRaw {
@@ -291,11 +295,51 @@ export interface PublicPowWorkspaceStatsRaw {
   by_type?: Array<{ type: string; count: number }>;
 }
 
+/**
+ * Eligible for Map of Knowledge public surfaces:
+ * - is_public must be strictly true
+ * - not archived
+ * - status active when present (legacy rows without status still allowed)
+ */
+export function isEligibleMapPublicWorkspace(row: {
+  is_public?: boolean | null;
+  status?: string | null;
+  archived_at?: string | null;
+}): boolean {
+  if (row.is_public !== true) return false;
+  if (row.archived_at) return false;
+  const status = typeof row.status === "string" ? row.status.trim().toLowerCase() : "";
+  if (status && status !== "active") return false;
+  return true;
+}
+
 /** Filter rows to public workspaces only. */
-export function filterPublicWorkspaces<T extends { is_public?: boolean | null }>(
-  rows: T[],
-): T[] {
-  return rows.filter((r) => r.is_public === true);
+export function filterPublicWorkspaces<
+  T extends { is_public?: boolean | null; status?: string | null; archived_at?: string | null },
+>(rows: T[]): T[] {
+  return rows.filter((r) => isEligibleMapPublicWorkspace(r));
+}
+
+/**
+ * Workspaces shown in the "mint guest link" placement dropdown.
+ * Public + active + not archived, and must have at least one expert knowledge
+ * region so placement is against the knowledge map (not random community plans
+ * that happen to be is_public).
+ */
+export function filterMapPlacementWorkspaces<
+  T extends {
+    is_public?: boolean | null;
+    status?: string | null;
+    archived_at?: string | null;
+    region_count?: number | null;
+  },
+>(workspaces: readonly T[]): T[] {
+  return workspaces.filter(
+    (ws) =>
+      isEligibleMapPublicWorkspace(ws) &&
+      typeof ws.region_count === "number" &&
+      ws.region_count > 0,
+  );
 }
 
 /** Dot kind for map rendering: ILE = golden, TAP = standard. */
@@ -831,6 +875,7 @@ export function buildMapOfKnowledgePayload(input: {
     root_topic: w.root_topic || w.title || "Untitled",
     description: w.description ?? null,
     cover_image_url: w.cover_image_url ?? null,
+    is_public: true,
     block_count: blockCountByWs.get(w.id) || 0,
     region_count: regionCountByWs.get(w.id) || 0,
     user_point_count: pointCountByWs.get(w.id) || 0,

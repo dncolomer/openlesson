@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   filterEnabledRegions,
+  filterMapPlacementWorkspaces,
   generateAnonymousGuestIdentity,
   groupRegionsByWorkspace,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
@@ -130,7 +131,9 @@ export function MapOfKnowledgeClient() {
         setExpandedRegionWorkspaces(new Set());
         if (!workspaceInitRef.current) {
           workspaceInitRef.current = true;
-          const firstWs = (payload.workspaces || [])[0];
+          // Placement: public workspaces with expert regions only (not bare community plans).
+          const placement = filterMapPlacementWorkspaces(payload.workspaces || []);
+          const firstWs = placement[0];
           if (firstWs) {
             setSelectedWorkspaceId(firstWs.id);
             const startBlock =
@@ -201,10 +204,29 @@ export function MapOfKnowledgeClient() {
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
+  /** Public placement targets only — never private / region-less community plans. */
+  const placementWorkspaces = useMemo(() => {
+    if (!data?.workspaces) return [];
+    return filterMapPlacementWorkspaces(data.workspaces);
+  }, [data?.workspaces]);
+
   const blocksForWorkspace = useMemo(() => {
     if (!data) return [];
+    // Only blocks for a selected placement-eligible public workspace.
+    if (!placementWorkspaces.some((w) => w.id === selectedWorkspaceId)) return [];
     return data.blocks.filter((b) => b.workspace_id === selectedWorkspaceId);
-  }, [data, selectedWorkspaceId]);
+  }, [data, selectedWorkspaceId, placementWorkspaces]);
+
+  // If selection falls outside the public placement list, snap to first eligible.
+  useEffect(() => {
+    if (placementWorkspaces.length === 0) {
+      if (selectedWorkspaceId) setSelectedWorkspaceId("");
+      return;
+    }
+    if (!placementWorkspaces.some((w) => w.id === selectedWorkspaceId)) {
+      setSelectedWorkspaceId(placementWorkspaces[0].id);
+    }
+  }, [placementWorkspaces, selectedWorkspaceId]);
 
   useEffect(() => {
     if (blocksForWorkspace.length === 0) {
@@ -911,11 +933,12 @@ export function MapOfKnowledgeClient() {
                 value={selectedWorkspaceId}
                 onChange={(e) => setSelectedWorkspaceId(e.target.value)}
                 className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                data-map-placement-workspace-select
               >
-                {(data?.workspaces || []).length === 0 && (
-                  <option value="">No public workspaces</option>
+                {placementWorkspaces.length === 0 && (
+                  <option value="">No public knowledge workspaces</option>
                 )}
-                {(data?.workspaces || []).map((ws) => (
+                {placementWorkspaces.map((ws) => (
                   <option key={ws.id} value={ws.id}>
                     {ws.title}
                   </option>

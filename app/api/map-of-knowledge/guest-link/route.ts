@@ -58,14 +58,20 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace, error: wsError } = await supabase
       .from("workspaces")
-      .select("id, user_id, organization_id, is_public, title, root_topic")
+      .select("id, user_id, organization_id, is_public, title, root_topic, status, archived_at")
       .eq("id", workspaceId)
       .maybeSingle();
 
     if (wsError || !workspace) {
       return NextResponse.json({ error: "Workspace not found", code: "not_found" }, { status: 404 });
     }
-    if (!workspace.is_public) {
+    if (
+      workspace.is_public !== true ||
+      workspace.archived_at != null ||
+      (typeof workspace.status === "string" &&
+        workspace.status.trim() !== "" &&
+        workspace.status !== "active")
+    ) {
       return NextResponse.json(
         { error: "Workspace is not public", code: "not_public" },
         { status: 403 },

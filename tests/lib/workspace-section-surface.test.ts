@@ -178,6 +178,13 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).toContain('id: "knowledge-portal"');
     expect(integration).toContain('id: "guest-links"');
     expect(integration).toContain('id: "integrations"');
+    // Settings tab label for guest-links subview is Knowledge Links (i18n).
+    expect(integration).toContain('t("planView.performanceSubTabTap")');
+    const en = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, "messages/en.json"), "utf8"),
+    ) as { planView?: Record<string, string> };
+    expect(en.planView?.performanceSubTabTap).toBe("Knowledge Links");
+    expect(en.planView?.performanceSubTabTap).not.toMatch(/Guest Links/i);
     // Knowledge Portal tab is adjacent to Knowledge Regions in declared order.
     const regionsIdx = integration.indexOf('id: "regions"');
     const portalIdx = integration.indexOf('id: "knowledge-portal"');

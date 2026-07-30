@@ -250,7 +250,7 @@ export function WorkspaceIntegrationPanel({
           >
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">
-                Shareable practice links
+                {t("planView.performanceSubTabTap")}
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
                 Create shareable practice links for this workspace — open-ended or timed, explore or

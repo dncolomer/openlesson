@@ -1849,7 +1849,7 @@
     "forkToEditCta": "Hacer fork del espacio",
     "forkToEditSignInCta": "Inicia sesión para hacer fork",
     "performanceSubTabScore": "LWM Snapshot",
-    "performanceSubTabTap": "Enlaces de invitados",
+    "performanceSubTabTap": "Knowledge Links",
     "performanceScoreTitle": "Puntuación del espacio",
     "performanceScoreHint": "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida, el mismo contrato que el informe de rendimiento de Proof-of-Work API.",
     "performanceScoreGenerate": "Generar puntuación",

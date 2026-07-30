@@ -1838,7 +1838,7 @@
     "productTapHint": "Timed exploration or drill",
     "performanceSubTabScore": "LWM Snapshot",
     "performanceSubTabPow": "PoW",
-    "performanceSubTabTap": "Guest Links",
+    "performanceSubTabTap": "Knowledge Links",
     "performanceSubTabModels": "Embeddings",
     "performanceSubTabLwm": "Learning World Model",
     "performanceSubTabRanking": "Ranking",

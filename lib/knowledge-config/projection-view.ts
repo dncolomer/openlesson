@@ -107,27 +107,46 @@ export function computeDataBounds(
 /**
  * Fit transform that pads bounds slightly so points don't sit on the edge.
  * zoom=1, pan=0 shows full padded bounds.
+ *
+ * When `aspectRatio` is provided (screen inner width / height), spans match that
+ * ratio so one data unit is the same length on X and Y (circles stay circular).
+ * Default aspectRatio=1 preserves the historical square viewport.
  */
 export function fitViewTransform(
   bounds: DataBounds,
-  options?: { padFraction?: number; zoom?: number; panX?: number; panY?: number },
+  options?: {
+    padFraction?: number;
+    zoom?: number;
+    panX?: number;
+    panY?: number;
+    /** Drawable aspect (width/height). Use screen.innerW / screen.innerH. */
+    aspectRatio?: number;
+  },
 ): ViewTransform {
   const pad = options?.padFraction ?? 0.1;
   const rawSpanX = Math.max(MIN_SPAN, bounds.maxX - bounds.minX);
   const rawSpanY = Math.max(MIN_SPAN, bounds.maxY - bounds.minY);
-  // Symmetric pad; keep aspect roughly square by using max span.
-  const baseSpan = Math.max(rawSpanX, rawSpanY) * (1 + pad * 2);
+  const dataW = rawSpanX * (1 + pad * 2);
+  const dataH = rawSpanY * (1 + pad * 2);
+  const aspect =
+    options?.aspectRatio && Number.isFinite(options.aspectRatio) && options.aspectRatio > 0
+      ? options.aspectRatio
+      : 1;
+  // Isotropic fit: spanX/spanY = aspect, both axes cover padded data extents.
+  const spanX0 = Math.max(dataW, dataH * aspect);
+  const spanY0 = spanX0 / aspect;
   const midX = (bounds.minX + bounds.maxX) / 2;
   const midY = (bounds.minY + bounds.maxY) / 2;
   const zoom = clampZoom(options?.zoom ?? 1);
   const panX = options?.panX ?? 0;
   const panY = options?.panY ?? 0;
-  const span = baseSpan / zoom;
+  const spanX = spanX0 / zoom;
+  const spanY = spanY0 / zoom;
   return {
-    originX: midX - span / 2 + panX,
-    originY: midY - span / 2 + panY,
-    spanX: span,
-    spanY: span,
+    originX: midX - spanX / 2 + panX,
+    originY: midY - spanY / 2 + panY,
+    spanX,
+    spanY,
     zoom,
     panX,
     panY,
@@ -142,20 +161,20 @@ export function zoomViewTransform(
   focusDataY: number,
 ): ViewTransform {
   const zoom = clampZoom(nextZoom);
-  const prevSpan = view.spanX;
-  const nextSpan = (view.spanX * view.zoom) / zoom;
+  const nextSpanX = (view.spanX * view.zoom) / zoom;
+  const nextSpanY = (view.spanY * view.zoom) / zoom;
   // Keep focus fixed: origin' = focus - (focus - origin) * (nextSpan/prevSpan)
-  const t = nextSpan / prevSpan;
+  const t = nextSpanX / view.spanX;
   const originX = focusDataX - (focusDataX - view.originX) * t;
   const originY = focusDataY - (focusDataY - view.originY) * t;
-  const midX = originX + nextSpan / 2;
-  const midY = originY + nextSpan / 2;
+  const midX = originX + nextSpanX / 2;
+  const midY = originY + nextSpanY / 2;
   // Reconstruct pan relative to zoomed-at-1 mid would need fit bounds; store absolute origin via pan.
   return {
     originX,
     originY,
-    spanX: nextSpan,
-    spanY: nextSpan,
+    spanX: nextSpanX,
+    spanY: nextSpanY,
     zoom,
     panX: view.panX + (midX - (view.originX + view.spanX / 2)),
     panY: view.panY + (midY - (view.originY + view.spanY / 2)),

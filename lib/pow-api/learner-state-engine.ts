@@ -16,6 +16,7 @@ import {
 import {
   knowledgeConfigPointerFromEmbedding,
   encodeAndMeasureVelocity,
+  insertExperimentalKnowledgeConfigSnapshots,
   insertKnowledgeConfigSnapshot,
   loadLatestKnowledgeConfig,
   powRowsFromPerformanceContext,
@@ -232,16 +233,15 @@ export async function updateLearnerStateAfterScore(
     subject,
   );
 
+  // Product geometry: v1-d64 only for LWM pointer + velocity baseline.
   const previous = await loadLatestKnowledgeConfig(options.supabase, options.workspaceId, subject);
-  const embedding = encodeAndMeasureVelocity(
-    {
-      workspaceId: options.workspaceId,
-      totalBlocks: options.totalBlocks,
-      powRows: powRowsFromPerformanceContext(options.proofOfWork || []),
-      worldModel: merged,
-    },
-    previous,
-  );
+  const encodeInput = {
+    workspaceId: options.workspaceId,
+    totalBlocks: options.totalBlocks,
+    powRows: powRowsFromPerformanceContext(options.proofOfWork || []),
+    worldModel: merged,
+  };
+  const embedding = encodeAndMeasureVelocity(encodeInput, previous);
 
   const withPointer: LearningWorldModelV0 = {
     ...merged,
@@ -255,13 +255,29 @@ export async function updateLearnerStateAfterScore(
     subject,
   );
 
+  const lwmId = saved.id ?? lwmIdAfterMerge;
+  const trigger = options.trigger ?? "score";
+
   await insertKnowledgeConfigSnapshot(options.supabase, {
     workspaceId: options.workspaceId,
     subject,
     embedding,
-    trigger: options.trigger ?? "score",
-    lwmId: saved.id ?? lwmIdAfterMerge,
+    trigger,
+    lwmId,
   });
+
+  // Parallel experimental models: same score event, separate model ids — no backfill.
+  try {
+    await insertExperimentalKnowledgeConfigSnapshots(options.supabase, {
+      workspaceId: options.workspaceId,
+      subject,
+      encodeInput,
+      trigger,
+      lwmId,
+    });
+  } catch (err) {
+    console.warn("[learner-state-engine] experimental knowledge-config dual-write failed:", err);
+  }
 
   return {
     worldModel: saved.model,

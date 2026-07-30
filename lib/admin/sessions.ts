@@ -55,7 +55,7 @@ export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId
   const { data, error } = await adminClient
     .from("workspace_tap_sessions")
     .select(
-      "id, workspace_id, block_id, user_id, guest_user_id, organization_id, status, created_at, completed_at, requested_duration_seconds, duration_seconds, overall_score, marker_scores, analysis, summary, mode"
+      "id, workspace_id, block_id, user_id, guest_user_id, organization_id, status, created_at, completed_at, requested_duration_seconds, duration_seconds, overall_score, marker_scores, analysis, summary, mode, interaction_kind"
     )
     .eq("id", sessionId)
     .maybeSingle();

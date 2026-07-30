@@ -42,17 +42,33 @@ describe("projection-view helpers (shipped)", () => {
     expect(fit.zoom).toBe(1);
     expect(fit.spanX).toBeGreaterThan(0);
     expect(Number.isFinite(fit.originX)).toBe(true);
+    // Default aspect is square
+    expect(fit.spanX).toBeCloseTo(fit.spanY, 8);
 
     const midX = fit.originX + fit.spanX / 2;
     const midY = fit.originY + fit.spanY / 2;
     const zoomed = zoomViewTransform(fit, 2, midX, midY);
     expect(zoomed.zoom).toBe(2);
     expect(zoomed.spanX).toBeCloseTo(fit.spanX / 2, 8);
+    expect(zoomed.spanY).toBeCloseTo(fit.spanY / 2, 8);
     // Focus point stays fixed under zoom.
     const before = dataToScreen(midX, midY, fit, screen);
     const after = dataToScreen(midX, midY, zoomed, screen);
     expect(after.x).toBeCloseTo(before.x, 5);
     expect(after.y).toBeCloseTo(before.y, 5);
+  });
+
+  it("fitViewTransform respects screen aspect so circles stay isotropic", () => {
+    const bounds = { minX: -1, maxX: 1, minY: -1, maxY: 1 };
+    const aspect = 2; // wide viewport
+    const fit = fitViewTransform(bounds, { zoom: 1, aspectRatio: aspect });
+    expect(fit.spanX / fit.spanY).toBeCloseTo(aspect, 8);
+    // Radius maps equally on X and Y when spans match aspect
+    const wideScreen = { width: 1000, height: 500, margin: 0 };
+    const r = 0.25;
+    const rx = (r / fit.spanX) * wideScreen.width;
+    const ry = (r / fit.spanY) * wideScreen.height;
+    expect(rx).toBeCloseTo(ry, 8);
   });
 
   it("dataToScreen / screenToData round-trip", () => {

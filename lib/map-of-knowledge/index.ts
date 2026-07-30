@@ -4,8 +4,19 @@
  */
 
 import {
+  KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
+  KNOWLEDGE_CONFIG_CONTENT_D256_MODEL_ID,
+  KNOWLEDGE_CONFIG_CONTENT_D256_SEM_DIM,
+  KNOWLEDGE_CONFIG_CONTENT_D256_STRUCT_DIM,
   KNOWLEDGE_CONFIG_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_MODEL_ID,
+  KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+  KNOWLEDGE_CONFIG_HYBRID_D192_DIM,
+  KNOWLEDGE_CONFIG_HYBRID_D192_MODEL_ID,
+  KNOWLEDGE_CONFIG_HYBRID_D192_SEM_DIM,
+  KNOWLEDGE_CONFIG_HYBRID_D192_STRUCT_DIM,
   KNOWLEDGE_CONFIG_SEM_DIM,
   KNOWLEDGE_CONFIG_STRUCT_DIM,
   parseProjectionAlgorithmId,
@@ -160,6 +171,45 @@ export const EMBEDDING_MODEL_CATALOG: readonly EmbeddingModelInfo[] = [
       "Structural block encodes coverage, PoW patterns, and tool traces.",
       "Semantic block encodes topic / language features from the hybrid encoder.",
       "Regions (custom verification models) live in the same frame when built from this model.",
+      "Product UI and LWM knowledge_config pointer default to this model.",
+    ],
+  },
+  {
+    id: KNOWLEDGE_CONFIG_HYBRID_D192_MODEL_ID,
+    label: "Knowledge config hybrid v2 (D=192)",
+    dim: KNOWLEDGE_CONFIG_HYBRID_D192_DIM,
+    struct_dim: KNOWLEDGE_CONFIG_HYBRID_D192_STRUCT_DIM,
+    sem_dim: KNOWLEDGE_CONFIG_HYBRID_D192_SEM_DIM,
+    description:
+      "Experimental higher-D hybrid sibling of v1 (96 structural + 96 semantic). Dual-written on score for offline comparison; not product UI default.",
+    notes: [
+      "Not comparable to knowledgecfg-v1-d64 or other model ids.",
+      "Same structure-weighted hybrid recipe as v1 with expanded dimensions.",
+    ],
+  },
+  {
+    id: KNOWLEDGE_CONFIG_CONTENT_D256_MODEL_ID,
+    label: "Knowledge config content v2 (D=256)",
+    dim: KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
+    struct_dim: KNOWLEDGE_CONFIG_CONTENT_D256_STRUCT_DIM,
+    sem_dim: KNOWLEDGE_CONFIG_CONTENT_D256_SEM_DIM,
+    description:
+      "Experimental content-rich residual from thought/transcript/LWM free text. Dual-written on score; not product UI default.",
+    notes: [
+      "Not comparable to other embedding_model_id values.",
+      "Uses free-text already present on PoW metadata — no xAI file backfill required.",
+    ],
+  },
+  {
+    id: KNOWLEDGE_CONFIG_DUAL_D256_MODEL_ID,
+    label: "Knowledge config dual-stream v2 (D=256)",
+    dim: KNOWLEDGE_CONFIG_DUAL_D256_DIM,
+    struct_dim: KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
+    description:
+      "Experimental dual-stream System 1 / System 2 text channels with temporal fusion. Dual-written on score; not product UI default.",
+    notes: [
+      "Not comparable to other embedding_model_id values.",
+      "Separates stash/explore (System 1) from submit (System 2) free-text channels.",
     ],
   },
 ] as const;

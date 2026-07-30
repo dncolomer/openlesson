@@ -10,6 +10,10 @@ import {
   adminLabelClass,
   adminPageTitleClass,
 } from "@/components/admin/styles";
+import {
+  ADMIN_SESSION_HORIZON_LABELS,
+  adminSessionProductLabel,
+} from "@/lib/admin/product-labels";
 
 interface PlanOwner {
   id: string;
@@ -41,6 +45,7 @@ interface TapSession {
   created_at: string;
   completed_at: string | null;
   requested_duration_seconds: number;
+  interaction_kind?: string | null;
 }
 
 interface PlanDetail {
@@ -188,7 +193,7 @@ export default function AdminPlanDetailPage() {
             <div className="text-neutral-200">{completedNodes} / {nodes.length} completed</div>
           </div>
           <div>
-            <div className={adminLabelClass}>TAP sessions</div>
+            <div className={adminLabelClass}>{ADMIN_SESSION_HORIZON_LABELS.timed}</div>
             <div className="text-neutral-200">{tapSessions.length}</div>
           </div>
         </div>
@@ -223,9 +228,11 @@ export default function AdminPlanDetailPage() {
 
         <div className="space-y-6">
           <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
-            <h2 className="mb-4 text-sm font-medium text-white">Tutoring Blocks ({sessions.length})</h2>
+            <h2 className="mb-4 text-sm font-medium text-white">
+              {ADMIN_SESSION_HORIZON_LABELS.openEnded} ({sessions.length})
+            </h2>
             {sessions.length === 0 ? (
-              <p className="text-sm text-neutral-500">No linked tutoring blocks</p>
+              <p className="text-sm text-neutral-500">No open-ended sessions linked</p>
             ) : (
               <div className="max-h-[220px] space-y-3 overflow-y-auto">
                 {sessions.map((session) => (
@@ -247,27 +254,42 @@ export default function AdminPlanDetailPage() {
           </div>
 
           <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
-            <h2 className="mb-4 text-sm font-medium text-white">TAP sessions ({tapSessions.length})</h2>
+            <h2 className="mb-4 text-sm font-medium text-white">
+              {ADMIN_SESSION_HORIZON_LABELS.timed} ({tapSessions.length})
+            </h2>
             {tapSessions.length === 0 ? (
-              <p className="text-sm text-neutral-500">No TAP sessions yet</p>
+              <p className="text-sm text-neutral-500">No timed sessions yet</p>
             ) : (
               <div className="max-h-[220px] space-y-3 overflow-y-auto">
-                {tapSessions.map((session) => (
-                  <div key={session.id} className={adminItemClass}>
-                    <div className="mb-1 flex items-start justify-between">
-                      <div className="text-sm text-neutral-200">
-                        {session.requested_duration_seconds / 60} min session
+                {tapSessions.map((session) => {
+                  const productLabel = adminSessionProductLabel({
+                    technicalKind: "tap",
+                    interaction_kind: session.interaction_kind,
+                  });
+                  return (
+                    <Link
+                      key={session.id}
+                      href={`/admin/sessions/${session.id}`}
+                      className={`block ${adminItemClass}`}
+                    >
+                      <div className="mb-1 flex items-start justify-between">
+                        <div className="text-sm text-neutral-200">
+                          {productLabel}
+                          {session.requested_duration_seconds
+                            ? ` · ${session.requested_duration_seconds / 60} min`
+                            : ""}
+                        </div>
+                        <span className={`ml-2 rounded px-1.5 py-0.5 text-xs ${getStatusColor(session.status)}`}>
+                          {session.status}
+                        </span>
                       </div>
-                      <span className={`ml-2 rounded px-1.5 py-0.5 text-xs ${getStatusColor(session.status)}`}>
-                        {session.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-neutral-500">
-                      <span>{formatDate(session.created_at)}</span>
-                      {session.overall_score != null && <span>Score: {session.overall_score}</span>}
-                    </div>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3 text-xs text-neutral-500">
+                        <span>{formatDate(session.created_at)}</span>
+                        {session.overall_score != null && <span>Score: {session.overall_score}</span>}
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  EXPERIMENTAL_KNOWLEDGE_CONFIG_MODELS,
   KNOWLEDGE_CONFIG_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   encodeKnowledgeConfig,
@@ -11,6 +12,7 @@ import {
   parseProjectionAlgorithmId,
   projectTrajectoryPoints2D,
   projectionFrameId,
+  type KnowledgeConfigEmbedding,
   type KnowledgeConfigEmbeddingV1,
   type KnowledgeConfigEncodeInput,
   type KnowledgeConfigSnapshotTrigger,
@@ -43,7 +45,8 @@ export async function insertKnowledgeConfigSnapshot(
   options: {
     workspaceId: string;
     subject?: SubjectRef | null;
-    embedding: KnowledgeConfigEmbeddingV1;
+    /** Any finite unit-length model vector (v1 or experimental). */
+    embedding: KnowledgeConfigEmbedding;
     trigger: KnowledgeConfigSnapshotTrigger;
     lwmId?: string | null;
   },
@@ -79,6 +82,63 @@ export async function insertKnowledgeConfigSnapshot(
     return { id: null };
   }
   return { id: (data?.id as string) ?? null };
+}
+
+/**
+ * Attach optional L2 velocity vs previous snapshot of the same model id.
+ * Does not re-encode historical rows — previous is only used for velocity.
+ */
+export function attachEmbeddingVelocity(
+  embedding: KnowledgeConfigEmbedding,
+  previous: KnowledgeConfigSnapshotRow | null,
+): KnowledgeConfigEmbedding {
+  if (
+    previous &&
+    previous.embedding_model_id === embedding.embedding_model_id &&
+    isKnowledgeConfigVector(previous.vector, embedding.dim)
+  ) {
+    const dtHours = Math.max(1e-6, (embedding.as_of_ms - previous.as_of_ms) / 3_600_000);
+    embedding.velocity = l2Distance(embedding.vector, previous.vector) / dtHours;
+  }
+  return embedding;
+}
+
+/**
+ * Encode and insert experimental dual-write models for one score event.
+ * Does not touch the LWM knowledge_config pointer or backfill older snapshots.
+ * Returns inserted snapshot ids keyed by embedding_model_id.
+ */
+export async function insertExperimentalKnowledgeConfigSnapshots(
+  supabase: SupabaseClient,
+  options: {
+    workspaceId: string;
+    subject?: SubjectRef | null;
+    encodeInput: KnowledgeConfigEncodeInput;
+    trigger: KnowledgeConfigSnapshotTrigger;
+    lwmId?: string | null;
+  },
+): Promise<{ inserted: Array<{ embedding_model_id: string; id: string | null }> }> {
+  const inserted: Array<{ embedding_model_id: string; id: string | null }> = [];
+
+  for (const model of EXPERIMENTAL_KNOWLEDGE_CONFIG_MODELS) {
+    const previous = await loadLatestKnowledgeConfig(
+      supabase,
+      options.workspaceId,
+      options.subject,
+      model.id,
+    );
+    const embedding = attachEmbeddingVelocity(model.encode(options.encodeInput), previous);
+    const { id } = await insertKnowledgeConfigSnapshot(supabase, {
+      workspaceId: options.workspaceId,
+      subject: options.subject,
+      embedding,
+      trigger: options.trigger,
+      lwmId: options.lwmId,
+    });
+    inserted.push({ embedding_model_id: model.id, id });
+  }
+
+  return { inserted };
 }
 
 export async function loadLatestKnowledgeConfig(
@@ -328,11 +388,21 @@ export function encodeAndMeasureVelocity(
   previous: KnowledgeConfigSnapshotRow | null,
 ): KnowledgeConfigEmbeddingV1 {
   const embedding = encodeKnowledgeConfig(input);
-  if (previous && isKnowledgeConfigVector(previous.vector, KNOWLEDGE_CONFIG_DIM)) {
-    const dtHours = Math.max(1e-6, (embedding.as_of_ms - previous.as_of_ms) / 3_600_000);
-    embedding.velocity = l2Distance(embedding.vector, previous.vector) / dtHours;
-  }
-  return embedding;
+  return attachEmbeddingVelocity(embedding, previous) as KnowledgeConfigEmbeddingV1;
+}
+
+export function knowledgeConfigPointerFromEmbedding(
+  embedding: KnowledgeConfigEmbedding,
+): NonNullable<LearningWorldModelV0["knowledge_config"]> {
+  return {
+    embedding_model_id: embedding.embedding_model_id,
+    dim: embedding.dim,
+    vector: embedding.vector,
+    as_of: embedding.as_of,
+    as_of_ms: embedding.as_of_ms,
+    pow_event_count: embedding.pow_event_count,
+    confidence: embedding.confidence,
+  };
 }
 
 export function trajectoryPathLength(points: KnowledgeConfigTrajectoryPoint[]): number {
@@ -392,18 +462,4 @@ export function powRowsFromPerformanceContext(
     sample_count: row.sample_count,
     device_name: row.device_name,
   }));
-}
-
-export function knowledgeConfigPointerFromEmbedding(
-  embedding: KnowledgeConfigEmbeddingV1,
-): NonNullable<LearningWorldModelV0["knowledge_config"]> {
-  return {
-    embedding_model_id: embedding.embedding_model_id,
-    dim: embedding.dim,
-    vector: embedding.vector,
-    as_of: embedding.as_of,
-    as_of_ms: embedding.as_of_ms,
-    pow_event_count: embedding.pow_event_count,
-    confidence: embedding.confidence,
-  };
 }

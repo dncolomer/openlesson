@@ -3,9 +3,25 @@ export {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   KNOWLEDGE_CONFIG_SEM_DIM,
   KNOWLEDGE_CONFIG_STRUCT_DIM,
+  KNOWLEDGE_CONFIG_HYBRID_D192_MODEL_ID,
+  KNOWLEDGE_CONFIG_HYBRID_D192_DIM,
+  KNOWLEDGE_CONFIG_HYBRID_D192_STRUCT_DIM,
+  KNOWLEDGE_CONFIG_HYBRID_D192_SEM_DIM,
+  KNOWLEDGE_CONFIG_CONTENT_D256_MODEL_ID,
+  KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
+  KNOWLEDGE_CONFIG_CONTENT_D256_STRUCT_DIM,
+  KNOWLEDGE_CONFIG_CONTENT_D256_SEM_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_MODEL_ID,
+  KNOWLEDGE_CONFIG_DUAL_D256_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_STRUCT_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_S1_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_S2_DIM,
+  KNOWLEDGE_CONFIG_DUAL_D256_TEMPORAL_DIM,
   isKnowledgeConfigVector,
   type KnowledgeConfigEmbeddingModelId,
+  type KnowledgeConfigEmbedding,
   type KnowledgeConfigEmbeddingV1,
+  type ExperimentalKnowledgeConfigModelId,
   type KnowledgeConfigPointer,
   type KnowledgeConfigProjection2D,
   type KnowledgeConfigSnapshotTrigger,
@@ -28,6 +44,25 @@ export {
   type KnowledgeConfigEncodeInput,
   type PowFeatureRow,
 } from "./encoder";
+
+export {
+  encodeKnowledgeConfigHybrid192,
+  encodeKnowledgeConfigContent256,
+  encodeKnowledgeConfigDual256,
+  collectSystemChannelTexts,
+  extractTextFragmentsFromRow,
+} from "./experimental-encoders";
+
+export {
+  PRODUCT_KNOWLEDGE_CONFIG_MODEL,
+  EXPERIMENTAL_KNOWLEDGE_CONFIG_MODELS,
+  ALL_KNOWLEDGE_CONFIG_MODELS,
+  getKnowledgeConfigModelSpec,
+  encodeKnowledgeConfigForModel,
+  experimentalDualWriteModelIds,
+  type KnowledgeConfigEncodeFn,
+  type KnowledgeConfigModelSpec,
+} from "./registry";
 
 export {
   PROJECTION_ALGORITHM_IDS,

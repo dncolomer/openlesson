@@ -8,7 +8,8 @@ export const ADMIN_TIER_OPTIONS = [
   {
     id: "api_metered" as const,
     label: "API Metered",
-    description: "$99/mo platform · 0.05¢/API PoW · $1/TAP · $10/ILE",
+    description:
+      "$99/mo platform · 0.05¢/API PoW · $1/timed session · $10/open-ended session",
   },
 ] as const;
 
@@ -73,7 +74,7 @@ export function describePlanLimits(plan: string, extraLessons = 0, _extraWorkspa
   if (!def) return "Unknown plan";
 
   if (normalized === "api_metered") {
-    return "Unlimited PoW · metered: 0.05¢/API PoW · $1/TAP · $10/ILE · unlimited workspaces";
+    return "Unlimited PoW · metered: 0.05¢/API PoW · $1/timed session · $10/open-ended session · unlimited workspaces";
   }
 
   const proofOfWork =

@@ -712,8 +712,10 @@ describe("map-of-knowledge product surfaces", () => {
     const twoDSrc = readFileSync(twoD, "utf8");
     expect(twoDSrc).toContain("data-map-2d-interactive");
     expect(twoDSrc).toContain("data-map-2d-legend");
-    // Local 2D fills the host edge-to-edge (no meet letterbox without grid)
+    // Local 2D fills the host edge-to-edge; viewBox tracks host size so circles stay circular
     expect(twoDSrc).toContain('preserveAspectRatio="none"');
+    expect(twoDSrc).toContain("ResizeObserver");
+    expect(twoDSrc).toContain("aspectRatio");
     expect(twoDSrc).toContain("absolute inset-0");
     expect(twoDSrc).toContain("MAP_INFINITE_GRID.background");
     expect(twoDSrc).toContain("data-map-infinite-grid");

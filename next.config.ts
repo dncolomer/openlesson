@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
       { source: "/plans", destination: "/workspaces", permanent: true },
       { source: "/admin/plans", destination: "/admin/workspaces", permanent: true },
       { source: "/admin/plans/:id", destination: "/admin/workspaces/:id", permanent: true },
+      // Practice Portal public slug is /portal/{token}; keep old path working.
+      {
+        source: "/practice-portal/:token",
+        destination: "/portal/:token",
+        permanent: true,
+      },
     ];
   },
   images: {

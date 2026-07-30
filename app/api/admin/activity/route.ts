@@ -7,6 +7,7 @@ import {
   rankActiveUsers,
   type RawActivityRow,
 } from "@/lib/admin/activity";
+import { adminTimedSessionActivitySummary } from "@/lib/admin/product-labels";
 import {
   ADMIN_POW_SELECT,
   mapProofOfWorkRow,
@@ -45,7 +46,9 @@ export async function GET(request: NextRequest) {
         .limit(SOURCE_LIMIT),
       adminClient
         .from("workspace_tap_sessions")
-        .select("id, user_id, status, created_at, workspace_id, overall_score")
+        .select(
+          "id, user_id, status, created_at, workspace_id, overall_score, interaction_kind",
+        )
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(SOURCE_LIMIT),
@@ -107,16 +110,18 @@ export async function GET(request: NextRequest) {
     }
 
     for (const row of tapRes.data || []) {
-      const score =
-        typeof row.overall_score === "number" ? ` · score ${row.overall_score}` : "";
       raw.push({
         id: row.id,
         type: "tap_session",
         createdAt: row.created_at,
-        summary: `TAP session${score}`,
+        summary: adminTimedSessionActivitySummary({
+          interaction_kind: (row as { interaction_kind?: string | null }).interaction_kind,
+          overall_score: row.overall_score,
+        }),
         status: row.status,
         href: `/admin/sessions/${row.id}`,
         userId: row.user_id || null,
+        interaction_kind: (row as { interaction_kind?: string | null }).interaction_kind ?? null,
       });
     }
 

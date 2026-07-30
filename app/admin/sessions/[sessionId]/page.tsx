@@ -9,6 +9,7 @@ import {
   adminItemClass,
   adminLabelClass,
 } from "@/components/admin/styles";
+import { adminSessionProductLabel } from "@/lib/admin/product-labels";
 
 interface SessionOwner {
   id: string;
@@ -39,6 +40,7 @@ interface TapSessionDetail {
   overall_score: number | null;
   summary: string | null;
   mode: string | null;
+  interaction_kind?: string | null;
   owner?: SessionOwner | null;
 }
 
@@ -131,9 +133,7 @@ export default function AdminSessionDetailPage() {
     switch (status) {
       case "active":
       case "in_progress":
-        return "bg-white/[0.06] text-white";
       case "completed":
-        return "bg-white/[0.06] text-white";
       case "paused":
       case "pending":
         return "bg-white/[0.06] text-white";
@@ -144,11 +144,17 @@ export default function AdminSessionDetailPage() {
 
   if (loading) return <AdminLoading />;
   if (error) return <AdminError message={error} />;
-
   if (!payload) return <AdminError message="Session not found" />;
 
   if (payload.kind === "tap") {
     const { session, plan, block, owner } = payload;
+    const productLabel = adminSessionProductLabel({
+      technicalKind: "tap",
+      interaction_kind: session.interaction_kind,
+    });
+    const title =
+      block?.title || plan?.display_topic || plan?.root_topic || productLabel;
+
     return (
       <div className="space-y-6">
         <Link href="/admin/sessions" className={adminBackLinkClass}>
@@ -156,28 +162,32 @@ export default function AdminSessionDetailPage() {
         </Link>
 
         <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <p className={`mb-2 ${adminLabelClass}`}>TAP session</p>
-              <h1 className="text-xl font-medium tracking-[-0.3px] text-white">
-                {block?.title || plan?.display_topic || "Think Aloud Protocol"}
-              </h1>
-              {owner && (
-                <Link href={`/admin/users/${session.user_id}`} className="text-sm text-white hover:text-neutral-200">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className={`mb-2 ${adminLabelClass}`}>{productLabel}</p>
+              <h1 className="text-xl font-medium tracking-[-0.3px] text-white">{title}</h1>
+              {owner && session.user_id && (
+                <Link
+                  href={`/admin/users/${session.user_id}`}
+                  className="text-sm text-white hover:text-neutral-200"
+                >
                   {owner.email || owner.username}
                 </Link>
               )}
             </div>
-            <span className={`rounded px-2 py-1 text-xs ${getStatusColor(session.status)}`}>{session.status}</span>
+            <span className={`shrink-0 rounded px-2 py-1 text-xs ${getStatusColor(session.status)}`}>
+              {session.status}
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Field label="Created" value={formatDate(session.created_at)} />
             <Field label="Completed" value={formatDate(session.completed_at)} />
             <Field label="Duration" value={formatSeconds(session.duration_seconds)} />
-            <Field label="Score" value={session.overall_score != null ? String(session.overall_score) : "-"} />
-            <Field label="Mode" value={session.mode || "-"} />
-            <Field label="Session ID" value={`${session.id.slice(0, 12)}…`} mono />
+            <Field
+              label="Score"
+              value={session.overall_score != null ? String(session.overall_score) : "-"}
+            />
           </div>
 
           {session.summary && (
@@ -188,12 +198,16 @@ export default function AdminSessionDetailPage() {
         </div>
 
         {(plan || block) && (
-          <div className="rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm p-6">
-            <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
+          <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-6 backdrop-blur-sm">
+            <h2 className="mb-4 text-sm font-medium text-white">Workspace</h2>
             {plan && (
               <Link href={`/admin/workspaces/${plan.id}`} className={`block ${adminItemClass}`}>
-                <div className="text-sm text-white">{plan.display_topic || plan.root_topic}</div>
-                {block && <div className="mt-1 text-xs text-neutral-500">Block: {block.title}</div>}
+                <div className="text-sm text-white">
+                  {plan.display_topic || plan.root_topic || plan.title}
+                </div>
+                {block && (
+                  <div className="mt-1 text-xs text-neutral-500">Block: {block.title}</div>
+                )}
               </Link>
             )}
           </div>
@@ -203,6 +217,7 @@ export default function AdminSessionDetailPage() {
   }
 
   const { session, block } = payload;
+  const productLabel = adminSessionProductLabel({ technicalKind: "ile" });
 
   return (
     <div className="space-y-6">
@@ -211,33 +226,41 @@ export default function AdminSessionDetailPage() {
       </Link>
 
       <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
-        <div className="mb-4 flex items-start justify-between">
-          <div className="mr-4 flex-1">
-            <p className={`mb-2 ${adminLabelClass}`}>ILE session</p>
-            <h1 className="mb-2 text-xl font-medium tracking-[-0.3px] text-white">{session.problem}</h1>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="mr-4 min-w-0 flex-1">
+            <p className={`mb-2 ${adminLabelClass}`}>{productLabel}</p>
+            <h1 className="mb-2 text-xl font-medium tracking-[-0.3px] text-white">
+              {session.problem}
+            </h1>
             {session.owner && (
-              <Link href={`/admin/users/${session.user_id}`} className="text-sm text-white hover:text-neutral-200">
+              <Link
+                href={`/admin/users/${session.user_id}`}
+                className="text-sm text-white hover:text-neutral-200"
+              >
                 {session.owner.email || session.owner.username}
               </Link>
             )}
           </div>
-          <span className={`rounded px-2 py-1 text-xs ${getStatusColor(session.status)}`}>{session.status}</span>
+          <span className={`shrink-0 rounded px-2 py-1 text-xs ${getStatusColor(session.status)}`}>
+            {session.status}
+          </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-2">
           <Field label="Created" value={formatDate(session.created_at)} />
           <Field label="Duration" value={formatDuration(session.duration_ms || 0)} />
-          <Field label="Session ID" value={`${session.id.slice(0, 12)}…`} mono />
-          <Field label="User ID" value={`${session.user_id.slice(0, 12)}…`} mono />
         </div>
       </div>
 
       {block && (
-        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm p-6">
-          <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
-          <Link href={`/admin/workspaces/${block.workspace_id}`} className={`block ${adminItemClass}`}>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-6 backdrop-blur-sm">
+          <h2 className="mb-4 text-sm font-medium text-white">Workspace</h2>
+          <Link
+            href={`/admin/workspaces/${block.workspace_id}`}
+            className={`block ${adminItemClass}`}
+          >
             <div className="mb-1 text-sm text-white">
-              {block.plan?.display_topic || block.plan?.root_topic || "Unknown workspace"}
+              {block.plan?.display_topic || block.plan?.root_topic || "Workspace"}
             </div>
             <div className="text-xs text-neutral-500">Block: {block.title}</div>
           </Link>
@@ -247,11 +270,11 @@ export default function AdminSessionDetailPage() {
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className={adminLabelClass}>{label}</div>
-      <div className={`text-neutral-200 ${mono ? "font-mono text-xs" : ""}`}>{value}</div>
+      <div className="text-neutral-200">{value}</div>
     </div>
   );
 }

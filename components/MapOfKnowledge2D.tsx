@@ -21,11 +21,10 @@ import {
   type MapUserLocation,
 } from "@/lib/map-of-knowledge";
 
-// Match Global Map viewBox aspect so the infinite grid fills edge-to-edge (no letterbox band).
-const WIDTH = 960;
-const HEIGHT = 520;
+/** Fallback viewBox before ResizeObserver measures the host (≈ Global Map ratio). */
+const DEFAULT_WIDTH = 960;
+const DEFAULT_HEIGHT = 520;
 const MARGIN = 16;
-const SCREEN = { width: WIDTH, height: HEIGHT, margin: MARGIN };
 
 export type MapOfKnowledge2DProps = {
   userLocations: MapUserLocation[];
@@ -39,6 +38,9 @@ export type MapOfKnowledge2DProps = {
 
 /**
  * Interactive 2D embedding map: drag/touch pan, pinch & wheel zoom, keyboard nudge.
+ *
+ * ViewBox tracks the host size so region circles stay circular (no non-uniform SVG stretch).
+ * View spans match the drawable aspect so one data unit is the same length on X and Y.
  */
 export function MapOfKnowledge2D({
   userLocations,
@@ -66,6 +68,38 @@ export function MapOfKnowledge2D({
   } | null>(null);
   const viewRef = useRef<ViewTransform | null>(null);
 
+  /** Live host size → viewBox (prevents oval regions from preserveAspectRatio stretch). */
+  const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  const width = Math.max(1, size.width);
+  const height = Math.max(1, size.height);
+  const screen = useMemo(
+    () => ({ width, height, margin: MARGIN }),
+    [width, height],
+  );
+  const aspectRatio = useMemo(() => {
+    const innerW = Math.max(1, width - 2 * MARGIN);
+    const innerH = Math.max(1, height - 2 * MARGIN);
+    return innerW / innerH;
+  }, [width, height]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width: w, height: h } = entry.contentRect;
+      if (w < 2 || h < 2) return;
+      setSize((prev) =>
+        Math.abs(prev.width - w) < 0.5 && Math.abs(prev.height - h) < 0.5
+          ? prev
+          : { width: w, height: h },
+      );
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const bounds = useMemo(() => {
     const pts = userLocations.map((p) => ({ x: p.x, y: p.y }));
     const regs = regions.map((r) => ({
@@ -83,19 +117,22 @@ export function MapOfKnowledge2D({
     );
   }, [userLocations, regions]);
 
-  const [view, setView] = useState<ViewTransform>(() =>
-    fitViewTransform(bounds, { padFraction: 0.16, zoom: 1, panX: 0, panY: 0 }),
+  const fitOpts = useMemo(
+    () => ({ padFraction: 0.16, zoom: 1, panX: 0, panY: 0, aspectRatio }),
+    [aspectRatio],
   );
+
+  const [view, setView] = useState<ViewTransform>(() => fitViewTransform(bounds, fitOpts));
   viewRef.current = view;
 
-  // Re-fit when data / projection layout changes
+  // Re-fit when data / projection layout or host aspect changes
   useEffect(() => {
-    setView(fitViewTransform(bounds, { padFraction: 0.16, zoom: 1, panX: 0, panY: 0 }));
-  }, [bounds]);
+    setView(fitViewTransform(bounds, fitOpts));
+  }, [bounds, fitOpts]);
 
   const resetView = useCallback(() => {
-    setView(fitViewTransform(bounds, { padFraction: 0.16, zoom: 1, panX: 0, panY: 0 }));
-  }, [bounds]);
+    setView(fitViewTransform(bounds, fitOpts));
+  }, [bounds, fitOpts]);
 
   const zoomBy = useCallback((factor: number, focusX?: number, focusY?: number) => {
     setView((v) => {
@@ -109,20 +146,23 @@ export function MapOfKnowledge2D({
     setView((v) => panViewTransform(v, dDataX, dDataY));
   }, []);
 
-  const clientToSvg = (clientX: number, clientY: number) => {
-    const el = svgRef.current;
-    if (!el) return { sx: WIDTH / 2, sy: HEIGHT / 2 };
-    const rect = el.getBoundingClientRect();
-    return {
-      sx: ((clientX - rect.left) / Math.max(1, rect.width)) * WIDTH,
-      sy: ((clientY - rect.top) / Math.max(1, rect.height)) * HEIGHT,
-    };
-  };
+  const clientToSvg = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = svgRef.current;
+      if (!el) return { sx: width / 2, sy: height / 2 };
+      const rect = el.getBoundingClientRect();
+      return {
+        sx: ((clientX - rect.left) / Math.max(1, rect.width)) * width,
+        sy: ((clientY - rect.top) / Math.max(1, rect.height)) * height,
+      };
+    },
+    [width, height],
+  );
 
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
     const { sx, sy } = clientToSvg(e.clientX, e.clientY);
-    const focus = screenToData(sx, sy, view, SCREEN);
+    const focus = screenToData(sx, sy, view, screen);
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
     zoomBy(factor, focus.x, focus.y);
   };
@@ -152,8 +192,8 @@ export function MapOfKnowledge2D({
     const dSy = sy - dragRef.current.lastSy;
     dragRef.current.lastSx = sx;
     dragRef.current.lastSy = sy;
-    const innerW = WIDTH - 2 * MARGIN;
-    const innerH = HEIGHT - 2 * MARGIN;
+    const innerW = width - 2 * MARGIN;
+    const innerH = height - 2 * MARGIN;
     const dDataX = -(dSx / innerW) * view.spanX;
     const dDataY = (dSy / innerH) * view.spanY;
     panByData(dDataX, dDataY);
@@ -192,7 +232,7 @@ export function MapOfKnowledge2D({
         const { sx, sy } = clientToSvg(midX, midY);
         const v = viewRef.current;
         if (!v) return;
-        const focus = screenToData(sx, sy, v, SCREEN);
+        const focus = screenToData(sx, sy, v, screen);
         pinchRef.current = {
           active: true,
           startDist: Math.max(1, d),
@@ -233,7 +273,7 @@ export function MapOfKnowledge2D({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [bounds]);
+  }, [bounds, clientToSvg, screen]);
 
   // Keyboard: arrows / WASD pan, +/- zoom, 0/R reset
   useEffect(() => {
@@ -296,7 +336,7 @@ export function MapOfKnowledge2D({
     return () => root.removeEventListener("keydown", onKeyDown);
   }, [panByData, zoomBy, resetView]);
 
-  const mapPoint = (x: number, y: number) => dataToScreen(x, y, view, SCREEN);
+  const mapPoint = (x: number, y: number) => dataToScreen(x, y, view, screen);
 
   const heightClass = fill ? "min-h-0 flex-1 h-full" : "h-[min(58vh,520px)]";
 
@@ -314,13 +354,13 @@ export function MapOfKnowledge2D({
     >
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${width} ${height}`}
         className="absolute inset-0 h-full w-full touch-none select-none"
         style={{ cursor: "grab", touchAction: "none" }}
         role="img"
         aria-label={`Map of Knowledge 2D embedding projection (${projectionAlgorithm})`}
-        /* Fill the host box edge-to-edge (Global Map style). "meet" letterboxed and left a
-           solid band with no grid at the top/bottom on wide or tall containers. */
+        /* ViewBox tracks host size (ResizeObserver) so none-stretch stays isotropic —
+           region circles remain circular while the infinite grid still fills edge-to-edge. */
         preserveAspectRatio="none"
         data-map-2d-svg
         data-projection-algorithm={projectionAlgorithm}
@@ -351,10 +391,10 @@ export function MapOfKnowledge2D({
         </defs>
         {/* Infinite grid canvas: fixed screen pattern so pan/zoom of content never ends the field */}
         <g data-map-infinite-grid data-map-infinite-grid-surface="local-2d">
-          <rect width={WIDTH} height={HEIGHT} fill={MAP_INFINITE_GRID.background} />
+          <rect width={width} height={height} fill={MAP_INFINITE_GRID.background} />
           <rect
-            width={WIDTH}
-            height={HEIGHT}
+            width={width}
+            height={height}
             fill={mapInfiniteGridPatternFill(`${MAP_INFINITE_GRID.patternId}-2d`)}
           />
         </g>
@@ -362,7 +402,7 @@ export function MapOfKnowledge2D({
         {regions.map((region, i) => {
           const { x: sx, y: sy } = mapPoint(region.x, region.y);
           const hue = (i * 47) % 360;
-          const rr = mapRadiusToScreen(Math.max(0.08, region.radius || 0.35), view, SCREEN);
+          const rr = mapRadiusToScreen(Math.max(0.08, region.radius || 0.35), view, screen);
           return (
             <g key={region.id}>
               <circle
@@ -389,7 +429,7 @@ export function MapOfKnowledge2D({
 
         {userLocations.map((p) => {
           const { x: sx, y: sy } = mapPoint(p.x, p.y);
-          const fill = mapDotColor(p.kind);
+          const fillColor = mapDotColor(p.kind);
           const preview =
             p.id_preview || p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6);
           const avatarHref = p.avatar_path || null;
@@ -449,7 +489,7 @@ export function MapOfKnowledge2D({
                   cx={sx}
                   cy={sy}
                   r={focused ? 6 : 4.5}
-                  fill={fill}
+                  fill={fillColor}
                   fillOpacity={0.9}
                   stroke={
                     focused
@@ -480,8 +520,8 @@ export function MapOfKnowledge2D({
 
         {userLocations.length === 0 && regions.length === 0 && (
           <text
-            x={WIDTH / 2}
-            y={HEIGHT / 2}
+            x={width / 2}
+            y={height / 2}
             textAnchor="middle"
             className="fill-zinc-600"
             style={{ fontSize: 13, fontFamily: "ui-monospace, monospace" }}

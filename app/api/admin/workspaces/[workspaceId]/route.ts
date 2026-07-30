@@ -36,7 +36,9 @@ export async function GET(
         .order("created_at", { ascending: true }),
       adminClient
         .from("workspace_tap_sessions")
-        .select("id, status, overall_score, created_at, completed_at, requested_duration_seconds")
+        .select(
+          "id, status, overall_score, created_at, completed_at, requested_duration_seconds, interaction_kind",
+        )
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false }),
     ]);

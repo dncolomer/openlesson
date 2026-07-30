@@ -402,9 +402,16 @@ describe("updateLearnerStateAfterScore integration", () => {
     expect(result.knowledgeConfig!.confidence).toBeGreaterThan(0);
 
     expect(db._state.lwm).toHaveLength(1);
-    expect(db._state.snapshots).toHaveLength(1);
-    expect(db._state.snapshots[0].trigger).toBe("score");
-    expect(db._state.snapshots[0].subject_user_id).toBe("learner-1");
+    // Product v1 + 3 experimental dual-write models per score event
+    expect(db._state.snapshots.length).toBeGreaterThanOrEqual(1);
+    const v1Snaps = db._state.snapshots.filter(
+      (s) => s.embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+    );
+    expect(v1Snaps).toHaveLength(1);
+    expect(v1Snaps[0].trigger).toBe("score");
+    expect(v1Snaps[0].subject_user_id).toBe("learner-1");
+    // LWM pointer remains product v1 only
+    expect(result.knowledgeConfig?.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
   });
 
   it("accumulates scores across verticals and moves embedding", async () => {
@@ -460,12 +467,16 @@ describe("updateLearnerStateAfterScore integration", () => {
 
     expect(v2.worldModel.scores_snapshot.verification_score).toBe(40);
     expect(v2.worldModel.scores_snapshot.augmentation_score).toBe(85);
-    expect(db._state.snapshots).toHaveLength(2);
+    const v1Snaps = db._state.snapshots.filter(
+      (s) => s.embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+    );
+    expect(v1Snaps).toHaveLength(2);
     expect(l2Distance(v1.knowledgeConfig!.vector, v2.knowledgeConfig!.vector)).toBeGreaterThan(0);
 
     const latest = await loadLatestKnowledgeConfig(db, "ws", { user_id: "u" });
     expect(latest!.as_of_ms).toBe(v2.knowledgeConfig!.as_of_ms);
     expect(latest!.vector).toEqual(v2.knowledgeConfig!.vector);
+    expect(latest!.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
   });
 
   it("scopes guest participants separately from owners", async () => {
@@ -496,6 +507,9 @@ describe("updateLearnerStateAfterScore integration", () => {
     expect(guest.model.scores_snapshot.verification_score).toBe(30);
     expect(owner.model.scores_snapshot.verification_score).toBe(95);
     expect(db._state.lwm).toHaveLength(2);
-    expect(db._state.snapshots).toHaveLength(2);
+    const v1Snaps = db._state.snapshots.filter(
+      (s) => s.embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+    );
+    expect(v1Snaps).toHaveLength(2);
   });
 });

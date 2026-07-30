@@ -13,11 +13,15 @@ import {
   adminSectionTitleClass,
 } from "@/components/admin/styles";
 import {
-  activityTypeLabel,
-  type ActiveUserRow,
+  activityTypeLabelForEvent,
   type ActivityEvent,
   type ActivityWindow,
+  type ActiveUserRow,
 } from "@/lib/admin/activity";
+import {
+  ADMIN_SESSION_HORIZON_LABELS,
+  adminActiveUserActivityLabel,
+} from "@/lib/admin/product-labels";
 
 interface Stats {
   totalUsers: number;
@@ -45,8 +49,17 @@ const WINDOWS: Array<{ id: ActivityWindow; label: string }> = [
 const SECTION_LINKS = [
   { href: "/admin/users", label: "Users", description: "Accounts, plans, overage" },
   { href: "/admin/organizations", label: "Organizations", description: "Teams, invites, billing" },
-  { href: "/admin/workspaces", label: "Workspaces", description: "Plans, visibility, TAP" },
-  { href: "/admin/sessions", label: "Sessions", description: "ILE blocks and TAP runs" },
+  { href: "/admin/workspaces", label: "Workspaces", description: "Plans, visibility, sessions" },
+  {
+    href: "/admin/sessions",
+    label: "Sessions",
+    description: "Open-ended and timed product runs",
+  },
+  {
+    href: "/admin/data-studio",
+    label: "Data Studio",
+    description: "PoW, xAI, snapshots, regions, bulk LWM",
+  },
 ] as const;
 
 export default function AdminPage() {
@@ -122,8 +135,14 @@ export default function AdminPage() {
         <StatCard label="MAU" value={stats?.monthlyActiveUsers ?? 0} />
         <StatCard label="Active subs" value={stats?.activeSubscriptions ?? 0} />
         <StatCard label="Organizations" value={stats?.totalOrganizations ?? 0} />
-        <StatCard label="ILE sessions" value={stats?.totalIleSessions ?? 0} />
-        <StatCard label="TAP sessions" value={stats?.totalTapSessions ?? 0} />
+        <StatCard
+          label={ADMIN_SESSION_HORIZON_LABELS.openEnded}
+          value={stats?.totalIleSessions ?? 0}
+        />
+        <StatCard
+          label={ADMIN_SESSION_HORIZON_LABELS.timed}
+          value={stats?.totalTapSessions ?? 0}
+        />
         <StatCard label="Workspaces" value={stats?.totalWorkspaces ?? 0} />
         <StatCard label="Proof of work" value={stats?.totalEvidence ?? 0} />
       </div>
@@ -198,7 +217,9 @@ export default function AdminPage() {
                         {formatRelative(user.lastActiveAt)}
                       </td>
                       <td className="px-4 py-2.5 text-neutral-400">
-                        <span className="text-neutral-300">{activityCountLabel(user)}</span>
+                        <span className="text-neutral-300">
+                          {adminActiveUserActivityLabel(user)}
+                        </span>
                       </td>
                       <td className="px-4 py-2.5">
                         <span className={adminPillClass}>{user.plan}</span>
@@ -215,7 +236,7 @@ export default function AdminPage() {
           <div className="border-b border-neutral-800 px-4 py-3 sm:px-5">
             <h3 className={adminSectionTitleClass}>Activity feed</h3>
             <p className="mt-0.5 text-xs text-neutral-500">
-              ILE, TAP, workspaces, and proof-of-work
+              Sessions, workspaces, and proof-of-work
             </p>
           </div>
           {activityLoading ? (
@@ -238,7 +259,7 @@ export default function AdminPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className={adminPillClass}>{activityTypeLabel(event.type)}</span>
+                          <span className={adminPillClass}>{activityTypeLabelForEvent(event)}</span>
                           <span className="text-neutral-500">{formatRelative(event.createdAt)}</span>
                           {event.status && (
                             <span className="text-neutral-600">{event.status}</span>
@@ -342,15 +363,6 @@ function StatCard({ label, value }: { label: string; value: number }) {
       <div className={`mt-1 ${adminLabelClass}`}>{label}</div>
     </div>
   );
-}
-
-function activityCountLabel(user: ActiveUserRow): string {
-  const parts: string[] = [];
-  if (user.ileSessions) parts.push(`${user.ileSessions} ILE`);
-  if (user.tapSessions) parts.push(`${user.tapSessions} TAP`);
-  if (user.proofOfWork) parts.push(`${user.proofOfWork} PoW`);
-  if (user.workspacesCreated) parts.push(`${user.workspacesCreated} WS`);
-  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 function formatRelative(iso: string): string {

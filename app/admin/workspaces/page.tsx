@@ -189,7 +189,7 @@ export default function AdminPlansPage() {
           <div className="text-2xl font-semibold text-white">
             {kpiPlans.reduce((sum, p) => sum + (p.tap_session_count || 0), 0)}
           </div>
-          <div className={`mt-1 ${adminLabelClass}`}>TAP sessions (this page)</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Timed sessions (this page)</div>
           <div className="mt-2 flex gap-2 text-[11px]">
             <span className="text-white">Agent-created: {agentCount}</span>
           </div>
@@ -258,7 +258,7 @@ export default function AdminPlansPage() {
                 Nodes{getSortIcon("node_count")}
               </th>
               <th className="px-4 py-3 text-left font-medium">Visibility</th>
-              <th className="px-4 py-3 text-left font-medium">TAP</th>
+              <th className="px-4 py-3 text-left font-medium">Timed</th>
               <th className="px-4 py-3 text-left font-medium">Source</th>
             </tr>
           </thead>

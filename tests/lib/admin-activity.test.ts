@@ -21,9 +21,10 @@ const sampleRows: RawActivityRow[] = [
     id: "t1",
     type: "tap_session",
     createdAt: "2026-07-17T13:00:00.000Z",
-    summary: "TAP session",
+    summary: "Timed Exploration",
     href: "/admin/sessions/t1",
     userId: "u2",
+    interaction_kind: "conversational",
   },
   {
     id: "p1",
@@ -132,10 +133,22 @@ describe("admin activity helpers", () => {
     expect(ranked[1].plan).toBe("trial");
   });
 
-  it("labels activity types for UI", () => {
-    expect(activityTypeLabel("ile_session")).toBe("ILE session");
-    expect(activityTypeLabel("tap_session")).toBe("TAP session");
+  it("labels activity types with product tool / horizon names (not TAP/ILE)", () => {
+    expect(activityTypeLabel("ile_session")).toBe("Open-ended session");
+    expect(activityTypeLabel("tap_session")).toBe("Timed session");
     expect(activityTypeLabel("proof_of_work")).toBe("Proof of work");
     expect(activityTypeLabel("workspace_created")).toBe("Workspace");
+    expect(activityTypeLabel("ile_session")).not.toMatch(/TAP|ILE/i);
+    expect(activityTypeLabel("tap_session")).not.toMatch(/TAP|ILE/i);
+
+    expect(
+      activityTypeLabel("ile_session", { session_mode: "project", preferFullProductName: true }),
+    ).toBe("Open-ended Drill");
+    expect(
+      activityTypeLabel("tap_session", {
+        interaction_kind: "exercise",
+        preferFullProductName: true,
+      }),
+    ).toBe("Timed Drill");
   });
 });

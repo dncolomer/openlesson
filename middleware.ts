@@ -16,6 +16,8 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/legal",
   "/tap/session/",
   "/ile/session/",
+  "/portal/",
+  "/practice-portal/",
   "/insights/",
   "/p/",
   "/quiz/",
@@ -84,8 +86,16 @@ export async function middleware(request: NextRequest) {
   const protectedRoutes = ["/session", "/dashboard", "/results", "/admin"];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  // Public routes that should skip all auth logic (shareable TAP/ILE guest links)
-  const publicRoutes = ["/pricing", "/tap/session", "/ile/session", "/insights", "/learn"];
+  // Public routes that should skip all auth logic (shareable TAP/ILE guest links + Practice Portal)
+  const publicRoutes = [
+    "/pricing",
+    "/tap/session",
+    "/ile/session",
+    "/portal",
+    "/practice-portal",
+    "/insights",
+    "/learn",
+  ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

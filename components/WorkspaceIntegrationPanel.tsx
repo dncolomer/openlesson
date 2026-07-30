@@ -9,6 +9,7 @@ import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
 import { WorkspaceGuestLinksPanel } from "@/components/WorkspaceGuestLinksPanel";
+import { WorkspaceKnowledgePortalPanel } from "@/components/WorkspaceKnowledgePortalPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
@@ -17,12 +18,14 @@ import type { Workspace } from "@/components/WorkspaceView";
 type SettingsSubview =
   | "general"
   | "regions"
+  | "knowledge-portal"
   | "guest-links"
   | "integrations";
 
 const SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "general",
   "regions",
+  "knowledge-portal",
   "guest-links",
   "integrations",
 ];
@@ -84,6 +87,10 @@ export function WorkspaceIntegrationPanel({
       [
         { id: "general" as const, label: "General" },
         { id: "regions" as const, label: "Knowledge Regions" },
+        {
+          id: "knowledge-portal" as const,
+          label: t("planView.knowledgePortalSettingsTab"),
+        },
         { id: "guest-links" as const, label: t("planView.performanceSubTabTap") },
         { id: "integrations" as const, label: "Integrations" },
       ] satisfies Array<{ id: SettingsSubview; label: string }>,
@@ -208,6 +215,28 @@ export function WorkspaceIntegrationPanel({
             </div>
             <CustomVerificationModelsPanel
               workspaceId={workspaceId}
+              currentUserId={currentUserId}
+            />
+          </section>
+        ) : null}
+
+        {activeSubview === "knowledge-portal" ? (
+          <section
+            className="space-y-3"
+            data-settings-section="knowledge-portal"
+            data-settings-tab-panel="knowledge-portal"
+          >
+            <div className="min-w-0 shrink-0">
+              <h2 className="text-sm font-medium text-white">
+                {t("planView.practicePortalTitle")}
+              </h2>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
+                {t("planView.practicePortalHint")}
+              </p>
+            </div>
+            <WorkspaceKnowledgePortalPanel
+              workspaceId={workspaceId}
+              isOwner={isOwner}
               currentUserId={currentUserId}
             />
           </section>

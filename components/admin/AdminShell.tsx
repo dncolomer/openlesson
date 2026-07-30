@@ -10,6 +10,7 @@ const NAV_ITEMS: Array<{ href: string; label: string; exact?: boolean }> = [
   { href: "/admin/organizations", label: "Organizations" },
   { href: "/admin/workspaces", label: "Workspaces" },
   { href: "/admin/sessions", label: "Sessions" },
+  { href: "/admin/data-studio", label: "Data Studio" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               Admin
             </h1>
             <p className="mt-1 max-w-xl text-sm text-neutral-400">
-              Platform operations — users, orgs, workspaces, and live activity.
+              Platform operations — users, orgs, workspaces, activity, and Data Studio.
             </p>
           </div>
         </div>

@@ -1112,18 +1112,15 @@ export function MapOfKnowledgeClient() {
         >
           {fullscreen ? (
             <h2 id="map-canvas-heading" className="sr-only">
-              2D & 3D knowledge configuration
+              Embedding space (2D/3D projections)
             </h2>
           ) : (
             <div className="mb-2 min-w-0">
-              <div className="mb-1 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-2.5 py-0.5 font-mono text-[10px] tracking-[2px] text-zinc-500">
-                EMBEDDING SPACE
-              </div>
               <h2
                 id="map-canvas-heading"
-                className="text-lg font-medium tracking-tight text-white sm:text-xl"
+                className="mb-1 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-2.5 py-0.5 font-mono text-[10px] tracking-[2px] text-zinc-500"
               >
-                2D & 3D knowledge configuration
+                EMBEDDING SPACE (2D/3D projections)
               </h2>
             </div>
           )}

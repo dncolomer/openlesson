@@ -1,4 +1,5 @@
 import type { AdminProofOfWorkDetails } from "@/lib/admin/proof-of-work";
+import { adminActivityTypeLabel } from "@/lib/admin/product-labels";
 
 export type ActivityWindow = "24h" | "7d" | "30d";
 
@@ -25,6 +26,9 @@ export type ActivityEvent = {
   user: ActivityUser;
   /** Present for proof_of_work events — used by expandable feed rows. */
   details?: AdminProofOfWorkDetails;
+  /** Optional product subtype for four-variant labels. */
+  session_mode?: string | null;
+  interaction_kind?: string | null;
 };
 
 export type ActiveUserRow = {
@@ -33,7 +37,9 @@ export type ActiveUserRow = {
   email: string | null;
   plan: string;
   lastActiveAt: string;
+  /** Open-ended (technical ile) session count in window. */
   ileSessions: number;
+  /** Timed (technical tap) session count in window. */
   tapSessions: number;
   proofOfWork: number;
   workspacesCreated: number;
@@ -48,6 +54,8 @@ export type RawActivityRow = {
   href: string;
   userId: string | null;
   details?: AdminProofOfWorkDetails;
+  session_mode?: string | null;
+  interaction_kind?: string | null;
 };
 
 const WINDOW_MS: Record<ActivityWindow, number> = {
@@ -65,19 +73,30 @@ export function activityWindowStart(window: ActivityWindow, now = new Date()): D
   return new Date(now.getTime() - WINDOW_MS[window]);
 }
 
-export function activityTypeLabel(type: ActivityType): string {
-  switch (type) {
-    case "ile_session":
-      return "ILE session";
-    case "tap_session":
-      return "TAP session";
-    case "proof_of_work":
-      return "Proof of work";
-    case "workspace_created":
-      return "Workspace";
-    default:
-      return type;
-  }
+/**
+ * Operator-facing activity type label (product tool names / horizon rollups).
+ * Prefer {@link activityTypeLabelForEvent} when subtype fields are available.
+ */
+export function activityTypeLabel(
+  type: ActivityType,
+  meta?: {
+    session_mode?: string | null;
+    interaction_kind?: string | null;
+    preferFullProductName?: boolean;
+  },
+): string {
+  return adminActivityTypeLabel(type, meta);
+}
+
+/** Label an activity event using any attached product subtype fields. */
+export function activityTypeLabelForEvent(
+  event: Pick<ActivityEvent, "type" | "session_mode" | "interaction_kind">,
+): string {
+  return adminActivityTypeLabel(event.type, {
+    session_mode: event.session_mode,
+    interaction_kind: event.interaction_kind,
+    preferFullProductName: Boolean(event.session_mode || event.interaction_kind),
+  });
 }
 
 /** Merge multi-source rows and sort newest first. */
@@ -106,6 +125,8 @@ export function mergeActivityEvents(
         email: profile?.email ?? null,
       },
       details: row.details,
+      session_mode: row.session_mode ?? null,
+      interaction_kind: row.interaction_kind ?? null,
     };
   });
 }

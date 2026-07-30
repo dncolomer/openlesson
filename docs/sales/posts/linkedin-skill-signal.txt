@@ -1,0 +1,43 @@
+IMAGE: docs/sales/posts/linkedin-skill-signal.jpg
+PLATFORM: LinkedIn
+TONE: Operator observation — not a pitch deck
+CTA: Soft (conversation invite only)
+
+────────────────────────────────────────
+COPY-PASTE BELOW THIS LINE
+────────────────────────────────────────
+
+Most hiring pipelines still collapse at the same point.
+
+Everyone looks strong on paper.
+Few people get a real chance to show how they think.
+
+AI made applications cleaner.
+It did not make judgment easier.
+
+Resumes get more polished.
+Take-homes get more generic.
+Live interviews stay expensive — and still uneven.
+
+The teams moving faster right now are not interviewing more.
+They are getting an earlier skill signal.
+
+Something async.
+Something comparable across candidates.
+Something that surfaces reasoning, not just a finished answer.
+
+~15 minutes of structured think-aloud work can change who reaches the hiring manager.
+A real multi-block work sample can replace the take-home nobody has time to grade well.
+
+Hard skills should be verified before they become calendar debt.
+
+If you are scaling a team — or placing hard-skill roles for clients — curious how you currently prove fit before the interview loop.
+
+────────────────────────────────────────
+POSTING NOTES
+────────────────────────────────────────
+
+• Pair with: linkedin-skill-signal.jpg (square — works as feed image)
+• Hashtags (optional, use 3 max): #hiring #talentacquisition #recruiting
+• Do not add a hard product dump in comments on day 1; reply to comments with questions first
+• First line is the hook — keep it as its own paragraph for mobile preview

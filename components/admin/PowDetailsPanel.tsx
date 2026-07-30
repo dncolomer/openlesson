@@ -24,8 +24,11 @@ export function PowDetailsPanel({ details }: { details: AdminProofOfWorkDetails 
     Object.keys(details.bandPowers).length > 0;
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border border-neutral-800 bg-neutral-950/60 p-3">
-      <dl className="space-y-1.5">
+    <div
+      className="max-w-full space-y-2 overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/60 p-3"
+      data-studio-pow-details
+    >
+      <dl className="min-w-0 space-y-1.5">
         <DetailRow label="Type">{details.proofOfWorkType}</DetailRow>
         <DetailRow label="File">
           {details.fileName}

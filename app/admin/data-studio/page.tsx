@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
 import { PowDetailsPanel } from "@/components/admin/PowDetailsPanel";
@@ -23,9 +23,12 @@ import {
   initialPlatformBulkSnapshotProgress,
   parseDataStudioTab,
   reducePlatformBulkSnapshotProgress,
+  sortStudioRows,
+  toggleStudioSort,
   type DataStudioTab,
   type PlatformBulkSnapshotState,
   type StudioOverviewCounts,
+  type StudioSortState,
 } from "@/lib/admin/data-studio";
 import type { AdminProofOfWorkDetails } from "@/lib/admin/proof-of-work";
 import { PROJECTION_ALGORITHM_OPTIONS } from "@/lib/knowledge-config";
@@ -151,9 +154,20 @@ export default function AdminDataStudioPage() {
   const [powTotal, setPowTotal] = useState(0);
   const [powSearch, setPowSearch] = useState("");
   const [powType, setPowType] = useState("");
+  const [powLink, setPowLink] = useState("");
+  const [powLinkResolve, setPowLinkResolve] = useState<{
+    kind: string;
+    link_id: string;
+    session_id: string | null;
+    workspace_id: string | null;
+  } | null>(null);
   const [powLoading, setPowLoading] = useState(false);
   const [powError, setPowError] = useState<string | null>(null);
   const [expandedPowId, setExpandedPowId] = useState<string | null>(null);
+  const [powSort, setPowSort] = useState<StudioSortState>({
+    column: "created_at",
+    direction: "desc",
+  });
 
   // Snapshots
   const [kcItems, setKcItems] = useState<SnapshotKc[]>([]);
@@ -162,6 +176,14 @@ export default function AdminDataStudioPage() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [snapshotWsFilter, setSnapshotWsFilter] = useState("");
+  const [kcSort, setKcSort] = useState<StudioSortState>({
+    column: "created_at",
+    direction: "desc",
+  });
+  const [evalSort, setEvalSort] = useState<StudioSortState>({
+    column: "ran_at",
+    direction: "desc",
+  });
 
   // Regions
   const [regions, setRegions] = useState<RegionItem[]>([]);
@@ -171,6 +193,10 @@ export default function AdminDataStudioPage() {
   const [regionSearch, setRegionSearch] = useState("");
   const [evalRegionId, setEvalRegionId] = useState<string | null>(null);
   const [regionEvalResult, setRegionEvalResult] = useState<string | null>(null);
+  const [regionSort, setRegionSort] = useState<StudioSortState>({
+    column: "name",
+    direction: "asc",
+  });
 
   // xAI
   const [xaiItems, setXaiItems] = useState<XaiOrgItem[]>([]);
@@ -182,6 +208,10 @@ export default function AdminDataStudioPage() {
   const [xaiLoading, setXaiLoading] = useState(false);
   const [xaiError, setXaiError] = useState<string | null>(null);
   const [xaiIncludeUsage, setXaiIncludeUsage] = useState(false);
+  const [xaiSort, setXaiSort] = useState<StudioSortState>({
+    column: "name",
+    direction: "asc",
+  });
 
   // Bulk
   const [bulkWorkspaces, setBulkWorkspaces] = useState<BulkWorkspace[]>([]);
@@ -191,6 +221,10 @@ export default function AdminDataStudioPage() {
   );
   const [bulkLoadingList, setBulkLoadingList] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkWsSort, setBulkWsSort] = useState<StudioSortState>({
+    column: "label",
+    direction: "asc",
+  });
 
   // Projection
   const [projWorkspaceId, setProjWorkspaceId] = useState("");
@@ -219,21 +253,26 @@ export default function AdminDataStudioPage() {
       const qs = new URLSearchParams({
         page: String(powPage),
         pageSize: "25",
+        sort: powSort.column,
+        order: powSort.direction,
       });
       if (powSearch.trim()) qs.set("search", powSearch.trim());
       if (powType.trim()) qs.set("type", powType.trim());
+      if (powLink.trim()) qs.set("link", powLink.trim());
       const res = await fetch(`/api/admin/data-studio/pow?${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load PoW");
       setPowItems(data.items || []);
       setPowTotal(data.totalCount || 0);
       setPowTotalPages(data.totalPages || 1);
+      setPowLinkResolve(data.link_resolve ?? null);
     } catch (err) {
       setPowError(err instanceof Error ? err.message : "Failed to load PoW");
+      setPowLinkResolve(null);
     } finally {
       setPowLoading(false);
     }
-  }, [powPage, powSearch, powType]);
+  }, [powPage, powSearch, powType, powLink, powSort]);
 
   const loadSnapshots = useCallback(async () => {
     setSnapshotLoading(true);
@@ -353,6 +392,125 @@ export default function AdminDataStudioPage() {
   const bulkProgressText = useMemo(
     () => formatPlatformBulkSnapshotProgress(bulkProgress),
     [bulkProgress],
+  );
+
+  const sortedPowItems = useMemo(
+    () =>
+      sortStudioRows(powItems, powSort, (row, col) => {
+        switch (col) {
+          case "created_at":
+          case "when":
+            return row.createdAt;
+          case "type":
+          case "proof_of_work_type":
+            return row.proofOfWorkType;
+          case "summary":
+          case "file_name":
+            return row.summary || row.fileName;
+          case "workspace_id":
+          case "workspace":
+            return row.workspaceTitle || row.workspaceId;
+          case "timestamp_ms":
+            return row.timestampMs;
+          default:
+            return null;
+        }
+      }),
+    [powItems, powSort],
+  );
+
+  const sortedKcItems = useMemo(
+    () =>
+      sortStudioRows(kcItems, kcSort, (row, col) => {
+        switch (col) {
+          case "created_at":
+            return row.created_at;
+          case "confidence":
+            return row.confidence;
+          case "pow_event_count":
+            return row.pow_event_count;
+          case "workspace":
+            return snapshotTitles[row.workspace_id] || row.workspace_id;
+          case "embedding_model_id":
+            return row.embedding_model_id;
+          default:
+            return (row as Record<string, unknown>)[col];
+        }
+      }),
+    [kcItems, kcSort, snapshotTitles],
+  );
+
+  const sortedEvalItems = useMemo(
+    () =>
+      sortStudioRows(evalItems, evalSort, (row, col) => {
+        switch (col) {
+          case "ran_at":
+            return row.ran_at;
+          case "score":
+            return row.score;
+          case "vertical":
+            return row.vertical;
+          case "workspace":
+            return snapshotTitles[row.workspace_id] || row.workspace_id;
+          default:
+            return (row as Record<string, unknown>)[col];
+        }
+      }),
+    [evalItems, evalSort, snapshotTitles],
+  );
+
+  const sortedRegions = useMemo(
+    () =>
+      sortStudioRows(regions, regionSort, (row, col) => {
+        switch (col) {
+          case "name":
+            return row.name;
+          case "workspace":
+            return row.workspace_title || row.workspace_id;
+          case "subject_count":
+            return row.subject_count;
+          case "mean_radius":
+            return row.mean_radius;
+          case "cohort_cohesion":
+            return row.cohort_cohesion;
+          case "created_at":
+            return row.created_at;
+          default:
+            return (row as Record<string, unknown>)[col];
+        }
+      }),
+    [regions, regionSort],
+  );
+
+  const sortedXaiItems = useMemo(
+    () =>
+      sortStudioRows(xaiItems, xaiSort, (row, col) => {
+        switch (col) {
+          case "name":
+            return row.name;
+          case "plan":
+            return row.plan;
+          case "xai_api_key_status":
+            return row.xai_api_key_status;
+          case "xai_collection_status":
+            return row.xai_collection_status;
+          case "usage":
+            return row.usage?.totalUsd ?? -1;
+          default:
+            return (row as Record<string, unknown>)[col];
+        }
+      }),
+    [xaiItems, xaiSort],
+  );
+
+  const sortedBulkWorkspaces = useMemo(
+    () =>
+      sortStudioRows(bulkWorkspaces, bulkWsSort, (row, col) => {
+        if (col === "label" || col === "title") return row.label || row.title || row.id;
+        if (col === "id") return row.id;
+        return (row as Record<string, unknown>)[col];
+      }),
+    [bulkWorkspaces, bulkWsSort],
   );
 
   const runBulkSnapshot = async (mode: "selected" | "all") => {
@@ -527,7 +685,20 @@ export default function AdminDataStudioPage() {
       {tab === "pow" && (
         <section className="space-y-4" data-studio-panel="pow">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[12rem] flex-1">
+            <div className="min-w-[16rem] flex-[2]" data-studio-pow-link>
+              <label className={adminLabelClass}>Session link (TAP / ILE)</label>
+              <input
+                className={`${adminInputClass} mt-1`}
+                value={powLink}
+                onChange={(e) => {
+                  setPowPage(1);
+                  setPowLink(e.target.value);
+                }}
+                placeholder="https://…/tap/session/… or bare token"
+                data-studio-pow-link-input
+              />
+            </div>
+            <div className="min-w-[10rem] flex-1">
               <label className={adminLabelClass}>Search</label>
               <input
                 className={`${adminInputClass} mt-1`}
@@ -551,10 +722,32 @@ export default function AdminDataStudioPage() {
                 placeholder="tool, upload…"
               />
             </div>
+            <button
+              type="button"
+              className={adminPrimaryBtnClass}
+              onClick={() => void loadPow()}
+              data-studio-pow-lookup
+            >
+              Lookup
+            </button>
             <button type="button" className={adminBtnClass} onClick={() => void loadPow()}>
               Refresh
             </button>
           </div>
+          {powLinkResolve && (
+            <p className="text-xs text-neutral-400" data-studio-pow-link-resolve>
+              Resolved {powLinkResolve.kind.toUpperCase()} link{" "}
+              <span className="font-mono text-neutral-300">
+                {powLinkResolve.link_id.slice(0, 8)}…
+              </span>
+              {powLinkResolve.session_id
+                ? ` · session ${powLinkResolve.session_id.slice(0, 8)}…`
+                : ""}
+              {powLinkResolve.workspace_id
+                ? ` · workspace ${powLinkResolve.workspace_id.slice(0, 8)}…`
+                : ""}
+            </p>
+          )}
           {powError && <p className="text-sm text-neutral-300">{powError}</p>}
           <p className="text-xs text-neutral-500">
             {powTotal.toLocaleString()} rows · page {powPage}/{powTotalPages}
@@ -564,58 +757,108 @@ export default function AdminDataStudioPage() {
           ) : (
             <div className={adminCardClass}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table
+                  className="w-full table-fixed text-left text-sm"
+                  data-studio-pow-table
+                >
                   <thead>
                     <tr className={adminTableHeadClass}>
-                      <th className="px-4 py-2 font-medium">When</th>
-                      <th className="px-4 py-2 font-medium">Type</th>
-                      <th className="px-4 py-2 font-medium">Summary</th>
-                      <th className="px-4 py-2 font-medium">Workspace</th>
-                      <th className="px-4 py-2 font-medium" />
+                      <SortTh
+                        label="When"
+                        column="created_at"
+                        sort={powSort}
+                        onSort={(col) => setPowSort((s) => toggleStudioSort(s, col, "desc"))}
+                        className="w-[9rem]"
+                      />
+                      <SortTh
+                        label="Type"
+                        column="type"
+                        sort={powSort}
+                        onSort={(col) => setPowSort((s) => toggleStudioSort(s, col, "asc"))}
+                        className="w-[7rem]"
+                      />
+                      <SortTh
+                        label="Summary"
+                        column="summary"
+                        sort={powSort}
+                        onSort={(col) => setPowSort((s) => toggleStudioSort(s, col, "asc"))}
+                      />
+                      <SortTh
+                        label="Workspace"
+                        column="workspace"
+                        sort={powSort}
+                        onSort={(col) => setPowSort((s) => toggleStudioSort(s, col, "asc"))}
+                        className="w-[10rem]"
+                      />
+                      <th className="w-[5rem] px-4 py-2 font-medium" />
                     </tr>
                   </thead>
                   <tbody>
-                    {powItems.map((item) => {
+                    {sortedPowItems.map((item) => {
                       const expanded = expandedPowId === item.id;
                       return (
-                        <tr key={item.id} className="border-b border-neutral-800/80 align-top">
-                          <td className="whitespace-nowrap px-4 py-2.5 text-neutral-400">
-                            {formatWhen(item.createdAt)}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <span className={adminPillClass}>{item.proofOfWorkType}</span>
-                          </td>
-                          <td className="px-4 py-2.5 text-neutral-200">
-                            {item.summary || item.fileName}
-                            {expanded && <PowDetailsPanel details={item} />}
-                          </td>
-                          <td className="px-4 py-2.5 text-neutral-400">
-                            {item.workspaceId ? (
-                              <Link
-                                href={`/admin/workspaces/${item.workspaceId}`}
-                                className="hover:text-white hover:underline"
+                        <Fragment key={item.id}>
+                          <tr
+                            className="border-b border-neutral-800/80"
+                            data-studio-pow-row={item.id}
+                          >
+                            <td className="whitespace-nowrap px-4 py-2.5 text-neutral-400 align-top">
+                              {formatWhen(item.createdAt)}
+                              {item.timestampMs != null ? (
+                                <span className="mt-0.5 block font-mono text-[10px] text-neutral-600">
+                                  ts {item.timestampMs}
+                                </span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-2.5 align-top">
+                              <span className={adminPillClass}>{item.proofOfWorkType}</span>
+                            </td>
+                            <td className="min-w-0 px-4 py-2.5 text-neutral-200 align-top">
+                              <span className="block truncate">
+                                {item.summary || item.fileName}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-neutral-400 align-top">
+                              {item.workspaceId ? (
+                                <Link
+                                  href={`/admin/workspaces/${item.workspaceId}`}
+                                  className="hover:text-white hover:underline"
+                                >
+                                  {item.workspaceTitle || item.workspaceId.slice(0, 8)}
+                                </Link>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-right align-top">
+                              <button
+                                type="button"
+                                className="text-xs text-neutral-500 hover:text-white"
+                                data-studio-pow-expand={item.id}
+                                onClick={() =>
+                                  setExpandedPowId(expanded ? null : item.id)
+                                }
                               >
-                                {item.workspaceTitle || item.workspaceId.slice(0, 8)}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <button
-                              type="button"
-                              className="text-xs text-neutral-500 hover:text-white"
-                              onClick={() =>
-                                setExpandedPowId(expanded ? null : item.id)
-                              }
+                                {expanded ? "Hide" : "Details"}
+                              </button>
+                            </td>
+                          </tr>
+                          {expanded ? (
+                            <tr
+                              className="border-b border-neutral-800/80 bg-neutral-950/40"
+                              data-studio-pow-details-row={item.id}
                             >
-                              {expanded ? "Hide" : "Details"}
-                            </button>
-                          </td>
-                        </tr>
+                              <td colSpan={5} className="px-4 py-3">
+                                <div className="max-w-full overflow-x-auto">
+                                  <PowDetailsPanel details={item} />
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
                       );
                     })}
-                    {powItems.length === 0 && (
+                    {sortedPowItems.length === 0 && (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
                           No proof of work found
@@ -676,8 +919,37 @@ export default function AdminDataStudioPage() {
                     Latest-first geometry models (embedding space)
                   </p>
                 </div>
-                <ul className="divide-y divide-neutral-800/80 max-h-[28rem] overflow-y-auto">
-                  {kcItems.map((row) => (
+                <div className="flex flex-wrap gap-2 border-b border-neutral-800/80 px-4 py-2">
+                  <SortChip
+                    label="Created"
+                    column="created_at"
+                    sort={kcSort}
+                    onSort={(c) => setKcSort((s) => toggleStudioSort(s, c, "desc"))}
+                  />
+                  <SortChip
+                    label="Confidence"
+                    column="confidence"
+                    sort={kcSort}
+                    onSort={(c) => setKcSort((s) => toggleStudioSort(s, c, "desc"))}
+                  />
+                  <SortChip
+                    label="PoW count"
+                    column="pow_event_count"
+                    sort={kcSort}
+                    onSort={(c) => setKcSort((s) => toggleStudioSort(s, c, "desc"))}
+                  />
+                  <SortChip
+                    label="Workspace"
+                    column="workspace"
+                    sort={kcSort}
+                    onSort={(c) => setKcSort((s) => toggleStudioSort(s, c, "asc"))}
+                  />
+                </div>
+                <ul
+                  className="divide-y divide-neutral-800/80 max-h-[28rem] overflow-y-auto"
+                  data-studio-sort-list="kc"
+                >
+                  {sortedKcItems.map((row) => (
                     <li key={row.id} className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={adminPillClass}>{row.embedding_model_id}</span>
@@ -700,7 +972,7 @@ export default function AdminDataStudioPage() {
                       </p>
                     </li>
                   ))}
-                  {kcItems.length === 0 && (
+                  {sortedKcItems.length === 0 && (
                     <li className="px-4 py-8 text-center text-neutral-500">No snapshots</li>
                   )}
                 </ul>
@@ -712,8 +984,31 @@ export default function AdminDataStudioPage() {
                     Vertical scorecards / snapshot models
                   </p>
                 </div>
-                <ul className="divide-y divide-neutral-800/80 max-h-[28rem] overflow-y-auto">
-                  {evalItems.map((row) => (
+                <div className="flex flex-wrap gap-2 border-b border-neutral-800/80 px-4 py-2">
+                  <SortChip
+                    label="Ran"
+                    column="ran_at"
+                    sort={evalSort}
+                    onSort={(c) => setEvalSort((s) => toggleStudioSort(s, c, "desc"))}
+                  />
+                  <SortChip
+                    label="Score"
+                    column="score"
+                    sort={evalSort}
+                    onSort={(c) => setEvalSort((s) => toggleStudioSort(s, c, "desc"))}
+                  />
+                  <SortChip
+                    label="Vertical"
+                    column="vertical"
+                    sort={evalSort}
+                    onSort={(c) => setEvalSort((s) => toggleStudioSort(s, c, "asc"))}
+                  />
+                </div>
+                <ul
+                  className="divide-y divide-neutral-800/80 max-h-[28rem] overflow-y-auto"
+                  data-studio-sort-list="eval"
+                >
+                  {sortedEvalItems.map((row) => (
                     <li key={row.id} className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={adminPillClass}>{row.vertical}</span>
@@ -729,7 +1024,7 @@ export default function AdminDataStudioPage() {
                       <p className="mt-0.5 text-xs text-neutral-500">{formatWhen(row.ran_at)}</p>
                     </li>
                   ))}
-                  {evalItems.length === 0 && (
+                  {sortedEvalItems.length === 0 && (
                     <li className="px-4 py-8 text-center text-neutral-500">No eval runs</li>
                   )}
                 </ul>
@@ -769,19 +1064,44 @@ export default function AdminDataStudioPage() {
           ) : (
             <div className={adminCardClass}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left text-sm" data-studio-sort-table="regions">
                   <thead>
                     <tr className={adminTableHeadClass}>
-                      <th className="px-4 py-2 font-medium">Name</th>
-                      <th className="px-4 py-2 font-medium">Workspace</th>
-                      <th className="px-4 py-2 font-medium">Subjects</th>
-                      <th className="px-4 py-2 font-medium">Radius / θ</th>
-                      <th className="px-4 py-2 font-medium">Cohesion</th>
+                      <SortTh
+                        label="Name"
+                        column="name"
+                        sort={regionSort}
+                        onSort={(c) => setRegionSort((s) => toggleStudioSort(s, c, "asc"))}
+                      />
+                      <SortTh
+                        label="Workspace"
+                        column="workspace"
+                        sort={regionSort}
+                        onSort={(c) => setRegionSort((s) => toggleStudioSort(s, c, "asc"))}
+                      />
+                      <SortTh
+                        label="Subjects"
+                        column="subject_count"
+                        sort={regionSort}
+                        onSort={(c) => setRegionSort((s) => toggleStudioSort(s, c, "desc"))}
+                      />
+                      <SortTh
+                        label="Radius / θ"
+                        column="mean_radius"
+                        sort={regionSort}
+                        onSort={(c) => setRegionSort((s) => toggleStudioSort(s, c, "desc"))}
+                      />
+                      <SortTh
+                        label="Cohesion"
+                        column="cohort_cohesion"
+                        sort={regionSort}
+                        onSort={(c) => setRegionSort((s) => toggleStudioSort(s, c, "desc"))}
+                      />
                       <th className="px-4 py-2 font-medium" />
                     </tr>
                   </thead>
                   <tbody>
-                    {regions.map((r) => (
+                    {sortedRegions.map((r) => (
                       <tr key={r.id} className="border-b border-neutral-800/80">
                         <td className="px-4 py-2.5 text-white">{r.name}</td>
                         <td className="px-4 py-2.5 text-neutral-400">
@@ -813,7 +1133,7 @@ export default function AdminDataStudioPage() {
                         </td>
                       </tr>
                     ))}
-                    {regions.length === 0 && (
+                    {sortedRegions.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
                           No regions
@@ -856,17 +1176,37 @@ export default function AdminDataStudioPage() {
                   <h3 className={adminSectionTitleClass}>Organization xAI resources</h3>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-sm" data-studio-sort-table="xai">
                     <thead>
                       <tr className={adminTableHeadClass}>
-                        <th className="px-4 py-2 font-medium">Org</th>
-                        <th className="px-4 py-2 font-medium">API key</th>
-                        <th className="px-4 py-2 font-medium">Collection</th>
-                        <th className="px-4 py-2 font-medium">Usage</th>
+                        <SortTh
+                          label="Org"
+                          column="name"
+                          sort={xaiSort}
+                          onSort={(c) => setXaiSort((s) => toggleStudioSort(s, c, "asc"))}
+                        />
+                        <SortTh
+                          label="API key"
+                          column="xai_api_key_status"
+                          sort={xaiSort}
+                          onSort={(c) => setXaiSort((s) => toggleStudioSort(s, c, "asc"))}
+                        />
+                        <SortTh
+                          label="Collection"
+                          column="xai_collection_status"
+                          sort={xaiSort}
+                          onSort={(c) => setXaiSort((s) => toggleStudioSort(s, c, "asc"))}
+                        />
+                        <SortTh
+                          label="Usage"
+                          column="usage"
+                          sort={xaiSort}
+                          onSort={(c) => setXaiSort((s) => toggleStudioSort(s, c, "desc"))}
+                        />
                       </tr>
                     </thead>
                     <tbody>
-                      {xaiItems.map((org) => (
+                      {sortedXaiItems.map((org) => (
                         <tr key={org.id} className="border-b border-neutral-800/80">
                           <td className="px-4 py-2.5">
                             <Link
@@ -901,7 +1241,7 @@ export default function AdminDataStudioPage() {
                           </td>
                         </tr>
                       ))}
-                      {xaiItems.length === 0 && (
+                      {sortedXaiItems.length === 0 && (
                         <tr>
                           <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
                             No organizations
@@ -1025,27 +1365,41 @@ export default function AdminDataStudioPage() {
           {bulkLoadingList ? (
             <AdminLoading message="Loading workspaces" />
           ) : (
-            <div className={adminCardClass}>
-              <div className="border-b border-neutral-800 px-4 py-3 flex items-center justify-between gap-2">
+            <div className={adminCardClass} data-studio-sort-list="bulk">
+              <div className="border-b border-neutral-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className={adminSectionTitleClass}>
                   Eligible workspaces ({bulkWorkspaces.length})
                 </h3>
-                <button
-                  type="button"
-                  className="text-xs text-neutral-500 hover:text-white"
-                  onClick={() => {
-                    if (selectedWs.size === bulkWorkspaces.length) {
-                      setSelectedWs(new Set());
-                    } else {
-                      setSelectedWs(new Set(bulkWorkspaces.map((w) => w.id)));
-                    }
-                  }}
-                >
-                  {selectedWs.size === bulkWorkspaces.length ? "Clear all" : "Select all"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SortChip
+                    label="Label"
+                    column="label"
+                    sort={bulkWsSort}
+                    onSort={(c) => setBulkWsSort((s) => toggleStudioSort(s, c, "asc"))}
+                  />
+                  <SortChip
+                    label="Id"
+                    column="id"
+                    sort={bulkWsSort}
+                    onSort={(c) => setBulkWsSort((s) => toggleStudioSort(s, c, "asc"))}
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-neutral-500 hover:text-white"
+                    onClick={() => {
+                      if (selectedWs.size === bulkWorkspaces.length) {
+                        setSelectedWs(new Set());
+                      } else {
+                        setSelectedWs(new Set(bulkWorkspaces.map((w) => w.id)));
+                      }
+                    }}
+                  >
+                    {selectedWs.size === bulkWorkspaces.length ? "Clear all" : "Select all"}
+                  </button>
+                </div>
               </div>
               <ul className="max-h-[24rem] divide-y divide-neutral-800/80 overflow-y-auto">
-                {bulkWorkspaces.map((ws) => (
+                {sortedBulkWorkspaces.map((ws) => (
                   <li key={ws.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                     <input
                       type="checkbox"
@@ -1065,7 +1419,7 @@ export default function AdminDataStudioPage() {
                     </Link>
                   </li>
                 ))}
-                {bulkWorkspaces.length === 0 && (
+                {sortedBulkWorkspaces.length === 0 && (
                   <li className="px-4 py-8 text-center text-neutral-500">No workspaces</li>
                 )}
               </ul>
@@ -1252,4 +1606,73 @@ function formatWhen(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function sortIndicator(sort: StudioSortState, column: string): string {
+  if (sort.column !== column) return "";
+  return sort.direction === "asc" ? " ↑" : " ↓";
+}
+
+function SortTh({
+  label,
+  column,
+  sort,
+  onSort,
+  className = "",
+}: {
+  label: string;
+  column: string;
+  sort: StudioSortState;
+  onSort: (column: string) => void;
+  className?: string;
+}) {
+  const active = sort.column === column;
+  return (
+    <th className={`px-4 py-2 font-medium ${className}`}>
+      <button
+        type="button"
+        className={`inline-flex items-center gap-0.5 text-left transition hover:text-white ${
+          active ? "text-white" : "text-neutral-400"
+        }`}
+        data-studio-sort={column}
+        data-studio-sort-dir={active ? sort.direction : undefined}
+        onClick={() => onSort(column)}
+      >
+        {label}
+        <span className="font-mono text-[10px] text-neutral-500">
+          {sortIndicator(sort, column) || " ·"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+function SortChip({
+  label,
+  column,
+  sort,
+  onSort,
+}: {
+  label: string;
+  column: string;
+  sort: StudioSortState;
+  onSort: (column: string) => void;
+}) {
+  const active = sort.column === column;
+  return (
+    <button
+      type="button"
+      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide transition ${
+        active
+          ? "border-white/40 bg-white/10 text-white"
+          : "border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+      }`}
+      data-studio-sort={column}
+      data-studio-sort-dir={active ? sort.direction : undefined}
+      onClick={() => onSort(column)}
+    >
+      {label}
+      {sortIndicator(sort, column)}
+    </button>
+  );
 }

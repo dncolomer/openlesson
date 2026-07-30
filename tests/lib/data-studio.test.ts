@@ -15,13 +15,18 @@ import {
   initialPlatformBulkSnapshotProgress,
   isAdminProfile,
   matchesStudioPowFilter,
+  matchesStudioPowToSessionLink,
   paginateSlice,
   parseDataStudioTab,
   parsePlatformBulkProgressLine,
   parsePositiveInt,
+  parseStudioSessionLinkInput,
+  parseStudioSortDirection,
   reducePlatformBulkSnapshotProgress,
   selectWorkspacesForBulkSnapshot,
+  sortStudioRows,
   summarizeXaiOrgRows,
+  toggleStudioSort,
   workspaceBulkLabel,
 } from "@/lib/admin/data-studio";
 import {
@@ -105,6 +110,135 @@ describe("data studio browse helpers (pure)", () => {
     ]);
     expect(s.organizationsWithXaiKey).toBe(2);
     expect(s.organizationsWithXaiCollection).toBe(2);
+  });
+});
+
+describe("studio session link parse + PoW match (pure)", () => {
+  it("parseStudioSessionLinkInput extracts TAP/ILE tokens from URLs and bare tokens", () => {
+    expect(parseStudioSessionLinkInput("")).toBeNull();
+    expect(parseStudioSessionLinkInput("  ")).toBeNull();
+
+    const bare = parseStudioSessionLinkInput("QPhnhE7qCFgITvWPDNy0fBp7db0G8MBY");
+    expect(bare).toEqual({
+      token: "QPhnhE7qCFgITvWPDNy0fBp7db0G8MBY",
+      kind: null,
+    });
+
+    const tap = parseStudioSessionLinkInput(
+      "http://localhost:3000/tap/session/abcTOKEN123456",
+    );
+    expect(tap).toEqual({ token: "abcTOKEN123456", kind: "tap" });
+
+    const ile = parseStudioSessionLinkInput(
+      "https://uncertain.systems/ile/session/ileTok_xyz98765",
+    );
+    expect(ile).toEqual({ token: "ileTok_xyz98765", kind: "ile" });
+
+    const pathOnly = parseStudioSessionLinkInput("/tap/session/pathTokenABCDEF");
+    expect(pathOnly?.kind).toBe("tap");
+    expect(pathOnly?.token).toBe("pathTokenABCDEF");
+  });
+
+  it("matchesStudioPowToSessionLink uses session_id, source_link, and legacy metadata", () => {
+    const resolved = {
+      kind: "tap" as const,
+      linkId: "link-uuid-1",
+      sessionId: "link-uuid-1",
+      workspaceId: "ws-1",
+    };
+
+    expect(
+      matchesStudioPowToSessionLink(
+        { session_id: "link-uuid-1", metadata: {} },
+        resolved,
+      ),
+    ).toBe(true);
+
+    expect(
+      matchesStudioPowToSessionLink(
+        {
+          session_id: "other",
+          metadata: { source_link_kind: "tap", source_link_id: "link-uuid-1" },
+        },
+        resolved,
+      ),
+    ).toBe(true);
+
+    expect(
+      matchesStudioPowToSessionLink(
+        { session_id: null, metadata: { tap_session_id: "link-uuid-1" } },
+        resolved,
+      ),
+    ).toBe(true);
+
+    expect(
+      matchesStudioPowToSessionLink(
+        { session_id: "nope", metadata: { source_link_id: "other" } },
+        resolved,
+      ),
+    ).toBe(false);
+
+    const ile = {
+      kind: "ile" as const,
+      linkId: "ile-link-9",
+      sessionId: "sess-9",
+      workspaceId: "ws-2",
+    };
+    expect(
+      matchesStudioPowToSessionLink(
+        { session_id: "sess-9", metadata: null },
+        ile,
+      ),
+    ).toBe(true);
+    expect(
+      matchesStudioPowToSessionLink(
+        { session_id: null, metadata: { ile_link_id: "ile-link-9" } },
+        ile,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("sortStudioRows (pure)", () => {
+  const rows = [
+    { id: "a", name: "Charlie", created_at: "2026-01-03T00:00:00Z", n: 2 },
+    { id: "b", name: "Alice", created_at: "2026-01-01T00:00:00Z", n: 10 },
+    { id: "c", name: "Bob", created_at: "2026-01-02T00:00:00Z", n: 5 },
+  ];
+
+  it("sorts by string and number columns asc/desc and is stable", () => {
+    const byName = sortStudioRows(rows, { column: "name", direction: "asc" }, (r, c) =>
+      c === "name" ? r.name : null,
+    );
+    expect(byName.map((r) => r.id)).toEqual(["b", "c", "a"]);
+
+    const byNDesc = sortStudioRows(rows, { column: "n", direction: "desc" }, (r, c) =>
+      c === "n" ? r.n : null,
+    );
+    expect(byNDesc.map((r) => r.id)).toEqual(["b", "c", "a"]);
+
+    const byWhen = sortStudioRows(
+      rows,
+      { column: "created_at", direction: "asc" },
+      (r, c) => (c === "created_at" ? r.created_at : null),
+    );
+    expect(byWhen.map((r) => r.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("toggleStudioSort and parseStudioSortDirection", () => {
+    expect(parseStudioSortDirection("asc")).toBe("asc");
+    expect(parseStudioSortDirection("DESC")).toBe("desc");
+    expect(parseStudioSortDirection("nope", "asc")).toBe("asc");
+    expect(toggleStudioSort(null, "name", "asc")).toEqual({
+      column: "name",
+      direction: "asc",
+    });
+    expect(
+      toggleStudioSort({ column: "name", direction: "asc" }, "name"),
+    ).toEqual({ column: "name", direction: "desc" });
+    expect(
+      toggleStudioSort({ column: "name", direction: "desc" }, "created_at", "desc"),
+    ).toEqual({ column: "created_at", direction: "desc" });
   });
 });
 
@@ -359,6 +493,28 @@ describe("data studio structural wiring", () => {
     expect(page).toContain("data-studio-panel=\"regions\"");
     expect(page).toContain("data-studio-panel=\"bulk\"");
     expect(page).toContain("data-studio-panel=\"projections\"");
+    // PoW session link paste + expand containment + sort controls
+    expect(page).toContain("data-studio-pow-link");
+    expect(page).toContain("data-studio-pow-link-input");
+    expect(page).toContain("data-studio-pow-lookup");
+    expect(page).toContain("data-studio-pow-details-row");
+    expect(page).toContain("colSpan={5}");
+    expect(page).toContain("sortStudioRows");
+    expect(page).toContain("toggleStudioSort");
+    expect(page).toContain("data-studio-sort");
+    expect(page).toMatch(/data-studio-sort-table|data-studio-sort-list/);
+  });
+
+  it("pow API resolves TAP/ILE link tokens and matches related PoW", () => {
+    const src = readFileSync(join(ROOT, "app/api/admin/data-studio/pow/route.ts"), "utf8");
+    expect(src).toContain("parseStudioSessionLinkInput");
+    expect(src).toContain("hashPrivateToken");
+    expect(src).toContain("matchesStudioPowToSessionLink");
+    expect(src).toContain("workspace_tap_sessions");
+    expect(src).toContain("workspace_ile_links");
+    expect(src).toContain("private_token_hash");
+    expect(src).toContain("sortStudioRows");
+    expect(src).toContain('params.get("link")');
   });
 
   it("all Data Studio API routes call requireAdmin", () => {

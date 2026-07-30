@@ -120,6 +120,201 @@ export function matchesStudioPowFilter(
   return hay.includes(q);
 }
 
+// ---------- Session / guest-link paste lookup (TAP & ILE) ----------
+
+export type StudioSessionLinkKind = "tap" | "ile";
+
+export type StudioSessionLinkParse = {
+  token: string;
+  /** When the path clearly indicates kind; null if bare token / ambiguous. */
+  kind: StudioSessionLinkKind | null;
+};
+
+/**
+ * Parse a TAP/ILE share URL, path, or bare private token for Data Studio PoW lookup.
+ * Accepts `/tap/session/{token}`, `/ile/session/{token}`, full URLs, or bare tokens.
+ */
+export function parseStudioSessionLinkInput(
+  input: string | null | undefined,
+): StudioSessionLinkParse | null {
+  const raw = (input || "").trim();
+  if (!raw) return null;
+
+  // Bare token (no path/scheme)
+  if (!/[\s/]/.test(raw) && raw.length >= 8 && !raw.includes("://")) {
+    return { token: raw, kind: null };
+  }
+
+  try {
+    const withScheme = raw.includes("://")
+      ? raw
+      : `https://placeholder.local${raw.startsWith("/") ? "" : "/"}${raw}`;
+    const url = new URL(withScheme);
+    const parts = url.pathname.split("/").filter(Boolean);
+    // …/tap/session/<token> or …/ile/session/<token>
+    const sessionIdx = parts.findIndex((p) => p === "session");
+    if (sessionIdx >= 1 && parts[sessionIdx + 1]) {
+      const product = parts[sessionIdx - 1]?.toLowerCase();
+      const token = decodeURIComponent(parts[sessionIdx + 1]).trim();
+      if (!token) return null;
+      if (product === "tap" || product === "ile") {
+        return { token, kind: product };
+      }
+      return { token, kind: null };
+    }
+    const last = parts[parts.length - 1];
+    if (last && last.length >= 8) {
+      const token = decodeURIComponent(last).trim();
+      if (token) return { token, kind: null };
+    }
+  } catch {
+    // fall through
+  }
+
+  const cleaned = raw.split(/[?#]/)[0].replace(/\/+$/, "");
+  const seg = cleaned.split("/").filter(Boolean).pop();
+  if (seg && seg.length >= 8) {
+    const token = decodeURIComponent(seg).trim();
+    return token ? { token, kind: null } : null;
+  }
+  return null;
+}
+
+/** Resolved guest-link / session identity used to match PoW rows. */
+export type StudioResolvedSessionLink = {
+  kind: StudioSessionLinkKind;
+  /** workspace_tap_sessions.id or workspace_ile_links.id */
+  linkId: string;
+  /** sessions.id when the link has started a session (ILE often; TAP link id is often also the session). */
+  sessionId: string | null;
+  workspaceId: string | null;
+};
+
+/**
+ * Whether a PoW row belongs to a resolved TAP/ILE link/session.
+ * Matches session_id, source_link_* metadata, and legacy tap_session_id / ile_link_id.
+ */
+export function matchesStudioPowToSessionLink(
+  row: {
+    session_id?: string | null;
+    metadata?: Record<string, unknown> | null;
+  },
+  resolved: StudioResolvedSessionLink,
+): boolean {
+  const linkId = (resolved.linkId || "").trim();
+  const sessionId = (resolved.sessionId || "").trim();
+  if (!linkId && !sessionId) return false;
+
+  const sid = typeof row.session_id === "string" ? row.session_id.trim() : "";
+  if (sessionId && sid && sid === sessionId) return true;
+  // TAP: link id is often the same as historical session / PoW session_id
+  if (linkId && sid && sid === linkId) return true;
+
+  const meta =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? row.metadata
+      : {};
+
+  const sourceKind = meta.source_link_kind;
+  const sourceId =
+    typeof meta.source_link_id === "string" ? meta.source_link_id.trim() : "";
+  if (sourceId && sourceId === linkId) {
+    if (sourceKind === "tap" || sourceKind === "ile") {
+      return sourceKind === resolved.kind || !resolved.kind;
+    }
+    return true;
+  }
+
+  if (resolved.kind === "tap") {
+    const tapId =
+      typeof meta.tap_session_id === "string" ? meta.tap_session_id.trim() : "";
+    if (tapId && (tapId === linkId || (sessionId && tapId === sessionId))) return true;
+  }
+  if (resolved.kind === "ile") {
+    const ileId = typeof meta.ile_link_id === "string" ? meta.ile_link_id.trim() : "";
+    if (ileId && ileId === linkId) return true;
+  }
+
+  return false;
+}
+
+// ---------- Table sorting ----------
+
+export type StudioSortDirection = "asc" | "desc";
+
+export type StudioSortState = {
+  column: string;
+  direction: StudioSortDirection;
+};
+
+export function parseStudioSortDirection(
+  value: string | null | undefined,
+  fallback: StudioSortDirection = "desc",
+): StudioSortDirection {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (raw === "asc" || raw === "ascending") return "asc";
+  if (raw === "desc" || raw === "descending") return "desc";
+  return fallback;
+}
+
+export function toggleStudioSort(
+  current: StudioSortState | null,
+  column: string,
+  defaultDirection: StudioSortDirection = "desc",
+): StudioSortState {
+  if (!current || current.column !== column) {
+    return { column, direction: defaultDirection };
+  }
+  return {
+    column,
+    direction: current.direction === "asc" ? "desc" : "asc",
+  };
+}
+
+function studioSortComparable(value: unknown): string | number {
+  if (value == null) return "";
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "string") {
+    const asNum = Number(value);
+    if (value.trim() !== "" && Number.isFinite(asNum) && /^-?\d+(\.\d+)?$/.test(value.trim())) {
+      return asNum;
+    }
+    // ISO timestamps sort lexicographically when normalized
+    return value.toLowerCase();
+  }
+  return String(value).toLowerCase();
+}
+
+/**
+ * Stable multi-type sort for Data Studio list rows.
+ * `getColumn` returns the value for the active sort column.
+ */
+export function sortStudioRows<T>(
+  rows: readonly T[],
+  sort: StudioSortState | null | undefined,
+  getColumn: (row: T, column: string) => unknown,
+): T[] {
+  if (!sort?.column) return [...rows];
+  const dir = sort.direction === "asc" ? 1 : -1;
+  const indexed = rows.map((row, index) => ({ row, index }));
+  indexed.sort((a, b) => {
+    const av = studioSortComparable(getColumn(a.row, sort.column));
+    const bv = studioSortComparable(getColumn(b.row, sort.column));
+    if (av === "" && bv !== "") return 1;
+    if (bv === "" && av !== "") return -1;
+    if (typeof av === "number" && typeof bv === "number") {
+      if (av !== bv) return av < bv ? -dir : dir;
+    } else {
+      const as = String(av);
+      const bs = String(bv);
+      if (as !== bs) return as < bs ? -dir : dir;
+    }
+    return a.index - b.index;
+  });
+  return indexed.map((x) => x.row);
+}
+
 // ---------- Overview aggregation ----------
 
 export type StudioOverviewCounts = {

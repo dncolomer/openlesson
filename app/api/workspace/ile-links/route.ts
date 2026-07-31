@@ -12,6 +12,7 @@ import {
   invalidateIleLinksAll,
 } from "@/lib/pow-api/invalidate-guest-links";
 import type { AuthContext } from "@/lib/pow-api/types";
+import { guestLinkUrlFromPublicToken } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 
@@ -126,7 +127,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to list ILE links" }, { status: 500 });
   }
 
-  return NextResponse.json({ ile_links: links || [] });
+  const origin = baseUrl(req);
+  // Always attach listable share URLs from durable public_token (not one-shot client memory).
+  const ile_links = (links || []).map((link) => {
+    const publicToken =
+      link && typeof link === "object" && "public_token" in link
+        ? (link as { public_token?: string | null }).public_token
+        : null;
+    const url = guestLinkUrlFromPublicToken(origin, "ile", publicToken);
+    return {
+      ...link,
+      url: url ?? null,
+      private_url: url ?? null,
+    };
+  });
+
+  return NextResponse.json({ ile_links });
 }
 
 export async function POST(req: NextRequest) {

@@ -69,6 +69,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   const communityLinks = [
     { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
     { href: "/map-of-knowledge", label: "Map of Knowledge" },
+    { href: "/tapbench", label: "TAPBench" },
   ];
 
   const showCommunity = isLoggedIn !== true;

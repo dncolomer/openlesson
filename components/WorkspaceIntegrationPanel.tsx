@@ -208,8 +208,8 @@ export function WorkspaceIntegrationPanel({
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">Custom Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                High-validation regions in knowledgecfg-v1-d64 — group user embeddings, or create a
-                compatible region from a description and/or reference files. Overlay them from the
+                High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or
+                tapbench PoW (mint agent links under Knowledge Links). Overlay them from the
                 Embeddings tab projection.
               </p>
             </div>
@@ -253,8 +253,8 @@ export function WorkspaceIntegrationPanel({
                 {t("planView.performanceSubTabTap")}
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Create shareable practice links for this workspace — open-ended or timed, explore or
-                drill.
+                Create shareable practice links for this workspace (open-ended or timed, explore or
+                drill) and TAPBench links for agent Stash/Submit sessions.
               </p>
             </div>
             <WorkspaceGuestLinksPanel

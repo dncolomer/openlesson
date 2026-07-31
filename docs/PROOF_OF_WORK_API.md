@@ -2,7 +2,7 @@
 
 Capture base path: **`/api/v3/pow`**  
 Snapshot base path: **`/api/v3/snapshot`**  
-Stash base path: **`/api/v3/stash`** (alaTAP buffer)
+Stash base path: **`/api/v3/stash`** (TAP buffer; TAPBench timed sessions supported)
 
 - **PoW (`/api/v3/pow`)** — list/get workspaces, learning-progress, proof-of-work upload, schema, integration skill, blocks, TAP links, API keys (browser session), org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
 - **Snapshot (`/api/v3/snapshot`)** — vertical scores, learning world model, knowledge-config + trajectory, knowledge distance, snapshot-history, custom verification models.
@@ -88,13 +88,17 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `GET` | `/workspaces/{workspace_id}/custom-knowledge-regions` | `workspaces:read` | `list_custom_knowledge_regions` | List custom knowledge regions + subjects with knowledge config. |
 | `POST` | `/workspaces/{workspace_id}/custom-knowledge-regions` | `workspaces:write` | `create_custom_knowledge_region` / `eval_custom_knowledge_region` | Body `action`: `create` (default) or `eval` (`model_id` + subject). |
 
-## Endpoints (stash / alaTAP — base `/api/v3/stash`)
+## Endpoints (stash / TAP — base `/api/v3/stash`)
 
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | `buffer_proof_of_work` | Buffer a PoW unit (same payload as PoW upload) until stash/submit. |
-| `POST` | `/workspaces/{workspace_id}/stash` | `workspaces:write` | `stash_proof_of_work` | Flush buffer as System 1 (stash) into regular PoW. |
-| `POST` | `/workspaces/{workspace_id}/submit` | `workspaces:write` | `submit_stashed_proof_of_work` | Flush buffer as System 2 (submit) into regular PoW. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | `buffer_proof_of_work` | Buffer a PoW unit (same payload as PoW upload) until stash/submit. With a TAPBench session token (`X-Tapbench-Session`), response includes exercise + remaining time. |
+| `POST` | `/workspaces/{workspace_id}/stash` | `workspaces:write` | `stash_proof_of_work` | Flush buffer as System 1 (stash) into regular PoW. TAPBench sessions flag flushed PoW as tapbench pow; expired tokens are rejected. |
+| `POST` | `/workspaces/{workspace_id}/submit` | `workspaces:write` | `submit_stashed_proof_of_work` | Flush buffer as System 2 (submit) into regular PoW. Same TAPBench rules as stash. |
+
+### TAPBench sessions
+
+Mint via workspace Knowledge Regions (`POST /api/workspace/tapbench-links`) or resolve `GET /api/tapbench/{token}`. Pass `session_token` as `X-Tapbench-Session` (or body field) on stash routes until `remaining_ms` is 0.
 
 ## Predictive Interruptions (TIM)
 

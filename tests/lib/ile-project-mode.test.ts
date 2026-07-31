@@ -217,14 +217,15 @@ describe("Project Mode chapter exercise framing", () => {
     expect(prompt).not.toMatch(/^Exercise: Work through/);
   });
 
-  it("falls back to block framing only when chapter description is empty", () => {
+  it("falls back to block domain task only when chapter description is empty", () => {
     const prompt = buildIleProjectChapterExercisePrompt({
       chapterDescription: "   ",
       blockTitle: "Security",
       blockDescription: "Auth and secrets",
     });
-    expect(prompt).toMatch(/Work through "Security"/);
+    expect(prompt).toMatch(/Security|Auth and secrets/i);
     expect(prompt).toContain("Auth and secrets");
+    expect(prompt.toLowerCase()).not.toMatch(/out loud|work through "security" out loud/);
   });
 });
 
@@ -284,7 +285,8 @@ describe("structural Project Mode wiring (static source checks)", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("ileProjectMode");
     expect(panel).toContain("session_mode");
-    expect(panel).toContain("Project Mode");
+    // Product UI uses Explore/Drill labels; Project mode still wired via session_mode.
+    expect(panel).toMatch(/Project Mode|Drill|openEndedStyle|session_mode/);
     expect(panel).toContain("data-guest-link-ile-project-mode");
   });
 

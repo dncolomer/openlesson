@@ -33,41 +33,39 @@ describe("custom verification model surfaces", () => {
     expect(src).toContain("validation_score");
   });
 
-  it("workspace UI wires Custom Knowledge Regions cohort + synthetic/file create + remove", () => {
+  it("workspace UI wires Custom Knowledge Regions sub-tabs: Create / Browse regions", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
     expect(ui).toContain("data-custom-knowledge-regions");
-    expect(ui).toContain("Create from selected users");
-    expect(ui).toContain("Create region");
-    expect(ui).toContain("Create from description or files");
+    expect(ui).toContain("data-knowledge-regions-subtabs");
+    expect(ui).toContain("WorkspaceSectionSubTabs");
+    expect(ui).toContain("Region builder");
     expect(ui).toContain('action: "create"');
-    expect(ui).toContain('action: "create_synthetic"');
     expect(ui).toContain('action: "delete"');
     expect(ui).toContain("data-remove-knowledge-region");
     expect(ui).toContain("Remove knowledge region?");
+    // Two sub-tabs — TAPBench mint lives under Knowledge Links
+    expect(ui).toContain('data-knowledge-regions-inner-tab="create"');
+    expect(ui).toContain('data-knowledge-regions-inner-tab="browse-regions"');
+    expect(ui).not.toContain('data-knowledge-regions-inner-tab="tapbench"');
+    expect(ui).toContain('innerTab === "create"');
+    expect(ui).toContain('innerTab === "browse-regions"');
+    expect(ui).not.toContain('innerTab === "tapbench"');
+    expect(ui).not.toContain("data-create-tapbench-link");
+    // Synthetic create-from-prompt removed from Knowledge Regions.
+    expect(ui).not.toContain('action: "create_synthetic"');
+    expect(ui).not.toContain("Create from description or files");
+    expect(ui).not.toContain("data-create-synthetic-region");
+    expect(ui).not.toContain("data-synthetic-region-prompt");
+    expect(ui).toContain("data-region-builder");
+    expect(ui).toContain("data-region-source-filter");
+    expect(ui).toContain("data-region-link-filter");
+    expect(ui).toContain("data-create-cohort-region");
+    expect(ui).toContain("data-region-saved-list");
     // Settings region cards are create/list/remove — distance lives on Embeddings overlays.
     expect(ui).not.toContain('action: "eval"');
     expect(ui).not.toContain('action: "knowledge_distance"');
     expect(ui).not.toContain("data-knowledge-distance-btn");
     expect(ui).not.toContain("Eval against region");
-    expect(ui).toContain("data-create-synthetic-region");
-    expect(ui).toContain("data-create-cohort-region");
-    expect(ui).toContain("data-synthetic-region-prompt");
-    expect(ui).toContain("data-synthetic-region-name");
-    // File attach for custom regions (not prompt-only).
-    expect(ui).toContain("data-synthetic-region-files");
-    expect(ui).toContain("data-region-file-attach");
-    expect(ui).toContain("FileDropZone");
-    expect(ui).toContain("syntheticFiles");
-    expect(ui).toContain("files:");
-    // Create allowed when prompt and/or files present (not prompt-only).
-    expect(ui).toContain("disabled={synthesizing || !canCreateSynthetic}");
-    expect(ui).toContain("canCreateSynthetic");
-    // No violet/lila styling on synthetic/file create CTA.
-    const createBtnSlice = ui.slice(
-      ui.indexOf("data-create-synthetic-region") - 200,
-      ui.indexOf("data-create-synthetic-region") + 80,
-    );
-    expect(createBtnSlice).not.toMatch(/violet-/);
     expect(ui).toContain("bg-cyan-600");
     expect(ui).toContain("PRIMARY_CTA_CLASS");
     expect(ui).toContain("subjects");
@@ -95,7 +93,6 @@ describe("custom verification model surfaces", () => {
     expect(settings).toContain('id: "regions"');
     expect(settings).toContain('data-settings-tab-panel="regions"');
     expect(settings).toContain('activeSubview === "regions"');
-    expect(settings).toMatch(/description and\/or reference files|files/);
   });
 
   it("API routes expose cohort create, synthetic create with files, delete, eval, knowledge distance, and listing", () => {

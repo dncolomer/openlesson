@@ -15,10 +15,11 @@ import {
 import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 
 describe("normalizeGuestLinkAccessMode", () => {
-  it("is private-only (collapsed link type)", () => {
+  it("accepts public and private (default private; URLs stay listable via public_token)", () => {
     expect(normalizeGuestLinkAccessMode({})).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("private");
+    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
+    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("public");
+    expect(normalizeGuestLinkAccessMode({ access_mode: "private" })).toBe("private");
   });
 });
 
@@ -174,12 +175,18 @@ describe("PoW source link traceability", () => {
     });
   });
 
-  it("create modules force private access mode via normalize", async () => {
-    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("private");
+  it("create modules store durable public_token for always-visible share URLs", async () => {
+    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
+    expect(normalizeGuestLinkAccessMode({ access_mode: "private" })).toBe("private");
     const createTap = await import("@/lib/pow-api/create-tap-link");
     const createIle = await import("@/lib/pow-api/create-ile-link");
     expect(typeof createTap.createWorkspaceTapLink).toBe("function");
     expect(typeof createIle.createWorkspaceIleLink).toBe("function");
+    const tapSrc = (await import("node:fs")).readFileSync(
+      (await import("node:path")).join(__dirname, "../../lib/pow-api/create-tap-link.ts"),
+      "utf8",
+    );
+    expect(tapSrc).toContain("durableGuestLinkPublicToken");
   });
 });
 

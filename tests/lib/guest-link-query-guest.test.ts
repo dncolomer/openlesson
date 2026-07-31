@@ -14,11 +14,11 @@ import {
   resolveGuestForLinkQueryParams,
 } from "@/lib/guest-link-query-guest";
 
-describe("normalizeGuestLinkAccessMode (private-only)", () => {
-  it("always returns private even if public is requested", () => {
+describe("normalizeGuestLinkAccessMode", () => {
+  it("defaults to private; accepts public when requested (URLs still listable via public_token)", () => {
     expect(normalizeGuestLinkAccessMode({})).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("private");
+    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("public");
+    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
   });
 });
 

@@ -1,9 +1,12 @@
 /**
- * Stash API (alaTAP) — temporary PoW buffer + Stash (System 1) / Submit (System 2) flush.
+ * Stash API (TAP) — temporary PoW buffer + Stash (System 1) / Submit (System 2) flush.
  *
  * Agents stream the same PoW types as the Proof-of-Work API into a short-lived buffer.
  * A Stash or Submit decision drains the buffer into the regular PoW upload path with
  * workspace + user refs and System 1 / System 2 intent metadata, then resets memory.
+ *
+ * TAPBench sessions attach a timed exercise + session token; flushed PoW is flagged
+ * as tapbench pow until the token expires.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -19,13 +22,18 @@ import {
   uploadWorkspaceProofOfWork,
   type UploadWorkspaceProofOfWorkInput,
 } from "./upload-workspace-proof-of-work";
+import {
+  TAPBENCH_POW_SOURCE,
+  type ResolveTapbenchSessionResult,
+} from "./tapbench";
+import { alignStashUnitToTapThoughtTrace } from "./tapbench-pow-align";
 
 export const STASH_API_PRODUCT = {
   id: "stash-api",
   name: "Stash API",
-  tagline: "alaTAP — evaluate Agents the same way we evaluate humans with TAP",
+  tagline: "TAP — evaluate Agents the same way we evaluate humans with TAP",
   description:
-    "The first Agentic Product (alaTAP): pure-API Think Aloud for agents. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
+    "Agentic Stash/Submit (TAP): pure-API Think Aloud for agents. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack. With a TAPBench session token, responses include the exercise and remaining time; flushed PoW is flagged as tapbench pow.",
 } as const;
 
 /** Stash = System 1 (fast / parked intent); Submit = System 2 (deliberate commit). */
@@ -98,32 +106,45 @@ export function stashBufferKey(workspaceId: string, subjectId: string): string {
   return `${workspaceId}::${subjectId}`;
 }
 
-/** Process-local temporary memory — survives until stash/submit within the API process. */
-const stashBuffers = new Map<string, StashBufferedUnit[]>();
+/**
+ * Process-local temporary memory — must be shared across Next.js route module
+ * instances (each route bundle can evaluate this file separately). Use globalThis.
+ */
+type StashGlobal = {
+  __openlessonStashBuffers?: Map<string, StashBufferedUnit[]>;
+  __openlessonStashUnitSeq?: number;
+};
 
-let unitSeq = 0;
+const stashGlobal = globalThis as typeof globalThis & StashGlobal;
+
+function getStashBuffers(): Map<string, StashBufferedUnit[]> {
+  if (!stashGlobal.__openlessonStashBuffers) {
+    stashGlobal.__openlessonStashBuffers = new Map();
+  }
+  return stashGlobal.__openlessonStashBuffers;
+}
 
 function nextUnitId(): string {
-  unitSeq += 1;
-  return `stash_${Date.now()}_${unitSeq}`;
+  stashGlobal.__openlessonStashUnitSeq = (stashGlobal.__openlessonStashUnitSeq ?? 0) + 1;
+  return `stash_${Date.now()}_${stashGlobal.__openlessonStashUnitSeq}`;
 }
 
 /** Test helper: wipe all buffers. */
 export function resetAllStashBuffersForTests(): void {
-  stashBuffers.clear();
-  unitSeq = 0;
+  getStashBuffers().clear();
+  stashGlobal.__openlessonStashUnitSeq = 0;
 }
 
 export function getStashBufferSize(workspaceId: string, subjectId: string): number {
-  return stashBuffers.get(stashBufferKey(workspaceId, subjectId))?.length ?? 0;
+  return getStashBuffers().get(stashBufferKey(workspaceId, subjectId))?.length ?? 0;
 }
 
 export function peekStashBuffer(workspaceId: string, subjectId: string): readonly StashBufferedUnit[] {
-  return stashBuffers.get(stashBufferKey(workspaceId, subjectId)) ?? [];
+  return getStashBuffers().get(stashBufferKey(workspaceId, subjectId)) ?? [];
 }
 
 export function clearStashBuffer(workspaceId: string, subjectId: string): void {
-  stashBuffers.delete(stashBufferKey(workspaceId, subjectId));
+  getStashBuffers().delete(stashBufferKey(workspaceId, subjectId));
 }
 
 /**
@@ -220,9 +241,10 @@ export function appendToStashBuffer(
   unit: StashBufferedUnit,
 ): StashBufferedUnit {
   const key = stashBufferKey(workspaceId, subjectId);
-  const list = stashBuffers.get(key) ?? [];
+  const buffers = getStashBuffers();
+  const list = buffers.get(key) ?? [];
   list.push(unit);
-  stashBuffers.set(key, list);
+  buffers.set(key, list);
   return unit;
 }
 
@@ -240,19 +262,51 @@ export function ingestStashUnit(
   return parsed;
 }
 
+/** Optional TAPBench context applied on flush / response shaping. */
+export interface StashTapbenchContext {
+  linkId: string;
+  exercise: string;
+  expires_at: string;
+  remaining_ms: number;
+  duration_seconds: number;
+  session_token: string;
+  block_id: string | null;
+  workspace_id: string;
+  /** Anonymous guest UUID — all flushed PoW attributed to this subject. */
+  guest_user_id: string | null;
+}
+
+export function stashTapbenchContextFromResolved(
+  resolved: ResolveTapbenchSessionResult,
+): StashTapbenchContext {
+  return {
+    linkId: resolved.link.id,
+    exercise: resolved.exercise,
+    expires_at: resolved.expires_at,
+    remaining_ms: resolved.remaining_ms,
+    duration_seconds: resolved.duration_seconds,
+    session_token: resolved.session_token,
+    block_id: resolved.block_id,
+    workspace_id: resolved.workspace_id,
+    guest_user_id: resolved.guest_user_id ?? resolved.link.guest_user_id ?? null,
+  };
+}
+
 /**
  * Metadata attached on flush so scoring / knowledge-config see System 1 vs System 2
- * the same way TAP stash/submit traces do.
+ * the same way TAP stash/submit traces do. When tapbench context is present, PoW is
+ * flagged as tapbench pow and aligned with human TAP thought-trace metadata (incl. text).
  */
 export function buildStashDecisionMetadata(
   decision: StashDecision,
   existing: Record<string, unknown> = {},
+  tapbench?: StashTapbenchContext | null,
 ): Record<string, unknown> {
   const system = systemFlagForDecision(decision);
   const traceType = traceTypeForDecision(decision);
-  return {
+  const base: Record<string, unknown> = {
     ...existing,
-    source: "stash_api",
+    source: tapbench ? TAPBENCH_POW_SOURCE : "stash_api",
     decision,
     system,
     system_n: system,
@@ -260,26 +314,65 @@ export function buildStashDecisionMetadata(
     submit: decision === "submit",
     trace_type: traceType,
     agentic_product: "stash_api",
-    alatap: true,
   };
+
+  if (tapbench) {
+    base.tapbench = true;
+    base.pow_source = TAPBENCH_POW_SOURCE;
+    base.source_link_kind = TAPBENCH_POW_SOURCE;
+    base.source_link_id = tapbench.linkId;
+    base.tapbench_link_id = tapbench.linkId;
+    // Parity with human TAP metadata.tap_session_id (session-scoped PoW queries)
+    base.tap_session_id = tapbench.linkId;
+    base.selective_thought = true;
+    base.thought_trace = true;
+    if (tapbench.guest_user_id) {
+      base.guest_user_id = tapbench.guest_user_id;
+    }
+    if (tapbench.block_id && base.block_id === undefined) {
+      base.block_id = tapbench.block_id;
+    }
+  }
+
+  return base;
 }
 
 export function unitToPowUploadInput(
   unit: StashBufferedUnit,
   decision: StashDecision,
+  tapbench?: StashTapbenchContext | null,
 ): UploadWorkspaceProofOfWorkInput {
+  // TAPBench: rewrite to human TAP thought-trace shape (text + tool_name/action).
+  if (tapbench) {
+    const aligned = alignStashUnitToTapThoughtTrace(unit, decision, tapbench);
+    return {
+      workspaceId: "", // filled by caller
+      type: aligned.type,
+      mime_type: aligned.mime_type,
+      data: aligned.data,
+      block_id: aligned.block_id,
+      session_id: unit.session_id,
+      file_name: aligned.file_name,
+      timestamp_ms: aligned.timestamp_ms,
+      tool_name: aligned.tool_name,
+      tool_action: aligned.tool_action,
+      metadata: aligned.metadata,
+    };
+  }
+
+  const blockId = unit.block_id ?? null;
   return {
     workspaceId: "", // filled by caller
     type: unit.type,
     mime_type: unit.mime_type,
     data: unit.data,
-    block_id: unit.block_id,
+    block_id: blockId,
     session_id: unit.session_id,
     file_name: unit.file_name,
     timestamp_ms: unit.timestamp_ms,
     tool_name: unit.tool_name ?? undefined,
     tool_action: unit.tool_action ?? undefined,
-    metadata: buildStashDecisionMetadata(decision, unit.metadata),
+    metadata: buildStashDecisionMetadata(decision, unit.metadata, null),
   };
 }
 
@@ -290,6 +383,7 @@ export type StashPowFlushUploader = (input: {
   auth: AuthContext;
   workspace: { id: string; user_id: string; organization_id: string | null };
   supabase: SupabaseClient;
+  tapbench?: StashTapbenchContext | null;
 }) => Promise<unknown>;
 
 export interface FlushStashBufferOptions {
@@ -299,6 +393,8 @@ export interface FlushStashBufferOptions {
   auth: AuthContext;
   workspace: { id: string; user_id: string; organization_id: string | null };
   supabase: SupabaseClient;
+  /** When set, flushed PoW is flagged as tapbench pow and block_id may be filled. */
+  tapbench?: StashTapbenchContext | null;
   /** Inject for tests — defaults to real uploadWorkspaceProofOfWork. */
   uploader?: StashPowFlushUploader;
 }
@@ -312,6 +408,7 @@ export type FlushStashBufferResult =
       empty: boolean;
       proof_of_work: unknown[];
       buffer_remaining: number;
+      tapbench: StashTapbenchContext | null;
     }
   | {
       ok: false;
@@ -321,6 +418,7 @@ export type FlushStashBufferResult =
       error: string;
       /** Buffer left intact (or with only successfully flushed units removed on partial — we keep all on failure). */
       buffer_remaining: number;
+      tapbench: StashTapbenchContext | null;
     };
 
 const defaultUploader: StashPowFlushUploader = async ({
@@ -330,8 +428,9 @@ const defaultUploader: StashPowFlushUploader = async ({
   auth,
   workspace,
   supabase,
+  tapbench,
 }) => {
-  const input = unitToPowUploadInput(unit, decision);
+  const input = unitToPowUploadInput(unit, decision, tapbench);
   input.workspaceId = workspaceId;
   return uploadWorkspaceProofOfWork(supabase, auth, workspace, input);
 };
@@ -339,6 +438,7 @@ const defaultUploader: StashPowFlushUploader = async ({
 /**
  * Drain temporary buffer → regular PoW API with System 1 (stash) or System 2 (submit).
  * Empty buffer no-ops cleanly (ok, flushed: 0). Buffer resets only after full success.
+ * When tapbench context is provided, each unit is stamped as tapbench pow.
  */
 export async function flushStashBuffer(
   options: FlushStashBufferOptions,
@@ -350,11 +450,12 @@ export async function flushStashBuffer(
     auth,
     workspace,
     supabase,
+    tapbench = null,
     uploader = defaultUploader,
   } = options;
   const system = systemFlagForDecision(decision);
   const key = stashBufferKey(workspaceId, subjectId);
-  const units = stashBuffers.get(key) ?? [];
+  const units = getStashBuffers().get(key) ?? [];
 
   if (units.length === 0) {
     return {
@@ -365,6 +466,7 @@ export async function flushStashBuffer(
       empty: true,
       proof_of_work: [],
       buffer_remaining: 0,
+      tapbench,
     };
   }
 
@@ -381,6 +483,7 @@ export async function flushStashBuffer(
         auth,
         workspace,
         supabase,
+        tapbench,
       });
       uploaded.push(row);
     }
@@ -392,6 +495,7 @@ export async function flushStashBuffer(
       flushed: uploaded.length,
       error: error instanceof Error ? error.message : "Failed to flush stash buffer to PoW API",
       buffer_remaining: getStashBufferSize(workspaceId, subjectId),
+      tapbench,
     };
   }
 
@@ -405,6 +509,25 @@ export async function flushStashBuffer(
     empty: false,
     proof_of_work: uploaded,
     buffer_remaining: 0,
+    tapbench,
+  };
+}
+
+/** Shape exercise + timing fields for stash/submit/ingest HTTP responses. */
+export function stashExerciseResponseFields(
+  tapbench: StashTapbenchContext | null | undefined,
+): Record<string, unknown> {
+  if (!tapbench) return {};
+  return {
+    exercise: tapbench.exercise,
+    remaining_ms: tapbench.remaining_ms,
+    expires_at: tapbench.expires_at,
+    duration_seconds: tapbench.duration_seconds,
+    session_token: tapbench.session_token,
+    tapbench: true,
+    tapbench_link_id: tapbench.linkId,
+    block_id: tapbench.block_id,
+    guest_user_id: tapbench.guest_user_id,
   };
 }
 

@@ -24,6 +24,7 @@ import {
 } from "@/lib/guest-link-browse";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
+import { WorkspaceTapbenchLinksPanel } from "@/components/WorkspaceTapbenchLinksPanel";
 
 interface WorkspaceBlock {
   id: string;
@@ -43,6 +44,10 @@ interface TapLinkRow {
   created_at: string;
   completed_at: string | null;
   interaction_kind?: string | null;
+  /** Always-visible share URL from list API (public_token). */
+  url?: string | null;
+  private_url?: string | null;
+  public_token?: string | null;
 }
 
 interface IleLinkRow {
@@ -57,6 +62,10 @@ interface IleLinkRow {
   completed_at: string | null;
   /** learning (default) | project */
   session_mode?: string | null;
+  /** Always-visible share URL from list API (public_token). */
+  url?: string | null;
+  private_url?: string | null;
+  public_token?: string | null;
 }
 
 interface OrgMember {
@@ -65,7 +74,7 @@ interface OrgMember {
   username: string | null;
 }
 
-type GuestLinksInnerTab = "create" | "browse";
+type GuestLinksInnerTab = "create" | "browse" | "tapbench";
 
 function participantLabel(
   link: {
@@ -545,9 +554,15 @@ export function WorkspaceGuestLinksPanel({
 
   const renderBrowseRow = (link: GuestLinkBrowseRow) => {
     const isRevoked = link.status === "revoked";
-    // Revoked links are not copyable (keep expression shape for structural tests).
-    const privateUrl = isRevoked ? undefined : createdLinks[link.id];
     const isTap = link.kind === "tap";
+    // Prefer durable list URL (public_token); fall back to just-created client memory.
+    const listUrl = isTap
+      ? tapLinks.find((row) => row.id === link.id)?.url ||
+        tapLinks.find((row) => row.id === link.id)?.private_url
+      : ileLinks.find((row) => row.id === link.id)?.url ||
+        ileLinks.find((row) => row.id === link.id)?.private_url;
+    // Revoked links are not copyable (keep expression shape for structural tests).
+    const privateUrl = isRevoked ? undefined : listUrl || createdLinks[link.id];
     const busy = invalidating || (isTap ? creatingLink : creatingIleLink);
     const intent = productIntentFromGuestLink({
       kind: link.kind,
@@ -677,6 +692,7 @@ export function WorkspaceGuestLinksPanel({
   const innerTabs = [
     { id: "create" as const, label: t("planView.guestLinksTabCreate") },
     { id: "browse" as const, label: t("planView.guestLinksTabBrowse") },
+    { id: "tapbench" as const, label: "TAPBench" },
   ];
 
   return (
@@ -1056,6 +1072,17 @@ export function WorkspaceGuestLinksPanel({
                 {filteredBrowseRows.map((row) => renderBrowseRow(row))}
               </ul>
             )}
+          </div>
+        ) : null}
+
+        {innerTab === "tapbench" ? (
+          <div
+            className="flex flex-col gap-5 p-5 sm:p-6"
+            data-guest-links-inner-tab="tapbench"
+            data-knowledge-links-tapbench-tab
+            role="tabpanel"
+          >
+            <WorkspaceTapbenchLinksPanel workspaceId={workspaceId} />
           </div>
         ) : null}
       </div>

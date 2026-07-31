@@ -94,47 +94,53 @@ describe("create TAP link interaction_kind wiring", () => {
 });
 
 describe("buildExercisePromptText", () => {
-  it("frames block title as a solo exercise when no explicit text", () => {
+  it("frames rich block description as a domain task without out-loud stage directions", () => {
     const text = buildExercisePromptText({
       blockTitle: "Binary search",
-      blockDescription: "Find target in sorted array.",
+      blockDescription: "Find target in sorted array with O(log n) comparisons.",
     });
     expect(text).toContain("Binary search");
-    expect(text.toLowerCase()).toMatch(/out loud|exercise/);
-    expect(text).toContain("Find target in sorted array");
+    expect(text).toMatch(/Find target in sorted array/i);
     expect(text.startsWith("Exercise:")).toBe(true);
+    expect(text.toLowerCase()).not.toMatch(/out loud|think aloud/);
   });
 
-  it("prefers block solo framing over conversational Teach me openings", () => {
+  it("prefers block domain framing over conversational Teach me openings", () => {
     const text = buildExercisePromptText({
       openingQuestion: 'Teach me what you learned about "Binary search".',
       blockTitle: "Binary search",
+      blockDescription: "Locate a key using mid-point halving.",
     });
     expect(text.startsWith("Exercise:")).toBe(true);
     expect(text.toLowerCase()).not.toMatch(/^teach me/);
-    expect(text).toContain("Binary search");
+    expect(text).toMatch(/Binary search|mid-point|halving/i);
+    expect(text.toLowerCase()).not.toMatch(/out loud/);
   });
 
-  it("prefixes free-form exercise text once and is idempotent", () => {
+  it("frames free-form exercise text without stage directions and is idempotent", () => {
     const raw = buildExercisePromptText({
       openingQuestion: "What is amortized analysis?",
+      blockTitle: "Amortized analysis",
     });
-    expect(raw).toMatch(/Solve this out loud/);
     expect(raw).toContain("amortized analysis");
+    expect(raw.toLowerCase()).not.toMatch(/out loud|think aloud/);
+    expect(raw.startsWith("Exercise:")).toBe(true);
 
-    const alreadyFramed = buildExercisePromptText({
+    const cleanedLegacy = buildExercisePromptText({
       exerciseText: "Solve out loud: prove O(log n) for heapify.",
     });
-    expect(alreadyFramed).toBe("Solve out loud: prove O(log n) for heapify.");
+    expect(cleanedLegacy.toLowerCase()).not.toMatch(/out loud/);
+    expect(cleanedLegacy.toLowerCase()).toMatch(/heapify|o\(log n\)/);
 
     // Idempotent: re-running on Exercise: prompt must not double-frame.
     const serverPrompt = buildExercisePromptText({
       blockTitle: "Heaps",
+      blockDescription: "Binary heap insert and extract-min.",
     });
     expect(serverPrompt.startsWith("Exercise:")).toBe(true);
     const again = buildExercisePromptText({ openingQuestion: serverPrompt });
     expect(again).toBe(serverPrompt);
-    expect(again).not.toMatch(/Solve this out loud:\s*Exercise:/i);
+    expect(again).not.toMatch(/Exercise:\s*Exercise:/i);
   });
 
   it("falls back to workspace title when conversational text alone is present", () => {
@@ -144,7 +150,17 @@ describe("buildExercisePromptText", () => {
     });
     expect(text).toContain("Algorithms 101");
     expect(text.startsWith("Exercise:")).toBe(true);
-    expect(text.toLowerCase()).not.toMatch(/^teach me/);
+    expect(text.toLowerCase()).not.toMatch(/^teach me|out loud/);
+  });
+
+  it("uses file names when present as material cues", () => {
+    const text = buildExercisePromptText({
+      blockTitle: "Query performance",
+      blockDescription: "Index choices for multi-tenant Postgres.",
+      files: [{ name: "schema.sql" }, { name: "n-plus-one.md", excerpt: "Avoid loops of child queries." }],
+    });
+    expect(text.toLowerCase()).not.toMatch(/out loud/);
+    expect(text).toMatch(/schema\.sql|n-plus-one|multi-tenant|index/i);
   });
 });
 
@@ -283,11 +299,37 @@ describe("resolveExercisePromptAfterIntro", () => {
       workspaceTitle: "Algo",
     });
     expect(prompt).toContain("amortized analysis");
-    expect(prompt.toLowerCase()).toMatch(/solve|exercise|out loud/);
+    expect(prompt.toLowerCase()).toMatch(/exercise|task|explain|complete/);
+    expect(prompt.toLowerCase()).not.toMatch(/out loud/);
   });
 
-  it("prefers already-framed server prompt when no topic", () => {
+  it("rewrites legacy out-loud framed server prompts into clean domain tasks", () => {
     const server = 'Exercise: Work through "Heaps" out loud on your own. Explain your reasoning as you go.';
+    const resolved = resolveExercisePromptAfterIntro({
+      serverOpeningQuestion: server,
+      workspaceTitle: "WS",
+      blockTitle: "Heaps",
+    });
+    expect(resolved.toLowerCase()).not.toMatch(/out loud/);
+    expect(resolved).toMatch(/Heaps|heap/i);
+    expect(resolved.startsWith("Exercise:")).toBe(true);
+  });
+
+  it("legacy Work through + rich description prefers description substance", () => {
+    const server = 'Exercise: Work through "Heaps" out loud on your own. Explain your reasoning as you go.';
+    const resolved = resolveExercisePromptAfterIntro({
+      serverOpeningQuestion: server,
+      blockTitle: "Heaps",
+      blockDescription: "Binary heap insert and extract-min with sift-down.",
+    });
+    expect(resolved.toLowerCase()).not.toMatch(/out loud/);
+    expect(resolved).not.toMatch(/Work through "Heaps"/i);
+    expect(resolved).toMatch(/extract-min|sift-down|Binary heap/i);
+  });
+
+  it("keeps already-framed clean server prompts unchanged", () => {
+    const server =
+      'Exercise: Demonstrate your understanding of "Heaps": define the core idea and one edge case.';
     expect(
       resolveExercisePromptAfterIntro({
         serverOpeningQuestion: server,

@@ -8,6 +8,7 @@ import {
   buildTapPracticeOpeningQuestionTask,
   buildTapStartingTopicsTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
+import { formatPromptWorkspaceContextBlock } from "@/lib/prompt-workspace-context";
 
 export interface TapStartingTopic {
   id: string;
@@ -27,6 +28,8 @@ export interface TapScoreBrief {
     root_topic: string;
     description?: string | null;
     notes?: string | null;
+    /** When present, preferred over description as the success outcome. */
+    workspace_goal?: string | null;
   };
   nodes: Array<{
     id: string;
@@ -49,6 +52,8 @@ export interface TapScoreBrief {
     status: string | null;
     report: string | null;
   } | null;
+  /** Workspace file names (always listed when present). */
+  files?: Array<{ name: string; mime_type?: string | null }>;
 }
 
 export interface TapScoreMarker {
@@ -123,7 +128,9 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
 
   const { data: plan, error: planError } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, title, root_topic, description, notes, is_public, is_group")
+    .select(
+      "id, user_id, organization_id, title, root_topic, description, notes, workspace_goal, is_public, is_group",
+    )
     .eq("id", workspaceId)
     .single();
 
@@ -198,6 +205,13 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
 
   if (focusSessionId && !focusSession) throw new Error("Session not found");
 
+  const { data: workspaceFiles } = await supabase
+    .from("workspace_files")
+    .select("file_name, mime_type")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false })
+    .limit(24);
+
   return {
     userId,
     brief: {
@@ -207,6 +221,8 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         root_topic: plan.root_topic,
         description: plan.description,
         notes: plan.notes,
+        workspace_goal:
+          (plan as { workspace_goal?: string | null }).workspace_goal ?? null,
       },
       nodes: (nodes || []).map((node) => ({
         id: node.id,
@@ -229,6 +245,12 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         status: focusSession.status,
         report: focusSession.report,
       } : null,
+      files: (workspaceFiles || [])
+        .map((f) => ({
+          name: String((f as { file_name?: string }).file_name || "").trim(),
+          mime_type: (f as { mime_type?: string | null }).mime_type ?? null,
+        }))
+        .filter((f) => f.name),
     } satisfies TapScoreBrief,
   };
 }
@@ -252,11 +274,18 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
-  const workspaceBlock = `Workspace:
-Title: ${brief.plan.title}
-Topic: ${brief.plan.root_topic}
-Description: ${brief.plan.description || "None"}
-Notes: ${brief.plan.notes || "None"}
+  const sharedContext = formatPromptWorkspaceContextBlock({
+    workspaceTitle: brief.plan.title,
+    rootTopic: brief.plan.root_topic,
+    workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
+    workspaceDescription: brief.plan.description,
+    notes: brief.plan.notes,
+    blockTitle: focusedBlock?.title,
+    blockDescription: focusedBlock?.description,
+    files: (brief.files || []).map((f) => ({ name: f.name, mime_type: f.mime_type })),
+  });
+
+  const workspaceBlock = `${sharedContext}
 
 Workspace sessions/nodes:
 ${nodeSummary || "No nodes found."}
@@ -264,7 +293,9 @@ ${nodeSummary || "No nodes found."}
 User session context:
 ${sessionSummary || "No completed session reports found yet."}
 
-${focusSessionSummary}`;
+${focusSessionSummary}
+
+Learner-visible prompts must stay on this domain context. Never invent unrelated topics. Never use "out loud" stage directions.`;
 
   return buildTapFacilitatorInstructions({
     assessmentTarget,
@@ -277,10 +308,26 @@ ${focusSessionSummary}`;
 
 export function buildTapOpeningQuestionFallback(brief: TapScoreBrief) {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  const substance = (
+    focusedBlock?.description ||
+    brief.plan.workspace_goal ||
+    brief.plan.description ||
+    ""
+  )
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 220);
   if (focusedBlock) {
-    return `Teach me what you learned about "${focusedBlock.title}". What is the core idea, and how would you explain it to someone encountering it for the first time?`;
+    if (substance) {
+      return `What is the core idea of "${focusedBlock.title}" (${substance.slice(0, 120)}), and how would you explain what would break if you got it wrong?`;
+    }
+    return `What is the core idea of "${focusedBlock.title}", and how would you explain it to someone encountering it for the first time?`;
   }
-  return `Teach me what you learned in "${brief.plan.title}". What stands out as most important, and why?`;
+  const title = brief.plan.title || brief.plan.root_topic || "this workspace";
+  if (substance) {
+    return `What is the most important idea you learned in "${title}" (${substance.slice(0, 120)}), and how would you explain why it matters in practice?`;
+  }
+  return `What stands out as most important in "${title}", and how would you explain that you understand it?`;
 }
 
 function slugifyTopicId(value: string, index: number) {
@@ -319,26 +366,38 @@ function normalizeTapStartingTopics(raw: unknown): TapStartingTopic[] | null {
 export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartingTopic[] {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const planTitle = brief.plan.title || brief.plan.root_topic;
+  const descCue = (focusedBlock?.description || brief.plan.description || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  const fileCue =
+    brief.files && brief.files.length > 0
+      ? ` (materials: ${brief.files
+          .slice(0, 2)
+          .map((f) => f.name)
+          .join(", ")})`
+      : "";
 
   if (focusedBlock) {
+    const substance = descCue || focusedBlock.title;
     return [
       {
         id: "core-idea",
-        title: `Core idea of ${focusedBlock.title}`,
-        subtitle: "Explain the central concept in your own words.",
-        openingQuestion: `What is the core idea behind "${focusedBlock.title}", and how would you explain it to someone encountering it for the first time?`,
+        title: `Core idea of ${focusedBlock.title}`.slice(0, 48),
+        subtitle: "Define the central mechanism.",
+        openingQuestion: `What is the core idea of "${focusedBlock.title}"${descCue ? ` — given: ${descCue}` : ""}, and how would you define it precisely?`,
       },
       {
         id: "why-it-matters",
         title: "Why it matters",
-        subtitle: "Connect the concept to a real problem or decision.",
-        openingQuestion: `Why does "${focusedBlock.title}" matter in practice, and where would misunderstanding it cause trouble?`,
+        subtitle: "Connect concept to a real decision.",
+        openingQuestion: `Why does "${focusedBlock.title}" matter in practice${fileCue}, and where would misunderstanding "${substance.slice(0, 60)}" cause trouble?`,
       },
       {
         id: "transfer",
         title: "Apply and transfer",
-        subtitle: "Show how you would use this beyond the original example.",
-        openingQuestion: `How would you apply what you learned about "${focusedBlock.title}" in a new context? Walk me through an example.`,
+        subtitle: "Use it in a new scenario.",
+        openingQuestion: `How would you apply "${focusedBlock.title}" in a new scenario? Walk through one concrete example${fileCue}.`,
       },
     ];
   }
@@ -346,8 +405,10 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
   const nodeTopics = brief.nodes.slice(0, TAP_STARTING_TOPIC_COUNT).map((node, index) => ({
     id: slugifyTopicId(node.title, index),
     title: node.title,
-    subtitle: node.description?.trim() || `Demonstrate what you learned about ${node.title}.`,
-    openingQuestion: `Teach me what you learned about "${node.title}". What is the key idea, and how confident are you that you could explain it clearly?`,
+    subtitle: node.description?.trim().slice(0, 80) || `Key ideas in ${node.title}.`,
+    openingQuestion: node.description?.trim()
+      ? `For "${node.title}": ${node.description.trim().slice(0, 140)} — what is the key idea you must not get wrong?`
+      : `What is the key idea of "${node.title}", and how would you demonstrate that you understand it?`,
   }));
 
   if (nodeTopics.length === TAP_STARTING_TOPIC_COUNT) {
@@ -357,21 +418,21 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
   const fillers: TapStartingTopic[] = [
     {
       id: "big-picture",
-      title: `${planTitle}: big picture`,
-      subtitle: "Start with what matters most across the workspace.",
-      openingQuestion: `What is the most important thing you learned in "${planTitle}", and why does it stand out?`,
+      title: `${planTitle}: big picture`.slice(0, 48),
+      subtitle: "What matters most across the workspace.",
+      openingQuestion: `What is the most important idea in "${planTitle}"${descCue ? ` (${descCue})` : ""}, and why does it stand out?`,
     },
     {
       id: "causal-links",
       title: "Causal connections",
-      subtitle: "Show how ideas depend on or explain each other.",
-      openingQuestion: `In "${planTitle}", what causes what? Pick one relationship you understand and explain the mechanism behind it.`,
+      subtitle: "How ideas depend on each other.",
+      openingQuestion: `In "${planTitle}", what causes what? Pick one relationship and explain the mechanism.`,
     },
     {
       id: "blind-spots",
       title: "Gaps and blind spots",
-      subtitle: "Surface what still feels fuzzy or fragile.",
-      openingQuestion: `Where is your understanding of "${planTitle}" still weakest, and how would you test whether you've actually learned it?`,
+      subtitle: "What still feels fragile.",
+      openingQuestion: `Where is your understanding of "${planTitle}" still weakest, and how would you test that you've actually learned it?`,
     },
   ];
 
@@ -404,6 +465,10 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
 export function buildTapPracticeOpeningQuestionFallback(brief: TapScoreBrief): string {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const target = focusedBlock?.title || brief.plan.title || brief.plan.root_topic || "this topic";
+  const hint = (focusedBlock?.description || brief.plan.description || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  if (hint) {
+    return `In simple terms, what is the basic idea behind "${target}" (${hint})?`;
+  }
   return `In simple terms, what is "${target}" — just the basic idea in a sentence or two?`;
 }
 

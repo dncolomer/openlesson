@@ -116,7 +116,7 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 5. Re-fetch schema + regenerate skill as proof of work grows
 Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/ILE end. Workspace creation is UI-only.
 
-REST mirror: /api/v3/pow (capture), /api/v3/snapshot (scores + LWM/knowledge), /api/v3/stash (alaTAP buffer).
+REST mirror: /api/v3/pow (capture), /api/v3/snapshot (scores + LWM/knowledge), /api/v3/stash (TAP buffer + TAPBench sessions).
 
 Resources: uncertain-systems://integration-scope, proof-of-work-loop, predictive-interruptions
 
@@ -478,7 +478,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "buffer_proof_of_work",
     description:
-      "Buffer a PoW unit in Stash API memory until stash or submit (alaTAP). REST: POST /api/v3/stash/workspaces/{id}/proof-of-work.",
+      "Buffer a PoW unit in Stash API memory until stash or submit (TAP). REST: POST /api/v3/stash/workspaces/{id}/proof-of-work.",
     inputSchema: {
       type: "object",
       properties: {

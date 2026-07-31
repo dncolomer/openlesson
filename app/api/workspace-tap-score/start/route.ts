@@ -75,9 +75,7 @@ export async function POST(req: NextRequest) {
     let openingQuestion: string;
 
     if (interactionKind === "exercise") {
-      // Solo exercise: do NOT generate conversational "Teach me…" openings.
-      // Prefer block/workspace framing; only use body text when it is already
-      // exercise-like (not a dialogue partner prompt).
+      // Solo exercise: domain task from block/workspace/files — not conversational "Teach me…".
       const focused = brief.nodes.length === 1 ? brief.nodes[0] : null;
       const explicitExercise =
         requestedOpeningQuestion && !looksLikeConversationalOpening(requestedOpeningQuestion)
@@ -88,6 +86,14 @@ export async function POST(req: NextRequest) {
         blockTitle: focused?.title,
         blockDescription: focused?.description,
         workspaceTitle: brief.plan.title,
+        workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
+        workspaceDescription: brief.plan.description,
+        notes: brief.plan.notes,
+        rootTopic: brief.plan.root_topic,
+        files: (brief.files || []).map((f) => ({
+          name: f.name,
+          mime_type: f.mime_type,
+        })),
       });
     } else {
       openingQuestion =

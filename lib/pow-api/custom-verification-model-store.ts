@@ -707,10 +707,71 @@ export async function computeKnowledgeDistanceForSubject(
   };
 }
 
+/**
+ * Build id → share URL map for TAP / ILE / TAPBench links in a workspace.
+ * Used so region-builder can filter by the same listable URLs operators copy.
+ */
+export async function buildWorkspaceLinkUrlMap(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  baseUrl: string = process.env.NEXT_PUBLIC_APP_URL || "https://uncertain.systems",
+): Promise<Map<string, string>> {
+  const { buildGuestLinkUrl } = await import("@/lib/guest-link-access");
+  const { buildTapbenchShareUrl, listStoredTapbenchLinks, toTapbenchListRow } = await import(
+    "./tapbench"
+  );
+  const map = new Map<string, string>();
+  const base = (baseUrl || "").replace(/\/$/, "") || "https://uncertain.systems";
+
+  const [tapRes, ileRes, tbRes] = await Promise.all([
+    supabase
+      .from("workspace_tap_sessions")
+      .select("id, public_token")
+      .eq("workspace_id", workspaceId)
+      .limit(500),
+    supabase
+      .from("workspace_ile_links")
+      .select("id, public_token")
+      .eq("workspace_id", workspaceId)
+      .limit(500),
+    supabase
+      .from("workspace_tapbench_links")
+      .select("id, public_token")
+      .eq("workspace_id", workspaceId)
+      .limit(500),
+  ]);
+
+  for (const row of tapRes.data || []) {
+    const id = String((row as { id: string }).id);
+    const tok = (row as { public_token?: string | null }).public_token;
+    if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "tap", tok.trim()));
+  }
+  for (const row of ileRes.data || []) {
+    const id = String((row as { id: string }).id);
+    const tok = (row as { public_token?: string | null }).public_token;
+    if (tok?.trim()) map.set(id, buildGuestLinkUrl(base, "ile", tok.trim()));
+  }
+  for (const row of tbRes.data || []) {
+    const id = String((row as { id: string }).id);
+    const tok = (row as { public_token?: string | null }).public_token;
+    if (tok?.trim()) map.set(id, buildTapbenchShareUrl(base, tok.trim()));
+  }
+
+  // Process-store TAPBench mints not yet in DB
+  for (const link of listStoredTapbenchLinks(workspaceId)) {
+    if (!map.has(link.id)) {
+      map.set(link.id, toTapbenchListRow(link, base).url);
+    }
+  }
+
+  return map;
+}
+
 /** Distinct subjects that have at least one knowledge config snapshot in the workspace. */
 export async function listSubjectsWithKnowledgeConfig(
   supabase: SupabaseClient,
   workspaceId: string,
+  options?: { baseUrl?: string },
 ): Promise<
   Array<{
     user_id: string | null;
@@ -718,6 +779,11 @@ export async function listSubjectsWithKnowledgeConfig(
     embedding_model_id: string;
     as_of_ms: number;
     confidence: number;
+    /** human | tapbench — from associated PoW metadata when available. */
+    pow_source: "human" | "tapbench";
+    source_link_id: string | null;
+    /** Listable share URL for the source link (TAP / ILE / TAPBench). */
+    source_link_url: string | null;
   }>
 > {
   const { data, error } = await supabase
@@ -733,6 +799,58 @@ export async function listSubjectsWithKnowledgeConfig(
     return [];
   }
 
+  // Best-effort PoW provenance for region-builder human vs tapbench filter.
+  const { data: powRows } = await supabase
+    .from("workspace_proof_of_work")
+    .select("user_id, guest_user_id, metadata")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false })
+    .limit(1000);
+
+  const provenanceBySubject = new Map<
+    string,
+    { pow_source: "human" | "tapbench"; source_link_id: string | null }
+  >();
+  for (const row of powRows || []) {
+    const uid = (row.user_id as string | null) ?? null;
+    const gid = (row.guest_user_id as string | null) ?? null;
+    const key = `${uid ?? ""}|${gid ?? ""}`;
+    const meta =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const isTapbench =
+      meta.tapbench === true ||
+      meta.pow_source === "tapbench" ||
+      meta.source === "tapbench" ||
+      meta.source_link_kind === "tapbench";
+    const linkId =
+      (typeof meta.source_link_id === "string" && meta.source_link_id.trim()) ||
+      (typeof meta.tapbench_link_id === "string" && meta.tapbench_link_id.trim()) ||
+      null;
+    const existing = provenanceBySubject.get(key);
+    if (!existing) {
+      provenanceBySubject.set(key, {
+        pow_source: isTapbench ? "tapbench" : "human",
+        source_link_id: linkId,
+      });
+    } else if (isTapbench) {
+      // tapbench wins if any PoW row is tapbench
+      provenanceBySubject.set(key, {
+        pow_source: "tapbench",
+        source_link_id: existing.source_link_id || linkId,
+      });
+    } else if (!existing.source_link_id && linkId) {
+      provenanceBySubject.set(key, { ...existing, source_link_id: linkId });
+    }
+  }
+
+  const linkUrlById = await buildWorkspaceLinkUrlMap(
+    supabase,
+    workspaceId,
+    options?.baseUrl,
+  );
+
   const seen = new Set<string>();
   const out: Array<{
     user_id: string | null;
@@ -740,6 +858,9 @@ export async function listSubjectsWithKnowledgeConfig(
     embedding_model_id: string;
     as_of_ms: number;
     confidence: number;
+    pow_source: "human" | "tapbench";
+    source_link_id: string | null;
+    source_link_url: string | null;
   }> = [];
 
   for (const row of data) {
@@ -748,12 +869,17 @@ export async function listSubjectsWithKnowledgeConfig(
     const key = `${uid ?? ""}|${gid ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    const prov = provenanceBySubject.get(key);
+    const source_link_id = prov?.source_link_id ?? null;
     out.push({
       user_id: uid,
       guest_user_id: gid,
       embedding_model_id: String(row.embedding_model_id),
       as_of_ms: Number(row.as_of_ms),
       confidence: Number(row.confidence) || 0,
+      pow_source: prov?.pow_source ?? "human",
+      source_link_id,
+      source_link_url: source_link_id ? linkUrlById.get(source_link_id) ?? null : null,
     });
   }
   return out;

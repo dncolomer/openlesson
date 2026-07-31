@@ -18,6 +18,7 @@ import {
 } from "./resolve-workspace-guest";
 import {
   buildGuestLinkUrl,
+  durableGuestLinkPublicToken,
   normalizeGuestLinkAccessMode,
   type GuestLinkAccessMode,
 } from "@/lib/guest-link-access";
@@ -84,12 +85,14 @@ function withIleLinkUrl(
 ): CreatedIleLink {
   const access_mode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
-  const url = buildGuestLinkUrl(baseUrl, "ile", sessionToken);
+  // Always listable: prefer stored public_token, fall back to session bearer.
+  const bearer = link.public_token?.trim() || sessionToken;
+  const url = buildGuestLinkUrl(baseUrl, "ile", bearer);
   const session_mode = normalizeIleSessionMode(link.session_mode, ILE_SESSION_MODE_DEFAULT);
   return {
     ...link,
     access_mode,
-    public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
+    public_token: bearer,
     entry_query_params: link.entry_query_params ?? [],
     show_end_session: link.show_end_session !== false,
     session_mode,
@@ -286,8 +289,9 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
   const accessMode = normalizeGuestLinkAccessMode(body);
   const showEndSession = resolveShowEndSessionFromBody(body);
   const sessionMode = resolveIleSessionModeFromBody(body as Record<string, unknown>);
+  // Always store public_token so list endpoints can rebuild the share URL after reload.
   const sessionToken = createPrivateToken();
-  const publicToken = accessMode === "public" ? sessionToken : null;
+  const publicToken = durableGuestLinkPublicToken(sessionToken);
 
   const { data: link, error } = await supabase
     .from("workspace_ile_links")
@@ -370,20 +374,17 @@ export async function reissueWorkspaceIleLink(
     throw new CreateIleLinkError("Workspace not found", 404, "workspace_not_found");
   }
 
-  const isPublic = existing.access_mode === "public";
-  const sessionToken = isPublic
-    ? String(existing.public_token || "")
-    : createPrivateToken();
+  // Reissue rotates bearer; always keep public_token in sync so list URLs stay copyable.
+  const sessionToken = createPrivateToken();
   if (!sessionToken) {
-    throw new CreateIleLinkError("Public ILE link is missing public_token", 500, "internal_error");
+    throw new CreateIleLinkError("Failed to mint ILE link token", 500, "internal_error");
   }
 
   const { data: link, error } = await supabase
     .from("workspace_ile_links")
     .update({
-      ...(isPublic
-        ? {}
-        : { private_token_hash: hashPrivateToken(sessionToken), public_token: null }),
+      private_token_hash: hashPrivateToken(sessionToken),
+      public_token: durableGuestLinkPublicToken(sessionToken),
       status: "pending",
       started_at: null,
       completed_at: null,

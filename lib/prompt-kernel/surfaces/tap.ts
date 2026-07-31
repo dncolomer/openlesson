@@ -97,7 +97,7 @@ ${TAP_SELECTIVE_THOUGHT_OVERLAY}${practiceOverlay}`,
 }
 
 export function buildTapOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. It must invite a concrete demonstration of learning about the workspace/block context — definitions, core idea, causal mechanism, or a worked example — not a generic icebreaker, not a meta question about their "approach," and not stage directions about speaking out loud. Prefer concrete demonstration of knowledge. One sentence only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
+  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. Ground it in the workspace/block context block provided (title, description, notes, file names/excerpts when present). It must invite a concrete demonstration of domain knowledge — definitions, core mechanism, causal link, worked example, or debugging a misuse — not a generic icebreaker, not a meta question about their "approach," and not stage directions about speaking out loud. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". Prefer concrete demonstration of knowledge from the given materials. One sentence only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
 }
 
 /** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
@@ -115,7 +115,7 @@ This is a short warm-up, not a scored demonstration. Stay on the same domain as 
 `.trim();
 
 export function buildTapStartingTopicsTask(topicCount: number): string {
-  return `Generate exactly ${topicCount} distinct starting topics for a knowledge-verification conversation. Each topic is a concrete angle for demonstrating understanding from the workspace context — not generic study advice, not think-aloud stage directions, and not platform/product language.
+  return `Generate exactly ${topicCount} distinct starting topics for a knowledge-verification conversation. Each topic is a concrete angle for demonstrating understanding from the workspace/block context (and file names/excerpts when provided) — not generic study advice, not think-aloud stage directions, and not platform/product language.
 
 Return JSON only:
 {
@@ -130,10 +130,10 @@ Return JSON only:
 }
 
 Rules:
-- Topics must be meaningfully different.
-- openingQuestion must be one sentence, specific, and invite verbal demonstration of knowledge (definitions, causal links, examples, transfer, repair) that will yield System 1 and System 2 traces for later analysis.
+- Topics must be meaningfully different and grounded in the provided context (block description, notes, files when present).
+- openingQuestion must be one sentence, specific, and invite demonstration of domain knowledge (definitions, causal links, examples, transfer, repair) that will yield System 1 and System 2 traces for later analysis.
 - No preamble inside openingQuestion.
-- No "out loud" / "think aloud" stage directions inside title, subtitle, or openingQuestion.
+- No "out loud" / "think aloud" / "say … aloud" stage directions inside title, subtitle, or openingQuestion.
 - Never mention Uncertain Systems, PoW, TAP, tools, scoring, or product names in any field.
-- Titles should feel like session entry points into the domain.`;
+- Titles should feel like session entry points into the domain, not process coaching.`;
 }

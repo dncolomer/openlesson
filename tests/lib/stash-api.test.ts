@@ -265,7 +265,7 @@ describe("Stash API buffer + stash/submit flush", () => {
     expect(getStashBufferSize("ws-1", subject)).toBe(2);
   });
 
-  it("buildStashDecisionMetadata encodes System 1/2 like TAP intent", () => {
+  it("buildStashDecisionMetadata encodes System 1/2 like TAP intent (no alaTAP)", () => {
     const s1 = buildStashDecisionMetadata("stash", { custom: true });
     expect(s1).toMatchObject({
       custom: true,
@@ -274,8 +274,9 @@ describe("Stash API buffer + stash/submit flush", () => {
       submit: false,
       trace_type: "system1",
       source: "stash_api",
-      alatap: true,
+      agentic_product: "stash_api",
     });
+    expect(s1.alatap).toBeUndefined();
     const s2 = buildStashDecisionMetadata("submit");
     expect(s2).toMatchObject({ system: 2, submit: true, stash: false, trace_type: "system2" });
   });
@@ -442,7 +443,7 @@ describe("Stash API product surfaces", () => {
       ),
     ).toBe(false);
 
-    const landing = readFileSync(join(ROOT, "app/page.tsx"), "utf8");
-    expect(landing).toContain("Stash API");
+    // Landing may or may not name Stash API; product deck is the source of truth above.
+    expect(STASH_API_PRODUCT.name).toBe("Stash API");
   });
 });

@@ -12,6 +12,7 @@ import {
   invalidateTapLinksAll,
 } from "@/lib/pow-api/invalidate-guest-links";
 import type { AuthContext } from "@/lib/pow-api/types";
+import { guestLinkUrlFromPublicToken } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 
@@ -95,7 +96,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to list TAP links" }, { status: 500 });
   }
 
-  return NextResponse.json({ tap_links: links || [] });
+  const origin = baseUrl(req);
+  // Always attach listable share URLs from durable public_token (not one-shot client memory).
+  const tap_links = (links || []).map((link) => {
+    const url = guestLinkUrlFromPublicToken(origin, "tap", link.public_token);
+    return {
+      ...link,
+      url: url ?? null,
+      private_url: url ?? null,
+    };
+  });
+
+  return NextResponse.json({ tap_links });
 }
 
 export async function POST(req: NextRequest) {

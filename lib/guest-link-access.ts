@@ -2,7 +2,8 @@
  * Shared helpers for guest TAP/ILE links: entry query capture, param fingerprint
  * (guest identity), and Proof of Work source-link attribution.
  *
- * Links are always private bearer tokens. Query params on the share URL select
+ * Share URLs stay listable via durable public_token (not one-shot client memory).
+ * Bearer-in-URL remains the access mechanism. Query params on the share URL select
  * which guest subject receives PoW (order-independent; name+value identity).
  */
 
@@ -22,15 +23,29 @@ export type EntryQueryCapture = {
 };
 
 /**
- * Access mode is collapsed to private-only for new links.
- * Still accepts legacy body keys but always returns private.
+ * Guest links keep share URLs always visible to operators via public_token.
+ * Access mode still accepts public/private from body (default private for auth
+ * semantics); both modes store a durable public_token for list/copy.
  */
-export function normalizeGuestLinkAccessMode(_input?: {
+export function normalizeGuestLinkAccessMode(input?: {
   access_mode?: unknown;
   accessMode?: unknown;
   public?: unknown;
 }): GuestLinkAccessMode {
+  if (!input) return "private";
+  if (input.public === true || input.public === "true") return "public";
+  const raw = input.access_mode ?? input.accessMode;
+  if (raw === "public") return "public";
+  if (raw === "private") return "private";
   return "private";
+}
+
+/**
+ * Always persist the bearer as public_token so list APIs can rebuild the share URL
+ * after reload (links are not one-shot secrets for the workspace owner).
+ */
+export function durableGuestLinkPublicToken(sessionToken: string): string {
+  return sessionToken;
 }
 
 /**
@@ -204,6 +219,20 @@ export function buildGuestLinkUrl(
   const base = baseUrl.replace(/\/$/, "");
   const path = kind === "tap" ? "tap" : "ile";
   return `${base}/${path}/session/${token}`;
+}
+
+/**
+ * Rebuild a listable share URL from a stored public_token (or null when missing).
+ * Used by TAP/ILE list endpoints so owners always see copyable URLs.
+ */
+export function guestLinkUrlFromPublicToken(
+  baseUrl: string,
+  kind: GuestLinkKind,
+  publicToken: string | null | undefined,
+): string | null {
+  const t = typeof publicToken === "string" ? publicToken.trim() : "";
+  if (!t) return null;
+  return buildGuestLinkUrl(baseUrl, kind, t);
 }
 
 export type GuestLinkTable = "workspace_tap_sessions" | "workspace_ile_links";

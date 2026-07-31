@@ -27,6 +27,7 @@ import {
 } from "./resolve-workspace-guest";
 import {
   buildGuestLinkUrl,
+  durableGuestLinkPublicToken,
   normalizeGuestLinkAccessMode,
   type GuestLinkAccessMode,
 } from "@/lib/guest-link-access";
@@ -94,13 +95,15 @@ function withTapLinkUrl(
 ): CreatedTapLink {
   const access_mode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
-  const url = buildGuestLinkUrl(baseUrl, "tap", sessionToken);
+  // Always listable: prefer stored public_token, fall back to session bearer.
+  const bearer = link.public_token?.trim() || sessionToken;
+  const url = buildGuestLinkUrl(baseUrl, "tap", bearer);
   const interaction_kind: TapInteractionKind =
     link.interaction_kind === "exercise" ? "exercise" : "conversational";
   return {
     ...link,
     access_mode,
-    public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
+    public_token: bearer,
     entry_query_params: link.entry_query_params ?? [],
     show_end_session: link.show_end_session !== false,
     interaction_kind,
@@ -328,9 +331,9 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   const accessMode = normalizeGuestLinkAccessMode(body);
   const showEndSession = resolveShowEndSessionFromBody(body);
   const interactionKind = resolveTapInteractionKindFromBody(body);
-  // Session path token: secret for private; stable non-rotating public_token for public.
+  // Always store public_token so list endpoints can rebuild the share URL after reload.
   const sessionToken = createPrivateToken();
-  const publicToken = accessMode === "public" ? sessionToken : null;
+  const publicToken = durableGuestLinkPublicToken(sessionToken);
 
   const { data: link, error } = await supabase
     .from("workspace_tap_sessions")
@@ -420,21 +423,17 @@ export async function reissueWorkspaceTapLink(
     throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
   }
 
-  const isPublic = existing.access_mode === "public";
-  // Public URLs stay stable ("always the same"); only private bearer tokens rotate.
-  const sessionToken = isPublic
-    ? String(existing.public_token || "")
-    : createPrivateToken();
+  // Reissue rotates bearer; always keep public_token in sync so list URLs stay copyable.
+  const sessionToken = createPrivateToken();
   if (!sessionToken) {
-    throw new CreateTapLinkError("Public TAP link is missing public_token", 500, "internal_error");
+    throw new CreateTapLinkError("Failed to mint TAP link token", 500, "internal_error");
   }
 
   const { data: link, error } = await supabase
     .from("workspace_tap_sessions")
     .update({
-      ...(isPublic
-        ? {}
-        : { private_token_hash: hashPrivateToken(sessionToken), public_token: null }),
+      private_token_hash: hashPrivateToken(sessionToken),
+      public_token: durableGuestLinkPublicToken(sessionToken),
       status: "pending",
       started_at: null,
       completed_at: null,

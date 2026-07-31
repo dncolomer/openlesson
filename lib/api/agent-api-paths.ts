@@ -1,5 +1,5 @@
 /**
- * Canonical public API bases (v3): Proof-of-Work + Snapshot + Stash (alaTAP).
+ * Canonical public API bases (v3): Proof-of-Work + Snapshot + Stash (TAP).
  * Capture lives under POW; LWM Snapshot / world model / knowledge-config under SNAPSHOT;
  * agent stash/submit buffering under STASH.
  */

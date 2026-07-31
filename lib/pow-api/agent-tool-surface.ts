@@ -185,7 +185,7 @@ export const AGENT_TOOL_SURFACE = [
     name: "buffer_proof_of_work",
     scope: "workspaces:write",
     summary:
-      "Buffer a PoW unit in Stash API temporary memory (alaTAP) until stash or submit.",
+      "Buffer a PoW unit in Stash API temporary memory (TAP) until stash or submit.",
     rest: {
       method: "POST",
       path: `${STASH_API_BASE}/workspaces/{workspace_id}/proof-of-work`,

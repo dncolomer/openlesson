@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
 
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+
     const [models, subjects] = await Promise.all([
       listCustomVerificationModels(auth.supabase, workspaceId),
-      listSubjectsWithKnowledgeConfig(auth.supabase, workspaceId),
+      listSubjectsWithKnowledgeConfig(auth.supabase, workspaceId, { baseUrl }),
     ]);
 
     return NextResponse.json({

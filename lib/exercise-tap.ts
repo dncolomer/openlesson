@@ -1,6 +1,9 @@
 /**
  * Pure helpers for Exercise TAP — solo prompt + submitted thoughts (no Helios dialogue).
  * Interaction kind persistence lives in tap-link-config; this module owns exercise UX logic.
+ *
+ * Exercise text is a genuine domain task grounded in block/workspace/file context —
+ * never "say this out loud" stage directions.
  */
 import {
   normalizeTapInteractionKind,
@@ -12,6 +15,13 @@ import {
   type TapThoughtTracePayload,
 } from "@/lib/tap-score-traces";
 import { normalize } from "@/lib/tap-score-client-helpers";
+import {
+  assemblePromptWorkspaceContext,
+  containsOutLoudStageDirection,
+  stripOutLoudStageDirections,
+  type PromptWorkspaceContextInput,
+  type WorkspaceFileContextItem,
+} from "@/lib/prompt-workspace-context";
 
 export type { TapInteractionKind };
 
@@ -51,8 +61,22 @@ export function resolveTapShellFromSession(input: {
 export function isAlreadyFramedExercisePrompt(text: string): boolean {
   const t = normalize(text);
   if (!t) return false;
-  return /^(exercise\s*:|solve(\s+this)?\s+out\s+loud\b|work through\b|think aloud through\b)/i.test(
+  // Legacy "out loud" frames count as framed so we can rewrite them once via strip path.
+  return /^(exercise\s*:|task\s*:|solve(\s+this)?\s*:|work through\b|apply\b|debug\b|design\b)/i.test(
     t,
+  );
+}
+
+/**
+ * Thin title-wrapper templates ("Exercise: Work through \"Heaps\"…") that must not
+ * short-circuit when block/chapter description, notes, or file excerpts exist.
+ */
+export function isThinWorkThroughTitleFrame(text: string): boolean {
+  const t = normalize(text);
+  if (!t) return false;
+  return (
+    /^exercise\s*:\s*work through\s+["“'][^"”']+["”']/i.test(t) ||
+    /^work through\s+["“'][^"”']+["”']/i.test(t)
   );
 }
 
@@ -65,82 +89,163 @@ export function looksLikeConversationalOpening(text: string): boolean {
   );
 }
 
-/**
- * Resolve the exercise prompt after intro start.
- * Prefer topic opening (seeded from topic cards), then server openingQuestion,
- * then structural block/workspace framing. Always returns solo exercise text.
- */
-export function resolveExercisePromptAfterIntro(input: {
-  topicOpeningQuestion?: string | null;
-  serverOpeningQuestion?: string | null;
-  blockTitle?: string | null;
-  blockDescription?: string | null;
-  workspaceTitle?: string | null;
-}): string {
-  const topic = normalize(String(input.topicOpeningQuestion || ""));
-  if (topic) {
-    return buildExercisePromptText({
-      exerciseText: topic,
-      blockTitle: input.blockTitle,
-      blockDescription: input.blockDescription,
-      workspaceTitle: input.workspaceTitle,
-    });
-  }
-  const server = normalize(String(input.serverOpeningQuestion || ""));
-  if (server) {
-    // Server already frames exercise for interaction_kind=exercise; keep if framed.
-    if (isAlreadyFramedExercisePrompt(server)) return server;
-    return buildExercisePromptText({
-      exerciseText: server,
-      blockTitle: input.blockTitle,
-      blockDescription: input.blockDescription,
-      workspaceTitle: input.workspaceTitle,
-    });
-  }
-  return buildExercisePromptText({
-    blockTitle: input.blockTitle,
-    blockDescription: input.blockDescription,
-    workspaceTitle: input.workspaceTitle,
-  });
-}
-
-/**
- * Build the single exercise prompt shown at the top of Exercise TAP.
- * Prefer true solo framing from block/workspace. Idempotent: already-framed
- * prompts are returned unchanged. Conversational openings ("Teach me…") are
- * not treated as exercise text — fall through to block/workspace framing.
- */
-export function buildExercisePromptText(input: {
+export type BuildExercisePromptInput = {
   exerciseText?: string | null;
   openingQuestion?: string | null;
   blockTitle?: string | null;
   blockDescription?: string | null;
   workspaceTitle?: string | null;
-}): string {
-  const explicit = normalize(String(input.exerciseText || input.openingQuestion || ""));
-  const blockTitle = normalize(String(input.blockTitle || ""));
-  const blockDescription = normalize(String(input.blockDescription || ""));
-  const workspaceTitle = normalize(String(input.workspaceTitle || "this workspace"));
+  workspaceGoal?: string | null;
+  workspaceDescription?: string | null;
+  notes?: string | null;
+  rootTopic?: string | null;
+  chapterDescription?: string | null;
+  files?: WorkspaceFileContextItem[] | null;
+  /** Optional pre-built context (avoids re-assembly). */
+  promptContext?: PromptWorkspaceContextInput | null;
+};
 
-  // Already framed → never re-prefix (client/server double-call safe).
-  if (explicit && isAlreadyFramedExercisePrompt(explicit)) {
-    return explicit;
+/**
+ * Resolve the exercise prompt after intro start.
+ * Prefer topic opening (seeded from topic cards), then server openingQuestion,
+ * then structural block/workspace framing. Always returns solo exercise text.
+ */
+export function resolveExercisePromptAfterIntro(
+  input: BuildExercisePromptInput & {
+    topicOpeningQuestion?: string | null;
+    serverOpeningQuestion?: string | null;
+  },
+): string {
+  const topic = normalize(String(input.topicOpeningQuestion || ""));
+  if (topic) {
+    return buildExercisePromptText({
+      ...input,
+      exerciseText: topic,
+    });
+  }
+  const server = normalize(String(input.serverOpeningQuestion || ""));
+  if (server) {
+    // Keep only clean, substantive framed prompts. Thin "Work through \"Title\"" and
+    // out-loud legacy frames always go through the domain framer (may use description/files).
+    if (
+      isAlreadyFramedExercisePrompt(server) &&
+      !containsOutLoudStageDirection(server) &&
+      !isThinWorkThroughTitleFrame(server)
+    ) {
+      return server;
+    }
+    return buildExercisePromptText({
+      ...input,
+      exerciseText: server,
+    });
+  }
+  return buildExercisePromptText(input);
+}
+
+function ensureExercisePrefix(body: string): string {
+  const clean = body.replace(/\s+/g, " ").trim();
+  if (!clean) return clean;
+  if (/^exercise\s*:/i.test(clean)) return clean;
+  return `Exercise: ${clean}`;
+}
+
+/**
+ * Build a concrete domain exercise from context substance (description, notes, files).
+ * No "out loud" / think-aloud stage directions.
+ */
+export function buildExercisePromptText(input: BuildExercisePromptInput): string {
+  const ctx = assemblePromptWorkspaceContext({
+    workspaceTitle: input.workspaceTitle,
+    rootTopic: input.rootTopic,
+    workspaceGoal: input.workspaceGoal,
+    workspaceDescription: input.workspaceDescription,
+    notes: input.notes,
+    blockTitle: input.blockTitle,
+    blockDescription: input.blockDescription,
+    chapterDescription: input.chapterDescription,
+    files: input.files,
+    ...(input.promptContext || {}),
+  });
+
+  const explicitRaw = normalize(String(input.exerciseText || input.openingQuestion || ""));
+  let explicit = explicitRaw;
+  if (explicit && containsOutLoudStageDirection(explicit)) {
+    explicit = stripOutLoudStageDirections(explicit);
+  }
+  if (explicit && looksLikeConversationalOpening(explicit)) {
+    explicit = "";
   }
 
-  // Prefer structural solo exercise when block is known, even if a conversational
-  // opening was passed through by mistake.
-  if (blockTitle) {
-    const desc = blockDescription ? ` Context: ${blockDescription}` : "";
-    return `Exercise: Work through "${blockTitle}" out loud on your own. Explain your reasoning as you go.${desc}`;
+  // Already a clean framed exercise → keep (idempotent), unless it is only a thin
+  // "Work through \"Title\"" wrapper and we have richer domain substance to use.
+  if (
+    explicit &&
+    isAlreadyFramedExercisePrompt(explicit) &&
+    !containsOutLoudStageDirection(explicit) &&
+    !(ctx.hasDomainSubstance && isThinWorkThroughTitleFrame(explicit))
+  ) {
+    return explicit.startsWith("Exercise:") || /^exercise\s*:/i.test(explicit)
+      ? explicit
+      : ensureExercisePrefix(explicit);
   }
 
-  // Explicit non-conversational free text → prefix once.
-  if (explicit && !looksLikeConversationalOpening(explicit)) {
-    return `Solve this out loud: ${explicit}`;
+  const topicLabel =
+    ctx.blockTitle ||
+    ctx.workspaceTitle ||
+    ctx.rootTopic ||
+    "this material";
+
+  // Rich substance: turn description / files into a concrete task.
+  // Preferred over stripped legacy Work-through title frames.
+  if (ctx.hasDomainSubstance) {
+    const substance =
+      ctx.blockDescription ||
+      ctx.chapterDescription ||
+      ctx.workspaceGoal ||
+      ctx.workspaceDescription ||
+      ctx.domainSubstanceSummary;
+    const fileCue =
+      ctx.fileNames.length > 0
+        ? ` Use the workspace materials (${ctx.fileNames.slice(0, 3).join(", ")}${ctx.fileNames.length > 3 ? ", …" : ""}) where relevant.`
+        : "";
+    if (substance) {
+      // If substance already reads like a task/instruction, frame lightly.
+      if (
+        /^(design|implement|debug|compare|explain|derive|prove|build|analyze|write|calculate|model)\b/i.test(
+          substance,
+        )
+      ) {
+        return ensureExercisePrefix(`${substance}${fileCue}`);
+      }
+      return ensureExercisePrefix(
+        `Using what you know about "${topicLabel}", complete this task: ${substance}${fileCue} State assumptions, work the solution, and note where you are uncertain.`,
+      );
+    }
   }
 
-  // Workspace-level solo exercise (ignore leftover "Teach me…" dialogue text).
-  return `Exercise: Think aloud through what you know about "${workspaceTitle}". Solve or explain the material out loud on your own — there is no dialogue partner.`;
+  // Explicit domain free text (non-conversational) → task framing without stage directions.
+  if (explicit) {
+    const cleaned = stripOutLoudStageDirections(explicit);
+    if (cleaned) {
+      if (isAlreadyFramedExercisePrompt(cleaned) || /^exercise\s*:/i.test(cleaned)) {
+        return ensureExercisePrefix(cleaned.replace(/^exercise\s*:\s*/i, ""));
+      }
+      return ensureExercisePrefix(
+        `Complete this task about "${topicLabel}": ${cleaned} Show your reasoning and the result.`,
+      );
+    }
+  }
+
+  // Title-only thin context — still a knowledge task, never out-loud stage direction.
+  if (ctx.blockTitle) {
+    return ensureExercisePrefix(
+      `Demonstrate your understanding of "${ctx.blockTitle}": define the core idea, give one concrete example or application, and call out a common mistake or edge case.`,
+    );
+  }
+
+  return ensureExercisePrefix(
+    `Demonstrate your understanding of "${topicLabel}": explain the key idea, how the pieces fit together, and one place the idea is easy to misuse.`,
+  );
 }
 
 /** Alias used for both stash and submission lists. */

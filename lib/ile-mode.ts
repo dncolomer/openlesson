@@ -255,32 +255,47 @@ export function emptyIleProjectDualLists(): ExerciseDualLists {
 export function frameIleProjectChapterDescription(description: string): string {
   const clean = String(description || "").replace(/\s+/g, " ").trim();
   if (!clean) return clean;
-  if (isAlreadyFramedExercisePrompt(clean)) return clean;
-  return `Exercise: ${clean}`;
+  // Delegate to domain exercise framer so chapter text becomes a task, not stage directions.
+  return buildExercisePromptText({
+    chapterDescription: clean,
+    exerciseText: clean,
+  });
 }
 
 /**
  * Prompt shown for the active chapter exercise in Project Mode.
- * When a chapter description exists, it is the sole exercise body (framed once).
- * Do not pass blockTitle alongside chapter text — buildExercisePromptText prefers
- * block framing and would drop typical LLM plan chapter text.
- * Block/workspace framing is only used when no chapter description is available.
+ * Prefer chapter plan text as the domain task; otherwise block/workspace context
+ * (and optional file names/excerpts when the caller has them).
  */
 export function buildIleProjectChapterExercisePrompt(input: {
   chapterDescription?: string | null;
   blockTitle?: string | null;
   blockDescription?: string | null;
   workspaceTitle?: string | null;
+  workspaceGoal?: string | null;
+  notes?: string | null;
+  files?: import("@/lib/prompt-workspace-context").WorkspaceFileContextItem[] | null;
 }): string {
   const chapter = String(input.chapterDescription || "").trim();
   if (chapter) {
-    // Chapter is the exercise — frame it alone (idempotent if already Exercise:…).
-    return frameIleProjectChapterDescription(chapter);
+    return buildExercisePromptText({
+      chapterDescription: chapter,
+      exerciseText: chapter,
+      blockTitle: input.blockTitle,
+      blockDescription: input.blockDescription,
+      workspaceTitle: input.workspaceTitle,
+      workspaceGoal: input.workspaceGoal,
+      notes: input.notes,
+      files: input.files,
+    });
   }
   return buildExercisePromptText({
     blockTitle: input.blockTitle,
     blockDescription: input.blockDescription,
     workspaceTitle: input.workspaceTitle,
+    workspaceGoal: input.workspaceGoal,
+    notes: input.notes,
+    files: input.files,
   });
 }
 

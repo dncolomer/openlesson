@@ -211,12 +211,14 @@ describe("TAPBench exercise uses improved framer", () => {
 });
 
 describe("wiring: richer context on start + brief + prompt surfaces", () => {
-  it("start route passes files/notes/goal into buildExercisePromptText", () => {
+  it("start route LLM-authors exercise mode via generateTapExercisePrompt", () => {
     const start = read("app/api/workspace-tap-score/start/route.ts");
-    expect(start).toContain("buildExercisePromptText");
+    expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("brief.files");
     expect(start).toContain("workspaceGoal");
     expect(start).toContain("notes");
+    // Conversational path still uses LLM opening generation.
+    expect(start).toContain("generateTapOpeningQuestion");
   });
 
   it("tap-score brief loads workspace_files and injects shared context block", () => {

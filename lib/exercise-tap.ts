@@ -22,6 +22,10 @@ import {
   type PromptWorkspaceContextInput,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
+import {
+  buildTapbenchExerciseFallback,
+  looksLikeTopicOverview,
+} from "@/lib/pow-api/tapbench-exercise-quality";
 
 export type { TapInteractionKind };
 
@@ -197,6 +201,7 @@ export function buildExercisePromptText(input: BuildExercisePromptInput): string
 
   // Rich substance: turn description / files into a concrete task.
   // Preferred over stripped legacy Work-through title frames.
+  // Never paste a syllabus/topic catalog as "complete this task: …" — that is not an exercise.
   if (ctx.hasDomainSubstance) {
     const substance =
       ctx.blockDescription ||
@@ -209,16 +214,34 @@ export function buildExercisePromptText(input: BuildExercisePromptInput): string
         ? ` Use the workspace materials (${ctx.fileNames.slice(0, 3).join(", ")}${ctx.fileNames.length > 3 ? ", …" : ""}) where relevant.`
         : "";
     if (substance) {
-      // If substance already reads like a task/instruction, frame lightly.
+      // If substance already reads like a task/instruction, frame lightly
+      // but keep the block title so the domain is explicit.
       if (
-        /^(design|implement|debug|compare|explain|derive|prove|build|analyze|write|calculate|model)\b/i.test(
+        /^(design|implement|debug|compare|explain|derive|prove|build|analyze|write|calculate|model|solve|find|show|compute)\b/i.test(
           substance,
         )
       ) {
-        return ensureExercisePrefix(`${substance}${fileCue}`);
+        const titled =
+          topicLabel &&
+          !new RegExp(topicLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(
+            substance,
+          )
+            ? `${substance} (topic: ${topicLabel})`
+            : substance;
+        return ensureExercisePrefix(`${titled}${fileCue}`);
+      }
+      // Topic overviews / catalogs → problem-shaped fallback (not "complete this task: <list>").
+      if (looksLikeTopicOverview(substance)) {
+        const fb = buildTapbenchExerciseFallback({
+          blockTitle: ctx.blockTitle || topicLabel,
+          blockDescription: substance,
+          workspaceTitle: ctx.workspaceTitle,
+          workspaceGoal: ctx.workspaceGoal,
+        });
+        return fileCue ? `${fb.replace(/\.$/, "")}.${fileCue}` : fb;
       }
       return ensureExercisePrefix(
-        `Using what you know about "${topicLabel}", complete this task: ${substance}${fileCue} State assumptions, work the solution, and note where you are uncertain.`,
+        `Solve a concrete problem about "${topicLabel}". Context: ${substance}${fileCue} State the problem, show full work with intermediate steps, box a final answer, and note one edge case.`,
       );
     }
   }

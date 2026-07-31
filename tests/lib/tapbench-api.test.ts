@@ -302,6 +302,7 @@ describe("TAPBench surface contracts (routes + UI)", () => {
       "lib/pow-api/stash-api.ts",
       "app/api/workspace/tapbench-links/route.ts",
       "app/api/tapbench/[token]/route.ts",
+      "app/api/tapbench/[token]/skills/route.ts",
       "app/tapbench/[token]/page.tsx",
       "app/api/v3/stash/workspaces/[id]/stash/route.ts",
       "app/api/v3/stash/workspaces/[id]/submit/route.ts",
@@ -317,6 +318,22 @@ describe("TAPBench surface contracts (routes + UI)", () => {
     expect(page).toContain("data-tapbench-exercise");
     expect(page).toContain("data-tapbench-session-token");
     expect(page).toContain("data-tapbench-remaining");
+    // Agents visiting the link are pointed at skills.md
+    expect(page).toContain("buildTapbenchSkillsMarkdown");
+    expect(page).toContain("data-tapbench-skills-md");
+    expect(page).toContain("data-download-tapbench-skills");
+    expect(page).toContain("skills_md_url");
+    expect(page).toContain("TAPBENCH_SKILLS_MD_FILENAME");
+    expect(page).toContain("/skills");
+    const resolveApi = readFileSync(join(ROOT, "app/api/tapbench/[token]/route.ts"), "utf8");
+    expect(resolveApi).toContain("skills_md_url");
+    expect(resolveApi).toContain("skills.md");
+    const skillsApi = readFileSync(
+      join(ROOT, "app/api/tapbench/[token]/skills/route.ts"),
+      "utf8",
+    );
+    expect(skillsApi).toContain("buildTapbenchSkillsMarkdown");
+    expect(skillsApi).toContain("text/markdown");
     const mw = readFileSync(join(ROOT, "middleware.ts"), "utf8");
     expect(mw).toContain("/tapbench");
     const share = readFileSync(join(ROOT, "lib/pow-api/tapbench.ts"), "utf8");

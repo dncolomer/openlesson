@@ -15,13 +15,11 @@ import {
   resolveTapInteractionKindFromBody,
   type TapInteractionKind,
 } from "@/lib/pow-api/tap-link-config";
-import {
-  buildExercisePromptText,
-  looksLikeConversationalOpening,
-} from "@/lib/exercise-tap";
+import { looksLikeConversationalOpening } from "@/lib/exercise-tap";
+import { generateTapExercisePrompt } from "@/lib/pow-api/tapbench-exercise-generate";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,13 +73,14 @@ export async function POST(req: NextRequest) {
     let openingQuestion: string;
 
     if (interactionKind === "exercise") {
-      // Solo exercise: domain task from block/workspace/files — not conversational "Teach me…".
+      // Solo exercise: LLM-authored concrete problem (same quality bar as TAPBench).
+      // Not conversational "Teach me…" and not a topic-list template wrap.
       const focused = brief.nodes.length === 1 ? brief.nodes[0] : null;
       const explicitExercise =
         requestedOpeningQuestion && !looksLikeConversationalOpening(requestedOpeningQuestion)
           ? requestedOpeningQuestion
           : null;
-      openingQuestion = buildExercisePromptText({
+      const generated = await generateTapExercisePrompt({
         exerciseText: explicitExercise,
         blockTitle: focused?.title,
         blockDescription: focused?.description,
@@ -94,8 +93,11 @@ export async function POST(req: NextRequest) {
           name: f.name,
           mime_type: f.mime_type,
         })),
+        durationSeconds: requestedDurationSeconds,
       });
+      openingQuestion = generated.exercise;
     } else {
+      // Conversational TAP already uses LLM opening generation.
       openingQuestion =
         requestedOpeningQuestion ||
         (await generateTapOpeningQuestion(brief, minutes, { practice }));

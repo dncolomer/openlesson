@@ -131,6 +131,10 @@ import {
   type IleSessionMode,
 } from "@/lib/ile-mode";
 import {
+  isLowQualityTapbenchExercise,
+  looksLikeTopicOverview,
+} from "@/lib/pow-api/tapbench-exercise-quality";
+import {
   buildFollowUpChapterDescription,
   findAdjacentFreeChapterSlot,
   type ChapterFollowUpSuggestion,
@@ -473,6 +477,8 @@ export function SessionView({
 
   const projectChapterExercisePrompt = useMemo(() => {
     if (!isProjectMode) return chapterDialoguePrompt;
+    // Prefer the stored chapter text when it is already a real exercise (LLM-authored).
+    // Thin topic wraps still go through the pure framer until upgraded async below.
     return buildIleProjectChapterExercisePrompt({
       chapterDescription: activeStep?.description,
       blockTitle:
@@ -481,6 +487,91 @@ export function SessionView({
       workspaceTitle: session?.problem,
     });
   }, [isProjectMode, chapterDialoguePrompt, activeStep?.description, session?.metadata, session?.problem]);
+
+  /** LLM-authored exercise override for the active Project Mode chapter (when seed was thin). */
+  const [llmChapterExerciseById, setLlmChapterExerciseById] = useState<
+    Record<string, string>
+  >({});
+  const llmChapterInflightRef = useRef<Set<string>>(new Set());
+
+  const displayProjectChapterExercise =
+    (activeStep?.id && llmChapterExerciseById[activeStep.id]) ||
+    projectChapterExercisePrompt;
+
+  /** When Project Mode chapter text is still a topic catalog / thin wrap, author a real exercise via LLM. */
+  useEffect(() => {
+    if (!isProjectMode || !session?.id || !activeStep?.id) return;
+    const seed = String(activeStep.description || "").trim();
+    if (!seed) return;
+    if (llmChapterExerciseById[activeStep.id]) return;
+    if (llmChapterInflightRef.current.has(activeStep.id)) return;
+    const thin =
+      looksLikeTopicOverview(seed) ||
+      isLowQualityTapbenchExercise(seed, {
+        blockTitle:
+          (session?.metadata as { block_title?: string } | undefined)?.block_title ||
+          session?.problem,
+        blockDescription: seed,
+        workspaceTitle: session?.problem,
+      });
+    // Already a solid exercise — keep as-is (session-plan LLM / prior generate).
+    if (!thin && seed.length > 80) return;
+
+    const stepId = activeStep.id;
+    llmChapterInflightRef.current.add(stepId);
+    void (async () => {
+      try {
+        const res = await fetch("/api/generate-exercise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: session.id,
+            surface: "ile_project",
+            chapterDescription: seed,
+            blockTitle:
+              (session?.metadata as { block_title?: string } | undefined)?.block_title ||
+              session?.problem,
+            workspaceTitle: session?.problem,
+            ...guestAccessBody,
+          }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { exercise?: string };
+        const exercise = String(data.exercise || "").trim();
+        if (!exercise) return;
+        setLlmChapterExerciseById((prev) =>
+          prev[stepId] ? prev : { ...prev, [stepId]: exercise },
+        );
+        // Persist upgraded exercise onto the chapter so reloads stay high quality.
+        const plan = sessionPlanRef.current;
+        if (plan) {
+          const nextSteps = plan.steps.map((s) =>
+            s.id === stepId ? { ...s, description: exercise } : s,
+          );
+          void persistPlanSteps(
+            { ...plan, steps: nextSteps },
+            {
+              toolAction: "chapter_exercise_upgrade",
+              toolData: { stepId, source: "generate-exercise" },
+            },
+          );
+        }
+      } catch {
+        /* keep pure framer */
+      } finally {
+        llmChapterInflightRef.current.delete(stepId);
+      }
+    })();
+  }, [
+    isProjectMode,
+    session?.id,
+    session?.problem,
+    session?.metadata,
+    activeStep?.id,
+    activeStep?.description,
+    llmChapterExerciseById,
+    guestAccessBody,
+  ]);
 
   // Project Mode dual-list thoughts keyed by chapter id (stash + solution).
   const [projectThoughtsByChapter, setProjectThoughtsByChapter] = useState<
@@ -1043,9 +1134,36 @@ export function SessionView({
     if (!currentPlan) return;
     const trimmed = description.trim();
     if (!trimmed) return;
-    // Project Mode: new chapters are longer-horizon exercises.
-    const framed =
-      isProjectMode ? frameIleProjectChapterDescription(trimmed) : trimmed;
+    // Project Mode: LLM-author a real longer-horizon exercise (not a topic-list wrap).
+    let framed = trimmed;
+    if (isProjectMode) {
+      try {
+        const res = await fetch("/api/generate-exercise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: sessionRef.current?.id || session?.id,
+            surface: "ile_project",
+            chapterDescription: trimmed,
+            seed: trimmed,
+            blockTitle:
+              (session?.metadata as { block_title?: string } | undefined)?.block_title ||
+              session?.problem,
+            workspaceTitle: session?.problem,
+            ...guestAccessBody,
+          }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { exercise?: string };
+          if (data.exercise?.trim()) framed = data.exercise.trim();
+          else framed = frameIleProjectChapterDescription(trimmed);
+        } else {
+          framed = frameIleProjectChapterDescription(trimmed);
+        }
+      } catch {
+        framed = frameIleProjectChapterDescription(trimmed);
+      }
+    }
     if (!isChapterSlotAvailable(currentPlan, position.row, position.col)) {
       throw new Error("That grid slot is already occupied.");
     }
@@ -1073,7 +1191,15 @@ export function SessionView({
         exercise: isProjectMode,
       },
     });
-  }, [persistPlanSteps, isProjectMode, resolvedSessionMode]);
+  }, [
+    persistPlanSteps,
+    isProjectMode,
+    resolvedSessionMode,
+    session?.id,
+    session?.problem,
+    session?.metadata,
+    guestAccessBody,
+  ]);
 
   const handleUpdateChapter = useCallback(async (stepId: string, description: string) => {
     const currentPlan = sessionPlanRef.current;
@@ -2542,9 +2668,8 @@ export function SessionView({
       if (!step) return;
       // Always place on the closest empty chapter square to the finished chapter.
       const slot = findAdjacentFreeChapterSlot(plan, step);
-      const description = frameIleProjectChapterDescription(
-        buildFollowUpChapterDescription(suggestion),
-      );
+      // Seed from follow-up; handleAddChapter LLM-authors a real exercise.
+      const description = buildFollowUpChapterDescription(suggestion);
       try {
         await handleAddChapter(description, slot);
         // Keep section visible: drop the chosen topic, then refresh so finished
@@ -3558,7 +3683,7 @@ export function SessionView({
                         isAssistantPending={isProjectMode ? false : isHeliosAssistantPending}
                         heliosTurnMode={isProjectMode ? "idle" : heliosTurnMode}
                         chapterPrompt={
-                          isProjectMode ? projectChapterExercisePrompt : chapterDialoguePrompt
+                          isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt
                         }
                         userInitial={userInitial}
                         isSessionActive={isRecording && !isPaused}

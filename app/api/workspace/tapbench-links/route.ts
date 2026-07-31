@@ -10,6 +10,7 @@ import {
   mintTapbenchLinkPersisted,
 } from "@/lib/pow-api/tapbench-store";
 import { normalizeTapbenchDurationSeconds } from "@/lib/pow-api/tapbench";
+import { generateTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-generate";
 
 export const runtime = "nodejs";
 
@@ -71,7 +72,9 @@ export async function POST(req: NextRequest) {
     // Load workspace + optional block for exercise framing
     const { data: workspace } = await auth.supabase
       .from("workspaces")
-      .select("id, title, root_topic, workspace_goal, user_id, organization_id")
+      .select(
+        "id, title, root_topic, workspace_goal, description, notes, user_id, organization_id",
+      )
       .eq("id", workspaceId)
       .single();
 
@@ -95,7 +98,7 @@ export async function POST(req: NextRequest) {
       blockDescription = (block as { description?: string | null }).description ?? null;
     }
 
-    const exerciseText =
+    const explicitExercise =
       typeof body.exercise === "string"
         ? body.exercise
         : typeof body.exerciseText === "string"
@@ -103,6 +106,39 @@ export async function POST(req: NextRequest) {
           : typeof body.exercise_text === "string"
             ? body.exercise_text
             : null;
+
+    // Best-effort file names for exercise grounding (no inline bodies on this table).
+    let files: { name: string; excerpt?: string | null }[] = [];
+    try {
+      const { data: fileRows } = await auth.supabase
+        .from("workspace_files")
+        .select("file_name")
+        .eq("workspace_id", workspaceId)
+        .limit(6);
+      files = (fileRows || [])
+        .map((f: { file_name?: string | null }) => ({
+          name: typeof f.file_name === "string" ? f.file_name : "",
+        }))
+        .filter((f) => f.name);
+    } catch {
+      files = [];
+    }
+
+    // Author a real problem (LLM). Never mint the old topic-list template as the exercise.
+    const generated = await generateTapbenchExercise({
+      workspaceTitle: workspace.title,
+      workspaceGoal: workspace.workspace_goal,
+      rootTopic: workspace.root_topic,
+      workspaceDescription:
+        (workspace as { description?: string | null }).description ?? null,
+      notes: (workspace as { notes?: string | null }).notes ?? null,
+      blockTitle,
+      blockDescription,
+      exerciseText: explicitExercise,
+      files,
+      durationSeconds,
+    });
+    const exerciseText = generated.exercise;
 
     const minted = await mintTapbenchLinkPersisted({
       supabase: auth.supabase,
@@ -140,6 +176,7 @@ export async function POST(req: NextRequest) {
           session_token: minted.session_token,
           guest_user_id: minted.link.guest_user_id,
         },
+        exercise_source: generated.source,
       },
       { status: 201 },
     );

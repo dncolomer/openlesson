@@ -47,6 +47,10 @@ describe("UI: Knowledge Regions builder + Knowledge Links TAPBench", () => {
     expect(page).toContain("resolveTapbenchSessionToken");
     expect(page).toContain("data-tapbench-exercise");
     expect(page).toContain("session_token");
+    // skills.md is referenced when agents visit the link
+    expect(page).toContain("data-tapbench-skills-md");
+    expect(page).toContain("skills.md");
+    expect(page).toContain("/skills");
     const mw = read("middleware.ts");
     expect(mw).toMatch(/\/tapbench/);
     // Mint URL path is /tapbench/{token} not only /api/tapbench

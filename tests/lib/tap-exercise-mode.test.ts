@@ -398,10 +398,10 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(submission).toContain("data-exercise-remove-thought");
   });
 
-  it("start route builds solo exercise without conversational Teach me for exercise kind", () => {
+  it("start route LLM-authors solo exercise (not template Teach me) for exercise kind", () => {
     const start = read("app/api/workspace-tap-score/start/route.ts");
     expect(start).toContain('interactionKind === "exercise"');
-    expect(start).toContain("buildExercisePromptText");
+    expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("looksLikeConversationalOpening");
     // Conversational generation only on non-exercise branch.
     expect(start).toMatch(

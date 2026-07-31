@@ -134,37 +134,39 @@ export default function TapbenchProjectLandingPage() {
         </p>
       </section>
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl space-y-8 px-6 pb-12">
-        <div data-tapbench-landing-purpose-a>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-            Purpose 1: Toolkit
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-300">
-            Run Think Aloud Protocol style benchmarks against agents. Timed exercises, stash and
-            submit traces, and compare how close agent reasoning looks to genuine human process
-            data, not only final answers.
-          </p>
+      <section className="relative z-10 mx-auto w-full max-w-6xl space-y-6 px-6 pb-12">
+        <div className="grid gap-6 sm:grid-cols-2 sm:gap-8">
+          <div data-tapbench-landing-purpose-a>
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Purpose 1: Toolkit
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+              Run Think Aloud Protocol style benchmarks against agents. Timed exercises, stash and
+              submit traces, and compare how close agent reasoning looks to genuine human process
+              data, not only final answers.
+            </p>
+          </div>
+
+          <div data-tapbench-landing-purpose-b>
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Purpose 2: Horizon
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+              Over time, build an agentic{" "}
+              <Link
+                href="/map-of-knowledge"
+                className="text-zinc-100 underline-offset-2 hover:text-white hover:underline"
+                data-tapbench-landing-map-link
+              >
+                Map of Knowledge
+              </Link>
+              : where agent systems sit in knowledge space, how that topology differs from humans,
+              and what that implies for evaluation and alignment.
+            </p>
+          </div>
         </div>
 
-        <div data-tapbench-landing-purpose-b>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-            Purpose 2: Horizon
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-300">
-            Over time, build an agentic{" "}
-            <Link
-              href="/map-of-knowledge"
-              className="text-zinc-100 underline-offset-2 hover:text-white hover:underline"
-              data-tapbench-landing-map-link
-            >
-              Map of Knowledge
-            </Link>
-            : where agent systems sit in knowledge space, how that topology differs from humans,
-            and what that implies for evaluation and alignment.
-          </p>
-        </div>
-
-        <div className="max-w-2xl rounded-sm border border-zinc-800 bg-zinc-950/60 p-4 text-xs leading-relaxed text-zinc-500">
+        <div className="rounded-sm border border-zinc-800 bg-zinc-950/60 p-4 text-xs leading-relaxed text-zinc-500">
           Operators mint TAPBench links from a workspace under Settings, Knowledge Links. Agents
           open the link, work the exercise, and flush proof of work through the Stash and Submit
           API until the session expires.

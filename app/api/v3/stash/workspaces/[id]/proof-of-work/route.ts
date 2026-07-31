@@ -15,6 +15,7 @@ import {
 } from "@/lib/pow-api/stash-api";
 import { resolveStashTapbenchFromRequest } from "@/lib/pow-api/stash-tapbench-auth";
 import { getServiceClient } from "@/lib/pow-api/auth";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   // Prefer API key auth; TAPBench session can also authorize when present.
   const apiAuth = await authenticateRequest(req, "workspaces:write");
-  let auth;
+  let auth: AuthContext;
   let supabase;
 
   if (apiAuth instanceof NextResponse) {

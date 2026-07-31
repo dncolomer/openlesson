@@ -150,7 +150,9 @@ describe("TAPBench mint / resolve / expiry", () => {
     expect(resolved.ok).toBe(false);
     if (resolved.ok) return;
     expect(resolved.code).toBe("session_expired");
-    expect(resolved.remaining_ms).toBe(0);
+    if (resolved.code === "session_expired") {
+      expect(resolved.remaining_ms).toBe(0);
+    }
   });
 
   it("list row always includes stable share URL from public_token", () => {

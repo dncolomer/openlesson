@@ -13,6 +13,7 @@ import {
   submitBufferedProofOfWork,
 } from "@/lib/pow-api/stash-api";
 import { resolveStashTapbenchFromRequest } from "@/lib/pow-api/stash-tapbench-auth";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   const apiAuth = await authenticateRequest(req, "workspaces:write");
-  let auth;
+  let auth: AuthContext;
   let supabase;
   let tapbenchCtx = null as import("@/lib/pow-api/stash-api").StashTapbenchContext | null;
 

@@ -246,7 +246,6 @@ export function WorkspaceTapbenchLinksPanel({
                   className="rounded-md border border-cyan-800/60 bg-cyan-950/30 px-2.5 py-1.5 text-[11px] text-cyan-200 transition hover:border-cyan-600"
                   data-download-tapbench-skills
                   data-tapbench-skills-md
-                  download={TAPBENCH_SKILLS_MD_FILENAME}
                   title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}
                 >
                   Download skills.md

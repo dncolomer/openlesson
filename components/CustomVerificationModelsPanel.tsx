@@ -49,7 +49,12 @@ function subjectKey(s: { user_id?: string | null; guest_user_id?: string | null 
   return `${s.user_id ?? ""}|${s.guest_user_id ?? ""}`;
 }
 
-function subjectLabel(s: SubjectRow): string {
+function subjectLabel(s: {
+  user_id?: string | null;
+  guest_user_id?: string | null;
+  label?: string | null;
+}): string {
+  if (s.label) return s.label;
   if (s.user_id) return `User ${s.user_id.slice(0, 8)}…`;
   if (s.guest_user_id) return `Guest ${s.guest_user_id.slice(0, 8)}…`;
   return "Workspace aggregate";

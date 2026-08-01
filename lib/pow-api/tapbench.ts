@@ -138,6 +138,12 @@ export function buildTapbenchExercise(input: {
   rootTopic?: string | null;
   blockTitle?: string | null;
   blockDescription?: string | null;
+  notes?: string | null;
+  files?: import("@/lib/prompt-workspace-context").WorkspaceFileContextItem[] | null;
+  blocks?: import("@/lib/prompt-workspace-context").PromptBlockInventoryItem[] | null;
+  focusedBlockId?: string | null;
+  blockLocalContext?: import("@/lib/prompt-workspace-context").BlockLocalContextInput | null;
+  unusableCells?: Array<{ row: number; col: number }> | null;
 }): string {
   const explicit =
     (typeof input.exerciseText === "string" && input.exerciseText.trim()) ||
@@ -152,6 +158,12 @@ export function buildTapbenchExercise(input: {
     workspaceTitle: input.workspaceTitle || input.rootTopic || "this workspace",
     workspaceGoal: input.workspaceGoal,
     rootTopic: input.rootTopic,
+    notes: input.notes,
+    files: input.files,
+    blocks: input.blocks,
+    focusedBlockId: input.focusedBlockId,
+    blockLocalContext: input.blockLocalContext,
+    unusableCells: input.unusableCells,
   });
 
   const trimmed = exercise.trim();

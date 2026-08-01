@@ -10,6 +10,7 @@ import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySetting
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
 import { WorkspaceGuestLinksPanel } from "@/components/WorkspaceGuestLinksPanel";
 import { WorkspaceKnowledgePortalPanel } from "@/components/WorkspaceKnowledgePortalPanel";
+import { WorkspaceDataStudioPanel } from "@/components/WorkspaceDataStudioPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
@@ -20,6 +21,7 @@ type SettingsSubview =
   | "regions"
   | "knowledge-portal"
   | "guest-links"
+  | "data-studio"
   | "integrations";
 
 const SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
@@ -27,6 +29,7 @@ const SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "regions",
   "knowledge-portal",
   "guest-links",
+  "data-studio",
   "integrations",
 ];
 
@@ -92,6 +95,7 @@ export function WorkspaceIntegrationPanel({
           label: t("planView.knowledgePortalSettingsTab"),
         },
         { id: "guest-links" as const, label: t("planView.performanceSubTabTap") },
+        { id: "data-studio" as const, label: "Data Studio" },
         { id: "integrations" as const, label: "Integrations" },
       ] satisfies Array<{ id: SettingsSubview; label: string }>,
     [t],
@@ -262,6 +266,16 @@ export function WorkspaceIntegrationPanel({
               isOwner={isOwner}
               currentUserId={currentUserId}
             />
+          </section>
+        ) : null}
+
+        {activeSubview === "data-studio" ? (
+          <section
+            className="space-y-3"
+            data-settings-section="data-studio"
+            data-settings-tab-panel="data-studio"
+          >
+            <WorkspaceDataStudioPanel workspaceId={workspaceId} isOwner={isOwner} />
           </section>
         ) : null}
 

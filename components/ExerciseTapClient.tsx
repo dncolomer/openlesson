@@ -89,6 +89,10 @@ interface ExerciseTapClientProps {
   showEndSession?: boolean;
   entryQueryParams?: Record<string, string | string[]>;
   participantIdentity?: PowParticipantIdentity | null;
+  /** Pre-selected duration from workspace launch (minutes). */
+  initialMinutes?: number;
+  /** When true, hide the briefing duration picker. */
+  lockDuration?: boolean;
 }
 
 function ThoughtButton({
@@ -112,6 +116,8 @@ export function ExerciseTapClient({
   showEndSession: showEndSessionProp,
   entryQueryParams = {},
   participantIdentity: participantIdentityProp = null,
+  initialMinutes,
+  lockDuration = false,
 }: ExerciseTapClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -164,9 +170,12 @@ export function ExerciseTapClient({
   }, [participantIdentityProp, privateToken]);
 
   const [phase, setPhase] = useState<Phase>("briefing");
-  const [minutes, setMinutes] = useState(
-    resolveInitialMinutes(initialSession?.requested_duration_seconds),
-  );
+  const resolvedLaunchMinutes =
+    typeof initialMinutes === "number" && Number.isFinite(initialMinutes)
+      ? resolveInitialMinutes(initialMinutes * 60)
+      : resolveInitialMinutes(initialSession?.requested_duration_seconds);
+  const [minutes, setMinutes] = useState(resolvedLaunchMinutes);
+  const durationLocked = lockDuration || typeof initialMinutes === "number";
   const [conversationLanguage, setConversationLanguage] = useState<SpokenLocale>("en");
   const speechLang = toSpeechBcp47(conversationLanguage);
   const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
@@ -201,9 +210,7 @@ export function ExerciseTapClient({
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
-  const [liveMinutes, setLiveMinutes] = useState(
-    resolveInitialMinutes(initialSession?.requested_duration_seconds),
-  );
+  const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
   const isPracticeModeRef = useRef(false);
 
@@ -845,7 +852,7 @@ export function ExerciseTapClient({
                   onConversationLanguageChange={(locale) =>
                     setConversationLanguage(coerceSpokenLocale(locale))
                   }
-                  showDurationPicker={!privateToken}
+                  showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
                   intro="Speak out loud on your own — no dialogue partner. Del stashes raw thinking. Enter promotes thoughts into the Solution Stack — that stack is what will be evaluated as your solution at the end. Undo on a Solution card moves it back to Stash (out of the evaluated solution) without discarding the thought."
                   shortcutRows={[

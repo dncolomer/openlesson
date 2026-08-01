@@ -103,6 +103,11 @@ export function composeGenerateShapeBlockUserPrompt(input: {
   /** Actual occupied cell count (freeform may be less than spanW×spanH). */
   cellCount?: number;
   freeform?: boolean;
+  /**
+   * Selected context sources (files / external / notes) used as generation
+   * source and attached as block local context.
+   */
+  selectedMaterialsSnippet?: string;
 }): string {
   const bboxCells = blockFootprintCellCount(input.spanW, input.spanH);
   const cells =
@@ -125,8 +130,14 @@ export function composeGenerateShapeBlockUserPrompt(input: {
       ? `Scope the topic as a baseline single ILE/TAP unit.`
       : `Scope the topic ~${cells}× broader than a single-cell block (${cells} single-block units of lecture breadth): wider competency cluster and richer proof-of-work expectations.`,
     `Nearby blocks:\n${input.neighborSummary.trim() || "none"}`,
+    input.selectedMaterialsSnippet?.trim()
+      ? `Primary generation source (creator-selected materials):\n${input.selectedMaterialsSnippet.trim()}`
+      : "",
     `User request: "${input.userRequest.trim()}"`,
     `Create exactly one learning block that occupies this combined shape as one lecture.`,
+    input.selectedMaterialsSnippet?.trim()
+      ? `Ground the title and description in the selected materials above when they are present.`
+      : "",
   ];
   if (input.languageNote?.trim()) parts.push(input.languageNote.trim());
   return parts.filter(Boolean).join("\n\n");

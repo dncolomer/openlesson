@@ -116,6 +116,17 @@ export function resolveProductIntentFromAxes(
   );
 }
 
+/**
+ * UI launch: Explore|Drill × timebox on/off → existing four targets.
+ * timeboxEnabled true → timed (TAP path); false → open-ended (ILE path).
+ */
+export function resolveLaunchFromStyleAndTimebox(
+  style: unknown,
+  timeboxEnabled: boolean,
+): ProductLaunchTarget {
+  return resolveProductIntent(style, timeboxEnabled ? "timed" : "open_ended");
+}
+
 /** Display cluster label for a technical launch target. */
 export function productIntentClusterLabel(target: ProductLaunchTarget): string {
   switch (target.id) {

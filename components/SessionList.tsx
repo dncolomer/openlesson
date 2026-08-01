@@ -19,12 +19,18 @@ interface Block {
   is_start: boolean;
   next_block_ids: string[];
   status: string;
-  position_x?: number;
-  position_y?: number;
-  span_w?: number;
-  span_h?: number;
+  position_x?: number | null;
+  position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
   planning_prompt?: string;
   session_id?: string;
+  lock_until_block_ids?: string[] | null;
+  local_context?: {
+    notes?: string | null;
+    local_files?: Array<{ name: string; excerpt?: string | null }> | null;
+    global_file_refs?: string[] | null;
+  } | null;
 }
 
 interface SessionListProps {
@@ -55,6 +61,27 @@ interface SessionListProps {
    */
   expandedNodeId?: string | null;
   onExpandedNodeIdChange?: (blockId: string | null) => void;
+  /**
+   * Empty-cell selection for the right pane (1 → Add, 2+ → generate shape).
+   * Null/[] clears.
+   */
+  onEmptySelectionChange?: (cells: Array<{ row: number; col: number }> | null) => void;
+  /**
+   * @deprecated Prefer onEmptySelectionChange.
+   * Single empty placeable cell for right-pane Add block (null clears).
+   */
+  onAddTargetChange?: (cell: { row: number; col: number } | null) => void;
+  /** Unusable map ground cells (path-shaping). */
+  unusableCells?: Array<{ row: number; col: number }> | null;
+  /** Persist lock-until / unusable ground from left toolbar + selection. */
+  onMapGround?: (payload: {
+    op: "set_lock_until" | "set_unusable_cells";
+    blockId?: string;
+    prerequisiteIds?: string[];
+    unusableCells?: Array<{ row: number; col: number }>;
+  }) => Promise<void> | void;
+  /** Workspace notes for generate-in-shape context source picker. */
+  workspaceNotes?: string | null;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -115,6 +142,11 @@ export function SessionList({
   ayclToken,
   expandedNodeId: expandedNodeIdProp,
   onExpandedNodeIdChange,
+  onEmptySelectionChange,
+  onAddTargetChange,
+  unusableCells = null,
+  onMapGround,
+  workspaceNotes = null,
 }: SessionListProps) {
   const router = useRouter();
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
@@ -271,7 +303,7 @@ export function SessionList({
 
   const handleGridOp = useCallback(
     async (payload: {
-      op: "generate_shape" | "merge" | "split" | "move" | "update_block";
+      op: "generate_shape" | "merge" | "split" | "move" | "update_block" | "delete_block";
       prompt?: string;
       cells?: Array<{ row: number; col: number }>;
       blockIds?: string[];
@@ -280,6 +312,7 @@ export function SessionList({
       blockId?: string;
       title?: string;
       description?: string;
+      contextSourceKeys?: string[];
     }) => {
       if (!workspaceId || !isOwner) return;
 
@@ -362,7 +395,31 @@ export function SessionList({
           <BlockSkillGrid
             nodes={nodes}
             selectedNodeId={expandedNodeId}
-            onSelectNode={setExpandedNodeId}
+            onSelectNode={(blockId) => {
+              // Opening a block clears empty create surfaces (right-pane hosts only).
+              if (blockId && onEmptySelectionChange) onEmptySelectionChange(null);
+              if (blockId && onAddTargetChange) onAddTargetChange(null);
+              setExpandedNodeId(blockId);
+            }}
+            // Only wire when parent hosts right-pane empty create. A always-defined
+            // wrapper would force useRightPaneEmpty and break local fallback
+            // (e.g. WorkspaceChat SessionList without these props).
+            onEmptySelectionChange={
+              onEmptySelectionChange
+                ? (cells) => {
+                    if (cells && cells.length > 0) setExpandedNodeId(null);
+                    onEmptySelectionChange(cells);
+                  }
+                : undefined
+            }
+            onAddTargetChange={
+              onAddTargetChange
+                ? (cell) => {
+                    if (cell) setExpandedNodeId(null);
+                    onAddTargetChange(cell);
+                  }
+                : undefined
+            }
             canEdit={isOwner}
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
@@ -371,6 +428,9 @@ export function SessionList({
             locale={locale}
             onAddBlock={handleAddBlock}
             onGridOp={handleGridOp}
+            unusableCells={unusableCells}
+            onMapGround={onMapGround}
+            workspaceNotes={workspaceNotes}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{
@@ -390,7 +450,6 @@ export function SessionList({
               split: t("sessionList.gridSplit"),
               move: t("sessionList.gridMove"),
               generateShape: t("sessionList.gridGenerateShape"),
-              editBlock: t("sessionList.gridEditBlock"),
               clearSelection: t("sessionList.gridClearSelection"),
               multiSelectHint: t("sessionList.gridMultiSelectHint"),
             }}

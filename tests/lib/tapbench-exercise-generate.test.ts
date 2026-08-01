@@ -124,11 +124,19 @@ describe("pure framer no longer wraps topic catalogs as tasks", () => {
 });
 
 describe("mint route wires LLM exercise generation", () => {
-  it("POST handler imports and calls generateTapbenchExercise", () => {
+  it("POST handler imports and calls generateTapbenchExercise with full context layers", () => {
     const route = read("app/api/workspace/tapbench-links/route.ts");
     expect(route).toContain("generateTapbenchExercise");
     expect(route).toContain("exercise_source");
+    expect(route).toContain("loadWorkspacePromptContext");
+    expect(route).toContain("blocks: promptCtx.blocks");
+    expect(route).toContain("blockLocalContext: promptCtx.blockLocalContext");
+    expect(route).toContain("unusableCells: promptCtx.unusableCells");
+    expect(route).toContain("focusedBlockId: promptCtx.focusedBlockId");
     expect(existsSync(join(ROOT, "lib/pow-api/tapbench-exercise-generate.ts"))).toBe(
+      true,
+    );
+    expect(existsSync(join(ROOT, "lib/pow-api/load-workspace-prompt-context.ts"))).toBe(
       true,
     );
   });
@@ -148,10 +156,15 @@ describe("human TAP + ILE also use LLM domain exercise author", () => {
     expect(route).toContain("ile_project");
   });
 
-  it("SessionView calls generate-exercise for Project Mode chapters", () => {
+  it("SessionView calls generate-exercise for Project Mode chapters with context layers", () => {
     const view = read("components/SessionView.tsx");
     expect(view).toContain("/api/generate-exercise");
     expect(view).toContain("ile_project");
+    expect(view).toContain("buildIleProjectChapterExercisePrompt");
+    expect(view).toContain("blocks: ilePromptMaterials?.blocks");
+    expect(view).toContain("blockLocalContext: ilePromptMaterials?.blockLocalContext");
+    expect(view).toContain("unusableCells: ilePromptMaterials?.unusableCells");
+    expect(view).toContain("notes: ilePromptMaterials?.notes");
   });
 
   it("generateDomainExercise supports tap_exercise and ile_project surfaces", async () => {

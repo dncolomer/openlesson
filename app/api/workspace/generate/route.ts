@@ -229,8 +229,18 @@ export async function POST(req: NextRequest) {
       ? `\nThe user has attached ${docFiles.length} document(s) as reference material. Search and analyze them, then incorporate their content into the plan alongside the topic "${topic}".`
       : "";
 
-    // Template mode: selected resources as generation context (+ persisted notes later)
+    // Template mode: selected resources as generation context; persist as external sources later.
     let templateNotes: string | null = null;
+    let templateExternalCreates: Array<{
+      title: string;
+      url: string;
+      resource_type?: string;
+      description?: string | null;
+      source: "create";
+      dantes_topic_slug?: string | null;
+      meta?: Record<string, unknown>;
+      sort_order: number;
+    }> = [];
     if (createMode === "template") {
       const dantesTopic =
         body.dantesTopic && typeof body.dantesTopic === "object"
@@ -239,19 +249,47 @@ export async function POST(req: NextRequest) {
       const dantesResources = Array.isArray(body.dantesResources) ? body.dantesResources : [];
       const topicName =
         (typeof dantesTopic?.name === "string" && dantesTopic.name) || topic;
-      const resourceItems = dantesResources.map((r: Record<string, unknown>) => ({
-        title: typeof r.title === "string" ? r.title : "Resource",
-        type: typeof r.type === "string" ? r.type : undefined,
-        url: typeof r.url === "string" ? r.url : undefined,
-        description: typeof r.description === "string" ? r.description : null,
-        difficulty: typeof r.difficulty === "string" ? r.difficulty : undefined,
-      }));
+      const topicSlug =
+        typeof dantesTopic?.slug === "string" ? dantesTopic.slug : null;
+      type TemplateResourceItem = {
+        title: string;
+        type?: string;
+        url?: string;
+        description: string | null;
+        difficulty?: string;
+      };
+      const resourceItems: TemplateResourceItem[] = dantesResources.map(
+        (r: Record<string, unknown>) => ({
+          title: typeof r.title === "string" ? r.title : "Resource",
+          type: typeof r.type === "string" ? r.type : undefined,
+          url: typeof r.url === "string" ? r.url : undefined,
+          description: typeof r.description === "string" ? r.description : null,
+          difficulty: typeof r.difficulty === "string" ? r.difficulty : undefined,
+        }),
+      );
       fileContext =
         composeDantesResourceContext(topicName, resourceItems) + (fileContext || "");
+      // Dual-write: notes keep a readable link appendix; Context list uses external_resources table.
       templateNotes = composeTemplateWorkspaceNotes(topicName, resourceItems, {
         topicDescription:
           typeof dantesTopic?.description === "string" ? dantesTopic.description : null,
       });
+      const externalRows: typeof templateExternalCreates = [];
+      resourceItems.forEach((r: TemplateResourceItem, i: number) => {
+        const url = typeof r.url === "string" ? r.url.trim() : "";
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+        externalRows.push({
+          title: r.title,
+          url,
+          resource_type: r.type,
+          description: r.description ?? null,
+          source: "create",
+          dantes_topic_slug: topicSlug,
+          meta: { difficulty: r.difficulty ?? null },
+          sort_order: i,
+        });
+      });
+      templateExternalCreates = externalRows;
     }
 
     const goalPromptText =
@@ -468,6 +506,28 @@ export async function POST(req: NextRequest) {
         },
         { status: 500 },
       );
+    }
+
+    // Persist external Context sources from Dantes template selection (same store as Context CRUD).
+    if (templateExternalCreates.length > 0) {
+      const rows = templateExternalCreates.map((r) => ({
+        workspace_id: plan.id,
+        user_id: user.id,
+        title: r.title,
+        url: r.url,
+        resource_type: r.resource_type ?? null,
+        description: r.description ?? null,
+        source: r.source,
+        dantes_topic_slug: r.dantes_topic_slug ?? null,
+        meta: r.meta ?? {},
+        sort_order: r.sort_order,
+      }));
+      const { error: extError } = await supabase
+        .from("workspace_external_resources")
+        .insert(rows);
+      if (extError) {
+        console.error("[generate] workspace_external_resources insert:", extError.message);
+      }
     }
 
     // Persist workspace_files records (already uploaded to xAI above)

@@ -37,13 +37,14 @@ describe("AYCL section layout mapping (shared helper)", () => {
   it("Knowledge and Settings are available for AYCL owner-equivalent sessions", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
+      "context",
       "knowledge",
       "settings",
     ]);
     expect(resolveActiveSection("settings", { isOwner: true })).toBe("settings");
     expect(resolveActiveSection("knowledge", { isOwner: true })).toBe("knowledge");
-    // Non-owners without org admin lose both privileged tabs
-    expect(availableWorkspaceSections({ isOwner: false })).toEqual(["workspace"]);
+    // Non-owners keep Context; lose privileged Knowledge/Settings
+    expect(availableWorkspaceSections({ isOwner: false })).toEqual(["workspace", "context"]);
     expect(resolveActiveSection("knowledge", { isOwner: false })).toBe("workspace");
     const layout = resolveWorkspaceSectionLayout("settings");
     expect(layout.mountsIntegrationPanel).toBe(true);
@@ -94,7 +95,7 @@ describe("AyclWorkspaceView section shell wiring", () => {
     expect(ayclSource).toContain("ayclToken={accessToken}");
     expect(ayclSource).toContain("sectionLayout.showBlockMapChrome");
     expect(ayclSource).toContain("<SessionList");
-    expect(ayclSource).toContain("WorkspaceNotesFilesPanel");
+    expect(ayclSource).toContain("WorkspaceContextPanel");
     expect(ayclSource.indexOf("sectionLayout.mountsPerformancePanel")).toBeLessThan(
       ayclSource.indexOf("sectionLayout.showBlockMapChrome"),
     );
@@ -106,6 +107,6 @@ describe("AyclWorkspaceView section shell wiring", () => {
     expect(ayclSource).toContain("Copy access link");
     expect(ayclSource).toContain("All-You-Can-Learn");
     expect(ayclSource).toContain("Lifetime access");
-    expect(ayclSource).toContain("ILE only");
+    expect(ayclSource).toContain("Open-ended only");
   });
 });

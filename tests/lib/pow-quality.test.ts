@@ -3,13 +3,20 @@ import fs from "fs";
 import path from "path";
 import {
   classifyPowQuality,
+  clearPowMetadataInvalidated,
   filterSnapshotEligibleProofOfWorkRows,
   isExcludedFromSnapshotPoW,
   isImpurePoWMetadata,
+  isInvalidatedPoWMetadata,
   isPracticePoW,
   isScoredPoW,
+  markPowMetadataInvalidated,
   matchesPowQualityFilter,
+  POW_INVALIDATED_METADATA_KEY,
 } from "@/lib/pow-api/pow-quality";
+import {
+  buildStudioPowPatch,
+} from "@/lib/pow-api/studio-pow-mutate";
 import { aggregateProofOfWorkStats, type ProofOfWorkStatsRow } from "@/lib/pow-api/proof-of-work-stats";
 
 const ROOT = process.cwd();
@@ -26,23 +33,65 @@ describe("pow-quality snapshot exclusion", () => {
     expect(isExcludedFromSnapshotPoW({})).toBe(false);
   });
 
-  it("filters snapshot rows to scored-only", () => {
+  it("detects and sets invalidated flag only in metadata", () => {
+    expect(isInvalidatedPoWMetadata({ [POW_INVALIDATED_METADATA_KEY]: true })).toBe(true);
+    expect(isInvalidatedPoWMetadata({ invalidated: true })).toBe(true);
+    expect(isInvalidatedPoWMetadata({})).toBe(false);
+    expect(isExcludedFromSnapshotPoW({ invalidated: true })).toBe(true);
+    expect(isScoredPoW({ invalidated: true })).toBe(false);
+
+    const marked = markPowMetadataInvalidated(
+      { tap_session_id: "t1", text: "hello" },
+      { by: "user-1", reason: "manual", at: "2026-07-31T00:00:00.000Z" },
+    );
+    expect(marked.invalidated).toBe(true);
+    expect(marked.invalidated_by).toBe("user-1");
+    expect(marked.invalidated_at).toBe("2026-07-31T00:00:00.000Z");
+    expect(marked.text).toBe("hello");
+    // Original not mutated
+    expect(isInvalidatedPoWMetadata({ tap_session_id: "t1" })).toBe(false);
+
+    const cleared = clearPowMetadataInvalidated(marked);
+    expect(isInvalidatedPoWMetadata(cleared)).toBe(false);
+    expect(cleared.text).toBe("hello");
+  });
+
+  it("filters snapshot rows to scored-only (excludes practice, impure, invalidated)", () => {
     const rows = [
       { id: "1", metadata: { tap_session_id: "a" } },
       { id: "2", metadata: { practice: true, pow_kind: "practice" } },
       { id: "3", metadata: { impure: true, quality: "impure" } },
       { id: "4", metadata: { practice_pow: true } },
+      { id: "5", metadata: { invalidated: true, invalidated_at: "2026-07-31T00:00:00Z" } },
     ];
     const eligible = filterSnapshotEligibleProofOfWorkRows(rows);
     expect(eligible.map((r) => r.id)).toEqual(["1"]);
   });
 
-  it("matches quality filters", () => {
+  it("matches quality filters including invalidated", () => {
     expect(matchesPowQualityFilter({ practice: true }, "practice")).toBe(true);
     expect(matchesPowQualityFilter({ impure: true }, "impure")).toBe(true);
     expect(matchesPowQualityFilter({}, "scored")).toBe(true);
     expect(matchesPowQualityFilter({ practice: true }, "scored")).toBe(false);
+    expect(matchesPowQualityFilter({ invalidated: true }, "invalidated")).toBe(true);
+    expect(matchesPowQualityFilter({ invalidated: true }, "scored")).toBe(false);
     expect(classifyPowQuality({ practice: true, impure: true })).toBe("impure");
+    expect(classifyPowQuality({ invalidated: true })).toBe("invalidated");
+  });
+
+  it("buildStudioPowPatch drives invalidate without inventing SQL columns", () => {
+    const patch = buildStudioPowPatch(
+      { text: "work", tool: "math" },
+      { invalidate: true, invalidateOptions: { by: "admin-1" } },
+    );
+    expect(patch.fields).toHaveProperty("metadata");
+    expect(patch.fields).not.toHaveProperty("invalidated");
+    expect(patch.metadata.invalidated).toBe(true);
+    expect(patch.metadata.invalidated_by).toBe("admin-1");
+    expect(patch.metadata.text).toBe("work");
+
+    const cleared = buildStudioPowPatch(patch.metadata, { clearInvalidated: true });
+    expect(cleared.metadata.invalidated).toBeUndefined();
   });
 });
 
@@ -67,7 +116,7 @@ describe("aggregateProofOfWorkStats quality + subject", () => {
     };
   }
 
-  it("counts practice and impure separately and filters detail aggregates", () => {
+  it("counts practice, impure, and invalidated separately and filters detail aggregates", () => {
     const now = Date.now();
     const rows: ProofOfWorkStatsRow[] = [
       row({
@@ -88,26 +137,34 @@ describe("aggregateProofOfWorkStats quality + subject", () => {
         guest_user_id: "g1",
         tool_name: "tap-speech",
       }),
+      row({
+        created_at: new Date(now - 3000).toISOString(),
+        metadata: { invalidated: true },
+        user_id: "u2",
+        tool_name: "math",
+      }),
     ];
 
-    const all = aggregateProofOfWorkStats("ws", 3, rows);
+    const all = aggregateProofOfWorkStats("ws", 4, rows);
     expect(all.scored_artifacts).toBe(1);
     expect(all.practice_artifacts).toBe(1);
     expect(all.impure_artifacts).toBe(1);
-    expect(all.subjects.length).toBe(2);
+    expect(all.invalidated_artifacts).toBe(1);
+    expect(all.subjects.length).toBe(3);
 
-    const practiceOnly = aggregateProofOfWorkStats("ws", 3, rows, { quality: "practice" });
+    const practiceOnly = aggregateProofOfWorkStats("ws", 4, rows, { quality: "practice" });
     expect(practiceOnly.unique_tools).toBe(1);
     expect(practiceOnly.recent.every((r) => r.quality === "practice")).toBe(true);
 
-    const me = aggregateProofOfWorkStats("ws", 3, rows, {
+    const me = aggregateProofOfWorkStats("ws", 4, rows, {
       subjectKey: "me",
       currentUserId: "u1",
     });
-    // me = scored + practice for u1 (no guest)
+    // me = scored + practice for u1 (no guest); quality counts stay sample-wide
     expect(me.scored_artifacts).toBe(1);
     expect(me.practice_artifacts).toBe(1);
-    expect(me.impure_artifacts).toBe(1); // quality counts stay sample-wide
+    expect(me.impure_artifacts).toBe(1);
+    expect(me.invalidated_artifacts).toBe(1);
     expect(me.unique_tools).toBe(1);
   });
 });

@@ -5,7 +5,6 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { createClient, type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "../lib/i18n";
-import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { BlockDetailCard } from "./BlockDetailCard";
 
 interface Block {
@@ -85,23 +84,12 @@ export function SessionItem({
   const [promptSaved, setPromptSaved] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [activeSession, setActiveSession] = useState<{ id: string; status: string } | null>(null);
-  const [aestheticImages, setAestheticImages] = useState<string[] | null>(null);
   const isCompleted = node.status === "completed";
   const isLocked = node.status === "locked";
   const isInProgress = node.status === "in_progress";
   useEffect(() => {
     setEditedPlanningPrompt(node.planning_prompt || "");
   }, [node.id, node.planning_prompt]);
-
-  useEffect(() => {
-    if (!isDetail) return;
-    fetchAestheticPackages()
-      .then((packages) => {
-        const images = packages.flatMap((pkg) => pkg.images);
-        if (images.length > 0) setAestheticImages(images);
-      })
-      .catch(() => {});
-  }, [isDetail]);
 
   useEffect(() => {
     if (!node.session_id) return;
@@ -172,6 +160,7 @@ export function SessionItem({
   const handleStartTimed = (
     interactionKind: "conversational" | "exercise",
     event?: React.MouseEvent,
+    minutes?: number,
   ) => {
     event?.stopPropagation();
     if (!workspaceId) return;
@@ -179,23 +168,31 @@ export function SessionItem({
     if (interactionKind === "exercise") {
       params.set("interactionKind", "exercise");
     }
+    if (typeof minutes === "number" && Number.isFinite(minutes) && minutes > 0) {
+      params.set("minutes", String(Math.trunc(minutes)));
+    }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
     router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
   };
 
-  const handleLaunchIntent = (target: {
-    id: string;
-    product: string;
-    session_mode?: string;
-    interaction_kind?: string;
-  }) => {
+  const handleLaunchIntent = (
+    target: {
+      id: string;
+      product: string;
+      session_mode?: string;
+      interaction_kind?: string;
+    },
+    options?: { minutes?: number },
+  ) => {
     if (target.product === "ile") {
       void handleStart(target.session_mode === "project" ? "project" : "learning");
       return;
     }
     handleStartTimed(
       target.interaction_kind === "exercise" ? "exercise" : "conversational",
+      undefined,
+      options?.minutes,
     );
   };
 
@@ -326,12 +323,14 @@ export function SessionItem({
       : isInProgress
         ? "in_progress"
         : "neutral";
-    const thumbnailSrc = aestheticImageForId(node.id, aestheticImages ?? undefined);
+    // Hero aesthetics image intentionally not passed — launch card is text + actions only.
+    const customizeLabel =
+      t("sessionItem.customizeSessionLabel") || "Customize the session";
     const detailPromptSection = isOwner ? (
-      <div>
+      <div data-customize-session>
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            {t("sessionItem.customInstructionsLabel")}
+            {customizeLabel}
           </span>
           <span className="text-[10px] text-neutral-500">
             {savingPrompt && t("sessionItem.saving")}
@@ -343,14 +342,14 @@ export function SessionItem({
           onChange={(e) => setEditedPlanningPrompt(e.target.value)}
           onBlur={savePlanningPrompt}
           placeholder={t("sessionItem.customInstructions")}
-          className="w-full resize-none rounded-lg border border-white/15 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
-          rows={4}
+          className="w-full resize-none rounded border border-neutral-700/60 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+          rows={3}
         />
       </div>
     ) : node.planning_prompt ? (
-      <div>
+      <div data-customize-session>
         <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          {t("sessionItem.customInstructionsLabel")}
+          {customizeLabel}
         </p>
         <p className="text-xs leading-relaxed text-neutral-400">{node.planning_prompt}</p>
       </div>
@@ -363,7 +362,6 @@ export function SessionItem({
           layout={detailLayout === "drawer" ? "modal" : "horizontal"}
           title={node.title}
           description={node.description}
-          thumbnailSrc={thumbnailSrc}
           progressRing={progressRing}
           isStart={node.is_start}
           isStarting={isStarting}
@@ -374,10 +372,14 @@ export function SessionItem({
           onStartIle={() => void handleStart("learning")}
           onStartIleProject={() => void handleStart("project")}
           onStartEval={
-            hideTap ? undefined : (e) => handleStartTimed("conversational", e)
+            hideTap
+              ? undefined
+              : (e, minutes) => handleStartTimed("conversational", e, minutes)
           }
           onStartExercise={
-            hideTap ? undefined : (e) => handleStartTimed("exercise", e)
+            hideTap
+              ? undefined
+              : (e, minutes) => handleStartTimed("exercise", e, minutes)
           }
           promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}

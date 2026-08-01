@@ -12,6 +12,7 @@ import {
   mergeBlocksToFreeform,
   normalizeSpan,
   parseShapeCells,
+  placedBlockCells,
   selectionIsFreeformLectureShape,
   splitBlocksToSingles,
   translateBlocksPreservingShape,
@@ -26,8 +27,22 @@ import {
   composeSplitBlockSystemMessage,
   composeSplitBlockUserPrompt,
 } from "@/lib/block-footprint-prompt";
+import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-rules";
+import {
+  buildShapeContextSourceOptions,
+  composeShapeGenerationContext,
+  shapeSelectionToGenerationSnippet,
+  shapeSelectionToLocalContext,
+} from "@/lib/shape-context-select";
+import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 
-type GridOp = "generate_shape" | "merge" | "split" | "move" | "update_block";
+type GridOp =
+  | "generate_shape"
+  | "merge"
+  | "split"
+  | "move"
+  | "update_block"
+  | "delete_block";
 
 interface AiBlockPayload {
   title: string;
@@ -41,18 +56,45 @@ interface AiSplitPayload {
 async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string) {
   const { data: plan } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, workspace_goal")
+    .select("id, title, root_topic, description, notes, workspace_goal, unusable_cells")
     .eq("id", workspaceId)
     .single();
 
   const { data: files } = await supabase
     .from("workspace_files")
-    .select("file_name")
+    .select("id, file_name")
     .eq("workspace_id", workspaceId);
 
+  // External resources table may not be migrated yet — degrade gracefully.
+  let externalRows: Array<{
+    id: string;
+    title?: string | null;
+    url?: string | null;
+    description?: string | null;
+  }> = [];
+  const externalQuery = await supabase
+    .from("workspace_external_resources")
+    .select("id, title, url, description")
+    .eq("workspace_id", workspaceId)
+    .order("sort_order", { ascending: true });
+  if (externalQuery.error) {
+    const msg = externalQuery.error.message || "";
+    if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
+      console.error("[grid-ops] external resources load:", externalQuery.error);
+    }
+  } else {
+    externalRows = (externalQuery.data || []) as typeof externalRows;
+  }
+
+  const fileRows = (files || []) as Array<{ id?: string; file_name?: string }>;
   return {
     plan,
-    fileNames: (files || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
+    fileNames: fileRows.map((f) => f.file_name).filter(Boolean) as string[],
+    fileRows,
+    externalResources: externalRows,
+    unusableCells: normalizeUnusableCells(
+      (plan as { unusable_cells?: unknown } | null)?.unusable_cells,
+    ),
   };
 }
 
@@ -93,6 +135,7 @@ export async function POST(req: NextRequest) {
       model: userModel,
       locale,
       weightedNeighbors,
+      contextSourceKeys,
     } = body as {
       workspaceId?: string;
       op?: GridOp;
@@ -107,6 +150,8 @@ export async function POST(req: NextRequest) {
       model?: string;
       locale?: string;
       weightedNeighbors?: WeightedGridNeighbor[];
+      /** Selected Context sources for generate_shape (files / external / notes). */
+      contextSourceKeys?: string[];
     };
 
     if (!workspaceId || !op) {
@@ -164,6 +209,73 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (op === "delete_block") {
+      if (!blockId || typeof blockId !== "string") {
+        return NextResponse.json({ error: "blockId is required" }, { status: 400 });
+      }
+      const existing = nodes.find((n) => n.id === blockId);
+      if (!existing) return NextResponse.json({ error: "Block not found" }, { status: 404 });
+
+      // Strip deleted id from peers' next / lock-until lists.
+      for (const n of nodes) {
+        if (n.id === blockId) continue;
+        const nextIds = Array.isArray(n.next_block_ids)
+          ? (n.next_block_ids as string[]).filter((id) => id !== blockId)
+          : [];
+        const lockIds = Array.isArray(n.lock_until_block_ids)
+          ? (n.lock_until_block_ids as string[]).filter((id) => id !== blockId)
+          : [];
+        const prevNext = Array.isArray(n.next_block_ids) ? n.next_block_ids : [];
+        const prevLock = Array.isArray(n.lock_until_block_ids) ? n.lock_until_block_ids : [];
+        if (nextIds.length !== prevNext.length || lockIds.length !== prevLock.length) {
+          await supabase
+            .from("blocks")
+            .update({
+              next_block_ids: nextIds,
+              lock_until_block_ids: lockIds,
+            })
+            .eq("id", n.id);
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from("blocks")
+        .delete()
+        .eq("id", blockId)
+        .eq("workspace_id", workspaceId);
+
+      if (deleteError) {
+        return NextResponse.json({ error: "Failed to delete block" }, { status: 500 });
+      }
+
+      // If the deleted block was the start, promote the earliest remaining block.
+      if (existing.is_start) {
+        const { data: remaining } = await supabase
+          .from("blocks")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        const promoteId = remaining?.[0]?.id;
+        if (promoteId) {
+          await supabase.from("blocks").update({ is_start: true }).eq("id", promoteId);
+        }
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        deletedBlockId: blockId,
+        explanation: `Deleted block "${existing.title || blockId}".`,
+      });
+    }
+
     if (op === "move") {
       const ids = Array.isArray(blockIds) ? blockIds.filter(Boolean) : [];
       if (ids.length === 0) {
@@ -181,6 +293,18 @@ export async function POST(req: NextRequest) {
       );
       if (!next) {
         return NextResponse.json({ error: "Move collides with occupied cells" }, { status: 409 });
+      }
+
+      const { unusableCells: moveUnusable } = await loadWorkspaceContext(supabase, workspaceId);
+      for (const block of next) {
+        const cells = placedBlockCells(block);
+        const ground = canPlaceOnMapGround(cells, moveUnusable);
+        if (!ground.ok && ground.reason === "unusable") {
+          return NextResponse.json(
+            { error: "Move lands on unusable ground", code: "unusable_ground" },
+            { status: 409 },
+          );
+        }
       }
 
       for (const block of next) {
@@ -496,12 +620,52 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
-      const context = composeBlockGenerationContext({
+      const {
+        plan,
+        fileNames,
+        fileRows,
+        externalResources,
+        unusableCells: shapeUnusable,
+      } = await loadWorkspaceContext(supabase, workspaceId);
+      const ground = canPlaceOnMapGround(absolute, shapeUnusable);
+      if (!ground.ok && ground.reason === "unusable") {
+        return NextResponse.json(
+          {
+            error: "Selection includes unusable ground cells",
+            code: "unusable_ground",
+          },
+          { status: 409 },
+        );
+      }
+
+      const selectedKeys = Array.isArray(contextSourceKeys)
+        ? contextSourceKeys.map((k) => String(k || "").trim()).filter(Boolean)
+        : [];
+      const shapeOptions = buildShapeContextSourceOptions({
+        notes: plan?.notes ?? "",
+        files: fileRows.map((f) => ({
+          id: f.id,
+          file_name: f.file_name,
+        })),
+        externalResources,
+      });
+      const selectedSnippet = shapeSelectionToGenerationSnippet(selectedKeys, shapeOptions);
+      const localContext = shapeSelectionToLocalContext(selectedKeys, shapeOptions);
+      const normalizedLocal = localContext
+        ? normalizeBlockLocalContext(localContext)
+        : null;
+
+      const baseContext = composeBlockGenerationContext({
         workspaceTitle: plan?.title || plan?.root_topic || undefined,
         goal: plan?.workspace_goal || plan?.root_topic,
-        notes: plan?.notes,
-        fileNames,
+        // When user selected a subset, do not force full workspace notes into
+        // the "always" block — selected materials are primary.
+        notes: selectedKeys.length > 0 ? undefined : plan?.notes,
+        fileNames: selectedKeys.length > 0 ? undefined : fileNames,
+      });
+      const context = composeShapeGenerationContext({
+        baseContext,
+        selectedSnippet,
       });
 
       const neighborSummary =
@@ -531,6 +695,7 @@ export async function POST(req: NextRequest) {
         languageNote: languageNote || undefined,
         cellCount,
         freeform: Boolean(shapeCells),
+        selectedMaterialsSnippet: selectedSnippet || undefined,
       });
 
       const aiResponse = await callXaiJSON<AiBlockPayload>(
@@ -546,6 +711,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: aiResponse.error || "Failed to generate block" }, { status: 502 });
       }
 
+      const local_context =
+        localContext && normalizedLocal?.hasLocalMaterials
+          ? {
+              notes: localContext.notes ?? null,
+              global_file_refs: localContext.global_file_refs ?? null,
+              local_files: localContext.local_files ?? null,
+              external_resource_ids: localContext.external_resource_ids ?? null,
+            }
+          : null;
+
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         title: aiResponse.data.title.trim(),
@@ -558,6 +733,7 @@ export async function POST(req: NextRequest) {
         span_w: footprint.span_w,
         span_h: footprint.span_h,
         shape_cells: shapeCells,
+        ...(local_context ? { local_context } : {}),
       };
 
       let { data: newNode, error: insertError } = await supabase
@@ -566,14 +742,30 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-      // Graceful fallback if span/shape columns not migrated yet
-      if (insertError && /span_w|span_h|shape_cells|schema cache/i.test(insertError.message || "")) {
-        const { span_w: _sw, span_h: _sh, shape_cells: _sc, ...rest } = insertPayload;
-        let retryPayload: Record<string, unknown> = { ...rest, span_w: footprint.span_w, span_h: footprint.span_h };
+      // Graceful fallback if span/shape/local_context columns not migrated yet
+      if (
+        insertError &&
+        /span_w|span_h|shape_cells|local_context|schema cache/i.test(insertError.message || "")
+      ) {
+        const { span_w: _sw, span_h: _sh, shape_cells: _sc, local_context: _lc, ...rest } =
+          insertPayload;
+        let retryPayload: Record<string, unknown> = {
+          ...rest,
+          span_w: footprint.span_w,
+          span_h: footprint.span_h,
+          ...(local_context ? { local_context } : {}),
+        };
         let retry = await supabase.from("blocks").insert(retryPayload).select().single();
         if (retry.error && /span_w|span_h|schema cache/i.test(retry.error.message || "")) {
-          retryPayload = rest;
+          retryPayload = {
+            ...rest,
+            ...(local_context ? { local_context } : {}),
+          };
           retry = await supabase.from("blocks").insert(retryPayload).select().single();
+        }
+        if (retry.error && /local_context|schema cache/i.test(retry.error.message || "")) {
+          const { local_context: __lc, ...withoutLocal } = retryPayload;
+          retry = await supabase.from("blocks").insert(withoutLocal).select().single();
         }
         newNode = retry.data;
         insertError = retry.error;

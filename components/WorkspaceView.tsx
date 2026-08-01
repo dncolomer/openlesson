@@ -11,10 +11,14 @@ import { getOrderedSessions, SessionList } from "@/components/SessionList";
 import { SessionItem } from "@/components/SessionItem";
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
-import { WorkspaceNotesFilesPanel } from "@/components/WorkspaceNotesFilesPanel";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
+import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
+import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
+import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
+import { WorkspaceAddBlockPane } from "@/components/WorkspaceAddBlockPane";
+import { WorkspaceGenerateShapePane } from "@/components/WorkspaceGenerateShapePane";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   availableWorkspaceSections,
@@ -24,10 +28,27 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
+  clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   nextWorkspaceBlockSelection,
+  resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
+  type EmptySelectionSurface,
+  type WorkspaceAddTargetCell,
+  WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS,
+  WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS,
 } from "@/lib/workspace-right-pane";
+import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
+import {
+  normalizeUnusableCells,
+  type UnusableCell,
+} from "@/lib/map-ground-rules";
+import {
+  parseBlockLocalContext,
+  type BlockLocalContextInput,
+  type WorkspaceFileContextItem,
+} from "@/lib/prompt-workspace-context";
 
 export interface Block {
   id: string;
@@ -38,6 +59,13 @@ export interface Block {
   status: string;
   planning_prompt?: string;
   session_id?: string;
+  position_x?: number | null;
+  position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
+  shape_cells?: Array<{ dr: number; dc: number }> | null;
+  lock_until_block_ids?: string[] | null;
+  local_context?: BlockLocalContextInput | null;
 }
 
 export interface Workspace {
@@ -60,6 +88,7 @@ export interface Workspace {
   workspace_goal?: string | null;
   cover_image_url?: string;
   is_all_you_can_learn?: boolean;
+  unusable_cells?: UnusableCell[] | null;
 }
 
 interface WorkspaceViewProps {
@@ -73,12 +102,19 @@ function planShareSlug(plan: Workspace) {
 }
 
 function parseSectionParam(value: string | null): WorkspaceSectionKey | null {
-  if (value === "workspace" || value === "knowledge" || value === "settings") return value;
+  if (
+    value === "workspace" ||
+    value === "context" ||
+    value === "knowledge" ||
+    value === "settings"
+  ) {
+    return value;
+  }
   return null;
 }
 
 export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,22 +139,54 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
   const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForId(workspaceId));
-  /** Open block for right-pane detail (double-click). Null → notes/files. */
+  /** Open block for right-pane detail (double-click). Null → map authoring tools. */
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
+  /** Empty selection surface for right-pane create (single Add / multi shape). */
+  const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
+  const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
+  const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
+  const [mapGroundBusy, setMapGroundBusy] = useState(false);
 
   const supabase = createClient();
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
     const next = nextWorkspaceBlockSelection(expandedBlockId, blockId);
     setExpandedBlockId(next);
-    if (next) setMobileColumn("workspace");
+    if (next) {
+      setEmptySurface(clearWorkspaceAddTarget());
+      setMobileColumn("workspace");
+    }
   }, [expandedBlockId]);
 
   const handleCloseBlockDetail = useCallback(() => {
     setExpandedBlockId(clearWorkspaceBlockSelection());
   }, []);
 
-  const rightPane = resolveWorkspaceRightPane(expandedBlockId);
+  const handleEmptySelectionChange = useCallback(
+    (cells: Array<{ row: number; col: number }> | null) => {
+      const surface = resolveEmptySelectionSurface({
+        selectedEmptyCells: cells || [],
+        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+      });
+      setEmptySurface(surface);
+      if (surface) {
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setMobileColumn("workspace");
+      }
+    },
+    [unusableCells],
+  );
+
+  const handleCloseEmptyCreate = useCallback(() => {
+    setEmptySurface(clearWorkspaceAddTarget());
+  }, []);
+
+  const rightPane = resolveWorkspaceRightPane(expandedBlockId, emptySurface);
+  const addTargetCell =
+    emptySurface?.kind === "add_block" ? emptySurface.cell : null;
+  const generateShapeCells =
+    emptySurface?.kind === "generate_shape" ? emptySurface.cells : null;
   const orderedBlocks = getOrderedSessions(nodes as Parameters<typeof getOrderedSessions>[0]);
   const detailBlock =
     expandedBlockId != null
@@ -134,9 +202,130 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     isOrgAdmin,
   });
 
-  const refreshNodes = () => {
-    setRefreshKey(k => k + 1);
-  };
+  const refreshNodes = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  const handleSubmitAddBlock = useCallback(
+    async (
+      prompt: string,
+      position: WorkspaceAddTargetCell,
+      opts?: { contextSourceKeys?: string[] },
+    ) => {
+      if (!workspaceId || !isOwner) return;
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const { placements } = buildSkillGridLayout(nodes);
+      const weightedNeighbors = getWeightedNeighborhood(
+        { row: position.row, col: position.col },
+        placements,
+        nodesById,
+      );
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/add-block-at-slot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            row: position.row,
+            col: position.col,
+            prompt,
+            weightedNeighbors,
+            model,
+            locale,
+            ...(opts?.contextSourceKeys?.length
+              ? { contextSourceKeys: opts.contextSourceKeys }
+              : {}),
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to add block");
+        }
+        const data = await response.json();
+        if (data.updatedNodes?.length > 0) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setEmptySurface(clearWorkspaceAddTarget());
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, locale, nodes, refreshNodes, router, workspaceId],
+  );
+
+  const handleSubmitGenerateShape = useCallback(
+    async (payload: {
+      prompt: string;
+      cells: WorkspaceAddTargetCell[];
+      contextSourceKeys?: string[];
+    }) => {
+      if (!workspaceId || !isOwner) return;
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const { placements } = buildSkillGridLayout(nodes);
+      const anchor = payload.cells[0]
+        ? { row: payload.cells[0].row, col: payload.cells[0].col }
+        : null;
+      const weightedNeighbors = anchor
+        ? getWeightedNeighborhood(anchor, placements, nodesById)
+        : [];
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "generate_shape",
+            prompt: payload.prompt,
+            cells: payload.cells,
+            weightedNeighbors,
+            model,
+            locale,
+            ...(payload.contextSourceKeys?.length
+              ? { contextSourceKeys: payload.contextSourceKeys }
+              : {}),
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to generate block");
+        }
+        const data = await response.json();
+        if (data.updatedNodes?.length > 0) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setEmptySurface(clearWorkspaceAddTarget());
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, locale, nodes, refreshNodes, router, workspaceId],
+  );
 
   const handleNodesUpdate = (newNodes: Block[]) => {
     setNodes(newNodes);
@@ -224,6 +413,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       setIsOrgAdmin(orgAdminForWorkspace);
 
       setPlan(planData);
+      setUnusableCells(
+        normalizeUnusableCells(
+          (planData as { unusable_cells?: unknown }).unusable_cells,
+        ),
+      );
 
       const { data: nodesData, error: nodesError } = await supabase
         .from("blocks")
@@ -233,7 +427,12 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       if (nodesError) {
         setError("Failed to load nodes");
       } else {
-        let finalNodes = nodesData || [];
+        let finalNodes: Block[] = (nodesData || []).map(
+          (n: Block & { local_context?: unknown }) => ({
+            ...n,
+            local_context: parseBlockLocalContext(n.local_context),
+          }),
+        );
 
         const sessionIds = finalNodes
           .map((n: Block) => n.session_id)
@@ -264,6 +463,22 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         setNodes(finalNodes);
       }
 
+      // File names for prompt-impact + block local refs (excerpts loaded when available).
+      const { data: fileRows } = await supabase
+        .from("workspace_files")
+        .select("file_name, mime_type")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .limit(24);
+      setWorkspaceFileItems(
+        (fileRows || [])
+          .map((f: { file_name?: string; mime_type?: string | null }) => ({
+            name: String(f.file_name || "").trim(),
+            mime_type: f.mime_type ?? null,
+          }))
+          .filter((f: WorkspaceFileContextItem) => f.name),
+      );
+
       setLoading(false);
     }
 
@@ -290,6 +505,169 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       }
     },
     [isOwner, isOrgAdmin],
+  );
+
+  const postMapGround = useCallback(
+    async (payload: Record<string, unknown>) => {
+      setMapGroundBusy(true);
+      try {
+        const res = await fetch("/api/workspace/map-ground", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, ...payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Map ground update failed");
+        }
+        if (Array.isArray(data.unusableCells)) {
+          setUnusableCells(normalizeUnusableCells(data.unusableCells));
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        return data;
+      } finally {
+        setMapGroundBusy(false);
+      }
+    },
+    [workspaceId],
+  );
+
+  const handleSetLockUntil = useCallback(
+    async (blockId: string, prerequisiteIds: string[]) => {
+      await postMapGround({
+        op: "set_lock_until",
+        blockId,
+        prerequisiteIds,
+      });
+    },
+    [postMapGround],
+  );
+
+  const handleToggleUnusable = useCallback(
+    async (row: number, col: number) => {
+      await postMapGround({ op: "toggle_unusable", row, col });
+    },
+    [postMapGround],
+  );
+
+  /** Left toolbar + multi-select ground authoring (primary creator path). */
+  const handleMapGround = useCallback(
+    async (payload: {
+      op: "set_lock_until" | "set_unusable_cells";
+      blockId?: string;
+      prerequisiteIds?: string[];
+      unusableCells?: Array<{ row: number; col: number }>;
+    }) => {
+      if (payload.op === "set_lock_until" && payload.blockId) {
+        await postMapGround({
+          op: "set_lock_until",
+          blockId: payload.blockId,
+          prerequisiteIds: payload.prerequisiteIds || [],
+        });
+        return;
+      }
+      if (payload.op === "set_unusable_cells") {
+        await postMapGround({
+          op: "set_unusable_cells",
+          unusableCells: payload.unusableCells || [],
+        });
+      }
+    },
+    [postMapGround],
+  );
+
+  const handleSaveLocalContext = useCallback(
+    async (blockId: string, localContext: BlockLocalContextInput) => {
+      await postMapGround({
+        op: "set_local_context",
+        blockId,
+        localContext,
+      });
+    },
+    [postMapGround],
+  );
+
+  /** Update title/description from the block-detail Edit drawer. */
+  const handleUpdateBlock = useCallback(
+    async (input: { blockId: string; title: string; description: string }) => {
+      if (!workspaceId || !isOwner) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "update_block",
+            blockId: input.blockId,
+            title: input.title,
+            description: input.description,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to update block");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, refreshNodes, router, workspaceId],
+  );
+
+  /** Delete block from the Edit drawer; clears selection after. */
+  const handleDeleteBlock = useCallback(
+    async (blockId: string) => {
+      if (!workspaceId || !isOwner) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "delete_block",
+            blockId,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete block");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setEmptySurface(clearWorkspaceAddTarget());
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, refreshNodes, router, workspaceId],
   );
 
   const saveNotes = async () => {
@@ -348,6 +726,19 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         </svg>
       ),
     },
+    ...(visibleSections.includes("context")
+      ? [
+          {
+            key: "context" as const,
+            label: t("planView.sectionContext"),
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("knowledge")
       ? [
           {
@@ -376,6 +767,27 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       : []),
   ];
 
+  const inventoryBlocks = nodes.map((n) => ({
+    id: n.id,
+    title: n.title,
+    description: n.description,
+    status: n.status,
+    is_start: n.is_start,
+    position_x: n.position_x,
+    position_y: n.position_y,
+    span_w: n.span_w,
+    span_h: n.span_h,
+    shape_cells: n.shape_cells,
+    next_block_ids: n.next_block_ids,
+    lock_until_block_ids: n.lock_until_block_ids,
+    local_context: n.local_context,
+  }));
+
+  const detailLockTitles =
+    detailBlock?.lock_until_block_ids
+      ?.map((id) => nodes.find((n) => n.id === id)?.title || id)
+      .filter(Boolean) || [];
+
   return (
     <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
       <Navbar />
@@ -387,6 +799,43 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
       />
+
+      {sectionLayout.mountsContextPanel && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId,
+            isOwner,
+          }}
+        >
+          <div
+            data-workspace-context-section
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceContextPanel
+              workspaceId={workspaceId}
+              isOwner={isOwner}
+              notesContent={notesContent}
+              setNotesContent={setNotesContent}
+              isEditingNotes={isEditingNotes}
+              setIsEditingNotes={setIsEditingNotes}
+              savingNotes={savingNotes}
+              onSaveNotes={saveNotes}
+              onCancelNotes={() => {
+                setNotesContent(plan.notes || "");
+                setIsEditingNotes(false);
+              }}
+              showFiles
+              seedQuery={plan.root_topic || plan.title}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
 
       {canAccessPrivilegedSections && sectionLayout.mountsPerformancePanel && (
         <WorkspaceSectionSurface
@@ -555,7 +1004,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           </div>
         </aside>
 
-        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:w-1/2 md:border-b-0 md:border-r`}>
+        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}>
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -570,10 +1019,14 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             onNodesUpdate={handleNodesUpdate}
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
+            onEmptySelectionChange={handleEmptySelectionChange}
+            unusableCells={unusableCells}
+            onMapGround={isOwner ? handleMapGround : undefined}
+            workspaceNotes={notesContent || plan.notes}
           />
         </aside>
 
-        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex`}>
+        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex ${WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS} md:flex-none`}>
           {workspaceImage && (
             <img
               src={workspaceImage}
@@ -585,14 +1038,38 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
 
           <main
-            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4"
+            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-0"
             data-workspace-right-column
             data-workspace-right-pane={rightPane}
           >
             {rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
               <WorkspaceBlockDetailPane
+                key={detailBlock.id}
                 title={detailBlock.title}
-                onClose={handleCloseBlockDetail}
+                blockId={detailBlock.id}
+                blockTitle={detailBlock.title}
+                blockDescription={detailBlock.description}
+                planningPrompt={detailBlock.planning_prompt}
+                localContext={detailBlock.local_context}
+                canEdit={isOwner}
+                editBusy={isAddingBlock}
+                onUpdateBlock={handleUpdateBlock}
+                onDeleteBlock={handleDeleteBlock}
+                localContextPanel={
+                  <WorkspaceBlockLocalContextPanel
+                    key={detailBlock.id}
+                    canEdit={isOwner}
+                    blockId={detailBlock.id}
+                    blockTitle={detailBlock.title}
+                    blockDescription={detailBlock.description}
+                    blockStatus={detailBlock.status}
+                    lockUntilTitles={detailLockTitles}
+                    localContext={detailBlock.local_context}
+                    workspaceFiles={workspaceFileItems}
+                    onSaveLocalContext={handleSaveLocalContext}
+                    busy={mapGroundBusy}
+                  />
+                }
               >
                 <SessionItem
                   node={detailBlock}
@@ -610,22 +1087,50 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   detailLayout="inline"
                 />
               </WorkspaceBlockDetailPane>
-            ) : (
-              <WorkspaceNotesFilesPanel
-                notesContent={notesContent}
-                setNotesContent={setNotesContent}
-                isEditingNotes={isEditingNotes}
-                setIsEditingNotes={setIsEditingNotes}
-                savingNotes={savingNotes}
-                onSaveNotes={saveNotes}
-                onCancelNotes={() => {
-                  setNotesContent(plan.notes || "");
-                  setIsEditingNotes(false);
-                }}
-                isOwner={isOwner}
+            ) : rightPane === "add_block" && addTargetCell ? (
+              <WorkspaceAddBlockPane
+                key={`add-${addTargetCell.row}-${addTargetCell.col}`}
+                cell={addTargetCell}
+                nodes={nodes}
                 workspaceId={workspaceId}
-                showFiles
+                locale={locale}
+                busy={isAddingBlock}
+                workspaceNotes={notesContent || plan.notes}
+                onSubmit={handleSubmitAddBlock}
+                onCancel={handleCloseEmptyCreate}
+                labels={{
+                  addTitle: t("sessionList.gridAddTitle"),
+                  addPlaceholder: t("sessionList.gridAddPlaceholder"),
+                  addSubmit: t("sessionList.gridAddSubmit"),
+                  addCancel: t("sessionList.gridAddCancel"),
+                  suggestTopics: t("sessionList.gridSuggestTopics"),
+                  suggesting: t("sessionList.gridSuggesting"),
+                  suggestError: t("sessionList.gridSuggestError"),
+                }}
               />
+            ) : rightPane === "generate_shape" && generateShapeCells ? (
+              <WorkspaceGenerateShapePane
+                key={`shape-${generateShapeCells.map((c) => `${c.row}:${c.col}`).join(",")}`}
+                cells={generateShapeCells}
+                nodes={nodes}
+                workspaceId={workspaceId}
+                locale={locale}
+                busy={isAddingBlock}
+                workspaceNotes={notesContent || plan.notes}
+                onSubmit={handleSubmitGenerateShape}
+                onCancel={handleCloseEmptyCreate}
+                labels={{
+                  generateShape: t("sessionList.gridGenerateShape"),
+                  addPlaceholder: t("sessionList.gridAddPlaceholder"),
+                  addSubmit: t("sessionList.gridAddSubmit"),
+                  addCancel: t("sessionList.gridAddCancel"),
+                  suggestTopics: t("sessionList.gridSuggestTopics"),
+                  suggesting: t("sessionList.gridSuggesting"),
+                  suggestError: t("sessionList.gridSuggestError"),
+                }}
+              />
+            ) : (
+              <WorkspaceMapAuthoringPane canEdit={isOwner} />
             )}
           </main>
         </section>
@@ -646,9 +1151,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75V6.75zm0 5.25h.008v.008H3.75V12zm0 5.25h.008v.008H3.75v-.008z" />
               </svg>
             ) },
-            { key: "workspace" as const, label: "Notes", icon: (
+            { key: "workspace" as const, label: "Tools", icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.72 5.72a2.25 2.25 0 01-3.182-3.182l5.72-5.72M12 3v4.5m0 9V21m9-9h-4.5m-9 0H3m15.364 6.364l-3.182-3.182M6.818 6.818L3.636 3.636m12.728 0l-3.182 3.182M6.818 17.182l-3.182 3.182" />
               </svg>
             ) },
           ].map(({ key, label, icon }) => (

@@ -86,11 +86,11 @@ export function TapBriefingConfig({
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">
             {t("tap.briefing.sessionLength")}
           </p>
-          <div className="mt-2 grid max-w-xs grid-cols-2 gap-2">
+          <div className="mt-2 grid max-w-sm grid-cols-3 gap-1.5 sm:grid-cols-4">
             {DURATIONS.map((duration) => (
               <ThoughtButton
                 key={duration}
-                size="lg"
+                size="md"
                 variant={minutes === duration ? "toggleOn" : "toggleOff"}
                 className="w-full"
                 disabled={disabled}

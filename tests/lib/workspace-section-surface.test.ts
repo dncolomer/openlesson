@@ -177,6 +177,7 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).toContain('id: "regions"');
     expect(integration).toContain('id: "knowledge-portal"');
     expect(integration).toContain('id: "guest-links"');
+    expect(integration).toContain('id: "data-studio"');
     expect(integration).toContain('id: "integrations"');
     // Settings tab label for guest-links subview is Knowledge Links (i18n).
     expect(integration).toContain('t("planView.performanceSubTabTap")');
@@ -189,24 +190,29 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     const regionsIdx = integration.indexOf('id: "regions"');
     const portalIdx = integration.indexOf('id: "knowledge-portal"');
     const guestIdx = integration.indexOf('id: "guest-links"');
+    const dataStudioIdx = integration.indexOf('id: "data-studio"');
     expect(regionsIdx).toBeGreaterThan(-1);
     expect(portalIdx).toBeGreaterThan(regionsIdx);
     expect(guestIdx).toBeGreaterThan(portalIdx);
+    expect(dataStudioIdx).toBeGreaterThan(guestIdx);
     expect(integration).toContain('data-settings-tab-panel="general"');
     expect(integration).toContain('data-settings-tab-panel="regions"');
     expect(integration).toContain('data-settings-tab-panel="knowledge-portal"');
     expect(integration).toContain('data-settings-tab-panel="guest-links"');
+    expect(integration).toContain('data-settings-tab-panel="data-studio"');
     expect(integration).toContain('data-settings-tab-panel="integrations"');
     // Active-tab conditionals (only one body shown at a time).
     expect(integration).toContain('activeSubview === "general"');
     expect(integration).toContain('activeSubview === "regions"');
     expect(integration).toContain('activeSubview === "knowledge-portal"');
     expect(integration).toContain('activeSubview === "guest-links"');
+    expect(integration).toContain('activeSubview === "data-studio"');
     expect(integration).toContain('activeSubview === "integrations"');
     // Major capabilities still wired under tabs.
     expect(integration).toContain('data-settings-section="custom-knowledge-regions"');
     expect(integration).toContain('data-settings-section="knowledge-portal"');
     expect(integration).toContain('data-settings-section="guest-tap-ile"');
+    expect(integration).toContain('data-settings-section="data-studio"');
     expect(integration).toContain('data-settings-section="skill"');
     expect(integration).toContain('data-settings-section="mcp"');
     expect(integration).toContain("WorkspaceIdentitySettings");
@@ -214,6 +220,7 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(integration).toContain("CustomVerificationModelsPanel");
     expect(integration).toContain("WorkspaceGuestLinksPanel");
     expect(integration).toContain("WorkspaceKnowledgePortalPanel");
+    expect(integration).toContain("WorkspaceDataStudioPanel");
     expect(integration).not.toContain('data-settings-layout="linear"');
     expect(integration).not.toContain('data-settings-section="generate"');
     expect(integration).not.toContain("data-settings-workspace-context");

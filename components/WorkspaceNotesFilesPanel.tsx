@@ -8,7 +8,10 @@ import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   buildWorkspaceResourceList,
+  filterWorkspaceResourceList,
+  nextResourceTypeFilter,
   type WorkspaceFileListEntry,
+  type WorkspaceResourceTypeFilter,
 } from "@/lib/workspace-resource-list";
 import {
   isInlineNotesMime,
@@ -17,6 +20,7 @@ import {
   NOTES_FILE_STARTER,
   textToBase64Utf8,
 } from "@/lib/workspace-notes-files";
+import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 
 interface WorkspaceNotesFilesPanelProps {
   notesContent: string;
@@ -30,9 +34,17 @@ interface WorkspaceNotesFilesPanelProps {
   workspaceId: string;
   /** When false, hide files (e.g. AYCL token sessions without files API auth). */
   showFiles?: boolean;
+  /** External sources listed above notes in Context. */
+  externalResources?: WorkspaceExternalResource[];
+  onUpdateExternal?: (
+    id: string,
+    patch: { title?: string; url?: string; description?: string | null },
+  ) => Promise<void> | void;
+  onDeleteExternal?: (id: string) => Promise<void> | void;
+  externalBusy?: boolean;
 }
 
-function FileTypeIcon({ mimeType, className = "w-5 h-5" }: { mimeType: string; className?: string }) {
+function FileTypeIcon({ mimeType, className = "h-3.5 w-3.5" }: { mimeType: string; className?: string }) {
   if (mimeType.startsWith("image/")) {
     return (
       <svg className={`${className} text-violet-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -54,7 +66,7 @@ function FileTypeIcon({ mimeType, className = "w-5 h-5" }: { mimeType: string; c
   );
 }
 
-function NotesTypeIcon({ className = "w-5 h-5" }: { className?: string }) {
+function NotesTypeIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
   return (
     <svg className={`${className} text-blue-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -96,11 +108,19 @@ export function WorkspaceNotesFilesPanel({
   isOwner,
   workspaceId,
   showFiles = true,
+  externalResources = [],
+  onUpdateExternal,
+  onDeleteExternal,
+  externalBusy = false,
 }: WorkspaceNotesFilesPanelProps) {
   const { t } = useI18n();
   const [files, setFiles] = useState<WorkspaceFileListEntry[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(showFiles);
   const [error, setError] = useState<string | null>(null);
+  const [editingExternalId, setEditingExternalId] = useState<string | null>(null);
+  const [extTitle, setExtTitle] = useState("");
+  const [extUrl, setExtUrl] = useState("");
+  const [deletingExternalId, setDeletingExternalId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -112,6 +132,8 @@ export function WorkspaceNotesFilesPanel({
   const [fileEditContent, setFileEditContent] = useState("");
   const [fileEditLoading, setFileEditLoading] = useState(false);
   const [savingFileId, setSavingFileId] = useState<string | null>(null);
+  const [listQuery, setListQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<WorkspaceResourceTypeFilter>("all");
 
   const MAX_FILES = 5;
   const atLimit = files.length >= MAX_FILES;
@@ -141,11 +163,29 @@ export function WorkspaceNotesFilesPanel({
       buildWorkspaceResourceList({
         notes: notesContent,
         files,
+        externalResources,
         includeNotes: true,
         includeFiles: showFiles,
+        includeExternal: true,
       }),
-    [notesContent, files, showFiles],
+    [notesContent, files, showFiles, externalResources],
   );
+
+  const filteredItems = useMemo(
+    () =>
+      filterWorkspaceResourceList(listItems, {
+        query: listQuery,
+        typeFilter,
+      }),
+    [listItems, listQuery, typeFilter],
+  );
+
+  const typeChips: Array<{ id: WorkspaceResourceTypeFilter; label: string }> = [
+    { id: "all", label: "All" },
+    { id: "external", label: "Links" },
+    { id: "notes", label: "Notes" },
+    ...(showFiles ? [{ id: "files" as const, label: "Files" }] : []),
+  ];
 
   const handleUpload = async () => {
     if (pendingFiles.length === 0) return;
@@ -359,26 +399,202 @@ export function WorkspaceNotesFilesPanel({
       data-workspace-notes-files-panel
       data-unified-resource-list
     >
-      <div className="mb-3 flex items-center justify-between gap-2 px-1">
-        <h3 className="text-sm font-medium text-white">
-          {t("planView.notes")}
+      <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+        <h3 className="text-xs font-medium text-white">
+          Context
+          {externalResources.length > 0 ? ` · ${externalResources.length} links` : ""}
+          {` · ${t("planView.notes")}`}
           {showFiles ? ` · ${t("planView.files")}` : ""}
         </h3>
         {showFiles ? (
-          <span className="text-xs text-neutral-600">
+          <span className="text-[10px] text-neutral-600">
             {files.length} / {MAX_FILES}
           </span>
         ) : null}
       </div>
 
       {error ? (
-        <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="mb-2 rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-400">
           {error}
         </div>
       ) : null}
 
-      <ul className="flex flex-col gap-2" role="list" data-resource-list>
-        {listItems.map((item) => {
+      {/* Search + type filters above the list */}
+      <div
+        className="mb-2 space-y-1.5"
+        data-resource-list-toolbar
+      >
+        <input
+          type="search"
+          data-resource-list-search
+          value={listQuery}
+          onChange={(e) => setListQuery(e.target.value)}
+          placeholder="Search links, notes, files…"
+          className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+          aria-label="Search context materials"
+        />
+        <div
+          className="flex flex-wrap gap-1"
+          role="group"
+          aria-label="Filter by type"
+          data-resource-type-filters
+        >
+          {typeChips.map((chip) => {
+            const active = typeFilter === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                data-resource-type-filter={chip.id}
+                data-active={active ? "true" : "false"}
+                onClick={() =>
+                  setTypeFilter((cur) => nextResourceTypeFilter(cur, chip.id))
+                }
+                className={`rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition ${
+                  active
+                    ? "border-white/35 bg-white/10 text-white"
+                    : "border-neutral-800 bg-transparent text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <ul className="flex flex-col gap-0.5" role="list" data-resource-list data-resource-list-compact>
+        {filteredItems.length === 0 ? (
+          <li
+            className="px-1 py-2 text-center text-[11px] text-neutral-600"
+            data-resource-list-empty
+          >
+            No matching materials
+          </li>
+        ) : null}
+        {filteredItems.map((item) => {
+          if (item.kind === "external") {
+            const r = item.resource;
+            const isEditing = editingExternalId === r.id;
+            return (
+              <li
+                key={r.id}
+                role="listitem"
+                data-resource-kind="external"
+                data-resource-row="external"
+                data-resource-row-compact
+                data-external-id={r.id}
+                className="rounded-md border border-cyan-500/10 bg-cyan-950/10 px-2 py-1"
+              >
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="h-3.5 w-3.5 shrink-0 text-cyan-400/90"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.608a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364L6.47 6.47"
+                    />
+                  </svg>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-medium leading-tight text-white">
+                      {r.title}
+                    </p>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-[10px] leading-tight text-cyan-300/70 hover:underline"
+                    >
+                      {r.url}
+                    </a>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {isOwner ? (
+                      <>
+                        <button
+                          type="button"
+                          data-external-edit
+                          disabled={externalBusy}
+                          onClick={() => {
+                            if (isEditing) {
+                              setEditingExternalId(null);
+                            } else {
+                              setEditingExternalId(r.id);
+                              setExtTitle(r.title);
+                              setExtUrl(r.url);
+                            }
+                          }}
+                          className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                        >
+                          {isEditing ? t("common.cancel") : t("common.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          data-external-delete
+                          disabled={externalBusy || deletingExternalId === r.id}
+                          onClick={() => {
+                            if (!onDeleteExternal) return;
+                            setDeletingExternalId(r.id);
+                            void Promise.resolve(onDeleteExternal(r.id)).finally(() =>
+                              setDeletingExternalId(null),
+                            );
+                          }}
+                          className="rounded border border-red-500/25 px-1.5 py-0.5 text-[9px] text-red-300/80 hover:bg-red-500/10"
+                        >
+                          {deletingExternalId === r.id ? "…" : t("common.delete")}
+                        </button>
+                      </>
+                    ) : (
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                      >
+                        Open
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {isEditing && isOwner && onUpdateExternal ? (
+                  <div className="mt-1.5 space-y-1.5 border-t border-neutral-800/80 pt-1.5">
+                    <input
+                      data-external-edit-title
+                      value={extTitle}
+                      onChange={(e) => setExtTitle(e.target.value)}
+                      className="w-full rounded border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
+                    />
+                    <input
+                      data-external-edit-url
+                      value={extUrl}
+                      onChange={(e) => setExtUrl(e.target.value)}
+                      className="w-full rounded border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
+                    />
+                    <button
+                      type="button"
+                      data-external-edit-save
+                      disabled={externalBusy}
+                      onClick={() => {
+                        void Promise.resolve(
+                          onUpdateExternal(r.id, { title: extTitle, url: extUrl }),
+                        ).then(() => setEditingExternalId(null));
+                      }}
+                      className="rounded bg-white px-2 py-1 text-[10px] text-black"
+                    >
+                      {t("common.save")}
+                    </button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          }
+
           if (item.kind === "notes") {
             const preview = notesPreview(item.content);
             const subtitle = item.content
@@ -393,17 +609,20 @@ export function WorkspaceNotesFilesPanel({
                 role="listitem"
                 data-resource-kind="notes"
                 data-resource-row="attachment"
-                className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3"
+                data-resource-row-compact
+                className="rounded-md border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <NotesTypeIcon />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-white">
+                    <p className="truncate text-[11px] font-medium leading-tight text-white">
                       {item.content ? `${t("planView.notes")}.md` : t("planView.notes")}
                     </p>
-                    <p className="truncate text-xs text-neutral-500">{subtitle}</p>
+                    <p className="truncate text-[10px] leading-tight text-neutral-500">
+                      {subtitle}
+                    </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1">
                     {isOwner ? (
                       <button
                         type="button"
@@ -414,7 +633,7 @@ export function WorkspaceNotesFilesPanel({
                             setIsEditingNotes(true);
                           }
                         }}
-                        className="flex items-center gap-1 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
+                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
                       >
                         {isEditingNotes
                           ? t("common.cancel")
@@ -426,7 +645,7 @@ export function WorkspaceNotesFilesPanel({
                       <button
                         type="button"
                         onClick={() => setIsEditingNotes(!isEditingNotes)}
-                        className="flex items-center gap-1 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
+                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                       >
                         {isEditingNotes ? t("common.cancel") : "Open"}
                       </button>
@@ -435,27 +654,27 @@ export function WorkspaceNotesFilesPanel({
                 </div>
 
                 {isEditingNotes && isOwner ? (
-                  <div className="mt-3 space-y-3 border-t border-neutral-800 pt-3">
+                  <div className="mt-1.5 space-y-2 border-t border-neutral-800/80 pt-1.5">
                     <textarea
                       value={notesContent}
                       onChange={(e) => setNotesContent(e.target.value)}
                       placeholder={t("planView.notesPlaceholder")}
-                      className="h-[min(32vh,16rem)] w-full resize-none rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 font-mono text-sm text-white focus:border-neutral-400 focus:outline-none"
+                      className="h-[min(28vh,12rem)] w-full resize-none rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                       autoFocus
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => void onSaveNotes()}
                         disabled={savingNotes}
-                        className="rounded-md bg-white px-3 py-1.5 text-sm text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
+                        className="rounded bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
                       >
                         {savingNotes ? t("common.saving") : t("common.save")}
                       </button>
                       <button
                         type="button"
                         onClick={onCancelNotes}
-                        className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm text-white transition-colors hover:bg-neutral-700"
+                        className="rounded bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
                       >
                         {t("common.cancel")}
                       </button>
@@ -464,7 +683,7 @@ export function WorkspaceNotesFilesPanel({
                 ) : null}
 
                 {isEditingNotes && !isOwner && item.content ? (
-                  <div className="prose prose-invert prose-sm mt-3 max-w-none border-t border-neutral-800 pt-3">
+                  <div className="prose prose-invert prose-sm mt-1.5 max-w-none border-t border-neutral-800/80 pt-1.5 text-[11px]">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
                   </div>
                 ) : null}
@@ -481,18 +700,21 @@ export function WorkspaceNotesFilesPanel({
               role="listitem"
               data-resource-kind="file"
               data-resource-row="attachment"
+              data-resource-row-compact
               data-notes-file={canInlineEdit ? "true" : undefined}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3"
+              className="rounded-md border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <FileTypeIcon mimeType={item.mime_type} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-white">{item.file_name}</p>
-                  <p className="text-xs text-neutral-500">
+                  <p className="truncate text-[11px] font-medium leading-tight text-white">
+                    {item.file_name}
+                  </p>
+                  <p className="truncate text-[10px] leading-tight text-neutral-500">
                     {formatBytes(item.file_size)} · {formatDate(item.created_at)}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1">
                   {canInlineEdit && isOwner ? (
                     <button
                       type="button"
@@ -500,7 +722,7 @@ export function WorkspaceNotesFilesPanel({
                         if (isEditingThis) cancelFileEditor();
                         else void openFileEditor(item);
                       }}
-                      className="flex items-center gap-1 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
+                      className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                     >
                       {isEditingThis ? t("common.cancel") : t("common.edit")}
                     </button>
@@ -509,7 +731,7 @@ export function WorkspaceNotesFilesPanel({
                     type="button"
                     onClick={() => void handleDownload(item)}
                     disabled={downloadingId === item.id}
-                    className="flex items-center gap-1 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                    className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white disabled:opacity-50"
                   >
                     {t("workspaceFiles.download")}
                   </button>
@@ -518,10 +740,10 @@ export function WorkspaceNotesFilesPanel({
                       type="button"
                       onClick={() => void handleDelete(item.id)}
                       disabled={deletingId === item.id}
-                      className="p-1.5 text-neutral-600 transition-colors hover:text-red-400 disabled:opacity-50"
+                      className="p-0.5 text-neutral-600 transition-colors hover:text-red-400 disabled:opacity-50"
                       title={t("workspaceFiles.removeFile")}
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                       </svg>
                     </button>
@@ -530,7 +752,7 @@ export function WorkspaceNotesFilesPanel({
               </div>
 
               {isEditingThis ? (
-                <div className="mt-3 space-y-3 border-t border-neutral-800 pt-3" data-inline-notes-editor>
+                <div className="mt-1.5 space-y-2 border-t border-neutral-800/80 pt-1.5" data-inline-notes-editor>
                   {fileEditLoading ? (
                     <LoadingStatusMessage size="sm" tone="subtle" message={t("common.loading")} />
                   ) : (
@@ -539,29 +761,29 @@ export function WorkspaceNotesFilesPanel({
                         type="text"
                         value={fileEditName}
                         onChange={(e) => setFileEditName(e.target.value)}
-                        className="w-full rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
+                        className="w-full rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1 text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                         aria-label="File name"
                       />
                       <textarea
                         value={fileEditContent}
                         onChange={(e) => setFileEditContent(e.target.value)}
                         placeholder={t("planView.notesPlaceholder")}
-                        className="h-[min(32vh,16rem)] w-full resize-none rounded-md border border-neutral-800 bg-neutral-950/50 px-3 py-2 font-mono text-sm text-white focus:border-neutral-400 focus:outline-none"
+                        className="h-[min(28vh,12rem)] w-full resize-none rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                         autoFocus
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         <button
                           type="button"
                           onClick={() => void saveFileEditor(item)}
                           disabled={savingFileId === item.id}
-                          className="rounded-md bg-white px-3 py-1.5 text-sm text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
+                          className="rounded bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
                         >
                           {savingFileId === item.id ? t("common.saving") : t("common.save")}
                         </button>
                         <button
                           type="button"
                           onClick={cancelFileEditor}
-                          className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm text-white transition-colors hover:bg-neutral-700"
+                          className="rounded bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
                         >
                           {t("common.cancel")}
                         </button>
@@ -581,17 +803,17 @@ export function WorkspaceNotesFilesPanel({
           data-create-notes-file-row
           onClick={() => void createNotesFile()}
           disabled={creatingNotesFile}
-          className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-neutral-700 bg-neutral-900/30 px-4 py-3 text-left transition-colors hover:border-neutral-500 hover:bg-neutral-900/60 disabled:opacity-40"
+          className="mt-1.5 flex w-full items-center gap-2 rounded-md border border-dashed border-neutral-700 bg-neutral-900/30 px-2 py-1.5 text-left transition-colors hover:border-neutral-500 hover:bg-neutral-900/60 disabled:opacity-40"
         >
           <NotesTypeIcon />
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-white">New notes file</p>
-            <p className="text-xs text-neutral-500">
-              Creates a separate markdown file in this list ({nextNotesFileName(files)})
+            <p className="text-[11px] text-white">New notes file</p>
+            <p className="text-[10px] text-neutral-500">
+              {nextNotesFileName(files)}
             </p>
           </div>
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-neutral-700 text-neutral-400">
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-neutral-700 text-neutral-400">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
           </span>

@@ -1,23 +1,30 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
-  allProductLaunchTargets,
-  productIntentClusterHint,
-  productIntentClusterLabel,
   PRODUCT_INTENT_LABELS,
+  resolveLaunchFromStyleAndTimebox,
+  type LearningStyle,
   type ProductLaunchTarget,
 } from "@/lib/product-intent";
+import { DEFAULT_DURATION_MINUTES, DURATIONS } from "@/lib/tap-score-client-helpers";
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
+
+/** Optional launch options (duration chosen on the card before TAP). */
+export type ProductLaunchOptions = {
+  /** Timed sessions only — minutes for the TAP clock. */
+  minutes?: number;
+};
 
 type BlockDetailCardProps = {
   layout?: "horizontal" | "stacked" | "modal";
   title: string;
   description?: string;
-  thumbnailSrc: string;
-  progressRing: ProgressRing;
+  /** @deprecated Hero aesthetics image removed from detail launch card. */
+  thumbnailSrc?: string;
+  progressRing?: ProgressRing;
   isStart?: boolean;
   /** @deprecated unused — intent UI owns labels */
   evalLabel?: string;
@@ -29,17 +36,18 @@ type BlockDetailCardProps = {
   /**
    * Launch by product intent (Explore/Drill × Open-ended/Timed).
    * Prefer this over the four technical callbacks.
+   * Style buttons only select; Start triggers this.
    */
-  onLaunchIntent?: (target: ProductLaunchTarget) => void;
+  onLaunchIntent?: (target: ProductLaunchTarget, options?: ProductLaunchOptions) => void;
   /** Open-ended Explore → ILE learning (fallback if onLaunchIntent omitted). */
   onStartIle?: () => void;
   /** Open-ended Drill → ILE project */
   onStartIleProject?: () => void;
   /** Timed Explore → TAP conversational */
-  onStartEval?: (event: React.MouseEvent) => void;
+  onStartEval?: (event: React.MouseEvent, minutes?: number) => void;
   /** Timed Drill → TAP exercise */
-  onStartExercise?: (event: React.MouseEvent) => void;
-  /** When false, hide timed (TAP) options. */
+  onStartExercise?: (event: React.MouseEvent, minutes?: number) => void;
+  /** When false, hide timed (TAP) options / timebox control. */
   allowTimed?: boolean;
   forkCallout?: ReactNode;
   promptSection?: ReactNode;
@@ -53,117 +61,96 @@ const HERO_RING_CLASS: Record<ProgressRing, string> = {
   in_progress: "ring-white/20",
 };
 
+function ExploreIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      data-style-icon="explore"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      aria-hidden
+    >
+      {/* Compass / open exploration */}
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 9.5l-2.2 5.3-5.3 2.2 2.2-5.3 5.3-2.2z" />
+    </svg>
+  );
+}
+
+function DrillIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      data-style-icon="drill"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      aria-hidden
+    >
+      {/* Target / focused practice */}
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/**
+ * Text-only block header (no aesthetics/thumbnail image).
+ * Keeps title + description + optional start badge for launch chrome.
+ */
 function BlockDetailHero({
-  thumbnailSrc,
   title,
   description,
-  progressRing,
   isStart,
   layout,
   className = "",
 }: {
-  thumbnailSrc: string;
+  thumbnailSrc?: string;
   title: string;
   description?: string;
-  progressRing: ProgressRing;
+  progressRing?: ProgressRing;
   isStart?: boolean;
   layout: "modal" | "stacked" | "horizontal";
   className?: string;
 }) {
   const { t } = useI18n();
-  const sizeClass =
-    layout === "stacked"
-      ? "aspect-[5/3] shrink-0"
-      : layout === "modal"
-        ? "min-h-[8.75rem] flex-1"
-        : "aspect-[2.65/1] min-h-[6.5rem] shrink-0";
-
   const titleClamp =
-    layout === "stacked" ? "line-clamp-2" : layout === "modal" ? "line-clamp-2" : "line-clamp-1";
+    layout === "stacked" ? "line-clamp-2" : layout === "modal" ? "line-clamp-2" : "line-clamp-2";
   const descriptionClamp =
-    layout === "stacked" ? "line-clamp-2" : layout === "modal" ? "line-clamp-4" : "line-clamp-2";
+    layout === "stacked" ? "line-clamp-3" : layout === "modal" ? "line-clamp-4" : "line-clamp-3";
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-white/10 ring-1 ring-inset ${HERO_RING_CLASS[progressRing]} ${sizeClass} ${className}`}
+      data-block-detail-header
+      data-block-detail-no-hero-image
+      className={`relative ${className}`}
     >
-      <img src={thumbnailSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/50 to-black/20" />
-      <div className="absolute inset-0 flex flex-col justify-end overflow-hidden p-3 sm:p-3.5">
-        <div className="flex min-h-0 max-h-full items-end justify-between gap-2 overflow-hidden">
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-            <h3
-              className={`font-semibold leading-snug tracking-tight text-white drop-shadow-md ${titleClamp} ${
-                layout === "stacked" ? "text-lg" : "text-base"
-              }`}
-            >
-              {title}
-            </h3>
-            <p
-              className={`mt-1 leading-relaxed text-neutral-200/90 drop-shadow-sm ${descriptionClamp} ${
-                layout === "stacked" ? "text-sm" : "text-xs"
-              }`}
-            >
-              {description || t("sessionItem.noDescription")}
-            </p>
-          </div>
-          {isStart ? (
-            <span className="shrink-0 rounded-full border border-white/25 bg-black/45 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-100 backdrop-blur-sm">
-              {t("sessionItem.startBlock")}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BlockDetailGuidePanel() {
-  const { t } = useI18n();
-  const hints = [
-    "sessionItem.blockDetailGuideHint1",
-    "sessionItem.blockDetailGuideHint2",
-    "sessionItem.blockDetailGuideHint3",
-    "sessionItem.blockDetailGuideHint4",
-    "sessionItem.blockDetailGuideHint5",
-  ] as const;
-
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-3 rounded-lg border border-white/10 bg-neutral-900/35 p-3.5">
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-          {t("sessionItem.blockDetailGuideTitle")}
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-neutral-300">{t("sessionItem.blockDetailGuideIntro")}</p>
-      </div>
-
-      <div className="space-y-2.5">
-        <div>
-          <p className="text-xs font-medium text-neutral-200">{t("sessionItem.blockDetailGuideSourcesTitle")}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-            {t("sessionItem.blockDetailGuideSourcesBody")}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3
+            className={`font-semibold leading-snug tracking-tight text-white ${titleClamp} ${
+              layout === "stacked" ? "text-lg" : "text-sm"
+            }`}
+          >
+            {title}
+          </h3>
+          <p
+            className={`mt-1 leading-relaxed text-neutral-400 ${descriptionClamp} ${
+              layout === "stacked" ? "text-sm" : "text-xs"
+            }`}
+          >
+            {description || t("sessionItem.noDescription")}
           </p>
         </div>
-        <div>
-          <p className="text-xs font-medium text-neutral-200">{t("sessionItem.blockDetailGuideMaterialsTitle")}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-            {t("sessionItem.blockDetailGuideMaterialsBody")}
-          </p>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1">
-        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">
-          {t("sessionItem.blockDetailGuideHintsTitle")}
-        </p>
-        <ul className="mt-2 space-y-1.5">
-          {hints.map((key) => (
-            <li key={key} className="flex gap-2 text-[11px] leading-snug text-neutral-400">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/30" aria-hidden />
-              <span>{t(key)}</span>
-            </li>
-          ))}
-        </ul>
+        {isStart ? (
+          <span className="shrink-0 rounded-full border border-white/20 bg-neutral-900/80 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-300">
+            {t("sessionItem.startBlock")}
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -191,20 +178,34 @@ export function BlockDetailCard({
   highlightOpacity = 1,
 }: BlockDetailCardProps) {
   const { t } = useI18n();
-  const [showHelp, setShowHelp] = useState(false);
+  const [style, setStyle] = useState<LearningStyle>("explore");
+  const [timebox, setTimebox] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState<number>(DEFAULT_DURATION_MINUTES);
   const isStacked = layout === "stacked";
   const isModal = layout === "modal";
 
-  const targets = allProductLaunchTargets().filter((target) => {
-    if (target.product === "tap" && !allowTimed) return false;
-    if (target.id === "open_ended_drill" && !onStartIleProject && !onLaunchIntent) return false;
-    if (target.product === "tap" && !onStartEval && !onStartExercise && !onLaunchIntent) return false;
-    return true;
-  });
+  const effectiveTimebox = allowTimed && timebox;
+  const resolvedTarget = useMemo(
+    () => resolveLaunchFromStyleAndTimebox(style, effectiveTimebox),
+    [style, effectiveTimebox],
+  );
+
+  const canLaunchStyle = (s: LearningStyle) => {
+    const target = resolveLaunchFromStyleAndTimebox(s, effectiveTimebox);
+    if (onLaunchIntent) return true;
+    if (target.id === "open_ended_explore") return Boolean(onStartIle);
+    if (target.id === "open_ended_drill") return Boolean(onStartIleProject);
+    if (target.id === "timed_explore") return Boolean(onStartEval);
+    if (target.id === "timed_drill") return Boolean(onStartExercise);
+    return false;
+  };
+
+  const canStart = canLaunchStyle(style);
 
   const launch = (target: ProductLaunchTarget, event?: React.MouseEvent) => {
+    const minutes = target.product === "tap" ? durationMinutes : undefined;
     if (onLaunchIntent) {
-      onLaunchIntent(target);
+      onLaunchIntent(target, minutes != null ? { minutes } : undefined);
       return;
     }
     if (target.id === "open_ended_explore") {
@@ -216,182 +217,188 @@ export function BlockDetailCard({
       return;
     }
     if (target.id === "timed_explore") {
-      onStartEval?.(event as React.MouseEvent);
+      onStartEval?.(event as React.MouseEvent, minutes);
       return;
     }
     if (target.id === "timed_drill") {
-      onStartExercise?.(event as React.MouseEvent);
+      onStartExercise?.(event as React.MouseEvent, minutes);
     }
   };
 
+  // Flat shell — avoid deep nested card chrome in the narrow right pane.
   const cardShellClass = isStacked || isModal
     ? "relative"
-    : `relative overflow-hidden rounded-xl border border-white/15 bg-neutral-950/95 shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${
-        highlighted ? "ring-1 ring-white/25" : ""
-      }`;
+    : `relative ${highlighted ? "ring-1 ring-white/15" : ""}`;
 
   const cardShellStyle = highlighted
-    ? { boxShadow: `0 10px 40px rgba(0,0,0,0.45), 0 0 20px rgba(255,255,255,${highlightOpacity * 0.1})` }
+    ? { boxShadow: `0 0 12px rgba(255,255,255,${highlightOpacity * 0.06})` }
     : undefined;
 
-  const helpSections = [
-    {
-      title: PRODUCT_INTENT_LABELS.openEndedExplore,
-      summary: PRODUCT_INTENT_LABELS.openEndedExploreHint,
-    },
-    {
-      title: PRODUCT_INTENT_LABELS.openEndedDrill,
-      summary: PRODUCT_INTENT_LABELS.openEndedDrillHint,
-    },
-    ...(allowTimed
-      ? [
-          {
-            title: PRODUCT_INTENT_LABELS.timedExplore,
-            summary: PRODUCT_INTENT_LABELS.timedExploreHint,
-          },
-          {
-            title: PRODUCT_INTENT_LABELS.timedDrill,
-            summary: PRODUCT_INTENT_LABELS.timedDrillHint,
-          },
-        ]
-      : []),
-  ];
-
+  void thumbnailSrc;
+  void progressRing;
   const heroLayout = isModal ? "modal" : isStacked ? "stacked" : "horizontal";
   const blockHero = (
     <BlockDetailHero
-      thumbnailSrc={thumbnailSrc}
       title={title}
       description={description}
-      progressRing={progressRing}
       isStart={isStart}
       layout={heroLayout}
-      className={heroLayout === "horizontal" ? "rounded-none border-x-0 border-t-0" : ""}
     />
   );
 
   const actionButtons = showActions ? (
-    <div data-product-intent="workspace-start">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-          {PRODUCT_INTENT_LABELS.chooseStyle}
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowHelp(true)}
-          className="flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-neutral-900/80 text-[10px] font-semibold text-neutral-400 transition hover:border-white/35 hover:bg-neutral-800 hover:text-white"
-          aria-label={t("sessionItem.modesHelpTitle")}
-        >
-          ?
-        </button>
-      </div>
-
-      <p className="mb-2 text-[11px] leading-snug text-neutral-500">
-        {PRODUCT_INTENT_LABELS.questionExplore} {PRODUCT_INTENT_LABELS.questionDrill}{" "}
-        {PRODUCT_INTENT_LABELS.questionOpen} {PRODUCT_INTENT_LABELS.questionTimed}
+    <div data-product-intent="workspace-start" data-product-intent-ui="style-timebox">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+        {PRODUCT_INTENT_LABELS.chooseStyle}
       </p>
 
-      <div
-        className={`grid gap-2 ${
-          targets.length >= 4
-            ? isStacked
-              ? "grid-cols-1"
-              : "grid-cols-1 sm:grid-cols-2"
-            : targets.length === 2
-              ? isModal
-                ? "grid-cols-2"
-                : "grid-cols-1 sm:grid-cols-2"
-              : "grid-cols-1"
-        }`}
-        data-block-mode-tools
-        data-product-intent-grid
-      >
-        {targets.map((target) => (
+      {/* Select-only style tools — same chrome for Explore and Drill; launch via Start */}
+      <div className="grid grid-cols-2 gap-2" data-block-mode-tools data-product-intent-style-grid>
+        {(
+          [
+            {
+              id: "explore" as const,
+              label: PRODUCT_INTENT_LABELS.styleExplore,
+              Icon: ExploreIcon,
+            },
+            {
+              id: "drill" as const,
+              label: "Drill",
+              Icon: DrillIcon,
+            },
+          ] as const
+        ).map(({ id, label, Icon }) => {
+          const selected = style === id;
+          const target = resolveLaunchFromStyleAndTimebox(id, effectiveTimebox);
+          return (
             <button
-              key={target.id}
+              key={id}
               type="button"
-              onClick={(e) => launch(target, e)}
-              disabled={isStarting || isLocked}
-              data-block-tool={target.id}
+              data-style-option={id}
+              data-style-select
               data-product-intent-id={target.id}
               data-product-tech={target.product}
-              className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/35 bg-transparent px-3 py-2.5 text-left transition hover:border-white/60 hover:bg-white/5 disabled:opacity-40"
+              data-block-tool={target.id}
+              aria-pressed={selected}
+              disabled={isStarting || isLocked || !canLaunchStyle(id)}
+              onClick={() => setStyle(id)}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg border-2 px-3 text-left transition disabled:opacity-40 ${
+                selected
+                  ? "border-white/55 bg-white/10 text-white"
+                  : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
+              }`}
             >
-              <span className="text-xs font-semibold tracking-tight text-white">
-                {productIntentClusterLabel(target)}
-              </span>
-              <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
-                {isStarting ? t("sessionItem.starting") : productIntentClusterHint(target)}
-              </span>
+              <Icon className="h-5 w-5 shrink-0 opacity-90" />
+              <span className="text-xs font-semibold tracking-tight">{label}</span>
             </button>
-          ))}
+          );
+        })}
       </div>
-    </div>
-  ) : null;
 
-  if (showHelp) {
-    return (
-      <div className={cardShellClass} style={cardShellStyle}>
-        {!isStacked && !isModal && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        )}
-
-        <div className={isStacked || isModal ? "space-y-3" : "p-4 sm:p-5"}>
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold text-white">{t("sessionItem.modesHelpTitle")}</p>
-            <button
-              type="button"
-              onClick={() => setShowHelp(false)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 bg-neutral-900/80 text-sm text-neutral-400 transition hover:border-white/35 hover:bg-neutral-800 hover:text-white"
-              aria-label={t("sessionItem.modesHelpClose")}
-            >
-              ×
-            </button>
+      {allowTimed ? (
+        <div
+          className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-neutral-900/40 px-3 py-2"
+          data-timebox-control
+        >
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-neutral-200">Timebox</p>
+            <p className="text-[10px] leading-snug text-neutral-500">
+              {effectiveTimebox
+                ? "Timed session (clock on)"
+                : "Open-ended session (no clock)"}
+            </p>
           </div>
-
-          <div
-            className={`grid gap-3 ${
-              helpSections.length >= 4
-                ? "sm:grid-cols-2"
-                : helpSections.length >= 3
-                  ? "sm:grid-cols-3"
-                  : "sm:grid-cols-2"
-            }`}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={timebox}
+            data-timebox-toggle
+            data-timebox-on={timebox ? "true" : "false"}
+            disabled={isStarting || isLocked}
+            onClick={() => setTimebox((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full border transition ${
+              timebox
+                ? "border-white/40 bg-white/25"
+                : "border-neutral-600 bg-neutral-800"
+            } disabled:opacity-40`}
           >
-            {helpSections.map((section) => (
-              <div
-                key={section.title}
-                className="rounded-lg border border-white/15 bg-neutral-900/50 p-3"
-              >
-                <p className="text-xs font-semibold text-white">{section.title}</p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-300">{section.summary}</p>
-              </div>
-            ))}
+            <span
+              className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition ${
+                timebox ? "left-5" : "left-0.5"
+              }`}
+              style={{ width: 18, height: 18 }}
+            />
+          </button>
+        </div>
+      ) : null}
+
+      {effectiveTimebox ? (
+        <div className="mt-3" data-launch-duration-picker>
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Session length
+          </p>
+          <div
+            className="grid grid-cols-3 gap-1.5 sm:grid-cols-4"
+            role="group"
+            aria-label="Session length"
+            data-launch-duration-options
+          >
+            {DURATIONS.map((mins) => {
+              const selected = durationMinutes === mins;
+              return (
+                <button
+                  key={mins}
+                  type="button"
+                  data-launch-duration={mins}
+                  aria-pressed={selected}
+                  disabled={isStarting || isLocked}
+                  onClick={() => setDurationMinutes(mins)}
+                  className={`h-8 rounded-lg border-2 text-[11px] font-semibold tracking-tight transition disabled:opacity-40 ${
+                    selected
+                      ? "border-white/55 bg-white/10 text-white"
+                      : "border-white/25 bg-transparent text-neutral-300 hover:border-white/45 hover:bg-white/5"
+                  }`}
+                >
+                  {mins}m
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
-    );
-  }
+      ) : null}
+
+      <button
+        type="button"
+        data-launch-start
+        data-resolved-intent-id={resolvedTarget.id}
+        disabled={isStarting || isLocked || !canStart}
+        onClick={(e) => launch(resolvedTarget, e)}
+        className="mt-3 w-full rounded-lg bg-white px-3 py-2.5 text-xs font-semibold tracking-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+      >
+        {isStarting
+          ? t("sessionItem.starting")
+          : effectiveTimebox
+            ? `Start · ${durationMinutes} min`
+            : "Start"}
+      </button>
+    </div>
+  ) : null;
 
   if (isModal) {
     const hasFloatingActions = !forkCallout && actionButtons;
 
     return (
       <div className={cardShellClass} style={cardShellStyle}>
-        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4">
-          <div className="flex min-h-0 min-w-0 flex-col gap-3">
-            <div className="flex min-h-0 flex-1 flex-col">{blockHero}</div>
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
+          <div className="flex min-h-0 flex-1 flex-col">{blockHero}</div>
 
-            {forkCallout ? <div className="shrink-0">{forkCallout}</div> : null}
+          {forkCallout ? <div className="shrink-0">{forkCallout}</div> : null}
 
-            {hasFloatingActions ? (
-              <div className="shrink-0 rounded-xl border border-white/15 bg-neutral-950/92 p-3 shadow-[0_-10px_36px_rgba(0,0,0,0.5)] backdrop-blur-md">
-                {actionButtons}
-              </div>
-            ) : null}
-          </div>
-
-          <BlockDetailGuidePanel />
+          {hasFloatingActions ? (
+            <div className="shrink-0 rounded-xl border border-white/15 bg-neutral-950/92 p-3 shadow-[0_-10px_36px_rgba(0,0,0,0.5)] backdrop-blur-md">
+              {actionButtons}
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -412,15 +419,17 @@ export function BlockDetailCard({
   }
 
   return (
-    <div className={cardShellClass} style={cardShellStyle}>
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    <div className={cardShellClass} style={cardShellStyle} data-block-detail-launch>
+      <div className="space-y-3">
+        {blockHero}
 
-      {blockHero}
+        {forkCallout ? <div>{forkCallout}</div> : actionButtons ? <div>{actionButtons}</div> : null}
 
-      <div className="p-3.5 sm:p-4">
-        {forkCallout ? <div>{forkCallout}</div> : actionButtons ? <div className="mt-4">{actionButtons}</div> : null}
-
-        {promptSection ? <div className="mt-3.5 border-t border-white/10 pt-3">{promptSection}</div> : null}
+        {promptSection ? (
+          <div className="border-t border-neutral-800/80 pt-2.5" data-customize-session-slot>
+            {promptSection}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -1,29 +1,36 @@
 /**
  * Top-level workspace shell sections.
- * Workspace-local graph/notes/files tabs are retired — notes + files share one surface.
+ * Context hosts notes + files; Workspace is map-first with authoring tools.
  */
-export type WorkspaceSectionKey = "workspace" | "knowledge" | "settings";
+export type WorkspaceSectionKey = "workspace" | "context" | "knowledge" | "settings";
 
 /** @deprecated Local tab keys no longer drive the Workspace section UI. */
 export type WorkspaceLocalTabKey = "graph" | "notes" | "files";
 
-export type WorkspaceMainSurface = "workspace-local" | "knowledge" | "settings";
+export type WorkspaceMainSurface =
+  | "workspace-local"
+  | "context"
+  | "knowledge"
+  | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
+  "context",
   "knowledge",
   "settings",
 ] as const;
 
-/** Empty: Workspace section has no local tab bar (notes+files are combined). */
+/** Empty: Workspace section has no local tab bar (notes+files live under Context). */
 export const WORKSPACE_LOCAL_TABS: readonly WorkspaceLocalTabKey[] = [] as const;
 
 export type WorkspaceSectionLayout = {
   section: WorkspaceSectionKey;
   mainSurface: WorkspaceMainSurface;
-  /** Sessions list + builder multi-column chrome. */
+  /** Sessions list + builder multi-column chrome (map). */
   showBlockMapChrome: boolean;
   showSessionsColumn: boolean;
+  /** Context surface hosts notes + files (global materials). */
+  mountsContextPanel: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -38,12 +45,24 @@ export function resolveWorkspaceSectionLayout(
   section: WorkspaceSectionKey,
 ): WorkspaceSectionLayout {
   switch (section) {
+    case "context":
+      return {
+        section: "context",
+        mainSurface: "context",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: true,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+      };
     case "knowledge":
       return {
         section: "knowledge",
         mainSurface: "knowledge",
         showBlockMapChrome: false,
         showSessionsColumn: false,
+        mountsContextPanel: false,
         localTabs: [],
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
@@ -54,6 +73,7 @@ export function resolveWorkspaceSectionLayout(
         mainSurface: "settings",
         showBlockMapChrome: false,
         showSessionsColumn: false,
+        mountsContextPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
@@ -65,6 +85,7 @@ export function resolveWorkspaceSectionLayout(
         mainSurface: "workspace-local",
         showBlockMapChrome: true,
         showSessionsColumn: true,
+        mountsContextPanel: false,
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -74,7 +95,8 @@ export function resolveWorkspaceSectionLayout(
 
 /**
  * Knowledge + Settings are privileged: workspace owners and org admins only.
- * Everyone else is limited to the Workspace section.
+ * Context + Workspace are available to everyone who can open the workspace
+ * (builders and buyers/consumers).
  */
 export function canAccessPrivilegedWorkspaceSections(options: {
   isOwner?: boolean;
@@ -85,6 +107,7 @@ export function canAccessPrivilegedWorkspaceSections(options: {
 
 /**
  * Privileged sections (Knowledge, Settings): non-privileged callers fall back to Workspace.
+ * Context is open to all workspace viewers.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -105,9 +128,10 @@ export function availableWorkspaceSections(options: {
   isOrgAdmin?: boolean;
 }): WorkspaceSectionKey[] {
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    return ["workspace", "knowledge", "settings"];
+    return ["workspace", "context", "knowledge", "settings"];
   }
-  return ["workspace"];
+  // Buyers / consumers still see Context (materials + how prompts use them).
+  return ["workspace", "context"];
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

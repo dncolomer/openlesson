@@ -1,0 +1,123 @@
+/**
+ * Workspace Settings Data Studio + Admin PoW invalidate — structural + pure mutate.
+ */
+import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  buildStudioPowPatch,
+  isInvalidatedPoWMetadata,
+} from "@/lib/pow-api/studio-pow-mutate";
+import { filterSnapshotEligibleProofOfWorkRows } from "@/lib/pow-api/pow-quality";
+import { parseStudioSessionLinkInput } from "@/lib/admin/data-studio";
+
+const ROOT = join(__dirname, "../..");
+
+function read(rel: string) {
+  return readFileSync(join(ROOT, rel), "utf8");
+}
+
+describe("workspace Data Studio surface", () => {
+  it("Settings registry mounts Data Studio tab and panel", () => {
+    const panel = read("components/WorkspaceIntegrationPanel.tsx");
+    expect(panel).toContain('"data-studio"');
+    expect(panel).toContain("Data Studio");
+    expect(panel).toContain("WorkspaceDataStudioPanel");
+    expect(panel).toContain('data-settings-tab-panel="data-studio"');
+    expect(existsSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"))).toBe(true);
+    const studio = read("components/WorkspaceDataStudioPanel.tsx");
+    expect(studio).toContain("data-workspace-data-studio");
+    expect(studio).toContain("data-studio-filter-user");
+    expect(studio).toContain("data-studio-filter-link");
+    expect(studio).toContain("data-studio-filter-search");
+    expect(studio).toContain("data-studio-bulk-invalidate");
+    expect(studio).toContain("data-studio-invalidate");
+    expect(studio).toContain("/api/workspace/data-studio/pow");
+    // Expandable row details with metadata
+    expect(studio).toContain("data-studio-pow-expand");
+    expect(studio).toContain("data-studio-pow-details-row");
+    expect(studio).toContain("data-studio-pow-metadata-json");
+    expect(studio).toContain("data-studio-pow-details");
+    expect(studio).toContain("JSON.stringify(meta");
+  });
+
+  it("ships workspace and admin mutate routes using metadata invalidate", () => {
+    const ws = read("app/api/workspace/data-studio/pow/route.ts");
+    expect(ws).toContain("buildStudioPowPatch");
+    expect(ws).toContain("invalidate");
+    expect(ws).toContain("guardWorkspaceRoute");
+    expect(ws).toContain("updated_ids");
+    // Writes after owner gate use service role (RLS lacked UPDATE historically)
+    expect(ws).toContain("createAdminClient");
+    // List: accurate range+count for simple browse; candidate scan for filters
+    expect(ws).toContain("count: \"exact\"");
+    expect(ws).toContain("POW_CANDIDATE_LIMIT");
+    expect(ws).toContain("needsCandidateScan");
+    expect(ws).toContain(".range(");
+
+    const admin = read("app/api/admin/data-studio/pow/route.ts");
+    expect(admin).toContain("export async function PATCH");
+    expect(admin).toContain("export async function POST");
+    expect(admin).toContain("buildStudioPowPatch");
+    expect(admin).toContain("invalidated");
+
+    // No dedicated invalidated column in select / updates beyond metadata object
+    expect(ws).not.toMatch(/\.update\(\s*\{\s*invalidated\s*:/);
+    expect(admin).not.toMatch(/\.update\(\s*\{\s*invalidated\s*:/);
+
+    // Owner UPDATE RLS migration ships
+    expect(
+      existsSync(
+        join(ROOT, "supabase/migrations/20260731160000_workspace_pow_owner_update.sql"),
+      ),
+    ).toBe(true);
+    const mig = read("supabase/migrations/20260731160000_workspace_pow_owner_update.sql");
+    expect(mig).toMatch(/Workspace owners can update evidence/i);
+    expect(mig).toMatch(/FOR UPDATE/i);
+  });
+
+  it("bulk invalidate UI closes inspect to avoid stale metadata wipe", () => {
+    const wsUi = read("components/WorkspaceDataStudioPanel.tsx");
+    expect(wsUi).toContain("setExpandedId(null)");
+    expect(wsUi).toMatch(/bulkInvalidate[\s\S]*setExpandedId\(null\)/);
+    const adminUi = read("app/admin/data-studio/page.tsx");
+    expect(adminUi).toContain("setExpandedPowId(null)");
+    expect(adminUi).toMatch(/bulkInvalidatePow[\s\S]*setExpandedPowId\(null\)/);
+  });
+
+  it("Admin Data Studio UI exposes bulk + single invalidate", () => {
+    const page = read("app/admin/data-studio/page.tsx");
+    expect(page).toContain("data-studio-bulk-invalidate");
+    expect(page).toContain("data-studio-invalidate");
+    expect(page).toContain("bulkInvalidatePow");
+    expect(page).toContain("savePowEdit");
+    expect(page).toContain("data-studio-edit-metadata");
+  });
+});
+
+describe("link parse includes TAPBench", () => {
+  it("parses /tapbench/{token}", () => {
+    const p = parseStudioSessionLinkInput(
+      "http://localhost:3000/tapbench/czgktLvZB3di3xXm0UeWGzWisnk32Qosjws1LDLPF3g",
+    );
+    expect(p?.kind).toBe("tapbench");
+    expect(p?.token).toBe("czgktLvZB3di3xXm0UeWGzWisnk32Qosjws1LDLPF3g");
+  });
+});
+
+describe("invalidate contract drives snapshot eligibility", () => {
+  it("bulk-style patch marks metadata so filterSnapshotEligible drops the row", () => {
+    const before = { id: "pow-1", metadata: { text: "solution", source: "agent" } };
+    const patch = buildStudioPowPatch(before.metadata, {
+      invalidate: true,
+      invalidateOptions: { by: "owner", reason: "bulk" },
+    });
+    expect(isInvalidatedPoWMetadata(patch.metadata)).toBe(true);
+    const eligible = filterSnapshotEligibleProofOfWorkRows([
+      before,
+      { id: "pow-1-after", metadata: patch.metadata },
+      { id: "pow-2", metadata: { text: "ok" } },
+    ]);
+    expect(eligible.map((r) => r.id)).toEqual(["pow-1", "pow-2"]);
+  });
+});

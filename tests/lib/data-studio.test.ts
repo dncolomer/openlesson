@@ -498,7 +498,9 @@ describe("data studio structural wiring", () => {
     expect(page).toContain("data-studio-pow-link-input");
     expect(page).toContain("data-studio-pow-lookup");
     expect(page).toContain("data-studio-pow-details-row");
-    expect(page).toContain("colSpan={5}");
+    expect(page).toContain("colSpan={7}");
+    expect(page).toContain("data-studio-bulk-invalidate");
+    expect(page).toContain("data-studio-invalidate");
     expect(page).toContain("sortStudioRows");
     expect(page).toContain("toggleStudioSort");
     expect(page).toContain("data-studio-sort");

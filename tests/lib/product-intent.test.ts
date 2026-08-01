@@ -100,11 +100,21 @@ describe("productIntentFromGuestLink / create fields", () => {
 });
 
 describe("structural: workspace + settings hide TAP/ILE product names", () => {
-  it("BlockDetailCard uses intent tools, not ILE/TAP CTAs", () => {
+  it("BlockDetailCard uses Explore/Drill + timebox, not ILE/TAP CTAs", () => {
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("product-intent");
-    expect(card).toContain("open_ended_explore");
-    expect(card).toContain("timed_drill");
+    expect(card).toContain("resolveLaunchFromStyleAndTimebox");
+    expect(card).toContain("data-style-option={id}");
+    expect(card).toContain('id: "explore"');
+    expect(card).toContain('id: "drill"');
+    expect(card).toContain("data-timebox-toggle");
+    // Select-only style tools; Start launches
+    expect(card).toContain("data-style-select");
+    expect(card).toContain("data-launch-start");
+    expect(card).toContain("data-launch-duration-picker");
+    expect(card).toContain("onClick={() => setStyle(id)}");
+    expect(card).not.toContain("openEndedExploreHint");
+    expect(card).not.toContain("timedExploreHint");
     // User-visible product brands removed from action grid
     expect(card).not.toMatch(/ILE · Learning Mode|ILE · Project Mode|Exercise TAP|Think Aloud Protocol/);
     expect(card).not.toContain('data-block-tool="ile-learning"');
@@ -145,12 +155,25 @@ describe("structural: workspace + settings hide TAP/ILE product names", () => {
     expect(aycl).not.toContain("ILE only");
 
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain("double-click block to practice");
+    expect(grid).toMatch(/double-click block for (detail|practice)/);
     expect(grid).not.toContain("double-click block for TAP/ILE");
   });
 
   it("labels never use TAP/ILE as product names", () => {
     const labels = Object.values(PRODUCT_INTENT_LABELS).join(" ");
     expect(labels).not.toMatch(/\bTAP\b|\bILE\b/);
+  });
+
+  it("workspace TAP route accepts minutes and locks duration in the client", () => {
+    const page = read("app/workspace/[id]/tap/page.tsx");
+    expect(page).toContain("minutes");
+    expect(page).toContain("initialMinutes");
+    expect(page).toContain("lockDuration");
+    const score = read("components/TapScoreClient.tsx");
+    expect(score).toContain("lockDuration");
+    expect(score).toContain("showDurationPicker={!privateToken && !durationLocked}");
+    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(exercise).toContain("lockDuration");
+    expect(exercise).toContain("showDurationPicker={!privateToken && !durationLocked}");
   });
 });

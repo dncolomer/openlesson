@@ -7,17 +7,19 @@ export interface SkillGridNode {
   /** Optional body text for hand-edit surfaces */
   description?: string;
   /** Grid column in world coordinates (anchor / top-left of multi-cell span) */
-  position_x?: number;
+  position_x?: number | null;
   /** Grid row in world coordinates (anchor / top-left of multi-cell span) */
-  position_y?: number;
+  position_y?: number | null;
   /** Width in cells (≥1). Default 1. */
-  span_w?: number;
+  span_w?: number | null;
   /** Height in cells (≥1). Default 1. */
-  span_h?: number;
+  span_h?: number | null;
   /**
    * Freeform mask: relative {dr,dc} from anchor. Null/empty = solid span_w×span_h.
    */
   shape_cells?: Array<{ dr: number; dc: number }> | null;
+  /** Prerequisite block ids that must be completed before this block unlocks. */
+  lock_until_block_ids?: string[] | null;
 }
 
 export interface GridCell {

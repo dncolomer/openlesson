@@ -1,48 +1,170 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
+import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
+import { deriveBlockExampleTopics } from "@/lib/block-example-topics";
+import {
+  normalizeBlockLocalContext,
+  type BlockLocalContextInput,
+} from "@/lib/prompt-workspace-context";
 
 /**
- * Right-column chrome for open block detail (replaces notes/files surface).
- * Not a map-covering modal — lives in the workspace right pane only.
+ * Block-detail right column: peer top-level drawers —
+ * Details (expanded), Edit (update/delete for owners), Local context,
+ * Examples (collapsed by default unless local materials exist).
+ * No X close on drawers; dismiss via map selection clear.
  */
 export function WorkspaceBlockDetailPane({
   title,
-  onClose,
   children,
+  localContextPanel,
+  blockId,
+  blockTitle,
+  blockDescription,
+  planningPrompt,
+  localContext,
+  canEdit = false,
+  editBusy = false,
+  onUpdateBlock,
+  onDeleteBlock,
 }: {
   title?: string;
-  onClose: () => void;
+  /** Block launch / detail body (e.g. SessionItem). */
   children: ReactNode;
+  localContextPanel: ReactNode;
+  blockId: string;
+  blockTitle: string;
+  blockDescription?: string | null;
+  planningPrompt?: string | null;
+  localContext?: BlockLocalContextInput | null;
+  canEdit?: boolean;
+  editBusy?: boolean;
+  onUpdateBlock?: (input: {
+    blockId: string;
+    title: string;
+    description: string;
+  }) => Promise<void> | void;
+  onDeleteBlock?: (blockId: string) => Promise<void> | void;
+  /** @deprecated Selection-driven dismiss; no drawer X. */
+  onClose?: () => void;
 }) {
   const { t } = useI18n();
+  const localNorm = normalizeBlockLocalContext(localContext);
+  const hasLocalMaterials = localNorm.hasLocalMaterials;
+  const examples = deriveBlockExampleTopics({
+    title: blockTitle,
+    description: blockDescription,
+    planningPrompt,
+    localNotes: localContext?.notes ?? null,
+  });
 
   return (
     <div
       data-workspace-right-pane="block-detail"
       data-workspace-block-detail-pane
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-800/80 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-md"
+      data-block-detail-drawers
+      data-block-detail-mini-tabs
+      data-block-has-local-context={hasLocalMaterials ? "true" : "false"}
+      className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-800/70 px-3 py-2.5 sm:px-4">
-        <p className="min-w-0 truncate text-xs font-medium uppercase tracking-[0.12em] text-neutral-500">
-          {title || t("sessionList.sessions")}
-        </p>
-        <button
-          type="button"
-          data-block-detail-close
-          onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-neutral-700/80 bg-neutral-900/80 text-neutral-300 transition-colors hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-          title={t("common.close")}
-          aria-label={t("common.close")}
-        >
-          <X className="h-4 w-4" strokeWidth={2.25} />
-        </button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-3 sm:p-4">
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="detail"
+        title={title || t("sessionList.sessions")}
+        defaultExpanded
+        bodyClassName="space-y-3"
+      >
         {children}
-      </div>
+      </WorkspaceRightPaneDrawer>
+
+      {canEdit ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="edit"
+          title="Edit"
+          defaultExpanded={false}
+          bodyClassName="space-y-2"
+        >
+          <div data-block-detail-tab-content="edit">
+            <WorkspaceBlockEditPanel
+              blockId={blockId}
+              title={blockTitle}
+              description={blockDescription}
+              canEdit={canEdit}
+              busy={editBusy}
+              onUpdate={onUpdateBlock}
+              onDelete={onDeleteBlock}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="local"
+        title="Local context"
+        subtitle={hasLocalMaterials ? "Materials attached" : undefined}
+        // Open when create-time / saved local materials exist so they are visible on select.
+        defaultExpanded={hasLocalMaterials}
+        bodyClassName="space-y-2"
+      >
+        <div data-block-detail-tab-content="local">{localContextPanel}</div>
+      </WorkspaceRightPaneDrawer>
+
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="examples"
+        title="Examples"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+      >
+        <div data-block-detail-tab-content="examples" className="space-y-3">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+              Topics this block explores
+            </p>
+            {examples.topics.length > 0 ? (
+              <ul className="mt-1.5 flex flex-wrap gap-1" data-block-example-topics>
+                {examples.topics.map((topic) => (
+                  <li
+                    key={topic}
+                    className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-neutral-300"
+                  >
+                    {topic}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-neutral-600">No topics derived yet.</p>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+              Example questions
+            </p>
+            {examples.questions.length > 0 ? (
+              <ul className="mt-1.5 space-y-1" data-block-example-questions>
+                {examples.questions.map((q) => (
+                  <li
+                    key={q}
+                    className="flex gap-1.5 text-[11px] leading-snug text-neutral-400"
+                  >
+                    <span
+                      className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/25"
+                      aria-hidden
+                    />
+                    <span>{q}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-neutral-600">No example questions yet.</p>
+            )}
+          </div>
+        </div>
+      </WorkspaceRightPaneDrawer>
     </div>
   );
 }

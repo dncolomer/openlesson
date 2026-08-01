@@ -26,7 +26,14 @@ export interface TapChatMessage {
 export const OPENING_MESSAGE_ID = "opening";
 export const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
 export const CHAIN_GAP_MS = 2600;
-export const DURATIONS = [15, 30];
+
+/** Session length choices in minutes (every 5 from 5–60). */
+export const DURATIONS: readonly number[] = Array.from(
+  { length: 12 },
+  (_, i) => (i + 1) * 5,
+);
+/** Default when no duration is pre-selected. */
+export const DEFAULT_DURATION_MINUTES = 15;
 
 export const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -64,12 +71,12 @@ export function clearDialogueMessages(storageKey: string) {
 }
 
 export function resolveInitialMinutes(requestedDurationSeconds: unknown): number {
-  const minutes = Number(requestedDurationSeconds || 900) / 60;
-  if (!Number.isFinite(minutes)) return 15;
+  const minutes = Number(requestedDurationSeconds || DEFAULT_DURATION_MINUTES * 60) / 60;
+  if (!Number.isFinite(minutes)) return DEFAULT_DURATION_MINUTES;
   if (minutes >= TAP_LINK_MIN_MINUTES && minutes <= TAP_LINK_MAX_MINUTES) {
     return Math.trunc(minutes);
   }
-  return DURATIONS.includes(minutes) ? minutes : 15;
+  return DURATIONS.includes(minutes) ? minutes : DEFAULT_DURATION_MINUTES;
 }
 
 export function normalize(text: string) {

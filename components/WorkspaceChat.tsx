@@ -17,10 +17,18 @@ interface Block {
   is_start: boolean;
   next_block_ids: string[];
   status: string;
-  position_x?: number;
-  position_y?: number;
+  position_x?: number | null;
+  position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
   planning_prompt?: string;
   session_id?: string;
+  lock_until_block_ids?: string[] | null;
+  local_context?: {
+    notes?: string | null;
+    local_files?: Array<{ name: string; excerpt?: string | null }> | null;
+    global_file_refs?: string[] | null;
+  } | null;
 }
 
 interface Workspace {

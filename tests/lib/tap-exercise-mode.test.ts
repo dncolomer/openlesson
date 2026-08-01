@@ -359,6 +359,9 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(card).toContain("timed_explore");
     expect(card).toContain("timed_drill");
     expect(card).toContain("onLaunchIntent");
+    expect(card).toContain("data-launch-start");
+    expect(card).toContain("data-launch-duration-picker");
+    expect(card).toContain("onClick={() => setStyle(id)}");
 
     const item = read("components/SessionItem.tsx");
     expect(item).toContain("handleStartTimed");
@@ -366,6 +369,7 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(item).toContain("onLaunchIntent");
     expect(item).toContain('handleStart("project")');
     expect(item).toContain("session_mode: ileMode");
+    expect(item).toContain('params.set("minutes"');
   });
 
   it("Exercise session UI is a separate dual-history shell without DialogueSplit/Helios bubbles", () => {

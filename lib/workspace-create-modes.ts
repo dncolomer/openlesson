@@ -79,9 +79,9 @@ export function composeDantesResourceContext(
 }
 
 /**
- * Persist selected template resources as workspace notes markdown with links.
- * Notes surface in the Notes tab and are re-injected into later block generation.
- * (External URLs are not workspace_files — those require uploaded binaries.)
+ * Optional light notes for template workspaces (topic blurb).
+ * Selected Dantes resources are first-class rows in workspace_external_resources
+ * (Context tab) — not the sole markdown list in notes.
  */
 export function composeTemplateWorkspaceNotes(
   topicName: string,
@@ -92,7 +92,7 @@ export function composeTemplateWorkspaceNotes(
   const lines: string[] = [
     `# ${title}`,
     "",
-    "Workspace created from a topic template. Selected resources below are linked for reference and used as learning context.",
+    "Workspace created from a topic template. External resources live in Context (above notes).",
   ];
 
   const desc = options?.topicDescription?.trim();
@@ -100,24 +100,25 @@ export function composeTemplateWorkspaceNotes(
     lines.push("", desc);
   }
 
+  // Optional legacy markdown appendix when callers still pass resources into notes
+  // (create path primarily inserts them into workspace_external_resources).
   lines.push("", "## Resource links", "");
-
   if (resources.length === 0) {
     lines.push("_No resources were selected for this template._");
-    return lines.join("\n");
-  }
-
-  for (const r of resources) {
-    const label = (r.title || "Resource").trim();
-    const href = typeof r.url === "string" ? r.url.trim() : "";
-    const meta = [r.type, r.difficulty].filter(Boolean).join(" · ");
-    if (href) {
-      lines.push(`- [${label}](${href})${meta ? ` — ${meta}` : ""}`);
-    } else {
-      lines.push(`- **${label}**${meta ? ` — ${meta}` : ""}`);
-    }
-    if (r.description?.trim()) {
-      lines.push(`  - ${r.description.trim().slice(0, 240)}`);
+  } else {
+    lines.push("_Also stored as Context external sources._", "");
+    for (const r of resources) {
+      const label = (r.title || "Resource").trim();
+      const href = typeof r.url === "string" ? r.url.trim() : "";
+      const meta = [r.type, r.difficulty].filter(Boolean).join(" · ");
+      if (href) {
+        lines.push(`- [${label}](${href})${meta ? ` — ${meta}` : ""}`);
+      } else {
+        lines.push(`- **${label}**${meta ? ` — ${meta}` : ""}`);
+      }
+      if (r.description?.trim()) {
+        lines.push(`  - ${r.description.trim().slice(0, 240)}`);
+      }
     }
   }
 

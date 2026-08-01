@@ -135,6 +135,13 @@ import {
   looksLikeTopicOverview,
 } from "@/lib/pow-api/tapbench-exercise-quality";
 import {
+  parseBlockLocalContext,
+  type BlockLocalContextInput,
+  type PromptBlockInventoryItem,
+  type WorkspaceFileContextItem,
+} from "@/lib/prompt-workspace-context";
+import { normalizeUnusableCells } from "@/lib/map-ground-rules";
+import {
   buildFollowUpChapterDescription,
   findAdjacentFreeChapterSlot,
   type ChapterFollowUpSuggestion,
@@ -475,18 +482,154 @@ export function SessionView({
   const chapterThoughtsLocked =
     isProjectMode && isIleChapterThoughtsLocked(activeStep?.status);
 
+  /** Workspace materials for ILE Project framer + generate-exercise (notes/files/blocks/local). */
+  type IlePromptMaterials = {
+    workspaceId: string | null;
+    workspaceTitle: string | null;
+    workspaceGoal: string | null;
+    rootTopic: string | null;
+    notes: string | null;
+    files: WorkspaceFileContextItem[];
+    blocks: PromptBlockInventoryItem[];
+    unusableCells: Array<{ row: number; col: number }>;
+    focusedBlockId: string | null;
+    blockTitle: string | null;
+    blockDescription: string | null;
+    blockLocalContext: BlockLocalContextInput | null;
+  };
+  const [ilePromptMaterials, setIlePromptMaterials] = useState<IlePromptMaterials | null>(null);
+
+  useEffect(() => {
+    if (!isProjectMode || !session) return;
+    const meta = (session.metadata || {}) as Record<string, unknown>;
+    const workspaceId =
+      typeof meta.workspace_id === "string" && meta.workspace_id.trim()
+        ? meta.workspace_id.trim()
+        : null;
+    if (!workspaceId) return;
+    const focusedBlockId =
+      typeof meta.block_id === "string" && meta.block_id.trim()
+        ? meta.block_id.trim()
+        : typeof meta.focus_block_id === "string" && meta.focus_block_id.trim()
+          ? meta.focus_block_id.trim()
+          : null;
+    let cancelled = false;
+    const supabase = createClient();
+    void (async () => {
+      try {
+        const { data: workspace } = await supabase
+          .from("workspaces")
+          .select("id, title, root_topic, workspace_goal, description, notes, unusable_cells")
+          .eq("id", workspaceId)
+          .maybeSingle();
+        if (cancelled || !workspace) return;
+        const { data: blockRows } = await supabase
+          .from("blocks")
+          .select(
+            "id, title, description, status, is_start, position_x, position_y, span_w, span_h, shape_cells, next_block_ids, lock_until_block_ids, local_context",
+          )
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: true });
+        const blocks: PromptBlockInventoryItem[] = (blockRows || []).map((n) => ({
+          id: n.id,
+          title: String(n.title || ""),
+          description: (n as { description?: string | null }).description ?? null,
+          status: (n as { status?: string | null }).status ?? null,
+          is_start: (n as { is_start?: boolean | null }).is_start ?? null,
+          position_x: (n as { position_x?: number | null }).position_x ?? null,
+          position_y: (n as { position_y?: number | null }).position_y ?? null,
+          span_w: (n as { span_w?: number | null }).span_w ?? null,
+          span_h: (n as { span_h?: number | null }).span_h ?? null,
+          shape_cells:
+            (n as { shape_cells?: Array<{ dr: number; dc: number }> | null }).shape_cells ??
+            null,
+          next_block_ids: (n as { next_block_ids?: string[] | null }).next_block_ids ?? null,
+          lock_until_block_ids:
+            (n as { lock_until_block_ids?: string[] | null }).lock_until_block_ids ?? null,
+          local_context: parseBlockLocalContext(
+            (n as { local_context?: unknown }).local_context,
+          ),
+        }));
+        const focused =
+          (focusedBlockId && blocks.find((b) => b.id === focusedBlockId)) || null;
+        let files: WorkspaceFileContextItem[] = [];
+        try {
+          const { data: fileRows } = await supabase
+            .from("workspace_files")
+            .select("file_name, mime_type")
+            .eq("workspace_id", workspaceId)
+            .order("created_at", { ascending: false })
+            .limit(12);
+          files = (fileRows || [])
+            .map((f: { file_name?: string | null; mime_type?: string | null }) => ({
+              name: typeof f.file_name === "string" ? f.file_name.trim() : "",
+              mime_type: f.mime_type ?? null,
+            }))
+            .filter((f) => f.name);
+        } catch {
+          files = [];
+        }
+        if (cancelled) return;
+        setIlePromptMaterials({
+          workspaceId,
+          workspaceTitle: workspace.title ?? session.problem ?? null,
+          workspaceGoal:
+            (workspace as { workspace_goal?: string | null }).workspace_goal ?? null,
+          rootTopic: workspace.root_topic ?? null,
+          notes: (workspace as { notes?: string | null }).notes ?? null,
+          files,
+          blocks,
+          unusableCells: normalizeUnusableCells(
+            (workspace as { unusable_cells?: unknown }).unusable_cells,
+          ),
+          focusedBlockId: focused?.id ?? focusedBlockId,
+          blockTitle:
+            focused?.title ||
+            (typeof meta.block_title === "string" ? meta.block_title : null) ||
+            session.problem ||
+            null,
+          blockDescription: focused?.description ?? null,
+          blockLocalContext: focused?.local_context ?? null,
+        });
+      } catch {
+        /* best-effort — pure framer still works with thinner input */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProjectMode, session]);
+
   const projectChapterExercisePrompt = useMemo(() => {
     if (!isProjectMode) return chapterDialoguePrompt;
     // Prefer the stored chapter text when it is already a real exercise (LLM-authored).
     // Thin topic wraps still go through the pure framer until upgraded async below.
+    // Pass notes/files/blocks/local/unusable when loaded so ILE uses the shared assembler layers.
     return buildIleProjectChapterExercisePrompt({
       chapterDescription: activeStep?.description,
       blockTitle:
+        ilePromptMaterials?.blockTitle ||
         (session?.metadata as { block_title?: string } | undefined)?.block_title ||
         session?.problem,
-      workspaceTitle: session?.problem,
+      blockDescription: ilePromptMaterials?.blockDescription,
+      workspaceTitle:
+        ilePromptMaterials?.workspaceTitle || session?.problem,
+      workspaceGoal: ilePromptMaterials?.workspaceGoal,
+      notes: ilePromptMaterials?.notes,
+      files: ilePromptMaterials?.files,
+      blocks: ilePromptMaterials?.blocks,
+      focusedBlockId: ilePromptMaterials?.focusedBlockId,
+      blockLocalContext: ilePromptMaterials?.blockLocalContext,
+      unusableCells: ilePromptMaterials?.unusableCells,
     });
-  }, [isProjectMode, chapterDialoguePrompt, activeStep?.description, session?.metadata, session?.problem]);
+  }, [
+    isProjectMode,
+    chapterDialoguePrompt,
+    activeStep?.description,
+    session?.metadata,
+    session?.problem,
+    ilePromptMaterials,
+  ]);
 
   /** LLM-authored exercise override for the active Project Mode chapter (when seed was thin). */
   const [llmChapterExerciseById, setLlmChapterExerciseById] = useState<
@@ -526,12 +669,23 @@ export function SessionView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId: session.id,
+            workspaceId: ilePromptMaterials?.workspaceId || undefined,
             surface: "ile_project",
             chapterDescription: seed,
             blockTitle:
+              ilePromptMaterials?.blockTitle ||
               (session?.metadata as { block_title?: string } | undefined)?.block_title ||
               session?.problem,
-            workspaceTitle: session?.problem,
+            blockDescription: ilePromptMaterials?.blockDescription || undefined,
+            workspaceTitle:
+              ilePromptMaterials?.workspaceTitle || session?.problem,
+            workspaceGoal: ilePromptMaterials?.workspaceGoal || undefined,
+            notes: ilePromptMaterials?.notes || undefined,
+            files: ilePromptMaterials?.files || undefined,
+            blocks: ilePromptMaterials?.blocks || undefined,
+            focusedBlockId: ilePromptMaterials?.focusedBlockId || undefined,
+            blockLocalContext: ilePromptMaterials?.blockLocalContext || undefined,
+            unusableCells: ilePromptMaterials?.unusableCells || undefined,
             ...guestAccessBody,
           }),
         });
@@ -571,6 +725,7 @@ export function SessionView({
     activeStep?.description,
     llmChapterExerciseById,
     guestAccessBody,
+    ilePromptMaterials,
   ]);
 
   // Project Mode dual-list thoughts keyed by chapter id (stash + solution).
@@ -1143,13 +1298,24 @@ export function SessionView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId: sessionRef.current?.id || session?.id,
+            workspaceId: ilePromptMaterials?.workspaceId || undefined,
             surface: "ile_project",
             chapterDescription: trimmed,
             seed: trimmed,
             blockTitle:
+              ilePromptMaterials?.blockTitle ||
               (session?.metadata as { block_title?: string } | undefined)?.block_title ||
               session?.problem,
-            workspaceTitle: session?.problem,
+            blockDescription: ilePromptMaterials?.blockDescription || undefined,
+            workspaceTitle:
+              ilePromptMaterials?.workspaceTitle || session?.problem,
+            workspaceGoal: ilePromptMaterials?.workspaceGoal || undefined,
+            notes: ilePromptMaterials?.notes || undefined,
+            files: ilePromptMaterials?.files || undefined,
+            blocks: ilePromptMaterials?.blocks || undefined,
+            focusedBlockId: ilePromptMaterials?.focusedBlockId || undefined,
+            blockLocalContext: ilePromptMaterials?.blockLocalContext || undefined,
+            unusableCells: ilePromptMaterials?.unusableCells || undefined,
             ...guestAccessBody,
           }),
         });
@@ -1199,6 +1365,7 @@ export function SessionView({
     session?.problem,
     session?.metadata,
     guestAccessBody,
+    ilePromptMaterials,
   ]);
 
   const handleUpdateChapter = useCallback(async (stepId: string, description: string) => {

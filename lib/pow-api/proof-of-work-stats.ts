@@ -47,7 +47,7 @@ export interface ProofOfWorkRecentEvent {
   file_size: number | null;
   created_at: string;
   timestamp_ms: number | null;
-  quality: "scored" | "practice" | "impure";
+  quality: "scored" | "practice" | "impure" | "invalidated";
 }
 
 export interface ProofOfWorkSubjectBreakdown {
@@ -69,6 +69,8 @@ export interface WorkspaceProofOfWorkStats {
   scored_artifacts: number;
   practice_artifacts: number;
   impure_artifacts: number;
+  /** Manually invalidated (metadata.invalidated) — not counted as impure. */
+  invalidated_artifacts: number;
   by_type: ProofOfWorkTypeBreakdown[];
   unique_sessions: number;
   unique_blocks: number;
@@ -167,12 +169,14 @@ export function aggregateProofOfWorkStats(
   let scored_artifacts = 0;
   let practice_artifacts = 0;
   let impure_artifacts = 0;
+  let invalidated_artifacts = 0;
   const subjectMap = new Map<string, ProofOfWorkSubjectBreakdown>();
 
   for (const row of rows) {
     const quality = classifyPowQuality(row.metadata);
     if (quality === "scored") scored_artifacts += 1;
     else if (quality === "practice") practice_artifacts += 1;
+    else if (quality === "invalidated") invalidated_artifacts += 1;
     else impure_artifacts += 1;
 
     const key = subjectKeyForRow(row);
@@ -295,6 +299,7 @@ export function aggregateProofOfWorkStats(
     scored_artifacts,
     practice_artifacts,
     impure_artifacts,
+    invalidated_artifacts,
     by_type,
     unique_sessions: sessions.size,
     unique_blocks: blocks.size,

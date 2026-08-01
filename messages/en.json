@@ -1719,12 +1719,12 @@
     "dialogueWelcome": "Hey, I'm Helios. Send me a thought and I'll answer under my avatar — plain text, one turn at a time."
   },
   "sessionItem": {
-    "customInstructions": "Custom instructions for this block...",
+    "customInstructions": "Instructions to steer this session...",
     "resume": "Resume",
     "expand": "Expand",
     "next": "Next:",
     "leadsTo": "Leads to:",
-    "customInstructionsLabel": "Custom instructions",
+    "customInstructionsLabel": "Customize the session",
     "saving": "saving...",
     "saved": "saved",
     "preview": "Preview",
@@ -1789,7 +1789,8 @@
     "blockDetailGuideHint2": "Custom instructions: steer this block toward your job, exam, or project.",
     "blockDetailGuideHint3": "Open-ended practice: think aloud, crystallize speech into thoughts, send or stash them as you work.",
     "blockDetailGuideHint4": "Workspace builder: add or reshape blocks when you discover gaps in the plan.",
-    "blockDetailGuideHint5": "Timed runs: use when you are ready to demonstrate skill, not on the first pass."
+    "blockDetailGuideHint5": "Timed runs: use when you are ready to demonstrate skill, not on the first pass.",
+    "customizeSessionLabel": "Customize the session"
   },
   "planView": {
     "addDescription": "Add a description for this workspace...",
@@ -2009,6 +2010,7 @@
     "performanceScoreTitleAugmentation": "LWM Snapshot",
     "performanceScoreTitleOptimization": "LWM Snapshot",
     "sectionWorkspace": "Workspace",
+    "sectionContext": "Context",
     "sectionKnowledge": "Knowledge",
     "sectionSetting": "Setting",
     "topLevelSectionsNav": "Workspace areas",

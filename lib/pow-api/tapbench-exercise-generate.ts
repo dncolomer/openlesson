@@ -16,6 +16,8 @@ import {
 } from "@/lib/xai-client";
 import {
   assemblePromptWorkspaceContext,
+  type BlockLocalContextInput,
+  type PromptBlockInventoryItem,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
 import {
@@ -42,6 +44,11 @@ export interface GenerateDomainExerciseInput extends TapbenchExerciseContext {
   files?: WorkspaceFileContextItem[] | null;
   /** ILE chapter plan text (Project Mode). */
   chapterDescription?: string | null;
+  /** Map inventory + layout for shared assembler (TAP/ILE/TAPBench). */
+  blocks?: PromptBlockInventoryItem[] | null;
+  focusedBlockId?: string | null;
+  blockLocalContext?: BlockLocalContextInput | null;
+  unusableCells?: Array<{ row: number; col: number }> | null;
   durationSeconds?: number | null;
   surface?: DomainExerciseSurface;
   /** Inject LLM for tests. */
@@ -113,6 +120,10 @@ export function buildDomainExerciseAuthorUserPrompt(
     blockDescription: input.blockDescription,
     chapterDescription: input.chapterDescription,
     files: input.files,
+    blocks: input.blocks,
+    focusedBlockId: input.focusedBlockId,
+    blockLocalContext: input.blockLocalContext,
+    unusableCells: input.unusableCells,
   });
   const minutes =
     typeof input.durationSeconds === "number" && input.durationSeconds > 0
@@ -150,6 +161,21 @@ export function buildDomainExerciseAuthorUserPrompt(
   for (const fe of ctx.fileExcerpts.slice(0, 2)) {
     lines.push(`Excerpt from ${fe.name}: ${fe.excerpt.slice(0, 400)}`);
   }
+  if (ctx.blockInventoryLines.length > 0) {
+    lines.push("Block inventory (map roles / kinds):");
+    lines.push(...ctx.blockInventoryLines.slice(0, 12));
+  }
+  if (ctx.topologyLines.length > 0) {
+    lines.push("Map layout / topology:");
+    lines.push(...ctx.topologyLines.slice(0, 12));
+  }
+  if (ctx.hasLocalContext) {
+    lines.push("Local block context (focused block materials):");
+    lines.push(...ctx.localContextLines);
+  }
+  // Full shared context block so authors ground in the same layers TAP/ILE use.
+  lines.push("");
+  lines.push(ctx.contextBlock);
   lines.push("");
   lines.push(
     `Author one concrete exercise for ${surfaceLabel(surface)}. Return only the exercise text.`,

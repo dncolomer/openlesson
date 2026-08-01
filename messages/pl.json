@@ -1806,6 +1806,7 @@
     "performanceScoreTitleAugmentation": "LWM Snapshot",
     "performanceScoreTitleOptimization": "LWM Snapshot",
     "sectionWorkspace": "Przestrzeń robocza",
+    "sectionContext": "Kontekst",
     "sectionKnowledge": "Wiedza",
     "sectionSetting": "Ustawienia",
     "topLevelSectionsNav": "Obszary przestrzeni roboczej",

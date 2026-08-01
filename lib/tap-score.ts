@@ -8,7 +8,12 @@ import {
   buildTapPracticeOpeningQuestionTask,
   buildTapStartingTopicsTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
-import { formatPromptWorkspaceContextBlock } from "@/lib/prompt-workspace-context";
+import {
+  formatPromptWorkspaceContextBlock,
+  parseBlockLocalContext,
+  type PromptBlockInventoryItem,
+} from "@/lib/prompt-workspace-context";
+import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 
 export interface TapStartingTopic {
   id: string;
@@ -36,6 +41,15 @@ export interface TapScoreBrief {
     title: string;
     description: string | null;
     status: string | null;
+    is_start?: boolean | null;
+    position_x?: number | null;
+    position_y?: number | null;
+    span_w?: number | null;
+    span_h?: number | null;
+    shape_cells?: Array<{ dr: number; dc: number }> | null;
+    next_block_ids?: string[] | null;
+    lock_until_block_ids?: string[] | null;
+    local_context?: ReturnType<typeof parseBlockLocalContext>;
   }>;
   sessions: Array<{
     id: string;
@@ -54,6 +68,8 @@ export interface TapScoreBrief {
   } | null;
   /** Workspace file names (always listed when present). */
   files?: Array<{ name: string; mime_type?: string | null }>;
+  /** Unusable map ground cells (path-shaping). */
+  unusableCells?: Array<{ row: number; col: number }>;
 }
 
 export interface TapScoreMarker {
@@ -129,7 +145,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
   const { data: plan, error: planError } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, title, root_topic, description, notes, workspace_goal, is_public, is_group",
+      "id, user_id, organization_id, title, root_topic, description, notes, workspace_goal, is_public, is_group, unusable_cells",
     )
     .eq("id", workspaceId)
     .single();
@@ -158,7 +174,9 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
 
   let nodesQuery = supabase
     .from("blocks")
-    .select("id, title, description, status")
+    .select(
+      "id, title, description, status, is_start, position_x, position_y, span_w, span_h, shape_cells, next_block_ids, lock_until_block_ids, local_context",
+    )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true });
 
@@ -229,6 +247,19 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
         title: node.title,
         description: node.description,
         status: node.status,
+        is_start: (node as { is_start?: boolean }).is_start ?? null,
+        position_x: (node as { position_x?: number | null }).position_x ?? null,
+        position_y: (node as { position_y?: number | null }).position_y ?? null,
+        span_w: (node as { span_w?: number | null }).span_w ?? null,
+        span_h: (node as { span_h?: number | null }).span_h ?? null,
+        shape_cells: (node as { shape_cells?: Array<{ dr: number; dc: number }> | null })
+          .shape_cells ?? null,
+        next_block_ids: (node as { next_block_ids?: string[] | null }).next_block_ids ?? null,
+        lock_until_block_ids:
+          (node as { lock_until_block_ids?: string[] | null }).lock_until_block_ids ?? null,
+        local_context: parseBlockLocalContext(
+          (node as { local_context?: unknown }).local_context,
+        ),
       })),
       sessions: (sessions || []).map((session) => ({
         id: session.id,
@@ -251,6 +282,9 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
           mime_type: (f as { mime_type?: string | null }).mime_type ?? null,
         }))
         .filter((f) => f.name),
+      unusableCells: normalizeUnusableCells(
+        (plan as { unusable_cells?: unknown }).unusable_cells,
+      ),
     } satisfies TapScoreBrief,
   };
 }
@@ -274,6 +308,22 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
+  const inventoryBlocks: PromptBlockInventoryItem[] = (brief.nodes || []).map((node) => ({
+    id: node.id,
+    title: node.title,
+    description: node.description,
+    status: node.status,
+    is_start: node.is_start,
+    position_x: node.position_x,
+    position_y: node.position_y,
+    span_w: node.span_w,
+    span_h: node.span_h,
+    shape_cells: node.shape_cells,
+    next_block_ids: node.next_block_ids,
+    lock_until_block_ids: node.lock_until_block_ids,
+    local_context: node.local_context,
+  }));
+
   const sharedContext = formatPromptWorkspaceContextBlock({
     workspaceTitle: brief.plan.title,
     rootTopic: brief.plan.root_topic,
@@ -282,7 +332,11 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
     notes: brief.plan.notes,
     blockTitle: focusedBlock?.title,
     blockDescription: focusedBlock?.description,
+    focusedBlockId: focusedBlock?.id,
     files: (brief.files || []).map((f) => ({ name: f.name, mime_type: f.mime_type })),
+    blocks: inventoryBlocks,
+    blockLocalContext: focusedBlock?.local_context ?? null,
+    unusableCells: brief.unusableCells,
   });
 
   const workspaceBlock = `${sharedContext}

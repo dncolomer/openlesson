@@ -105,6 +105,15 @@ interface TapScoreClientProps {
   entryQueryParams?: Record<string, string | string[]>;
   /** Server-resolved participant for guest links; map UI resolves signed-in user client-side. */
   participantIdentity?: PowParticipantIdentity | null;
+  /**
+   * Pre-selected duration from workspace launch (minutes).
+   * Wins over session requested_duration when set.
+   */
+  initialMinutes?: number;
+  /**
+   * When true, hide the briefing duration picker (duration already chosen upstream).
+   */
+  lockDuration?: boolean;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -138,6 +147,8 @@ export function TapScoreClient({
   showEndSession: showEndSessionProp,
   entryQueryParams = {},
   participantIdentity: participantIdentityProp = null,
+  initialMinutes,
+  lockDuration = false,
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -191,7 +202,11 @@ export function TapScoreClient({
     };
   }, [participantIdentityProp, privateToken]);
   const [phase, setPhase] = useState<Phase>("briefing");
-  const [minutes, setMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
+  const resolvedLaunchMinutes =
+    typeof initialMinutes === "number" && Number.isFinite(initialMinutes)
+      ? resolveInitialMinutes(initialMinutes * 60)
+      : resolveInitialMinutes(initialSession?.requested_duration_seconds);
+  const [minutes, setMinutes] = useState(resolvedLaunchMinutes);
   const [conversationLanguage, setConversationLanguage] = useState<SpokenLocale>("en");
   const speechLang = toSpeechBcp47(conversationLanguage);
   const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
@@ -207,6 +222,7 @@ export function TapScoreClient({
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const durationLocked = lockDuration || typeof initialMinutes === "number";
   const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
@@ -228,7 +244,7 @@ export function TapScoreClient({
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
   /** Duration for the active live run (practice is always the warm-up length). */
-  const [liveMinutes, setLiveMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
+  const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
   const isPracticeModeRef = useRef(false);
 
   const isEndingRef = useRef(false);
@@ -1208,7 +1224,7 @@ export function TapScoreClient({
                   onConversationLanguageChange={(locale) =>
                     setConversationLanguage(coerceSpokenLocale(locale))
                   }
-                  showDurationPicker={!privateToken}
+                  showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
                 />
               </div>

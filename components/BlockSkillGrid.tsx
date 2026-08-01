@@ -31,28 +31,69 @@ import {
 } from "@/lib/skill-grid-ops";
 import {
   DEFAULT_BLOCK_MAP_MODE,
+  allowsMapClickSelection,
   blockDragMoveDelta,
+  blocksIntersectingGridRect,
+  emptyCellsIntersectingGridRect,
+  resolveLassoSelection,
   clientPointToGridCell,
   isBlockMapManipulationMode,
   isBlockMapToolEnabled,
-  isEmptyCellMultiSelectGesture,
   isMultiCellBlockSpan,
   nextActiveModeTool,
-  toggleOrReplaceBlockSelection,
+  normalizeGridSelectionRect,
+  cancelPrereqEditMode,
+  confirmPrereqEdit,
+  EMPTY_PREREQ_EDIT,
+  enterPrereqEditMode,
+  resolveMapBlockHighlightRole,
+  resolveUnusableFromSelection,
+  shouldEmptyCellClickSelect,
+  toggleOrReplaceBlockSelection as toggleOrReplaceBlockSelectionPure,
+  toggleOrReplaceEmptyCellSelection as toggleOrReplaceEmptyCellSelectionPure,
+  toggleStagedPrereq,
+  type PrereqEditState,
   visibleBlockMapTools,
   type BlockMapModeTool,
   type BlockMapToolEnablementInput,
   type BlockMapToolId,
 } from "@/lib/block-map-tools";
+import {
+  filterPlaceableEmptyCells,
+  resolveEmptyAddTarget,
+  resolveEmptySelectionSurface,
+} from "@/lib/workspace-right-pane";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
-  MAP_CELL_MULTI_SELECTED_CLASS,
+  MAP_CELL_PREREQ_CLASS,
+  MAP_CELL_UNUSABLE_CLASS,
   mapCellChromeClasses,
   mapCellFreeformColors,
+  mapCellFreeformPrereqColors,
   resolveMapCellStatusIcon,
 } from "@/lib/map-cell-chrome";
-import { Check, Settings } from "lucide-react";
+import {
+  blockHasLockDependencies,
+  isBlockLockedUntilCompleted,
+  normalizeLockUntilBlockIds,
+  unusableCellKeySet,
+  type UnusableCell,
+} from "@/lib/map-ground-rules";
+import {
+  buildMinimapClusterGraph,
+  MINIMAP_FRAME_HEIGHT,
+  MINIMAP_FRAME_PADDING,
+  MINIMAP_FRAME_WIDTH,
+  placementsFromOccupiedCells,
+  projectMinimapClusters,
+  type MinimapCluster,
+} from "@/lib/map-minimap-clusters";
+import {
+  buildShapeContextSourceOptions,
+  toggleShapeContextSelection,
+  type ShapeContextSourceOption,
+} from "@/lib/shape-context-select";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -67,6 +108,16 @@ interface BlockSkillGridProps {
   focusedNodeId?: string | null;
   /** Focus / open block detail. Null clears focus (e.g. Select mode closes practice drawer). */
   onSelectNode: (blockId: string | null) => void;
+  /**
+   * Empty-cell selection for the right pane:
+   * 1 placeable → single Add; 2+ placeable → generate-in-shape form.
+   * Null/[] clears. When omitted, local fallbacks still apply.
+   */
+  onEmptySelectionChange?: (cells: GridCell[] | null) => void;
+  /**
+   * @deprecated Prefer onEmptySelectionChange — still maps single cell for older hosts.
+   */
+  onAddTargetChange?: (cell: GridCell | null) => void;
   canEdit: boolean;
   showProgress?: boolean;
   isAdding?: boolean;
@@ -83,7 +134,7 @@ interface BlockSkillGridProps {
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   /** Multi-select / multi-cell / merge / split / move ops (workspace builder). */
   onGridOp?: (payload: {
-    op: "generate_shape" | "merge" | "split" | "move" | "update_block";
+    op: "generate_shape" | "merge" | "split" | "move" | "update_block" | "delete_block";
     prompt?: string;
     cells?: Array<{ row: number; col: number }>;
     blockIds?: string[];
@@ -92,7 +143,24 @@ interface BlockSkillGridProps {
     blockId?: string;
     title?: string;
     description?: string;
+    /** Context source keys for generate_shape (file:/external:/notes). */
+    contextSourceKeys?: string[];
   }) => Promise<{ updatedNodes?: SkillGridNode[]; placedNodeId?: string; appearSequentially?: boolean } | void>;
+  /** Workspace notes for generate-in-shape context picker. */
+  workspaceNotes?: string | null;
+  /** Absolute unusable ground cells (path-shaping). */
+  unusableCells?: UnusableCell[] | null;
+  /**
+   * Persist map-ground rules from left-toolbar + selection.
+   * lock-until: first selected block is target, rest are prerequisites.
+   * unusable: multi-selected empty cells mark/clear unusable ground.
+   */
+  onMapGround?: (payload: {
+    op: "set_lock_until" | "set_unusable_cells";
+    blockId?: string;
+    prerequisiteIds?: string[];
+    unusableCells?: UnusableCell[];
+  }) => Promise<void> | void;
   /** Block ids that should play entrance animation (staggered). */
   appearingNodeIds?: string[];
   onAppearingComplete?: (nodeIds: string[]) => void;
@@ -113,26 +181,37 @@ interface BlockSkillGridProps {
     split?: string;
     move?: string;
     generateShape?: string;
-    editBlock?: string;
     clearSelection?: string;
     multiSelectHint?: string;
+    lockUntil?: string;
+    markUnusable?: string;
   };
 }
 
 function toolTooltip(id: BlockMapToolId, labels: BlockSkillGridProps["labels"]): string {
   switch (id) {
     case "select":
-      return labels.select || "Select";
+      return labels.select || "Select — click one block; Shift+click multi-select";
     case "move":
-      return labels.move || "Move";
+      return labels.move || "Move — drag blocks with hand tool";
+    case "lasso":
+      return "Lasso — drag a rectangle to select blocks or empty cells";
     case "merge":
       return labels.merge || "Merge";
     case "split":
       return labels.split || "Split";
-    case "edit":
-      return labels.editBlock || "Edit block";
     case "generate_shape":
       return labels.generateShape || "Generate in shape";
+    case "lock_until":
+      return (
+        labels.lockUntil ||
+        "Lock until — select target, enter prereq mode, multi-select prereqs, confirm"
+      );
+    case "mark_unusable":
+      return (
+        labels.markUnusable ||
+        "Unusable ground — multi-select empty cells, then click to mark/clear"
+      );
     case "clear_selection":
       return labels.clearSelection || "Clear selection";
     case "zoom_in":
@@ -156,9 +235,41 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
         </svg>
       );
     case "move":
+      // Open hand — drag blocks (not the 4-arrow pan icon)
       return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5M7 17l5 4 5-4M7 7l5-4 5 4" />
+        <svg
+          className={common}
+          data-tool-icon="move-hand"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8.5 11V7.5a1.5 1.5 0 113 0V11m0 0V6.75a1.5 1.5 0 113 0V11m0 0V7.5a1.5 1.5 0 113 0V11m0 0v-1.25a1.5 1.5 0 113 0V14a5 5 0 01-5 5H11a5 5 0 01-5-5v-2.5a1.5 1.5 0 113 0V11"
+          />
+        </svg>
+      );
+    case "lasso":
+      return (
+        <svg
+          className={common}
+          data-tool-icon="lasso"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 7h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17l4 4" />
         </svg>
       );
     case "merge":
@@ -173,16 +284,26 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v8a2 2 0 002 2h3m8-12h3a2 2 0 012 2v8a2 2 0 01-2 2h-3M12 3v18" />
         </svg>
       );
-    case "edit":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 3.487a2.1 2.1 0 113 3L8.25 18.1 3 19.5l1.4-5.25L16.862 3.487z" />
-        </svg>
-      );
     case "generate_shape":
       return (
         <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h6v6H4V6zm10 0h6v6h-6V6zM4 16h6v4H4v-4zm10-2h6v6h-6v-6z" />
+        </svg>
+      );
+    case "lock_until":
+      return (
+        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M6.75 10.5h10.5a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5v-7.5a1.5 1.5 0 011.5-1.5z"
+          />
+        </svg>
+      );
+    case "mark_unusable":
+      return (
+        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l16 16M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
         </svg>
       );
     case "clear_selection":
@@ -208,11 +329,7 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
 
 const PAN_CLICK_THRESHOLD = 6;
 
-/** @deprecated Prefer mapCellChromeClasses — kept as thin alias for any external callers. */
-function cellStatusClass(status: string, selected: boolean, focused: boolean, showProgress: boolean) {
-  return mapCellChromeClasses({ status, selected, focused, showProgress });
-}
-
+/** Occupied map tiles always show title only — no gear/tick status glyphs. */
 function MapCellStatusGlyph({
   status,
   showProgress,
@@ -222,34 +339,52 @@ function MapCellStatusGlyph({
   showProgress: boolean;
   title: string;
 }) {
-  const icon = resolveMapCellStatusIcon(status, showProgress);
-  if (icon === "gear") {
-    return (
-      <span
-        className="flex flex-col items-center justify-center gap-1"
-        data-map-cell-status="in_progress"
-        title={title}
-        aria-label={`${title} (in progress)`}
-      >
-        <Settings className="h-5 w-5 text-neutral-200" strokeWidth={1.75} aria-hidden />
-      </span>
-    );
-  }
-  if (icon === "tick") {
-    return (
-      <span
-        className="flex flex-col items-center justify-center gap-1"
-        data-map-cell-status="completed"
-        title={title}
-        aria-label={`${title} (done)`}
-      >
-        <Check className="h-5 w-5 text-neutral-200" strokeWidth={2.25} aria-hidden />
-      </span>
-    );
-  }
+  // resolveMapCellStatusIcon is always null (title-only policy); keep call for tests.
+  void resolveMapCellStatusIcon(status, showProgress);
   return (
     <span className="line-clamp-3 text-[11px] font-medium leading-tight" data-map-cell-status="title">
       {title}
+    </span>
+  );
+}
+
+/** Small lock badge for blocks that declare lock-until dependencies. */
+function BlockDependencyLockBadge({
+  dependencyCount,
+  currentlyLocked,
+}: {
+  dependencyCount: number;
+  currentlyLocked: boolean;
+}) {
+  if (dependencyCount <= 0) return null;
+  return (
+    <span
+      className={`absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
+        currentlyLocked ? "text-neutral-300" : "text-neutral-500"
+      }`}
+      data-block-dependency-lock
+      data-block-dependency-count={dependencyCount}
+      data-block-dependency-locked={currentlyLocked ? "true" : "false"}
+      title={
+        currentlyLocked
+          ? `Locked until ${dependencyCount} prerequisite${dependencyCount === 1 ? "" : "s"} complete`
+          : `Depends on ${dependencyCount} block${dependencyCount === 1 ? "" : "s"}`
+      }
+      aria-hidden
+    >
+      <svg
+        className="h-3 w-3"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M16.5 10.5V7.5a4.5 4.5 0 10-9 0v3m-.75 0h10.5a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5v-7.5a1.5 1.5 0 011.5-1.5z"
+        />
+      </svg>
     </span>
   );
 }
@@ -263,6 +398,8 @@ export function BlockSkillGrid({
   selectedNodeId,
   focusedNodeId = null,
   onSelectNode,
+  onEmptySelectionChange,
+  onAddTargetChange,
   canEdit,
   showProgress = true,
   isAdding = false,
@@ -276,13 +413,41 @@ export function BlockSkillGrid({
   followCell = null,
   onAddBlock,
   onGridOp,
+  unusableCells = null,
+  onMapGround,
   appearingNodeIds = EMPTY_APPEARING_NODE_IDS,
   onAppearingComplete,
+  workspaceNotes = null,
   labels,
 }: BlockSkillGridProps) {
+  const unusableKeys = useMemo(
+    () => unusableCellKeySet(unusableCells || []),
+    [unusableCells],
+  );
+  /** Right-pane hosts empty create when either callback is wired. */
+  const useRightPaneEmpty =
+    typeof onEmptySelectionChange === "function" ||
+    typeof onAddTargetChange === "function";
+  const [localPendingCell, setLocalPendingCell] = useState<GridCell | null>(null);
+  /** Ref so lasso endDrag (defined earlier) can call the latest emit helper. */
+  const emitEmptySelectionRef = useRef<(cells: readonly GridCell[]) => void>(() => {});
   const viewportRef = useRef<HTMLDivElement>(null);
   const hasInitialCenterRef = useRef(false);
   const panMovedRef = useRef(false);
+  /** Lasso rectangle drag in viewport client coords (relative to viewport). */
+  const lassoDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    curX: number;
+    curY: number;
+  } | null>(null);
+  const [lassoOverlay, setLassoOverlay] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -302,7 +467,7 @@ export function BlockSkillGrid({
     null,
   );
 
-  const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
+  /** Generate-in-shape / merge dialogs still use local prompt + suggest (not single-cell add). */
   const [prompt, setPrompt] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -324,13 +489,21 @@ export function BlockSkillGrid({
   const selectedEmptyCellsRef = useRef<GridCell[]>([]);
   const activeToolRef = useRef<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
   const [activeTool, setActiveTool] = useState<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
+  /** Explicit prereq-edit: target + staged prereqs; confirm/cancel write or discard. */
+  const [prereqEdit, setPrereqEdit] = useState<PrereqEditState>(EMPTY_PREREQ_EDIT);
+  const prereqEditRef = useRef<PrereqEditState>(EMPTY_PREREQ_EDIT);
+  prereqEditRef.current = prereqEdit;
   const [shapePromptOpen, setShapePromptOpen] = useState(false);
   const [mergePromptOpen, setMergePromptOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
+
   const [localBusy, setLocalBusy] = useState(false);
   const [visibleAppearing, setVisibleAppearing] = useState<Set<string>>(new Set());
+  /** Generate-in-shape: multi-select Context sources (files / external / notes). */
+  const [shapeContextOptions, setShapeContextOptions] = useState<ShapeContextSourceOption[]>(
+    [],
+  );
+  const [shapeContextSelected, setShapeContextSelected] = useState<string[]>([]);
+  const [shapeContextLoading, setShapeContextLoading] = useState(false);
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { occupancy, placements, spans, startCell } = useMemo(
@@ -341,6 +514,53 @@ export function BlockSkillGrid({
     suggestMode === "chapter" ? Boolean(sessionId) : Boolean(workspaceId);
   const viewportCenterCell = recenterCell ?? startCell;
   const busy = isAdding || localBusy;
+
+  // Load Context inventory when generate-in-shape dialog opens.
+  useEffect(() => {
+    if (!shapePromptOpen || !workspaceId || !canEdit) return;
+    let cancelled = false;
+    setShapeContextLoading(true);
+    void (async () => {
+      try {
+        const qs = new URLSearchParams({ workspaceId });
+        if (ayclToken) qs.set("ayclToken", ayclToken);
+        const [filesRes, extRes] = await Promise.all([
+          fetch(`/api/workspace/files?workspaceId=${encodeURIComponent(workspaceId)}`),
+          fetch(`/api/workspace/external-resources?${qs}`),
+        ]);
+        const filesData = (await filesRes.json().catch(() => ({}))) as {
+          files?: Array<{ id?: string; file_name?: string }>;
+        };
+        const extData = (await extRes.json().catch(() => ({}))) as {
+          resources?: Array<{
+            id: string;
+            title?: string | null;
+            url?: string | null;
+            description?: string | null;
+          }>;
+        };
+        if (cancelled) return;
+        setShapeContextOptions(
+          buildShapeContextSourceOptions({
+            notes: workspaceNotes ?? "",
+            files: filesData.files || [],
+            externalResources: extData.resources || [],
+          }),
+        );
+      } catch {
+        if (!cancelled) {
+          setShapeContextOptions(
+            buildShapeContextSourceOptions({ notes: workspaceNotes ?? "", files: [], externalResources: [] }),
+          );
+        }
+      } finally {
+        if (!cancelled) setShapeContextLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shapePromptOpen, workspaceId, canEdit, ayclToken, workspaceNotes]);
 
   const visibleCells = useMemo(
     () => getVisibleGridCells(viewportSize.width, viewportSize.height, pan.x, pan.y, zoom),
@@ -355,6 +575,59 @@ export function BlockSkillGrid({
     }
     return ids;
   }, [nodes, placements]);
+
+  /** Occupied cells per block for minimap clustering (placements + spans / freeform). */
+  const occupiedByBlockId = useMemo(() => {
+    const map = new Map<string, GridCell[]>();
+    for (const [id, cell] of placements) {
+      const node = nodesById.get(id);
+      if (node && node.position_x != null && node.position_y != null) {
+        const occ = skillNodeOccupiedCells(node);
+        if (occ.length > 0) {
+          map.set(id, occ);
+          continue;
+        }
+      }
+      const span = spans.get(id) || { span_w: 1, span_h: 1 };
+      const cells: GridCell[] = [];
+      const h = Math.max(1, span.span_h);
+      const w = Math.max(1, span.span_w);
+      for (let dr = 0; dr < h; dr++) {
+        for (let dc = 0; dc < w; dc++) {
+          cells.push({ row: cell.row + dr, col: cell.col + dc });
+        }
+      }
+      map.set(id, cells);
+    }
+    return map;
+  }, [placements, spans, nodesById]);
+
+  const minimapGraph = useMemo(
+    () => buildMinimapClusterGraph(placementsFromOccupiedCells(occupiedByBlockId)),
+    [occupiedByBlockId],
+  );
+
+  const minimapPoints = useMemo(
+    () =>
+      projectMinimapClusters(
+        minimapGraph.clusters,
+        MINIMAP_FRAME_WIDTH,
+        MINIMAP_FRAME_HEIGHT,
+        MINIMAP_FRAME_PADDING,
+      ),
+    [minimapGraph.clusters],
+  );
+
+  const panToCluster = useCallback(
+    (cluster: MinimapCluster) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const { width, height } = viewport.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      setPan(getPanToCenterCell(width, height, cluster.centerCell, zoom));
+    },
+    [zoom],
+  );
 
   const applyCenterOnStart = useCallback(
     (nextZoom = zoom) => {
@@ -473,7 +746,29 @@ export function BlockSkillGrid({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0 || pendingCell || shapePromptOpen || mergePromptOpen || editOpen) return;
+      if (event.button !== 0 || shapePromptOpen || mergePromptOpen) return;
+
+      // Lasso: draw rectangle anywhere on the map viewport (including over cells).
+      if (activeToolRef.current === "lasso" && canEdit) {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        const rect = viewport.getBoundingClientRect();
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        lassoDragRef.current = {
+          pointerId: event.pointerId,
+          startX: localX,
+          startY: localY,
+          curX: localX,
+          curY: localY,
+        };
+        setLassoOverlay({ left: localX, top: localY, width: 0, height: 0 });
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        return;
+      }
+
+      // Viewport pan only on empty background (not on skill cells).
       if ((event.target as HTMLElement).closest("[data-skill-cell]")) return;
 
       panMovedRef.current = false;
@@ -486,10 +781,30 @@ export function BlockSkillGrid({
       };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [pan.x, pan.y, pendingCell, shapePromptOpen, mergePromptOpen, editOpen],
+    [canEdit, pan.x, pan.y, shapePromptOpen, mergePromptOpen],
   );
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const lasso = lassoDragRef.current;
+    if (lasso && lasso.pointerId === event.pointerId) {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      lasso.curX = localX;
+      lasso.curY = localY;
+      const left = Math.min(lasso.startX, localX);
+      const top = Math.min(lasso.startY, localY);
+      setLassoOverlay({
+        left,
+        top,
+        width: Math.abs(localX - lasso.startX),
+        height: Math.abs(localY - lasso.startY),
+      });
+      return;
+    }
+
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
 
@@ -503,13 +818,171 @@ export function BlockSkillGrid({
     setPan({ x: drag.panStartX + dx, y: drag.panStartY + dy });
   }, []);
 
-  const endDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  }, []);
+  const endDrag = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const lasso = lassoDragRef.current;
+      if (lasso && lasso.pointerId === event.pointerId) {
+        lassoDragRef.current = null;
+        setLassoOverlay(null);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+
+        const viewport = viewportRef.current;
+        if (!viewport || !canEdit) return;
+        const vrect = viewport.getBoundingClientRect();
+        // Convert lasso corners (viewport-local) to client → grid cells.
+        const startClientX = vrect.left + lasso.startX;
+        const startClientY = vrect.top + lasso.startY;
+        const endClientX = vrect.left + lasso.curX;
+        const endClientY = vrect.top + lasso.curY;
+        const a = clientPointToGridCell({
+          clientX: startClientX,
+          clientY: startClientY,
+          viewportLeft: vrect.left,
+          viewportTop: vrect.top,
+          panX: pan.x,
+          panY: pan.y,
+          zoom,
+          pitch: SKILL_GRID_PITCH,
+        });
+        const b = clientPointToGridCell({
+          clientX: endClientX,
+          clientY: endClientY,
+          viewportLeft: vrect.left,
+          viewportTop: vrect.top,
+          panX: pan.x,
+          panY: pan.y,
+          zoom,
+          pitch: SKILL_GRID_PITCH,
+        });
+        // Ignore pure clicks with no drag area (still allow 1-cell rect).
+        const dragPx = Math.hypot(lasso.curX - lasso.startX, lasso.curY - lasso.startY);
+        if (dragPx < PAN_CLICK_THRESHOLD) return;
+
+        const gridRect = normalizeGridSelectionRect(a, b);
+        const blockInputs = nodes.map((node) => {
+          const cell = placements.get(node.id);
+          const span = spans.get(node.id) || {
+            span_w: normalizeSpan(node.span_w),
+            span_h: normalizeSpan(node.span_h),
+          };
+          const occupied = skillNodeOccupiedCells(node);
+          return {
+            id: node.id,
+            row: cell?.row ?? node.position_y ?? 0,
+            col: cell?.col ?? node.position_x ?? 0,
+            span_w: span.span_w,
+            span_h: span.span_h,
+            occupiedCells: occupied,
+          };
+        });
+        const hitIds = blocksIntersectingGridRect(blockInputs, gridRect);
+        // Placeable empties inside the same rectangle (not occupied / unusable).
+        const occupiedKeys = new Set<string>(occupancy.keys());
+        const emptyHits = emptyCellsIntersectingGridRect({
+          rect: gridRect,
+          occupiedKeys,
+          unusableKeys,
+        });
+        const resolved = resolveLassoSelection({
+          rect: gridRect,
+          blockHits: hitIds,
+          emptyHits,
+        });
+
+        selectedBlockIdsRef.current = resolved.selectedBlockIds;
+        setSelectedBlockIds(resolved.selectedBlockIds);
+        selectedEmptyCellsRef.current = resolved.selectedEmptyCells;
+        setSelectedEmptyCells(resolved.selectedEmptyCells);
+
+        if (resolved.mode === "empty") {
+          // Drive right-pane single Add / multi generate-shape from empty hits.
+          emitEmptySelectionRef.current(resolved.selectedEmptyCells);
+          if (selectedNodeId) onSelectNode(null);
+        } else if (resolved.mode === "blocks") {
+          // Clear empty create surfaces (right-pane host + local Add/shape modal).
+          setLocalPendingCell(null);
+          setShapePromptOpen(false);
+          onEmptySelectionChange?.(null);
+          onAddTargetChange?.(null);
+          // Side panel: open when exactly one block was lassoed.
+          if (resolved.selectedBlockIds.length === 1) {
+            onSelectNode(resolved.selectedBlockIds[0]);
+          } else if (selectedNodeId) {
+            onSelectNode(null);
+          }
+        } else {
+          setLocalPendingCell(null);
+          setShapePromptOpen(false);
+          onEmptySelectionChange?.(null);
+          onAddTargetChange?.(null);
+          if (selectedNodeId) onSelectNode(null);
+        }
+        return;
+      }
+
+      if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
+      dragRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [
+      canEdit,
+      nodes,
+      occupancy,
+      onAddTargetChange,
+      onEmptySelectionChange,
+      onSelectNode,
+      pan.x,
+      pan.y,
+      placements,
+      selectedNodeId,
+      spans,
+      unusableKeys,
+      zoom,
+    ],
+  );
+
+  const emitEmptySelection = useCallback(
+    (cells: readonly GridCell[]) => {
+      const placeable = filterPlaceableEmptyCells({
+        selectedEmptyCells: cells,
+        unusableKeys,
+      });
+      const surface = resolveEmptySelectionSurface({
+        selectedEmptyCells: cells,
+        unusableKeys,
+      });
+      if (useRightPaneEmpty) {
+        onEmptySelectionChange?.(placeable.length ? placeable : null);
+        // Legacy single-cell callback for hosts that only know Add.
+        onAddTargetChange?.(
+          surface?.kind === "add_block" ? surface.cell : null,
+        );
+        setLocalPendingCell(null);
+        // Multi create lives in the right pane — do not open map modal.
+        if (surface?.kind === "generate_shape") {
+          setShapePromptOpen(false);
+        }
+        return;
+      }
+      // Standalone maps (chapter): local single-add or local multi modal.
+      if (surface?.kind === "add_block") {
+        setLocalPendingCell(surface.cell);
+        setShapePromptOpen(false);
+      } else if (surface?.kind === "generate_shape" && onGridOp) {
+        setLocalPendingCell(null);
+        setShapePromptOpen(true);
+      } else {
+        setLocalPendingCell(null);
+        setShapePromptOpen(false);
+      }
+    },
+    [onAddTargetChange, onEmptySelectionChange, onGridOp, unusableKeys, useRightPaneEmpty],
+  );
+  emitEmptySelectionRef.current = emitEmptySelection;
 
   const clearSelection = useCallback(() => {
     selectedEmptyCellsRef.current = [];
@@ -518,9 +991,11 @@ export function BlockSkillGrid({
     setSelectedBlockIds([]);
     setShapePromptOpen(false);
     setMergePromptOpen(false);
-    setEditOpen(false);
     setPrompt("");
-  }, []);
+    setLocalPendingCell(null);
+    onEmptySelectionChange?.(null);
+    onAddTargetChange?.(null);
+  }, [onAddTargetChange, onEmptySelectionChange]);
 
   /**
    * Sole writer for filled-block multi-select.
@@ -529,7 +1004,7 @@ export function BlockSkillGrid({
    */
   const applyBlockSelection = useCallback((blockId: string, multi: boolean): string[] => {
     const prev = selectedBlockIdsRef.current;
-    const nextIds = toggleOrReplaceBlockSelection({
+    const nextIds = toggleOrReplaceBlockSelectionPure({
       blockId,
       multi,
       prevSelectedBlockIds: prev,
@@ -540,8 +1015,13 @@ export function BlockSkillGrid({
       selectedEmptyCellsRef.current = [];
       setSelectedEmptyCells([]);
     }
+    // Block selection closes empty create surfaces (right pane or local).
+    setLocalPendingCell(null);
+    setShapePromptOpen(false);
+    onEmptySelectionChange?.(null);
+    onAddTargetChange?.(null);
     return nextIds;
-  }, []);
+  }, [onAddTargetChange, onEmptySelectionChange]);
 
   const manipulationMode = isBlockMapManipulationMode(activeTool, {
     canEdit,
@@ -550,7 +1030,7 @@ export function BlockSkillGrid({
 
   const handleCellSelect = useCallback(
     (blockId: string, event: React.MouseEvent) => {
-      // Select tool handled multi-select on pointerdown — ignore trailing click
+      // Select tool handled selection on pointerdown — ignore trailing click
       // (avoids add-then-remove double toggle).
       if (suppressBlockClickRef.current) {
         suppressBlockClickRef.current = false;
@@ -566,6 +1046,8 @@ export function BlockSkillGrid({
         return;
       }
 
+      if (!allowsMapClickSelection(activeTool)) return;
+
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
 
       if (activeTool === "move" && !multiModifier && manipulationMode) {
@@ -574,8 +1056,13 @@ export function BlockSkillGrid({
       }
 
       // Fallback when pointerdown path didn't run (e.g. chapter map).
-      applyBlockSelection(blockId, activeTool === "select" || multiModifier);
-      // Do NOT call onSelectNode here — parent re-renders were racing selection state.
+      // Plain click = single-select replace (or clear if already sole); Shift multi-toggle.
+      const nextIds = applyBlockSelection(blockId, multiModifier);
+      if (nextIds.length === 0) {
+        onSelectNode(null);
+      } else if (!multiModifier || nextIds.length === 1) {
+        onSelectNode(nextIds[0]);
+      }
     },
     [activeTool, applyBlockSelection, canEdit, manipulationMode, onSelectNode],
   );
@@ -610,16 +1097,40 @@ export function BlockSkillGrid({
   const handleBlockPointerDown = useCallback(
     (blockId: string, nodeCell: GridCell, event: React.PointerEvent) => {
       if (event.button !== 0) return;
-      // Never let the map pan steal the gesture when pressing a block.
-      event.stopPropagation();
 
       const tool = activeToolRef.current;
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
 
-      // ── Select tool: always multi-toggle (same model as empty cells) ──
+      // ── Prereq-edit mode: multi-toggle staged prerequisites (not the target) ──
+      if (canEdit && prereqEditRef.current.active) {
+        event.stopPropagation();
+        if (blockId === prereqEditRef.current.targetId) {
+          suppressBlockClickRef.current = true;
+          return;
+        }
+        setPrereqEdit((prev) => toggleStagedPrereq(prev, blockId));
+        suppressBlockClickRef.current = true;
+        return;
+      }
+
+      // Lasso draws on the viewport — do not steal pointer for block click-select.
+      if (tool === "lasso") {
+        return;
+      }
+
+      // Never let the map pan steal the gesture when pressing a block (select/move).
+      event.stopPropagation();
+
+      // ── Select tool: plain click = single-select (re-click sole → clear); Shift multi ──
       if (canEdit && tool === "select") {
-        applyBlockSelection(blockId, /* multi */ true);
-        // Swallow the synthetic click so we don't toggle twice.
+        const nextIds = applyBlockSelection(blockId, multiModifier);
+        // Side panel: sole selection opens detail; empty selection closes it.
+        if (nextIds.length === 0) {
+          onSelectNode(null);
+        } else if (!multiModifier || nextIds.length === 1) {
+          onSelectNode(nextIds[0]);
+        }
+        // Swallow the synthetic click so we don't apply twice.
         suppressBlockClickRef.current = true;
         return;
       }
@@ -628,15 +1139,22 @@ export function BlockSkillGrid({
 
       // ── Move tool ──
       if (multiModifier) {
-        applyBlockSelection(blockId, true);
+        const nextIds = applyBlockSelection(blockId, true);
+        if (nextIds.length === 0) onSelectNode(null);
+        else if (nextIds.length === 1) onSelectNode(nextIds[0]);
         suppressBlockClickRef.current = true;
         return;
       }
 
-      // Keep multi-group when pressing a member; otherwise focus the pressed block.
+      // Keep multi-group when pressing a member; otherwise focus/toggle the pressed block.
       const prev = selectedBlockIdsRef.current;
       const nextIds =
         prev.includes(blockId) && prev.length > 1 ? [...prev] : applyBlockSelection(blockId, false);
+      if (nextIds.length === 0) {
+        onSelectNode(null);
+      } else if (nextIds.length === 1) {
+        onSelectNode(nextIds[0]);
+      }
       if (!onGridOp || nextIds.length === 0) return;
 
       blockDragRef.current = {
@@ -649,7 +1167,7 @@ export function BlockSkillGrid({
       setBlockDragOffset(null);
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     },
-    [applyBlockSelection, canEdit, manipulationMode, onGridOp],
+    [applyBlockSelection, canEdit, manipulationMode, onGridOp, onSelectNode],
   );
 
   const handleBlockPointerMove = useCallback(
@@ -671,70 +1189,66 @@ export function BlockSkillGrid({
     [resolveCellFromClient],
   );
 
-  const toggleEmptyCellSelection = useCallback((cell: GridCell) => {
-    selectedBlockIdsRef.current = [];
-    setSelectedBlockIds([]);
-    setSelectedEmptyCells((prev) => {
-      const key = cellKey(cell);
-      const next = prev.some((c) => cellKey(c) === key)
-        ? prev.filter((c) => cellKey(c) !== key)
-        : [...prev, cell];
-      selectedEmptyCellsRef.current = next;
-      return next;
+  /**
+   * Sole writer for empty-cell selection (mirrors applyBlockSelection).
+   * multi=true → toggle membership; multi=false → replace with [cell].
+   * Always clears filled-block selection when selecting empties.
+   */
+  const applyEmptyCellSelection = useCallback((cell: GridCell, multi: boolean): GridCell[] => {
+    const next = toggleOrReplaceEmptyCellSelectionPure({
+      cell,
+      multi,
+      prevSelectedEmptyCells: selectedEmptyCellsRef.current,
     });
-  }, []);
+    selectedEmptyCellsRef.current = next;
+    setSelectedEmptyCells(next);
+    if (selectedBlockIdsRef.current.length > 0) {
+      selectedBlockIdsRef.current = [];
+      setSelectedBlockIds([]);
+    }
+    // Empty selection → right-pane Add (1) or generate-shape (2+); unusable-only clears.
+    emitEmptySelection(next);
+    return next;
+  }, [emitEmptySelection]);
 
   const handleEmptyCellClick = useCallback(
     (cell: GridCell, event: React.MouseEvent) => {
       if (!canEdit || busy) return;
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
+      // Lasso owns the gesture — never open add or select empties from click.
+      if (activeToolRef.current === "lasso") return;
 
+      const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
-      const multiEmpty = isEmptyCellMultiSelectGesture({
-        multiModifier,
-        activeTool: activeToolRef.current,
-        prevSelectedEmptyCount: selectedEmptyCellsRef.current.length,
-      });
+      const tool = activeToolRef.current;
+      const selectsEmpty =
+        shouldEmptyCellClickSelect({ activeTool: tool }) || isUnusable;
 
-      // Select / Move / modifier: multi-toggle empty cells (same model as filled blocks).
-      if (multiEmpty) {
+      // Select / Move: plain = single empty (+ right-pane add when placeable);
+      // Shift/⌘/Ctrl = multi-toggle (generate-in-shape). No double-click add path.
+      // Unusable cells must remain selectable so mark_unusable can clear them.
+      if (selectsEmpty) {
         if (multiModifier) event.preventDefault();
-        toggleEmptyCellSelection(cell);
+        applyEmptyCellSelection(cell, multiModifier);
         if (selectedNodeId) onSelectNode(null);
         return;
       }
 
-      // No multi mode: open single-cell add dialog (legacy path).
-      setAddError(null);
-      setPendingCell(cell);
+      // Legacy path (no select/move mode): single empty still drives right-pane add.
+      if (isUnusable) return;
+      applyEmptyCellSelection(cell, false);
+      if (selectedNodeId) onSelectNode(null);
     },
-    [busy, canEdit, occupancy, onSelectNode, selectedNodeId, toggleEmptyCellSelection],
+    [
+      applyEmptyCellSelection,
+      busy,
+      canEdit,
+      occupancy,
+      onSelectNode,
+      selectedNodeId,
+      unusableKeys,
+    ],
   );
-
-  const handleEmptyCellDoubleClick = useCallback(
-    (cell: GridCell) => {
-      if (!canEdit || busy) return;
-      if (isCellOccupied(occupancy, cell.row, cell.col)) return;
-      // Double-click empty always opens add dialog even in Select multi mode.
-      setSelectedEmptyCells([]);
-      setSelectedBlockIds([]);
-      setAddError(null);
-      setPendingCell(cell);
-    },
-    [busy, canEdit, occupancy],
-  );
-
-  useEffect(() => {
-    if (pendingCell) return;
-    setSuggestions([]);
-    setSuggestError(null);
-    setIsSuggesting(false);
-  }, [pendingCell]);
-
-  const pendingWeightedNeighbors = useMemo(() => {
-    if (!pendingCell) return [];
-    return getWeightedNeighborhood(pendingCell, placements, nodesById);
-  }, [nodesById, pendingCell, placements]);
 
   const shapeFootprint = useMemo(
     () => (selectedEmptyCells.length > 0 ? footprintFromCells(selectedEmptyCells) : null),
@@ -830,15 +1344,6 @@ export function BlockSkillGrid({
     ],
   );
 
-  const handleSuggestTopics = useCallback(async () => {
-    if (!pendingCell) return;
-    await runSuggestTopics({
-      row: pendingCell.row,
-      col: pendingCell.col,
-      weightedNeighbors: pendingWeightedNeighbors,
-    });
-  }, [pendingCell, pendingWeightedNeighbors, runSuggestTopics]);
-
   const handleSuggestShapeTopics = useCallback(async () => {
     if (!shapeFootprint || selectedEmptyCells.length === 0) return;
     await runSuggestTopics({
@@ -853,17 +1358,32 @@ export function BlockSkillGrid({
     });
   }, [runSuggestTopics, selectedEmptyCells, shapeFootprint, shapeWeightedNeighbors]);
 
-  const submitAdd = async () => {
-    if (!pendingCell || !prompt.trim() || busy) return;
-    if (isCellOccupied(occupancy, pendingCell.row, pendingCell.col)) {
+  const localPendingNeighbors = useMemo(() => {
+    if (!localPendingCell) return [];
+    return getWeightedNeighborhood(localPendingCell, placements, nodesById);
+  }, [localPendingCell, nodesById, placements]);
+
+  const handleSuggestLocalAdd = useCallback(async () => {
+    if (!localPendingCell) return;
+    await runSuggestTopics({
+      row: localPendingCell.row,
+      col: localPendingCell.col,
+      weightedNeighbors: localPendingNeighbors,
+    });
+  }, [localPendingCell, localPendingNeighbors, runSuggestTopics]);
+
+  const submitLocalAdd = async () => {
+    if (!localPendingCell || !prompt.trim() || busy) return;
+    if (isCellOccupied(occupancy, localPendingCell.row, localPendingCell.col)) {
       setAddError("That grid slot is already occupied.");
       return;
     }
     setAddError(null);
     try {
-      await onAddBlock(prompt.trim(), pendingCell);
+      await onAddBlock(prompt.trim(), localPendingCell);
       setPrompt("");
-      setPendingCell(null);
+      setLocalPendingCell(null);
+      clearSelection();
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to add item");
     }
@@ -914,17 +1434,6 @@ export function BlockSkillGrid({
     [resolveCellFromClient, runGridOp],
   );
 
-  const openEditSelected = () => {
-    const id = selectedBlockIds[0] || selectedNodeId;
-    if (!id) return;
-    const node = nodesById.get(id);
-    if (!node) return;
-    setEditTitle(node.title);
-    setEditDescription(node.description || "");
-    setEditOpen(true);
-    if (!selectedBlockIds.includes(id)) setSelectedBlockIds([id]);
-  };
-
   if (nodes.length === 0 && !canEdit) {
     return <div className="flex h-full items-center justify-center text-sm text-neutral-600">{labels.emptyCell}</div>;
   }
@@ -963,6 +1472,8 @@ export function BlockSkillGrid({
     canEdit,
     busy,
     hasGridOps: Boolean(onGridOp),
+    hasMapGroundOps: Boolean(onMapGround),
+    prereqEditActive: prereqEdit.active,
     selectedBlockCount: selectedBlockIds.length,
     selectedEmptyCellCount: selectedEmptyCells.length,
     selectedMultiCellBlockCount,
@@ -971,7 +1482,24 @@ export function BlockSkillGrid({
   };
   const stripTools = visibleBlockMapTools(toolEnablement);
 
+  // Preview: when a single target is selected, highlight its saved dependencies
+  // with a dashed outline (outside prereq-edit).
+  const previewTargetId =
+    !prereqEdit.active && selectedBlockIds.length === 1 ? selectedBlockIds[0] : null;
+  const previewPrereqIds = previewTargetId
+    ? normalizeLockUntilBlockIds(
+        nodesById.get(previewTargetId)?.lock_until_block_ids,
+        previewTargetId,
+      )
+    : [];
+
   const handleToolClick = (tool: BlockMapToolId) => {
+    // Leaving prereq-edit when switching modes (except lock_until confirm path).
+    if (tool === "select" || tool === "move" || tool === "lasso") {
+      if (prereqEdit.active) {
+        setPrereqEdit(cancelPrereqEditMode());
+      }
+    }
     const nextMode = nextActiveModeTool(activeTool, tool);
     // Keep ref in sync immediately so the next pointerdown sees the new mode.
     activeToolRef.current = nextMode;
@@ -979,6 +1507,7 @@ export function BlockSkillGrid({
     switch (tool) {
       case "select":
       case "move":
+      case "lasso":
         return;
       case "merge":
         if (isBlockMapToolEnabled("merge", toolEnablement)) setMergePromptOpen(true);
@@ -999,18 +1528,80 @@ export function BlockSkillGrid({
           }
         }
         return;
-      case "edit":
-        if (isBlockMapToolEnabled("edit", toolEnablement)) openEditSelected();
-        return;
       case "generate_shape":
-        if (isBlockMapToolEnabled("generate_shape", toolEnablement)) {
+        // Toolbar opener removed — multi empty selection opens the form in the
+        // right pane (or local modal when no right-pane host). Keep case for
+        // type exhaustiveness if an old strip still emits the id.
+        if (!useRightPaneEmpty && isBlockMapToolEnabled("generate_shape", toolEnablement)) {
           setSuggestions([]);
           setSuggestError(null);
           setPrompt("");
           setShapePromptOpen(true);
         }
         return;
+      case "lock_until": {
+        if (!isBlockMapToolEnabled("lock_until", toolEnablement) || !onMapGround) return;
+        // Already in prereq-edit → confirm staged set and persist.
+        if (prereqEdit.active) {
+          const payload = confirmPrereqEdit(prereqEdit);
+          if (!payload) return;
+          void (async () => {
+            try {
+              await onMapGround({
+                op: "set_lock_until",
+                blockId: payload.blockId,
+                prerequisiteIds: payload.lock_until_block_ids,
+              });
+              setPrereqEdit(cancelPrereqEditMode());
+            } catch (err) {
+              console.error("lock_until confirm failed", err);
+            }
+          })();
+          return;
+        }
+        // Enter prereq-edit: need a single target (first selected or sole id).
+        const targetId = selectedBlockIds[0] || selectedNodeId;
+        if (!targetId) return;
+        const node = nodesById.get(targetId);
+        setPrereqEdit(
+          enterPrereqEditMode({
+            targetId,
+            currentLocks: node?.lock_until_block_ids ?? [],
+          }),
+        );
+        // Focus map selection on the target only for clarity.
+        selectedBlockIdsRef.current = [targetId];
+        setSelectedBlockIds([targetId]);
+        selectedEmptyCellsRef.current = [];
+        setSelectedEmptyCells([]);
+        return;
+      }
+      case "mark_unusable": {
+        if (!isBlockMapToolEnabled("mark_unusable", toolEnablement) || !onMapGround) return;
+        const nextCells = resolveUnusableFromSelection(
+          selectedEmptyCells,
+          unusableCells || [],
+        );
+        if (!nextCells) return;
+        void (async () => {
+          try {
+            await onMapGround({
+              op: "set_unusable_cells",
+              unusableCells: nextCells,
+            });
+            clearSelection();
+          } catch (err) {
+            console.error("mark_unusable failed", err);
+          }
+        })();
+        return;
+      }
       case "clear_selection":
+        if (prereqEdit.active) {
+          // Cancel prereq-edit without writing (do not apply partial staged set).
+          setPrereqEdit(cancelPrereqEditMode());
+          return;
+        }
         if (isBlockMapToolEnabled("clear_selection", toolEnablement)) clearSelection();
         return;
       case "zoom_in":
@@ -1029,26 +1620,41 @@ export function BlockSkillGrid({
 
   const isViewportTool = (t?: BlockMapToolId) =>
     t === "zoom_in" || t === "zoom_out" || t === "recenter";
-  const isModeTool = (t?: BlockMapToolId) => t === "select" || t === "move";
+  const isModeTool = (t?: BlockMapToolId) =>
+    t === "select" || t === "move" || t === "lasso";
   const modeTools = stripTools.filter((t) => isModeTool(t));
   const actionTools = stripTools.filter((t) => !isModeTool(t) && !isViewportTool(t));
   const viewportTools = stripTools.filter((t) => isViewportTool(t));
 
   const renderToolButton = (tool: BlockMapToolId) => {
     const enabled = isBlockMapToolEnabled(tool, toolEnablement);
-    const isActiveMode = (tool === "select" || tool === "move") && activeTool === tool;
-    const title = toolTooltip(tool, labels);
+    const isActiveMode =
+      ((tool === "select" || tool === "move" || tool === "lasso") && activeTool === tool) ||
+      (tool === "lock_until" && prereqEdit.active);
+    const title =
+      tool === "lock_until" && prereqEdit.active
+        ? prereqEdit.stagedPrereqIds.length === 0
+          ? "Confirm: clear all prerequisites for this block"
+          : "Confirm: save staged prerequisites (empty set clears all)"
+        : toolTooltip(tool, labels);
     return (
       <button
         key={tool}
         type="button"
         data-block-map-tool={tool}
         data-active={isActiveMode ? "true" : "false"}
+        data-prereq-edit-active={
+          tool === "lock_until" && prereqEdit.active ? "true" : undefined
+        }
         disabled={!enabled}
         onClick={() => handleToolClick(tool)}
         title={title}
         aria-label={title}
-        aria-pressed={tool === "select" || tool === "move" ? isActiveMode : undefined}
+        aria-pressed={
+          tool === "select" || tool === "move" || tool === "lasso" || tool === "lock_until"
+            ? isActiveMode
+            : undefined
+        }
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm transition ${
           isActiveMode
             ? "border-cyan-400/70 bg-cyan-500/20 text-cyan-50 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
@@ -1101,13 +1707,103 @@ export function BlockSkillGrid({
         <div
           ref={viewportRef}
           className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
-            activeTool === "move" ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+            activeTool === "lasso"
+              ? "cursor-crosshair"
+              : activeTool === "move"
+                ? "cursor-grab active:cursor-grabbing"
+                : "cursor-default"
           }`}
+          data-map-lasso-mode={activeTool === "lasso" ? "true" : "false"}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+        {lassoOverlay ? (
+          <div
+            data-map-lasso-rect
+            className="pointer-events-none absolute z-[12] border border-cyan-400/80 bg-cyan-400/10"
+            style={{
+              left: lassoOverlay.left,
+              top: lassoOverlay.top,
+              width: lassoOverlay.width,
+              height: lassoOverlay.height,
+            }}
+          />
+        ) : null}
+        {/* Rectangular minimap: cluster graph, top-right overlay */}
+        {minimapGraph.clusters.length > 0 ? (
+          <div
+            data-block-minimap
+            data-minimap-cluster-count={minimapGraph.clusters.length}
+            className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+            style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
+            onPointerDown={(e) => e.stopPropagation()}
+            title="Minimap — click a cluster to center the map"
+          >
+            <svg
+              width={MINIMAP_FRAME_WIDTH}
+              height={MINIMAP_FRAME_HEIGHT}
+              className="block"
+              aria-label="Block cluster minimap"
+            >
+              {/* Edges between neighboring clusters (MST) */}
+              {minimapGraph.edges.map((edge) => {
+                const a = minimapPoints.get(edge.fromClusterId);
+                const b = minimapPoints.get(edge.toClusterId);
+                if (!a || !b) return null;
+                return (
+                  <line
+                    key={`${edge.fromClusterId}-${edge.toClusterId}`}
+                    data-minimap-edge
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke="rgba(255,255,255,0.22)"
+                    strokeWidth={1.25}
+                  />
+                );
+              })}
+              {minimapGraph.clusters.map((cluster) => {
+                const pt = minimapPoints.get(cluster.id);
+                if (!pt) return null;
+                const r = Math.min(14, 8 + Math.log2(cluster.count + 1) * 2.2);
+                return (
+                  <g key={cluster.id}>
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={r}
+                      fill="rgba(255,255,255,0.12)"
+                      stroke="rgba(255,255,255,0.55)"
+                      strokeWidth={1.25}
+                      className="cursor-pointer transition hover:fill-white/25"
+                      data-minimap-cluster={cluster.id}
+                      data-minimap-cluster-count={cluster.count}
+                      data-minimap-center-block={cluster.centerBlockId}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        panToCluster(cluster);
+                      }}
+                    />
+                    <text
+                      x={pt.x}
+                      y={pt.y}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="pointer-events-none select-none fill-neutral-100"
+                      style={{ fontSize: cluster.count >= 10 ? 9 : 10, fontWeight: 600 }}
+                    >
+                      {cluster.count}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        ) : null}
+
         <div
           className="absolute inset-0 pointer-events-none opacity-40"
           style={{
@@ -1125,17 +1821,19 @@ export function BlockSkillGrid({
             transformOrigin: "0 0",
           }}
         >
-          {/* Empty cells + selection highlights */}
+          {/* Empty cells + selection highlights + unusable ground */}
           {visibleCells.map((cell) => {
             const blockId = occupancy.get(`${cell.row}:${cell.col}`);
             if (blockId) return null;
             const selectedEmpty = selectedEmptyCells.some(
               (c) => c.row === cell.row && c.col === cell.col,
             );
+            const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
                 data-skill-cell
+                data-map-cell-kind={isUnusable ? "unusable" : "open"}
                 className="absolute"
                 style={{
                   left: cell.col * SKILL_GRID_PITCH,
@@ -1147,24 +1845,41 @@ export function BlockSkillGrid({
                 <button
                   type="button"
                   disabled={!canEdit || busy}
-                  onClick={(e) => handleEmptyCellClick(cell, e)}
-                  onDoubleClick={() => handleEmptyCellDoubleClick(cell)}
+                  data-map-cell-unusable={isUnusable ? "true" : "false"}
+                  data-map-cell-selected={selectedEmpty ? "true" : "false"}
+                  onClick={(e) => {
+                    handleEmptyCellClick(cell, e);
+                  }}
                   className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
-                    selectedEmpty
-                      ? MAP_CELL_EMPTY_SELECTED_CLASS
-                      : canEdit
-                        ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
-                        : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
+                    isUnusable
+                      ? selectedEmpty
+                        ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50`
+                        : MAP_CELL_UNUSABLE_CLASS
+                      : selectedEmpty
+                        ? MAP_CELL_EMPTY_SELECTED_CLASS
+                        : canEdit
+                          ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
+                          : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
                   }`}
                   title={
-                    canEdit
-                      ? activeTool === "select" || activeTool === "move"
-                        ? "Click to multi-select · double-click to add"
-                        : labels.emptyCell
-                      : undefined
+                    isUnusable
+                      ? canEdit
+                        ? "Unusable ground — click to select, then Unusable tool to clear"
+                        : "Unusable ground — shapes paths"
+                      : canEdit
+                        ? activeTool === "lasso"
+                          ? "Drag to lasso-select blocks"
+                          : activeTool === "select" || activeTool === "move"
+                            ? "Click empty to Add · Shift+click multi-select for shape form"
+                            : labels.emptyCell
+                        : undefined
                   }
                 >
-                  {canEdit && <span className="text-xl leading-none text-neutral-600">+</span>}
+                  {isUnusable ? (
+                    <span className="text-[9px] uppercase tracking-wide text-neutral-600">∅</span>
+                  ) : (
+                    canEdit && <span className="text-xl leading-none text-neutral-600">+</span>
+                  )}
                 </button>
               </div>
             );
@@ -1198,19 +1913,37 @@ export function BlockSkillGrid({
                 : 0;
 
             // Neutral status chrome + white selection (single or multi).
+            // Prerequisite locks render as locked chrome until deps complete —
+            // but stay fully clickable so creators can reselect and unlock.
+            // Prereq-edit / single-select preview: target = full white;
+            // dependencies = dashed mild white.
             const singleSelected =
               focusedNodeId === node.id || (!multiSelected && selectedNodeId === node.id);
-            const baseStatus = cellStatusClass(
-              node.status,
-              multiSelected || singleSelected,
-              false,
-              showProgress,
+            const dependencyIds = normalizeLockUntilBlockIds(
+              node.lock_until_block_ids,
+              node.id,
             );
-            const multiChrome = multiSelected ? MAP_CELL_MULTI_SELECTED_CLASS : "";
-            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${
-              multiSelected ? multiChrome : baseStatus
-            } ${
-              manipulationMode
+            const hasDependencies = blockHasLockDependencies(node);
+            const lockedByPrereq = isBlockLockedUntilCompleted(node, nodesById);
+            const displayStatus = lockedByPrereq ? "locked" : node.status;
+            const highlightRole = resolveMapBlockHighlightRole({
+              blockId: node.id,
+              selected: multiSelected,
+              prereqEdit,
+              previewTargetId,
+              previewPrereqIds,
+              isLockedDisplay: lockedByPrereq,
+            });
+            const isPrereqHighlight = highlightRole === "prereq";
+            const baseChrome = mapCellChromeClasses({
+              status: displayStatus,
+              selected: multiSelected || singleSelected,
+              focused: singleSelected,
+              showProgress,
+              highlightRole,
+            });
+            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 pointer-events-auto ${baseChrome} ${
+              canEdit
                 ? activeTool === "move"
                   ? "cursor-grab active:cursor-grabbing"
                   : "cursor-pointer"
@@ -1229,15 +1962,30 @@ export function BlockSkillGrid({
                   ? "none"
                   : undefined,
             } as const;
+            const lockBadge = hasDependencies ? (
+              <BlockDependencyLockBadge
+                dependencyCount={dependencyIds.length}
+                currentlyLocked={lockedByPrereq}
+              />
+            ) : null;
 
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
               const labelCell = freeformLabelCell(occupiedCells);
-              const freeformColors = mapCellFreeformColors(multiSelected);
+              const freeformColors =
+                isPrereqHighlight
+                  ? mapCellFreeformPrereqColors()
+                  : highlightRole === "target" || multiSelected
+                    ? mapCellFreeformColors(true)
+                    : mapCellFreeformColors(false);
               const freeformFill = freeformColors.fill;
               const freeformBorder = freeformColors.border;
               const freeformText = freeformColors.text;
+              const freeformBorderStyle: "solid" | "dashed" = isPrereqHighlight
+                ? "dashed"
+                : "solid";
+              const freeformBorderWidth = isPrereqHighlight ? 2 : 1;
               return (
                 <div
                   key={`block-${node.id}`}
@@ -1274,6 +2022,9 @@ export function BlockSkillGrid({
                           type="button"
                           data-block-id={node.id}
                           data-block-selected={multiSelected ? "true" : "false"}
+                          data-block-locked={lockedByPrereq ? "true" : "false"}
+                          data-block-has-dependencies={hasDependencies ? "true" : "false"}
+                          data-block-highlight={highlightRole}
                           data-block-map-draggable={activeTool === "move" ? "true" : undefined}
                           onClick={(e) => handleCellSelect(node.id, e)}
                           onDoubleClick={() => handleBlockDoubleClick(node.id)}
@@ -1289,8 +2040,23 @@ export function BlockSkillGrid({
                           onPointerCancel={
                             activeTool === "move" ? handleBlockPointerUp : undefined
                           }
-                          className={`relative flex h-full w-full flex-col items-center justify-center px-2 text-center transition hover:brightness-110 ${
-                            manipulationMode
+                          title={
+                            prereqEdit.active
+                              ? highlightRole === "target"
+                                ? `${node.title} (target — click other blocks to add/remove prereqs)`
+                                : highlightRole === "prereq"
+                                  ? `${node.title} (prerequisite — click to remove)`
+                                  : `${node.title} (click to add as prerequisite)`
+                              : isPrereqHighlight
+                                ? `${node.title} (dependency of selected block)`
+                                : lockedByPrereq
+                                  ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
+                                  : hasDependencies
+                                    ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
+                                    : node.title
+                          }
+                          className={`relative flex h-full w-full flex-col items-center justify-center px-2 text-center transition hover:brightness-110 pointer-events-auto ${
+                            canEdit
                               ? activeTool === "move"
                                 ? "cursor-grab active:cursor-grabbing"
                                 : "cursor-pointer"
@@ -1306,20 +2072,25 @@ export function BlockSkillGrid({
                             ...tileTransition,
                             backgroundColor: freeformFill,
                             color: freeformText,
-                            // Outer edges only — internal edges open so the polyomino reads as one shape
-                            borderStyle: "solid",
+                            // Outer edges only — internal edges open so the polyomino reads as one shape.
+                            // Dependencies of the selected target use a dashed outline.
+                            borderStyle: freeformBorderStyle,
                             borderColor: freeformBorder,
-                            borderTopWidth: edges.top ? 1 : 0,
-                            borderRightWidth: edges.right ? 1 : 0,
-                            borderBottomWidth: edges.bottom ? 1 : 0,
-                            borderLeftWidth: edges.left ? 1 : 0,
+                            borderTopWidth: edges.top ? freeformBorderWidth : 0,
+                            borderRightWidth: edges.right ? freeformBorderWidth : 0,
+                            borderBottomWidth: edges.bottom ? freeformBorderWidth : 0,
+                            borderLeftWidth: edges.left ? freeformBorderWidth : 0,
                             borderTopLeftRadius: edges.top && edges.left ? radius : 0,
                             borderTopRightRadius: edges.top && edges.right ? radius : 0,
                             borderBottomRightRadius: edges.bottom && edges.right ? radius : 0,
                             borderBottomLeftRadius: edges.bottom && edges.left ? radius : 0,
-                            boxShadow: multiSelected ? freeformColors.shadow : undefined,
+                            boxShadow:
+                              isPrereqHighlight ||
+                              highlightRole === "target" ||
+                              multiSelected
+                                ? freeformColors.shadow
+                                : undefined,
                           }}
-                          title={node.title}
                         >
                           {isLabel ? (
                             <>
@@ -1337,6 +2108,7 @@ export function BlockSkillGrid({
                                 showProgress={showProgress}
                                 title={node.title}
                               />
+                              {lockBadge}
                             </>
                           ) : null}
                         </button>
@@ -1369,6 +2141,9 @@ export function BlockSkillGrid({
                   type="button"
                   data-block-id={node.id}
                   data-block-selected={multiSelected ? "true" : "false"}
+                  data-block-locked={lockedByPrereq ? "true" : "false"}
+                  data-block-has-dependencies={hasDependencies ? "true" : "false"}
+                  data-block-highlight={highlightRole}
                   data-block-map-draggable={activeTool === "move" ? "true" : undefined}
                   onClick={(e) => handleCellSelect(node.id, e)}
                   onDoubleClick={() => handleBlockDoubleClick(node.id)}
@@ -1378,7 +2153,21 @@ export function BlockSkillGrid({
                   onPointerCancel={activeTool === "move" ? handleBlockPointerUp : undefined}
                   className={tileClass}
                   style={tileTransition}
-                  title={node.title}
+                  title={
+                    prereqEdit.active
+                      ? highlightRole === "target"
+                        ? `${node.title} (target — click other blocks to add/remove prereqs)`
+                        : highlightRole === "prereq"
+                          ? `${node.title} (prerequisite — click to remove)`
+                          : `${node.title} (click to add as prerequisite)`
+                      : isPrereqHighlight
+                        ? `${node.title} (dependency of selected block)`
+                        : lockedByPrereq
+                          ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
+                          : hasDependencies
+                            ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
+                            : node.title
+                  }
                 >
                   <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
                     {formatGridCoordinate(nodeCell.row, nodeCell.col)}
@@ -1396,6 +2185,7 @@ export function BlockSkillGrid({
                     showProgress={showProgress}
                     title={node.title}
                   />
+                  {lockBadge}
                 </button>
               </div>
             );
@@ -1403,14 +2193,38 @@ export function BlockSkillGrid({
         </div>
 
         {canEdit && (
-          <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500">
-            {manipulationMode
-              ? activeTool === "select"
-                ? `Select: click boxes to multi-select (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · double-click empty to add · double-click block to practice`
-                : "Move: drag blocks · click empties to multi-select for Generate in shape"
-              : labels.multiSelectHint ||
-                "Select: click empty or filled boxes to multi-select. Double-click empty to add a single cell."}
-            {shapeFootprint && selectedEmptyCells.length > 0 && (
+          <div
+            className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500"
+            data-map-status-bar
+            data-prereq-edit-active={prereqEdit.active ? "true" : undefined}
+          >
+            {prereqEdit.active ? (
+              <span className="text-neutral-300">
+                Prereq edit: dashed outline = prerequisites · click to add/remove · Lock
+                until saves
+                {prereqEdit.stagedPrereqIds.length === 0
+                  ? " (empty → clears all prereqs)"
+                  : ` (${prereqEdit.stagedPrereqIds.length} staged)`}
+                {" · "}Clear cancels
+              </span>
+            ) : previewTargetId && previewPrereqIds.length > 0 ? (
+              <span className="text-neutral-400">
+                Selected block depends on {previewPrereqIds.length} block
+                {previewPrereqIds.length === 1 ? "" : "s"} (dashed outline)
+              </span>
+            ) : activeTool === "lasso" ? (
+              `Lasso: drag a rectangle to select blocks or empty cells (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty)`
+            ) : manipulationMode ? (
+              activeTool === "select" ? (
+                `Select: click one block or empty (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · 1 empty → Add · multi empty → shape form in right panel · double-click block for detail`
+              ) : (
+                "Move: drag blocks with hand · multi-select empties opens shape form in right panel"
+              )
+            ) : (
+              labels.multiSelectHint ||
+              "Select: click one empty to Add · Shift multi-select empties for shape form · Lasso for blocks."
+            )}
+            {!prereqEdit.active && shapeFootprint && selectedEmptyCells.length > 0 && (
               <span className="ml-1 text-neutral-400">
                 · shape {selectedEmptyCells.length} cells
                 {shapeFootprint.span_w * shapeFootprint.span_h !== selectedEmptyCells.length
@@ -1426,42 +2240,22 @@ export function BlockSkillGrid({
         </div>
       </div>
 
-      {pendingCell && (
-        <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+      {/* Local fallback only when parent does not host right-pane empty create. */}
+      {!useRightPaneEmpty && localPendingCell ? (
+        <div
+          className="absolute inset-0 z-20 flex items-end justify-center bg-black/55 p-3 sm:items-center"
+          data-local-add-fallback
+        >
           <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl shadow-black/50">
             <h3 className="text-sm font-medium text-white">{labels.addTitle}</h3>
             <p className="mt-1 text-[11px] text-neutral-500">
-              Slot {formatGridCoordinate(pendingCell.row, pendingCell.col)}
+              Slot {formatGridCoordinate(localPendingCell.row, localPendingCell.col)}
             </p>
-            {pendingWeightedNeighbors.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-                  Influenced by
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {pendingWeightedNeighbors.slice(0, 3).map((entry) => (
-                    <div
-                      key={entry.id}
-                      title={entry.title}
-                      className="flex min-h-[4.5rem] flex-col rounded-lg border border-neutral-700/80 bg-neutral-900/70 px-2 py-1.5 shadow-sm shadow-black/30"
-                    >
-                      <span className="font-mono text-[9px] text-neutral-500">
-                        {formatGridCoordinate(entry.row, entry.col)}
-                        <span className="text-neutral-600"> · d{entry.distance}</span>
-                      </span>
-                      <span className="mt-1 line-clamp-3 text-[10px] font-medium leading-snug text-neutral-200">
-                        {entry.title}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="mt-3 flex items-center justify-between gap-2">
               <button
                 type="button"
                 disabled={!canSuggest || isSuggesting || busy}
-                onClick={() => void handleSuggestTopics()}
+                onClick={() => void handleSuggestLocalAdd()}
                 className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
               >
                 {isSuggesting ? labels.suggesting : labels.suggestTopics}
@@ -1495,7 +2289,7 @@ export function BlockSkillGrid({
               <button
                 type="button"
                 onClick={() => {
-                  setPendingCell(null);
+                  setLocalPendingCell(null);
                   setPrompt("");
                   setSuggestions([]);
                   setSuggestError(null);
@@ -1507,7 +2301,7 @@ export function BlockSkillGrid({
               <button
                 type="button"
                 disabled={!prompt.trim() || busy}
-                onClick={() => void submitAdd()}
+                onClick={() => void submitLocalAdd()}
                 className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
               >
                 {busy ? "..." : labels.addSubmit}
@@ -1515,7 +2309,7 @@ export function BlockSkillGrid({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {shapePromptOpen && (
         <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
@@ -1577,6 +2371,71 @@ export function BlockSkillGrid({
               rows={3}
               autoFocus
             />
+
+            <div
+              className="mt-3 space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5"
+              data-shape-context-picker
+            >
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                Attach context sources
+              </p>
+              <p className="text-[10px] leading-relaxed text-neutral-600">
+                Selected files, external links, and notes become local context on the new
+                block and feed generation.
+              </p>
+              {shapeContextLoading ? (
+                <p className="text-[11px] text-neutral-600" data-shape-context-loading>
+                  Loading sources…
+                </p>
+              ) : shapeContextOptions.length === 0 ? (
+                <p className="text-[11px] text-neutral-600">
+                  No Context sources yet — add files or links under the Context tab.
+                </p>
+              ) : (
+                <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
+                  {shapeContextOptions.map((opt) => {
+                    const checked = shapeContextSelected.includes(opt.key);
+                    return (
+                      <li key={opt.key}>
+                        <label
+                          className={`flex cursor-pointer items-start gap-2 rounded-md border px-2 py-1.5 text-[11px] transition ${
+                            checked
+                              ? "border-white/30 bg-white/10 text-neutral-100"
+                              : "border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:border-neutral-600"
+                          }`}
+                          data-shape-context-option={opt.key}
+                          data-shape-context-kind={opt.kind}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={checked}
+                            onChange={() =>
+                              setShapeContextSelected((prev) =>
+                                toggleShapeContextSelection(prev, opt.key),
+                              )
+                            }
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{opt.label}</span>
+                            <span className="block text-[10px] uppercase tracking-wide text-neutral-600">
+                              {opt.kind}
+                              {opt.url ? ` · link` : ""}
+                            </span>
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {shapeContextSelected.length > 0 ? (
+                <p className="text-[10px] text-neutral-500" data-shape-context-selected-count>
+                  {shapeContextSelected.length} selected
+                </p>
+              ) : null}
+            </div>
+
             <div className="mt-3 flex justify-end gap-2">
               <button
                 type="button"
@@ -1585,6 +2444,7 @@ export function BlockSkillGrid({
                   setPrompt("");
                   setSuggestions([]);
                   setSuggestError(null);
+                  setShapeContextSelected([]);
                 }}
                 className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
@@ -1592,6 +2452,7 @@ export function BlockSkillGrid({
               </button>
               <button
                 type="button"
+                data-generate-shape-submit
                 disabled={!prompt.trim() || busy || !shapeFreeform.ok}
                 onClick={() => {
                   if (!shapeFreeform.ok) {
@@ -1604,6 +2465,9 @@ export function BlockSkillGrid({
                     op: "generate_shape",
                     prompt: prompt.trim(),
                     cells: selectedEmptyCells,
+                    contextSourceKeys: shapeContextSelected,
+                  }).then(() => {
+                    setShapeContextSelected([]);
                   });
                 }}
                 className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
@@ -1661,52 +2525,6 @@ export function BlockSkillGrid({
         </div>
       )}
 
-      {editOpen && selectedBlockIds[0] && (
-        <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
-          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
-            <h3 className="text-sm font-medium text-white">{labels.editBlock || "Edit block"}</h3>
-            <input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="mt-3 w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white focus:border-neutral-500 focus:outline-none"
-              placeholder="Title"
-              autoFocus
-            />
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="mt-2 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-              rows={4}
-              placeholder="Description"
-            />
-            {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditOpen(false)}
-                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
-              >
-                {labels.addCancel}
-              </button>
-              <button
-                type="button"
-                disabled={!editTitle.trim() || busy}
-                onClick={() =>
-                  void runGridOp({
-                    op: "update_block",
-                    blockId: selectedBlockIds[0],
-                    title: editTitle.trim(),
-                    description: editDescription,
-                  })
-                }
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
-              >
-                {busy ? "..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

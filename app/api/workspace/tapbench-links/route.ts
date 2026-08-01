@@ -11,6 +11,7 @@ import {
 } from "@/lib/pow-api/tapbench-store";
 import { normalizeTapbenchDurationSeconds } from "@/lib/pow-api/tapbench";
 import { generateTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-generate";
+import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
 
 export const runtime = "nodejs";
 
@@ -69,12 +70,20 @@ export async function POST(req: NextRequest) {
       (body.minutes != null ? Number(body.minutes) * 60 : undefined);
     const durationSeconds = normalizeTapbenchDurationSeconds(rawDuration);
 
-    // Load workspace + optional block for exercise framing
+    // Load full workspace prompt context (inventory, topology, local, unusable).
+    // Primary TAPBench mint path must feed the shared assembler — not titles alone.
+    const promptCtx = await loadWorkspacePromptContext(auth.supabase, workspaceId, {
+      focusedBlockId: blockId || null,
+    });
+
+    if (!promptCtx) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    // organization_id still needed for mint; load workspace ownership fields.
     const { data: workspace } = await auth.supabase
       .from("workspaces")
-      .select(
-        "id, title, root_topic, workspace_goal, description, notes, user_id, organization_id",
-      )
+      .select("id, organization_id, title, workspace_goal, root_topic")
       .eq("id", workspaceId)
       .single();
 
@@ -82,21 +91,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    let blockTitle: string | null = null;
-    let blockDescription: string | null = null;
-    if (blockId) {
-      const { data: block } = await auth.supabase
-        .from("blocks")
-        .select("id, title, description")
-        .eq("id", blockId)
-        .eq("workspace_id", workspaceId)
-        .maybeSingle();
-      if (!block) {
-        return NextResponse.json({ error: "Block not found" }, { status: 404 });
-      }
-      blockTitle = block.title ?? null;
-      blockDescription = (block as { description?: string | null }).description ?? null;
+    if (blockId && !promptCtx.blocks.some((b) => b.id === blockId)) {
+      return NextResponse.json({ error: "Block not found" }, { status: 404 });
     }
+
+    const blockTitle = promptCtx.focusedBlockTitle;
+    const blockDescription = promptCtx.focusedBlockDescription;
 
     const explicitExercise =
       typeof body.exercise === "string"
@@ -107,35 +107,21 @@ export async function POST(req: NextRequest) {
             ? body.exercise_text
             : null;
 
-    // Best-effort file names for exercise grounding (no inline bodies on this table).
-    let files: { name: string; excerpt?: string | null }[] = [];
-    try {
-      const { data: fileRows } = await auth.supabase
-        .from("workspace_files")
-        .select("file_name")
-        .eq("workspace_id", workspaceId)
-        .limit(6);
-      files = (fileRows || [])
-        .map((f: { file_name?: string | null }) => ({
-          name: typeof f.file_name === "string" ? f.file_name : "",
-        }))
-        .filter((f) => f.name);
-    } catch {
-      files = [];
-    }
-
     // Author a real problem (LLM). Never mint the old topic-list template as the exercise.
     const generated = await generateTapbenchExercise({
-      workspaceTitle: workspace.title,
-      workspaceGoal: workspace.workspace_goal,
-      rootTopic: workspace.root_topic,
-      workspaceDescription:
-        (workspace as { description?: string | null }).description ?? null,
-      notes: (workspace as { notes?: string | null }).notes ?? null,
+      workspaceTitle: promptCtx.workspaceTitle ?? workspace.title,
+      workspaceGoal: promptCtx.workspaceGoal ?? workspace.workspace_goal,
+      rootTopic: promptCtx.rootTopic ?? workspace.root_topic,
+      workspaceDescription: promptCtx.workspaceDescription,
+      notes: promptCtx.notes,
       blockTitle,
       blockDescription,
       exerciseText: explicitExercise,
-      files,
+      files: promptCtx.files,
+      blocks: promptCtx.blocks,
+      focusedBlockId: promptCtx.focusedBlockId,
+      blockLocalContext: promptCtx.blockLocalContext,
+      unusableCells: promptCtx.unusableCells,
       durationSeconds,
     });
     const exerciseText = generated.exercise;

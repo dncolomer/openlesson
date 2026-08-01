@@ -13,12 +13,13 @@ import {
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
 describe("resolveWorkspaceSectionLayout", () => {
-  it("maps Workspace section without local tabs (notes+files combined)", () => {
+  it("maps Workspace section without local tabs (map-first; notes under Context)", () => {
     const layout = resolveWorkspaceSectionLayout("workspace");
 
     expect(layout.mainSurface).toBe("workspace-local");
     expect(layout.showBlockMapChrome).toBe(true);
     expect(layout.showSessionsColumn).toBe(true);
+    expect(layout.mountsContextPanel).toBe(false);
     expect(layout.localTabs).toEqual([]);
     expect(layout.localTabs).toEqual([...WORKSPACE_LOCAL_TABS]);
     expect(layout.localTabs).not.toContain("graph");
@@ -30,12 +31,24 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.mountsIntegrationPanel).toBe(false);
   });
 
+  it("maps Context section to notes/files surface without block-map chrome", () => {
+    const layout = resolveWorkspaceSectionLayout("context");
+
+    expect(layout.mainSurface).toBe("context");
+    expect(layout.mountsContextPanel).toBe(true);
+    expect(layout.showBlockMapChrome).toBe(false);
+    expect(layout.showSessionsColumn).toBe(false);
+    expect(layout.mountsPerformancePanel).toBe(false);
+    expect(layout.mountsIntegrationPanel).toBe(false);
+  });
+
   it("maps Knowledge section to the performance surface without block-map chrome", () => {
     const layout = resolveWorkspaceSectionLayout("knowledge");
 
     expect(layout.mainSurface).toBe("knowledge");
     expect(layout.showBlockMapChrome).toBe(false);
     expect(layout.showSessionsColumn).toBe(false);
+    expect(layout.mountsContextPanel).toBe(false);
     expect(layout.localTabs).toEqual([]);
     expect(layout.mountsPerformancePanel).toBe(true);
     expect(layout.mountsIntegrationPanel).toBe(false);
@@ -87,21 +100,24 @@ describe("privileged Knowledge + Settings gating", () => {
 });
 
 describe("availableWorkspaceSections", () => {
-  it("includes Knowledge and Settings only for owners or org admins", () => {
+  it("includes Context for everyone; Knowledge and Settings only for owners or org admins", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
+      "context",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOrgAdmin: true })).toEqual([
       "workspace",
+      "context",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false, isOrgAdmin: false })).toEqual([
       "workspace",
+      "context",
     ]);
-    expect(availableWorkspaceSections({})).toEqual(["workspace"]);
+    expect(availableWorkspaceSections({})).toEqual(["workspace", "context"]);
   });
 });
 
@@ -203,19 +219,25 @@ describe("WorkspaceView section shell wiring", () => {
     expect(chromeBlocks.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("combines notes and files as one unified list surface (not stacked sections)", () => {
-    expect(viewSource).toContain("WorkspaceNotesFilesPanel");
+  it("hosts notes, files, and external sources under Context section", () => {
+    expect(viewSource).toContain("WorkspaceContextPanel");
+    expect(viewSource).toContain("mountsContextPanel");
+    expect(viewSource).toContain("data-workspace-context-section");
     expect(notesFilesSource).toContain("data-workspace-notes-files-panel");
     expect(notesFilesSource).toContain("data-unified-resource-list");
     expect(notesFilesSource).toContain("data-resource-list");
     expect(notesFilesSource).toContain('data-resource-kind="notes"');
     expect(notesFilesSource).toContain('data-resource-kind="file"');
+    expect(notesFilesSource).toContain('data-resource-kind="external"');
     expect(notesFilesSource).toContain("buildWorkspaceResourceList");
     // Not two peer section cards stacked as separate panels
     expect(notesFilesSource).not.toContain("WorkspaceFilesTab");
     expect(viewSource).not.toContain('activeTab === "notes"');
     expect(viewSource).not.toContain('activeTab === "files"');
     expect(viewSource).not.toContain('activeTab === "graph"');
+    // Map section uses authoring tools, not notes/files as default right pane
+    expect(viewSource).toContain("WorkspaceMapAuthoringPane");
+    expect(viewSource).not.toContain("WorkspacePromptImpactPanel");
   });
 
   it("hosts workspace goal edit under Settings, not the builder surface", () => {
@@ -233,11 +255,12 @@ describe("WorkspaceView section shell wiring", () => {
   it("renders notes with the same attachment-row chrome as files", () => {
     expect(notesFilesSource).toContain('data-resource-row="attachment"');
     expect(notesFilesSource).toContain("NotesTypeIcon");
-    // Shared list-item shell classes for notes + file rows
+    // Shared compact list-item shell for notes + file rows (denser Context list)
     expect(notesFilesSource).toMatch(
-      /data-resource-kind="notes"[\s\S]*?flex items-center gap-3/,
+      /data-resource-kind="notes"[\s\S]*?flex items-center gap-2/,
     );
     expect(notesFilesSource).toContain('data-resource-kind="file"');
+    expect(notesFilesSource).toContain("data-resource-row-compact");
   });
 
   it("exposes a create new notes file action for owners via the bottom placeholder card", () => {
@@ -293,8 +316,9 @@ describe("WorkspaceView section shell wiring", () => {
     expect(identitySource).not.toContain("Enable Paid (AYCL)");
   });
 
-  it("exposes three top-level section labels via i18n keys", () => {
+  it("exposes top-level section labels via i18n keys including Context", () => {
     expect(viewSource).toContain('t("planView.sectionWorkspace")');
+    expect(viewSource).toContain('t("planView.sectionContext")');
     expect(viewSource).toContain('t("planView.sectionKnowledge")');
     expect(viewSource).toContain('t("planView.sectionSetting")');
   });

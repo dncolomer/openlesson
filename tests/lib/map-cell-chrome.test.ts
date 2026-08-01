@@ -1,15 +1,17 @@
 /**
- * Neutral map cell chrome: white selection, gear/tick status icons (no green/yellow fills).
+ * Neutral map cell chrome: white selection, title-only labels (no gear/tick).
  * Drives shipped helpers used by workspace block maps and ILE chapter maps.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
   MAP_CELL_MULTI_SELECTED_CLASS,
   MAP_CELL_NEUTRAL_CLASS,
+  MAP_CELL_PREREQ_CLASS,
   MAP_CELL_SELECTED_CLASS,
+  MAP_CELL_TARGET_CLASS,
   mapCellChromeClasses,
   mapCellChromeIsNeutral,
   mapCellFreeformColors,
@@ -17,6 +19,9 @@ import {
 } from "@/lib/map-cell-chrome";
 
 const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.MAP_CANVAS_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-29340150e801/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -24,17 +29,33 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
+function writeEvidence(name: string, body: string) {
+  try {
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(join(SCRATCH, name), body, "utf8");
+  } catch {
+    /* optional */
+  }
+}
+
 describe("resolveMapCellStatusIcon", () => {
-  it("returns null when progress is hidden", () => {
+  it("always returns null (title-only — no gear/tick for any status)", () => {
     expect(resolveMapCellStatusIcon("completed", false)).toBeNull();
     expect(resolveMapCellStatusIcon("in_progress", false)).toBeNull();
-  });
-
-  it("maps in_progress → gear and completed → tick", () => {
-    expect(resolveMapCellStatusIcon("in_progress", true)).toBe("gear");
-    expect(resolveMapCellStatusIcon("completed", true)).toBe("tick");
+    expect(resolveMapCellStatusIcon("in_progress", true)).toBeNull();
+    expect(resolveMapCellStatusIcon("completed", true)).toBeNull();
+    expect(resolveMapCellStatusIcon("done", true)).toBeNull();
+    expect(resolveMapCellStatusIcon("active", true)).toBeNull();
     expect(resolveMapCellStatusIcon("available", true)).toBeNull();
-    expect(resolveMapCellStatusIcon("pending", true)).toBeNull();
+
+    writeEvidence(
+      "map-cell-title-only.log",
+      [
+        "in_progress=" + String(resolveMapCellStatusIcon("in_progress", true)),
+        "completed=" + String(resolveMapCellStatusIcon("completed", true)),
+        "available=" + String(resolveMapCellStatusIcon("available", true)),
+      ].join("\n"),
+    );
   });
 });
 
@@ -62,7 +83,7 @@ describe("mapCellChromeClasses", () => {
     expect(MAP_CELL_SELECTED_CLASS).toMatch(/white/);
   });
 
-  it("in_progress and completed stay neutral (icons carry status, not color)", () => {
+  it("in_progress and completed stay neutral (no status color fills)", () => {
     const progress = mapCellChromeClasses({
       status: "in_progress",
       selected: false,
@@ -77,8 +98,6 @@ describe("mapCellChromeClasses", () => {
     expect(done).toBe(MAP_CELL_NEUTRAL_CLASS);
     expect(mapCellChromeIsNeutral(progress)).toBe(true);
     expect(mapCellChromeIsNeutral(done)).toBe(true);
-    expect(progress).not.toMatch(/amber|yellow|emerald|green/i);
-    expect(done).not.toMatch(/amber|yellow|emerald|green/i);
   });
 
   it("focused (active chapter) uses white selection language", () => {
@@ -105,20 +124,43 @@ describe("multi-select / empty selection tokens", () => {
   });
 });
 
-describe("structural: BlockSkillGrid + ChapterMapPanel share chrome", () => {
-  it("BlockSkillGrid uses shared helper + gear/tick glyphs", () => {
+describe("structural: BlockSkillGrid title-only map tiles", () => {
+  it("BlockSkillGrid uses title path; no gear/tick chrome", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("mapCellChromeClasses");
     expect(grid).toContain("resolveMapCellStatusIcon");
     expect(grid).toContain("MapCellStatusGlyph");
-    expect(grid).toContain("MAP_CELL_MULTI_SELECTED_CLASS");
+    expect(grid).toContain('data-map-cell-status="title"');
+    expect(grid).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("MAP_CELL_EMPTY_SELECTED_CLASS");
-    expect(grid).toContain("Settings"); // gear
-    expect(grid).toContain("Check"); // tick
-    // Occupied status path no longer hardcodes emerald/amber fills
+    expect(grid).toContain("highlightRole");
+    expect(grid).toContain("data-block-dependency-lock");
+    expect(grid).toContain("BlockDependencyLockBadge");
+    // No gear/tick icon components
+    expect(grid).not.toMatch(/from "lucide-react"/);
+    expect(grid).not.toContain("data-map-cell-status=\"in_progress\"");
+    expect(grid).not.toContain("data-map-cell-status=\"completed\"");
     expect(grid).not.toMatch(/border-emerald-500|bg-emerald-950|border-amber-400\/55 bg-amber-950/);
     expect(grid).not.toMatch(/border-cyan-400\/80 bg-cyan-500\/20 text-cyan-50 ring-2 ring-cyan-400\/70/);
-    expect(grid).not.toMatch(/border-cyan-400\/70 bg-cyan-500\/15 text-cyan-100 ring-2 ring-cyan-400\/40/);
+  });
+
+  it("prereq highlight role uses mild white dashed outline, not full multi-select", () => {
+    const prereq = mapCellChromeClasses({
+      status: "available",
+      selected: false,
+      highlightRole: "prereq",
+    });
+    const target = mapCellChromeClasses({
+      status: "available",
+      selected: false,
+      highlightRole: "target",
+    });
+    expect(prereq).toBe(MAP_CELL_PREREQ_CLASS);
+    expect(target).toBe(MAP_CELL_TARGET_CLASS);
+    expect(prereq).toMatch(/white/);
+    expect(prereq).toMatch(/dashed/);
+    expect(prereq).not.toMatch(/cyan/i);
+    expect(MAP_CELL_PREREQ_CLASS).toMatch(/border-dashed/);
   });
 
   it("ILE ChapterMapPanel and workspace SessionList use BlockSkillGrid", () => {

@@ -16,26 +16,37 @@ export const MAP_CELL_MULTI_SELECTED_CLASS =
 export const MAP_CELL_EMPTY_SELECTED_CLASS =
   "border-white/45 bg-white/10 text-neutral-100 ring-2 ring-white/40";
 
+/**
+ * Milder white highlight for prerequisite blocks of the focused/edited target.
+ * Dashed outline (not solid multi-select ring) so deps read as related, not selected.
+ */
+export const MAP_CELL_PREREQ_CLASS =
+  "border-2 border-dashed border-white/45 bg-white/[0.05] text-neutral-100 shadow-[0_0_8px_rgba(255,255,255,0.06)]";
+
+/** Target block under prereq-edit (full select language). */
+export const MAP_CELL_TARGET_CLASS = MAP_CELL_SELECTED_CLASS;
+
 /** Neutral unselected occupied tile. */
 export const MAP_CELL_NEUTRAL_CLASS =
   "border-neutral-700/80 bg-neutral-950/75 text-neutral-100";
 
-/** Locked tiles stay neutral but slightly dimmed. */
+/** Locked tiles stay neutral but slightly dimmed — still fully clickable/selectable. */
 export const MAP_CELL_LOCKED_CLASS =
-  "border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-70";
+  "border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-80 pointer-events-auto";
+
+/** Unusable ground — shapes paths; not placeable open ground. */
+export const MAP_CELL_UNUSABLE_CLASS =
+  "border-neutral-900 bg-[repeating-linear-gradient(135deg,rgba(30,30,30,0.9)_0_4px,rgba(12,12,12,0.95)_4px_8px)] text-neutral-600 opacity-80";
 
 /**
- * Status → icon when progress is shown.
- * in_progress → gear; completed → tick; otherwise title text.
+ * Status → icon for occupied map tiles.
+ * Map tiles are title-only: never gear/tick — status is not reflected on cells.
+ * (showProgress / status retained for API compatibility.)
  */
 export function resolveMapCellStatusIcon(
-  status: string,
-  showProgress: boolean,
+  _status: string,
+  _showProgress: boolean,
 ): MapCellStatusIcon {
-  if (!showProgress) return null;
-  const s = String(status || "").toLowerCase();
-  if (s === "completed" || s === "done") return "tick";
-  if (s === "in_progress" || s === "in-progress" || s === "active") return "gear";
   return null;
 }
 
@@ -49,11 +60,29 @@ export function mapCellChromeClasses(input: {
   /** Active/loaded chapter or focused tile — same white language as selected. */
   focused?: boolean;
   showProgress?: boolean;
+  /** Unusable ground cell (path-shaping). */
+  unusable?: boolean;
+  /**
+   * Prereq-edit / preview role. When set, overrides selected/locked for target/prereq.
+   * "prereq" → mild white; "target" → full select chrome.
+   */
+  highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
 }): string {
   const selected = Boolean(input.selected || input.focused);
   const status = String(input.status || "").toLowerCase();
+  const role = input.highlightRole ?? null;
 
-  if (status === "locked" || status === "skipped") {
+  if (input.unusable) {
+    return selected
+      ? `${MAP_CELL_UNUSABLE_CLASS} ring-1 ring-white/30`
+      : MAP_CELL_UNUSABLE_CLASS;
+  }
+
+  if (role === "target") return MAP_CELL_TARGET_CLASS;
+  if (role === "prereq") return MAP_CELL_PREREQ_CLASS;
+  if (role === "selected") return MAP_CELL_MULTI_SELECTED_CLASS;
+
+  if (status === "locked" || status === "skipped" || role === "locked") {
     return selected
       ? `${MAP_CELL_SELECTED_CLASS} opacity-80`
       : MAP_CELL_LOCKED_CLASS;
@@ -64,6 +93,23 @@ export function mapCellChromeClasses(input: {
   }
 
   return MAP_CELL_NEUTRAL_CLASS;
+}
+
+/** Freeform fill/border for mild prereq highlight (pair with dashed borderStyle). */
+export function mapCellFreeformPrereqColors(): {
+  fill: string;
+  border: string;
+  text: string;
+  shadow?: string;
+  borderStyle: "dashed";
+} {
+  return {
+    fill: "rgba(255, 255, 255, 0.05)",
+    border: "rgba(255, 255, 255, 0.45)",
+    text: "rgb(245, 245, 245)",
+    shadow: "0 0 8px rgba(255,255,255,0.06)",
+    borderStyle: "dashed",
+  };
 }
 
 /** True if class string is free of progress tints and cyan selection chrome. */

@@ -9,8 +9,12 @@ import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane"
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
-import { WorkspaceNotesFilesPanel } from "@/components/WorkspaceNotesFilesPanel";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
+import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
+import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
+import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
+import { WorkspaceAddBlockPane } from "@/components/WorkspaceAddBlockPane";
+import { WorkspaceGenerateShapePane } from "@/components/WorkspaceGenerateShapePane";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { useI18n } from "@/lib/i18n";
 import type { Block, Workspace } from "@/components/WorkspaceView";
@@ -21,10 +25,27 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
+  clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   nextWorkspaceBlockSelection,
+  resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
+  type EmptySelectionSurface,
+  type WorkspaceAddTargetCell,
+  WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS,
+  WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS,
 } from "@/lib/workspace-right-pane";
+import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
+import {
+  normalizeUnusableCells,
+  type UnusableCell,
+} from "@/lib/map-ground-rules";
+import {
+  parseBlockLocalContext,
+  type BlockLocalContextInput,
+  type WorkspaceFileContextItem,
+} from "@/lib/prompt-workspace-context";
 
 interface AyclWorkspaceViewProps {
   accessToken: string;
@@ -39,7 +60,7 @@ export function AyclWorkspaceView({
   initialPlan,
   initialNodes,
 }: AyclWorkspaceViewProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [plan, setPlan] = useState(initialPlan);
   const [nodes, setNodes] = useState(initialNodes);
@@ -52,20 +73,172 @@ export function AyclWorkspaceView({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("sessions");
-  /** Open block for right-pane detail (double-click). Null → notes. */
+  /** Open block for right-pane detail (double-click). Null → map authoring. */
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
+  const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
+  const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const [unusableCells, setUnusableCells] = useState<UnusableCell[]>(() =>
+    normalizeUnusableCells(initialPlan.unusable_cells),
+  );
+  const [workspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
+  const [mapGroundBusy, setMapGroundBusy] = useState(false);
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
     const next = nextWorkspaceBlockSelection(expandedBlockId, blockId);
     setExpandedBlockId(next);
-    if (next) setMobileColumn("workspace");
+    if (next) {
+      setEmptySurface(clearWorkspaceAddTarget());
+      setMobileColumn("workspace");
+    }
   }, [expandedBlockId]);
 
   const handleCloseBlockDetail = useCallback(() => {
     setExpandedBlockId(clearWorkspaceBlockSelection());
   }, []);
 
-  const rightPane = resolveWorkspaceRightPane(expandedBlockId);
+  const handleEmptySelectionChange = useCallback(
+    (cells: Array<{ row: number; col: number }> | null) => {
+      const surface = resolveEmptySelectionSurface({
+        selectedEmptyCells: cells || [],
+        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+      });
+      setEmptySurface(surface);
+      if (surface) {
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setMobileColumn("workspace");
+      }
+    },
+    [unusableCells],
+  );
+
+  const handleCloseEmptyCreate = useCallback(() => {
+    setEmptySurface(clearWorkspaceAddTarget());
+  }, []);
+
+  const handleSubmitAddBlock = useCallback(
+    async (
+      prompt: string,
+      position: WorkspaceAddTargetCell,
+      opts?: { contextSourceKeys?: string[] },
+    ) => {
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const { placements } = buildSkillGridLayout(nodes);
+      const weightedNeighbors = getWeightedNeighborhood(
+        { row: position.row, col: position.col },
+        placements,
+        nodesById,
+      );
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/add-block-at-slot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            row: position.row,
+            col: position.col,
+            prompt,
+            weightedNeighbors,
+            model,
+            locale,
+            ayclToken: accessToken,
+            ...(opts?.contextSourceKeys?.length
+              ? { contextSourceKeys: opts.contextSourceKeys }
+              : {}),
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to add block");
+        }
+        const data = await response.json();
+        if (data.updatedNodes?.length > 0) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setEmptySurface(clearWorkspaceAddTarget());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, locale, nodes, plan.id, router],
+  );
+
+  const handleSubmitGenerateShape = useCallback(
+    async (payload: {
+      prompt: string;
+      cells: WorkspaceAddTargetCell[];
+      contextSourceKeys?: string[];
+    }) => {
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const { placements } = buildSkillGridLayout(nodes);
+      const anchor = payload.cells[0]
+        ? { row: payload.cells[0].row, col: payload.cells[0].col }
+        : null;
+      const weightedNeighbors = anchor
+        ? getWeightedNeighborhood(anchor, placements, nodesById)
+        : [];
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            op: "generate_shape",
+            prompt: payload.prompt,
+            cells: payload.cells,
+            weightedNeighbors,
+            model,
+            locale,
+            ayclToken: accessToken,
+            ...(payload.contextSourceKeys?.length
+              ? { contextSourceKeys: payload.contextSourceKeys }
+              : {}),
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to generate block");
+        }
+        const data = await response.json();
+        if (data.updatedNodes?.length > 0) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setEmptySurface(clearWorkspaceAddTarget());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, locale, nodes, plan.id, router],
+  );
+
+  const rightPane = resolveWorkspaceRightPane(expandedBlockId, emptySurface);
+  const addTargetCell =
+    emptySurface?.kind === "add_block" ? emptySurface.cell : null;
+  const generateShapeCells =
+    emptySurface?.kind === "generate_shape" ? emptySurface.cells : null;
   const orderedBlocks = getOrderedSessions(nodes as Parameters<typeof getOrderedSessions>[0]);
   const detailBlock =
     expandedBlockId != null
@@ -80,10 +253,118 @@ export function AyclWorkspaceView({
     const data = await res.json();
     if (res.ok && data.workspace) {
       setPlan(data.workspace);
-      setNodes(data.blocks || []);
+      setUnusableCells(normalizeUnusableCells(data.workspace.unusable_cells));
+      setNodes(
+        (data.blocks || []).map((n: Block & { local_context?: unknown }) => ({
+          ...n,
+          local_context: parseBlockLocalContext(n.local_context),
+        })),
+      );
       setNotesContent(data.workspace.notes || "");
     }
   }, [accessToken]);
+
+  const postMapGround = useCallback(
+    async (payload: Record<string, unknown>) => {
+      setMapGroundBusy(true);
+      try {
+        const res = await fetch("/api/workspace/map-ground", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            ...payload,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Map ground update failed");
+        if (Array.isArray(data.unusableCells)) {
+          setUnusableCells(normalizeUnusableCells(data.unusableCells));
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        return data;
+      } finally {
+        setMapGroundBusy(false);
+      }
+    },
+    [accessToken, plan.id],
+  );
+
+  const handleUpdateBlock = useCallback(
+    async (input: { blockId: string; title: string; description: string }) => {
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "update_block",
+            blockId: input.blockId,
+            title: input.title,
+            description: input.description,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Failed to update block");
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, plan.id, router],
+  );
+
+  const handleDeleteBlock = useCallback(
+    async (blockId: string) => {
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "delete_block",
+            blockId,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Failed to delete block");
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setEmptySurface(clearWorkspaceAddTarget());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, plan.id, router],
+  );
 
   useEffect(() => {
     void refreshWorkspace();
@@ -161,6 +442,23 @@ export function AyclWorkspaceView({
         </svg>
       ),
     },
+    ...(visibleSections.includes("context")
+      ? [
+          {
+            key: "context" as const,
+            label: t("planView.sectionContext"),
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("knowledge")
       ? [
           {
@@ -197,6 +495,11 @@ export function AyclWorkspaceView({
       : []),
   ];
 
+  const detailLockTitles =
+    detailBlock?.lock_until_block_ids
+      ?.map((id) => nodes.find((n) => n.id === id)?.title || id)
+      .filter(Boolean) || [];
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0a0a0a] text-white">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-800/60 px-4 py-3">
@@ -230,6 +533,44 @@ export function AyclWorkspaceView({
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
       />
+
+      {sectionLayout.mountsContextPanel && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId: plan.id,
+            isOwner: true,
+          }}
+        >
+          <div
+            data-workspace-context-section
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceContextPanel
+              workspaceId={plan.id}
+              isOwner
+              notesContent={notesContent}
+              setNotesContent={setNotesContent}
+              isEditingNotes={isEditingNotes}
+              setIsEditingNotes={setIsEditingNotes}
+              savingNotes={savingNotes}
+              onSaveNotes={saveNotes}
+              onCancelNotes={() => {
+                setNotesContent(plan.notes || "");
+                setIsEditingNotes(false);
+              }}
+              showFiles={false}
+              seedQuery={plan.root_topic || plan.title}
+              ayclToken={accessToken}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
 
       {sectionLayout.mountsPerformancePanel && (
         <WorkspaceSectionSurface
@@ -285,7 +626,7 @@ export function AyclWorkspaceView({
         <>
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
             <aside
-              className={`${mobileColumn === "sessions" ? "flex" : "hidden"} min-h-0 flex-1 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:w-1/2 md:border-b-0 md:border-r`}
+              className={`${mobileColumn === "sessions" ? "flex" : "hidden"} min-h-0 flex-1 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}
             >
               <SessionList
                 nodes={nodes}
@@ -304,11 +645,30 @@ export function AyclWorkspaceView({
                 ayclToken={accessToken}
                 expandedNodeId={expandedBlockId}
                 onExpandedNodeIdChange={handleExpandedBlockChange}
+                onEmptySelectionChange={handleEmptySelectionChange}
+                unusableCells={unusableCells}
+                workspaceNotes={notesContent || plan.notes}
+                onMapGround={async (payload) => {
+                  if (payload.op === "set_lock_until" && payload.blockId) {
+                    await postMapGround({
+                      op: "set_lock_until",
+                      blockId: payload.blockId,
+                      prerequisiteIds: payload.prerequisiteIds || [],
+                    });
+                    return;
+                  }
+                  if (payload.op === "set_unusable_cells") {
+                    await postMapGround({
+                      op: "set_unusable_cells",
+                      unusableCells: payload.unusableCells || [],
+                    });
+                  }
+                }}
               />
             </aside>
 
             <section
-              className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex`}
+              className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex ${WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS} md:flex-none`}
             >
               {workspaceImage ? (
                 <img
@@ -332,14 +692,44 @@ export function AyclWorkspaceView({
               </div>
 
               <main
-                className="relative z-10 min-h-0 flex-1 overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4"
+                className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-0"
                 data-workspace-right-column
                 data-workspace-right-pane={rightPane}
               >
                 {rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
                   <WorkspaceBlockDetailPane
+                    key={detailBlock.id}
                     title={detailBlock.title}
-                    onClose={handleCloseBlockDetail}
+                    blockId={detailBlock.id}
+                    blockTitle={detailBlock.title}
+                    blockDescription={detailBlock.description}
+                    planningPrompt={detailBlock.planning_prompt}
+                    localContext={detailBlock.local_context}
+                    canEdit
+                    editBusy={isAddingBlock}
+                    onUpdateBlock={handleUpdateBlock}
+                    onDeleteBlock={handleDeleteBlock}
+                    localContextPanel={
+                      <WorkspaceBlockLocalContextPanel
+                        key={detailBlock.id}
+                        canEdit
+                        blockId={detailBlock.id}
+                        blockTitle={detailBlock.title}
+                        blockDescription={detailBlock.description}
+                        blockStatus={detailBlock.status}
+                        lockUntilTitles={detailLockTitles}
+                        localContext={detailBlock.local_context}
+                        workspaceFiles={workspaceFileItems}
+                        onSaveLocalContext={async (blockId, localContext) => {
+                          await postMapGround({
+                            op: "set_local_context",
+                            blockId,
+                            localContext,
+                          });
+                        }}
+                        busy={mapGroundBusy}
+                      />
+                    }
                   >
                     <SessionItem
                       node={detailBlock}
@@ -358,22 +748,52 @@ export function AyclWorkspaceView({
                       onCustomStart={handleCustomStart}
                     />
                   </WorkspaceBlockDetailPane>
-                ) : (
-                  <WorkspaceNotesFilesPanel
-                    notesContent={notesContent}
-                    setNotesContent={setNotesContent}
-                    isEditingNotes={isEditingNotes}
-                    setIsEditingNotes={setIsEditingNotes}
-                    savingNotes={savingNotes}
-                    onSaveNotes={saveNotes}
-                    onCancelNotes={() => {
-                      setNotesContent(plan.notes || "");
-                      setIsEditingNotes(false);
-                    }}
-                    isOwner
+                ) : rightPane === "add_block" && addTargetCell ? (
+                  <WorkspaceAddBlockPane
+                    key={`add-${addTargetCell.row}-${addTargetCell.col}`}
+                    cell={addTargetCell}
+                    nodes={nodes}
                     workspaceId={plan.id}
-                    showFiles={false}
+                    ayclToken={accessToken}
+                    locale={locale}
+                    busy={isAddingBlock}
+                    workspaceNotes={notesContent || plan.notes}
+                    onSubmit={handleSubmitAddBlock}
+                    onCancel={handleCloseEmptyCreate}
+                    labels={{
+                      addTitle: t("sessionList.gridAddTitle"),
+                      addPlaceholder: t("sessionList.gridAddPlaceholder"),
+                      addSubmit: t("sessionList.gridAddSubmit"),
+                      addCancel: t("sessionList.gridAddCancel"),
+                      suggestTopics: t("sessionList.gridSuggestTopics"),
+                      suggesting: t("sessionList.gridSuggesting"),
+                      suggestError: t("sessionList.gridSuggestError"),
+                    }}
                   />
+                ) : rightPane === "generate_shape" && generateShapeCells ? (
+                  <WorkspaceGenerateShapePane
+                    key={`shape-${generateShapeCells.map((c) => `${c.row}:${c.col}`).join(",")}`}
+                    cells={generateShapeCells}
+                    nodes={nodes}
+                    workspaceId={plan.id}
+                    ayclToken={accessToken}
+                    locale={locale}
+                    busy={isAddingBlock}
+                    workspaceNotes={notesContent || plan.notes}
+                    onSubmit={handleSubmitGenerateShape}
+                    onCancel={handleCloseEmptyCreate}
+                    labels={{
+                      generateShape: t("sessionList.gridGenerateShape"),
+                      addPlaceholder: t("sessionList.gridAddPlaceholder"),
+                      addSubmit: t("sessionList.gridAddSubmit"),
+                      addCancel: t("sessionList.gridAddCancel"),
+                      suggestTopics: t("sessionList.gridSuggestTopics"),
+                      suggesting: t("sessionList.gridSuggesting"),
+                      suggestError: t("sessionList.gridSuggestError"),
+                    }}
+                  />
+                ) : (
+                  <WorkspaceMapAuthoringPane canEdit />
                 )}
               </main>
             </section>
@@ -382,8 +802,8 @@ export function AyclWorkspaceView({
           <div className="shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2 md:hidden">
             <div className="grid grid-cols-2 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
               {[
-                { key: "sessions" as const, label: "Blocks" },
-                { key: "workspace" as const, label: "Notes" },
+                { key: "sessions" as const, label: "Map" },
+                { key: "workspace" as const, label: "Tools" },
               ].map(({ key, label }) => (
                 <button
                   key={key}

@@ -37,6 +37,8 @@ type PowItem = AdminProofOfWorkDetails & {
   summary?: string;
   xaiFileId?: string | null;
   userId?: string | null;
+  guestUserId?: string | null;
+  invalidated?: boolean;
 };
 
 type SnapshotKc = {
@@ -164,6 +166,13 @@ export default function AdminDataStudioPage() {
   const [powLoading, setPowLoading] = useState(false);
   const [powError, setPowError] = useState<string | null>(null);
   const [expandedPowId, setExpandedPowId] = useState<string | null>(null);
+  const [powSelected, setPowSelected] = useState<Set<string>>(new Set());
+  const [powBulkBusy, setPowBulkBusy] = useState(false);
+  const [powEditMeta, setPowEditMeta] = useState("");
+  const [powEditToolName, setPowEditToolName] = useState("");
+  const [powEditToolAction, setPowEditToolAction] = useState("");
+  const [powSaveBusy, setPowSaveBusy] = useState(false);
+  const [powActionMsg, setPowActionMsg] = useState<string | null>(null);
   const [powSort, setPowSort] = useState<StudioSortState>({
     column: "created_at",
     direction: "desc",
@@ -266,6 +275,7 @@ export default function AdminDataStudioPage() {
       setPowTotal(data.totalCount || 0);
       setPowTotalPages(data.totalPages || 1);
       setPowLinkResolve(data.link_resolve ?? null);
+      setPowSelected(new Set());
     } catch (err) {
       setPowError(err instanceof Error ? err.message : "Failed to load PoW");
       setPowLinkResolve(null);
@@ -273,6 +283,85 @@ export default function AdminDataStudioPage() {
       setPowLoading(false);
     }
   }, [powPage, powSearch, powType, powLink, powSort]);
+
+  const openPowInspect = (item: PowItem) => {
+    setExpandedPowId(item.id);
+    setPowEditMeta(JSON.stringify(item.metadata || {}, null, 2));
+    setPowEditToolName(item.toolName || "");
+    setPowEditToolAction(item.toolAction || "");
+    setPowActionMsg(null);
+  };
+
+  const savePowEdit = async (opts?: {
+    invalidate?: boolean;
+    clearInvalidated?: boolean;
+  }) => {
+    if (!expandedPowId) return;
+    setPowSaveBusy(true);
+    setPowActionMsg(null);
+    try {
+      let metadata: unknown = undefined;
+      if (!opts?.invalidate && !opts?.clearInvalidated) {
+        try {
+          metadata = JSON.parse(powEditMeta || "{}");
+        } catch {
+          throw new Error("Metadata must be valid JSON");
+        }
+      }
+      const res = await fetch("/api/admin/data-studio/pow", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: expandedPowId,
+          ...(metadata !== undefined ? { metadata } : {}),
+          tool_name: powEditToolName || null,
+          tool_action: powEditToolAction || null,
+          invalidate: opts?.invalidate === true,
+          clearInvalidated: opts?.clearInvalidated === true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setPowActionMsg(
+        opts?.invalidate ? "Flagged invalidated (metadata)." : "Saved.",
+      );
+      await loadPow();
+      if (data.item) openPowInspect(data.item as PowItem);
+    } catch (err) {
+      setPowActionMsg(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setPowSaveBusy(false);
+    }
+  };
+
+  const bulkInvalidatePow = async () => {
+    if (powSelected.size === 0) return;
+    setPowBulkBusy(true);
+    setPowActionMsg(null);
+    try {
+      const res = await fetch("/api/admin/data-studio/pow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: Array.from(powSelected),
+          action: "invalidate",
+          reason: "bulk_admin_data_studio",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Bulk invalidate failed");
+      setPowActionMsg(`Invalidated ${data.updated_count ?? powSelected.size} PoW row(s).`);
+      setPowSelected(new Set());
+      // Close inspect so Save edits cannot re-PATCH stale pre-invalidate metadata.
+      setExpandedPowId(null);
+      setPowEditMeta("");
+      await loadPow();
+    } catch (err) {
+      setPowActionMsg(err instanceof Error ? err.message : "Bulk invalidate failed");
+    } finally {
+      setPowBulkBusy(false);
+    }
+  };
 
   const loadSnapshots = useCallback(async () => {
     setSnapshotLoading(true);
@@ -686,7 +775,7 @@ export default function AdminDataStudioPage() {
         <section className="space-y-4" data-studio-panel="pow">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[16rem] flex-[2]" data-studio-pow-link>
-              <label className={adminLabelClass}>Session link (TAP / ILE)</label>
+              <label className={adminLabelClass}>Session link (TAP / ILE / TAPBench)</label>
               <input
                 className={`${adminInputClass} mt-1`}
                 value={powLink}
@@ -694,7 +783,7 @@ export default function AdminDataStudioPage() {
                   setPowPage(1);
                   setPowLink(e.target.value);
                 }}
-                placeholder="https://…/tap/session/… or bare token"
+                placeholder="https://…/tap/session/… or /tapbench/… or bare token"
                 data-studio-pow-link-input
               />
             </div>
@@ -733,7 +822,23 @@ export default function AdminDataStudioPage() {
             <button type="button" className={adminBtnClass} onClick={() => void loadPow()}>
               Refresh
             </button>
+            <button
+              type="button"
+              className={adminBtnClass}
+              disabled={powSelected.size === 0 || powBulkBusy}
+              onClick={() => void bulkInvalidatePow()}
+              data-studio-bulk-invalidate
+            >
+              {powBulkBusy
+                ? "Invalidating…"
+                : `Invalidate selected (${powSelected.size})`}
+            </button>
           </div>
+          {powActionMsg ? (
+            <p className="text-xs text-neutral-300" data-studio-pow-action-msg>
+              {powActionMsg}
+            </p>
+          ) : null}
           {powLinkResolve && (
             <p className="text-xs text-neutral-400" data-studio-pow-link-resolve>
               Resolved {powLinkResolve.kind.toUpperCase()} link{" "}
@@ -763,6 +868,24 @@ export default function AdminDataStudioPage() {
                 >
                   <thead>
                     <tr className={adminTableHeadClass}>
+                      <th className="w-[2.5rem] px-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={
+                            sortedPowItems.length > 0 &&
+                            powSelected.size === sortedPowItems.length
+                          }
+                          onChange={() => {
+                            if (powSelected.size === sortedPowItems.length) {
+                              setPowSelected(new Set());
+                            } else {
+                              setPowSelected(new Set(sortedPowItems.map((i) => i.id)));
+                            }
+                          }}
+                          data-studio-select-all
+                          aria-label="Select all"
+                        />
+                      </th>
                       <SortTh
                         label="When"
                         column="created_at"
@@ -790,18 +913,37 @@ export default function AdminDataStudioPage() {
                         onSort={(col) => setPowSort((s) => toggleStudioSort(s, col, "asc"))}
                         className="w-[10rem]"
                       />
+                      <th className="w-[5rem] px-4 py-2 font-medium">Flags</th>
                       <th className="w-[5rem] px-4 py-2 font-medium" />
                     </tr>
                   </thead>
                   <tbody>
                     {sortedPowItems.map((item) => {
                       const expanded = expandedPowId === item.id;
+                      const inv = Boolean(item.invalidated);
                       return (
                         <Fragment key={item.id}>
                           <tr
                             className="border-b border-neutral-800/80"
                             data-studio-pow-row={item.id}
+                            data-pow-invalidated={inv ? "true" : "false"}
                           >
+                            <td className="px-2 py-2.5 align-top">
+                              <input
+                                type="checkbox"
+                                checked={powSelected.has(item.id)}
+                                onChange={() => {
+                                  setPowSelected((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(item.id)) next.delete(item.id);
+                                    else next.add(item.id);
+                                    return next;
+                                  });
+                                }}
+                                data-studio-select-row
+                                aria-label={`Select ${item.id}`}
+                              />
+                            </td>
                             <td className="whitespace-nowrap px-4 py-2.5 text-neutral-400 align-top">
                               {formatWhen(item.createdAt)}
                               {item.timestampMs != null ? (
@@ -830,14 +972,27 @@ export default function AdminDataStudioPage() {
                                 "—"
                               )}
                             </td>
+                            <td className="px-4 py-2.5 align-top">
+                              {inv ? (
+                                <span
+                                  className="rounded bg-red-950/50 px-1.5 py-0.5 text-[10px] text-red-300"
+                                  data-pow-invalidated-badge
+                                >
+                                  invalidated
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-neutral-600">—</span>
+                              )}
+                            </td>
                             <td className="px-4 py-2.5 text-right align-top">
                               <button
                                 type="button"
                                 className="text-xs text-neutral-500 hover:text-white"
                                 data-studio-pow-expand={item.id}
-                                onClick={() =>
-                                  setExpandedPowId(expanded ? null : item.id)
-                                }
+                                onClick={() => {
+                                  if (expanded) setExpandedPowId(null);
+                                  else openPowInspect(item);
+                                }}
                               >
                                 {expanded ? "Hide" : "Details"}
                               </button>
@@ -848,9 +1003,75 @@ export default function AdminDataStudioPage() {
                               className="border-b border-neutral-800/80 bg-neutral-950/40"
                               data-studio-pow-details-row={item.id}
                             >
-                              <td colSpan={5} className="px-4 py-3">
-                                <div className="max-w-full overflow-x-auto">
+                              <td colSpan={7} className="px-4 py-3">
+                                <div className="max-w-full space-y-3 overflow-x-auto">
                                   <PowDetailsPanel details={item} />
+                                  <div
+                                    className="space-y-2 rounded border border-neutral-800 p-3"
+                                    data-studio-pow-edit
+                                  >
+                                    <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+                                      Edit / invalidate
+                                    </div>
+                                    <label className="block text-[11px] text-neutral-500">
+                                      Tool name
+                                      <input
+                                        className={`${adminInputClass} mt-1`}
+                                        value={powEditToolName}
+                                        onChange={(e) => setPowEditToolName(e.target.value)}
+                                        data-studio-edit-tool-name
+                                      />
+                                    </label>
+                                    <label className="block text-[11px] text-neutral-500">
+                                      Tool action
+                                      <input
+                                        className={`${adminInputClass} mt-1`}
+                                        value={powEditToolAction}
+                                        onChange={(e) => setPowEditToolAction(e.target.value)}
+                                        data-studio-edit-tool-action
+                                      />
+                                    </label>
+                                    <label className="block text-[11px] text-neutral-500">
+                                      Metadata (JSON)
+                                      <textarea
+                                        className="mt-1 h-36 w-full rounded border border-neutral-700 bg-black/40 p-2 font-mono text-[11px] text-neutral-300"
+                                        value={powEditMeta}
+                                        onChange={(e) => setPowEditMeta(e.target.value)}
+                                        data-studio-edit-metadata
+                                      />
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        className={adminBtnClass}
+                                        disabled={powSaveBusy}
+                                        onClick={() => void savePowEdit()}
+                                        data-studio-save-edit
+                                      >
+                                        {powSaveBusy ? "Saving…" : "Save edits"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={adminBtnClass}
+                                        disabled={powSaveBusy}
+                                        onClick={() => void savePowEdit({ invalidate: true })}
+                                        data-studio-invalidate
+                                      >
+                                        Flag invalidated
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={adminBtnClass}
+                                        disabled={powSaveBusy}
+                                        onClick={() =>
+                                          void savePowEdit({ clearInvalidated: true })
+                                        }
+                                        data-studio-clear-invalidated
+                                      >
+                                        Clear invalidated
+                                      </button>
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -860,7 +1081,7 @@ export default function AdminDataStudioPage() {
                     })}
                     {sortedPowItems.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
+                        <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
                           No proof of work found
                         </td>
                       </tr>

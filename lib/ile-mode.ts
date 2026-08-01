@@ -275,28 +275,32 @@ export function buildIleProjectChapterExercisePrompt(input: {
   workspaceGoal?: string | null;
   notes?: string | null;
   files?: import("@/lib/prompt-workspace-context").WorkspaceFileContextItem[] | null;
+  blocks?: import("@/lib/prompt-workspace-context").PromptBlockInventoryItem[] | null;
+  focusedBlockId?: string | null;
+  blockLocalContext?: import("@/lib/prompt-workspace-context").BlockLocalContextInput | null;
+  unusableCells?: Array<{ row: number; col: number }> | null;
 }): string {
   const chapter = String(input.chapterDescription || "").trim();
-  if (chapter) {
-    return buildExercisePromptText({
-      chapterDescription: chapter,
-      exerciseText: chapter,
-      blockTitle: input.blockTitle,
-      blockDescription: input.blockDescription,
-      workspaceTitle: input.workspaceTitle,
-      workspaceGoal: input.workspaceGoal,
-      notes: input.notes,
-      files: input.files,
-    });
-  }
-  return buildExercisePromptText({
+  const shared = {
     blockTitle: input.blockTitle,
     blockDescription: input.blockDescription,
     workspaceTitle: input.workspaceTitle,
     workspaceGoal: input.workspaceGoal,
     notes: input.notes,
     files: input.files,
-  });
+    blocks: input.blocks,
+    focusedBlockId: input.focusedBlockId,
+    blockLocalContext: input.blockLocalContext,
+    unusableCells: input.unusableCells,
+  };
+  if (chapter) {
+    return buildExercisePromptText({
+      ...shared,
+      chapterDescription: chapter,
+      exerciseText: chapter,
+    });
+  }
+  return buildExercisePromptText(shared);
 }
 
 /**

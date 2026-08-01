@@ -19,6 +19,9 @@ import {
   assemblePromptWorkspaceContext,
   containsOutLoudStageDirection,
   stripOutLoudStageDirections,
+  type BlockLocalContextInput,
+  type PromptBlockInventoryItem,
+  type PromptWorkspaceContext,
   type PromptWorkspaceContextInput,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
@@ -105,9 +108,42 @@ export type BuildExercisePromptInput = {
   rootTopic?: string | null;
   chapterDescription?: string | null;
   files?: WorkspaceFileContextItem[] | null;
-  /** Optional pre-built context (avoids re-assembly). */
+  /** Map inventory (roles/kinds + layout). Feeds TAP/ILE/TAPBench assembly. */
+  blocks?: PromptBlockInventoryItem[] | null;
+  focusedBlockId?: string | null;
+  blockLocalContext?: BlockLocalContextInput | null;
+  unusableCells?: Array<{ row: number; col: number }> | null;
+  /** Optional pre-built context (avoids re-assembly). Explicit fields above win when set. */
   promptContext?: PromptWorkspaceContextInput | null;
 };
+
+/**
+ * Build the shared PromptWorkspaceContext for exercise/ILE framing.
+ * Includes inventory, topology, and local block materials when provided.
+ * Tests and LLM author paths should drive this helper — not re-implement merge.
+ */
+export function resolveExercisePromptContext(
+  input: BuildExercisePromptInput,
+): PromptWorkspaceContext {
+  const base = input.promptContext || {};
+  return assemblePromptWorkspaceContext({
+    ...base,
+    workspaceTitle: input.workspaceTitle ?? base.workspaceTitle,
+    rootTopic: input.rootTopic ?? base.rootTopic,
+    workspaceGoal: input.workspaceGoal ?? base.workspaceGoal,
+    workspaceDescription: input.workspaceDescription ?? base.workspaceDescription,
+    notes: input.notes ?? base.notes,
+    blockTitle: input.blockTitle ?? base.blockTitle,
+    blockDescription: input.blockDescription ?? base.blockDescription,
+    chapterDescription: input.chapterDescription ?? base.chapterDescription,
+    files: input.files ?? base.files,
+    blocks: input.blocks ?? base.blocks,
+    focusedBlockId: input.focusedBlockId ?? base.focusedBlockId,
+    blockLocalContext: input.blockLocalContext ?? base.blockLocalContext,
+    unusableCells: input.unusableCells ?? base.unusableCells,
+    extra: base.extra,
+  });
+}
 
 /**
  * Resolve the exercise prompt after intro start.
@@ -154,22 +190,12 @@ function ensureExercisePrefix(body: string): string {
 }
 
 /**
- * Build a concrete domain exercise from context substance (description, notes, files).
+ * Build a concrete domain exercise from context substance
+ * (description, notes, files, local block materials, inventory/topology cues).
  * No "out loud" / think-aloud stage directions.
  */
 export function buildExercisePromptText(input: BuildExercisePromptInput): string {
-  const ctx = assemblePromptWorkspaceContext({
-    workspaceTitle: input.workspaceTitle,
-    rootTopic: input.rootTopic,
-    workspaceGoal: input.workspaceGoal,
-    workspaceDescription: input.workspaceDescription,
-    notes: input.notes,
-    blockTitle: input.blockTitle,
-    blockDescription: input.blockDescription,
-    chapterDescription: input.chapterDescription,
-    files: input.files,
-    ...(input.promptContext || {}),
-  });
+  const ctx = resolveExercisePromptContext(input);
 
   const explicitRaw = normalize(String(input.exerciseText || input.openingQuestion || ""));
   let explicit = explicitRaw;
@@ -199,13 +225,52 @@ export function buildExercisePromptText(input: BuildExercisePromptInput): string
     ctx.rootTopic ||
     "this material";
 
-  // Rich substance: turn description / files into a concrete task.
+  // Local notes + inventory/topology cues become part of the learner-facing frame
+  // so map layout and block-local materials actually shape the exercise.
+  const localNotesLine = ctx.localContextLines.find((l) =>
+    /^Local block notes:/i.test(l),
+  );
+  const localNotesBody = localNotesLine
+    ? localNotesLine.replace(/^Local block notes:\s*/i, "").trim()
+    : "";
+  const mapCueParts: string[] = [];
+  if (ctx.blockInventoryLines.length > 0) {
+    mapCueParts.push(
+      `Block inventory (${ctx.blockInventoryLines.length}): ${ctx.blockInventoryLines
+        .slice(0, 3)
+        .map((l) => l.replace(/^-\s*/, ""))
+        .join("; ")}`,
+    );
+  }
+  if (ctx.topologyLines.length > 0) {
+    const unusable = ctx.topologyLines.find((l) => /Unusable ground/i.test(l));
+    if (unusable) mapCueParts.push(unusable.replace(/^-\s*/, ""));
+    const layoutSample = ctx.topologyLines
+      .filter((l) => !/Unusable ground/i.test(l))
+      .slice(0, 2)
+      .map((l) => l.replace(/^-\s*/, ""));
+    if (layoutSample.length) {
+      mapCueParts.push(`Map layout: ${layoutSample.join("; ")}`);
+    }
+  }
+  if (ctx.hasLocalContext && ctx.localContextLines.length > 0) {
+    mapCueParts.push(
+      `Local block context: ${ctx.localContextLines
+        .join(" · ")
+        .replace(/\s+/g, " ")
+        .slice(0, 280)}`,
+    );
+  }
+  const mapCue = mapCueParts.length > 0 ? ` ${mapCueParts.join(" ")}` : "";
+
+  // Rich substance: turn description / files / local materials into a concrete task.
   // Preferred over stripped legacy Work-through title frames.
   // Never paste a syllabus/topic catalog as "complete this task: …" — that is not an exercise.
   if (ctx.hasDomainSubstance) {
     const substance =
       ctx.blockDescription ||
       ctx.chapterDescription ||
+      localNotesBody ||
       ctx.workspaceGoal ||
       ctx.workspaceDescription ||
       ctx.domainSubstanceSummary;
@@ -228,7 +293,7 @@ export function buildExercisePromptText(input: BuildExercisePromptInput): string
           )
             ? `${substance} (topic: ${topicLabel})`
             : substance;
-        return ensureExercisePrefix(`${titled}${fileCue}`);
+        return ensureExercisePrefix(`${titled}${fileCue}${mapCue}`);
       }
       // Topic overviews / catalogs → problem-shaped fallback (not "complete this task: <list>").
       if (looksLikeTopicOverview(substance)) {
@@ -238,10 +303,11 @@ export function buildExercisePromptText(input: BuildExercisePromptInput): string
           workspaceTitle: ctx.workspaceTitle,
           workspaceGoal: ctx.workspaceGoal,
         });
-        return fileCue ? `${fb.replace(/\.$/, "")}.${fileCue}` : fb;
+        const tail = `${fileCue}${mapCue}`.trim();
+        return tail ? `${fb.replace(/\.$/, "")}. ${tail}` : fb;
       }
       return ensureExercisePrefix(
-        `Solve a concrete problem about "${topicLabel}". Context: ${substance}${fileCue} State the problem, show full work with intermediate steps, box a final answer, and note one edge case.`,
+        `Solve a concrete problem about "${topicLabel}". Context: ${substance}${fileCue}${mapCue} State the problem, show full work with intermediate steps, box a final answer, and note one edge case.`,
       );
     }
   }

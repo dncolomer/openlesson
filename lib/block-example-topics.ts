@@ -1,6 +1,7 @@
 /**
- * Pure derivation of example questions + topics a block explores.
- * Used by the block-detail "Examples" mini-tab (no LLM required).
+ * Pure derivation of content samples (topics + practice questions) for a block.
+ * Used by the block-detail "Content Samples" drawer as a local fallback; LLM
+ * regenerate uses the same result shape.
  */
 
 export type BlockExampleTopicsInput = {
@@ -14,6 +15,32 @@ export type BlockExampleTopicsResult = {
   topics: string[];
   questions: string[];
 };
+
+/** Normalize LLM/API payload into a safe topics + questions result. */
+export function normalizeContentSamplesPayload(raw: unknown): BlockExampleTopicsResult {
+  if (!raw || typeof raw !== "object") {
+    return { topics: [], questions: [] };
+  }
+  const rec = raw as Record<string, unknown>;
+  const topicsRaw = Array.isArray(rec.topics) ? rec.topics : [];
+  const questionsRaw = Array.isArray(rec.questions)
+    ? rec.questions
+    : Array.isArray(rec.example_questions)
+      ? rec.example_questions
+      : [];
+  const topics = topicsRaw
+    .map((t) => cleanLine(String(t || "")))
+    .filter((t) => t.length >= 2)
+    .slice(0, 8);
+  const questions = questionsRaw
+    .map((q) => cleanLine(String(q || "")))
+    .filter((q) => q.length >= 8)
+    .slice(0, 8);
+  return {
+    topics: [...new Set(topics)],
+    questions: [...new Set(questions)],
+  };
+}
 
 function cleanLine(raw: string): string {
   return raw.replace(/^[\s•\-*–—\d.)]+/, "").replace(/\s+/g, " ").trim();

@@ -8,10 +8,12 @@ import { join } from "node:path";
 import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
+  clearWorkspaceFilledBlockSelection,
   nextRightPaneDrawerExpanded,
   nextWorkspaceBlockSelection,
   resolveEmptyAddTarget,
   resolveEmptySelectionSurface,
+  resolveFilledBlockSelectionSurface,
   resolveWorkspaceRightPane,
 } from "@/lib/workspace-right-pane";
 import { BLOCK_MAP_TOOL_STRIP, visibleBlockMapTools } from "@/lib/block-map-tools";
@@ -21,7 +23,8 @@ const SCRATCH =
   process.env.RIGHT_PANE_DRAWER_SCRATCH ||
   process.env.MULTI_EMPTY_RIGHT_PANE_SCRATCH ||
   process.env.EMPTY_ADD_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-5c13f6ec4c41/implementer";
+  process.env.COMBINE_BLOCKS_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b6a5456b9fa4/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -74,6 +77,59 @@ describe("resolveWorkspaceRightPane", () => {
       }),
     ).toBe("block_detail");
     expect(resolveWorkspaceRightPane(null, null)).toBe("map_tools");
+  });
+
+  it("2+ filled block ids → combine_blocks (wins over single detail and empty create)", () => {
+    expect(
+      resolveFilledBlockSelectionSurface(["a", "b"]),
+    ).toEqual({ kind: "combine_blocks", blockIds: ["a", "b"] });
+    expect(resolveFilledBlockSelectionSurface(["a"])).toEqual({
+      kind: "block_detail",
+      blockId: "a",
+    });
+    expect(resolveFilledBlockSelectionSurface([])).toBeNull();
+    expect(clearWorkspaceFilledBlockSelection()).toEqual([]);
+
+    expect(resolveWorkspaceRightPane(null, null, ["b1", "b2"])).toBe(
+      "combine_blocks",
+    );
+    // Multi filled beats single expanded id and empty generate_shape
+    expect(
+      resolveWorkspaceRightPane("b1", { kind: "add_block", cell: { row: 0, col: 0 } }, [
+        "b1",
+        "b2",
+      ]),
+    ).toBe("combine_blocks");
+    expect(
+      resolveWorkspaceRightPane(
+        null,
+        {
+          kind: "generate_shape",
+          cells: [
+            { row: 0, col: 0 },
+            { row: 0, col: 1 },
+          ],
+        },
+        ["x", "y", "z"],
+      ),
+    ).toBe("combine_blocks");
+    // Sole multi-list id still detail
+    expect(resolveWorkspaceRightPane(null, null, ["only"])).toBe("block_detail");
+
+    writeEvidence(
+      "combine-blocks-pane-route.log",
+      [
+        "multi2=" + resolveWorkspaceRightPane(null, null, ["a", "b"]),
+        "multiWinsEmpty=" +
+          resolveWorkspaceRightPane(
+            null,
+            { kind: "generate_shape", cells: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
+            ["a", "b"],
+          ),
+        "surface=" +
+          JSON.stringify(resolveFilledBlockSelectionSurface(["a", "b", "a"])),
+      ].join("\n"),
+    );
   });
 });
 
@@ -225,7 +281,49 @@ describe("structural: right pane not map modal", () => {
     expect(aycl).not.toContain("BlockDetailDrawer");
   });
 
-  it("block detail stacks Details + Local context + Examples; local/examples collapsed; no X", () => {
+  it("combine blocks pane: A+B visual, broader copy, combination prompt, merge op", () => {
+    const pane = read("components/WorkspaceCombineBlocksPane.tsx");
+    expect(pane).toContain("data-workspace-combine-blocks-pane");
+    expect(pane).toContain("data-combine-visual");
+    expect(pane).toContain('data-combine-layout="stack"');
+    expect(pane).toContain("data-combine-source-list");
+    expect(pane).toContain("data-combine-plus");
+    expect(pane).toContain("data-combine-result");
+    expect(pane).toContain("data-combine-prompt");
+    expect(pane).toContain("data-combine-submit");
+    expect(pane).toMatch(/broader/i);
+    expect(pane).toContain("Combination prompt");
+    expect(pane).toContain("areBlocksContiguous");
+    // Stack layout — no wide side-by-side wrap for 3+ cards
+    expect(pane).not.toContain("flex-wrap items-center justify-center");
+
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).toContain("WorkspaceCombineBlocksPane");
+    expect(view).toContain('rightPane === "combine_blocks"');
+    expect(view).toContain("handleCombineBlocks");
+    expect(view).toContain('op: "merge"');
+    expect(view).toContain("onSelectedBlockIdsChange");
+
+    const grid = read("components/BlockSkillGrid.tsx");
+    expect(grid).toContain("onSelectedBlockIdsChange");
+    expect(grid).toContain("emitFilledBlockSelection");
+
+    const list = read("components/SessionList.tsx");
+    expect(list).toContain("onSelectedBlockIdsChange");
+
+    writeEvidence(
+      "combine-blocks-ui.log",
+      [
+        "paneVisual=" + pane.includes("data-combine-visual"),
+        "plus=" + pane.includes("data-combine-plus"),
+        "prompt=" + pane.includes("data-combine-prompt"),
+        "viewMerge=" + view.includes('op: "merge"'),
+        "gridEmit=" + grid.includes("emitFilledBlockSelection"),
+      ].join("\n"),
+    );
+  });
+
+  it("block detail stacks Details + Local context + Simulation; simulation collapsed; no X", () => {
     const pane = read("components/WorkspaceBlockDetailPane.tsx");
     const drawer = read("components/WorkspaceRightPaneDrawer.tsx");
 
@@ -235,13 +333,22 @@ describe("structural: right pane not map modal", () => {
     // Peer top-level drawers
     expect(pane).toContain('drawerId="detail"');
     expect(pane).toContain('drawerId="local"');
-    expect(pane).toContain('drawerId="examples"');
+    expect(pane).toContain('drawerId="simulation"');
     expect(pane).toContain('title="Local context"');
-    expect(pane).toContain('title="Examples"');
-    // Local + Examples collapsed by default; detail expanded
+    expect(pane).toContain('title="Simulation"');
+    expect(pane).toContain("WorkspaceBlockSimulationPanel");
+    // Order: detail → simulation (pos 2) → edit → local
+    expect(pane).toMatch(
+      /drawerId="detail"[\s\S]*?drawerId="simulation"[\s\S]*?drawerId="local"/,
+    );
+    // Detail expanded; Simulation collapsed; local opens when materials exist
     expect(pane).toMatch(/drawerId="detail"[\s\S]*?defaultExpanded/);
-    expect(pane).toMatch(/drawerId="local"[\s\S]*?defaultExpanded=\{false\}/);
-    expect(pane).toMatch(/drawerId="examples"[\s\S]*?defaultExpanded=\{false\}/);
+    expect(pane).toMatch(
+      /drawerId="local"[\s\S]*?defaultExpanded=\{hasLocalMaterials\}/,
+    );
+    expect(pane).toMatch(
+      /drawerId="simulation"[\s\S]*?defaultExpanded=\{false\}/,
+    );
     // No X close on drawer chrome
     expect(pane).not.toContain("data-block-detail-close");
     expect(pane).not.toContain("onClose={");
@@ -258,11 +365,9 @@ describe("structural: right pane not map modal", () => {
       [
         "detailDrawer=" + pane.includes('drawerId="detail"'),
         "localDrawer=" + pane.includes('drawerId="local"'),
-        "examplesDrawer=" + pane.includes('drawerId="examples"'),
-        "localCollapsedDefault=" +
-          /drawerId="local"[\s\S]*?defaultExpanded=\{false\}/.test(pane),
-        "examplesCollapsedDefault=" +
-          /drawerId="examples"[\s\S]*?defaultExpanded=\{false\}/.test(pane),
+        "simulationDrawer=" + pane.includes('drawerId="simulation"'),
+        "simulationCollapsedDefault=" +
+          /drawerId="simulation"[\s\S]*?defaultExpanded=\{false\}/.test(pane),
         "noXOnShell=" + !drawer.includes("closeDataAttr"),
       ].join("\n"),
     );

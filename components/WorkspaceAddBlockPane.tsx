@@ -204,13 +204,6 @@ export function WorkspaceAddBlockPane({
     }
   };
 
-  const contextSubtitle =
-    contextSelected.length > 0
-      ? `${contextSelected.length} source${contextSelected.length === 1 ? "" : "s"} selected`
-      : contextLoading
-        ? "Loading…"
-        : undefined;
-
   return (
     <div
       data-workspace-right-pane="add_block"
@@ -324,7 +317,6 @@ export function WorkspaceAddBlockPane({
       <WorkspaceRightPaneDrawer
         variant="section"
         title="Local context"
-        subtitle={contextSubtitle}
         defaultExpanded={false}
         surfaceDataAttr="data-add-block-context-picker"
         bodyClassName="space-y-2"

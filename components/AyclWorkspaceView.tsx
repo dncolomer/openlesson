@@ -27,6 +27,7 @@ import {
 import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
+  clearWorkspaceFilledBlockSelection,
   nextWorkspaceBlockSelection,
   resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
@@ -35,6 +36,7 @@ import {
   WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS,
   WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS,
 } from "@/lib/workspace-right-pane";
+import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksPane";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
@@ -76,6 +78,7 @@ export function AyclWorkspaceView({
   /** Open block for right-pane detail (double-click). Null → map authoring. */
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
+  const [selectedFilledBlockIds, setSelectedFilledBlockIds] = useState<string[]>([]);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>(() =>
     normalizeUnusableCells(initialPlan.unusable_cells),
@@ -88,6 +91,7 @@ export function AyclWorkspaceView({
     setExpandedBlockId(next);
     if (next) {
       setEmptySurface(clearWorkspaceAddTarget());
+      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
       setMobileColumn("workspace");
     }
   }, [expandedBlockId]);
@@ -105,14 +109,29 @@ export function AyclWorkspaceView({
       setEmptySurface(surface);
       if (surface) {
         setExpandedBlockId(clearWorkspaceBlockSelection());
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
         setMobileColumn("workspace");
       }
     },
     [unusableCells],
   );
 
+  const handleSelectedBlockIdsChange = useCallback((ids: string[] | null) => {
+    const next = (ids || []).map((id) => String(id).trim()).filter(Boolean);
+    setSelectedFilledBlockIds(next);
+    if (next.length >= 2) {
+      setExpandedBlockId(clearWorkspaceBlockSelection());
+      setEmptySurface(clearWorkspaceAddTarget());
+      setMobileColumn("workspace");
+    }
+  }, []);
+
   const handleCloseEmptyCreate = useCallback(() => {
     setEmptySurface(clearWorkspaceAddTarget());
+  }, []);
+
+  const handleCloseCombine = useCallback(() => {
+    setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
   }, []);
 
   const handleSubmitAddBlock = useCallback(
@@ -234,11 +253,17 @@ export function AyclWorkspaceView({
     [accessToken, locale, nodes, plan.id, router],
   );
 
-  const rightPane = resolveWorkspaceRightPane(expandedBlockId, emptySurface);
+  const rightPane = resolveWorkspaceRightPane(
+    expandedBlockId,
+    emptySurface,
+    selectedFilledBlockIds,
+  );
   const addTargetCell =
     emptySurface?.kind === "add_block" ? emptySurface.cell : null;
   const generateShapeCells =
     emptySurface?.kind === "generate_shape" ? emptySurface.cells : null;
+  const combineBlockIds =
+    rightPane === "combine_blocks" ? selectedFilledBlockIds : [];
   const orderedBlocks = getOrderedSessions(nodes as Parameters<typeof getOrderedSessions>[0]);
   const detailBlock =
     expandedBlockId != null
@@ -247,6 +272,44 @@ export function AyclWorkspaceView({
   const detailIndex = detailBlock
     ? orderedBlocks.findIndex((n) => n.id === detailBlock.id)
     : -1;
+
+  const handleCombineBlocks = useCallback(
+    async (input: { blockIds: string[]; prompt?: string }) => {
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "merge",
+            blockIds: input.blockIds,
+            prompt: input.prompt,
+            locale,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to combine blocks");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, locale, plan.id, router],
+  );
 
   const refreshWorkspace = useCallback(async () => {
     const res = await fetch(`/api/aycl/workspace?token=${encodeURIComponent(accessToken)}`);
@@ -646,6 +709,7 @@ export function AyclWorkspaceView({
                 expandedNodeId={expandedBlockId}
                 onExpandedNodeIdChange={handleExpandedBlockChange}
                 onEmptySelectionChange={handleEmptySelectionChange}
+                onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
                 unusableCells={unusableCells}
                 workspaceNotes={notesContent || plan.notes}
                 onMapGround={async (payload) => {
@@ -696,7 +760,20 @@ export function AyclWorkspaceView({
                 data-workspace-right-column
                 data-workspace-right-pane={rightPane}
               >
-                {rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
+                {rightPane === "combine_blocks" && combineBlockIds.length >= 2 ? (
+                  <WorkspaceCombineBlocksPane
+                    key={`combine-${combineBlockIds.join(",")}`}
+                    blockIds={combineBlockIds}
+                    nodes={nodes}
+                    busy={isAddingBlock}
+                    onCombine={handleCombineBlocks}
+                    onCancel={handleCloseCombine}
+                    labels={{
+                      combine: t("sessionList.gridMerge") || "Combine into one block",
+                      cancel: t("sessionList.gridAddCancel") || "Cancel",
+                    }}
+                  />
+                ) : rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
                   <WorkspaceBlockDetailPane
                     key={detailBlock.id}
                     title={detailBlock.title}
@@ -705,6 +782,12 @@ export function AyclWorkspaceView({
                     blockDescription={detailBlock.description}
                     planningPrompt={detailBlock.planning_prompt}
                     localContext={detailBlock.local_context}
+                    blockStatus={detailBlock.status}
+                    isStart={detailBlock.is_start}
+                    lockUntilTitles={detailLockTitles}
+                    workspaceId={plan.id}
+                    ayclToken={accessToken}
+                    locale={locale}
                     canEdit
                     editBusy={isAddingBlock}
                     onUpdateBlock={handleUpdateBlock}

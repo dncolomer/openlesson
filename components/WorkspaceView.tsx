@@ -30,6 +30,7 @@ import {
 import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
+  clearWorkspaceFilledBlockSelection,
   nextWorkspaceBlockSelection,
   resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
@@ -38,6 +39,7 @@ import {
   WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS,
   WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS,
 } from "@/lib/workspace-right-pane";
+import { WorkspaceCombineBlocksPane } from "@/components/WorkspaceCombineBlocksPane";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
@@ -143,6 +145,8 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   /** Empty selection surface for right-pane create (single Add / multi shape). */
   const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
+  /** Multi-selected filled blocks (2+) → combine surface. */
+  const [selectedFilledBlockIds, setSelectedFilledBlockIds] = useState<string[]>([]);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
@@ -155,6 +159,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     setExpandedBlockId(next);
     if (next) {
       setEmptySurface(clearWorkspaceAddTarget());
+      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
       setMobileColumn("workspace");
     }
   }, [expandedBlockId]);
@@ -172,21 +177,42 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       setEmptySurface(surface);
       if (surface) {
         setExpandedBlockId(clearWorkspaceBlockSelection());
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
         setMobileColumn("workspace");
       }
     },
     [unusableCells],
   );
 
+  const handleSelectedBlockIdsChange = useCallback((ids: string[] | null) => {
+    const next = (ids || []).map((id) => String(id).trim()).filter(Boolean);
+    setSelectedFilledBlockIds(next);
+    if (next.length >= 2) {
+      setExpandedBlockId(clearWorkspaceBlockSelection());
+      setEmptySurface(clearWorkspaceAddTarget());
+      setMobileColumn("workspace");
+    }
+  }, []);
+
   const handleCloseEmptyCreate = useCallback(() => {
     setEmptySurface(clearWorkspaceAddTarget());
   }, []);
 
-  const rightPane = resolveWorkspaceRightPane(expandedBlockId, emptySurface);
+  const handleCloseCombine = useCallback(() => {
+    setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+  }, []);
+
+  const rightPane = resolveWorkspaceRightPane(
+    expandedBlockId,
+    emptySurface,
+    selectedFilledBlockIds,
+  );
   const addTargetCell =
     emptySurface?.kind === "add_block" ? emptySurface.cell : null;
   const generateShapeCells =
     emptySurface?.kind === "generate_shape" ? emptySurface.cells : null;
+  const combineBlockIds =
+    rightPane === "combine_blocks" ? selectedFilledBlockIds : [];
   const orderedBlocks = getOrderedSessions(nodes as Parameters<typeof getOrderedSessions>[0]);
   const detailBlock =
     expandedBlockId != null
@@ -205,6 +231,45 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const refreshNodes = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
+
+  const handleCombineBlocks = useCallback(
+    async (input: { blockIds: string[]; prompt?: string }) => {
+      if (!workspaceId || !isOwner) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "merge",
+            blockIds: input.blockIds,
+            prompt: input.prompt,
+            locale,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to combine blocks");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, locale, refreshNodes, router, workspaceId],
+  );
 
   const handleSubmitAddBlock = useCallback(
     async (
@@ -1020,6 +1085,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
             onEmptySelectionChange={handleEmptySelectionChange}
+            onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
             unusableCells={unusableCells}
             onMapGround={isOwner ? handleMapGround : undefined}
             workspaceNotes={notesContent || plan.notes}
@@ -1042,7 +1108,20 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             data-workspace-right-column
             data-workspace-right-pane={rightPane}
           >
-            {rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
+            {rightPane === "combine_blocks" && combineBlockIds.length >= 2 ? (
+              <WorkspaceCombineBlocksPane
+                key={`combine-${combineBlockIds.join(",")}`}
+                blockIds={combineBlockIds}
+                nodes={nodes}
+                busy={isAddingBlock}
+                onCombine={handleCombineBlocks}
+                onCancel={handleCloseCombine}
+                labels={{
+                  combine: t("sessionList.gridMerge") || "Combine into one block",
+                  cancel: t("sessionList.gridAddCancel") || "Cancel",
+                }}
+              />
+            ) : rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
               <WorkspaceBlockDetailPane
                 key={detailBlock.id}
                 title={detailBlock.title}
@@ -1051,6 +1130,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 blockDescription={detailBlock.description}
                 planningPrompt={detailBlock.planning_prompt}
                 localContext={detailBlock.local_context}
+                blockStatus={detailBlock.status}
+                isStart={detailBlock.is_start}
+                lockUntilTitles={detailLockTitles}
+                workspaceId={workspaceId}
+                locale={locale}
                 canEdit={isOwner}
                 editBusy={isAddingBlock}
                 onUpdateBlock={handleUpdateBlock}

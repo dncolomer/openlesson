@@ -1,8 +1,9 @@
 /**
  * Pure helpers for the workspace three-column right pane on the Map surface:
- * map authoring by default; block detail when a block is open; add-block when
- * a single empty placeable cell is selected; generate-shape when 2+ empties
- * are multi-selected. Notes/files live under Context.
+ * map authoring by default; block detail when one block is open; combine when
+ * 2+ filled blocks are multi-selected; add-block when a single empty is
+ * selected; generate-shape when 2+ empties are multi-selected.
+ * Notes/files live under Context.
  *
  * Desktop widths: right column ~½ prior half-width (map larger).
  */
@@ -10,6 +11,7 @@
 export type WorkspaceRightPaneKind =
   | "map_tools"
   | "block_detail"
+  | "combine_blocks"
   | "add_block"
   | "generate_shape";
 
@@ -33,17 +35,26 @@ export const WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS = "md:w-1/4";
 
 /**
  * Block-detail drawers (Photoshop-style exclusive panels).
- * Prompt tab removed — local context + examples only.
+ * Prompt tab removed — local context + simulation only.
  */
-export type BlockDetailMiniTab = "local" | "examples";
+export type BlockDetailMiniTab =
+  | "local"
+  | "examples"
+  | "content_samples"
+  | "simulation";
 
 export const BLOCK_DETAIL_MINI_TABS: readonly BlockDetailMiniTab[] = [
   "local",
-  "examples",
+  "simulation",
 ] as const;
 
 export function isBlockDetailMiniTab(value: unknown): value is BlockDetailMiniTab {
-  return value === "local" || value === "examples";
+  return (
+    value === "local" ||
+    value === "examples" ||
+    value === "content_samples" ||
+    value === "simulation"
+  );
 }
 
 export function nextBlockDetailMiniTab(
@@ -131,16 +142,56 @@ export function resolveEmptySelectionSurface(input: {
 }
 
 /**
+ * Multi-select of filled map blocks → combine surface; sole id → detail.
+ * Empty / invalid → null (caller falls through to empty/map surfaces).
+ */
+export function resolveFilledBlockSelectionSurface(
+  selectedBlockIds: readonly string[] | null | undefined,
+):
+  | { kind: "combine_blocks"; blockIds: string[] }
+  | { kind: "block_detail"; blockId: string }
+  | null {
+  const ids = (selectedBlockIds || [])
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+  // De-dupe while preserving order
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  if (unique.length >= 2) {
+    return { kind: "combine_blocks", blockIds: unique };
+  }
+  if (unique.length === 1) {
+    return { kind: "block_detail", blockId: unique[0] };
+  }
+  return null;
+}
+
+/**
  * Decide which surface the right column should show on the map section.
- * Block detail wins; then empty selection surface (single Add or multi generate);
- * otherwise map authoring tools.
+ * Priority: 2+ filled blocks → combine; single block detail; empty create
+ * (single Add or multi generate); otherwise map authoring tools.
  *
  * Second arg accepts either the modern EmptySelectionSurface or a legacy single cell.
+ * Third arg is the multi-select filled-block id list from the map strip.
  */
 export function resolveWorkspaceRightPane(
   selectedBlockId: string | null | undefined,
   emptySurfaceOrAddCell?: EmptySelectionSurface | WorkspaceAddTargetCell | null,
+  selectedBlockIds?: readonly string[] | null,
 ): WorkspaceRightPaneKind {
+  // Prefer explicit multi-select list when present (map Shift/lasso multi).
+  const multi = resolveFilledBlockSelectionSurface(selectedBlockIds);
+  if (multi?.kind === "combine_blocks") {
+    return "combine_blocks";
+  }
+  if (multi?.kind === "block_detail") {
+    return "block_detail";
+  }
   if (typeof selectedBlockId === "string" && selectedBlockId.trim()) {
     return "block_detail";
   }
@@ -152,6 +203,11 @@ export function resolveWorkspaceRightPane(
     return "add_block";
   }
   return "map_tools";
+}
+
+/** Clear multi-filled-block selection (right-pane combine host). */
+export function clearWorkspaceFilledBlockSelection(): string[] {
+  return [];
 }
 
 function normalizeEmptySurfaceArg(

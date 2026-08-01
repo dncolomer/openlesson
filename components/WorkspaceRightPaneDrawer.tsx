@@ -11,7 +11,6 @@ import { nextRightPaneDrawerExpanded } from "@/lib/workspace-right-pane";
 export function WorkspaceRightPaneDrawer({
   paneKind,
   title,
-  subtitle,
   defaultExpanded = true,
   children,
   headerExtra,
@@ -24,7 +23,6 @@ export function WorkspaceRightPaneDrawer({
   /** Value for data-workspace-right-pane (add_block | generate_shape | block-detail | …). */
   paneKind?: string;
   title: ReactNode;
-  subtitle?: ReactNode;
   defaultExpanded?: boolean;
   children: ReactNode;
   headerExtra?: ReactNode;
@@ -92,15 +90,8 @@ export function WorkspaceRightPaneDrawer({
           >
             ›
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium uppercase tracking-[0.12em] text-neutral-400">
-              {title}
-            </span>
-            {subtitle ? (
-              <span className="mt-0.5 block truncate text-[11px] text-neutral-500">
-                {subtitle}
-              </span>
-            ) : null}
+          <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.12em] text-neutral-400">
+            {title}
           </span>
         </button>
         {headerExtra}

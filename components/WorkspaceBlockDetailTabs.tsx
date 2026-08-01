@@ -15,12 +15,15 @@ import type {
 
 const DRAWER_LABELS: Record<BlockDetailMiniTab, string> = {
   local: "Local context",
-  examples: "Examples",
+  examples: "Simulation",
+  content_samples: "Simulation",
+  simulation: "Simulation",
 };
 
 /**
  * Photoshop-style exclusive drawers under block launch:
- * Local context + Examples (Prompt tab removed). One body open at a time.
+ * Local context + Simulation (Prompt tab removed). One body open at a time.
+ * @deprecated Prefer WorkspaceBlockDetailPane peer drawers.
  */
 export function WorkspaceBlockDetailTabs({
   blockTitle,
@@ -108,9 +111,9 @@ export function WorkspaceBlockDetailTabs({
                   <div data-block-detail-tab-content="local">{localContextPanel}</div>
                 ) : null}
 
-                {id === "examples" ? (
+                {id === "examples" || id === "content_samples" || id === "simulation" ? (
                   <div
-                    data-block-detail-tab-content="examples"
+                    data-block-detail-tab-content="simulation"
                     className="space-y-3"
                   >
                     <div>
@@ -139,7 +142,7 @@ export function WorkspaceBlockDetailTabs({
                     </div>
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                        Example questions
+                        Sample questions
                       </p>
                       {examples.questions.length > 0 ? (
                         <ul
@@ -161,7 +164,7 @@ export function WorkspaceBlockDetailTabs({
                         </ul>
                       ) : (
                         <p className="mt-1.5 text-[11px] text-neutral-600">
-                          No example questions yet.
+                          No sample questions yet.
                         </p>
                       )}
                     </div>

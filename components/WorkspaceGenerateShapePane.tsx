@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildSkillGridLayout,
-  formatGridCoordinate,
   getWeightedNeighborhood,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
@@ -228,22 +227,17 @@ export function WorkspaceGenerateShapePane({
     }
   };
 
-  const subtitle = shapeFootprint
-    ? `${cells.length} cell${cells.length === 1 ? "" : "s"} · bbox ${shapeFootprint.span_w}×${shapeFootprint.span_h} at ${formatGridCoordinate(shapeFootprint.position_y, shapeFootprint.position_x)}`
-    : `${cells.length} cells`;
-
   return (
     <WorkspaceRightPaneDrawer
       paneKind="generate_shape"
       surfaceDataAttr="data-workspace-generate-shape-pane"
       title={labels.generateShape || "Generate block in shape"}
-      subtitle={subtitle}
       bodyClassName="space-y-3"
     >
       <div
         data-generate-shape-dialog
         data-selected-empty-count={cells.length}
-        className="contents"
+        className="space-y-3"
       >
         {!shapeFreeform.ok && shapeFootprint ? (
           <p className="text-[11px] text-amber-400/90" data-shape-not-contiguous>
@@ -256,7 +250,7 @@ export function WorkspaceGenerateShapePane({
           </p>
         )}
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="mb-1 flex items-center justify-between gap-2 pb-1">
           <button
             type="button"
             data-suggest-shape-topics

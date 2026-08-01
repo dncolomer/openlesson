@@ -67,6 +67,11 @@ interface SessionListProps {
    */
   onEmptySelectionChange?: (cells: Array<{ row: number; col: number }> | null) => void;
   /**
+   * Multi-selected filled block ids (2+ → parent shows combine surface).
+   * Null/[] clears combine.
+   */
+  onSelectedBlockIdsChange?: (blockIds: string[] | null) => void;
+  /**
    * @deprecated Prefer onEmptySelectionChange.
    * Single empty placeable cell for right-pane Add block (null clears).
    */
@@ -143,6 +148,7 @@ export function SessionList({
   expandedNodeId: expandedNodeIdProp,
   onExpandedNodeIdChange,
   onEmptySelectionChange,
+  onSelectedBlockIdsChange,
   onAddTargetChange,
   unusableCells = null,
   onMapGround,
@@ -399,15 +405,31 @@ export function SessionList({
               // Opening a block clears empty create surfaces (right-pane hosts only).
               if (blockId && onEmptySelectionChange) onEmptySelectionChange(null);
               if (blockId && onAddTargetChange) onAddTargetChange(null);
+              if (blockId && onSelectedBlockIdsChange) onSelectedBlockIdsChange(null);
               setExpandedNodeId(blockId);
             }}
+            onSelectedBlockIdsChange={
+              onSelectedBlockIdsChange
+                ? (ids) => {
+                    if (ids && ids.length >= 2) {
+                      setExpandedNodeId(null);
+                      if (onEmptySelectionChange) onEmptySelectionChange(null);
+                      if (onAddTargetChange) onAddTargetChange(null);
+                    }
+                    onSelectedBlockIdsChange(ids);
+                  }
+                : undefined
+            }
             // Only wire when parent hosts right-pane empty create. A always-defined
             // wrapper would force useRightPaneEmpty and break local fallback
             // (e.g. WorkspaceChat SessionList without these props).
             onEmptySelectionChange={
               onEmptySelectionChange
                 ? (cells) => {
-                    if (cells && cells.length > 0) setExpandedNodeId(null);
+                    if (cells && cells.length > 0) {
+                      setExpandedNodeId(null);
+                      if (onSelectedBlockIdsChange) onSelectedBlockIdsChange(null);
+                    }
                     onEmptySelectionChange(cells);
                   }
                 : undefined

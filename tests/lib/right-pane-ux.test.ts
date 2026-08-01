@@ -122,11 +122,11 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).toContain("data-block-detail-mini-tabs");
     expect(detail).toContain("data-block-detail-drawers");
     expect(detail).toContain('drawerId="local"');
-    expect(detail).toContain('drawerId="examples"');
+    expect(detail).toContain('drawerId="simulation"');
     expect(detail).toContain('drawerId="detail"');
     expect(detail).toContain('title="Local context"');
-    expect(detail).toContain('title="Examples"');
-    // Local drawer expands when materials already attached; examples stay collapsed.
+    expect(detail).toContain('title="Simulation"');
+    // Local drawer expands when materials already attached; simulation stays collapsed.
     expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
     expect(detail).toContain("defaultExpanded={false}");
     expect(detail).toContain("hasLocalMaterials");
@@ -144,9 +144,15 @@ describe("desktop layout + block detail chrome", () => {
     expect(tools).toContain("edit is omitted");
     expect(detail).not.toContain('prompt: "Prompt"');
     expect(detail).not.toContain("WorkspacePromptImpactPanel");
-    expect(detail).toContain("Example questions");
-    expect(detail).toContain("Topics this block explores");
+    expect(detail).toContain("WorkspaceBlockSimulationPanel");
     expect(detail).not.toContain("data-block-detail-close");
+
+    const simPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
+    expect(simPanel).toContain("data-simulation-regenerate");
+    expect(simPanel).toContain("/api/workspace/block-content-samples");
+    expect(simPanel).toContain("data-simulation-questions");
+    expect(simPanel).toContain("data-simulation-exercises");
+    expect(simPanel).not.toContain("data-simulation-audience");
 
     const local = read("components/WorkspaceBlockLocalContextPanel.tsx");
     expect(local).not.toContain("WorkspacePromptImpactPanel");
@@ -155,13 +161,13 @@ describe("desktop layout + block detail chrome", () => {
     expect(local).toContain('data-block-local-authoring');
     expect(local).not.toMatch(/rounded-xl border[\s\S]{0,40}rounded-xl border/);
 
-    expect(BLOCK_DETAIL_MINI_TABS).toEqual(["local", "examples"]);
+    expect(BLOCK_DETAIL_MINI_TABS).toEqual(["local", "simulation"]);
     expect(BLOCK_DETAIL_MINI_TABS).not.toContain("prompt" as never);
-    expect(nextBlockDetailMiniTab("local", "examples")).toBe("examples");
+    expect(nextBlockDetailMiniTab("local", "simulation")).toBe("simulation");
     expect(nextBlockDetailMiniTab("local", "prompt")).toBe("local");
     expect(nextBlockDetailMiniTab("local", "nope")).toBe("local");
-    expect(resolveExclusiveBlockDetailDrawer("local", "examples")).toBe("examples");
-    expect(resolveExclusiveBlockDetailDrawer("examples", "local")).toBe("local");
+    expect(resolveExclusiveBlockDetailDrawer("local", "simulation")).toBe("simulation");
+    expect(resolveExclusiveBlockDetailDrawer("simulation", "local")).toBe("local");
     expect(resolveExclusiveBlockDetailDrawer("local", "prompt")).toBe("local");
 
     const examples = deriveBlockExampleTopics({
@@ -196,7 +202,7 @@ describe("desktop layout + block detail chrome", () => {
         "hasPromptTab=" + BLOCK_DETAIL_MINI_TABS.includes("prompt" as never),
         "drawersMarker=" + detail.includes("data-block-detail-drawers"),
         "peerLocal=" + detail.includes('drawerId="local"'),
-        "peerExamples=" + detail.includes('drawerId="examples"'),
+        "peerSimulation=" + detail.includes('drawerId="simulation"'),
         "localCollapsed=" +
           /drawerId="local"[\s\S]*?defaultExpanded=\{false\}/.test(detail),
         "nextInvalidStaysLocal=" +

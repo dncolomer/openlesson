@@ -109,6 +109,11 @@ interface BlockSkillGridProps {
   /** Focus / open block detail. Null clears focus (e.g. Select mode closes practice drawer). */
   onSelectNode: (blockId: string | null) => void;
   /**
+   * Filled-block multi-select for the right pane:
+   * 2+ ids → combine surface; 0/1 → clear combine (single still uses onSelectNode).
+   */
+  onSelectedBlockIdsChange?: (blockIds: string[] | null) => void;
+  /**
    * Empty-cell selection for the right pane:
    * 1 placeable → single Add; 2+ placeable → generate-in-shape form.
    * Null/[] clears. When omitted, local fallbacks still apply.
@@ -398,6 +403,7 @@ export function BlockSkillGrid({
   selectedNodeId,
   focusedNodeId = null,
   onSelectNode,
+  onSelectedBlockIdsChange,
   onEmptySelectionChange,
   onAddTargetChange,
   canEdit,
@@ -431,6 +437,7 @@ export function BlockSkillGrid({
   const [localPendingCell, setLocalPendingCell] = useState<GridCell | null>(null);
   /** Ref so lasso endDrag (defined earlier) can call the latest emit helper. */
   const emitEmptySelectionRef = useRef<(cells: readonly GridCell[]) => void>(() => {});
+  const emitFilledBlockSelectionRef = useRef<(ids: readonly string[]) => void>(() => {});
   const viewportRef = useRef<HTMLDivElement>(null);
   const hasInitialCenterRef = useRef(false);
   const panMovedRef = useRef(false);
@@ -898,6 +905,7 @@ export function BlockSkillGrid({
 
         if (resolved.mode === "empty") {
           // Drive right-pane single Add / multi generate-shape from empty hits.
+          emitFilledBlockSelectionRef.current([]);
           emitEmptySelectionRef.current(resolved.selectedEmptyCells);
           if (selectedNodeId) onSelectNode(null);
         } else if (resolved.mode === "blocks") {
@@ -906,10 +914,11 @@ export function BlockSkillGrid({
           setShapePromptOpen(false);
           onEmptySelectionChange?.(null);
           onAddTargetChange?.(null);
-          // Side panel: open when exactly one block was lassoed.
+          emitFilledBlockSelectionRef.current(resolved.selectedBlockIds);
+          // Side panel: one block → detail; 2+ → combine (parent via multi ids).
           if (resolved.selectedBlockIds.length === 1) {
             onSelectNode(resolved.selectedBlockIds[0]);
-          } else if (selectedNodeId) {
+          } else {
             onSelectNode(null);
           }
         } else {
@@ -917,6 +926,7 @@ export function BlockSkillGrid({
           setShapePromptOpen(false);
           onEmptySelectionChange?.(null);
           onAddTargetChange?.(null);
+          emitFilledBlockSelectionRef.current([]);
           if (selectedNodeId) onSelectNode(null);
         }
         return;
@@ -995,13 +1005,28 @@ export function BlockSkillGrid({
     setLocalPendingCell(null);
     onEmptySelectionChange?.(null);
     onAddTargetChange?.(null);
-  }, [onAddTargetChange, onEmptySelectionChange]);
+    onSelectedBlockIdsChange?.(null);
+  }, [onAddTargetChange, onEmptySelectionChange, onSelectedBlockIdsChange]);
 
   /**
    * Sole writer for filled-block multi-select.
    * Ref is source of truth (never overwritten by a state-mirroring useEffect).
    * multi=true → toggle membership; multi=false → replace with [blockId].
    */
+  const emitFilledBlockSelection = useCallback(
+    (ids: readonly string[]) => {
+      if (!onSelectedBlockIdsChange) return;
+      if (ids.length >= 2) {
+        onSelectedBlockIdsChange([...ids]);
+      } else {
+        // Single/zero: combine surface clears; single detail still via onSelectNode.
+        onSelectedBlockIdsChange(null);
+      }
+    },
+    [onSelectedBlockIdsChange],
+  );
+  emitFilledBlockSelectionRef.current = emitFilledBlockSelection;
+
   const applyBlockSelection = useCallback((blockId: string, multi: boolean): string[] => {
     const prev = selectedBlockIdsRef.current;
     const nextIds = toggleOrReplaceBlockSelectionPure({
@@ -1011,6 +1036,7 @@ export function BlockSkillGrid({
     });
     selectedBlockIdsRef.current = nextIds;
     setSelectedBlockIds(nextIds);
+    emitFilledBlockSelection(nextIds);
     if (selectedEmptyCellsRef.current.length > 0) {
       selectedEmptyCellsRef.current = [];
       setSelectedEmptyCells([]);
@@ -1021,7 +1047,7 @@ export function BlockSkillGrid({
     onEmptySelectionChange?.(null);
     onAddTargetChange?.(null);
     return nextIds;
-  }, [onAddTargetChange, onEmptySelectionChange]);
+  }, [emitFilledBlockSelection, onAddTargetChange, onEmptySelectionChange]);
 
   const manipulationMode = isBlockMapManipulationMode(activeTool, {
     canEdit,
@@ -1060,8 +1086,11 @@ export function BlockSkillGrid({
       const nextIds = applyBlockSelection(blockId, multiModifier);
       if (nextIds.length === 0) {
         onSelectNode(null);
-      } else if (!multiModifier || nextIds.length === 1) {
+      } else if (nextIds.length === 1) {
         onSelectNode(nextIds[0]);
+      } else {
+        // Multi filled → combine surface; clear single-block detail focus.
+        onSelectNode(null);
       }
     },
     [activeTool, applyBlockSelection, canEdit, manipulationMode, onSelectNode],
@@ -1124,11 +1153,13 @@ export function BlockSkillGrid({
       // ── Select tool: plain click = single-select (re-click sole → clear); Shift multi ──
       if (canEdit && tool === "select") {
         const nextIds = applyBlockSelection(blockId, multiModifier);
-        // Side panel: sole selection opens detail; empty selection closes it.
+        // Side panel: sole → detail; multi → combine; empty → close detail.
         if (nextIds.length === 0) {
           onSelectNode(null);
-        } else if (!multiModifier || nextIds.length === 1) {
+        } else if (nextIds.length === 1) {
           onSelectNode(nextIds[0]);
+        } else {
+          onSelectNode(null);
         }
         // Swallow the synthetic click so we don't apply twice.
         suppressBlockClickRef.current = true;
@@ -1142,6 +1173,7 @@ export function BlockSkillGrid({
         const nextIds = applyBlockSelection(blockId, true);
         if (nextIds.length === 0) onSelectNode(null);
         else if (nextIds.length === 1) onSelectNode(nextIds[0]);
+        else onSelectNode(null);
         suppressBlockClickRef.current = true;
         return;
       }
@@ -1150,10 +1182,16 @@ export function BlockSkillGrid({
       const prev = selectedBlockIdsRef.current;
       const nextIds =
         prev.includes(blockId) && prev.length > 1 ? [...prev] : applyBlockSelection(blockId, false);
+      // Keep emit in sync when reusing multi-group without re-apply.
+      if (prev.includes(blockId) && prev.length > 1) {
+        emitFilledBlockSelection(nextIds);
+      }
       if (nextIds.length === 0) {
         onSelectNode(null);
       } else if (nextIds.length === 1) {
         onSelectNode(nextIds[0]);
+      } else {
+        onSelectNode(null);
       }
       if (!onGridOp || nextIds.length === 0) return;
 
@@ -1167,7 +1205,14 @@ export function BlockSkillGrid({
       setBlockDragOffset(null);
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     },
-    [applyBlockSelection, canEdit, manipulationMode, onGridOp, onSelectNode],
+    [
+      applyBlockSelection,
+      canEdit,
+      emitFilledBlockSelection,
+      manipulationMode,
+      onGridOp,
+      onSelectNode,
+    ],
   );
 
   const handleBlockPointerMove = useCallback(

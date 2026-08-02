@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   blockHasAttachedLocalContext,
   buildSkillGridLayout,
@@ -28,14 +35,21 @@ import {
 } from "@/lib/add-block-range-density";
 import {
   areBlocksContiguous,
+  buildOccupancyFromPlaced,
+  footprintFromBlock,
   footprintFromCells,
   freeformCellExternalEdges,
   freeformLabelCell,
   freeformShapeKeySet,
   freeformTilePixelSize,
   normalizeSpan,
+  parseShapeCells,
+  previewStretchBlockFromHandle,
   selectionIsFreeformLectureShape,
+  STRETCH_HANDLES,
+  stretchBlockFromHandle,
   type PlacedBlockRef,
+  type StretchHandle,
 } from "@/lib/skill-grid-ops";
 import {
   DEFAULT_BLOCK_MAP_MODE,
@@ -175,15 +189,17 @@ interface BlockSkillGridProps {
   /** Pan to this cell when it changes (e.g. after loading a chapter). */
   followCell?: GridCell | null;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
-  /** Multi-select / multi-cell / merge / split / move ops (workspace builder). */
+  /** Multi-select / multi-cell / merge / split / move / resize ops (workspace builder). */
   onGridOp?: (payload: {
-    op: "generate_shape" | "merge" | "split" | "move" | "update_block" | "delete_block";
+    op: "generate_shape" | "merge" | "split" | "move" | "resize" | "update_block" | "delete_block";
     prompt?: string;
     cells?: Array<{ row: number; col: number }>;
     blockIds?: string[];
     dRow?: number;
     dCol?: number;
     blockId?: string;
+    /** Edge/corner stretch handle for resize. */
+    handle?: StretchHandle;
     title?: string;
     description?: string;
     /** Context source keys for generate_shape (file:/external:/notes). */
@@ -610,6 +626,20 @@ export function BlockSkillGrid({
   /** Ids participating in the active move drag (sole or multi) — drives drag chrome. */
   const [blockDragIds, setBlockDragIds] = useState<string[] | null>(null);
 
+  /**
+   * Sole-block edge/corner stretch: preview-only until pointerup settles via resize op.
+   * Distinct from body move-drag so handle pointers never arm translate.
+   */
+  const stretchDragRef = useRef<{
+    pointerId: number;
+    blockId: string;
+    handle: StretchHandle;
+    originRow: number;
+    originCol: number;
+    moved: boolean;
+  } | null>(null);
+  const [stretchPreview, setStretchPreview] = useState<PlacedBlockRef | null>(null);
+
   /** Generate-in-shape / merge dialogs still use local prompt + suggest (not single-cell add). */
   const [prompt, setPrompt] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -658,6 +688,8 @@ export function BlockSkillGrid({
     multiModifier: boolean;
     panning: boolean;
   } | null>(null);
+  /** Swallow synthetic click only after empty-cell pan (not shared with block select). */
+  const suppressEmptyClickRef = useRef(false);
   /** Explicit prereq-edit: target + staged prereqs; confirm/cancel write or discard. */
   const [prereqEdit, setPrereqEdit] = useState<PrereqEditState>(EMPTY_PREREQ_EDIT);
   const prereqEditRef = useRef<PrereqEditState>(EMPTY_PREREQ_EDIT);
@@ -678,6 +710,23 @@ export function BlockSkillGrid({
   const { occupancy, placements, spans, startCell } = useMemo(
     () => buildSkillGridLayout(nodes),
     [nodes],
+  );
+  /** Placed refs + occupancy for stretch preview/settle (honors freeform masks). */
+  const placedBlocksForStretch = useMemo((): PlacedBlockRef[] => {
+    return nodes
+      .filter((n) => n.position_x != null && n.position_y != null)
+      .map((n) => ({
+        id: n.id,
+        position_x: n.position_x!,
+        position_y: n.position_y!,
+        span_w: normalizeSpan(n.span_w),
+        span_h: normalizeSpan(n.span_h),
+        shape_cells: parseShapeCells(n.shape_cells ?? null),
+      }));
+  }, [nodes]);
+  const stretchOccupancy = useMemo(
+    () => buildOccupancyFromPlaced(placedBlocksForStretch),
+    [placedBlocksForStretch],
   );
   /**
    * Blocks occupying any cell of a running radius/density expand job — not clickable
@@ -1683,9 +1732,10 @@ export function BlockSkillGrid({
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
       // Lasso modes own the gesture — never open add or select empties from click.
       if (isLassoModeTool(activeToolRef.current)) return;
-      // Swallow after empty-cell pan (pointer path).
-      if (suppressBlockClickRef.current) {
-        suppressBlockClickRef.current = false;
+      // Swallow only after empty-cell pan (do NOT share suppressBlockClickRef —
+      // block click-and-drag left that true and blocked every empty select).
+      if (suppressEmptyClickRef.current) {
+        suppressEmptyClickRef.current = false;
         event.preventDefault?.();
         event.stopPropagation?.();
         return;
@@ -1957,6 +2007,146 @@ export function BlockSkillGrid({
     ],
   );
 
+  /**
+   * Sole-select stretch: edge/corner handle owns the gesture (not body move).
+   * Preview on move; settle via resize op on pointerup only.
+   * Window listeners keep the gesture alive if freeform→solid remounts handles.
+   */
+  const endStretchDrag = useCallback(
+    (clientX: number, clientY: number, pointerId: number) => {
+      const drag = stretchDragRef.current;
+      if (!drag || drag.pointerId !== pointerId) return;
+      stretchDragRef.current = null;
+      setStretchPreview(null);
+
+      if (!drag.moved) return;
+
+      const cell = resolveCellFromClient(clientX, clientY);
+      if (!cell) return;
+      const delta = blockDragMoveDelta(
+        { row: drag.originRow, col: drag.originCol },
+        cell,
+      );
+      if (delta.dRow === 0 && delta.dCol === 0) return;
+
+      const source = placedBlocksForStretch.find((b) => b.id === drag.blockId);
+      if (!source) return;
+      // Pure settle gate — only persist when helper accepts the target.
+      const settled = stretchBlockFromHandle(
+        source,
+        drag.handle,
+        delta.dRow,
+        delta.dCol,
+        stretchOccupancy,
+      );
+      if (!settled) return;
+
+      suppressBlockClickRef.current = true;
+      void runGridOp({
+        op: "resize",
+        blockId: drag.blockId,
+        handle: drag.handle,
+        dRow: delta.dRow,
+        dCol: delta.dCol,
+      });
+    },
+    [
+      placedBlocksForStretch,
+      resolveCellFromClient,
+      runGridOp,
+      stretchOccupancy,
+    ],
+  );
+
+  const handleStretchPointerDown = useCallback(
+    (blockId: string, handle: StretchHandle, event: React.PointerEvent) => {
+      if (!canEdit || busy || !onGridOp) return;
+      if (event.button !== 0) return;
+      if (selectedBlockIdsRef.current.length !== 1) return;
+      if (selectedBlockIdsRef.current[0] !== blockId) return;
+      if (generationLockedBlockIdsRef.current.has(blockId)) return;
+
+      event.stopPropagation();
+      event.preventDefault();
+      // Cancel any body-move arm so handle drag never translates.
+      blockDragRef.current = null;
+      setBlockDragOffset(null);
+      setBlockDragIds(null);
+      pendingSelectClickRef.current = null;
+
+      const cell = resolveCellFromClient(event.clientX, event.clientY);
+      if (!cell) return;
+
+      const pointerId = event.pointerId;
+      stretchDragRef.current = {
+        pointerId,
+        blockId,
+        handle,
+        originRow: cell.row,
+        originCol: cell.col,
+        moved: false,
+      };
+      const source = placedBlocksForStretch.find((b) => b.id === blockId);
+      if (source) {
+        // Immediate solid-bbox preview so freeform remounts into solid path once.
+        const bbox = footprintFromBlock(source);
+        setStretchPreview({
+          id: source.id,
+          position_x: bbox.position_x,
+          position_y: bbox.position_y,
+          span_w: bbox.span_w,
+          span_h: bbox.span_h,
+          shape_cells: null,
+        });
+      }
+      suppressBlockClickRef.current = true;
+
+      const onMove = (ev: PointerEvent) => {
+        const drag = stretchDragRef.current;
+        if (!drag || drag.pointerId !== ev.pointerId) return;
+        const nextCell = resolveCellFromClient(ev.clientX, ev.clientY);
+        if (!nextCell) return;
+        const delta = blockDragMoveDelta(
+          { row: drag.originRow, col: drag.originCol },
+          nextCell,
+        );
+        if (delta.dRow !== 0 || delta.dCol !== 0) {
+          drag.moved = true;
+          suppressBlockClickRef.current = true;
+        }
+        const src = placedBlocksForStretch.find((b) => b.id === drag.blockId);
+        if (!src) return;
+        setStretchPreview(
+          previewStretchBlockFromHandle(
+            src,
+            drag.handle,
+            delta.dRow,
+            delta.dCol,
+            stretchOccupancy,
+          ),
+        );
+      };
+      const onUp = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        endStretchDrag(ev.clientX, ev.clientY, pointerId);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    [
+      busy,
+      canEdit,
+      endStretchDrag,
+      onGridOp,
+      placedBlocksForStretch,
+      resolveCellFromClient,
+      stretchOccupancy,
+    ],
+  );
+
   const handleEmptyCellPointerDown = useCallback(
     (cell: GridCell, event: React.PointerEvent) => {
       if (
@@ -1974,10 +2164,14 @@ export function BlockSkillGrid({
       if (!canEdit || busy) return;
 
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
-      // Shift multi-select: keep click path only.
-      if (multiModifier) return;
+      // Shift multi-select: let the normal click path handle it.
+      if (multiModifier) {
+        emptyCellPointerRef.current = null;
+        return;
+      }
 
-      event.stopPropagation();
+      // Arm pan-vs-click only — do not capture yet (capture before pan breaks click).
+      // Selection happens on onClick when !panning so single-click Add is reliable.
       emptyCellPointerRef.current = {
         pointerId: event.pointerId,
         cell: { row: cell.row, col: cell.col },
@@ -1986,7 +2180,6 @@ export function BlockSkillGrid({
         multiModifier: false,
         panning: false,
       };
-      (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     },
     [beginViewportPan, busy, canEdit],
   );
@@ -2009,7 +2202,7 @@ export function BlockSkillGrid({
         })
       ) {
         arm.panning = true;
-        suppressBlockClickRef.current = true;
+        suppressEmptyClickRef.current = true;
         panMovedRef.current = true;
         dragRef.current = {
           pointerId: event.pointerId,
@@ -2018,6 +2211,8 @@ export function BlockSkillGrid({
           panStartX: pan.x,
           panStartY: pan.y,
         };
+        // Capture only once pan starts so a pure click still generates onClick.
+        (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
       }
       if (arm.panning && dragRef.current?.pointerId === event.pointerId) {
         const drag = dragRef.current;
@@ -2033,21 +2228,26 @@ export function BlockSkillGrid({
   const handleEmptyCellPointerUp = useCallback(
     (event: React.PointerEvent) => {
       const arm = emptyCellPointerRef.current;
-      if (!arm || arm.pointerId !== event.pointerId) return;
+      if (!arm || arm.pointerId !== event.pointerId) {
+        // Stale up without arm — clear capture if any.
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+          (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+        }
+        return;
+      }
       emptyCellPointerRef.current = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
       }
       if (arm.panning) {
         dragRef.current = null;
-        suppressBlockClickRef.current = true;
+        // Keep suppressEmptyClickRef true so the following click is ignored.
+        suppressEmptyClickRef.current = true;
         return;
       }
-      // Click: select empty / open Add (existing handler).
-      handleEmptyCellClick(arm.cell, event as unknown as React.MouseEvent);
-      suppressBlockClickRef.current = true;
+      // Pure click: selection is applied by onClick (do not double-apply here).
     },
-    [handleEmptyCellClick],
+    [],
   );
 
   if (nodes.length === 0 && !canEdit) {
@@ -2258,6 +2458,74 @@ export function BlockSkillGrid({
     lassoShape,
   });
   const canDragBlocks = allowsBlockDragInMode(activeTool, Boolean(onGridOp));
+  /**
+   * Stretch handles only when exactly one block is selected (sole selection),
+   * edit + grid-ops available, not in prereq-edit. Multi-select / empty omit them.
+   */
+  const soleStretchBlockId =
+    canEdit &&
+    canDragBlocks &&
+    !prereqEdit.active &&
+    !busy &&
+    selectedBlockIds.length === 1
+      ? selectedBlockIds[0]
+      : null;
+
+  const stretchHandleStyle = (handle: StretchHandle): CSSProperties => {
+    const base: CSSProperties = {
+      position: "absolute",
+      width: 10,
+      height: 10,
+      borderRadius: 2,
+      zIndex: 30,
+      boxSizing: "border-box",
+    };
+    switch (handle) {
+      case "n":
+        return { ...base, top: -5, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" };
+      case "s":
+        return { ...base, bottom: -5, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" };
+      case "e":
+        return { ...base, right: -5, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" };
+      case "w":
+        return { ...base, left: -5, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" };
+      case "ne":
+        return { ...base, top: -5, right: -5, cursor: "nesw-resize" };
+      case "nw":
+        return { ...base, top: -5, left: -5, cursor: "nwse-resize" };
+      case "se":
+        return { ...base, bottom: -5, right: -5, cursor: "nwse-resize" };
+      case "sw":
+        return { ...base, bottom: -5, left: -5, cursor: "nesw-resize" };
+      default:
+        return base;
+    }
+  };
+
+  const renderStretchHandles = (blockId: string) => {
+    if (soleStretchBlockId !== blockId) return null;
+    if (generationLockedBlockIds.has(blockId)) return null;
+    return (
+      <div
+        className="pointer-events-none absolute inset-0"
+        data-stretch-handles
+        data-stretch-block={blockId}
+      >
+        {STRETCH_HANDLES.map((handle) => (
+          <div
+            key={handle}
+            role="presentation"
+            data-stretch-handle={handle}
+            data-stretch-block={blockId}
+            className="pointer-events-auto border border-white/90 bg-sky-400 shadow-sm hover:bg-sky-300"
+            style={stretchHandleStyle(handle)}
+            title={`Stretch ${handle.toUpperCase()}`}
+            onPointerDown={(e) => handleStretchPointerDown(blockId, handle, e)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderToolButton = (tool: BlockMapToolId) => {
     const enabled = isBlockMapToolEnabled(tool, toolEnablement);
@@ -2657,11 +2925,9 @@ export function BlockSkillGrid({
                   data-empty-preview={previewEmpty && !selectedEmpty ? "true" : "false"}
                   data-generation-pending={generationPending ? "true" : "false"}
                   onClick={(e) => {
-                    // Multi-modifier still uses click; plain clicks go through pointer up
-                    // after empty-drag pan disambiguation.
-                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
-                      handleEmptyCellClick(cell, e);
-                    }
+                    // Primary path for empty select / Add (plain + Shift multi).
+                    // Empty pan sets suppressEmptyClickRef so this is skipped.
+                    handleEmptyCellClick(cell, e);
                   }}
                   onPointerDown={(e) => handleEmptyCellPointerDown(cell, e)}
                   onPointerMove={handleEmptyCellPointerMove}
@@ -2715,16 +2981,37 @@ export function BlockSkillGrid({
             const node = nodesById.get(blockId);
             const nodeCell = placements.get(blockId);
             if (!node || !nodeCell) return null;
-            const span = spans.get(blockId) || {
+            const baseSpan = spans.get(blockId) || {
               span_w: normalizeSpan(node.span_w),
               span_h: normalizeSpan(node.span_h),
             };
-            const occupiedCells = skillNodeOccupiedCells(node);
-            const freeform =
-              Array.isArray(node.shape_cells) &&
-              node.shape_cells.length > 0 &&
-              occupiedCells.length > 0 &&
-              occupiedCells.length !== span.span_w * span.span_h;
+            // Live stretch preview overrides geometry until mouseup settle (no persist mid-drag).
+            const liveStretch =
+              stretchPreview?.id === blockId ? stretchPreview : null;
+            const span = liveStretch
+              ? {
+                  span_w: normalizeSpan(liveStretch.span_w),
+                  span_h: normalizeSpan(liveStretch.span_h),
+                }
+              : baseSpan;
+            const renderCell = liveStretch
+              ? { row: liveStretch.position_y, col: liveStretch.position_x }
+              : nodeCell;
+            // During stretch preview always draw solid rect of the candidate bbox.
+            const occupiedCells = liveStretch
+              ? Array.from({ length: span.span_h }, (_, dr) =>
+                  Array.from({ length: span.span_w }, (_, dc) => ({
+                    row: renderCell.row + dr,
+                    col: renderCell.col + dc,
+                  })),
+                ).flat()
+              : skillNodeOccupiedCells(node);
+            const freeform = liveStretch
+              ? false
+              : Array.isArray(node.shape_cells) &&
+                node.shape_cells.length > 0 &&
+                occupiedCells.length > 0 &&
+                occupiedCells.length !== span.span_w * span.span_h;
             // Map selection chrome follows selectedBlockIds only (drag set source of
             // truth). Do not also paint selectedNodeId / focusedNodeId as selected —
             // that made lasso multi-select look broader than the drag membership.
@@ -2833,6 +3120,7 @@ export function BlockSkillGrid({
                 ? "dashed"
                 : "solid";
               const freeformBorderWidth = isPrereqHighlight ? 2 : 1;
+              const freeformBbox = footprintFromCells(occupiedCells);
               return (
                 <div
                   key={`block-${node.id}`}
@@ -2980,6 +3268,26 @@ export function BlockSkillGrid({
                       </div>
                     );
                   })}
+                  {/* BBox stretch chrome for freeform sole-select (solid rect of bbox). */}
+                  {freeformBbox && soleStretchBlockId === node.id ? (
+                    <div
+                      className="pointer-events-none absolute"
+                      data-stretch-bbox={node.id}
+                      style={{
+                        left: freeformBbox.position_x * SKILL_GRID_PITCH + dragDx,
+                        top: freeformBbox.position_y * SKILL_GRID_PITCH + dragDy,
+                        width:
+                          freeformBbox.span_w * SKILL_GRID_CELL_SIZE +
+                          (freeformBbox.span_w - 1) * SKILL_GRID_GAP,
+                        height:
+                          freeformBbox.span_h * SKILL_GRID_CELL_SIZE +
+                          (freeformBbox.span_h - 1) * SKILL_GRID_GAP,
+                        zIndex: 6,
+                      }}
+                    >
+                      {renderStretchHandles(node.id)}
+                    </div>
+                  ) : null}
                 </div>
               );
             }
@@ -2995,11 +3303,16 @@ export function BlockSkillGrid({
                 data-skill-cell
                 className="absolute"
                 style={{
-                  left: nodeCell.col * SKILL_GRID_PITCH + dragDx,
-                  top: nodeCell.row * SKILL_GRID_PITCH + dragDy,
+                  left: renderCell.col * SKILL_GRID_PITCH + dragDx,
+                  top: renderCell.row * SKILL_GRID_PITCH + dragDy,
                   width,
                   height,
-                  zIndex: isDragParticipant && blockDragOffset ? 5 : undefined,
+                  zIndex:
+                    isDragParticipant && blockDragOffset
+                      ? 5
+                      : liveStretch
+                        ? 5
+                        : undefined,
                 }}
               >
                 <button
@@ -3011,6 +3324,7 @@ export function BlockSkillGrid({
                   data-block-has-local-context={hasLocalContext ? "true" : "false"}
                   data-block-generation-locked={generationLocked ? "true" : "false"}
                   data-block-highlight={highlightRole}
+                  data-block-stretch-preview={liveStretch ? "true" : undefined}
                   data-block-map-draggable={
                     generationLocked
                       ? undefined
@@ -3059,7 +3373,7 @@ export function BlockSkillGrid({
                   }
                 >
                   <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
-                    {formatGridCoordinate(nodeCell.row, nodeCell.col)}
+                    {formatGridCoordinate(renderCell.row, renderCell.col)}
                     {(span.span_w > 1 || span.span_h > 1) && (
                       <span className="text-neutral-600"> · {span.span_w}×{span.span_h}</span>
                     )}
@@ -3072,6 +3386,7 @@ export function BlockSkillGrid({
                   {localContextBadge}
                   {lockBadge}
                 </button>
+                {renderStretchHandles(node.id)}
               </div>
             );
           })}

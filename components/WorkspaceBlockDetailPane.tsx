@@ -130,7 +130,7 @@ export function WorkspaceBlockDetailPane({
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="simulation"
-        title="Simulation"
+        title="Block Simulation"
         defaultExpanded={false}
         bodyClassName="space-y-3"
       >

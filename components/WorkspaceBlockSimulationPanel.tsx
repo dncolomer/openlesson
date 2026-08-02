@@ -117,6 +117,14 @@ export function WorkspaceBlockSimulationPanel({
   void isStart;
 
   const localNorm = normalizeBlockLocalContext(localContext);
+  // normalizeBlockLocalContext returns fresh arrays every call — depend on
+  // content fingerprints, not array identity, or useEffect loops forever.
+  const localFileNamesKey = [
+    ...localNorm.globalFileRefs,
+    ...localNorm.localFiles.map((f) => f.name),
+  ].join("\0");
+  const externalIdsKey = localNorm.externalResourceIds.join("\0");
+  const lockTitlesKey = (lockUntilTitles ?? []).join("\0");
 
   const seedInput = useMemo(
     () => ({
@@ -126,15 +134,11 @@ export function WorkspaceBlockSimulationPanel({
       localNotes: localContext?.notes ?? null,
       hasLocalContext: localNorm.hasLocalMaterials,
       hasPlanningPrompt: Boolean(planningPrompt?.trim()),
-      lockUntilTitles: lockUntilTitles ?? null,
-      localFileNames: [
-        ...localNorm.globalFileRefs,
-        ...localNorm.localFiles.map((f) => f.name),
-      ],
-      externalLabels:
-        localNorm.externalResourceIds.length > 0
-          ? localNorm.externalResourceIds.map((id) => id.slice(0, 8))
-          : null,
+      lockUntilTitles: lockTitlesKey ? lockTitlesKey.split("\0") : null,
+      localFileNames: localFileNamesKey ? localFileNamesKey.split("\0") : [],
+      externalLabels: externalIdsKey
+        ? externalIdsKey.split("\0").map((id) => id.slice(0, 8))
+        : null,
     }),
     [
       blockTitle,
@@ -142,10 +146,9 @@ export function WorkspaceBlockSimulationPanel({
       planningPrompt,
       localContext?.notes,
       localNorm.hasLocalMaterials,
-      localNorm.globalFileRefs,
-      localNorm.localFiles,
-      localNorm.externalResourceIds,
-      lockUntilTitles,
+      localFileNamesKey,
+      externalIdsKey,
+      lockTitlesKey,
     ],
   );
 

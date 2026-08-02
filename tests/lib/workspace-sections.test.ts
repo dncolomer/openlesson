@@ -29,6 +29,7 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.localTabs).not.toContain("integration");
     expect(layout.mountsPerformancePanel).toBe(false);
     expect(layout.mountsIntegrationPanel).toBe(false);
+    expect(layout.mountsSimulationPanel).toBe(false);
   });
 
   it("maps Context section to notes/files surface without block-map chrome", () => {
@@ -36,6 +37,19 @@ describe("resolveWorkspaceSectionLayout", () => {
 
     expect(layout.mainSurface).toBe("context");
     expect(layout.mountsContextPanel).toBe(true);
+    expect(layout.mountsSimulationPanel).toBe(false);
+    expect(layout.showBlockMapChrome).toBe(false);
+    expect(layout.showSessionsColumn).toBe(false);
+    expect(layout.mountsPerformancePanel).toBe(false);
+    expect(layout.mountsIntegrationPanel).toBe(false);
+  });
+
+  it("maps Simulation section after Context: author overview, no map chrome", () => {
+    const layout = resolveWorkspaceSectionLayout("simulation");
+
+    expect(layout.mainSurface).toBe("simulation");
+    expect(layout.mountsSimulationPanel).toBe(true);
+    expect(layout.mountsContextPanel).toBe(false);
     expect(layout.showBlockMapChrome).toBe(false);
     expect(layout.showSessionsColumn).toBe(false);
     expect(layout.mountsPerformancePanel).toBe(false);
@@ -49,6 +63,7 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.showBlockMapChrome).toBe(false);
     expect(layout.showSessionsColumn).toBe(false);
     expect(layout.mountsContextPanel).toBe(false);
+    expect(layout.mountsSimulationPanel).toBe(false);
     expect(layout.localTabs).toEqual([]);
     expect(layout.mountsPerformancePanel).toBe(true);
     expect(layout.mountsIntegrationPanel).toBe(false);
@@ -63,6 +78,7 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.localTabs).toEqual([]);
     expect(layout.mountsPerformancePanel).toBe(false);
     expect(layout.mountsIntegrationPanel).toBe(true);
+    expect(layout.mountsSimulationPanel).toBe(false);
   });
 });
 
@@ -92,32 +108,44 @@ describe("privileged Knowledge + Settings gating", () => {
     expect(resolveActiveSection("knowledge", { isOwner: false, isOrgAdmin: false })).toBe("workspace");
   });
 
-  it("leaves workspace unchanged for all callers", () => {
+  it("leaves workspace and simulation unchanged for all callers", () => {
     expect(resolveActiveSection("workspace", { isOwner: false })).toBe("workspace");
     expect(resolveActiveSection("workspace", { isOwner: true })).toBe("workspace");
     expect(resolveActiveSection("workspace", { isOrgAdmin: true })).toBe("workspace");
+    expect(resolveActiveSection("simulation", { isOwner: false })).toBe("simulation");
+    expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
   });
 });
 
 describe("availableWorkspaceSections", () => {
-  it("includes Context for everyone; Knowledge and Settings only for owners or org admins", () => {
+  it("includes Context then Simulation for everyone; Knowledge/Settings for owners or org admins", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "context",
+      "simulation",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOrgAdmin: true })).toEqual([
       "workspace",
       "context",
+      "simulation",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false, isOrgAdmin: false })).toEqual([
       "workspace",
       "context",
+      "simulation",
     ]);
-    expect(availableWorkspaceSections({})).toEqual(["workspace", "context"]);
+    expect(availableWorkspaceSections({})).toEqual([
+      "workspace",
+      "context",
+      "simulation",
+    ]);
+    // Simulation sits immediately after Context
+    const owner = availableWorkspaceSections({ isOwner: true });
+    expect(owner.indexOf("simulation")).toBe(owner.indexOf("context") + 1);
   });
 });
 

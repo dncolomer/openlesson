@@ -9,12 +9,14 @@ import {
   canPlaceAbsoluteCells,
   canPlaceFootprint,
   freeformShapeFromCells,
+  isStretchHandle,
   mergeBlocksToFreeform,
   normalizeSpan,
   parseShapeCells,
   placedBlockCells,
   selectionIsFreeformLectureShape,
   splitBlocksToSingles,
+  stretchBlockFromHandle,
   translateBlocksPreservingShape,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
@@ -42,6 +44,7 @@ type GridOp =
   | "merge"
   | "split"
   | "move"
+  | "resize"
   | "update_block"
   | "delete_block";
 
@@ -133,6 +136,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       blockId,
+      handle: stretchHandleBody,
       is_start: isStartBody,
       model: userModel,
       locale,
@@ -149,6 +153,8 @@ export async function POST(req: NextRequest) {
       title?: string;
       description?: string;
       blockId?: string;
+      /** Edge/corner id for sole-block stretch resize. */
+      handle?: string;
       /** Author starter flag (update_block / generate_shape). */
       is_start?: boolean;
       model?: string;
@@ -342,6 +348,70 @@ export async function POST(req: NextRequest) {
         planModified: true,
         updatedNodes: updatedNodes || [],
         explanation: `Moved ${next.length} block(s).`,
+      });
+    }
+
+    if (op === "resize") {
+      // Sole-block edge/corner stretch — settle only (client previews without persist).
+      if (!blockId || typeof blockId !== "string") {
+        return NextResponse.json({ error: "blockId required for resize" }, { status: 400 });
+      }
+      if (!isStretchHandle(stretchHandleBody)) {
+        return NextResponse.json({ error: "valid stretch handle required for resize" }, { status: 400 });
+      }
+      const target = placed.find((p) => p.id === blockId);
+      if (!target) {
+        return NextResponse.json({ error: "Block not found or unplaced" }, { status: 400 });
+      }
+      const settled = stretchBlockFromHandle(
+        target,
+        stretchHandleBody,
+        Number(dRow) || 0,
+        Number(dCol) || 0,
+        placedOccupancy,
+      );
+      if (!settled) {
+        return NextResponse.json(
+          { error: "Resize invalid (collision, no-op, or out of bounds)" },
+          { status: 409 },
+        );
+      }
+
+      const { unusableCells: resizeUnusable } = await loadWorkspaceContext(supabase, workspaceId);
+      const resizeCells = placedBlockCells(settled);
+      const ground = canPlaceOnMapGround(resizeCells, resizeUnusable);
+      if (!ground.ok && ground.reason === "unusable") {
+        return NextResponse.json(
+          { error: "Resize lands on unusable ground", code: "unusable_ground" },
+          { status: 409 },
+        );
+      }
+
+      const { error: resizeError } = await supabase
+        .from("blocks")
+        .update({
+          position_x: settled.position_x,
+          position_y: settled.position_y,
+          span_w: settled.span_w ?? 1,
+          span_h: settled.span_h ?? 1,
+          shape_cells: null,
+        })
+        .eq("id", settled.id);
+
+      if (resizeError) {
+        return NextResponse.json({ error: "Failed to resize block" }, { status: 500 });
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        explanation: `Resized block to ${settled.span_w}×${settled.span_h}.`,
       });
     }
 

@@ -1151,6 +1151,9 @@ describe("block-map-tools", () => {
     expect(src).toContain("spaceHeldRef");
     expect(src).toContain("handleEmptyCellPointerDown");
     expect(src).toContain("beginViewportPan");
+    // Empty select must not share block suppress (that blocked empty single-click)
+    expect(src).toContain("suppressEmptyClickRef");
+    expect(src).toContain("handleEmptyCellClick(cell, e)");
     // Pan only when Space/middle (not ordinary primary block click)
     expect(src).toMatch(/isMapPanGesture\(\{[\s\S]*?spaceHeld: spaceHeldRef/);
     // One lasso + shape submenu (not three strip tools)

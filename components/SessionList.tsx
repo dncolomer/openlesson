@@ -328,13 +328,15 @@ export function SessionList({
 
   const handleGridOp = useCallback(
     async (payload: {
-      op: "generate_shape" | "merge" | "split" | "move" | "update_block" | "delete_block";
+      op: "generate_shape" | "merge" | "split" | "move" | "resize" | "update_block" | "delete_block";
       prompt?: string;
       cells?: Array<{ row: number; col: number }>;
       blockIds?: string[];
       dRow?: number;
       dCol?: number;
       blockId?: string;
+      /** Edge/corner stretch handle for sole-block resize. */
+      handle?: string;
       title?: string;
       description?: string;
       contextSourceKeys?: string[];

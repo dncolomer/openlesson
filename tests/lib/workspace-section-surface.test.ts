@@ -63,7 +63,7 @@ describe("resolveSectionIdentityDisplay", () => {
       },
       "settings",
     );
-    expect(display.eyebrow).toBe("Setting");
+    expect(display.eyebrow).toBe("Settings");
     expect(display.showOwnerBadge).toBe(false);
     expect(display.notesPreview).toBeTruthy();
     expect(display.notesPreview!.endsWith("…")).toBe(true);

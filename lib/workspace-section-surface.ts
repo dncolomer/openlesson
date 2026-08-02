@@ -92,7 +92,7 @@ export function resolveSectionIdentityDisplay(
     notes && notes.length > 160 ? `${notes.slice(0, 157)}…` : notes;
 
   return {
-    eyebrow: kind === "knowledge" ? "Knowledge" : "Setting",
+    eyebrow: kind === "knowledge" ? "Knowledge" : "Settings",
     title,
     subtitle: description,
     showOwnerBadge: identity.isOwner === true,

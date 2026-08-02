@@ -27,22 +27,43 @@ const DrawerAccordionContext = createContext<DrawerAccordionContextValue | null>
 /**
  * Accordion group: at most one section drawer open.
  * Opening any drawer collapses the others.
+ * Supports controlled `openId` / `onOpenIdChange` for hosts that react to
+ * which drawer is open (e.g. bridge map preview).
  */
 export function WorkspaceRightPaneDrawerGroup({
   children,
   /** Preferred open id when multiple defaultExpanded (e.g. "detail"). */
   defaultOpenId = null,
+  /** Controlled open drawer id (optional). */
+  openId: openIdControlled,
+  onOpenIdChange,
   className,
   ...dataAttrs
 }: {
   children: ReactNode;
   defaultOpenId?: string | null;
+  openId?: string | null;
+  onOpenIdChange?: (id: string | null) => void;
   className?: string;
   // data-* surface markers (string | boolean for presence attrs)
   [key: `data-${string}`]: string | boolean | undefined;
 }) {
-  const [openId, setOpenId] = useState<string | null>(
+  const [openIdUncontrolled, setOpenIdUncontrolled] = useState<string | null>(
     defaultOpenId ? String(defaultOpenId).trim() || null : null,
+  );
+  const isControlled = openIdControlled !== undefined;
+  const openId = isControlled
+    ? openIdControlled == null
+      ? null
+      : String(openIdControlled).trim() || null
+    : openIdUncontrolled;
+
+  const setOpenId = useCallback(
+    (id: string | null) => {
+      if (!isControlled) setOpenIdUncontrolled(id);
+      onOpenIdChange?.(id);
+    },
+    [isControlled, onOpenIdChange],
   );
 
   const extra: Record<string, string | boolean> = {};
@@ -60,7 +81,7 @@ export function WorkspaceRightPaneDrawerGroup({
         /* open id is owned by the group initial state / parent */
       },
     }),
-    [openId],
+    [openId, setOpenId],
   );
 
   return (

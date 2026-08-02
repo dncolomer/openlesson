@@ -607,3 +607,197 @@ export function relativeOffsets(blocks: PlacedBlockRef[]): Map<string, { dRow: n
   }
   return map;
 }
+
+/**
+ * Edge and corner stretch handles for sole-selected block resize on the map.
+ * Cardinal edges + four corners; product treats stretch as solid-rect bbox expand.
+ */
+export type StretchHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+export const STRETCH_HANDLES: readonly StretchHandle[] = [
+  "n",
+  "s",
+  "e",
+  "w",
+  "ne",
+  "nw",
+  "se",
+  "sw",
+] as const;
+
+export function isStretchHandle(value: unknown): value is StretchHandle {
+  return (
+    typeof value === "string" &&
+    (STRETCH_HANDLES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Compute a candidate solid-rectangle footprint by stretching the block's
+ * bounding box from a handle by cell deltas. Does not check occupancy.
+ * Returns null if the result would be invalid (empty / beyond span limits).
+ *
+ * Handle semantics (dRow positive = south, dCol positive = east):
+ * - n/s move the north/south edge; e/w move east/west; corners move both.
+ * - Opposite edge stays fixed; min size is 1×1; max span via normalizeSpan (24).
+ * - Freeform masks are expanded toward a filled solid rectangle of the new bbox.
+ */
+export function stretchFootprintFromHandle(
+  block: PlacedBlockRef,
+  handle: StretchHandle,
+  dRow: number,
+  dCol: number,
+): BlockFootprint | null {
+  const bbox = footprintFromBlock(block);
+  let minRow = bbox.position_y;
+  let maxRow = bbox.position_y + bbox.span_h - 1;
+  let minCol = bbox.position_x;
+  let maxCol = bbox.position_x + bbox.span_w - 1;
+
+  const movesN = handle === "n" || handle === "ne" || handle === "nw";
+  const movesS = handle === "s" || handle === "se" || handle === "sw";
+  const movesE = handle === "e" || handle === "ne" || handle === "se";
+  const movesW = handle === "w" || handle === "nw" || handle === "sw";
+
+  if (movesN) minRow = minRow + dRow;
+  if (movesS) maxRow = maxRow + dRow;
+  if (movesW) minCol = minCol + dCol;
+  if (movesE) maxCol = maxCol + dCol;
+
+  // Collapse inverted edges to min 1×1 (keep the fixed opposite side).
+  if (minRow > maxRow) {
+    if (movesN && !movesS) minRow = maxRow;
+    else if (movesS && !movesN) maxRow = minRow;
+    else {
+      // Corner / both: pin to smaller range
+      const mid = Math.floor((minRow + maxRow) / 2);
+      minRow = mid;
+      maxRow = mid;
+    }
+  }
+  if (minCol > maxCol) {
+    if (movesW && !movesE) minCol = maxCol;
+    else if (movesE && !movesW) maxCol = minCol;
+    else {
+      const mid = Math.floor((minCol + maxCol) / 2);
+      minCol = mid;
+      maxCol = mid;
+    }
+  }
+
+  const span_w = maxCol - minCol + 1;
+  const span_h = maxRow - minRow + 1;
+  if (span_w < 1 || span_h < 1) return null;
+  // Cap via normalizeSpan (product max 24).
+  const cappedW = normalizeSpan(span_w);
+  const cappedH = normalizeSpan(span_h);
+  // If capped, keep the fixed edge: shrink from the moving side(s).
+  let outMinRow = minRow;
+  let outMinCol = minCol;
+  let outMaxRow = minRow + cappedH - 1;
+  let outMaxCol = minCol + cappedW - 1;
+  if (cappedH < span_h) {
+    if (movesN && !movesS) {
+      outMinRow = maxRow - cappedH + 1;
+      outMaxRow = maxRow;
+    } else if (movesS && !movesN) {
+      outMinRow = minRow;
+      outMaxRow = minRow + cappedH - 1;
+    } else {
+      outMinRow = minRow;
+      outMaxRow = minRow + cappedH - 1;
+    }
+  }
+  if (cappedW < span_w) {
+    if (movesW && !movesE) {
+      outMinCol = maxCol - cappedW + 1;
+      outMaxCol = maxCol;
+    } else if (movesE && !movesW) {
+      outMinCol = minCol;
+      outMaxCol = minCol + cappedW - 1;
+    } else {
+      outMinCol = minCol;
+      outMaxCol = minCol + cappedW - 1;
+    }
+  }
+
+  return {
+    position_x: outMinCol,
+    position_y: outMinRow,
+    span_w: cappedW,
+    span_h: cappedH,
+  };
+}
+
+/**
+ * Stretch a sole block from an edge/corner handle by cell deltas.
+ * Settled shape is always a solid rectangle of the stretched bbox
+ * (fills freeform holes; geometry-only expand of the same block).
+ *
+ * Returns null when:
+ * - delta is a no-op (same placement as current solid bbox)
+ * - new footprint collides with another block's occupancy
+ *
+ * Caller should commit only on pointer-up; use this for both preview and settle.
+ */
+export function stretchBlockFromHandle(
+  block: PlacedBlockRef,
+  handle: StretchHandle,
+  dRow: number,
+  dCol: number,
+  occupancy: Map<string, string>,
+): PlacedBlockRef | null {
+  // No pointer movement → nothing to settle (preview may still re-show current).
+  if (dRow === 0 && dCol === 0) return null;
+
+  const nextFp = stretchFootprintFromHandle(block, handle, dRow, dCol);
+  if (!nextFp) return null;
+
+  const current = footprintFromBlock(block);
+  const sameBBox =
+    current.position_x === nextFp.position_x &&
+    current.position_y === nextFp.position_y &&
+    current.span_w === nextFp.span_w &&
+    current.span_h === nextFp.span_h;
+  if (sameBBox) {
+    // Already a solid rect of this bbox — pure no-op (e.g. shrink then re-expand).
+    const cells = placedBlockCells(block);
+    if (cells.length === current.span_w * current.span_h) return null;
+    // Freeform with unchanged bbox: filling holes is a real geometry change — allow.
+  }
+
+  if (!canPlaceFootprint(nextFp, occupancy, [block.id])) return null;
+
+  return {
+    id: block.id,
+    position_x: nextFp.position_x,
+    position_y: nextFp.position_y,
+    span_w: nextFp.span_w,
+    span_h: nextFp.span_h,
+    // Solid rectangle storage — drop freeform mask.
+    shape_cells: null,
+  };
+}
+
+/**
+ * Preview helper: same geometry as settle, but returns current block when
+ * stretch is invalid/noop so the UI can keep showing the live footprint.
+ */
+export function previewStretchBlockFromHandle(
+  block: PlacedBlockRef,
+  handle: StretchHandle,
+  dRow: number,
+  dCol: number,
+  occupancy: Map<string, string>,
+): PlacedBlockRef {
+  return (
+    stretchBlockFromHandle(block, handle, dRow, dCol, occupancy) ?? {
+      id: block.id,
+      position_x: block.position_x,
+      position_y: block.position_y,
+      span_w: normalizeSpan(block.span_w),
+      span_h: normalizeSpan(block.span_h),
+      shape_cells: parseShapeCells(block.shape_cells ?? null),
+    }
+  );
+}

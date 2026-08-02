@@ -125,7 +125,7 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).toContain('drawerId="simulation"');
     expect(detail).toContain('drawerId="detail"');
     expect(detail).toContain('title="Local context"');
-    expect(detail).toContain('title="Simulation"');
+    expect(detail).toContain('title="Block Simulation"');
     // Local drawer expands when materials already attached; simulation stays collapsed.
     expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
     expect(detail).toContain("defaultExpanded={false}");

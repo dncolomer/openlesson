@@ -13,6 +13,7 @@ import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
 import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
 import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
+import { WorkspaceSimulationPanel } from "@/components/WorkspaceSimulationPanel";
 import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
@@ -819,6 +820,23 @@ export function AyclWorkspaceView({
           },
         ]
       : []),
+    ...(visibleSections.includes("simulation")
+      ? [
+          {
+            key: "simulation" as const,
+            label: t("planView.sectionSimulation"),
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("knowledge")
       ? [
           {
@@ -927,6 +945,35 @@ export function AyclWorkspaceView({
               showFiles={false}
               seedQuery={plan.root_topic || plan.title}
               ayclToken={accessToken}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {sectionLayout.mountsSimulationPanel && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId: plan.id,
+            isOwner: true,
+          }}
+        >
+          <div
+            data-workspace-simulation-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceSimulationPanel
+              blocks={nodes}
+              workspaceTitle={plan.title || plan.root_topic}
+              workspaceGoal={plan.workspace_goal}
+              workspaceDescription={plan.description}
+              workspaceNotes={notesContent || plan.notes}
+              workspaceFileCount={workspaceFileItems.length}
             />
           </div>
         </WorkspaceSectionSurface>

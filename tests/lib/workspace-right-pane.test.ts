@@ -455,7 +455,7 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain('drawerId="local"');
     expect(pane).toContain('drawerId="simulation"');
     expect(pane).toContain('title="Local context"');
-    expect(pane).toContain('title="Simulation"');
+    expect(pane).toContain('title="Block Simulation"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
     // Order: detail → simulation (pos 2) → edit → local
     expect(pane).toMatch(

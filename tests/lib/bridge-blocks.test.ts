@@ -251,19 +251,20 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
     expect(pane).toContain("resolveBridgeSelection");
     expect(pane).toContain("onGenerateBridge");
     expect(pane).toContain("Generate bridge");
-    // Corridor preview only after density interaction — not auto on multi-select
-    // (auto-preview looked like a broader lasso selection).
-    expect(pane).toContain("bridgePreviewLive");
-    expect(pane).toContain("setBridgePreviewLive(true)");
-    expect(pane).toMatch(/bridgePreviewLive\s*&&/);
+    // Corridor highlight while Bridge drawer is open; density defaults to min.
+    expect(pane).toContain("BRIDGE_DENSITY_MIN");
+    expect(pane).toContain("useState(BRIDGE_DENSITY_MIN)");
+    expect(pane).toContain('openDrawerId === "bridge"');
+    expect(pane).toContain("onBridgePreviewChange");
+    expect(pane).toContain("data-bridge-drawer-open");
     // Smart defaults: Bridge expands when selection is not edge-contiguous
     expect(pane).toContain("defaultExpanded={contiguous}");
     expect(pane).toContain("defaultExpanded={!contiguous}");
-    expect(pane).toContain('data-default-drawer={contiguous ? "combine" : "bridge"}');
     // Accordion: combine + bridge collapse each other
     expect(pane).toContain("WorkspaceRightPaneDrawerGroup");
     expect(pane).toContain('drawerId="combine"');
     expect(pane).toContain('drawerId="bridge"');
+    expect(pane).toContain("openId={openDrawerId}");
 
     const view = read("components/WorkspaceView.tsx");
     expect(view).toContain("handleGenerateBridge");

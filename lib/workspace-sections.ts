@@ -1,8 +1,14 @@
 /**
  * Top-level workspace shell sections.
  * Context hosts notes + files; Workspace is map-first with authoring tools.
+ * Simulation is an author-facing learner-journey overview (not the map).
  */
-export type WorkspaceSectionKey = "workspace" | "context" | "knowledge" | "settings";
+export type WorkspaceSectionKey =
+  | "workspace"
+  | "context"
+  | "simulation"
+  | "knowledge"
+  | "settings";
 
 /** @deprecated Local tab keys no longer drive the Workspace section UI. */
 export type WorkspaceLocalTabKey = "graph" | "notes" | "files";
@@ -10,12 +16,14 @@ export type WorkspaceLocalTabKey = "graph" | "notes" | "files";
 export type WorkspaceMainSurface =
   | "workspace-local"
   | "context"
+  | "simulation"
   | "knowledge"
   | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
   "context",
+  "simulation",
   "knowledge",
   "settings",
 ] as const;
@@ -31,6 +39,8 @@ export type WorkspaceSectionLayout = {
   showSessionsColumn: boolean;
   /** Context surface hosts notes + files (global materials). */
   mountsContextPanel: boolean;
+  /** Workspace-level Simulation tab (author learner-journey overview). */
+  mountsSimulationPanel: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -52,6 +62,19 @@ export function resolveWorkspaceSectionLayout(
         showBlockMapChrome: false,
         showSessionsColumn: false,
         mountsContextPanel: true,
+        mountsSimulationPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+      };
+    case "simulation":
+      return {
+        section: "simulation",
+        mainSurface: "simulation",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -63,6 +86,7 @@ export function resolveWorkspaceSectionLayout(
         showBlockMapChrome: false,
         showSessionsColumn: false,
         mountsContextPanel: false,
+        mountsSimulationPanel: false,
         localTabs: [],
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
@@ -74,6 +98,7 @@ export function resolveWorkspaceSectionLayout(
         showBlockMapChrome: false,
         showSessionsColumn: false,
         mountsContextPanel: false,
+        mountsSimulationPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
@@ -86,6 +111,7 @@ export function resolveWorkspaceSectionLayout(
         showBlockMapChrome: true,
         showSessionsColumn: true,
         mountsContextPanel: false,
+        mountsSimulationPanel: false,
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -95,8 +121,8 @@ export function resolveWorkspaceSectionLayout(
 
 /**
  * Knowledge + Settings are privileged: workspace owners and org admins only.
- * Context + Workspace are available to everyone who can open the workspace
- * (builders and buyers/consumers).
+ * Context + Simulation + Workspace are available to everyone who can open the
+ * workspace (builders and buyers/consumers).
  */
 export function canAccessPrivilegedWorkspaceSections(options: {
   isOwner?: boolean;
@@ -107,7 +133,7 @@ export function canAccessPrivilegedWorkspaceSections(options: {
 
 /**
  * Privileged sections (Knowledge, Settings): non-privileged callers fall back to Workspace.
- * Context is open to all workspace viewers.
+ * Context and Simulation are open to all workspace viewers.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -128,10 +154,10 @@ export function availableWorkspaceSections(options: {
   isOrgAdmin?: boolean;
 }): WorkspaceSectionKey[] {
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    return ["workspace", "context", "knowledge", "settings"];
+    return ["workspace", "context", "simulation", "knowledge", "settings"];
   }
-  // Buyers / consumers still see Context (materials + how prompts use them).
-  return ["workspace", "context"];
+  // Buyers / consumers: Context + Simulation (author/learner insight) + Workspace.
+  return ["workspace", "context", "simulation"];
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

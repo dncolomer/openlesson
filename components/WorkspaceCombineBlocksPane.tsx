@@ -79,27 +79,11 @@ export function WorkspaceCombineBlocksPane({
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bridgeDensity, setBridgeDensity] = useState(50);
+  /** Start at min density (thin centerline); author can thicken via slider. */
+  const [bridgeDensity, setBridgeDensity] = useState(BRIDGE_DENSITY_MIN);
   const [bridgePrompt, setBridgePrompt] = useState("");
   const [bridgeSubmitting, setBridgeSubmitting] = useState(false);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
-  /**
-   * Corridor map preview only after the author uses the density control.
-   * Auto-preview on multi-select made lasso look broader than the drag set
-   * (density half-width painted many empty cells as white selection).
-   */
-  const [bridgePreviewLive, setBridgePreviewLive] = useState(false);
-
-  // Reset draft when the multi-selection set changes.
-  const selectionKey = blockIds.join(",");
-  useEffect(() => {
-    setPrompt("");
-    setError(null);
-    setBridgeDensity(50);
-    setBridgePrompt("");
-    setBridgeError(null);
-    setBridgePreviewLive(false);
-  }, [selectionKey]);
 
   const selected = useMemo(() => {
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -149,6 +133,21 @@ export function WorkspaceCombineBlocksPane({
     if (placed.length < 2) return false;
     return areBlocksContiguous(placed);
   }, [selected, skillNodes]);
+
+  /** Accordion open drawer — bridge open ⇒ show corridor highlight on the map. */
+  const defaultDrawerId = contiguous ? "combine" : "bridge";
+  const [openDrawerId, setOpenDrawerId] = useState<string | null>(defaultDrawerId);
+
+  // Reset draft when the multi-selection set changes.
+  const selectionKey = blockIds.join(",");
+  useEffect(() => {
+    setPrompt("");
+    setError(null);
+    setBridgeDensity(BRIDGE_DENSITY_MIN);
+    setBridgePrompt("");
+    setBridgeError(null);
+    setOpenDrawerId(contiguous ? "combine" : "bridge");
+  }, [selectionKey, contiguous]);
 
   const allSkillNodes = useMemo(
     () =>
@@ -203,13 +202,10 @@ export function WorkspaceCombineBlocksPane({
     bridgeAnchors.length >= 2 &&
     bridgeSelection.selected.length > 0;
 
-  // Map preview for bridge corridor — only while density preview is live.
+  // Map preview for bridge corridor while the Bridge drawer is open.
   useEffect(() => {
     if (!onBridgePreviewChange) return;
-    if (
-      bridgePreviewLive &&
-      bridgeSelection.selected.length > 0
-    ) {
+    if (openDrawerId === "bridge" && bridgeSelection.selected.length > 0) {
       onBridgePreviewChange(
         bridgeSelection.selected.map((c) => ({ row: c.row, col: c.col })),
       );
@@ -219,7 +215,7 @@ export function WorkspaceCombineBlocksPane({
     return () => {
       onBridgePreviewChange(null);
     };
-  }, [bridgePreviewLive, bridgeSelection.selected, onBridgePreviewChange]);
+  }, [openDrawerId, bridgeSelection.selected, onBridgePreviewChange]);
 
   const submit = async () => {
     if (submitting || busy || selected.length < 2 || !contiguous) return;
@@ -265,13 +261,16 @@ export function WorkspaceCombineBlocksPane({
 
   return (
     <WorkspaceRightPaneDrawerGroup
-      defaultOpenId={contiguous ? "combine" : "bridge"}
+      defaultOpenId={defaultDrawerId}
+      openId={openDrawerId}
+      onOpenIdChange={setOpenDrawerId}
       data-workspace-right-pane="combine_blocks"
       data-workspace-combine-blocks-pane
       data-combine-block-count={String(selected.length)}
       data-combine-contiguous={contiguous ? "true" : "false"}
       data-bridge-block-count={String(selected.length)}
-      data-default-drawer={contiguous ? "combine" : "bridge"}
+      data-default-drawer={defaultDrawerId}
+      data-bridge-drawer-open={openDrawerId === "bridge" ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
       <WorkspaceRightPaneDrawer
@@ -457,11 +456,7 @@ export function WorkspaceCombineBlocksPane({
               step={5}
               value={bridgeDensity}
               disabled={busy || bridgeSubmitting || selected.length < 2}
-              onChange={(e) => {
-                setBridgePreviewLive(true);
-                setBridgeDensity(Number(e.target.value));
-              }}
-              onPointerDown={() => setBridgePreviewLive(true)}
+              onChange={(e) => setBridgeDensity(Number(e.target.value))}
               className="w-full accent-white"
               data-bridge-density-input
             />

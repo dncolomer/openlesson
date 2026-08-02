@@ -15,9 +15,9 @@ import type {
 
 const DRAWER_LABELS: Record<BlockDetailMiniTab, string> = {
   local: "Local context",
-  examples: "Simulation",
-  content_samples: "Simulation",
-  simulation: "Simulation",
+  examples: "Block Simulation",
+  content_samples: "Block Simulation",
+  simulation: "Block Simulation",
 };
 
 /**

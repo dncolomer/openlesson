@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
+  MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_MULTI_SELECTED_CLASS,
   MAP_CELL_NEUTRAL_CLASS,
   MAP_CELL_PREREQ_CLASS,
@@ -118,6 +119,10 @@ describe("multi-select / empty selection tokens", () => {
     expect(MAP_CELL_MULTI_SELECTED_CLASS).not.toMatch(/cyan/i);
     expect(MAP_CELL_EMPTY_SELECTED_CLASS).toMatch(/white/);
     expect(MAP_CELL_EMPTY_SELECTED_CLASS).not.toMatch(/cyan/i);
+    // Generation-pending slots pulse white until each cell is created.
+    expect(MAP_CELL_GENERATION_PENDING_CLASS).toMatch(/white/);
+    expect(MAP_CELL_GENERATION_PENDING_CLASS).toMatch(/animate-pulse/);
+    expect(MAP_CELL_GENERATION_PENDING_CLASS).not.toMatch(/cyan/i);
     const free = mapCellFreeformColors(true);
     expect(free.border).toMatch(/255,\s*255,\s*255/);
     expect(free.fill).not.toMatch(/6,\s*182,\s*212|34,\s*211,\s*238/);
@@ -133,6 +138,12 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(grid).toContain('data-map-cell-status="title"');
     expect(grid).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("MAP_CELL_EMPTY_SELECTED_CLASS");
+    expect(grid).toContain("MAP_CELL_GENERATION_PENDING_CLASS");
+    expect(grid).toContain("data-generation-pending");
+    expect(grid).toContain("mergeActiveExpandJobPreviews");
+    // Expand progress bar + stop are white (not cyan/red)
+    expect(grid).toMatch(/bg-white[\s\S]{0,80}?data-map-expand-progress-fill/);
+    expect(grid).toMatch(/data-map-expand-stop[\s\S]{0,220}?bg-white/);
     expect(grid).toContain("highlightRole");
     expect(grid).toContain("data-block-dependency-lock");
     expect(grid).toContain("BlockDependencyLockBadge");

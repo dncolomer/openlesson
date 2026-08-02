@@ -16,6 +16,7 @@ import {
   shapeSelectionToLocalContext,
 } from "@/lib/shape-context-select";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
+import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
 
 interface AddBlockResponse {
   title: string;
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
       locale,
       weightedNeighbors,
       contextSourceKeys,
+      is_start: isStartBody,
+      isStart: isStartCamel,
     } = body;
 
     if (!workspaceId || typeof row !== "number" || typeof col !== "number" || !prompt?.trim()) {
@@ -200,11 +203,20 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
           }
         : null;
 
+    const authorStarter =
+      typeof isStartBody === "boolean"
+        ? isStartBody
+        : typeof isStartCamel === "boolean"
+          ? isStartCamel
+          : undefined;
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
       title: aiResponse.data.title.trim(),
       description: aiResponse.data.description?.trim() || "",
-      is_start: nodes.length === 0,
+      is_start: resolveCreateBlockIsStart({
+        authorStarter,
+        existingBlockCount: nodes.length,
+      }),
       next_block_ids: [],
       status: "available",
       position_x: col,

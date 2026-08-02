@@ -143,10 +143,12 @@ Block title: ${title}
 ${description ? `Block description: ${description}\n` : ""}${planningPrompt ? `Planning prompt: ${planningPrompt}\n` : ""}
 ${localParts.length ? `LOCAL CONTEXT (prioritize this when generating simulation content):\n${localParts.join("\n\n")}\n` : "No local context attached yet.\n"}
 Generate sample practice items for this block (what might appear in Explore or Drill):
-- questions: 4–6 dialogue / think-aloud questions a partner or coach might ask
-- exercises: 3–5 short solo exercise prompts (do/solve/outline out loud)
+- questions: EXACTLY 3 dialogue / think-aloud questions a partner or coach might ask
+- exercises: EXACTLY 3 short solo exercise prompts (do/solve/outline out loud)
 - topics: optional 3–6 short topic phrases
-- probes (optional): [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch" }]
+- probes (preferred): 6 items total — 3 with kind "question" and 3 with kind "exercise"
+  Each probe: { "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }
+  contextSources: short labels for what influenced the item (e.g. "Title", "Description", "Planning prompt", "Local notes", file names). Omit if none.
 
 Prioritize the latest local context and block text. Avoid generic fluff.
 ${languageNote}`;
@@ -154,13 +156,13 @@ ${languageNote}`;
     const ai = await callXaiJSON<SamplesResponse>(
       [
         systemMessage(
-          'You write sample practice items for a learning block. Return JSON only: { "topics": string[], "questions": string[], "exercises": string[], "probes": [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch" }] }.',
+          'You write sample practice items for a learning block. Return JSON only: { "topics": string[], "questions": string[3], "exercises": string[3], "probes": [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }] }. Exactly 3 questions and 3 exercises.',
         ),
         userMessage(userPrompt),
       ],
       {
         model: userModel || DEFAULT_MODEL,
-        maxTokens: 1200,
+        maxTokens: 1400,
         temperature: 0.55,
       },
     );

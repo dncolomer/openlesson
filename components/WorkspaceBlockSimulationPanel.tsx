@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   deriveBlockSimulation,
   normalizeSimulationPayload,
+  partitionSimulationProbes,
+  SIMULATION_EXERCISE_COUNT,
+  SIMULATION_QUESTION_COUNT,
   type BlockSimulationResult,
+  type SimulationProbe,
 } from "@/lib/block-simulation";
 import {
   normalizeBlockLocalContext,
@@ -12,10 +16,74 @@ import {
 } from "@/lib/prompt-workspace-context";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
+/** Compact influence chips under a probe — minimal footprint. */
+function ContextInfluenceChips({
+  sources,
+}: {
+  sources?: string[] | null;
+}) {
+  if (!sources?.length) return null;
+  return (
+    <div
+      className="mt-1 flex flex-wrap gap-1"
+      data-simulation-context-sources
+    >
+      {sources.map((s) => (
+        <span
+          key={s}
+          data-context-source-chip
+          title={`Influenced by: ${s}`}
+          className="max-w-[9rem] truncate rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[9px] leading-tight text-neutral-500"
+        >
+          {s}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ProbeList({
+  items,
+  kind,
+  empty,
+}: {
+  items: SimulationProbe[];
+  kind: "question" | "exercise";
+  empty: string;
+}) {
+  if (!items.length) {
+    return <p className="mt-1.5 text-[11px] text-neutral-600">{empty}</p>;
+  }
+  return (
+    <ul
+      className="mt-1.5 space-y-1.5"
+      data-block-example-questions={kind === "question" ? "true" : undefined}
+      data-block-example-exercises={kind === "exercise" ? "true" : undefined}
+    >
+      {items.map((p) => (
+        <li
+          key={p.id}
+          data-simulation-probe={p.id}
+          data-simulation-probe-kind={kind}
+          className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5"
+        >
+          <div className="flex gap-1.5 text-[11px] leading-snug text-neutral-300">
+            <span
+              className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/30"
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1">{p.question}</span>
+          </div>
+          <ContextInfluenceChips sources={p.contextSources} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
- * Simulation drawer: sample questions and exercises that might appear
- * when practicing this block. Local derivation seeds the list; regenerate
- * refreshes from the latest block text + local context via LLM.
+ * Simulation drawer: exactly 3 questions + 3 exercises.
+ * Compact context-influence chips when known; omitted when sparse.
  */
 export function WorkspaceBlockSimulationPanel({
   workspaceId,
@@ -59,6 +127,14 @@ export function WorkspaceBlockSimulationPanel({
       hasLocalContext: localNorm.hasLocalMaterials,
       hasPlanningPrompt: Boolean(planningPrompt?.trim()),
       lockUntilTitles: lockUntilTitles ?? null,
+      localFileNames: [
+        ...localNorm.globalFileRefs,
+        ...localNorm.localFiles.map((f) => f.name),
+      ],
+      externalLabels:
+        localNorm.externalResourceIds.length > 0
+          ? localNorm.externalResourceIds.map((id) => id.slice(0, 8))
+          : null,
     }),
     [
       blockTitle,
@@ -66,6 +142,9 @@ export function WorkspaceBlockSimulationPanel({
       planningPrompt,
       localContext?.notes,
       localNorm.hasLocalMaterials,
+      localNorm.globalFileRefs,
+      localNorm.localFiles,
+      localNorm.externalResourceIds,
       lockUntilTitles,
     ],
   );
@@ -126,18 +205,20 @@ export function WorkspaceBlockSimulationPanel({
     }
   };
 
-  const finalQuestions = sim.probes
-    .filter((p) => (p.kind ?? (p.difficulty === "stretch" ? "exercise" : "question")) === "question")
-    .map((p) => p.question);
-  const finalExercises = sim.probes
-    .filter((p) => (p.kind ?? (p.difficulty === "stretch" ? "exercise" : "question")) === "exercise")
-    .map((p) => p.question);
+  const { questions, exercises } = partitionSimulationProbes(sim.probes);
 
   return (
-    <div data-block-simulation data-block-id={blockId} className="space-y-3">
+    <div
+      data-block-simulation
+      data-block-id={blockId}
+      data-simulation-question-count={questions.length}
+      data-simulation-exercise-count={exercises.length}
+      className="space-y-3"
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] leading-snug text-neutral-600">
-          Examples of questions and exercises that might appear
+          {SIMULATION_QUESTION_COUNT} questions · {SIMULATION_EXERCISE_COUNT}{" "}
+          exercises · chips show influencing context when known
         </p>
         <button
           type="button"
@@ -160,54 +241,29 @@ export function WorkspaceBlockSimulationPanel({
       <div data-simulation-questions>
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
           Questions
+          <span className="ml-1 font-mono text-neutral-600">
+            ({questions.length})
+          </span>
         </p>
-        {finalQuestions.length > 0 ? (
-          <ul className="mt-1.5 space-y-1.5" data-block-example-questions>
-            {finalQuestions.map((q) => (
-              <li
-                key={q}
-                className="flex gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
-              >
-                <span
-                  className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/30"
-                  aria-hidden
-                />
-                <span>{q}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1.5 text-[11px] text-neutral-600">
-            No sample questions yet — regenerate after adding description or local
-            context.
-          </p>
-        )}
+        <ProbeList
+          items={questions}
+          kind="question"
+          empty="No sample questions yet — regenerate after adding description or local context."
+        />
       </div>
 
       <div data-simulation-exercises>
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
           Exercises
+          <span className="ml-1 font-mono text-neutral-600">
+            ({exercises.length})
+          </span>
         </p>
-        {finalExercises.length > 0 ? (
-          <ul className="mt-1.5 space-y-1.5" data-block-example-exercises>
-            {finalExercises.map((ex) => (
-              <li
-                key={ex}
-                className="flex gap-1.5 rounded-md border border-white/10 bg-neutral-950/50 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
-              >
-                <span
-                  className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/20"
-                  aria-hidden
-                />
-                <span>{ex}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1.5 text-[11px] text-neutral-600">
-            No sample exercises yet.
-          </p>
-        )}
+        <ProbeList
+          items={exercises}
+          kind="exercise"
+          empty="No sample exercises yet."
+        />
       </div>
     </div>
   );

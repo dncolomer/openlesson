@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
+import {
+  WorkspaceRightPaneDrawer,
+  WorkspaceRightPaneDrawerGroup,
+} from "@/components/WorkspaceRightPaneDrawer";
 import { areBlocksContiguous, type PlacedBlockRef } from "@/lib/skill-grid-ops";
 import {
   buildSkillGridLayout,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
+import {
+  BRIDGE_DENSITY_MAX,
+  BRIDGE_DENSITY_MIN,
+  BRIDGE_MAX_HALF_WIDTH,
+  bridgeAnchorsFromPlacedBlocks,
+  bridgeHalfWidthForDensity,
+  resolveBridgeSelection,
+} from "@/lib/bridge-blocks";
+import { unusableCellKeySet } from "@/lib/map-ground-rules";
 
 export type CombineBlockRef = {
   id: string;
@@ -21,23 +33,42 @@ export type CombineBlockRef = {
 
 /**
  * Right-column surface when ≥2 filled blocks are multi-selected.
- * Visual A + B (and more) preview, broader-nature copy, combination prompt → merge.
+ * Combine drawer (merge) + Bridge Blocks drawer (corridor multi-create).
  */
 export function WorkspaceCombineBlocksPane({
   blockIds,
   nodes,
   busy = false,
+  unusableCells = null,
   onCombine,
+  onGenerateBridge,
+  onBridgePreviewChange,
   onCancel,
   labels,
 }: {
   blockIds: string[];
   nodes: CombineBlockRef[];
   busy?: boolean;
+  unusableCells?: Array<{ row: number; col: number }> | null;
   onCombine: (input: {
     blockIds: string[];
     prompt?: string;
   }) => Promise<void> | void;
+  /**
+   * Enqueue background multi-create along a straight knowledge-bridge corridor.
+   * Host freezes slots into the same expand-job path as range/density create.
+   */
+  onGenerateBridge?: (input: {
+    blockIds: string[];
+    density: number;
+    userPrompt?: string;
+    frozenSlots: Array<{ row: number; col: number }>;
+    blockTitles: string[];
+  }) => Promise<void> | void;
+  /** Lift bridge corridor preview onto the map. */
+  onBridgePreviewChange?: (
+    cells: Array<{ row: number; col: number }> | null,
+  ) => void;
   onCancel: () => void;
   labels?: {
     combine?: string;
@@ -48,12 +79,26 @@ export function WorkspaceCombineBlocksPane({
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bridgeDensity, setBridgeDensity] = useState(50);
+  const [bridgePrompt, setBridgePrompt] = useState("");
+  const [bridgeSubmitting, setBridgeSubmitting] = useState(false);
+  const [bridgeError, setBridgeError] = useState<string | null>(null);
+  /**
+   * Corridor map preview only after the author uses the density control.
+   * Auto-preview on multi-select made lasso look broader than the drag set
+   * (density half-width painted many empty cells as white selection).
+   */
+  const [bridgePreviewLive, setBridgePreviewLive] = useState(false);
 
   // Reset draft when the multi-selection set changes.
   const selectionKey = blockIds.join(",");
   useEffect(() => {
     setPrompt("");
     setError(null);
+    setBridgeDensity(50);
+    setBridgePrompt("");
+    setBridgeError(null);
+    setBridgePreviewLive(false);
   }, [selectionKey]);
 
   const selected = useMemo(() => {
@@ -105,6 +150,77 @@ export function WorkspaceCombineBlocksPane({
     return areBlocksContiguous(placed);
   }, [selected, skillNodes]);
 
+  const allSkillNodes = useMemo(
+    () =>
+      nodes.map(
+        (n) =>
+          ({
+            id: n.id,
+            title: n.title || "",
+            description: n.description ?? "",
+            status: "available",
+            is_start: false,
+            next_block_ids: [],
+            position_x: n.position_x ?? null,
+            position_y: n.position_y ?? null,
+            span_w: n.span_w ?? 1,
+            span_h: n.span_h ?? 1,
+            shape_cells: n.shape_cells ?? null,
+          }) as SkillGridNode,
+      ),
+    [nodes],
+  );
+  const { occupancy } = useMemo(
+    () => buildSkillGridLayout(allSkillNodes),
+    [allSkillNodes],
+  );
+  const occupiedKeys = useMemo(
+    () => new Set(occupancy.keys()),
+    [occupancy],
+  );
+  const unusableKeys = useMemo(
+    () => unusableCellKeySet(unusableCells || []),
+    [unusableCells],
+  );
+
+  const bridgeAnchors = useMemo(
+    () => bridgeAnchorsFromPlacedBlocks(selected),
+    [selected],
+  );
+  const bridgeSelection = useMemo(
+    () =>
+      resolveBridgeSelection({
+        anchors: bridgeAnchors,
+        density: bridgeDensity,
+        occupiedKeys,
+        unusableKeys,
+      }),
+    [bridgeAnchors, bridgeDensity, occupiedKeys, unusableKeys],
+  );
+  const bridgeHalfWidth = bridgeHalfWidthForDensity(bridgeDensity);
+  const canBridge =
+    Boolean(onGenerateBridge) &&
+    bridgeAnchors.length >= 2 &&
+    bridgeSelection.selected.length > 0;
+
+  // Map preview for bridge corridor — only while density preview is live.
+  useEffect(() => {
+    if (!onBridgePreviewChange) return;
+    if (
+      bridgePreviewLive &&
+      bridgeSelection.selected.length > 0
+    ) {
+      onBridgePreviewChange(
+        bridgeSelection.selected.map((c) => ({ row: c.row, col: c.col })),
+      );
+    } else {
+      onBridgePreviewChange(null);
+    }
+    return () => {
+      onBridgePreviewChange(null);
+    };
+  }, [bridgePreviewLive, bridgeSelection.selected, onBridgePreviewChange]);
+
   const submit = async () => {
     if (submitting || busy || selected.length < 2 || !contiguous) return;
     setSubmitting(true);
@@ -122,18 +238,48 @@ export function WorkspaceCombineBlocksPane({
     }
   };
 
+  const submitBridge = async () => {
+    if (!onGenerateBridge || bridgeSubmitting || busy || !canBridge) return;
+    setBridgeSubmitting(true);
+    setBridgeError(null);
+    try {
+      await onGenerateBridge({
+        blockIds: selected.map((n) => n.id),
+        density: bridgeDensity,
+        userPrompt: bridgePrompt.trim() || undefined,
+        frozenSlots: bridgeSelection.selected.map((c) => ({
+          row: c.row,
+          col: c.col,
+        })),
+        blockTitles: selected.map((n) => n.title || "Untitled"),
+      });
+      setBridgePrompt("");
+    } catch (err) {
+      setBridgeError(
+        err instanceof Error ? err.message : "Failed to generate bridge",
+      );
+    } finally {
+      setBridgeSubmitting(false);
+    }
+  };
+
   return (
-    <div
+    <WorkspaceRightPaneDrawerGroup
+      defaultOpenId={contiguous ? "combine" : "bridge"}
       data-workspace-right-pane="combine_blocks"
       data-workspace-combine-blocks-pane
-      data-combine-block-count={selected.length}
+      data-combine-block-count={String(selected.length)}
       data-combine-contiguous={contiguous ? "true" : "false"}
+      data-bridge-block-count={String(selected.length)}
+      data-default-drawer={contiguous ? "combine" : "bridge"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
       <WorkspaceRightPaneDrawer
         variant="section"
+        drawerId="combine"
         title="Combine blocks"
-        defaultExpanded
+        // Contiguous group → Combine is the primary action; gaps → Bridge first.
+        defaultExpanded={contiguous}
         bodyClassName="space-y-3"
       >
         <p className="text-[11px] leading-relaxed text-neutral-400">
@@ -275,6 +421,119 @@ export function WorkspaceCombineBlocksPane({
           </button>
         </div>
       </WorkspaceRightPaneDrawer>
-    </div>
+
+      {/* Bridge Blocks — straight corridor multi-create between selected concepts */}
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        title="Bridge Blocks"
+        // Non-contiguous multi-select cannot combine — open Bridge by default.
+        defaultExpanded={!contiguous}
+        drawerId="bridge"
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-bridge-blocks-drawer"
+      >
+        <div data-bridge-blocks-pane className="space-y-3">
+          <p className="text-[11px] leading-relaxed text-neutral-400">
+            Generate a{" "}
+            <span className="text-neutral-200">knowledge bridge</span> of new
+            1×1 blocks along a straight path linking the selected topics. Density
+            controls how thick the corridor is (capped so it stays a bridge, not
+            a blob).
+          </p>
+
+          <label className="block space-y-1" data-bridge-density>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-neutral-400">Density</span>
+              <span className="font-mono text-[10px] text-neutral-500">
+                {bridgeDensity}% · half-width {bridgeHalfWidth}/
+                {BRIDGE_MAX_HALF_WIDTH} · {bridgeSelection.selected.length}{" "}
+                cells
+              </span>
+            </div>
+            <input
+              type="range"
+              min={BRIDGE_DENSITY_MIN}
+              max={BRIDGE_DENSITY_MAX}
+              step={5}
+              value={bridgeDensity}
+              disabled={busy || bridgeSubmitting || selected.length < 2}
+              onChange={(e) => {
+                setBridgePreviewLive(true);
+                setBridgeDensity(Number(e.target.value));
+              }}
+              onPointerDown={() => setBridgePreviewLive(true)}
+              className="w-full accent-white"
+              data-bridge-density-input
+            />
+            <p className="text-[10px] leading-snug text-neutral-600">
+              Higher density thickens the line (max half-width{" "}
+              {BRIDGE_MAX_HALF_WIDTH}) and fills more placeable cells.
+            </p>
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+              Bridging prompt
+            </span>
+            <textarea
+              data-bridge-prompt
+              value={bridgePrompt}
+              onChange={(e) => setBridgePrompt(e.target.value)}
+              rows={3}
+              disabled={busy || bridgeSubmitting}
+              placeholder="Optional guidance for the bridge (e.g. emphasize causality, shared vocabulary, or a transition exercise)…"
+              className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            />
+          </label>
+
+          {bridgeAnchors.length < 2 ? (
+            <p
+              className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] leading-snug text-amber-200/90"
+              data-bridge-need-anchors
+            >
+              Need at least two selected blocks with map positions to draw a
+              bridge.
+            </p>
+          ) : bridgeSelection.selected.length === 0 ? (
+            <p
+              className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] leading-snug text-amber-200/90"
+              data-bridge-no-cells
+            >
+              No placeable empty cells along the corridor — clear space between
+              the blocks or lower density.
+            </p>
+          ) : null}
+
+          {bridgeError ? (
+            <p className="text-xs text-red-400/90" data-bridge-error>
+              {bridgeError}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            data-bridge-generate
+            disabled={
+              busy ||
+              bridgeSubmitting ||
+              !canBridge ||
+              selected.length < 2
+            }
+            onClick={() => void submitBridge()}
+            className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          >
+            {bridgeSubmitting
+              ? "Starting bridge…"
+              : bridgeSelection.selected.length > 0
+                ? `Generate bridge (${bridgeSelection.selected.length} blocks)`
+                : "Generate bridge"}
+          </button>
+          <p className="text-[10px] leading-snug text-neutral-600">
+            Runs in the background like expand create — progress and Stop appear
+            under the minimap; bridge tiles stay non-clickable until finished.
+          </p>
+        </div>
+      </WorkspaceRightPaneDrawer>
+    </WorkspaceRightPaneDrawerGroup>
   );
 }

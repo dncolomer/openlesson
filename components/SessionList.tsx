@@ -23,6 +23,7 @@ interface Block {
   position_y?: number | null;
   span_w?: number | null;
   span_h?: number | null;
+  shape_cells?: Array<{ dr: number; dc: number }> | null;
   planning_prompt?: string;
   session_id?: string;
   lock_until_block_ids?: string[] | null;
@@ -30,6 +31,7 @@ interface Block {
     notes?: string | null;
     local_files?: Array<{ name: string; excerpt?: string | null }> | null;
     global_file_refs?: string[] | null;
+    external_resource_ids?: string[] | null;
   } | null;
 }
 
@@ -87,6 +89,20 @@ interface SessionListProps {
   }) => Promise<void> | void;
   /** Workspace notes for generate-in-shape context source picker. */
   workspaceNotes?: string | null;
+  /** Add-block Range/Density preview highlight (map only). */
+  previewEmptyCells?: Array<{ row: number; col: number }> | null;
+  /** Background multi-create jobs — progress/stop under minimap. */
+  expandJobs?: Array<{
+    id: string;
+    frozenSlots: Array<{ row: number; col: number }>;
+    completed: number;
+    total: number;
+    aborted: boolean;
+    status: "running" | "completed" | "stopped" | "error";
+    label?: string;
+    error?: string;
+  }> | null;
+  onAbortExpandJob?: (jobId: string) => void;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -153,6 +169,9 @@ export function SessionList({
   unusableCells = null,
   onMapGround,
   workspaceNotes = null,
+  previewEmptyCells = null,
+  expandJobs = null,
+  onAbortExpandJob,
 }: SessionListProps) {
   const router = useRouter();
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
@@ -453,6 +472,9 @@ export function SessionList({
             unusableCells={unusableCells}
             onMapGround={onMapGround}
             workspaceNotes={workspaceNotes}
+            previewEmptyCells={previewEmptyCells}
+            expandJobs={expandJobs}
+            onAbortExpandJob={onAbortExpandJob}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

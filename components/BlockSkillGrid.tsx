@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  blockHasAttachedLocalContext,
   buildSkillGridLayout,
   clampSkillGridZoom,
   formatGridCoordinate,
@@ -19,6 +20,13 @@ import {
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
 import {
+  activeExpandJobLockedCellKeys,
+  addExpandProgressFraction,
+  isOccupiedCellsGenerationLocked,
+  mergeActiveExpandJobPreviews,
+  type AddExpandJob,
+} from "@/lib/add-block-range-density";
+import {
   areBlocksContiguous,
   footprintFromCells,
   freeformCellExternalEdges,
@@ -31,27 +39,45 @@ import {
 } from "@/lib/skill-grid-ops";
 import {
   DEFAULT_BLOCK_MAP_MODE,
+  DEFAULT_LASSO_SHAPE,
+  LASSO_SHAPE_ORDER,
+  allowsBlockDragInMode,
   allowsMapClickSelection,
   blockDragMoveDelta,
+  blocksIntersectingCircle,
   blocksIntersectingGridRect,
-  emptyCellsIntersectingGridRect,
-  resolveLassoSelection,
+  blocksIntersectingPolygon,
   clientPointToGridCell,
+  clientPointToGridPoint,
+  emptyCellDragIsPan,
+  emptyCellsIntersectingCircle,
+  emptyCellsIntersectingGridRect,
+  emptyCellsIntersectingPolygon,
   isBlockMapManipulationMode,
   isBlockMapToolEnabled,
+  isLassoModeTool,
+  isMapPanGesture,
   isMultiCellBlockSpan,
+  lassoShapeLabel,
+  lassoShapeTooltip,
   nextActiveModeTool,
+  nextLassoShape,
   normalizeGridSelectionRect,
   cancelPrereqEditMode,
   confirmPrereqEdit,
   EMPTY_PREREQ_EDIT,
   enterPrereqEditMode,
+  resolveActiveLassoShape,
+  resolveLassoSelection,
   resolveMapBlockHighlightRole,
+  resolveBlockPointerGestureSelection,
+  resolveMoveDragBlockIds,
   resolveUnusableFromSelection,
   shouldEmptyCellClickSelect,
   toggleOrReplaceBlockSelection as toggleOrReplaceBlockSelectionPure,
   toggleOrReplaceEmptyCellSelection as toggleOrReplaceEmptyCellSelectionPure,
   toggleStagedPrereq,
+  type LassoShapeKind,
   type PrereqEditState,
   visibleBlockMapTools,
   type BlockMapModeTool,
@@ -66,6 +92,7 @@ import {
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
+  MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_PREREQ_CLASS,
   MAP_CELL_UNUSABLE_CLASS,
   mapCellChromeClasses,
@@ -119,6 +146,17 @@ interface BlockSkillGridProps {
    * Null/[] clears. When omitted, local fallbacks still apply.
    */
   onEmptySelectionChange?: (cells: GridCell[] | null) => void;
+  /**
+   * Preview highlight for Add-block Range/Density expand (does not change right pane).
+   */
+  previewEmptyCells?: Array<{ row: number; col: number }> | null;
+  /**
+   * Background multi-create jobs (range/density). Progress + stop render under the minimap.
+   * Host owns the loop — map stays interactive while jobs run.
+   */
+  expandJobs?: readonly AddExpandJob[] | null;
+  /** Abort one background expand job (stop remaining slots after current). */
+  onAbortExpandJob?: (jobId: string) => void;
   /**
    * @deprecated Prefer onEmptySelectionChange — still maps single cell for older hosts.
    */
@@ -196,11 +234,18 @@ interface BlockSkillGridProps {
 function toolTooltip(id: BlockMapToolId, labels: BlockSkillGridProps["labels"]): string {
   switch (id) {
     case "select":
-      return labels.select || "Select — click one block; Shift+click multi-select";
+      return (
+        labels.select ||
+        "Select — click block/empty · drag block to move · drag empty or Space/middle to pan · Shift multi"
+      );
     case "move":
-      return labels.move || "Move — drag blocks with hand tool";
+      return labels.move || "Move — use Select (click-and-drag)";
     case "lasso":
-      return "Lasso — drag a rectangle to select blocks or empty cells";
+      return "Lasso — region select (choose rect / circle / freehand in submenu)";
+    case "lasso_circle":
+      return "Circle lasso — drag from center to select blocks or empty cells";
+    case "lasso_freehand":
+      return "Freehand lasso — draw a path to select blocks or empty cells";
     case "merge":
       return labels.merge || "Merge";
     case "split":
@@ -230,7 +275,73 @@ function toolTooltip(id: BlockMapToolId, labels: BlockSkillGridProps["labels"]):
   }
 }
 
-function ToolIcon({ id }: { id: BlockMapToolId }) {
+/** Lasso shape icons — marquee / ellipse / classic rope-loop freehand. */
+function LassoShapeIcon({
+  shape,
+  className = "h-4 w-4",
+}: {
+  shape: LassoShapeKind;
+  className?: string;
+}) {
+  if (shape === "circle") {
+    return (
+      <svg
+        className={className}
+        data-tool-icon="lasso-circle"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeDasharray="3 2"
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="7" />
+      </svg>
+    );
+  }
+  if (shape === "freehand") {
+    // Freehand lasso: irregular dashed selection outline (reads as free-form marquee).
+    return (
+      <svg
+        className={className}
+        data-tool-icon="lasso-freehand"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeDasharray="2.6 2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M8 7.5c1.2-1.8 3.2-2.6 5.2-2.3 2.1.3 3.6 1.6 4.3 3.4.6 1.6.3 3.4-.8 4.7-1 1.1-2.5 1.7-4 1.6-1.2-.1-2.3-.7-3.1-1.6-.7-.8-1.1-1.8-1.2-2.9-.1-1.3.3-2.6 1.2-3.5" />
+        <path d="M8.6 15.2c-1.1.9-1.7 2.2-1.6 3.5.1 1.4 1 2.6 2.3 3.2 1.2.6 2.6.5 3.7-.2 1.1-.7 1.8-1.9 1.9-3.2.1-1.1-.3-2.2-1.1-3" />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      className={className}
+      data-tool-icon="lasso"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeDasharray="3.5 2.5"
+      aria-hidden
+    >
+      <rect x="4.5" y="5.5" width="15" height="13" rx="1.5" />
+    </svg>
+  );
+}
+
+function ToolIcon({
+  id,
+  lassoShape = DEFAULT_LASSO_SHAPE,
+}: {
+  id: BlockMapToolId;
+  lassoShape?: LassoShapeKind;
+}) {
   const common = "h-4 w-4";
   switch (id) {
     case "select":
@@ -240,7 +351,6 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
         </svg>
       );
     case "move":
-      // Open hand — drag blocks (not the 4-arrow pan icon)
       return (
         <svg
           className={common}
@@ -259,24 +369,11 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
         </svg>
       );
     case "lasso":
-      return (
-        <svg
-          className={common}
-          data-tool-icon="lasso"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M5 7h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z"
-          />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17l4 4" />
-        </svg>
-      );
+      return <LassoShapeIcon shape={lassoShape} className={common} />;
+    case "lasso_circle":
+      return <LassoShapeIcon shape="circle" className={common} />;
+    case "lasso_freehand":
+      return <LassoShapeIcon shape="freehand" className={common} />;
     case "merge":
       return (
         <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
@@ -394,6 +491,35 @@ function BlockDependencyLockBadge({
   );
 }
 
+/** Small document badge for blocks with attached local context materials. */
+function BlockLocalContextDocBadge() {
+  return (
+    <span
+      className="absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-400"
+      data-block-local-context-badge
+      title="Has attached local context"
+      aria-hidden
+    >
+      <svg
+        className="h-3 w-3"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        data-block-local-context-icon
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M7 3.75h6.75L19 9v11.25A1.5 1.5 0 0117.5 21.75h-10.5A1.5 1.5 0 015.5 20.25V5.25A1.5 1.5 0 017 3.75z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 3.75V9H19" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5h6M9 17h4.5" />
+      </svg>
+    </span>
+  );
+}
+
 function cellKey(cell: GridCell) {
   return `${cell.row}:${cell.col}`;
 }
@@ -406,6 +532,9 @@ export function BlockSkillGrid({
   onSelectedBlockIdsChange,
   onEmptySelectionChange,
   onAddTargetChange,
+  previewEmptyCells = null,
+  expandJobs = null,
+  onAbortExpandJob,
   canEdit,
   showProgress = true,
   isAdding = false,
@@ -441,20 +570,25 @@ export function BlockSkillGrid({
   const viewportRef = useRef<HTMLDivElement>(null);
   const hasInitialCenterRef = useRef(false);
   const panMovedRef = useRef(false);
-  /** Lasso rectangle drag in viewport client coords (relative to viewport). */
+  /**
+   * Lasso drag in viewport-local coords.
+   * rect/circle: start→cur; freehand: sampled `points` polyline.
+   */
   const lassoDragRef = useRef<{
     pointerId: number;
+    shape: LassoShapeKind;
     startX: number;
     startY: number;
     curX: number;
     curY: number;
+    points: { x: number; y: number }[];
   } | null>(null);
-  const [lassoOverlay, setLassoOverlay] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const [lassoOverlay, setLassoOverlay] = useState<
+    | { kind: "rect"; left: number; top: number; width: number; height: number }
+    | { kind: "circle"; cx: number; cy: number; r: number }
+    | { kind: "freehand"; points: { x: number; y: number }[] }
+    | null
+  >(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -473,6 +607,8 @@ export function BlockSkillGrid({
   const [blockDragOffset, setBlockDragOffset] = useState<{ dRow: number; dCol: number } | null>(
     null,
   );
+  /** Ids participating in the active move drag (sole or multi) — drives drag chrome. */
+  const [blockDragIds, setBlockDragIds] = useState<string[] | null>(null);
 
   /** Generate-in-shape / merge dialogs still use local prompt + suggest (not single-cell add). */
   const [prompt, setPrompt] = useState("");
@@ -496,6 +632,32 @@ export function BlockSkillGrid({
   const selectedEmptyCellsRef = useRef<GridCell[]>([]);
   const activeToolRef = useRef<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
   const [activeTool, setActiveTool] = useState<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
+  /** Lasso geometry for the single Lasso strip tool (submenu). */
+  const [lassoShape, setLassoShape] = useState<LassoShapeKind>(DEFAULT_LASSO_SHAPE);
+  const lassoShapeRef = useRef<LassoShapeKind>(DEFAULT_LASSO_SHAPE);
+  lassoShapeRef.current = lassoShape;
+  /** Space held → pan-over-cells (always-reachable pan). */
+  const spaceHeldRef = useRef(false);
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  /**
+   * Select-mode click-and-drag: snapshot selection at pointerdown.
+   * Pointerup !moved applies click from that snapshot (never re-toggle mid-gesture).
+   */
+  const pendingSelectClickRef = useRef<{
+    blockId: string;
+    multiModifier: boolean;
+    /** Selection at pointerdown — authoritative for click completion. */
+    prevSelectedBlockIds: string[];
+  } | null>(null);
+  /** Empty-cell press: pan if dragged past threshold, else click-select/Add. */
+  const emptyCellPointerRef = useRef<{
+    pointerId: number;
+    cell: GridCell;
+    startX: number;
+    startY: number;
+    multiModifier: boolean;
+    panning: boolean;
+  } | null>(null);
   /** Explicit prereq-edit: target + staged prereqs; confirm/cancel write or discard. */
   const [prereqEdit, setPrereqEdit] = useState<PrereqEditState>(EMPTY_PREREQ_EDIT);
   const prereqEditRef = useRef<PrereqEditState>(EMPTY_PREREQ_EDIT);
@@ -517,6 +679,41 @@ export function BlockSkillGrid({
     () => buildSkillGridLayout(nodes),
     [nodes],
   );
+  /**
+   * Blocks occupying any cell of a running radius/density expand job — not clickable
+   * until that job finishes (completed/stopped/removed).
+   */
+  const generationLockedCellKeys = useMemo(
+    () => activeExpandJobLockedCellKeys(expandJobs),
+    [expandJobs],
+  );
+  const generationLockedBlockIds = useMemo(() => {
+    const locked = new Set<string>();
+    if (generationLockedCellKeys.size === 0) return locked;
+    for (const node of nodes) {
+      const cells = skillNodeOccupiedCells(node);
+      if (isOccupiedCellsGenerationLocked(cells, generationLockedCellKeys)) {
+        locked.add(node.id);
+      }
+    }
+    return locked;
+  }, [generationLockedCellKeys, nodes]);
+  const generationLockedBlockIdsRef = useRef(generationLockedBlockIds);
+  generationLockedBlockIdsRef.current = generationLockedBlockIds;
+  /**
+   * Cells still waiting for a block from **running** expand/bridge jobs only.
+   * Each keeps a white pulse until that slot is created.
+   * Host pre-submit previews (range slider / bridge corridor) use static
+   * highlight via previewEmptyCells — not pulse — so they don't look like
+   * extra selected blocks after multi-select.
+   */
+  const generationPendingCellKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const c of mergeActiveExpandJobPreviews(expandJobs || [])) {
+      keys.add(`${c.row}:${c.col}`);
+    }
+    return keys;
+  }, [expandJobs]);
   const canSuggest =
     suggestMode === "chapter" ? Boolean(sessionId) : Boolean(workspaceId);
   const viewportCenterCell = recenterCell ?? startCell;
@@ -751,33 +948,48 @@ export function BlockSkillGrid({
     return () => viewport.removeEventListener("wheel", handleWheel);
   }, [zoomBy]);
 
-  const handlePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0 || shapePromptOpen || mergePromptOpen) return;
-
-      // Lasso: draw rectangle anywhere on the map viewport (including over cells).
-      if (activeToolRef.current === "lasso" && canEdit) {
-        const viewport = viewportRef.current;
-        if (!viewport) return;
-        const rect = viewport.getBoundingClientRect();
-        const localX = event.clientX - rect.left;
-        const localY = event.clientY - rect.top;
-        lassoDragRef.current = {
-          pointerId: event.pointerId,
-          startX: localX,
-          startY: localY,
-          curX: localX,
-          curY: localY,
-        };
-        setLassoOverlay({ left: localX, top: localY, width: 0, height: 0 });
-        event.currentTarget.setPointerCapture(event.pointerId);
-        event.preventDefault();
+  // Space-to-pan: hold Space and drag anywhere (including over blocks/empties).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      // Don't steal Space from inputs / contenteditable.
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      ) {
         return;
       }
+      if (!spaceHeldRef.current) {
+        spaceHeldRef.current = true;
+        setSpaceHeld(true);
+      }
+      e.preventDefault();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      spaceHeldRef.current = false;
+      setSpaceHeld(false);
+    };
+    const onBlur = () => {
+      spaceHeldRef.current = false;
+      setSpaceHeld(false);
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    window.addEventListener("keyup", onKeyUp, { capture: true });
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+      window.removeEventListener("keyup", onKeyUp, { capture: true });
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
 
-      // Viewport pan only on empty background (not on skill cells).
-      if ((event.target as HTMLElement).closest("[data-skill-cell]")) return;
-
+  const beginViewportPan = useCallback(
+    (event: React.PointerEvent, captureTarget?: EventTarget | null) => {
       panMovedRef.current = false;
       dragRef.current = {
         pointerId: event.pointerId,
@@ -786,9 +998,68 @@ export function BlockSkillGrid({
         panStartX: pan.x,
         panStartY: pan.y,
       };
-      event.currentTarget.setPointerCapture(event.pointerId);
+      const el = (captureTarget || event.currentTarget) as HTMLElement;
+      el.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
     },
-    [canEdit, pan.x, pan.y, shapePromptOpen, mergePromptOpen],
+    [pan.x, pan.y],
+  );
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (shapePromptOpen || mergePromptOpen) return;
+
+      // Space or middle-button: pan always (overrides lasso / skill cells).
+      if (
+        isMapPanGesture({
+          button: event.button,
+          spaceHeld: spaceHeldRef.current,
+        })
+      ) {
+        beginViewportPan(event);
+        return;
+      }
+
+      if (event.button !== 0) return;
+
+      // Lasso mode: draw region anywhere (including over cells).
+      const shape = resolveActiveLassoShape({
+        activeTool: activeToolRef.current,
+        lassoShape: lassoShapeRef.current,
+      });
+      if (shape && canEdit) {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        const rect = viewport.getBoundingClientRect();
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        lassoDragRef.current = {
+          pointerId: event.pointerId,
+          shape,
+          startX: localX,
+          startY: localY,
+          curX: localX,
+          curY: localY,
+          points: [{ x: localX, y: localY }],
+        };
+        if (shape === "rect") {
+          setLassoOverlay({ kind: "rect", left: localX, top: localY, width: 0, height: 0 });
+        } else if (shape === "circle") {
+          setLassoOverlay({ kind: "circle", cx: localX, cy: localY, r: 0 });
+        } else {
+          setLassoOverlay({ kind: "freehand", points: [{ x: localX, y: localY }] });
+        }
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        return;
+      }
+
+      // Primary pan on non-skill background (gaps / chrome).
+      if ((event.target as HTMLElement).closest("[data-skill-cell]")) return;
+
+      beginViewportPan(event);
+    },
+    [beginViewportPan, canEdit, mergePromptOpen, shapePromptOpen],
   );
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -801,14 +1072,31 @@ export function BlockSkillGrid({
       const localY = event.clientY - rect.top;
       lasso.curX = localX;
       lasso.curY = localY;
-      const left = Math.min(lasso.startX, localX);
-      const top = Math.min(lasso.startY, localY);
-      setLassoOverlay({
-        left,
-        top,
-        width: Math.abs(localX - lasso.startX),
-        height: Math.abs(localY - lasso.startY),
-      });
+      if (lasso.shape === "rect") {
+        setLassoOverlay({
+          kind: "rect",
+          left: Math.min(lasso.startX, localX),
+          top: Math.min(lasso.startY, localY),
+          width: Math.abs(localX - lasso.startX),
+          height: Math.abs(localY - lasso.startY),
+        });
+      } else if (lasso.shape === "circle") {
+        const r = Math.hypot(localX - lasso.startX, localY - lasso.startY);
+        setLassoOverlay({ kind: "circle", cx: lasso.startX, cy: lasso.startY, r });
+      } else {
+        const last = lasso.points[lasso.points.length - 1];
+        const step = last
+          ? Math.hypot(localX - last.x, localY - last.y)
+          : Infinity;
+        // Sample freehand points every ~4px to keep the polyline light.
+        if (step >= 4) {
+          lasso.points.push({ x: localX, y: localY });
+        } else if (last) {
+          last.x = localX;
+          last.y = localY;
+        }
+        setLassoOverlay({ kind: "freehand", points: [...lasso.points] });
+      }
       return;
     }
 
@@ -838,36 +1126,19 @@ export function BlockSkillGrid({
         const viewport = viewportRef.current;
         if (!viewport || !canEdit) return;
         const vrect = viewport.getBoundingClientRect();
-        // Convert lasso corners (viewport-local) to client → grid cells.
-        const startClientX = vrect.left + lasso.startX;
-        const startClientY = vrect.top + lasso.startY;
-        const endClientX = vrect.left + lasso.curX;
-        const endClientY = vrect.top + lasso.curY;
-        const a = clientPointToGridCell({
-          clientX: startClientX,
-          clientY: startClientY,
-          viewportLeft: vrect.left,
-          viewportTop: vrect.top,
-          panX: pan.x,
-          panY: pan.y,
-          zoom,
-          pitch: SKILL_GRID_PITCH,
-        });
-        const b = clientPointToGridCell({
-          clientX: endClientX,
-          clientY: endClientY,
-          viewportLeft: vrect.left,
-          viewportTop: vrect.top,
-          panX: pan.x,
-          panY: pan.y,
-          zoom,
-          pitch: SKILL_GRID_PITCH,
-        });
-        // Ignore pure clicks with no drag area (still allow 1-cell rect).
-        const dragPx = Math.hypot(lasso.curX - lasso.startX, lasso.curY - lasso.startY);
-        if (dragPx < PAN_CLICK_THRESHOLD) return;
 
-        const gridRect = normalizeGridSelectionRect(a, b);
+        const toGridPoint = (localX: number, localY: number) =>
+          clientPointToGridPoint({
+            clientX: vrect.left + localX,
+            clientY: vrect.top + localY,
+            viewportLeft: vrect.left,
+            viewportTop: vrect.top,
+            panX: pan.x,
+            panY: pan.y,
+            zoom,
+            pitch: SKILL_GRID_PITCH,
+          });
+
         const blockInputs = nodes.map((node) => {
           const cell = placements.get(node.id);
           const span = spans.get(node.id) || {
@@ -884,16 +1155,88 @@ export function BlockSkillGrid({
             occupiedCells: occupied,
           };
         });
-        const hitIds = blocksIntersectingGridRect(blockInputs, gridRect);
-        // Placeable empties inside the same rectangle (not occupied / unusable).
         const occupiedKeys = new Set<string>(occupancy.keys());
-        const emptyHits = emptyCellsIntersectingGridRect({
-          rect: gridRect,
-          occupiedKeys,
-          unusableKeys,
-        });
+
+        let hitIds: string[] = [];
+        let emptyHits: GridCell[] = [];
+
+        if (lasso.shape === "rect") {
+          const dragPx = Math.hypot(lasso.curX - lasso.startX, lasso.curY - lasso.startY);
+          if (dragPx < PAN_CLICK_THRESHOLD) return;
+          const a = clientPointToGridCell({
+            clientX: vrect.left + lasso.startX,
+            clientY: vrect.top + lasso.startY,
+            viewportLeft: vrect.left,
+            viewportTop: vrect.top,
+            panX: pan.x,
+            panY: pan.y,
+            zoom,
+            pitch: SKILL_GRID_PITCH,
+          });
+          const b = clientPointToGridCell({
+            clientX: vrect.left + lasso.curX,
+            clientY: vrect.top + lasso.curY,
+            viewportLeft: vrect.left,
+            viewportTop: vrect.top,
+            panX: pan.x,
+            panY: pan.y,
+            zoom,
+            pitch: SKILL_GRID_PITCH,
+          });
+          const gridRect = normalizeGridSelectionRect(a, b);
+          hitIds = blocksIntersectingGridRect(blockInputs, gridRect);
+          emptyHits = emptyCellsIntersectingGridRect({
+            rect: gridRect,
+            occupiedKeys,
+            unusableKeys,
+            includeUnusable: true,
+          });
+        } else if (lasso.shape === "circle") {
+          const dragPx = Math.hypot(lasso.curX - lasso.startX, lasso.curY - lasso.startY);
+          if (dragPx < PAN_CLICK_THRESHOLD) return;
+          const center = toGridPoint(lasso.startX, lasso.startY);
+          const edge = toGridPoint(lasso.curX, lasso.curY);
+          const radius = Math.hypot(edge.x - center.x, edge.y - center.y);
+          if (radius < 0.15) return;
+          hitIds = blocksIntersectingCircle(blockInputs, { center, radius });
+          emptyHits = emptyCellsIntersectingCircle({
+            center,
+            radius,
+            occupiedKeys,
+            unusableKeys,
+            includeUnusable: true,
+          });
+        } else {
+          // Freehand: ensure final point is recorded; require meaningful path length.
+          const pts = [...lasso.points];
+          const last = pts[pts.length - 1];
+          if (!last || last.x !== lasso.curX || last.y !== lasso.curY) {
+            pts.push({ x: lasso.curX, y: lasso.curY });
+          }
+          let pathPx = 0;
+          for (let i = 1; i < pts.length; i++) {
+            pathPx += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+          }
+          if (pathPx < PAN_CLICK_THRESHOLD * 2 || pts.length < 2) return;
+          const polygon = pts.map((p) => toGridPoint(p.x, p.y));
+          hitIds = blocksIntersectingPolygon(blockInputs, polygon);
+          emptyHits = emptyCellsIntersectingPolygon({
+            polygon,
+            occupiedKeys,
+            unusableKeys,
+            includeUnusable: true,
+          });
+        }
+
+        // Drop generation-locked expand-job blocks from lasso multi-select.
+        if (generationLockedBlockIdsRef.current.size > 0) {
+          hitIds = hitIds.filter(
+            (id) => !generationLockedBlockIdsRef.current.has(id),
+          );
+        }
+
+        // Blocks win over empties for all lasso shapes (rect / circle / freehand).
         const resolved = resolveLassoSelection({
-          rect: gridRect,
           blockHits: hitIds,
           emptyHits,
         });
@@ -1067,6 +1410,12 @@ export function BlockSkillGrid({
 
       event.stopPropagation();
 
+      // Radius/density expand job membership — not selectable while generating.
+      if (generationLockedBlockIdsRef.current.has(blockId)) {
+        event.preventDefault();
+        return;
+      }
+
       if (!canEdit) {
         onSelectNode(blockId);
         return;
@@ -1098,6 +1447,7 @@ export function BlockSkillGrid({
 
   const handleBlockDoubleClick = useCallback(
     (blockId: string) => {
+      if (generationLockedBlockIdsRef.current.has(blockId)) return;
       // Explicit open for practice detail (only path that opens the overlay)
       onSelectNode(blockId);
     },
@@ -1125,7 +1475,28 @@ export function BlockSkillGrid({
 
   const handleBlockPointerDown = useCallback(
     (blockId: string, nodeCell: GridCell, event: React.PointerEvent) => {
+      // Space / middle: pan over blocks (always-reachable pan).
+      if (
+        isMapPanGesture({
+          button: event.button,
+          spaceHeld: spaceHeldRef.current,
+        })
+      ) {
+        event.stopPropagation();
+        beginViewportPan(event, event.currentTarget);
+        return;
+      }
+
       if (event.button !== 0) return;
+
+      // Generating expand-job blocks: ignore select (lasso may still bubble).
+      if (generationLockedBlockIdsRef.current.has(blockId)) {
+        if (isLassoModeTool(activeToolRef.current)) return;
+        event.stopPropagation();
+        event.preventDefault();
+        suppressBlockClickRef.current = true;
+        return;
+      }
 
       const tool = activeToolRef.current;
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -1142,74 +1513,124 @@ export function BlockSkillGrid({
         return;
       }
 
-      // Lasso draws on the viewport — do not steal pointer for block click-select.
-      if (tool === "lasso") {
+      // Lasso modes draw on the viewport — do not steal pointer for block click-select.
+      if (isLassoModeTool(tool)) {
         return;
       }
 
-      // Never let the map pan steal the gesture when pressing a block (select/move).
+      // Never let the map pan steal the gesture when pressing a block (select).
       event.stopPropagation();
 
-      // ── Select tool: plain click = single-select (re-click sole → clear); Shift multi ──
-      if (canEdit && tool === "select") {
-        const nextIds = applyBlockSelection(blockId, multiModifier);
-        // Side panel: sole → detail; multi → combine; empty → close detail.
-        if (nextIds.length === 0) {
-          onSelectNode(null);
-        } else if (nextIds.length === 1) {
-          onSelectNode(nextIds[0]);
+      if (!canEdit || !manipulationMode) {
+        // Non-edit / read-only: still allow focus click via onClick path.
+        return;
+      }
+
+      // Shift/⌘/Ctrl: multi-toggle once on down (no second apply on up).
+      if (multiModifier) {
+        const prev = [...selectedBlockIdsRef.current];
+        const resolved = resolveBlockPointerGestureSelection({
+          blockId,
+          multiModifier: true,
+          moved: false,
+          prevSelectedBlockIds: prev,
+        });
+        selectedBlockIdsRef.current = resolved.selectedBlockIds;
+        setSelectedBlockIds(resolved.selectedBlockIds);
+        emitFilledBlockSelection(resolved.selectedBlockIds);
+        if (selectedEmptyCellsRef.current.length > 0) {
+          selectedEmptyCellsRef.current = [];
+          setSelectedEmptyCells([]);
+        }
+        setLocalPendingCell(null);
+        setShapePromptOpen(false);
+        onEmptySelectionChange?.(null);
+        onAddTargetChange?.(null);
+        if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
+        else if (resolved.selectedBlockIds.length === 1) {
+          onSelectNode(resolved.selectedBlockIds[0]);
         } else {
           onSelectNode(null);
         }
-        // Swallow the synthetic click so we don't apply twice.
+        suppressBlockClickRef.current = true;
+        pendingSelectClickRef.current = null;
+        return;
+      }
+
+      // Select (primary) + legacy move: arm click-and-drag.
+      // Snapshot prev for pointerup click resolution — do NOT apply sole-clear yet.
+      if (!allowsBlockDragInMode(tool, Boolean(onGridOp))) {
+        // No grid ops: click-select only (single apply).
+        const prev = [...selectedBlockIdsRef.current];
+        const resolved = resolveBlockPointerGestureSelection({
+          blockId,
+          multiModifier: false,
+          moved: false,
+          prevSelectedBlockIds: prev,
+        });
+        selectedBlockIdsRef.current = resolved.selectedBlockIds;
+        setSelectedBlockIds(resolved.selectedBlockIds);
+        emitFilledBlockSelection(resolved.selectedBlockIds);
+        if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
+        else if (resolved.selectedBlockIds.length === 1) {
+          onSelectNode(resolved.selectedBlockIds[0]);
+        } else {
+          onSelectNode(null);
+        }
         suppressBlockClickRef.current = true;
         return;
       }
 
-      if (!manipulationMode) return;
-
-      // ── Move tool ──
-      if (multiModifier) {
-        const nextIds = applyBlockSelection(blockId, true);
-        if (nextIds.length === 0) onSelectNode(null);
-        else if (nextIds.length === 1) onSelectNode(nextIds[0]);
-        else onSelectNode(null);
-        suppressBlockClickRef.current = true;
-        return;
+      const prev = [...selectedBlockIdsRef.current];
+      pendingSelectClickRef.current = {
+        blockId,
+        multiModifier: false,
+        prevSelectedBlockIds: prev,
+      };
+      // Drag preview set only — click completion uses prev snapshot on pointerup.
+      const dragIds = resolveMoveDragBlockIds({
+        blockId,
+        prevSelectedBlockIds: prev,
+      });
+      // Preview chrome: show drag set without committing sole-clear.
+      selectedBlockIdsRef.current = dragIds;
+      setSelectedBlockIds(dragIds);
+      if (selectedEmptyCellsRef.current.length > 0) {
+        selectedEmptyCellsRef.current = [];
+        setSelectedEmptyCells([]);
       }
-
-      // Keep multi-group when pressing a member; otherwise focus/toggle the pressed block.
-      const prev = selectedBlockIdsRef.current;
-      const nextIds =
-        prev.includes(blockId) && prev.length > 1 ? [...prev] : applyBlockSelection(blockId, false);
-      // Keep emit in sync when reusing multi-group without re-apply.
-      if (prev.includes(blockId) && prev.length > 1) {
-        emitFilledBlockSelection(nextIds);
-      }
-      if (nextIds.length === 0) {
+      setLocalPendingCell(null);
+      setShapePromptOpen(false);
+      onEmptySelectionChange?.(null);
+      onAddTargetChange?.(null);
+      // Detail: open when preview is a new sole focus; multi → combine (null).
+      if (dragIds.length === 1 && !(prev.length === 1 && prev[0] === blockId)) {
+        onSelectNode(dragIds[0]);
+      } else if (dragIds.length > 1) {
         onSelectNode(null);
-      } else if (nextIds.length === 1) {
-        onSelectNode(nextIds[0]);
-      } else {
-        onSelectNode(null);
       }
-      if (!onGridOp || nextIds.length === 0) return;
+
+      if (dragIds.length === 0) return;
 
       blockDragRef.current = {
         pointerId: event.pointerId,
         originRow: nodeCell.row,
         originCol: nodeCell.col,
-        blockIds: nextIds,
+        blockIds: dragIds,
         moved: false,
       };
-      setBlockDragOffset(null);
+      setBlockDragIds(dragIds);
+      setBlockDragOffset({ dRow: 0, dCol: 0 });
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      event.preventDefault();
     },
     [
-      applyBlockSelection,
+      beginViewportPan,
       canEdit,
       emitFilledBlockSelection,
       manipulationMode,
+      onAddTargetChange,
+      onEmptySelectionChange,
       onGridOp,
       onSelectNode,
     ],
@@ -1257,11 +1678,18 @@ export function BlockSkillGrid({
   }, [emitEmptySelection]);
 
   const handleEmptyCellClick = useCallback(
-    (cell: GridCell, event: React.MouseEvent) => {
+    (cell: GridCell, event: React.MouseEvent | React.PointerEvent) => {
       if (!canEdit || busy) return;
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
-      // Lasso owns the gesture — never open add or select empties from click.
-      if (activeToolRef.current === "lasso") return;
+      // Lasso modes own the gesture — never open add or select empties from click.
+      if (isLassoModeTool(activeToolRef.current)) return;
+      // Swallow after empty-cell pan (pointer path).
+      if (suppressBlockClickRef.current) {
+        suppressBlockClickRef.current = false;
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        return;
+      }
 
       const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -1269,8 +1697,8 @@ export function BlockSkillGrid({
       const selectsEmpty =
         shouldEmptyCellClickSelect({ activeTool: tool }) || isUnusable;
 
-      // Select / Move: plain = single empty (+ right-pane add when placeable);
-      // Shift/⌘/Ctrl = multi-toggle (generate-in-shape). No double-click add path.
+      // Select: plain = single empty (+ right-pane add when placeable);
+      // Shift/⌘/Ctrl = multi-toggle (generate-in-shape). Drag empty = pan.
       // Unusable cells must remain selectable so mark_unusable can clear them.
       if (selectsEmpty) {
         if (multiModifier) event.preventDefault();
@@ -1279,7 +1707,7 @@ export function BlockSkillGrid({
         return;
       }
 
-      // Legacy path (no select/move mode): single empty still drives right-pane add.
+      // Legacy path (no select mode): single empty still drives right-pane add.
       if (isUnusable) return;
       applyEmptyCellSelection(cell, false);
       if (selectedNodeId) onSelectNode(null);
@@ -1457,10 +1885,55 @@ export function BlockSkillGrid({
       if (!drag || drag.pointerId !== event.pointerId) return;
       blockDragRef.current = null;
       setBlockDragOffset(null);
+      setBlockDragIds(null);
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
       }
-      if (!drag.moved) return;
+
+      const pending = pendingSelectClickRef.current;
+      pendingSelectClickRef.current = null;
+
+      // Click (no drag): resolve from pointerdown snapshot only — never re-apply
+      // against mid-gesture preview (that caused select-then-clear).
+      if (!drag.moved) {
+        if (pending?.blockId) {
+          const resolved = resolveBlockPointerGestureSelection({
+            blockId: pending.blockId,
+            multiModifier: pending.multiModifier,
+            moved: false,
+            prevSelectedBlockIds: pending.prevSelectedBlockIds,
+          });
+          selectedBlockIdsRef.current = resolved.selectedBlockIds;
+          setSelectedBlockIds(resolved.selectedBlockIds);
+          emitFilledBlockSelection(resolved.selectedBlockIds);
+          if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
+          else if (resolved.selectedBlockIds.length === 1) {
+            onSelectNode(resolved.selectedBlockIds[0]);
+          } else {
+            onSelectNode(null);
+          }
+          suppressBlockClickRef.current = true;
+        }
+        return;
+      }
+
+      // Drag: keep drag membership; commit grid move.
+      if (pending) {
+        const resolved = resolveBlockPointerGestureSelection({
+          blockId: pending.blockId,
+          multiModifier: pending.multiModifier,
+          moved: true,
+          prevSelectedBlockIds: pending.prevSelectedBlockIds,
+        });
+        selectedBlockIdsRef.current = resolved.selectedBlockIds;
+        setSelectedBlockIds(resolved.selectedBlockIds);
+        emitFilledBlockSelection(resolved.selectedBlockIds);
+        if (resolved.selectedBlockIds.length === 1) {
+          onSelectNode(resolved.selectedBlockIds[0]);
+        } else {
+          onSelectNode(null);
+        }
+      }
       const cell = resolveCellFromClient(event.clientX, event.clientY);
       if (!cell) return;
       const delta = blockDragMoveDelta(
@@ -1476,7 +1949,105 @@ export function BlockSkillGrid({
         dCol: delta.dCol,
       });
     },
-    [resolveCellFromClient, runGridOp],
+    [
+      emitFilledBlockSelection,
+      onSelectNode,
+      resolveCellFromClient,
+      runGridOp,
+    ],
+  );
+
+  const handleEmptyCellPointerDown = useCallback(
+    (cell: GridCell, event: React.PointerEvent) => {
+      if (
+        isMapPanGesture({
+          button: event.button,
+          spaceHeld: spaceHeldRef.current,
+        })
+      ) {
+        event.stopPropagation();
+        beginViewportPan(event, event.currentTarget);
+        return;
+      }
+      if (event.button !== 0) return;
+      if (isLassoModeTool(activeToolRef.current)) return;
+      if (!canEdit || busy) return;
+
+      const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
+      // Shift multi-select: keep click path only.
+      if (multiModifier) return;
+
+      event.stopPropagation();
+      emptyCellPointerRef.current = {
+        pointerId: event.pointerId,
+        cell: { row: cell.row, col: cell.col },
+        startX: event.clientX,
+        startY: event.clientY,
+        multiModifier: false,
+        panning: false,
+      };
+      (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    },
+    [beginViewportPan, busy, canEdit],
+  );
+
+  const handleEmptyCellPointerMove = useCallback(
+    (event: React.PointerEvent) => {
+      const arm = emptyCellPointerRef.current;
+      if (!arm || arm.pointerId !== event.pointerId) return;
+      const dx = event.clientX - arm.startX;
+      const dy = event.clientY - arm.startY;
+      const past =
+        Math.abs(dx) > PAN_CLICK_THRESHOLD || Math.abs(dy) > PAN_CLICK_THRESHOLD;
+      if (
+        !arm.panning &&
+        emptyCellDragIsPan({
+          movedPastThreshold: past,
+          multiModifier: arm.multiModifier,
+          spaceHeld: spaceHeldRef.current,
+          button: event.buttons === 4 ? 1 : 0,
+        })
+      ) {
+        arm.panning = true;
+        suppressBlockClickRef.current = true;
+        panMovedRef.current = true;
+        dragRef.current = {
+          pointerId: event.pointerId,
+          startX: arm.startX,
+          startY: arm.startY,
+          panStartX: pan.x,
+          panStartY: pan.y,
+        };
+      }
+      if (arm.panning && dragRef.current?.pointerId === event.pointerId) {
+        const drag = dragRef.current;
+        setPan({
+          x: drag.panStartX + (event.clientX - drag.startX),
+          y: drag.panStartY + (event.clientY - drag.startY),
+        });
+      }
+    },
+    [pan.x, pan.y],
+  );
+
+  const handleEmptyCellPointerUp = useCallback(
+    (event: React.PointerEvent) => {
+      const arm = emptyCellPointerRef.current;
+      if (!arm || arm.pointerId !== event.pointerId) return;
+      emptyCellPointerRef.current = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+      }
+      if (arm.panning) {
+        dragRef.current = null;
+        suppressBlockClickRef.current = true;
+        return;
+      }
+      // Click: select empty / open Add (existing handler).
+      handleEmptyCellClick(arm.cell, event as unknown as React.MouseEvent);
+      suppressBlockClickRef.current = true;
+    },
+    [handleEmptyCellClick],
   );
 
   if (nodes.length === 0 && !canEdit) {
@@ -1540,19 +2111,31 @@ export function BlockSkillGrid({
 
   const handleToolClick = (tool: BlockMapToolId) => {
     // Leaving prereq-edit when switching modes (except lock_until confirm path).
-    if (tool === "select" || tool === "move" || tool === "lasso") {
+    if (tool === "select" || tool === "move" || isLassoModeTool(tool)) {
       if (prereqEdit.active) {
         setPrereqEdit(cancelPrereqEditMode());
       }
+    }
+    // Re-click Lasso while active: cycle shape (submenu alternative).
+    if (tool === "lasso" && activeTool === "lasso") {
+      setLassoShape((s) => nextLassoShape(s));
+      return;
     }
     const nextMode = nextActiveModeTool(activeTool, tool);
     // Keep ref in sync immediately so the next pointerdown sees the new mode.
     activeToolRef.current = nextMode;
     setActiveTool(nextMode);
+    if (tool === "lasso" || tool === "lasso_circle" || tool === "lasso_freehand") {
+      if (tool === "lasso_circle") setLassoShape("circle");
+      else if (tool === "lasso_freehand") setLassoShape("freehand");
+      // keep current lassoShape when entering via primary lasso button
+    }
     switch (tool) {
       case "select":
       case "move":
       case "lasso":
+      case "lasso_circle":
+      case "lasso_freehand":
         return;
       case "merge":
         if (isBlockMapToolEnabled("merge", toolEnablement)) setMergePromptOpen(true);
@@ -1666,28 +2249,36 @@ export function BlockSkillGrid({
   const isViewportTool = (t?: BlockMapToolId) =>
     t === "zoom_in" || t === "zoom_out" || t === "recenter";
   const isModeTool = (t?: BlockMapToolId) =>
-    t === "select" || t === "move" || t === "lasso";
+    t === "select" || t === "lasso";
   const modeTools = stripTools.filter((t) => isModeTool(t));
   const actionTools = stripTools.filter((t) => !isModeTool(t) && !isViewportTool(t));
   const viewportTools = stripTools.filter((t) => isViewportTool(t));
+  const activeLassoShape = resolveActiveLassoShape({
+    activeTool,
+    lassoShape,
+  });
+  const canDragBlocks = allowsBlockDragInMode(activeTool, Boolean(onGridOp));
 
   const renderToolButton = (tool: BlockMapToolId) => {
     const enabled = isBlockMapToolEnabled(tool, toolEnablement);
     const isActiveMode =
-      ((tool === "select" || tool === "move" || tool === "lasso") && activeTool === tool) ||
+      ((tool === "select" || tool === "lasso") && activeTool === tool) ||
       (tool === "lock_until" && prereqEdit.active);
     const title =
       tool === "lock_until" && prereqEdit.active
         ? prereqEdit.stagedPrereqIds.length === 0
           ? "Confirm: clear all prerequisites for this block"
           : "Confirm: save staged prerequisites (empty set clears all)"
-        : toolTooltip(tool, labels);
+        : tool === "lasso"
+          ? `${toolTooltip(tool, labels)} · ${lassoShapeTooltip(lassoShape)}`
+          : toolTooltip(tool, labels);
     return (
       <button
         key={tool}
         type="button"
         data-block-map-tool={tool}
         data-active={isActiveMode ? "true" : "false"}
+        data-lasso-shape={tool === "lasso" ? lassoShape : undefined}
         data-prereq-edit-active={
           tool === "lock_until" && prereqEdit.active ? "true" : undefined
         }
@@ -1696,19 +2287,19 @@ export function BlockSkillGrid({
         title={title}
         aria-label={title}
         aria-pressed={
-          tool === "select" || tool === "move" || tool === "lasso" || tool === "lock_until"
+          tool === "select" || tool === "lasso" || tool === "lock_until"
             ? isActiveMode
             : undefined
         }
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm transition ${
           isActiveMode
-            ? "border-cyan-400/70 bg-cyan-500/20 text-cyan-50 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
+            ? "border-white/40 bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.12)]"
             : enabled
               ? "border-transparent bg-transparent text-neutral-300 hover:border-neutral-600 hover:bg-neutral-800/80 hover:text-white"
               : "border-transparent bg-transparent text-neutral-600 opacity-45"
         } disabled:cursor-not-allowed`}
       >
-        <ToolIcon id={tool} />
+        <ToolIcon id={tool} lassoShape={lassoShape} />
       </button>
     );
   };
@@ -1717,6 +2308,8 @@ export function BlockSkillGrid({
     <div
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
       data-block-map-tool={activeTool}
+      data-lasso-shape={activeLassoShape || undefined}
+      data-space-pan={spaceHeld ? "true" : "false"}
       data-selected-block-count={selectedBlockIds.length}
       data-selected-block-ids={selectedBlockIds.join(",")}
     >
@@ -1730,7 +2323,42 @@ export function BlockSkillGrid({
           className="flex h-full w-11 shrink-0 flex-col items-center border-r border-neutral-800/80 bg-neutral-950/95 py-2"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-col items-center gap-0.5">{modeTools.map(renderToolButton)}</div>
+          <div className="flex flex-col items-center gap-0.5">
+            {modeTools.map(renderToolButton)}
+            {/* Lasso shape submenu — one lasso tool, choose rect / circle / freehand */}
+            {activeTool === "lasso" ? (
+              <div
+                className="mt-1 flex flex-col items-center gap-0.5 border-t border-neutral-800 pt-1"
+                data-lasso-shape-submenu
+                role="group"
+                aria-label="Lasso shape"
+              >
+                {LASSO_SHAPE_ORDER.map((shape) => {
+                  const active = lassoShape === shape;
+                  return (
+                    <button
+                      key={shape}
+                      type="button"
+                      data-lasso-shape-option={shape}
+                      data-active={active ? "true" : "false"}
+                      title={lassoShapeTooltip(shape)}
+                      aria-label={lassoShapeTooltip(shape)}
+                      aria-pressed={active}
+                      onClick={() => setLassoShape(shape)}
+                      className={`flex h-7 w-7 items-center justify-center rounded border text-[10px] transition ${
+                        active
+                          ? "border-white/40 bg-white/10 text-white"
+                          : "border-transparent text-neutral-400 hover:border-neutral-700 hover:text-white"
+                      }`}
+                    >
+                      <LassoShapeIcon shape={shape} className="h-3.5 w-3.5" />
+                      <span className="sr-only">{lassoShapeLabel(shape)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
           {actionTools.length > 0 && (
             <>
               <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
@@ -1752,19 +2380,22 @@ export function BlockSkillGrid({
         <div
           ref={viewportRef}
           className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
-            activeTool === "lasso"
-              ? "cursor-crosshair"
-              : activeTool === "move"
-                ? "cursor-grab active:cursor-grabbing"
-                : "cursor-default"
+            spaceHeld
+              ? "cursor-grab active:cursor-grabbing"
+              : activeLassoShape
+                ? "cursor-crosshair"
+                : activeTool === "select"
+                  ? "cursor-grab"
+                  : "cursor-default"
           }`}
-          data-map-lasso-mode={activeTool === "lasso" ? "true" : "false"}
+          data-map-lasso-mode={activeLassoShape || "false"}
+          data-map-lasso-shape={activeLassoShape || undefined}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
-        {lassoOverlay ? (
+        {lassoOverlay?.kind === "rect" ? (
           <div
             data-map-lasso-rect
             className="pointer-events-none absolute z-[12] border border-cyan-400/80 bg-cyan-400/10"
@@ -1776,16 +2407,58 @@ export function BlockSkillGrid({
             }}
           />
         ) : null}
-        {/* Rectangular minimap: cluster graph, top-right overlay */}
-        {minimapGraph.clusters.length > 0 ? (
+        {lassoOverlay?.kind === "circle" ? (
           <div
-            data-block-minimap
-            data-minimap-cluster-count={minimapGraph.clusters.length}
-            className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
-            style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title="Minimap — click a cluster to center the map"
+            data-map-lasso-circle
+            className="pointer-events-none absolute z-[12] rounded-full border border-cyan-400/80 bg-cyan-400/10"
+            style={{
+              left: lassoOverlay.cx - lassoOverlay.r,
+              top: lassoOverlay.cy - lassoOverlay.r,
+              width: lassoOverlay.r * 2,
+              height: lassoOverlay.r * 2,
+            }}
+          />
+        ) : null}
+        {lassoOverlay?.kind === "freehand" && lassoOverlay.points.length > 0 ? (
+          <svg
+            data-map-lasso-freehand
+            className="pointer-events-none absolute inset-0 z-[12] h-full w-full overflow-visible"
+            aria-hidden
           >
+            <polygon
+              fill="rgba(34, 211, 238, 0.08)"
+              stroke="rgba(34, 211, 238, 0.85)"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              points={lassoOverlay.points.map((p) => `${p.x},${p.y}`).join(" ")}
+            />
+          </svg>
+        ) : null}
+        {/* Rectangular minimap: cluster graph, top-right overlay (always shown) */}
+        <div
+          data-block-minimap
+          data-minimap-cluster-count={minimapGraph.clusters.length}
+          data-minimap-empty={minimapGraph.clusters.length === 0 ? "true" : "false"}
+          className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+          style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
+          onPointerDown={(e) => e.stopPropagation()}
+          title={
+            minimapGraph.clusters.length > 0
+              ? "Minimap — click a cluster to center the map"
+              : "Minimap — create a cluster to see it here"
+          }
+        >
+          {minimapGraph.clusters.length === 0 ? (
+            <div
+              className="flex h-full w-full items-center justify-center px-4 text-center"
+              data-minimap-empty-message
+            >
+              <p className="text-[11px] leading-snug text-neutral-500">
+                Create a cluster to see it in the minimap
+              </p>
+            </div>
+          ) : (
             <svg
               width={MINIMAP_FRAME_WIDTH}
               height={MINIMAP_FRAME_HEIGHT}
@@ -1846,6 +2519,85 @@ export function BlockSkillGrid({
                 );
               })}
             </svg>
+          )}
+        </div>
+
+        {/* Background range/density multi-create jobs — under minimap; map stays interactive */}
+        {Array.isArray(expandJobs) && expandJobs.length > 0 ? (
+          <div
+            data-map-expand-jobs
+            data-map-expand-job-count={expandJobs.length}
+            className="pointer-events-auto absolute right-2 z-20 flex max-h-[min(40vh,16rem)] w-[220px] flex-col gap-1.5 overflow-y-auto"
+            style={{ top: 8 + MINIMAP_FRAME_HEIGHT + 8, width: MINIMAP_FRAME_WIDTH }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {expandJobs.map((job) => {
+              const fraction = addExpandProgressFraction({
+                completed: job.completed,
+                total: job.total,
+              });
+              const running = job.status === "running";
+              return (
+                <div
+                  key={job.id}
+                  data-map-expand-job={job.id}
+                  data-map-expand-job-status={job.status}
+                  data-map-expand-progress-completed={job.completed}
+                  data-map-expand-progress-total={job.total}
+                  className="rounded-md border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+                >
+                  <div className="mb-1 flex items-start justify-between gap-1.5">
+                    <p className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-100">
+                      {job.label?.trim()
+                        ? job.label
+                        : running
+                          ? "Creating blocks…"
+                          : job.status === "stopped"
+                            ? "Stopped"
+                            : job.status === "error"
+                              ? "Failed"
+                              : "Done"}
+                    </p>
+                    <span
+                      className="shrink-0 font-mono text-[10px] text-neutral-300"
+                      data-map-expand-progress-label
+                    >
+                      {job.completed}/{job.total}
+                    </span>
+                  </div>
+                  <div
+                    className="mb-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800"
+                    role="progressbar"
+                    aria-valuenow={job.completed}
+                    aria-valuemin={0}
+                    aria-valuemax={job.total}
+                    aria-label={`Creating blocks ${job.completed} of ${job.total}`}
+                    data-map-expand-progress-bar
+                  >
+                    <div
+                      className="h-full rounded-full bg-white transition-[width] duration-300 ease-out"
+                      data-map-expand-progress-fill
+                      style={{ width: `${Math.round(fraction * 100)}%` }}
+                    />
+                  </div>
+                  {running ? (
+                    <button
+                      type="button"
+                      data-map-expand-stop
+                      data-map-expand-stop-job={job.id}
+                      onClick={() => onAbortExpandJob?.(job.id)}
+                      className="w-full rounded-md border border-white/50 bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:bg-neutral-100"
+                    >
+                      Stop
+                    </button>
+                  ) : job.error ? (
+                    <p className="text-[10px] text-red-300/90" data-map-expand-job-error>
+                      {job.error}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         ) : null}
 
@@ -1873,7 +2625,17 @@ export function BlockSkillGrid({
             const selectedEmpty = selectedEmptyCells.some(
               (c) => c.row === cell.row && c.col === cell.col,
             );
-            const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
+            const cellKeyStr = `${cell.row}:${cell.col}`;
+            const generationPending = generationPendingCellKeys.has(cellKeyStr);
+            const hostPreviewEmpty = Boolean(
+              previewEmptyCells?.some(
+                (c) => c.row === cell.row && c.col === cell.col,
+              ),
+            );
+            // Running-job slots pulse; host range/bridge previews are static white.
+            const previewEmpty = generationPending || hostPreviewEmpty;
+            const emptyHighlight = selectedEmpty || previewEmpty;
+            const isUnusable = unusableKeys.has(cellKeyStr);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
@@ -1889,33 +2651,51 @@ export function BlockSkillGrid({
               >
                 <button
                   type="button"
-                  disabled={!canEdit || busy}
+                  disabled={!canEdit || busy || generationPending}
                   data-map-cell-unusable={isUnusable ? "true" : "false"}
-                  data-map-cell-selected={selectedEmpty ? "true" : "false"}
+                  data-map-cell-selected={emptyHighlight ? "true" : "false"}
+                  data-empty-preview={previewEmpty && !selectedEmpty ? "true" : "false"}
+                  data-generation-pending={generationPending ? "true" : "false"}
                   onClick={(e) => {
-                    handleEmptyCellClick(cell, e);
+                    // Multi-modifier still uses click; plain clicks go through pointer up
+                    // after empty-drag pan disambiguation.
+                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                      handleEmptyCellClick(cell, e);
+                    }
                   }}
+                  onPointerDown={(e) => handleEmptyCellPointerDown(cell, e)}
+                  onPointerMove={handleEmptyCellPointerMove}
+                  onPointerUp={handleEmptyCellPointerUp}
+                  onPointerCancel={handleEmptyCellPointerUp}
                   className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
                     isUnusable
-                      ? selectedEmpty
-                        ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50`
-                        : MAP_CELL_UNUSABLE_CLASS
-                      : selectedEmpty
-                        ? MAP_CELL_EMPTY_SELECTED_CLASS
-                        : canEdit
-                          ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
-                          : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
+                      ? generationPending
+                        ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50 animate-pulse`
+                        : emptyHighlight
+                          ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50`
+                          : MAP_CELL_UNUSABLE_CLASS
+                      : generationPending
+                        ? MAP_CELL_GENERATION_PENDING_CLASS
+                        : emptyHighlight
+                          ? MAP_CELL_EMPTY_SELECTED_CLASS
+                          : canEdit
+                            ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
+                            : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
                   }`}
                   title={
-                    isUnusable
+                    generationPending
+                      ? "Generating block here…"
+                      : isUnusable
                       ? canEdit
-                        ? "Unusable ground — click to select, then Unusable tool to clear"
+                        ? activeLassoShape
+                          ? "Unusable ground — drag lasso to multi-select, then Unusable tool to clear"
+                          : "Unusable ground — click to select, then Unusable tool to clear"
                         : "Unusable ground — shapes paths"
                       : canEdit
-                        ? activeTool === "lasso"
-                          ? "Drag to lasso-select blocks"
+                        ? activeLassoShape
+                          ? "Drag to lasso-select blocks or empty cells"
                           : activeTool === "select" || activeTool === "move"
-                            ? "Click empty to Add · Shift+click multi-select for shape form"
+                            ? "Click empty to Add · drag empty to pan · Shift multi for shape form · Space/middle pan"
                             : labels.emptyCell
                         : undefined
                   }
@@ -1945,25 +2725,29 @@ export function BlockSkillGrid({
               node.shape_cells.length > 0 &&
               occupiedCells.length > 0 &&
               occupiedCells.length !== span.span_w * span.span_h;
+            // Map selection chrome follows selectedBlockIds only (drag set source of
+            // truth). Do not also paint selectedNodeId / focusedNodeId as selected —
+            // that made lasso multi-select look broader than the drag membership.
             const multiSelected = selectedBlockIds.includes(node.id);
+            /** Active move-drag member (sole or multi) — independent of selection lag. */
+            const isDragParticipant = Boolean(blockDragIds?.includes(node.id));
             const isAppearingTarget = appearingNodeIds.includes(node.id);
             const appeared = !isAppearingTarget || visibleAppearing.has(node.id);
+            // Prefer explicit drag participants (sole or multi) so single-block
+            // move still translates even if selection chrome lags a frame.
             const dragDx =
-              multiSelected && blockDragOffset
+              isDragParticipant && blockDragOffset
                 ? blockDragOffset.dCol * SKILL_GRID_PITCH
                 : 0;
             const dragDy =
-              multiSelected && blockDragOffset
+              isDragParticipant && blockDragOffset
                 ? blockDragOffset.dRow * SKILL_GRID_PITCH
                 : 0;
 
-            // Neutral status chrome + white selection (single or multi).
-            // Prerequisite locks render as locked chrome until deps complete —
-            // but stay fully clickable so creators can reselect and unlock.
-            // Prereq-edit / single-select preview: target = full white;
-            // dependencies = dashed mild white.
-            const singleSelected =
-              focusedNodeId === node.id || (!multiSelected && selectedNodeId === node.id);
+            // Chapter focus only when map multi-select list is empty (learner map).
+            const chapterFocusOnly =
+              selectedBlockIds.length === 0 &&
+              (focusedNodeId === node.id || selectedNodeId === node.id);
             const dependencyIds = normalizeLockUntilBlockIds(
               node.lock_until_block_ids,
               node.id,
@@ -1971,30 +2755,44 @@ export function BlockSkillGrid({
             const hasDependencies = blockHasLockDependencies(node);
             const lockedByPrereq = isBlockLockedUntilCompleted(node, nodesById);
             const displayStatus = lockedByPrereq ? "locked" : node.status;
+            // Prereq dashed preview only for sole map selection that is also the
+            // detail focus — not while multi-selecting (avoids "extra selected").
             const highlightRole = resolveMapBlockHighlightRole({
               blockId: node.id,
               selected: multiSelected,
               prereqEdit,
-              previewTargetId,
-              previewPrereqIds,
+              previewTargetId:
+                previewTargetId && selectedNodeId === previewTargetId
+                  ? previewTargetId
+                  : null,
+              previewPrereqIds:
+                previewTargetId && selectedNodeId === previewTargetId
+                  ? previewPrereqIds
+                  : [],
               isLockedDisplay: lockedByPrereq,
             });
             const isPrereqHighlight = highlightRole === "prereq";
             const baseChrome = mapCellChromeClasses({
               status: displayStatus,
-              selected: multiSelected || singleSelected,
-              focused: singleSelected,
+              selected: multiSelected || chapterFocusOnly,
+              focused: chapterFocusOnly,
               showProgress,
               highlightRole,
             });
-            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 pointer-events-auto ${baseChrome} ${
-              canEdit
-                ? activeTool === "move"
-                  ? "cursor-grab active:cursor-grabbing"
-                  : "cursor-pointer"
-                : ""
-            } ${
-              isAppearingTarget
+            // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
+            const generationLocked = generationLockedBlockIds.has(node.id);
+            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition ${
+              generationLocked
+                ? "pointer-events-none cursor-not-allowed opacity-60"
+                : `hover:brightness-110 pointer-events-auto ${
+                    canEdit
+                      ? canDragBlocks || spaceHeld
+                        ? "cursor-grab active:cursor-grabbing"
+                        : "cursor-pointer"
+                      : ""
+                  }`
+            } ${baseChrome} ${
+              !generationLocked && isAppearingTarget
                 ? appeared
                   ? "opacity-100 scale-100 shadow-[0_0_14px_rgba(255,255,255,0.12)]"
                   : "opacity-0 scale-95"
@@ -2003,7 +2801,7 @@ export function BlockSkillGrid({
             const tileTransition = {
               transition: isAppearingTarget
                 ? "opacity 380ms ease, transform 380ms ease, box-shadow 380ms ease"
-                : blockDragOffset && multiSelected
+                : isDragParticipant && blockDragOffset
                   ? "none"
                   : undefined,
             } as const;
@@ -2012,6 +2810,10 @@ export function BlockSkillGrid({
                 dependencyCount={dependencyIds.length}
                 currentlyLocked={lockedByPrereq}
               />
+            ) : null;
+            const hasLocalContext = blockHasAttachedLocalContext(node);
+            const localContextBadge = hasLocalContext ? (
+              <BlockLocalContextDocBadge />
             ) : null;
 
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
@@ -2060,7 +2862,7 @@ export function BlockSkillGrid({
                           top: cell.row * SKILL_GRID_PITCH + dragDy,
                           width,
                           height,
-                          zIndex: multiSelected && blockDragOffset ? 5 : 2,
+                          zIndex: isDragParticipant && blockDragOffset ? 5 : 2,
                         }}
                       >
                         <button
@@ -2069,24 +2871,40 @@ export function BlockSkillGrid({
                           data-block-selected={multiSelected ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
                           data-block-has-dependencies={hasDependencies ? "true" : "false"}
+                          data-block-has-local-context={hasLocalContext ? "true" : "false"}
+                          data-block-generation-locked={generationLocked ? "true" : "false"}
                           data-block-highlight={highlightRole}
-                          data-block-map-draggable={activeTool === "move" ? "true" : undefined}
+                          data-block-map-draggable={
+                            generationLocked
+                              ? undefined
+                              : canDragBlocks
+                                ? "true"
+                                : undefined
+                          }
                           onClick={(e) => handleCellSelect(node.id, e)}
                           onDoubleClick={() => handleBlockDoubleClick(node.id)}
                           onPointerDown={(e) =>
                             handleBlockPointerDown(node.id, nodeCell, e)
                           }
                           onPointerMove={
-                            activeTool === "move" ? handleBlockPointerMove : undefined
+                            canDragBlocks && !generationLocked
+                              ? handleBlockPointerMove
+                              : undefined
                           }
                           onPointerUp={
-                            activeTool === "move" ? handleBlockPointerUp : undefined
+                            canDragBlocks && !generationLocked
+                              ? handleBlockPointerUp
+                              : undefined
                           }
                           onPointerCancel={
-                            activeTool === "move" ? handleBlockPointerUp : undefined
+                            canDragBlocks && !generationLocked
+                              ? handleBlockPointerUp
+                              : undefined
                           }
                           title={
-                            prereqEdit.active
+                            generationLocked
+                              ? `${node.title} (generating — not clickable yet)`
+                              : prereqEdit.active
                               ? highlightRole === "target"
                                 ? `${node.title} (target — click other blocks to add/remove prereqs)`
                                 : highlightRole === "prereq"
@@ -2098,16 +2916,22 @@ export function BlockSkillGrid({
                                   ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
                                   : hasDependencies
                                     ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
-                                    : node.title
+                                    : hasLocalContext
+                                      ? `${node.title} (has local context)`
+                                      : node.title
                           }
-                          className={`relative flex h-full w-full flex-col items-center justify-center px-2 text-center transition hover:brightness-110 pointer-events-auto ${
-                            canEdit
-                              ? activeTool === "move"
-                                ? "cursor-grab active:cursor-grabbing"
-                                : "cursor-pointer"
-                              : ""
+                          className={`relative flex h-full w-full flex-col items-center justify-center px-2 text-center transition ${
+                            generationLocked
+                              ? "pointer-events-none cursor-not-allowed opacity-60"
+                              : `hover:brightness-110 pointer-events-auto ${
+                                  canEdit
+                                    ? canDragBlocks || spaceHeld
+                                      ? "cursor-grab active:cursor-grabbing"
+                                      : "cursor-pointer"
+                                    : ""
+                                }`
                           } ${
-                            isAppearingTarget
+                            !generationLocked && isAppearingTarget
                               ? appeared
                                 ? "opacity-100 scale-100"
                                 : "opacity-0 scale-95"
@@ -2143,16 +2967,12 @@ export function BlockSkillGrid({
                                 {formatGridCoordinate(nodeCell.row, nodeCell.col)}
                                 <span className="opacity-70"> · {occupiedCells.length}c</span>
                               </span>
-                              {node.is_start && (
-                                <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] opacity-60">
-                                  Start
-                                </span>
-                              )}
                               <MapCellStatusGlyph
                                 status={node.status}
                                 showProgress={showProgress}
                                 title={node.title}
                               />
+                              {localContextBadge}
                               {lockBadge}
                             </>
                           ) : null}
@@ -2179,7 +2999,7 @@ export function BlockSkillGrid({
                   top: nodeCell.row * SKILL_GRID_PITCH + dragDy,
                   width,
                   height,
-                  zIndex: multiSelected && blockDragOffset ? 5 : undefined,
+                  zIndex: isDragParticipant && blockDragOffset ? 5 : undefined,
                 }}
               >
                 <button
@@ -2188,18 +3008,40 @@ export function BlockSkillGrid({
                   data-block-selected={multiSelected ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
+                  data-block-has-local-context={hasLocalContext ? "true" : "false"}
+                  data-block-generation-locked={generationLocked ? "true" : "false"}
                   data-block-highlight={highlightRole}
-                  data-block-map-draggable={activeTool === "move" ? "true" : undefined}
+                  data-block-map-draggable={
+                    generationLocked
+                      ? undefined
+                      : canDragBlocks
+                        ? "true"
+                        : undefined
+                  }
                   onClick={(e) => handleCellSelect(node.id, e)}
                   onDoubleClick={() => handleBlockDoubleClick(node.id)}
                   onPointerDown={(e) => handleBlockPointerDown(node.id, nodeCell, e)}
-                  onPointerMove={activeTool === "move" ? handleBlockPointerMove : undefined}
-                  onPointerUp={activeTool === "move" ? handleBlockPointerUp : undefined}
-                  onPointerCancel={activeTool === "move" ? handleBlockPointerUp : undefined}
+                  onPointerMove={
+                    canDragBlocks && !generationLocked
+                      ? handleBlockPointerMove
+                      : undefined
+                  }
+                  onPointerUp={
+                    canDragBlocks && !generationLocked
+                      ? handleBlockPointerUp
+                      : undefined
+                  }
+                  onPointerCancel={
+                    canDragBlocks && !generationLocked
+                      ? handleBlockPointerUp
+                      : undefined
+                  }
                   className={tileClass}
                   style={tileTransition}
                   title={
-                    prereqEdit.active
+                    generationLocked
+                      ? `${node.title} (generating — not clickable yet)`
+                      : prereqEdit.active
                       ? highlightRole === "target"
                         ? `${node.title} (target — click other blocks to add/remove prereqs)`
                         : highlightRole === "prereq"
@@ -2211,7 +3053,9 @@ export function BlockSkillGrid({
                           ? `${node.title} (locked — select, then Lock until to edit/clear prereqs)`
                           : hasDependencies
                             ? `${node.title} (depends on ${dependencyIds.length} block${dependencyIds.length === 1 ? "" : "s"})`
-                            : node.title
+                            : hasLocalContext
+                              ? `${node.title} (has local context)`
+                              : node.title
                   }
                 >
                   <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
@@ -2220,16 +3064,12 @@ export function BlockSkillGrid({
                       <span className="text-neutral-600"> · {span.span_w}×{span.span_h}</span>
                     )}
                   </span>
-                  {node.is_start && (
-                    <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] text-neutral-400">
-                      Start
-                    </span>
-                  )}
                   <MapCellStatusGlyph
                     status={node.status}
                     showProgress={showProgress}
                     title={node.title}
                   />
+                  {localContextBadge}
                   {lockBadge}
                 </button>
               </div>
@@ -2257,17 +3097,17 @@ export function BlockSkillGrid({
                 Selected block depends on {previewPrereqIds.length} block
                 {previewPrereqIds.length === 1 ? "" : "s"} (dashed outline)
               </span>
-            ) : activeTool === "lasso" ? (
-              `Lasso: drag a rectangle to select blocks or empty cells (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty)`
+            ) : activeLassoShape === "rect" ? (
+              `Rect lasso: drag a marquee (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · submenu for circle/freehand · Space pan`
+            ) : activeLassoShape === "circle" ? (
+              `Circle lasso: drag from center (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · Space pan`
+            ) : activeLassoShape === "freehand" ? (
+              `Freehand lasso: draw a path (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · Space pan`
             ) : manipulationMode ? (
-              activeTool === "select" ? (
-                `Select: click one block or empty (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · 1 empty → Add · multi empty → shape form in right panel · double-click block for detail`
-              ) : (
-                "Move: drag blocks with hand · multi-select empties opens shape form in right panel"
-              )
+              `Select: click block/empty · drag block to move · drag empty or Space/middle to pan (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · Shift multi · 1 empty → Add`
             ) : (
               labels.multiSelectHint ||
-              "Select: click one empty to Add · Shift multi-select empties for shape form · Lasso for blocks."
+              "Select: click empty to Add · drag empty to pan · Shift multi empties for shape · Lasso for region."
             )}
             {!prereqEdit.active && shapeFootprint && selectedEmptyCells.length > 0 && (
               <span className="ml-1 text-neutral-400">

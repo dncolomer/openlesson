@@ -252,6 +252,14 @@ describe("structural: minimap on BlockSkillGrid", () => {
     expect(grid).toContain("MINIMAP_FRAME_WIDTH");
     expect(grid).toContain("MINIMAP_FRAME_HEIGHT");
     expect(grid).not.toMatch(/const MINIMAP_WIDTH = 148/);
+    // Always mounted — empty workspace shows a create-cluster hint
+    expect(grid).toContain("data-minimap-empty");
+    expect(grid).toContain("data-minimap-empty-message");
+    expect(grid).toMatch(/Create a cluster to see it in the minimap/i);
+    // Not gated only on clusters.length > 0 (empty state still renders the frame)
+    expect(grid).not.toMatch(
+      /minimapGraph\.clusters\.length > 0 \? \(\s*<div\s+data-block-minimap/,
+    );
     // Top-right placement
     expect(grid).toMatch(/top-2|top-3/);
     expect(grid).toMatch(/right-2|right-3/);
@@ -261,6 +269,7 @@ describe("structural: minimap on BlockSkillGrid", () => {
       [
         "hasOverlay=" + grid.includes("data-block-minimap"),
         "hasClusterAttr=" + grid.includes("data-minimap-cluster"),
+        "hasEmptyHint=" + grid.includes("data-minimap-empty-message"),
         "usesPanHelper=" + grid.includes("getPanToCenterCell"),
         "usesClusterGraph=" + grid.includes("buildMinimapClusterGraph"),
       ].join("\n"),

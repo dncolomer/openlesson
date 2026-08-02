@@ -219,6 +219,8 @@ export function composeSplitBlockUserPrompt(input: {
   sourceSpanH: number;
   parts: SplitPartSpec[];
   languageNote?: string;
+  /** Optional creator guidance from the Split drawer prompt field. */
+  userGuidance?: string | null;
 }): string {
   const sourceCells = blockFootprintCellCount(input.sourceSpanW, input.sourceSpanH);
   const partLines = input.parts
@@ -236,6 +238,9 @@ export function composeSplitBlockUserPrompt(input: {
     describeBlockBreadthRelativeToSingle(input.sourceSpanW, input.sourceSpanH),
     input.sourceDescription?.trim()
       ? `Source description: ${input.sourceDescription.trim()}`
+      : "",
+    input.userGuidance?.trim()
+      ? `Creator guidance for how to split / name the focused pieces:\n${input.userGuidance.trim()}`
       : "",
     `Each result is a 1×1 baseline unit — narrower than the source (~1/${sourceCells} of its ILE/TAP breadth). Titles must be distinct focused subtopics that together reconstruct the parent scope.`,
     `Parts to name:`,

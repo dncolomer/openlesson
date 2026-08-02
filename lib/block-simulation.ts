@@ -14,6 +14,10 @@ import {
 
 export type SimulationAudience = "author" | "learner";
 
+/** Fixed Simulation quota: 3 dialogue questions + 3 solo exercises. */
+export const SIMULATION_QUESTION_COUNT = 3;
+export const SIMULATION_EXERCISE_COUNT = 3;
+
 export type SimulationProbe = {
   id: string;
   question: string;
@@ -25,6 +29,11 @@ export type SimulationProbe = {
   difficulty: "warmup" | "core" | "stretch";
   /** Prefer explicit kind when set (LLM regenerate). */
   kind?: "question" | "exercise";
+  /**
+   * Compact labels for context pieces that influenced this probe
+   * (e.g. "Title", "Description", "Local notes"). Omitted when unknown.
+   */
+  contextSources?: string[];
 };
 
 export type SimulationReadinessItem = {
@@ -57,6 +66,10 @@ export type BlockSimulationInput = BlockExampleTopicsInput & {
   status?: string | null;
   isStart?: boolean | null;
   lockUntilTitles?: string[] | null;
+  /** Optional file names from local context (for influence chips). */
+  localFileNames?: string[] | null;
+  /** Optional external source labels (for influence chips). */
+  externalLabels?: string[] | null;
 };
 
 function clean(s: unknown): string {
@@ -93,8 +106,211 @@ function coachCueForQuestion(question: string, title: string): string {
   return "Success: precise language, one example, and no hand-wavy gaps.";
 }
 
+/** Normalize a free-form influence label for chips (dedupe-friendly). */
+export function normalizeContextInfluenceLabel(raw: unknown): string | null {
+  const s = clean(raw);
+  if (s.length < 2) return null;
+  return clip(s, 40);
+}
+
+/**
+ * Compact list of context pieces available on the block (for seed influence).
+ * Order is stable for UI chips.
+ */
+export function collectBlockContextInfluenceLabels(
+  input: BlockSimulationInput,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (label: string | null) => {
+    if (!label) return;
+    const k = label.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(label);
+  };
+  if (clean(input.title)) push("Title");
+  if (clean(input.description).length >= 8) push("Description");
+  if (clean(input.planningPrompt).length >= 4) push("Planning prompt");
+  if (clean(input.localNotes).length >= 4) push("Local notes");
+  for (const name of input.localFileNames || []) {
+    const n = clean(name);
+    if (n) push(clip(n, 28));
+  }
+  for (const ext of input.externalLabels || []) {
+    const n = clean(ext);
+    if (n) push(clip(`Ext: ${n}`, 32));
+  }
+  if (
+    input.hasLocalContext &&
+    !out.some((l) => /local|file|ext:/i.test(l))
+  ) {
+    push("Local context");
+  }
+  return out;
+}
+
+function pickInfluence(
+  available: readonly string[],
+  preferred: readonly string[],
+  max = 3,
+): string[] | undefined {
+  if (!available.length) return undefined;
+  const out: string[] = [];
+  const availLower = new Map(available.map((a) => [a.toLowerCase(), a]));
+  for (const p of preferred) {
+    const hit = availLower.get(p.toLowerCase());
+    if (hit && !out.includes(hit)) out.push(hit);
+    if (out.length >= max) break;
+  }
+  // Fill from remaining available if still empty / short
+  for (const a of available) {
+    if (out.length >= max) break;
+    if (!out.includes(a)) out.push(a);
+  }
+  return out.length ? out : undefined;
+}
+
+function parseContextSources(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const label = normalizeContextInfluenceLabel(item);
+    if (!label) continue;
+    const k = label.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(label);
+    if (out.length >= 4) break;
+  }
+  return out.length ? out : undefined;
+}
+
+export function probeKindOf(
+  p: Pick<SimulationProbe, "kind" | "difficulty">,
+): "question" | "exercise" {
+  if (p.kind === "question" || p.kind === "exercise") return p.kind;
+  return p.difficulty === "stretch" ? "exercise" : "question";
+}
+
+/** Split probes into question vs exercise lists (stable order). */
+export function partitionSimulationProbes(probes: readonly SimulationProbe[]): {
+  questions: SimulationProbe[];
+  exercises: SimulationProbe[];
+} {
+  const questions: SimulationProbe[] = [];
+  const exercises: SimulationProbe[] = [];
+  for (const p of probes || []) {
+    if (probeKindOf(p) === "exercise") exercises.push(p);
+    else questions.push(p);
+  }
+  return { questions, exercises };
+}
+
+function synthQuestion(title: string, i: number, description: string): string {
+  const t = title || "this topic";
+  if (i === 0) return `What is the core idea of “${t}”?`;
+  if (i === 1) return `How would you explain “${t}” to a peer in two sentences?`;
+  if (description) {
+    return `What evidence or steps support: ${clip(description, 100)}?`;
+  }
+  return `Where does “${t}” show up in a real problem or project?`;
+}
+
+function synthExercise(title: string, i: number, description: string): string {
+  const t = title || "this topic";
+  if (i === 0) {
+    return `Complete a short exercise on “${t}”: outline the steps or solution out loud.`;
+  }
+  if (i === 1) {
+    return `Drill: apply “${t}” to a concrete case — state the setup, action, and check.`;
+  }
+  if (description) {
+    return `Solo task: demonstrate “${clip(description, 80)}” with one worked example.`;
+  }
+  return `Solo task: invent a mini-problem that requires “${t}” and solve it step by step.`;
+}
+
+/**
+ * Enforce exactly 3 questions + 3 exercises. Pads with synthetic prompts when short;
+ * trims when long. Preserves contextSources when present.
+ */
+export function enforceSimulationProbeQuota(
+  probes: readonly SimulationProbe[],
+  input: {
+    title?: string | null;
+    description?: string | null;
+    availableInfluence?: readonly string[] | null;
+  },
+): SimulationProbe[] {
+  const title = clean(input.title) || "This block";
+  const description = clean(input.description);
+  const available = [...(input.availableInfluence || [])];
+  const { questions: qIn, exercises: eIn } = partitionSimulationProbes(probes);
+
+  const questions: SimulationProbe[] = qIn.slice(0, SIMULATION_QUESTION_COUNT);
+  while (questions.length < SIMULATION_QUESTION_COUNT) {
+    const i = questions.length;
+    const question = synthQuestion(title, i, description);
+    questions.push({
+      id: `q-${i}`,
+      question,
+      coachCue: coachCueForQuestion(question, title),
+      difficulty: i === 0 ? "warmup" : "core",
+      kind: "question",
+      contextSources: pickInfluence(
+        available,
+        i === 0
+          ? ["Title", "Description"]
+          : i === 1
+            ? ["Description", "Planning prompt"]
+            : ["Title", "Local notes", "Local context"],
+      ),
+    });
+  }
+
+  const exercises: SimulationProbe[] = eIn.slice(0, SIMULATION_EXERCISE_COUNT);
+  while (exercises.length < SIMULATION_EXERCISE_COUNT) {
+    const i = exercises.length;
+    const question = synthExercise(title, i, description);
+    exercises.push({
+      id: `ex-${i}`,
+      question,
+      coachCue: coachCueForQuestion(question, title),
+      difficulty: "stretch",
+      kind: "exercise",
+      contextSources: pickInfluence(
+        available,
+        i === 0
+          ? ["Description", "Local context", "Local notes"]
+          : i === 1
+            ? ["Planning prompt", "Local notes"]
+            : ["Title", "Description", "Local context"],
+      ),
+    });
+  }
+
+  // Re-id for stable list identity
+  return [
+    ...questions.map((p, i) => ({
+      ...p,
+      id: `q-${i}`,
+      kind: "question" as const,
+      difficulty: (i === 0 ? "warmup" : "core") as SimulationProbe["difficulty"],
+    })),
+    ...exercises.map((p, i) => ({
+      ...p,
+      id: `ex-${i}`,
+      kind: "exercise" as const,
+      difficulty: "stretch" as const,
+    })),
+  ];
+}
+
 /**
  * Derive a full simulation snapshot from block fields (no LLM).
+ * Always yields exactly 3 questions + 3 exercises with compact influence labels.
  */
 export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulationResult {
   const title = clean(input.title) || "This block";
@@ -108,6 +324,8 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     localNotes: notes,
   });
 
+  const availableInfluence = collectBlockContextInfluenceLabels(input);
+
   const intent = description
     ? clip(`Practice demonstrating: ${description}`, 160)
     : `Practice the core ideas of “${title}” out loud until the gaps show.`;
@@ -119,26 +337,31 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
       )
     : `After this block you can teach “${title}” to a peer with an example.`;
 
-  const probes: SimulationProbe[] = samples.questions.map((question, i) => {
+  // Seed probes from extracted questions + synthetic exercises, then enforce quota.
+  const seedProbes: SimulationProbe[] = samples.questions.map((question, i) => {
     const difficulty = difficultyForIndex(i);
     return {
       id: `probe-${i}`,
       question,
       coachCue: coachCueForQuestion(question, title),
       difficulty,
-      kind: difficulty === "stretch" ? "exercise" : "question",
+      kind: "question" as const,
+      contextSources: pickInfluence(
+        availableInfluence,
+        i === 0
+          ? ["Title", "Description"]
+          : i === 1
+            ? ["Description", "Planning prompt", "Local notes"]
+            : ["Title", "Local notes", "Local context"],
+      ),
     };
   });
-  // Ensure at least one exercise-style prompt when we only have questions.
-  if (probes.length > 0 && !probes.some((p) => p.kind === "exercise") && title) {
-    probes.push({
-      id: `probe-ex-${probes.length}`,
-      question: `Complete a short exercise on “${title}”: outline the steps or solution out loud.`,
-      coachCue: "Success: ordered steps and a check that the answer fits the problem.",
-      difficulty: "stretch",
-      kind: "exercise",
-    });
-  }
+
+  const probes = enforceSimulationProbeQuota(seedProbes, {
+    title,
+    description,
+    availableInfluence,
+  });
 
   const hasDescription = description.length >= 12;
   const hasLocal = Boolean(input.hasLocalContext || notes);
@@ -171,7 +394,7 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     {
       id: "probes",
       label: "Practice probes ready",
-      met: probes.length > 0,
+      met: probes.length === SIMULATION_QUESTION_COUNT + SIMULATION_EXERCISE_COUNT,
       authorHint: "Regenerate simulation after editing the block.",
       learnerHint: "Probes appear once the block has enough substance.",
     },
@@ -224,6 +447,9 @@ export function normalizeSimulationPayload(
   const intent =
     clean(rec.intent || rec.designed_to || rec.summary) || base.intent;
   const outcome = clean(rec.outcome || rec.you_will_be_able_to) || base.outcome;
+  const availableInfluence = fallback
+    ? collectBlockContextInfluenceLabels(fallback)
+    : [];
 
   let probes: SimulationProbe[] = [];
   if (Array.isArray(rec.probes)) {
@@ -245,6 +471,10 @@ export function normalizeSimulationPayload(
           : difficulty === "stretch"
             ? "exercise"
             : "question";
+      const contextSources =
+        parseContextSources(
+          pr.contextSources || pr.context_sources || pr.influences || pr.sources,
+        ) || undefined;
       parsed.push({
         id: `probe-${i}`,
         question,
@@ -253,9 +483,10 @@ export function normalizeSimulationPayload(
           coachCueForQuestion(question, clean(fallback?.title) || "this block"),
         difficulty,
         kind,
+        contextSources,
       });
     });
-    probes = parsed.slice(0, 8);
+    probes = parsed;
   }
 
   if (probes.length === 0 && samples.questions.length > 0) {
@@ -267,38 +498,95 @@ export function normalizeSimulationPayload(
         question,
         coachCue: coachCueForQuestion(question, title),
         difficulty,
-        kind: difficulty === "stretch" ? ("exercise" as const) : ("question" as const),
+        kind: "question" as const,
+        contextSources: pickInfluence(availableInfluence, ["Title", "Description"]),
       };
     });
   }
 
-  // Optional dedicated exercise list from the model
-  if (Array.isArray(rec.exercises)) {
-    const title = clean(fallback?.title) || "this block";
-    const fromEx: SimulationProbe[] = [];
-    rec.exercises.forEach((ex, i) => {
-      const question =
-        typeof ex === "string"
-          ? clean(ex)
-          : ex && typeof ex === "object"
-            ? clean(
-                (ex as Record<string, unknown>).question ||
-                  (ex as Record<string, unknown>).text,
+  // Optional dedicated exercise list — only fills when we lack exercises.
+  // Prefer probe exercises (with contextSources) over string exercises[].
+  {
+    const existingEx = probes.filter((p) => probeKindOf(p) === "exercise");
+    if (
+      existingEx.length < SIMULATION_EXERCISE_COUNT &&
+      Array.isArray(rec.exercises)
+    ) {
+      const title = clean(fallback?.title) || "this block";
+      const fromEx: SimulationProbe[] = [];
+      rec.exercises.forEach((ex, i) => {
+        const question =
+          typeof ex === "string"
+            ? clean(ex)
+            : ex && typeof ex === "object"
+              ? clean(
+                  (ex as Record<string, unknown>).question ||
+                    (ex as Record<string, unknown>).text,
+                )
+              : "";
+        if (question.length < 8) return;
+        const contextSources =
+          ex && typeof ex === "object"
+            ? parseContextSources(
+                (ex as Record<string, unknown>).contextSources ||
+                  (ex as Record<string, unknown>).context_sources ||
+                  (ex as Record<string, unknown>).influences,
               )
-            : "";
-      if (question.length < 8) return;
-      fromEx.push({
-        id: `ex-${i}`,
-        question,
-        coachCue: coachCueForQuestion(question, title),
-        difficulty: "stretch",
-        kind: "exercise",
+            : undefined;
+        fromEx.push({
+          id: `ex-raw-${i}`,
+          question,
+          coachCue: coachCueForQuestion(question, title),
+          difficulty: "stretch",
+          kind: "exercise",
+          contextSources,
+        });
       });
-    });
-    // Prefer explicit exercises over stretch-tagged probes when provided
-    if (fromEx.length) {
-      const qs = probes.filter((p) => p.kind !== "exercise");
-      probes = [...qs, ...fromEx].slice(0, 10);
+      if (fromEx.length) {
+        const qs = probes.filter((p) => probeKindOf(p) !== "exercise");
+        probes = [...qs, ...existingEx, ...fromEx];
+      }
+    }
+  }
+
+  // Optional dedicated questions array — only fills when we lack questions
+  // (do not overwrite probes that already carry contextSources).
+  {
+    const existingQ = probes.filter((p) => probeKindOf(p) === "question");
+    if (existingQ.length < SIMULATION_QUESTION_COUNT && Array.isArray(rec.questions)) {
+      const title = clean(fallback?.title) || "this block";
+      const fromQ: SimulationProbe[] = [];
+      rec.questions.forEach((q, i) => {
+        const question =
+          typeof q === "string"
+            ? clean(q)
+            : q && typeof q === "object"
+              ? clean(
+                  (q as Record<string, unknown>).question ||
+                    (q as Record<string, unknown>).text,
+                )
+              : "";
+        if (question.length < 8) return;
+        const contextSources =
+          q && typeof q === "object"
+            ? parseContextSources(
+                (q as Record<string, unknown>).contextSources ||
+                  (q as Record<string, unknown>).context_sources,
+              )
+            : undefined;
+        fromQ.push({
+          id: `q-raw-${i}`,
+          question,
+          coachCue: coachCueForQuestion(question, title),
+          difficulty: difficultyForIndex(i),
+          kind: "question",
+          contextSources,
+        });
+      });
+      if (fromQ.length) {
+        const ex = probes.filter((p) => probeKindOf(p) === "exercise");
+        probes = [...existingQ, ...fromQ, ...ex];
+      }
     }
   }
 
@@ -309,11 +597,20 @@ export function normalizeSimulationPayload(
         ? samples.topics
         : base.topics;
 
+  const enforced = enforceSimulationProbeQuota(
+    probes.length ? probes : base.probes,
+    {
+      title: fallback?.title || "This block",
+      description: fallback?.description,
+      availableInfluence,
+    },
+  );
+
   return {
     intent: intent || base.intent,
     outcome: outcome || base.outcome,
     topics: topics.length ? topics : base.topics,
-    probes: probes.length ? probes : base.probes,
+    probes: enforced,
     readiness: base.readiness,
     practiceModes: base.practiceModes,
   };

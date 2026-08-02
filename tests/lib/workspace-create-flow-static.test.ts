@@ -102,13 +102,13 @@ describe("workspace create + builder static wiring", () => {
     expect(list).toContain("setAppearingNodeIds");
   });
 
-  it("multi-select grid ops are exposed (merge, split, move, generate_shape, edit)", () => {
+  it("multi-select grid ops are exposed (merge, split, move op, generate_shape)", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("generate_shape");
     expect(grid).toContain("merge");
     expect(grid).toContain("split");
-    expect(grid).toContain("move");
-    expect(grid).toContain("update_block");
+    // Move is a grid op from click-and-drag (not a strip tool)
+    expect(grid).toContain('op: "move"');
     expect(grid).toContain("selectedEmptyCells");
     expect(grid).toContain("selectedBlockIds");
     const ops = read("app/api/workspace/grid-ops/route.ts");
@@ -116,17 +116,15 @@ describe("workspace create + builder static wiring", () => {
     expect(ops).toContain('op === "split"');
     expect(ops).toContain('op === "move"');
     expect(ops).toContain('op === "generate_shape"');
-    // Size-relative ILE/TAP prompts for merge / split / generate-in-shape
     expect(ops).toContain("composeMergeBlockUserPrompt");
     expect(ops).toContain("composeSplitBlockUserPrompt");
     expect(ops).toContain("composeGenerateShapeBlockUserPrompt");
     expect(ops).toContain("block-footprint-prompt");
   });
 
-  it("block map exposes a full-height icon tool column with Select and wired grid ops", () => {
+  it("block map exposes a full-height icon tool column with Select + Lasso and wired grid ops", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("data-block-map-tool-strip");
-    // Full top–bottom rail column (not floating absolute toolbox)
     expect(grid).toContain("h-full w-11 shrink-0 flex-col");
     expect(grid).toContain("border-r border-neutral-800");
     expect(grid).not.toMatch(/data-block-map-tool-strip[\s\S]{0,120}absolute left-2 top-2/);
@@ -136,21 +134,20 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("nextActiveModeTool");
     expect(grid).toContain("isBlockMapToolEnabled");
     expect(grid).toContain("handleToolClick");
-    // Select plain-click must populate selectedBlockIds via shared selection helpers
     expect(grid).toContain("toggleOrReplaceBlockSelection");
     expect(grid).toContain("applyBlockSelection");
     expect(grid).toContain("setSelectedBlockIds");
-    // Explicit Select tool + mode affordance
     expect(grid).toContain('"select"');
     expect(grid).toMatch(/aria-pressed/);
     expect(grid).toMatch(/title=\{title\}/);
-    // Ops still routed through real handlers / onGridOp
     expect(grid).toContain('op: "split"');
     expect(grid).toContain('op: "move"');
     expect(grid).toContain("setMergePromptOpen(true)");
     expect(grid).toContain("setShapePromptOpen(true)");
-    expect(grid).toContain("openEditSelected");
-    // Select/Move: drag-drop move, no arrow pad, no TAP/ILE on single click
+    // Select click-and-drag (Move demoted from strip)
+    expect(grid).toContain("allowsBlockDragInMode");
+    expect(grid).toContain("isMapPanGesture");
+    expect(grid).toContain("data-lasso-shape-submenu");
     expect(grid).toContain("isBlockMapManipulationMode");
     expect(grid).toContain("handleBlockPointerDown");
     expect(grid).toContain("data-block-map-draggable");
@@ -158,7 +155,6 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("handleBlockDoubleClick");
     expect(grid).not.toContain("data-block-map-move");
     expect(grid).not.toContain("showMovePad");
-    // Bottom text multi-toolbar is no longer the primary chrome
     expect(grid).not.toContain("multiToolbarVisible");
     const tools = read("lib/block-map-tools.ts");
     expect(tools).toContain("DEFAULT_BLOCK_MAP_MODE");
@@ -167,6 +163,18 @@ describe("workspace create + builder static wiring", () => {
     expect(tools).toContain("resolveBlockSelectionOnClick");
     expect(tools).toContain("blockDragMoveDelta");
     expect(tools).toContain("isBlockMapManipulationMode");
+    expect(tools).toContain("allowsBlockDragInMode");
+    // Strip contents: select + lasso only as modes (parse the array literal)
+    const stripMatch = tools.match(
+      /export const BLOCK_MAP_TOOL_STRIP[^=]*=\s*\[([\s\S]*?)\]\s*as const/,
+    );
+    expect(stripMatch).toBeTruthy();
+    const stripBody = stripMatch![1];
+    expect(stripBody).toContain('"select"');
+    expect(stripBody).toContain('"lasso"');
+    expect(stripBody).not.toContain('"move"');
+    expect(stripBody).not.toContain('"lasso_circle"');
+    expect(stripBody).not.toContain('"lasso_freehand"');
   });
 
   it("programmatic API/MCP create is disabled; UI generate remains", () => {

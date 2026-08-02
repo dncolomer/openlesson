@@ -35,6 +35,7 @@ import {
   shapeSelectionToLocalContext,
 } from "@/lib/shape-context-select";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
+import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
 
 type GridOp =
   | "generate_shape"
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       blockId,
+      is_start: isStartBody,
       model: userModel,
       locale,
       weightedNeighbors,
@@ -147,6 +149,8 @@ export async function POST(req: NextRequest) {
       title?: string;
       description?: string;
       blockId?: string;
+      /** Author starter flag (update_block / generate_shape). */
+      is_start?: boolean;
       model?: string;
       locale?: string;
       weightedNeighbors?: WeightedGridNeighbor[];
@@ -184,12 +188,21 @@ export async function POST(req: NextRequest) {
       const existing = nodes.find((n) => n.id === blockId);
       if (!existing) return NextResponse.json({ error: "Block not found" }, { status: 404 });
 
+      const updateFields: Record<string, unknown> = {
+        title: title.trim(),
+        description:
+          typeof description === "string"
+            ? description.trim()
+            : existing.description || "",
+      };
+      // Author starter flag when provided (boolean true|false).
+      if (typeof isStartBody === "boolean") {
+        updateFields.is_start = isStartBody;
+      }
+
       const { error: updateError } = await supabase
         .from("blocks")
-        .update({
-          title: title.trim(),
-          description: typeof description === "string" ? description.trim() : existing.description || "",
-        })
+        .update(updateFields)
         .eq("id", blockId);
 
       if (updateError) {
@@ -389,6 +402,9 @@ export async function POST(req: NextRequest) {
           sourceSpanH: spanH,
           parts: partSpecs,
           languageNote: languageNote || undefined,
+          userGuidance:
+            prompt?.trim() ||
+            "Decompose into focused subtopics that together cover the parent scope.",
         });
 
         const aiResponse = await callXaiJSON<AiSplitPayload>(
@@ -721,11 +737,22 @@ export async function POST(req: NextRequest) {
             }
           : null;
 
+      // Author may flag starter; empty map still gets a start when author left it off.
+      const authorStarter =
+        typeof isStartBody === "boolean"
+          ? isStartBody
+          : typeof (body as { isStart?: unknown }).isStart === "boolean"
+            ? Boolean((body as { isStart?: boolean }).isStart)
+            : undefined;
+
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         title: aiResponse.data.title.trim(),
         description: aiResponse.data.description?.trim() || "",
-        is_start: nodes.length === 0,
+        is_start: resolveCreateBlockIsStart({
+          authorStarter,
+          existingBlockCount: nodes.length,
+        }),
         next_block_ids: [],
         status: "available",
         position_x: footprint.position_x,

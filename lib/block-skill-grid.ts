@@ -20,6 +20,44 @@ export interface SkillGridNode {
   shape_cells?: Array<{ dr: number; dc: number }> | null;
   /** Prerequisite block ids that must be completed before this block unlocks. */
   lock_until_block_ids?: string[] | null;
+  /**
+   * Attached block-local materials (notes / files / external links).
+   * Present when the block has local context for generation.
+   */
+  local_context?: {
+    notes?: string | null;
+    local_files?: Array<{ name?: string; excerpt?: string | null }> | null;
+    global_file_refs?: string[] | null;
+    external_resource_ids?: string[] | null;
+  } | null;
+}
+
+/**
+ * True when a block has non-empty attached local context materials.
+ * Pure so map chrome / tests can decide without React.
+ */
+export function blockHasAttachedLocalContext(
+  block:
+    | {
+        local_context?: {
+          notes?: string | null;
+          local_files?: unknown[] | null;
+          global_file_refs?: unknown[] | null;
+          external_resource_ids?: unknown[] | null;
+        } | null;
+      }
+    | null
+    | undefined,
+): boolean {
+  const lc = block?.local_context;
+  if (!lc || typeof lc !== "object") return false;
+  if (typeof lc.notes === "string" && lc.notes.trim().length > 0) return true;
+  if (Array.isArray(lc.local_files) && lc.local_files.length > 0) return true;
+  if (Array.isArray(lc.global_file_refs) && lc.global_file_refs.length > 0) return true;
+  if (Array.isArray(lc.external_resource_ids) && lc.external_resource_ids.length > 0) {
+    return true;
+  }
+  return false;
 }
 
 export interface GridCell {

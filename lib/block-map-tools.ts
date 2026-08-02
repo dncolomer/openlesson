@@ -12,13 +12,29 @@ import {
   type UnusableCell,
 } from "@/lib/map-ground-rules";
 
-/** Active left-strip modes: select (default), move (drag blocks), lasso (rect select). */
-export type BlockMapModeTool = "select" | "move" | "lasso";
+/**
+ * Active left-strip modes.
+ * - select: click select + click-and-drag move (no separate Move mode on strip)
+ * - lasso: region select; shape is rect/circle/freehand via submenu (not separate tools)
+ * - move / lasso_circle / lasso_freehand: legacy mode ids still recognized for
+ *   enablement/tests; not shown on the primary strip
+ */
+export type BlockMapModeTool =
+  | "select"
+  | "move"
+  | "lasso"
+  | "lasso_circle"
+  | "lasso_freehand";
+
+/** Which geometric region a lasso mode draws. */
+export type LassoShapeKind = "rect" | "circle" | "freehand";
 
 export type BlockMapToolId =
   | "select"
   | "move"
   | "lasso"
+  | "lasso_circle"
+  | "lasso_freehand"
   | "merge"
   | "split"
   | "generate_shape"
@@ -30,6 +46,13 @@ export type BlockMapToolId =
   | "recenter";
 
 export type BlockMapToolKind = "mode" | "action" | "viewport";
+
+/** Lasso shapes available in the single-lasso submenu (order for cycle). */
+export const LASSO_SHAPE_ORDER: readonly LassoShapeKind[] = [
+  "rect",
+  "circle",
+  "freehand",
+] as const;
 
 export interface BlockMapToolEnablementInput {
   canEdit: boolean;
@@ -69,17 +92,22 @@ export function isMultiCellBlockSpan(span: {
   return w > 1 || h > 1;
 }
 
-/** Default map mode: single-click selects one block; Shift multi-selects. */
+/** Default map mode: click select + click-and-drag move; Shift multi-selects. */
 export const DEFAULT_BLOCK_MAP_MODE: BlockMapModeTool = "select";
 
+/** Default lasso geometry when entering lasso mode. */
+export const DEFAULT_LASSO_SHAPE: LassoShapeKind = "rect";
+
 /**
- * Primary strip order: modes, then block actions, map-ground, then viewport.
+ * Primary strip order: modes (select + one lasso), then block actions, map-ground,
+ * then viewport.
+ * Move is demoted (gesture drag in select) — not on the strip.
+ * Circle/freehand lasso are shapes under the single lasso control, not strip tools.
  * generate_shape is omitted — multi empty selection opens the form in the right pane.
  * edit is omitted — update/delete live on the block-detail Edit drawer when selected.
  */
 export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [
   "select",
-  "move",
   "lasso",
   "merge",
   "split",
@@ -91,20 +119,108 @@ export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [
   "recenter",
 ] as const;
 
+/** True for any region-select lasso mode (rect, circle, freehand legacy ids). */
+export function isLassoModeTool(
+  tool: BlockMapModeTool | BlockMapToolId | string | null | undefined,
+): boolean {
+  return tool === "lasso" || tool === "lasso_circle" || tool === "lasso_freehand";
+}
+
+/** Map a mode tool to its lasso geometry, or null when not a lasso mode. */
+export function lassoShapeForTool(
+  tool: BlockMapModeTool | BlockMapToolId | string | null | undefined,
+): LassoShapeKind | null {
+  if (tool === "lasso") return "rect";
+  if (tool === "lasso_circle") return "circle";
+  if (tool === "lasso_freehand") return "freehand";
+  return null;
+}
+
+/**
+ * Resolve which lasso shape to draw: explicit submenu shape when tool is `lasso`,
+ * else legacy per-tool mapping.
+ */
+export function resolveActiveLassoShape(input: {
+  activeTool: BlockMapModeTool | string | null | undefined;
+  lassoShape?: LassoShapeKind | null;
+}): LassoShapeKind | null {
+  if (!isLassoModeTool(input.activeTool)) return null;
+  if (input.activeTool === "lasso" && input.lassoShape) {
+    return input.lassoShape;
+  }
+  return lassoShapeForTool(input.activeTool);
+}
+
+/** Cycle rect → circle → freehand → rect (submenu / re-click). */
+export function nextLassoShape(current: LassoShapeKind | null | undefined): LassoShapeKind {
+  const cur = current && LASSO_SHAPE_ORDER.includes(current) ? current : DEFAULT_LASSO_SHAPE;
+  const i = LASSO_SHAPE_ORDER.indexOf(cur);
+  return LASSO_SHAPE_ORDER[(i + 1) % LASSO_SHAPE_ORDER.length]!;
+}
+
+/**
+ * Whether this pointer gesture should pan the map (modifier / middle button).
+ * Pure so tests pin Space / middle-button pan without React.
+ */
+export function isMapPanGesture(input: {
+  /** Pointer button: 0 primary, 1 middle, 2 secondary */
+  button?: number | null;
+  /** Space (or equivalent) held */
+  spaceHeld?: boolean;
+  /** Explicit pan tool — not used on strip; kept for future */
+  panMode?: boolean;
+}): boolean {
+  if (input.panMode) return true;
+  if (input.spaceHeld) return true;
+  if (Number(input.button) === 1) return true;
+  return false;
+}
+
+/**
+ * Empty-cell press: treat as pan-drag once pointer moves past threshold (not a click).
+ * Multi-modifier stays select-only so Shift+click multi-select is preserved.
+ */
+export function emptyCellDragIsPan(input: {
+  movedPastThreshold: boolean;
+  multiModifier?: boolean;
+  spaceHeld?: boolean;
+  button?: number | null;
+}): boolean {
+  if (isMapPanGesture({
+    button: input.button,
+    spaceHeld: input.spaceHeld,
+  })) {
+    return true;
+  }
+  if (input.multiModifier) return false;
+  return Boolean(input.movedPastThreshold);
+}
+
+/**
+ * Select mode may arm block drag (click-and-drag) when grid ops exist.
+ * Legacy move mode always arms drag the same way.
+ */
+export function allowsBlockDragInMode(
+  activeTool: BlockMapModeTool | string | null | undefined,
+  hasGridOps: boolean,
+): boolean {
+  if (!hasGridOps) return false;
+  return activeTool === "select" || activeTool === "move";
+}
+
 export function blockMapToolKind(tool: BlockMapToolId): BlockMapToolKind {
-  if (tool === "select" || tool === "move" || tool === "lasso") return "mode";
+  if (tool === "select" || tool === "move" || isLassoModeTool(tool)) return "mode";
   if (tool === "zoom_in" || tool === "zoom_out" || tool === "recenter") return "viewport";
   return "action";
 }
 
 export function isBlockMapModeTool(tool: BlockMapToolId): tool is BlockMapModeTool {
-  return tool === "select" || tool === "move" || tool === "lasso";
+  return tool === "select" || tool === "move" || isLassoModeTool(tool);
 }
 
 /**
  * Whether the active mode allows block/empty click selection (or open-add).
- * Select and Move allow clicks; lasso draws a rectangle (no click-select).
- * Viewport pan is background-drag only outside lasso.
+ * Select (and legacy move) allow clicks; lasso modes draw a region.
  */
 export function allowsMapClickSelection(activeTool: BlockMapModeTool): boolean {
   return activeTool === "select" || activeTool === "move";
@@ -352,6 +468,9 @@ export function nextActiveModeTool(
   current: BlockMapModeTool,
   clicked: BlockMapToolId,
 ): BlockMapModeTool {
+  // Strip only exposes select + lasso; legacy circle/freehand/move map to primary modes.
+  if (clicked === "lasso_circle" || clicked === "lasso_freehand") return "lasso";
+  if (clicked === "move") return "select";
   if (isBlockMapModeTool(clicked)) return clicked;
   return current;
 }
@@ -401,6 +520,97 @@ export function toggleOrReplaceBlockSelection(input: {
 }
 
 /**
+ * Move-tool press: which block ids should participate in a drag.
+ * Keep the full selection when pressing any already-selected member (including a
+ * sole selection) — do not apply "re-click sole clears", which would abort drag.
+ * Pressing a non-member replaces with only that block.
+ */
+export function resolveMoveDragBlockIds(input: {
+  blockId: string;
+  prevSelectedBlockIds: readonly string[];
+}): string[] {
+  const id = String(input.blockId || "").trim();
+  if (!id) return [];
+  const prev = (input.prevSelectedBlockIds || []).map((x) => String(x || "").trim()).filter(Boolean);
+  if (prev.includes(id)) return [...prev];
+  return [id];
+}
+
+/**
+ * Authoritative selection after a block pointer gesture ends.
+ *
+ * Must be driven from the selection **at pointerdown** (not mid-gesture preview).
+ * - multiModifier: toggle membership once
+ * - moved: keep drag set (no sole-clear)
+ * - plain click: replace / sole re-click clear via toggleOrReplace
+ *
+ * Fixes the pan/click-drag bug where pointerdown materialized [id] and pointerup
+ * re-applied plain select → sole-clear emptied the selection.
+ */
+export function resolveBlockPointerGestureSelection(input: {
+  blockId: string;
+  multiModifier: boolean;
+  /** True when the pointer moved past the drag threshold (cell or px). */
+  moved: boolean;
+  /** Selection snapshot at pointerdown — not after drag preview materialize. */
+  prevSelectedBlockIds: readonly string[];
+}): {
+  selectedBlockIds: string[];
+  dragBlockIds: string[];
+  kind: "click" | "drag" | "multi_toggle";
+} {
+  const id = String(input.blockId || "").trim();
+  const prev = (input.prevSelectedBlockIds || [])
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+
+  if (!id) {
+    return { selectedBlockIds: [...prev], dragBlockIds: [], kind: "click" };
+  }
+
+  if (input.multiModifier) {
+    const next = toggleOrReplaceBlockSelection({
+      blockId: id,
+      multi: true,
+      prevSelectedBlockIds: prev,
+    });
+    return {
+      selectedBlockIds: next,
+      dragBlockIds: next.includes(id) ? next : resolveMoveDragBlockIds({
+        blockId: id,
+        prevSelectedBlockIds: next,
+      }),
+      kind: "multi_toggle",
+    };
+  }
+
+  const dragBlockIds = resolveMoveDragBlockIds({
+    blockId: id,
+    prevSelectedBlockIds: prev,
+  });
+
+  if (input.moved) {
+    return {
+      selectedBlockIds: dragBlockIds,
+      dragBlockIds,
+      kind: "drag",
+    };
+  }
+
+  // Plain click — sole clear / replace from original prev only.
+  const next = toggleOrReplaceBlockSelection({
+    blockId: id,
+    multi: false,
+    prevSelectedBlockIds: prev,
+  });
+  return {
+    selectedBlockIds: next,
+    dragBlockIds: next.length > 0 ? next : dragBlockIds,
+    kind: "click",
+  };
+}
+
+/**
  * Resolve which blocks are selected after a block-cell interaction.
  * Plain click → single-select replace (or clear if already sole); modifier → toggle.
  */
@@ -436,7 +646,7 @@ export function isEmptyCellMultiSelectGesture(input: {
   prevSelectedEmptyCount: number;
 }): boolean {
   void input.prevSelectedEmptyCount;
-  if (input.activeTool === "lasso") return false;
+  if (isLassoModeTool(input.activeTool)) return false;
   return Boolean(input.multiModifier);
 }
 
@@ -604,8 +814,12 @@ function cellKeyOf(row: number, col: number): string {
 }
 
 /**
- * Placeable empty grid cells fully inside the inclusive lasso rectangle.
- * Excludes occupied cells and unusable ground. Order is row-major.
+ * Empty (non-occupied) grid cells fully inside the inclusive lasso rectangle.
+ * Occupied cells are never returned. Order is row-major.
+ *
+ * By default unusable ground is included so lasso multi-select matches click
+ * select for bulk mark_unusable clear/mark. Pass `includeUnusable: false` for
+ * placeable-only enumeration (e.g. generate-shape candidate preview).
  */
 export function emptyCellsIntersectingGridRect(input: {
   rect: GridSelectionRect;
@@ -614,10 +828,16 @@ export function emptyCellsIntersectingGridRect(input: {
    * Cells listed here are never returned as empty.
    */
   occupiedKeys?: ReadonlySet<string> | readonly string[] | null;
-  /** Unusable ground keys `"row:col"` — not placeable empties. */
+  /** Unusable ground keys `"row:col"`. */
   unusableKeys?: ReadonlySet<string> | readonly string[] | null;
+  /**
+   * When false, skip unusable ground (placeable empties only).
+   * Default true — lasso must select blocked/unusable tiles for mark_unusable.
+   */
+  includeUnusable?: boolean;
 }): { row: number; col: number }[] {
   const { rect } = input;
+  const includeUnusable = input.includeUnusable !== false;
   const minRow = Math.floor(rect.minRow);
   const maxRow = Math.floor(rect.maxRow);
   const minCol = Math.floor(rect.minCol);
@@ -652,7 +872,7 @@ export function emptyCellsIntersectingGridRect(input: {
     for (let col = minCol; col <= maxCol; col++) {
       const key = cellKeyOf(row, col);
       if (occupied.has(key)) continue;
-      if (unusable.has(key)) continue;
+      if (!includeUnusable && unusable.has(key)) continue;
       out.push({ row, col });
     }
   }
@@ -661,12 +881,14 @@ export function emptyCellsIntersectingGridRect(input: {
 
 /**
  * Lasso apply result: prefer **block** multi-select when any block footprint
- * intersects the rect (gaps around blocks must not steal selection). Empty
- * multi-select only when there are placeable empty hits and **no** block hits.
+ * intersects the region (gaps around blocks must not steal selection). Empty
+ * multi-select only when there are empty hits and **no** block hits.
  * Empties and blocks stay exclusive for right-pane create vs block-detail.
+ * Works for rect, circle, and freehand (hits precomputed by shape helpers).
  */
 export function resolveLassoSelection(input: {
-  rect: GridSelectionRect;
+  /** Optional bounding rect (rect lasso); ignored for hit resolution. */
+  rect?: GridSelectionRect | null;
   blockHits: readonly string[];
   emptyHits: readonly { row: number; col: number }[];
 }): {
@@ -695,6 +917,29 @@ export function resolveLassoSelection(input: {
   return { selectedBlockIds: [], selectedEmptyCells: [], mode: "none" };
 }
 
+/** Continuous grid coords: x = column space, y = row space (cell unit = 1). */
+export type GridContinuousPoint = { x: number; y: number };
+
+/** Map viewport client coords → continuous grid point (not floored). */
+export function clientPointToGridPoint(input: {
+  clientX: number;
+  clientY: number;
+  viewportLeft: number;
+  viewportTop: number;
+  panX: number;
+  panY: number;
+  zoom: number;
+  pitch: number;
+}): GridContinuousPoint {
+  const xPx = (input.clientX - input.viewportLeft - input.panX) / input.zoom;
+  const yPx = (input.clientY - input.viewportTop - input.panY) / input.zoom;
+  const pitch = input.pitch > 0 ? input.pitch : 1;
+  return {
+    x: xPx / pitch,
+    y: yPx / pitch,
+  };
+}
+
 /** Map viewport client coords → grid cell under the pointer. */
 export function clientPointToGridCell(input: {
   clientX: number;
@@ -706,12 +951,293 @@ export function clientPointToGridCell(input: {
   zoom: number;
   pitch: number;
 }): { row: number; col: number } {
-  const x = (input.clientX - input.viewportLeft - input.panX) / input.zoom;
-  const y = (input.clientY - input.viewportTop - input.panY) / input.zoom;
+  const p = clientPointToGridPoint(input);
   return {
-    col: Math.floor(x / input.pitch),
-    row: Math.floor(y / input.pitch),
+    col: Math.floor(p.x),
+    row: Math.floor(p.y),
   };
+}
+
+type LassoBlockInput = {
+  id: string;
+  row?: number | null;
+  col?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
+  occupiedCells?: readonly { row: number; col: number }[] | null;
+};
+
+function lassoBlockOccupiedCells(
+  block: LassoBlockInput,
+): { row: number; col: number }[] {
+  const occupied = block.occupiedCells;
+  if (occupied && occupied.length > 0) {
+    return occupied.map((c) => ({ row: c.row, col: c.col }));
+  }
+  const row = Math.floor(Number(block.row) || 0);
+  const col = Math.floor(Number(block.col) || 0);
+  const w = Math.max(1, Math.floor(Number(block.span_w) || 1));
+  const h = Math.max(1, Math.floor(Number(block.span_h) || 1));
+  const out: { row: number; col: number }[] = [];
+  for (let dr = 0; dr < h; dr++) {
+    for (let dc = 0; dc < w; dc++) {
+      out.push({ row: row + dr, col: col + dc });
+    }
+  }
+  return out;
+}
+
+function clampNum(n: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/** True when unit cell [col,col+1]×[row,row+1] intersects a circle (continuous grid). */
+export function cellIntersectsCircle(
+  row: number,
+  col: number,
+  center: GridContinuousPoint,
+  radius: number,
+): boolean {
+  if (!(radius > 0) || !Number.isFinite(radius)) return false;
+  const closestX = clampNum(center.x, col, col + 1);
+  const closestY = clampNum(center.y, row, row + 1);
+  const dx = closestX - center.x;
+  const dy = closestY - center.y;
+  return dx * dx + dy * dy <= radius * radius;
+}
+
+/**
+ * Block ids whose footprint intersects a circle (center + radius in cell units).
+ */
+export function blocksIntersectingCircle(
+  blocks: readonly LassoBlockInput[],
+  circle: { center: GridContinuousPoint; radius: number },
+): string[] {
+  const out: string[] = [];
+  for (const block of blocks) {
+    const cells = lassoBlockOccupiedCells(block);
+    if (
+      cells.some((c) =>
+        cellIntersectsCircle(c.row, c.col, circle.center, circle.radius),
+      )
+    ) {
+      out.push(block.id);
+    }
+  }
+  return out;
+}
+
+/**
+ * Empty (non-occupied) cells intersecting a circle. Unusable included by default.
+ */
+export function emptyCellsIntersectingCircle(input: {
+  center: GridContinuousPoint;
+  radius: number;
+  occupiedKeys?: ReadonlySet<string> | readonly string[] | null;
+  unusableKeys?: ReadonlySet<string> | readonly string[] | null;
+  includeUnusable?: boolean;
+}): { row: number; col: number }[] {
+  const r = input.radius;
+  if (!(r > 0) || !Number.isFinite(r)) return [];
+  const includeUnusable = input.includeUnusable !== false;
+  const occupied =
+    input.occupiedKeys instanceof Set
+      ? input.occupiedKeys
+      : new Set(input.occupiedKeys || []);
+  const unusable =
+    input.unusableKeys instanceof Set
+      ? input.unusableKeys
+      : new Set(input.unusableKeys || []);
+  const minRow = Math.floor(input.center.y - r);
+  const maxRow = Math.ceil(input.center.y + r) - 1;
+  const minCol = Math.floor(input.center.x - r);
+  const maxCol = Math.ceil(input.center.x + r) - 1;
+  if (
+    !Number.isFinite(minRow) ||
+    !Number.isFinite(maxRow) ||
+    !Number.isFinite(minCol) ||
+    !Number.isFinite(maxCol)
+  ) {
+    return [];
+  }
+  const rows = maxRow - minRow + 1;
+  const cols = maxCol - minCol + 1;
+  if (rows <= 0 || cols <= 0) return [];
+  if (rows * cols > 10_000) {
+    // Cap pathological radii — still scan (caller rarely hits this).
+  }
+  const out: { row: number; col: number }[] = [];
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      if (!cellIntersectsCircle(row, col, input.center, r)) continue;
+      const key = cellKeyOf(row, col);
+      if (occupied.has(key)) continue;
+      if (!includeUnusable && unusable.has(key)) continue;
+      out.push({ row, col });
+    }
+  }
+  return out;
+}
+
+/** Ray-cast point-in-polygon (even-odd). Polygon is not required to repeat first point. */
+export function pointInPolygon(
+  px: number,
+  py: number,
+  polygon: readonly GridContinuousPoint[],
+): boolean {
+  if (polygon.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const denom = yj - yi || 1e-12;
+    const intersect =
+      yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / denom + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distPointToSegmentSq(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const apx = px - ax;
+  const apy = py - ay;
+  const abLenSq = abx * abx + aby * aby;
+  if (abLenSq <= 1e-12) {
+    return apx * apx + apy * apy;
+  }
+  let t = (apx * abx + apy * aby) / abLenSq;
+  t = clampNum(t, 0, 1);
+  const cx = ax + t * abx;
+  const cy = ay + t * aby;
+  const dx = px - cx;
+  const dy = py - cy;
+  return dx * dx + dy * dy;
+}
+
+/** True when unit cell center is inside polygon or within stroke of any edge. */
+export function cellIntersectsPolygon(
+  row: number,
+  col: number,
+  polygon: readonly GridContinuousPoint[],
+  strokeRadius = 0.55,
+): boolean {
+  if (polygon.length < 2) return false;
+  const cx = col + 0.5;
+  const cy = row + 0.5;
+  if (polygon.length >= 3 && pointInPolygon(cx, cy, polygon)) return true;
+  const r = strokeRadius > 0 ? strokeRadius : 0;
+  const rSq = r * r;
+  for (let i = 0; i < polygon.length - 1; i++) {
+    const a = polygon[i];
+    const b = polygon[i + 1];
+    if (distPointToSegmentSq(cx, cy, a.x, a.y, b.x, b.y) <= rSq) return true;
+  }
+  // Close path for freehand lasso stroke
+  if (polygon.length >= 3) {
+    const a = polygon[polygon.length - 1];
+    const b = polygon[0];
+    if (distPointToSegmentSq(cx, cy, a.x, a.y, b.x, b.y) <= rSq) return true;
+  }
+  return false;
+}
+
+function polygonBounds(polygon: readonly GridContinuousPoint[], pad: number) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of polygon) {
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  if (!Number.isFinite(minX)) {
+    return { minRow: 0, maxRow: -1, minCol: 0, maxCol: -1 };
+  }
+  return {
+    minRow: Math.floor(minY - pad),
+    maxRow: Math.ceil(maxY + pad) - 1,
+    minCol: Math.floor(minX - pad),
+    maxCol: Math.ceil(maxX + pad) - 1,
+  };
+}
+
+/**
+ * Block ids whose footprint intersects a freehand polygon (interior + stroke).
+ */
+export function blocksIntersectingPolygon(
+  blocks: readonly LassoBlockInput[],
+  polygon: readonly GridContinuousPoint[],
+  strokeRadius = 0.55,
+): string[] {
+  if (polygon.length < 2) return [];
+  const out: string[] = [];
+  for (const block of blocks) {
+    const cells = lassoBlockOccupiedCells(block);
+    if (
+      cells.some((c) =>
+        cellIntersectsPolygon(c.row, c.col, polygon, strokeRadius),
+      )
+    ) {
+      out.push(block.id);
+    }
+  }
+  return out;
+}
+
+/**
+ * Empty cells inside / near a freehand polygon. Unusable included by default.
+ */
+export function emptyCellsIntersectingPolygon(input: {
+  polygon: readonly GridContinuousPoint[];
+  occupiedKeys?: ReadonlySet<string> | readonly string[] | null;
+  unusableKeys?: ReadonlySet<string> | readonly string[] | null;
+  includeUnusable?: boolean;
+  strokeRadius?: number;
+}): { row: number; col: number }[] {
+  const polygon = input.polygon;
+  if (polygon.length < 2) return [];
+  const stroke = input.strokeRadius ?? 0.55;
+  const includeUnusable = input.includeUnusable !== false;
+  const occupied =
+    input.occupiedKeys instanceof Set
+      ? input.occupiedKeys
+      : new Set(input.occupiedKeys || []);
+  const unusable =
+    input.unusableKeys instanceof Set
+      ? input.unusableKeys
+      : new Set(input.unusableKeys || []);
+  const bounds = polygonBounds(polygon, stroke);
+  if (bounds.maxRow < bounds.minRow || bounds.maxCol < bounds.minCol) return [];
+  const rows = bounds.maxRow - bounds.minRow + 1;
+  const cols = bounds.maxCol - bounds.minCol + 1;
+  if (rows * cols > 10_000) {
+    // Pathological freehand — still scan.
+  }
+  const out: { row: number; col: number }[] = [];
+  for (let row = bounds.minRow; row <= bounds.maxRow; row++) {
+    for (let col = bounds.minCol; col <= bounds.maxCol; col++) {
+      if (!cellIntersectsPolygon(row, col, polygon, stroke)) continue;
+      const key = cellKeyOf(row, col);
+      if (occupied.has(key)) continue;
+      if (!includeUnusable && unusable.has(key)) continue;
+      out.push({ row, col });
+    }
+  }
+  return out;
 }
 
 /** Delta for a drag-drop move from origin cell to drop cell. */
@@ -737,6 +1263,8 @@ export function isBlockMapToolEnabled(
     case "select":
       return state.canEdit;
     case "lasso":
+    case "lasso_circle":
+    case "lasso_freehand":
       return state.canEdit;
     case "move":
       return state.canEdit && state.hasGridOps;
@@ -811,11 +1339,21 @@ export function visibleBlockMapTools(
     const kind = blockMapToolKind(tool);
     if (kind === "viewport") return true;
     if (!state.canEdit) return false;
-    if (tool === "select" || tool === "lasso" || tool === "clear_selection") return true;
+    // Demoted: not on strip (gesture drag + lasso submenu instead)
+    if (tool === "move" || tool === "lasso_circle" || tool === "lasso_freehand") {
+      return false;
+    }
+    if (
+      tool === "select" ||
+      tool === "lasso" ||
+      tool === "clear_selection"
+    ) {
+      return true;
+    }
     if (tool === "lock_until" || tool === "mark_unusable") {
       return Boolean(state.hasMapGroundOps ?? state.hasGridOps);
     }
-    // Move + shape/merge/split need grid-ops wiring
+    // merge/split need grid-ops wiring
     return state.hasGridOps;
   });
 }
@@ -826,9 +1364,13 @@ export function blockMapToolLabel(tool: BlockMapToolId): string {
     case "select":
       return "Select";
     case "move":
-      return "Move";
+      return "Move (use Select: click-and-drag)";
     case "lasso":
-      return "Lasso (rectangle select)";
+      return "Lasso — region select (submenu: rect / circle / freehand)";
+    case "lasso_circle":
+      return "Circle lasso";
+    case "lasso_freehand":
+      return "Freehand lasso";
     case "merge":
       return "Merge";
     case "split":
@@ -849,5 +1391,29 @@ export function blockMapToolLabel(tool: BlockMapToolId): string {
       return "Recenter";
     default:
       return tool;
+  }
+}
+
+/** Short label for lasso shape chip. */
+export function lassoShapeLabel(kind: LassoShapeKind): string {
+  switch (kind) {
+    case "circle":
+      return "Circle";
+    case "freehand":
+      return "Freehand";
+    default:
+      return "Rect";
+  }
+}
+
+/** Tooltip for lasso shape chip in the submenu. */
+export function lassoShapeTooltip(kind: LassoShapeKind): string {
+  switch (kind) {
+    case "circle":
+      return "Circle lasso — drag from center";
+    case "freehand":
+      return "Freehand lasso — draw a path";
+    default:
+      return "Rectangle lasso — drag a marquee";
   }
 }

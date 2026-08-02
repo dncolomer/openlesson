@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getOrderedSessions, SessionList } from "@/components/SessionList";
@@ -13,7 +13,10 @@ import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
 import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPane";
 import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
-import { WorkspaceAddBlockPane } from "@/components/WorkspaceAddBlockPane";
+import {
+  WorkspaceAddBlockPane,
+  type WorkspaceAddBlockSubmitOpts,
+} from "@/components/WorkspaceAddBlockPane";
 import { WorkspaceGenerateShapePane } from "@/components/WorkspaceGenerateShapePane";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { useI18n } from "@/lib/i18n";
@@ -43,6 +46,20 @@ import {
   normalizeUnusableCells,
   type UnusableCell,
 } from "@/lib/map-ground-rules";
+import { buildUpdateBlockPayload } from "@/lib/block-starter-flag";
+import {
+  applyAddExpandJobProgress,
+  createAddExpandJob,
+  createAddExpandJobId,
+  mergeActiveExpandJobPreviews,
+  patchAddExpandJob,
+  removeAddExpandJob,
+  runAddExpandCreateLoop,
+  snapshotAddExpandSlots,
+  upsertAddExpandJob,
+  type AddExpandJob,
+} from "@/lib/add-block-range-density";
+import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import {
   parseBlockLocalContext,
   type BlockLocalContextInput,
@@ -79,12 +96,25 @@ export function AyclWorkspaceView({
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
   const [selectedFilledBlockIds, setSelectedFilledBlockIds] = useState<string[]>([]);
+  const [addExpandPreviewCells, setAddExpandPreviewCells] = useState<
+    Array<{ row: number; col: number }> | null
+  >(null);
+  const [expandJobs, setExpandJobs] = useState<AddExpandJob[]>([]);
+  const expandAbortRef = useRef(new Map<string, boolean>());
+  const expandJobSeqRef = useRef(0);
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>(() =>
     normalizeUnusableCells(initialPlan.unusable_cells),
   );
   const [workspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
   const [mapGroundBusy, setMapGroundBusy] = useState(false);
+
+  const handleAbortExpandJob = useCallback((jobId: string) => {
+    expandAbortRef.current.set(jobId, true);
+    setExpandJobs((prev) => patchAddExpandJob(prev, jobId, { aborted: true }));
+  }, []);
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
     const next = nextWorkspaceBlockSelection(expandedBlockId, blockId);
@@ -128,6 +158,7 @@ export function AyclWorkspaceView({
 
   const handleCloseEmptyCreate = useCallback(() => {
     setEmptySurface(clearWorkspaceAddTarget());
+    setAddExpandPreviewCells(null);
   }, []);
 
   const handleCloseCombine = useCallback(() => {
@@ -138,59 +169,276 @@ export function AyclWorkspaceView({
     async (
       prompt: string,
       position: WorkspaceAddTargetCell,
-      opts?: { contextSourceKeys?: string[] },
+      opts?: WorkspaceAddBlockSubmitOpts,
     ) => {
-      const nodesById = new Map(nodes.map((node) => [node.id, node]));
-      const { placements } = buildSkillGridLayout(nodes);
-      const weightedNeighbors = getWeightedNeighborhood(
-        { row: position.row, col: position.col },
-        placements,
-        nodesById,
-      );
       const savedModel =
         typeof window !== "undefined"
           ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
           : null;
       const model = savedModel || DEFAULT_MODEL;
-      setIsAddingBlock(true);
-      try {
-        const response = await fetch("/api/workspace/add-block-at-slot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId: plan.id,
-            row: position.row,
-            col: position.col,
-            prompt,
-            weightedNeighbors,
-            model,
-            locale,
-            ayclToken: accessToken,
-            ...(opts?.contextSourceKeys?.length
-              ? { contextSourceKeys: opts.contextSourceKeys }
-              : {}),
-          }),
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to add block");
-        }
-        const data = await response.json();
-        if (data.updatedNodes?.length > 0) {
-          setNodes(
-            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
-              ...n,
-              local_context: parseBlockLocalContext(n.local_context),
-            })),
+      const slots: WorkspaceAddTargetCell[] =
+        opts?.frozenSlots && opts.frozenSlots.length > 0
+          ? opts.frozenSlots.map((c) => ({ row: c.row, col: c.col }))
+          : snapshotAddExpandSlots({
+              center: position,
+              selected: [
+                position,
+                ...((opts?.expandCells || []).filter(
+                  (c) => !(c.row === position.row && c.col === position.col),
+                )),
+              ],
+            });
+      if (slots.length === 0) return;
+
+      expandJobSeqRef.current += 1;
+      const jobId = createAddExpandJobId(
+        `${Date.now()}-${expandJobSeqRef.current}`,
+      );
+      const job = createAddExpandJob({
+        id: jobId,
+        frozenSlots: slots,
+        label: prompt,
+      });
+      expandAbortRef.current.set(jobId, false);
+      setExpandJobs((prev) => {
+        const next = upsertAddExpandJob(prev, job);
+        const merged = mergeActiveExpandJobPreviews(next);
+        setAddExpandPreviewCells(merged.length ? merged : null);
+        return next;
+      });
+      setEmptySurface(clearWorkspaceAddTarget());
+      // Do NOT set isAddingBlock — map stays interactive during multi-create.
+
+      void (async () => {
+        try {
+          const result = await runAddExpandCreateLoop({
+            frozenSlots: slots,
+            isAborted: () => expandAbortRef.current.get(jobId) === true,
+            onProgress: (progress) => {
+              setExpandJobs((prev) => {
+                const next = applyAddExpandJobProgress(prev, jobId, progress);
+                const merged = mergeActiveExpandJobPreviews(next);
+                setAddExpandPreviewCells(merged.length ? merged : null);
+                return next;
+              });
+            },
+            createSlot: async (slot, i) => {
+              const lastNodes = nodesRef.current;
+              const nodesById = new Map(lastNodes.map((node) => [node.id, node]));
+              const { placements } = buildSkillGridLayout(lastNodes);
+              const weightedNeighbors = getWeightedNeighborhood(
+                { row: slot.row, col: slot.col },
+                placements,
+                nodesById,
+              );
+              const slotPrompt =
+                i === 0
+                  ? prompt
+                  : `${prompt}\n\n(Place a distinct neighboring 1×1 block at row ${slot.row}, col ${slot.col} — different subtopic, same overall theme.)`;
+              const response = await fetch("/api/workspace/add-block-at-slot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  workspaceId: plan.id,
+                  row: slot.row,
+                  col: slot.col,
+                  prompt: slotPrompt,
+                  weightedNeighbors,
+                  model,
+                  locale,
+                  ayclToken: accessToken,
+                  ...(opts?.contextSourceKeys?.length
+                    ? { contextSourceKeys: opts.contextSourceKeys }
+                    : {}),
+                  is_start: Boolean(opts?.isStart),
+                }),
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(
+                  errorData.error ||
+                    `Failed to add block at (${slot.row}, ${slot.col})`,
+                );
+              }
+              const data = await response.json();
+              if (data.updatedNodes?.length > 0) {
+                const nextNodes = data.updatedNodes.map(
+                  (n: Block & { local_context?: unknown }) => ({
+                    ...n,
+                    local_context: parseBlockLocalContext(n.local_context),
+                  }),
+                );
+                nodesRef.current = nextNodes;
+                setNodes(nextNodes);
+              }
+            },
+          });
+          setExpandJobs((prev) =>
+            applyAddExpandJobProgress(
+              prev,
+              jobId,
+              { completed: result.completed, total: result.total },
+              { stopped: result.stopped },
+            ),
           );
+          router.refresh();
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Failed to add blocks";
+          setExpandJobs((prev) =>
+            patchAddExpandJob(prev, jobId, {
+              status: "error",
+              error: message,
+            }),
+          );
+        } finally {
+          expandAbortRef.current.delete(jobId);
+          window.setTimeout(() => {
+            setExpandJobs((prev) => {
+              const next = removeAddExpandJob(prev, jobId);
+              const merged = mergeActiveExpandJobPreviews(next);
+              setAddExpandPreviewCells(merged.length ? merged : null);
+              return next;
+            });
+          }, 1800);
         }
-        setEmptySurface(clearWorkspaceAddTarget());
-        router.refresh();
-      } finally {
-        setIsAddingBlock(false);
-      }
+      })();
     },
-    [accessToken, locale, nodes, plan.id, router],
+    [accessToken, locale, plan.id, router],
+  );
+
+  const handleGenerateBridge = useCallback(
+    async (input: {
+      blockIds: string[];
+      density: number;
+      userPrompt?: string;
+      frozenSlots: Array<{ row: number; col: number }>;
+      blockTitles: string[];
+    }) => {
+      const slots = (input.frozenSlots || []).map((c) => ({
+        row: c.row,
+        col: c.col,
+      }));
+      if (slots.length === 0) return;
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+
+      expandJobSeqRef.current += 1;
+      const jobId = createAddExpandJobId(
+        `bridge-${Date.now()}-${expandJobSeqRef.current}`,
+      );
+      const job = createAddExpandJob({
+        id: jobId,
+        frozenSlots: slots,
+        label: `Bridge: ${(input.blockTitles || []).slice(0, 2).join(" ↔ ") || "topics"}`,
+      });
+      expandAbortRef.current.set(jobId, false);
+      setExpandJobs((prev) => {
+        const next = upsertAddExpandJob(prev, job);
+        const merged = mergeActiveExpandJobPreviews(next);
+        setAddExpandPreviewCells(merged.length ? merged : null);
+        return next;
+      });
+      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+
+      void (async () => {
+        try {
+          const result = await runAddExpandCreateLoop({
+            frozenSlots: slots,
+            isAborted: () => expandAbortRef.current.get(jobId) === true,
+            onProgress: (progress) => {
+              setExpandJobs((prev) => {
+                const next = applyAddExpandJobProgress(prev, jobId, progress);
+                const merged = mergeActiveExpandJobPreviews(next);
+                setAddExpandPreviewCells(merged.length ? merged : null);
+                return next;
+              });
+            },
+            createSlot: async (slot, i) => {
+              const lastNodes = nodesRef.current;
+              const nodesById = new Map(lastNodes.map((node) => [node.id, node]));
+              const { placements } = buildSkillGridLayout(lastNodes);
+              const weightedNeighbors = getWeightedNeighborhood(
+                { row: slot.row, col: slot.col },
+                placements,
+                nodesById,
+              );
+              const slotPrompt = buildBridgeKnowledgePrompt({
+                blockTitles: input.blockTitles,
+                userGuidance: input.userPrompt,
+                slotIndex: i,
+                totalSlots: slots.length,
+                cell: slot,
+              });
+              const response = await fetch("/api/workspace/add-block-at-slot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  workspaceId: plan.id,
+                  row: slot.row,
+                  col: slot.col,
+                  prompt: slotPrompt,
+                  weightedNeighbors,
+                  model,
+                  locale,
+                  ayclToken: accessToken,
+                }),
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(
+                  errorData.error ||
+                    `Failed to add bridge block at (${slot.row}, ${slot.col})`,
+                );
+              }
+              const data = await response.json();
+              if (data.updatedNodes?.length > 0) {
+                const nextNodes = data.updatedNodes.map(
+                  (n: Block & { local_context?: unknown }) => ({
+                    ...n,
+                    local_context: parseBlockLocalContext(n.local_context),
+                  }),
+                );
+                nodesRef.current = nextNodes;
+                setNodes(nextNodes);
+              }
+            },
+          });
+          setExpandJobs((prev) =>
+            applyAddExpandJobProgress(
+              prev,
+              jobId,
+              { completed: result.completed, total: result.total },
+              { stopped: result.stopped },
+            ),
+          );
+          router.refresh();
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Failed to generate bridge";
+          setExpandJobs((prev) =>
+            patchAddExpandJob(prev, jobId, {
+              status: "error",
+              error: message,
+            }),
+          );
+        } finally {
+          expandAbortRef.current.delete(jobId);
+          window.setTimeout(() => {
+            setExpandJobs((prev) => {
+              const next = removeAddExpandJob(prev, jobId);
+              const merged = mergeActiveExpandJobPreviews(next);
+              setAddExpandPreviewCells(merged.length ? merged : null);
+              return next;
+            });
+          }, 1800);
+        }
+      })();
+    },
+    [accessToken, locale, plan.id, router],
   );
 
   const handleSubmitGenerateShape = useCallback(
@@ -198,6 +446,7 @@ export function AyclWorkspaceView({
       prompt: string;
       cells: WorkspaceAddTargetCell[];
       contextSourceKeys?: string[];
+      isStart?: boolean;
     }) => {
       const nodesById = new Map(nodes.map((node) => [node.id, node]));
       const { placements } = buildSkillGridLayout(nodes);
@@ -229,6 +478,7 @@ export function AyclWorkspaceView({
             ...(payload.contextSourceKeys?.length
               ? { contextSourceKeys: payload.contextSourceKeys }
               : {}),
+            is_start: Boolean(payload.isStart),
           }),
         });
         if (!response.ok) {
@@ -311,6 +561,43 @@ export function AyclWorkspaceView({
     [accessToken, locale, plan.id, router],
   );
 
+  const handleSplitBlock = useCallback(
+    async (input: { blockId: string; prompt?: string }) => {
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "split",
+            blockIds: [input.blockId],
+            prompt: input.prompt,
+            locale,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to split block");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, locale, plan.id, router],
+  );
+
   const refreshWorkspace = useCallback(async () => {
     const res = await fetch(`/api/aycl/workspace?token=${encodeURIComponent(accessToken)}`);
     const data = await res.json();
@@ -362,9 +649,21 @@ export function AyclWorkspaceView({
   );
 
   const handleUpdateBlock = useCallback(
-    async (input: { blockId: string; title: string; description: string }) => {
+    async (input: {
+      blockId: string;
+      title: string;
+      description: string;
+      isStart?: boolean;
+    }) => {
       setIsAddingBlock(true);
       try {
+        const fields = buildUpdateBlockPayload({
+          blockId: input.blockId,
+          title: input.title,
+          description: input.description,
+          isStart: input.isStart,
+          includeIsStart: input.isStart !== undefined,
+        });
         const response = await fetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -372,9 +671,7 @@ export function AyclWorkspaceView({
             workspaceId: plan.id,
             ayclToken: accessToken,
             op: "update_block",
-            blockId: input.blockId,
-            title: input.title,
-            description: input.description,
+            ...fields,
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -712,6 +1009,9 @@ export function AyclWorkspaceView({
                 onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
                 unusableCells={unusableCells}
                 workspaceNotes={notesContent || plan.notes}
+                previewEmptyCells={addExpandPreviewCells}
+                expandJobs={expandJobs}
+                onAbortExpandJob={handleAbortExpandJob}
                 onMapGround={async (payload) => {
                   if (payload.op === "set_lock_until" && payload.blockId) {
                     await postMapGround({
@@ -766,7 +1066,10 @@ export function AyclWorkspaceView({
                     blockIds={combineBlockIds}
                     nodes={nodes}
                     busy={isAddingBlock}
+                    unusableCells={unusableCells}
                     onCombine={handleCombineBlocks}
+                    onGenerateBridge={handleGenerateBridge}
+                    onBridgePreviewChange={setAddExpandPreviewCells}
                     onCancel={handleCloseCombine}
                     labels={{
                       combine: t("sessionList.gridMerge") || "Combine into one block",
@@ -785,6 +1088,9 @@ export function AyclWorkspaceView({
                     blockStatus={detailBlock.status}
                     isStart={detailBlock.is_start}
                     lockUntilTitles={detailLockTitles}
+                    spanW={detailBlock.span_w}
+                    spanH={detailBlock.span_h}
+                    shapeCells={detailBlock.shape_cells}
                     workspaceId={plan.id}
                     ayclToken={accessToken}
                     locale={locale}
@@ -792,6 +1098,7 @@ export function AyclWorkspaceView({
                     editBusy={isAddingBlock}
                     onUpdateBlock={handleUpdateBlock}
                     onDeleteBlock={handleDeleteBlock}
+                    onSplitBlock={handleSplitBlock}
                     localContextPanel={
                       <WorkspaceBlockLocalContextPanel
                         key={detailBlock.id}
@@ -839,10 +1146,12 @@ export function AyclWorkspaceView({
                     workspaceId={plan.id}
                     ayclToken={accessToken}
                     locale={locale}
-                    busy={isAddingBlock}
+                    busy={false}
                     workspaceNotes={notesContent || plan.notes}
+                    unusableCells={unusableCells}
                     onSubmit={handleSubmitAddBlock}
                     onCancel={handleCloseEmptyCreate}
+                    onExpandPreviewChange={setAddExpandPreviewCells}
                     labels={{
                       addTitle: t("sessionList.gridAddTitle"),
                       addPlaceholder: t("sessionList.gridAddPlaceholder"),

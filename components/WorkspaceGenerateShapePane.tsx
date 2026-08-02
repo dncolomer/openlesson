@@ -17,6 +17,7 @@ import {
   type ShapeContextSourceOption,
 } from "@/lib/shape-context-select";
 import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
+import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -49,6 +50,7 @@ export function WorkspaceGenerateShapePane({
     prompt: string;
     cells: WorkspaceAddTargetCell[];
     contextSourceKeys?: string[];
+    isStart?: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   labels: {
@@ -70,6 +72,7 @@ export function WorkspaceGenerateShapePane({
   const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>([]);
   const [contextSelected, setContextSelected] = useState<string[]>([]);
   const [contextLoading, setContextLoading] = useState(false);
+  const [isStarter, setIsStarter] = useState(false);
 
   const cellKey = cells.map((c) => `${c.row}:${c.col}`).join(",");
 
@@ -79,6 +82,7 @@ export function WorkspaceGenerateShapePane({
     setSuggestError(null);
     setAddError(null);
     setContextSelected([]);
+    setIsStarter(false);
   }, [cellKey]);
 
   useEffect(() => {
@@ -216,10 +220,12 @@ export function WorkspaceGenerateShapePane({
         prompt: prompt.trim(),
         cells: cells.map((c) => ({ row: c.row, col: c.col })),
         contextSourceKeys: contextSelected.length > 0 ? [...contextSelected] : undefined,
+        isStart: isStarter,
       });
       setPrompt("");
       setSuggestions([]);
       setContextSelected([]);
+      setIsStarter(false);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to generate block");
     } finally {
@@ -311,13 +317,26 @@ export function WorkspaceGenerateShapePane({
             Selected files, external links, and notes become local context on the new block and
             feed generation.
           </p>
+          <WorkspaceSuggestExternalContext
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            topic={prompt}
+            disabled={busy || submitting}
+            selectedKeys={contextSelected}
+            options={contextOptions}
+            onChange={({ options, selectedKeys }) => {
+              setContextOptions(options);
+              setContextSelected(selectedKeys);
+            }}
+          />
           {contextLoading ? (
             <p className="text-[11px] text-neutral-600" data-shape-context-loading>
               Loading sources…
             </p>
           ) : contextOptions.length === 0 ? (
             <p className="text-[11px] text-neutral-600">
-              No Context sources yet — add files or links under the Context tab.
+              No Context sources yet — add files or links under the Context tab, or suggest
+              from the web above.
             </p>
           ) : (
             <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
@@ -363,6 +382,28 @@ export function WorkspaceGenerateShapePane({
             </p>
           ) : null}
         </div>
+
+        <label
+          className="flex cursor-pointer items-start gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
+          data-generate-shape-starter
+        >
+          <input
+            type="checkbox"
+            data-generate-shape-starter-input
+            checked={isStarter}
+            disabled={busy || submitting}
+            onChange={(e) => setIsStarter(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-medium text-neutral-200">
+              Starter block
+            </span>
+            <span className="mt-0.5 block text-[10px] leading-snug text-neutral-500">
+              Flag the created block as a potential start for learning paths.
+            </span>
+          </span>
+        </label>
 
         <div className="flex justify-end gap-2">
           <button

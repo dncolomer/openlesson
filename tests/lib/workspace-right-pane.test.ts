@@ -6,15 +6,20 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  blockOffersSplitDrawer,
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
   nextRightPaneDrawerExpanded,
+  nextAccordionOpenDrawerId,
+  initialAccordionOpenDrawerId,
   nextWorkspaceBlockSelection,
   resolveEmptyAddTarget,
   resolveEmptySelectionSurface,
   resolveFilledBlockSelectionSurface,
+  resolveSplitDrawerAvailability,
   resolveWorkspaceRightPane,
+  splitTargetCellCount,
 } from "@/lib/workspace-right-pane";
 import { BLOCK_MAP_TOOL_STRIP, visibleBlockMapTools } from "@/lib/block-map-tools";
 
@@ -24,7 +29,8 @@ const SCRATCH =
   process.env.MULTI_EMPTY_RIGHT_PANE_SCRATCH ||
   process.env.EMPTY_ADD_SCRATCH ||
   process.env.COMBINE_BLOCKS_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b6a5456b9fa4/implementer";
+  process.env.SPLIT_DRAWER_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f89c5e59d09f/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -281,6 +287,115 @@ describe("structural: right pane not map modal", () => {
     expect(aycl).not.toContain("BlockDetailDrawer");
   });
 
+  it("sole multi-cell block offers Split drawer; 1×1 and multi-select do not", () => {
+    const multiCell = { id: "m1", span_w: 2, span_h: 2 };
+    const single = { id: "s1", span_w: 1, span_h: 1 };
+    expect(blockOffersSplitDrawer(multiCell)).toBe(true);
+    expect(blockOffersSplitDrawer(single)).toBe(false);
+    expect(blockOffersSplitDrawer({ shape_cells: [{ dr: 0, dc: 0 }, { dr: 0, dc: 1 }] })).toBe(
+      true,
+    );
+    expect(splitTargetCellCount(multiCell)).toBe(4);
+
+    expect(
+      resolveSplitDrawerAvailability({
+        selectedBlockId: "m1",
+        block: multiCell,
+      }),
+    ).toEqual({ available: true, blockId: "m1", cellCount: 4 });
+
+    expect(
+      resolveSplitDrawerAvailability({
+        selectedBlockId: "s1",
+        block: single,
+      }),
+    ).toEqual({ available: false, blockId: "s1", cellCount: 1 });
+
+    // Multi filled selection → combine, not sole split
+    expect(
+      resolveSplitDrawerAvailability({
+        selectedBlockIds: ["a", "b"],
+        block: multiCell,
+      }),
+    ).toEqual({ available: false, blockId: null, cellCount: 1 });
+
+    // Pane routing: multi-cell sole still block_detail (Split is a peer drawer)
+    expect(resolveWorkspaceRightPane("m1", null, null)).toBe("block_detail");
+    expect(resolveWorkspaceRightPane(null, null, ["a", "b"])).toBe("combine_blocks");
+
+    writeEvidence(
+      "split-surface-resolve.log",
+      [
+        "multiCellOffers=" + blockOffersSplitDrawer(multiCell),
+        "singleOffers=" + blockOffersSplitDrawer(single),
+        "availMulti=" +
+          JSON.stringify(
+            resolveSplitDrawerAvailability({
+              selectedBlockId: "m1",
+              block: multiCell,
+            }),
+          ),
+        "availSingle=" +
+          JSON.stringify(
+            resolveSplitDrawerAvailability({
+              selectedBlockId: "s1",
+              block: single,
+            }),
+          ),
+        "availMultiSelect=" +
+          JSON.stringify(
+            resolveSplitDrawerAvailability({
+              selectedBlockIds: ["a", "b"],
+              block: multiCell,
+            }),
+          ),
+        "paneMultiCell=" + resolveWorkspaceRightPane("m1"),
+        "paneCombine=" + resolveWorkspaceRightPane(null, null, ["a", "b"]),
+      ].join("\n"),
+    );
+  });
+
+  it("split drawer UI: visual, splitting prompt, submit wires op split", () => {
+    const pane = read("components/WorkspaceSplitBlockPane.tsx");
+    expect(pane).toContain("data-workspace-split-block-pane");
+    expect(pane).toContain("data-split-visual");
+    expect(pane).toContain("data-split-prompt");
+    expect(pane).toContain("data-split-submit");
+    expect(pane).toMatch(/Splitting prompt/);
+    expect(pane).toMatch(/broader multi-cell|focused/i);
+
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    expect(detail).toContain("WorkspaceSplitBlockPane");
+    expect(detail).toContain('drawerId="split"');
+    expect(detail).toContain('title="Split"');
+    expect(detail).toContain("onSplitBlock");
+    expect(detail).toContain("blockOffersSplitDrawer");
+
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).toContain("handleSplitBlock");
+    expect(view).toContain('op: "split"');
+    expect(view).toContain("onSplitBlock={isOwner ? handleSplitBlock");
+
+    const aycl = read("components/AyclWorkspaceView.tsx");
+    expect(aycl).toContain("handleSplitBlock");
+    expect(aycl).toContain('op: "split"');
+
+    const ops = read("app/api/workspace/grid-ops/route.ts");
+    expect(ops).toContain("userGuidance:");
+    expect(ops).toMatch(/composeSplitBlockUserPrompt\([\s\S]*userGuidance/);
+
+    writeEvidence(
+      "split-drawer-ui.log",
+      [
+        "panePrompt=" + pane.includes("data-split-prompt"),
+        "paneSubmit=" + pane.includes("data-split-submit"),
+        "detailDrawer=" + detail.includes('drawerId="split"'),
+        "viewSplitOp=" + view.includes('op: "split"'),
+        "opsGuidance=" + ops.includes("userGuidance:"),
+      ].join("\n"),
+    );
+  });
+
   it("combine blocks pane: A+B visual, broader copy, combination prompt, merge op", () => {
     const pane = read("components/WorkspaceCombineBlocksPane.tsx");
     expect(pane).toContain("data-workspace-combine-blocks-pane");
@@ -328,8 +443,13 @@ describe("structural: right pane not map modal", () => {
     const drawer = read("components/WorkspaceRightPaneDrawer.tsx");
 
     expect(pane).toContain("WorkspaceRightPaneDrawer");
+    expect(pane).toContain("WorkspaceRightPaneDrawerGroup");
     expect(pane).toContain("data-workspace-block-detail-pane");
     expect(pane).toContain("data-block-detail-drawers");
+    // Accordion: opening one drawer collapses siblings
+    expect(pane).toContain("resolveDetailDrawerDefaultOpenId");
+    expect(drawer).toContain("nextAccordionOpenDrawerId");
+    expect(drawer).toContain("data-drawer-accordion");
     // Peer top-level drawers
     expect(pane).toContain('drawerId="detail"');
     expect(pane).toContain('drawerId="local"');
@@ -397,6 +517,29 @@ describe("structural: right pane not map modal", () => {
     expect(nextRightPaneDrawerExpanded(false, "toggle")).toBe(true);
     expect(nextRightPaneDrawerExpanded(false, "open")).toBe(true);
     expect(nextRightPaneDrawerExpanded(true, "close")).toBe(false);
+
+    // Accordion: open one → that id; re-click → collapse all
+    expect(
+      nextAccordionOpenDrawerId({ currentOpenId: "detail", clickedId: "simulation" }),
+    ).toBe("simulation");
+    expect(
+      nextAccordionOpenDrawerId({ currentOpenId: "simulation", clickedId: "simulation" }),
+    ).toBeNull();
+    expect(
+      nextAccordionOpenDrawerId({ currentOpenId: null, clickedId: "edit" }),
+    ).toBe("edit");
+    expect(
+      initialAccordionOpenDrawerId([
+        { id: "detail", defaultExpanded: true },
+        { id: "local", defaultExpanded: true },
+      ]),
+    ).toBe("detail");
+    expect(
+      initialAccordionOpenDrawerId([
+        { id: "simulation", defaultExpanded: false },
+        { id: "local", defaultExpanded: true },
+      ]),
+    ).toBe("local");
 
     for (const rel of [
       "components/WorkspaceBlockDetailPane.tsx",

@@ -3,10 +3,13 @@
  * map authoring by default; block detail when one block is open; combine when
  * 2+ filled blocks are multi-selected; add-block when a single empty is
  * selected; generate-shape when 2+ empties are multi-selected.
+ * Sole multi-cell selection also enables a Split drawer on block detail.
  * Notes/files live under Context.
  *
  * Desktop widths: right column ~½ prior half-width (map larger).
  */
+
+import { isMultiCellBlockSpan } from "@/lib/block-map-tools";
 
 export type WorkspaceRightPaneKind =
   | "map_tools"
@@ -210,6 +213,76 @@ export function clearWorkspaceFilledBlockSelection(): string[] {
   return [];
 }
 
+/**
+ * Footprint fields needed to decide Split eligibility (merged / multi-cell block).
+ */
+export type SplitCandidateBlock = {
+  id?: string | null;
+  span_w?: number | null;
+  span_h?: number | null;
+  /** Freeform mask cells; length > 1 also counts as multi-cell. */
+  shape_cells?: ReadonlyArray<unknown> | null;
+};
+
+/**
+ * True when a block occupies more than one grid cell (rect span or freeform mask).
+ * Same spirit as toolbar split enablement.
+ */
+export function blockOffersSplitDrawer(block: SplitCandidateBlock | null | undefined): boolean {
+  if (!block) return false;
+  if (isMultiCellBlockSpan(block)) return true;
+  if (Array.isArray(block.shape_cells) && block.shape_cells.length > 1) return true;
+  return false;
+}
+
+/**
+ * Approximate occupied cell count for split preview chrome.
+ * Prefers freeform mask length; else span_w × span_h.
+ */
+export function splitTargetCellCount(block: SplitCandidateBlock | null | undefined): number {
+  if (!block) return 1;
+  if (Array.isArray(block.shape_cells) && block.shape_cells.length > 0) {
+    return Math.max(1, block.shape_cells.length);
+  }
+  const w = Math.max(1, Math.floor(Number(block.span_w) || 1));
+  const h = Math.max(1, Math.floor(Number(block.span_h) || 1));
+  return w * h;
+}
+
+/**
+ * Sole selected multi-cell block → Split drawer may be offered on block detail.
+ * ≥2 ids never offer sole-split (combine path owns that selection).
+ * 1×1 sole → not available.
+ */
+export function resolveSplitDrawerAvailability(input: {
+  selectedBlockId?: string | null;
+  selectedBlockIds?: readonly string[] | null;
+  block?: SplitCandidateBlock | null;
+}): { available: boolean; blockId: string | null; cellCount: number } {
+  const multiIds = (input.selectedBlockIds || [])
+    .map((id) => String(id || "").trim())
+    .filter(Boolean);
+  if (multiIds.length >= 2) {
+    return { available: false, blockId: null, cellCount: 1 };
+  }
+  const id =
+    multiIds.length === 1
+      ? multiIds[0]
+      : typeof input.selectedBlockId === "string" && input.selectedBlockId.trim()
+        ? input.selectedBlockId.trim()
+        : null;
+  if (!id) return { available: false, blockId: null, cellCount: 1 };
+  const block = input.block;
+  if (!blockOffersSplitDrawer(block)) {
+    return { available: false, blockId: id, cellCount: splitTargetCellCount(block) };
+  }
+  return {
+    available: true,
+    blockId: id,
+    cellCount: splitTargetCellCount(block),
+  };
+}
+
 function normalizeEmptySurfaceArg(
   arg: EmptySelectionSurface | WorkspaceAddTargetCell | null | undefined,
 ): EmptySelectionSurface | null {
@@ -245,6 +318,37 @@ export function nextRightPaneDrawerExpanded(
   if (action === "open") return true;
   if (action === "close") return false;
   return !current;
+}
+
+/**
+ * Accordion: which drawer id should be open after a header click.
+ * Opening one drawer always closes others (returns the clicked id).
+ * Clicking the already-open drawer collapses all (returns null).
+ */
+export function nextAccordionOpenDrawerId(input: {
+  currentOpenId: string | null | undefined;
+  clickedId: string;
+}): string | null {
+  const clicked = String(input.clickedId || "").trim();
+  if (!clicked) return null;
+  const cur =
+    input.currentOpenId == null ? null : String(input.currentOpenId).trim() || null;
+  if (cur === clicked) return null;
+  return clicked;
+}
+
+/**
+ * Initial open drawer for an accordion stack: first candidate with
+ * defaultExpanded true, else the first id, else null.
+ */
+export function initialAccordionOpenDrawerId(
+  candidates: readonly { id: string; defaultExpanded?: boolean }[],
+): string | null {
+  if (!candidates?.length) return null;
+  const preferred = candidates.find((c) => c.defaultExpanded && String(c.id || "").trim());
+  if (preferred) return String(preferred.id).trim();
+  const first = String(candidates[0]?.id || "").trim();
+  return first || null;
 }
 
 /** Close / unselect path — always null so map tools return. */

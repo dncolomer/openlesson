@@ -164,6 +164,16 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     // After create, local_context is parsed into node state (not dropped).
     expect(view).toContain("parseBlockLocalContext(n.local_context)");
 
+    // Map tiles show a document icon when local context is attached.
+    const mapGrid = read("components/BlockSkillGrid.tsx");
+    expect(mapGrid).toContain("blockHasAttachedLocalContext");
+    expect(mapGrid).toContain("data-block-local-context-badge");
+    expect(mapGrid).toContain("data-block-has-local-context");
+    expect(mapGrid).toContain("BlockLocalContextDocBadge");
+    const skillGrid = read("lib/block-skill-grid.ts");
+    expect(skillGrid).toContain("export function blockHasAttachedLocalContext");
+    expect(skillGrid).toContain("local_context?");
+
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).toContain("hasLocalMaterials");
     expect(detail).toContain("defaultExpanded={hasLocalMaterials}");

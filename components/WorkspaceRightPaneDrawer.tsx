@@ -1,12 +1,89 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { nextRightPaneDrawerExpanded } from "@/lib/workspace-right-pane";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  initialAccordionOpenDrawerId,
+  nextAccordionOpenDrawerId,
+  nextRightPaneDrawerExpanded,
+} from "@/lib/workspace-right-pane";
+
+type DrawerAccordionContextValue = {
+  openId: string | null;
+  setOpenId: (id: string | null) => void;
+  registerDefault: (id: string, defaultExpanded: boolean) => void;
+};
+
+const DrawerAccordionContext = createContext<DrawerAccordionContextValue | null>(
+  null,
+);
+
+/**
+ * Accordion group: at most one section drawer open.
+ * Opening any drawer collapses the others.
+ */
+export function WorkspaceRightPaneDrawerGroup({
+  children,
+  /** Preferred open id when multiple defaultExpanded (e.g. "detail"). */
+  defaultOpenId = null,
+  className,
+  ...dataAttrs
+}: {
+  children: ReactNode;
+  defaultOpenId?: string | null;
+  className?: string;
+  // data-* surface markers (string | boolean for presence attrs)
+  [key: `data-${string}`]: string | boolean | undefined;
+}) {
+  const [openId, setOpenId] = useState<string | null>(
+    defaultOpenId ? String(defaultOpenId).trim() || null : null,
+  );
+
+  const extra: Record<string, string | boolean> = {};
+  for (const [k, v] of Object.entries(dataAttrs)) {
+    if (k.startsWith("data-") && v !== undefined && v !== false) {
+      extra[k] = v === true ? "" : (v as string | boolean);
+    }
+  }
+
+  const value = useMemo(
+    () => ({
+      openId,
+      setOpenId,
+      registerDefault: (_id: string, _defaultExpanded: boolean) => {
+        /* open id is owned by the group initial state / parent */
+      },
+    }),
+    [openId],
+  );
+
+  return (
+    <DrawerAccordionContext.Provider value={value}>
+      <div
+        data-workspace-right-pane-drawer-group
+        data-accordion-open={openId || ""}
+        className={className}
+        {...extra}
+      >
+        {children}
+      </div>
+    </DrawerAccordionContext.Provider>
+  );
+}
 
 /**
  * Shared chrome for map right-column form surfaces:
  * top-anchored, full column width, collapsible body — not a floating card.
  * Collapse/expand via header only (no close button on the chrome).
+ *
+ * When nested in WorkspaceRightPaneDrawerGroup with a drawerId, opening this
+ * drawer collapses every sibling in the group.
  */
 export function WorkspaceRightPaneDrawer({
   paneKind,
@@ -35,7 +112,28 @@ export function WorkspaceRightPaneDrawer({
   drawerId?: string;
   variant?: "fill" | "section";
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const group = useContext(DrawerAccordionContext);
+  const id = drawerId ? String(drawerId).trim() : "";
+  const inAccordion = Boolean(group && id);
+
+  const [localExpanded, setLocalExpanded] = useState(defaultExpanded);
+
+  const expanded = inAccordion
+    ? group!.openId === id
+    : localExpanded;
+
+  const toggle = useCallback(() => {
+    if (inAccordion && group) {
+      group.setOpenId(
+        nextAccordionOpenDrawerId({
+          currentOpenId: group.openId,
+          clickedId: id,
+        }),
+      );
+      return;
+    }
+    setLocalExpanded((cur) => nextRightPaneDrawerExpanded(cur, "toggle"));
+  }, [group, id, inAccordion]);
 
   const surfaceProps = surfaceDataAttr
     ? ({ [surfaceDataAttr]: true } as Record<string, boolean>)
@@ -63,6 +161,7 @@ export function WorkspaceRightPaneDrawer({
       data-drawer-anchor="top"
       data-drawer-width="full"
       data-drawer-variant={variant}
+      data-drawer-accordion={inAccordion ? "true" : "false"}
       className={shellClass}
       {...surfaceProps}
     >
@@ -77,9 +176,7 @@ export function WorkspaceRightPaneDrawer({
           type="button"
           data-workspace-right-pane-drawer-toggle
           aria-expanded={expanded}
-          onClick={() =>
-            setExpanded((cur) => nextRightPaneDrawerExpanded(cur, "toggle"))
-          }
+          onClick={toggle}
           className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left transition hover:bg-neutral-900/60 sm:px-4"
         >
           <span
@@ -115,4 +212,22 @@ export function WorkspaceRightPaneDrawer({
       ) : null}
     </div>
   );
+}
+
+/** Resolve initial open id for a detail stack (pure helper re-export path for hosts). */
+export function resolveDetailDrawerDefaultOpenId(input: {
+  hasLocalMaterials: boolean;
+  showSplit?: boolean;
+  canEdit?: boolean;
+}): string {
+  const candidates = [
+    { id: "detail", defaultExpanded: true },
+    { id: "simulation", defaultExpanded: false },
+    ...(input.showSplit ? [{ id: "split", defaultExpanded: false }] : []),
+    ...(input.canEdit ? [{ id: "edit", defaultExpanded: false }] : []),
+    { id: "local", defaultExpanded: input.hasLocalMaterials },
+  ];
+  // If local materials exist and detail is also default, prefer detail first
+  // (first defaultExpanded wins) — detail stays primary on open.
+  return initialAccordionOpenDrawerId(candidates) || "detail";
 }

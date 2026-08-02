@@ -17,6 +17,13 @@ export const MAP_CELL_EMPTY_SELECTED_CLASS =
   "border-white/45 bg-white/10 text-neutral-100 ring-2 ring-white/40";
 
 /**
+ * Pending expand/bridge generation slot — white highlight with a light pulse
+ * until that cell is created (progress indicator while jobs run).
+ */
+export const MAP_CELL_GENERATION_PENDING_CLASS =
+  "border-white/50 bg-white/12 text-neutral-100 ring-2 ring-white/45 shadow-[0_0_16px_rgba(255,255,255,0.14)] animate-pulse";
+
+/**
  * Milder white highlight for prerequisite blocks of the focused/edited target.
  * Dashed outline (not solid multi-select ring) so deps read as related, not selected.
  */

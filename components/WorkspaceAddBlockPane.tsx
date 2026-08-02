@@ -313,11 +313,11 @@ export function WorkspaceAddBlockPane({
   return (
     <WorkspaceRightPaneDrawerGroup
       defaultOpenId="add"
+      className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
       data-workspace-right-pane="add_block"
-      data-workspace-add-block-pane
+      data-workspace-add-block-pane="true"
       data-add-target-row={String(cell.row)}
       data-add-target-col={String(cell.col)}
-      className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
       {/* Primary form drawer — top-anchored, full width */}
       <WorkspaceRightPaneDrawer
@@ -606,3 +606,4 @@ export function WorkspaceAddBlockPane({
     </WorkspaceRightPaneDrawerGroup>
   );
 }
+

@@ -19,9 +19,9 @@ import {
 } from "@/lib/practice-item-builders";
 import {
   deriveBlockSimulation,
-  enforceSimulationProbeQuota,
   partitionSimulationProbes,
 } from "@/lib/block-simulation";
+import { deriveWorkspaceSimulationOverview } from "@/lib/workspace-simulation-overview";
 import {
   buildTapOpeningQuestionFallback,
   buildTapScoreInstructions,
@@ -204,8 +204,8 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
 });
 
 describe("Simulation shares live practice builders", () => {
-  it("deriveBlockSimulation pads with grounded items and never primary out-loud fillers", () => {
-    const sim = deriveBlockSimulation({
+  it("deriveBlockSimulation questions equal buildGroundedDialogueQuestion (rich + thin)", () => {
+    const groundRich = {
       title: richCtx.blockTitle,
       description: richCtx.blockDescription,
       planningPrompt: richCtx.planningPrompt,
@@ -215,45 +215,135 @@ describe("Simulation shares live practice builders", () => {
       rootTopic: richCtx.rootTopic,
       hasLocalContext: true,
       hasPlanningPrompt: true,
-    });
-    const { questions, exercises } = partitionSimulationProbes(sim.probes);
-    expect(questions).toHaveLength(3);
-    expect(exercises).toHaveLength(3);
+    };
+    const simRich = deriveBlockSimulation(groundRich);
+    const { questions: qRich, exercises: eRich } =
+      partitionSimulationProbes(simRich.probes);
+    expect(qRich).toHaveLength(3);
+    expect(eRich).toHaveLength(3);
 
-    for (const p of sim.probes) {
-      expect(p.question).not.toMatch(/\bout loud\b/i);
-      expect(isMetaLearningFluff(p.question)).toBe(false);
+    const liveCtx = {
+      blockTitle: richCtx.blockTitle,
+      blockDescription: richCtx.blockDescription,
+      workspaceGoal: richCtx.workspaceGoal,
+      workspaceTitle: richCtx.workspaceTitle,
+      rootTopic: richCtx.rootTopic,
+      planningPrompt: richCtx.planningPrompt,
+      localNotes: richCtx.localNotes,
+    };
+    for (let i = 0; i < 3; i++) {
+      expect(qRich[i].question).toBe(buildGroundedDialogueQuestion(liveCtx, i));
+      expect(eRich[i].question).toBe(buildGroundedExerciseItem(liveCtx, i));
     }
-    expect(sim.intent).not.toMatch(/\bout loud\b/i);
-    // Exercises should look like domain drills (Exercise: prefix common)
-    expect(exercises.some((e) => /Exercise:|Solve|Apply|Construct|Work/i.test(e.question))).toBe(
-      true,
+
+    // Live TAP opening fallback is the same dialogue builder index 0
+    expect(qRich[0].question).toBe(
+      buildTapOpeningQuestionFallback({
+        plan: {
+          id: "ws",
+          title: richCtx.workspaceTitle!,
+          root_topic: richCtx.rootTopic!,
+          description: null,
+          workspace_goal: richCtx.workspaceGoal,
+          notes: null,
+        },
+        nodes: [
+          {
+            id: "b1",
+            title: richCtx.blockTitle!,
+            description: richCtx.blockDescription!,
+            status: "available",
+          },
+        ],
+        sessions: [],
+        focusSession: null,
+      }),
     );
 
-    // Shared builders appear in pad path
-    const pad = enforceSimulationProbeQuota([], {
-      title: "Modular arithmetic",
-      description: "",
-      workspaceGoal: "Prove modular identities",
+    // Thin context equality
+    const simThin = deriveBlockSimulation({
+      title: thinCtx.blockTitle,
+      workspaceTitle: thinCtx.workspaceTitle,
+      rootTopic: thinCtx.rootTopic,
     });
-    expect(partitionSimulationProbes(pad).questions).toHaveLength(3);
-    expect(partitionSimulationProbes(pad).exercises).toHaveLength(3);
-    for (const p of pad) {
+    const { questions: qThin, exercises: eThin } =
+      partitionSimulationProbes(simThin.probes);
+    for (let i = 0; i < 3; i++) {
+      expect(qThin[i].question).toBe(buildGroundedDialogueQuestion(thinCtx, i));
+      expect(eThin[i].question).toBe(buildGroundedExerciseItem(thinCtx, i));
+      expect(isMetaLearningFluff(qThin[i].question)).toBe(false);
+    }
+
+    for (const p of simRich.probes) {
       expect(p.question).not.toMatch(/\bout loud\b/i);
       expect(isMetaLearningFluff(p.question)).toBe(false);
     }
+    expect(simRich.intent).not.toMatch(/\bout loud\b/i);
 
     writeEvidence(
       "simulation-shared-prompts.txt",
       [
-        "probeCount=" + sim.probes.length,
+        "probeCount=" + simRich.probes.length,
+        "simQ0_eq_live=" +
+          String(qRich[0].question === buildGroundedDialogueQuestion(liveCtx, 0)),
+        "simE0_eq_live=" +
+          String(eRich[0].question === buildGroundedExerciseItem(liveCtx, 0)),
+        "thinQ0_eq_live=" +
+          String(qThin[0].question === buildGroundedDialogueQuestion(thinCtx, 0)),
         "noOutLoud=" +
-          String(sim.probes.every((p) => !/\bout loud\b/i.test(p.question))),
-        "intent=" + sim.intent,
-        "q0=" + questions[0]?.question,
-        "e0=" + exercises[0]?.question.slice(0, 200),
+          String(simRich.probes.every((p) => !/\bout loud\b/i.test(p.question))),
+        "q0=" + qRich[0]?.question,
+        "e0=" + eRich[0]?.question.slice(0, 200),
       ].join("\n"),
     );
+  });
+
+  it("drawer + overview UI wire workspaceGoal into deriveBlockSimulation", () => {
+    const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
+    expect(panel).toMatch(/workspaceGoal:\s*workspaceGoal/);
+    expect(panel).toMatch(/workspaceTitle:\s*workspaceTitle/);
+    expect(panel).toContain("notes: workspaceNotes");
+
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    expect(detail).toContain("workspaceGoal={workspaceGoal}");
+    expect(detail).toContain("workspaceTitle={workspaceTitle}");
+
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
+
+    const overview = deriveWorkspaceSimulationOverview(
+      [
+        {
+          id: "b1",
+          title: richCtx.blockTitle,
+          description: richCtx.blockDescription,
+          is_start: true,
+        },
+      ],
+      {
+        workspaceTitle: richCtx.workspaceTitle,
+        workspaceGoal: richCtx.workspaceGoal,
+        rootTopic: richCtx.rootTopic,
+      },
+    );
+    expect(overview.sampleProbes.length).toBeGreaterThan(0);
+    const firstQ = overview.sampleProbes[0].questions[0]?.question;
+    expect(firstQ).toBe(
+      buildGroundedDialogueQuestion(
+        {
+          blockTitle: richCtx.blockTitle,
+          blockDescription: richCtx.blockDescription,
+          workspaceGoal: richCtx.workspaceGoal,
+          workspaceTitle: richCtx.workspaceTitle,
+          rootTopic: richCtx.rootTopic,
+        },
+        0,
+      ),
+    );
+
+    const tab = read("components/WorkspaceSimulationPanel.tsx");
+    expect(tab).toContain("deriveWorkspaceSimulationOverview(blocks,");
+    expect(tab).toContain("workspaceGoal");
   });
 
   it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {

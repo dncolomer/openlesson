@@ -125,14 +125,27 @@ export function buildSimulationPathFromStart(
   return path;
 }
 
+/** Optional workspace-level grounding (same fields live Explore/Drill use). */
+export type WorkspaceSimulationOverviewContext = {
+  workspaceTitle?: string | null;
+  workspaceGoal?: string | null;
+  rootTopic?: string | null;
+  notes?: string | null;
+};
+
 /**
  * Pure workspace-level simulation overview for course authors.
  */
 export function deriveWorkspaceSimulationOverview(
   blocks: readonly WorkspaceSimulationBlockRef[],
+  workspace?: WorkspaceSimulationOverviewContext | null,
 ): WorkspaceSimulationOverview {
   const list = (blocks || []).filter((b) => b && String(b.id || "").trim());
   const byId = new Map(list.map((b) => [String(b.id), b]));
+  const workspaceTitle = workspace?.workspaceTitle ?? null;
+  const workspaceGoal = workspace?.workspaceGoal ?? null;
+  const rootTopic = workspace?.rootTopic ?? null;
+  const notes = workspace?.notes ?? null;
 
   const starts = list.filter((b) => b.is_start);
   const lockedCount = list.filter(
@@ -172,7 +185,8 @@ export function deriveWorkspaceSimulationOverview(
     }`;
   }
 
-  // Sample probes from starts (or first blocks) via existing pure derive.
+  // Sample probes from starts (or first blocks) via existing pure derive —
+  // same grounded builders as live Explore/Drill, with workspace goal/title.
   const probeSources =
     starts.length > 0 ? starts.slice(0, 2) : list.slice(0, 2);
   const sampleProbes = probeSources.map((b) => {
@@ -187,6 +201,10 @@ export function deriveWorkspaceSimulationOverview(
       lockUntilTitles: (b.lock_until_block_ids || [])
         .map((id) => blockTitle(byId.get(String(id)) || { id, title: id }))
         .filter(Boolean),
+      workspaceGoal,
+      workspaceTitle,
+      rootTopic,
+      notes,
     });
     const { questions, exercises } = partitionSimulationProbes(sim.probes);
     return {

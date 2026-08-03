@@ -36,8 +36,14 @@ export function WorkspaceSimulationPanel({
   externalResourceCount?: number | null;
 }) {
   const overview = useMemo(
-    () => deriveWorkspaceSimulationOverview(blocks),
-    [blocks],
+    () =>
+      deriveWorkspaceSimulationOverview(blocks, {
+        workspaceTitle,
+        workspaceGoal,
+        rootTopic: workspaceTitle,
+        notes: workspaceNotes,
+      }),
+    [blocks, workspaceGoal, workspaceNotes, workspaceTitle],
   );
 
   const validationInput = useMemo(

@@ -48,6 +48,10 @@ export function WorkspaceBlockDetailPane({
   onUpdateBlock,
   onDeleteBlock,
   onSplitBlock,
+  workspaceGoal,
+  workspaceTitle,
+  rootTopic,
+  workspaceNotes,
 }: {
   title?: string;
   /** Block launch / detail body (e.g. SessionItem). */
@@ -67,6 +71,11 @@ export function WorkspaceBlockDetailPane({
   workspaceId?: string;
   ayclToken?: string;
   locale?: string;
+  /** Workspace identity for Simulation probe grounding (live Explore/Drill parity). */
+  workspaceGoal?: string | null;
+  workspaceTitle?: string | null;
+  rootTopic?: string | null;
+  workspaceNotes?: string | null;
   canEdit?: boolean;
   editBusy?: boolean;
   onUpdateBlock?: (input: {
@@ -148,6 +157,10 @@ export function WorkspaceBlockDetailPane({
             canEdit={canEdit}
             ayclToken={ayclToken}
             locale={locale}
+            workspaceGoal={workspaceGoal}
+            workspaceTitle={workspaceTitle}
+            rootTopic={rootTopic}
+            workspaceNotes={workspaceNotes}
           />
         </div>
       </WorkspaceRightPaneDrawer>

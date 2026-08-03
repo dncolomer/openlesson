@@ -98,6 +98,10 @@ export function WorkspaceBlockSimulationPanel({
   canEdit = false,
   ayclToken,
   locale = "en",
+  workspaceGoal,
+  workspaceTitle,
+  rootTopic,
+  workspaceNotes,
 }: {
   workspaceId?: string;
   blockId: string;
@@ -111,6 +115,11 @@ export function WorkspaceBlockSimulationPanel({
   canEdit?: boolean;
   ayclToken?: string;
   locale?: string;
+  /** Workspace goal — same grounding live Explore/Drill use. */
+  workspaceGoal?: string | null;
+  workspaceTitle?: string | null;
+  rootTopic?: string | null;
+  workspaceNotes?: string | null;
 }) {
   void canEdit;
   void blockStatus;
@@ -139,6 +148,10 @@ export function WorkspaceBlockSimulationPanel({
       externalLabels: externalIdsKey
         ? externalIdsKey.split("\0").map((id) => id.slice(0, 8))
         : null,
+      workspaceGoal: workspaceGoal ?? null,
+      workspaceTitle: workspaceTitle ?? null,
+      rootTopic: rootTopic ?? null,
+      notes: workspaceNotes ?? null,
     }),
     [
       blockTitle,
@@ -149,6 +162,10 @@ export function WorkspaceBlockSimulationPanel({
       localFileNamesKey,
       externalIdsKey,
       lockTitlesKey,
+      workspaceGoal,
+      workspaceTitle,
+      rootTopic,
+      workspaceNotes,
     ],
   );
 

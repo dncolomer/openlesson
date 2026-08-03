@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -95,6 +95,13 @@ import {
   normalizeWorkspaceDags,
   type WorkspaceDagRecord,
 } from "@/lib/workspace-dags";
+import {
+  ayclUpgradeOfferDescription,
+  ayclUpgradeOfferLabel,
+  AYCL_UPGRADE_PRICE_LABEL,
+  resolveAyclCapabilities,
+  type AyclCapabilities,
+} from "@/lib/aycl-shared";
 
 export interface Block {
   id: string;
@@ -142,6 +149,23 @@ export interface Workspace {
 interface WorkspaceViewProps {
   initialPlan?: Workspace;
   initialNodes?: Block[];
+  /**
+   * AYCL / purchased lifetime access: token is sent on authoring APIs.
+   * Full tier → owner-equivalent tools; learner tier → practice only.
+   */
+  ayclToken?: string;
+  /** Owner user id for AYCL (Knowledge/PoW subject scoping). */
+  ayclOwnerUserId?: string;
+  /** Purchase tier seed (avoids authoring flash before refresh). */
+  ayclAccessTier?: string | null;
+  /**
+   * Explicit workspace id when not on /workspace/[id] (e.g. /learn/[token]).
+   */
+  workspaceIdOverride?: string;
+  /** Hide main Navbar (AYCL page provides its own chrome). */
+  hideNavbar?: boolean;
+  /** Optional top banner under nav (e.g. Lifetime access). */
+  accessBanner?: ReactNode;
 }
 
 function planShareSlug(plan: Workspace) {
@@ -163,12 +187,24 @@ function parseSectionParam(value: string | null): WorkspaceSectionKey | null {
   return null;
 }
 
-export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps) {
+export function WorkspaceView({
+  initialPlan,
+  initialNodes,
+  ayclToken,
+  ayclOwnerUserId,
+  ayclAccessTier: ayclAccessTierProp,
+  workspaceIdOverride,
+  hideNavbar = false,
+  accessBanner,
+}: WorkspaceViewProps) {
   const { t, locale } = useI18n();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const workspaceId = params.id as string;
+  const workspaceId =
+    (workspaceIdOverride || (params?.id as string | undefined) || "").trim() ||
+    String(initialPlan?.id || "");
+  const isAycl = Boolean(ayclToken);
   const sectionFromUrl = parseSectionParam(searchParams.get("section"));
   const knowledgeSubviewFromUrl = searchParams.get("subview");
   
@@ -177,7 +213,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [loading, setLoading] = useState(!initialPlan);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(
+    () => ayclOwnerUserId || null,
+  );
   /** Org admin for this workspace's organization (or platform admin). */
   const [isOrgAdmin, setIsOrgAdmin] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -186,7 +224,13 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   );
   /** Creator = authoring (default); Learner = practice map + Knowledge LWM. */
   const [interactionMode, setInteractionMode] =
-    useState<WorkspaceInteractionMode>("creator");
+    useState<WorkspaceInteractionMode>(() => {
+      if (ayclToken) {
+        return resolveAyclCapabilities(ayclAccessTierProp ?? "full")
+          .defaultInteractionMode;
+      }
+      return "creator";
+    });
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -215,8 +259,31 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   );
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
   const [mapGroundBusy, setMapGroundBusy] = useState(false);
+  /** AYCL purchase tier capabilities (null = non-AYCL). Seeded from prop. */
+  const [ayclCapabilities, setAyclCapabilities] = useState<AyclCapabilities | null>(
+    () =>
+      ayclToken
+        ? resolveAyclCapabilities(ayclAccessTierProp ?? "full")
+        : null,
+  );
+  const [ayclUpgradeBusy, setAyclUpgradeBusy] = useState(false);
 
   const supabase = createClient();
+
+  /** Attach ayclToken to JSON bodies when present (full clone access). */
+  const withAycl = useCallback(
+    <T extends Record<string, unknown>>(body: T): T & { ayclToken?: string } =>
+      ayclToken ? { ...body, ayclToken } : body,
+    [ayclToken],
+  );
+
+
+  useEffect(() => {
+    if (!isAycl || !ayclCapabilities) return;
+    if (!ayclCapabilities.allowCreatorModeToggle) {
+      setInteractionMode("learner");
+    }
+  }, [isAycl, ayclCapabilities]);
 
   const handleAbortExpandJob = useCallback((jobId: string) => {
     expandAbortRef.current.set(jobId, true);
@@ -293,7 +360,13 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     ? orderedBlocks.findIndex((n) => n.id === detailBlock.id)
     : -1;
 
-  const isOwner = currentUserId ? plan?.user_id === currentUserId : false;
+  // AYCL: owner-equivalent only when purchase includes creation (full tier).
+  // Practice-only access is fixed-scope — no authoring / grow tools.
+  const isOwner = isAycl
+    ? Boolean(ayclCapabilities?.canAuthor)
+    : currentUserId
+      ? plan?.user_id === currentUserId
+      : false;
   const canAccessPrivilegedSections = canAccessPrivilegedWorkspaceSections({
     isOwner,
     isOrgAdmin,
@@ -302,6 +375,46 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const refreshNodes = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
+
+  // AYCL: reload plan/blocks via token API (no cookie session required).
+  const refreshAyclWorkspace = useCallback(async () => {
+    if (!ayclToken) return;
+    const res = await fetch(
+      `/api/aycl/workspace?token=${encodeURIComponent(ayclToken)}`,
+    );
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    if (data.workspace) {
+      setPlan((prev) => ({ ...(prev || {}), ...data.workspace }));
+      setUnusableCells(
+        normalizeUnusableCells(
+          (data.workspace as { unusable_cells?: unknown }).unusable_cells,
+        ),
+      );
+      setWorkspaceDags(
+        normalizeWorkspaceDags(
+          (data.workspace as { workspace_dags?: unknown }).workspace_dags,
+        ),
+      );
+    }
+    if (Array.isArray(data.blocks)) {
+      setNodes(
+        data.blocks.map((n: Block & { local_context?: unknown }) => ({
+          ...n,
+          local_context: parseBlockLocalContext(n.local_context),
+        })),
+      );
+    }
+    if (data.capabilities) {
+      setAyclCapabilities(
+        resolveAyclCapabilities(
+          (data.capabilities as AyclCapabilities).tier ?? data.accessTier,
+        ),
+      );
+    } else if (data.accessTier) {
+      setAyclCapabilities(resolveAyclCapabilities(data.accessTier));
+    }
+  }, [ayclToken]);
 
   const handleCombineBlocks = useCallback(
     async (input: { blockIds: string[]; prompt?: string }) => {
@@ -313,6 +426,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "merge",
             blockIds: input.blockIds,
             prompt: input.prompt,
@@ -352,6 +466,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "split",
             blockIds: [input.blockId],
             prompt: input.prompt,
@@ -470,6 +585,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                     : {}),
                   // Author starter flag (default false; API also starts empty maps).
                   is_start: Boolean(opts?.isStart),
+                  ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
               if (!response.ok) {
@@ -611,6 +727,8 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   weightedNeighbors,
                   model,
                   locale,
+                  intent: "bridge",
+                  ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
               if (!response.ok) {
@@ -696,6 +814,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "generate_shape",
             prompt: payload.prompt,
             cells: payload.cells,
@@ -762,6 +881,28 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
 
   useEffect(() => {
     async function loadPlan() {
+      // Purchased AYCL clone: token API, full owner UI, no login redirect.
+      if (isAycl && ayclToken) {
+        setCurrentUserId(ayclOwnerUserId || null);
+        setIsOrgAdmin(false);
+        if (initialPlan) {
+          setPlan(initialPlan);
+          setUnusableCells(normalizeUnusableCells(initialPlan.unusable_cells));
+          setWorkspaceDags(normalizeWorkspaceDags(initialPlan.workspace_dags));
+        }
+        if (initialNodes) {
+          setNodes(
+            initialNodes.map((n) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        await refreshAyclWorkspace();
+        setLoading(false);
+        return;
+      }
+
       let user: { id: string } | null = null;
       try {
         const { data } = await supabase.auth.getUser();
@@ -892,7 +1033,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     }
 
     loadPlan();
-  }, [workspaceId, supabase, router, refreshKey]);
+  }, [workspaceId, supabase, router, refreshKey, isAycl, ayclToken, ayclOwnerUserId, initialPlan, initialNodes, refreshAyclWorkspace]);
 
   useEffect(() => {
     if (plan?.notes !== undefined) {
@@ -923,7 +1064,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         const res = await fetch("/api/workspace/map-ground", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId, ...payload }),
+          body: JSON.stringify({ workspaceId, ...payload, ...(ayclToken ? { ayclToken } : {}) }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -1026,6 +1167,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "update_block",
             ...fields,
           }),
@@ -1062,6 +1204,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "delete_block",
             blockId,
           }),
@@ -1102,6 +1245,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "delete_blocks",
             blockIds: ids,
           }),
@@ -1154,6 +1298,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "apply_dag",
             blockIds: input.blockIds,
             dagDraft: input.dagDraft,
@@ -1203,6 +1348,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
             op: "delete_dag",
             dagId: input.dagId,
           }),
@@ -1240,7 +1386,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       const res = await fetch("/api/workspace/notes", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId: plan.id, notes: notesContent }),
+        body: JSON.stringify({ workspaceId: plan.id, notes: notesContent, ...(ayclToken ? { ayclToken } : {}) }),
       });
       const data = await res.json();
       if (data.success) {
@@ -1292,7 +1438,41 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
   const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);
 
+  const startAyclUpgradeCheckout = useCallback(async () => {
+    if (!ayclToken || ayclUpgradeBusy) return;
+    setAyclUpgradeBusy(true);
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceType: "all_you_can_learn",
+          ayclToken,
+          // Optional; server resolves source workspace from the purchase.
+          ...(workspaceId ? { workspaceId } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Upgrade checkout failed");
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upgrade checkout failed");
+      setAyclUpgradeBusy(false);
+    }
+  }, [ayclToken, ayclUpgradeBusy, workspaceId]);
+
   const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
+    // Practice-only AYCL cannot switch into Creator tools.
+    if (
+      isAycl &&
+      ayclCapabilities &&
+      !ayclCapabilities.allowCreatorModeToggle &&
+      mode === "creator"
+    ) {
+      return;
+    }
     const next = normalizeWorkspaceInteractionMode(mode);
     if (next === interactionMode) return;
     setInteractionMode(next);
@@ -1416,8 +1596,37 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       .filter(Boolean) || [];
 
   return (
-    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
-      <Navbar />
+    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden" data-aycl-shell={isAycl ? "true" : undefined}>
+      {!hideNavbar ? <Navbar /> : null}
+      {accessBanner ? (
+        <div className="shrink-0 border-b border-neutral-800/60" data-workspace-access-banner>
+          {accessBanner}
+        </div>
+      ) : null}
+
+      {isAycl && ayclCapabilities?.canUpgrade ? (
+        <div
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2"
+          data-aycl-upgrade-bar
+        >
+          <p className="text-[11px] text-amber-100/90">
+            {ayclUpgradeOfferDescription()}{" "}
+            <span className="font-medium text-white">
+              {AYCL_UPGRADE_PRICE_LABEL}
+            </span>{" "}
+            one-time.
+          </p>
+          <button
+            type="button"
+            data-aycl-upgrade-cta
+            disabled={ayclUpgradeBusy}
+            onClick={() => void startAyclUpgradeCheckout()}
+            className="rounded-md bg-white px-3 py-1.5 text-[11px] font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
+          >
+            {ayclUpgradeBusy ? "Redirecting…" : ayclUpgradeOfferLabel()}
+          </button>
+        </div>
+      ) : null}
 
       <WorkspaceSectionNav
         sections={sectionConfig}
@@ -1426,7 +1635,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
         interactionMode={interactionMode}
-        onInteractionModeChange={selectInteractionMode}
+        onInteractionModeChange={
+          isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle
+            ? undefined
+            : selectInteractionMode
+        }
       />
 
       {!isLearnerMode && sectionLayout.mountsContextPanel && (
@@ -1459,8 +1672,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 setNotesContent(plan.notes || "");
                 setIsEditingNotes(false);
               }}
-              showFiles
+              showFiles={!isAycl}
               seedQuery={plan.root_topic || plan.title}
+              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceSectionSurface>
@@ -1712,12 +1926,13 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             onFork={() => {}}
             isOwner={isOwner}
             learnerMode={isLearnerMode}
-            isLoggedIn={!!currentUserId}
+            isLoggedIn={!!currentUserId || isAycl}
             supabase={supabase}
             planTopic={plan.root_topic}
             workspaceId={workspaceId}
-            onRefresh={refreshNodes}
+            onRefresh={isAycl ? () => void refreshAyclWorkspace() : refreshNodes}
             onNodesUpdate={handleNodesUpdate}
+            ayclToken={ayclToken}
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
             onEmptySelectionChange={
@@ -1888,6 +2103,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       workspaceId,
+                      ...(ayclToken ? { ayclToken } : {}),
                       op: "set_block_status",
                       blockId,
                       status,
@@ -1997,9 +2213,14 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 spanH={detailBlock.span_h}
                 shapeCells={detailBlock.shape_cells}
                 workspaceId={workspaceId}
+                ayclToken={ayclToken}
                 locale={locale}
                 canEdit={isOwner}
                 editBusy={isAddingBlock}
+                workspaceGoal={plan.workspace_goal}
+                workspaceTitle={plan.title || plan.root_topic}
+                rootTopic={plan.root_topic}
+                workspaceNotes={notesContent || plan.notes}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}
                 onSplitBlock={isOwner ? handleSplitBlock : undefined}
@@ -2066,6 +2287,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
               rightPane === "generate_shape" &&
               generateShapeCells ? (
               <WorkspaceGenerateShapePane
+                ayclToken={ayclToken}
                 key={`shape-${generateShapeCells.map((c) => `${c.row}:${c.col}`).join(",")}`}
                 cells={generateShapeCells}
                 nodes={nodes}

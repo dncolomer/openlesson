@@ -381,12 +381,18 @@ export function enforceSimulationProbeQuota(
 /**
  * Derive a full simulation snapshot from block fields (no LLM).
  * Always yields exactly 3 questions + 3 exercises with compact influence labels.
+ *
+ * Dialogue questions and solo exercises are seeded from the **same pure builders**
+ * live Explore/Drill fallbacks use (`buildGroundedDialogueQuestion` /
+ * `buildGroundedExerciseItem`) so author Simulation previews match learner UX.
  */
 export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulationResult {
   const title = clean(input.title) || "This block";
   const description = clean(input.description);
   const planning = clean(input.planningPrompt);
   const notes = clean(input.localNotes);
+  // Topics only — do NOT use deriveBlockExampleTopics questions as probe seeds
+  // (those templates diverge from live Explore dialogue builders).
   const samples: BlockExampleTopicsResult = deriveBlockExampleTopics({
     title,
     description,
@@ -395,6 +401,17 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
   });
 
   const availableInfluence = collectBlockContextInfluenceLabels(input);
+
+  const ground: PracticeItemContext = {
+    blockTitle: title,
+    blockDescription: description,
+    workspaceGoal: input.workspaceGoal,
+    workspaceTitle: input.workspaceTitle,
+    rootTopic: input.rootTopic,
+    planningPrompt: planning,
+    localNotes: notes,
+    notes: input.notes,
+  };
 
   const goal = clean(input.workspaceGoal);
   const intent = description
@@ -410,17 +427,16 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
       )
     : `After this block you can teach “${title}” to a peer with an example.`;
 
-  // Seed probes from extracted questions + synthetic exercises, then enforce quota.
-  // Sanitize any legacy stage-direction phrasing from extracted seeds.
-  const seedProbes: SimulationProbe[] = samples.questions.map((question, i) => {
-    const difficulty = difficultyForIndex(i);
-    const q = sanitizeProbeText(question);
-    return {
-      id: `probe-${i}`,
+  // Seed from shared live builders (not example-topic template questions).
+  const seedProbes: SimulationProbe[] = [];
+  for (let i = 0; i < SIMULATION_QUESTION_COUNT; i++) {
+    const q = sanitizeProbeText(buildGroundedDialogueQuestion(ground, i));
+    seedProbes.push({
+      id: `probe-q-${i}`,
       question: q,
       coachCue: coachCueForQuestion(q, title),
-      difficulty,
-      kind: "question" as const,
+      difficulty: i === 0 ? "warmup" : "core",
+      kind: "question",
       contextSources: pickInfluence(
         availableInfluence,
         i === 0
@@ -429,8 +445,26 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
             ? ["Description", "Planning prompt", "Local notes"]
             : ["Title", "Local notes", "Local context"],
       ),
-    };
-  });
+    });
+  }
+  for (let i = 0; i < SIMULATION_EXERCISE_COUNT; i++) {
+    const q = sanitizeProbeText(buildGroundedExerciseItem(ground, i));
+    seedProbes.push({
+      id: `probe-ex-${i}`,
+      question: q,
+      coachCue: coachCueForQuestion(q, title),
+      difficulty: "stretch",
+      kind: "exercise",
+      contextSources: pickInfluence(
+        availableInfluence,
+        i === 0
+          ? ["Description", "Local context", "Local notes"]
+          : i === 1
+            ? ["Planning prompt", "Local notes"]
+            : ["Title", "Description", "Local context"],
+      ),
+    });
+  }
 
   const probes = enforceSimulationProbeQuota(seedProbes, {
     title,

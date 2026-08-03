@@ -50,16 +50,21 @@ describe("Context section layout resolver", () => {
   it("Context is available to owners and non-owners; knowledge remains privileged", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
+      "dags",
       "context",
+      "simulation",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false })).toEqual([
       "workspace",
       "context",
+      "simulation",
     ]);
     expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
     expect(resolveActiveSection("knowledge", { isOwner: false })).toBe("workspace");
+    // DAGs is owner-only (Creator authoring)
+    expect(availableWorkspaceSections({ isOwner: false })).not.toContain("dags");
   });
 });
 

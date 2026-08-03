@@ -10,17 +10,18 @@
 ## 1. Top-level workspace sections
 
 Registry: `WORKSPACE_SECTION_KEYS` / `availableWorkspaceSections` in `lib/workspace-sections.ts`.  
-Nav labels (EN): Workspace · Context · Simulation · Knowledge · Settings.
+Nav labels (EN): Workspace · DAGs · Context · Simulation · Knowledge · Settings.
 
 | Section key | Who sees it | Purpose for authors |
 |---|---|---|
 | **`workspace`** | Everyone with access | Map-first authoring: skill grid, left tool strip, right pane for selection-driven authoring |
 | **`context`** | Everyone | Workspace-level materials: notes, files, external links / Dantes search |
 | **`simulation`** | Everyone | Author preview of learner journey + **workspace validation** (not live learner session) |
+| **`dags`** | Workspace owner only (Creator mode) | List/edit/delete multi-block **leads-to** DAGs created via map multi-select Apply — no create on this tab |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`) |
 | **`settings`** | Owner / org admin only | Identity, access, guest links, data studio, knowledge portal, integrations |
 
-**Note:** Privileged sections (`knowledge`, `settings`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`.
+**Note:** Privileged sections (`knowledge`, `settings`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** is also hidden in Learner mode.
 
 ---
 
@@ -253,6 +254,7 @@ Not treated as **course map authoring** tools in this report (exist elsewhere in
 | Combine / bridge | `components/WorkspaceCombineBlocksPane.tsx`, `lib/bridge-blocks.ts` |
 | Add / expand | `components/WorkspaceAddBlockPane.tsx`, `lib/add-block-range-density.ts` |
 | Simulation overview | `lib/workspace-simulation-overview.ts`, `components/WorkspaceSimulationPanel.tsx` |
+| Created DAGs tab | `lib/workspace-dags.ts`, `components/WorkspaceDagsPanel.tsx` |
 | Workspace validation | `lib/workspace-simulation-validation.ts` |
 | Block simulation | `lib/block-simulation.ts`, `components/WorkspaceBlockSimulationPanel.tsx` |
 | Grid ops API | `app/api/workspace/grid-ops/route.ts` |

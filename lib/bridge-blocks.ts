@@ -1,6 +1,7 @@
 /**
  * Pure helpers for multi-select "Bridge Blocks":
- * straight-line corridor between selected block anchors + density thickness.
+ * straight-line corridor between selected block anchors.
+ * Independent **width** (half-width thickness) and **density** (fill of corridor).
  * Free of React so unit tests drive the real selection path.
  */
 
@@ -8,7 +9,7 @@ import type { AddExpandCell } from "@/lib/add-block-range-density";
 
 export type BridgeCell = AddExpandCell;
 
-/** Density 0..100 — maps to corridor half-width and fill sample. */
+/** Density 0..100 — fraction of placeable corridor cells to keep (after width). */
 export const BRIDGE_DENSITY_MIN = 0;
 export const BRIDGE_DENSITY_MAX = 100;
 /**
@@ -16,6 +17,9 @@ export const BRIDGE_DENSITY_MAX = 100;
  * Prevents arbitrarily thick "bridges".
  */
 export const BRIDGE_MAX_HALF_WIDTH = 2;
+/** Width slider range (half-width in cells). */
+export const BRIDGE_WIDTH_MIN = 0;
+export const BRIDGE_WIDTH_MAX = BRIDGE_MAX_HALF_WIDTH;
 
 function cellKey(c: BridgeCell): string {
   return `${c.row}:${c.col}`;
@@ -38,9 +42,19 @@ export function clampBridgeDensity(density: number): number {
   );
 }
 
+/** Clamp corridor half-width into 0..BRIDGE_WIDTH_MAX. */
+export function clampBridgeWidth(width: number): number {
+  const w = Number(width);
+  if (!Number.isFinite(w)) return BRIDGE_WIDTH_MIN;
+  return Math.min(
+    BRIDGE_WIDTH_MAX,
+    Math.max(BRIDGE_WIDTH_MIN, Math.round(w)),
+  );
+}
+
 /**
- * Map density → corridor half-width in cells, hard-capped at BRIDGE_MAX_HALF_WIDTH.
- * 0 → thin centerline only; 100 → max thickness.
+ * Legacy helper: map density → corridor half-width (when width not provided).
+ * Prefer explicit `width` in resolveBridgeSelection for dual-slider UI.
  */
 export function bridgeHalfWidthForDensity(density: number): number {
   const d = clampBridgeDensity(density);
@@ -48,6 +62,58 @@ export function bridgeHalfWidthForDensity(density: number): number {
     BRIDGE_MAX_HALF_WIDTH,
     Math.round((d / BRIDGE_DENSITY_MAX) * BRIDGE_MAX_HALF_WIDTH),
   );
+}
+
+/**
+ * From a thickened placeable corridor, keep spine placeables + a density-based
+ * sample of off-spine cells. Density 0 → spine only; 100 → all candidates.
+ */
+export function selectCorridorByDensity(
+  candidates: readonly BridgeCell[],
+  spine: readonly BridgeCell[],
+  density: number,
+): BridgeCell[] {
+  const d = clampBridgeDensity(density);
+  if (candidates.length === 0) return [];
+  const candKeys = new Set(candidates.map(cellKey));
+  const spinePlaceable = spine.filter((c) => candKeys.has(cellKey(c)));
+  if (d <= 0) return spinePlaceable.map((c) => ({ row: c.row, col: c.col }));
+  if (d >= 100) {
+    return candidates.map((c) => ({ row: c.row, col: c.col }));
+  }
+
+  const spineKeySet = new Set(spinePlaceable.map(cellKey));
+  const offSpine = candidates.filter((c) => !spineKeySet.has(cellKey(c)));
+  // Target total count between spine-only and full candidates
+  const minN = spinePlaceable.length;
+  const maxN = candidates.length;
+  const target = Math.max(
+    minN,
+    Math.min(maxN, Math.round(minN + ((maxN - minN) * d) / 100)),
+  );
+  const needOff = Math.max(0, target - minN);
+  // Stride sample for stable, content-sensitive fill
+  const pickedOff: BridgeCell[] = [];
+  if (needOff > 0 && offSpine.length > 0) {
+    if (needOff >= offSpine.length) {
+      pickedOff.push(...offSpine);
+    } else {
+      const step = offSpine.length / needOff;
+      for (let i = 0; i < needOff; i++) {
+        const idx = Math.min(offSpine.length - 1, Math.floor(i * step));
+        pickedOff.push(offSpine[idx]);
+      }
+    }
+  }
+  const out: BridgeCell[] = [];
+  const seen = new Set<string>();
+  for (const c of [...spinePlaceable, ...pickedOff]) {
+    const k = cellKey(c);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ row: c.row, col: c.col });
+  }
+  return out;
 }
 
 /**
@@ -178,21 +244,28 @@ export function placeableCorridorCells(input: {
 }
 
 /**
- * Full bridge selection: multi-anchor polyline → thickness from density →
- * placeable only.
+ * Full bridge selection: multi-anchor polyline → thickness from **width** →
+ * placeable filter → **density** fill sample.
  *
- * Density controls **thickness only** (half-width, hard-capped). The full
- * placeable spine between anchors is always selected so a thin bridge still
- * spans both ends — never a one-sided prefix near the first anchor.
+ * - `width` (preferred): corridor half-width in cells (0..BRIDGE_WIDTH_MAX).
+ * - `density` (0..100): how many placeable corridor cells to keep
+ *   (0 = placeable spine only; 100 = full thickened corridor).
+ * - Legacy: when `width` is omitted, half-width is derived from density
+ *   (old single-slider behavior) and all placeable cells are kept when density
+ *   alone was used as thickness — if both are provided, they are independent.
  */
 export function resolveBridgeSelection(input: {
   anchors: readonly BridgeCell[];
-  density: number;
+  density?: number;
+  /** Explicit corridor half-width (independent of density). */
+  width?: number;
   seed?: number;
   occupiedKeys?: ReadonlySet<string> | readonly string[] | null;
   unusableKeys?: ReadonlySet<string> | readonly string[] | null;
 }): {
   halfWidth: number;
+  width: number;
+  density: number;
   spine: BridgeCell[];
   candidates: BridgeCell[];
   selected: BridgeCell[];
@@ -208,10 +281,23 @@ export function resolveBridgeSelection(input: {
     if (prev && prev.row === a.row && prev.col === a.col) continue;
     uniqueAnchors.push(a);
   }
-  const density = clampBridgeDensity(input.density);
-  const halfWidth = bridgeHalfWidthForDensity(density);
+  const density = clampBridgeDensity(
+    input.density === undefined ? BRIDGE_DENSITY_MAX : input.density,
+  );
+  const widthExplicit = input.width !== undefined && input.width !== null;
+  const width = widthExplicit
+    ? clampBridgeWidth(Number(input.width))
+    : bridgeHalfWidthForDensity(density);
+  const halfWidth = width;
   if (uniqueAnchors.length < 2) {
-    return { halfWidth, spine: [], candidates: [], selected: [] };
+    return {
+      halfWidth,
+      width,
+      density,
+      spine: [],
+      candidates: [],
+      selected: [],
+    };
   }
   const spine = polylineCells(uniqueAnchors);
   const corridor = thickenCorridor(spine, halfWidth);
@@ -220,13 +306,19 @@ export function resolveBridgeSelection(input: {
     occupiedKeys: input.occupiedKeys,
     unusableKeys: input.unusableKeys,
   });
-  // Density = thickness only: keep every placeable cell in the corridor
-  // (full spine at halfWidth 0; spine + rings when thicker).
+  // When width is explicit, density samples the thickened corridor.
+  // Legacy density-only path (width omitted): keep full placeable corridor
+  // (old "density = thickness" behavior).
+  const selected = widthExplicit
+    ? selectCorridorByDensity(candidates, spine, density)
+    : candidates.map((c) => ({ row: c.row, col: c.col }));
   return {
     halfWidth,
+    width,
+    density,
     spine,
     candidates,
-    selected: [...candidates],
+    selected,
   };
 }
 

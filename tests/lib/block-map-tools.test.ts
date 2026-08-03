@@ -1570,7 +1570,10 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(pane).not.toContain("How context shapes practice");
     // Unusable cells must be clickable for multi-select clear (not disabled={...isUnusable}).
     expect(grid).toContain('data-map-cell-unusable={isUnusable ? "true" : "false"}');
-    expect(grid).toMatch(/disabled=\{!canEdit \|\| busy \|\| generationPending\}/);
+    // Empty cells stay pointer-enabled for drag-pan even when !canEdit (Learner mode).
+    // Authoring (Add) is gated in handleEmptyCellClick via canEdit.
+    expect(grid).toMatch(/disabled=\{busy \|\| generationPending\}/);
+    expect(grid).toContain("data-empty-pan-enabled");
     expect(grid).not.toMatch(/disabled=\{!canEdit \|\| busy \|\| isUnusable\}/);
     // Click path allows selecting unusable for clear; generation-pending may disable.
     expect(grid).toContain("if (isUnusable) return;");
@@ -1580,5 +1583,8 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     // Empty selection uses the same plain/Shift model as filled blocks.
     expect(grid).toContain("applyEmptyCellSelection(cell, multiModifier)");
     expect(grid).toContain("shouldEmptyCellClickSelect");
+    // Learner empty-drag pan: pointerdown arms pan without canEdit gate.
+    expect(grid).toContain("Pan arm is navigation");
+    expect(grid).toContain("available in Learner");
   });
 });

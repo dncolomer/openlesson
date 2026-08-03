@@ -44,6 +44,11 @@ interface SessionItemProps {
   variant?: "compact" | "detail";
   detailLayout?: "inline" | "drawer";
   hideTap?: boolean;
+  /**
+   * Creator mode: hide Explore/Drill launch card (that UI is Learner-only).
+   * Detail still shows title/description + customize prompt when owner.
+   */
+  hidePracticeLaunch?: boolean;
   onCustomStart?: (node: Block) => Promise<void>;
 }
 
@@ -66,6 +71,7 @@ export function SessionItem({
   variant = "compact",
   detailLayout = "inline",
   hideTap = false,
+  hidePracticeLaunch = false,
   onCustomStart,
 }: SessionItemProps) {
   void _isGroupPlan;
@@ -355,8 +361,16 @@ export function SessionItem({
       </div>
     ) : null;
 
+    // Creator workspace detail: no Explore/Drill (Learner-only drawer).
+    const showLaunchActions =
+      !hidePracticeLaunch && !isLocked && isOwner;
+
     return (
-      <div id={`session-item-${node.id}`}>
+      <div
+        id={`session-item-${node.id}`}
+        data-session-item-detail
+        data-practice-launch={showLaunchActions ? "true" : "false"}
+      >
         <BlockDetailCard
           key={node.id}
           layout={detailLayout === "drawer" ? "modal" : "horizontal"}
@@ -366,20 +380,24 @@ export function SessionItem({
           isStart={node.is_start}
           isStarting={isStarting}
           isLocked={isLocked}
-          showActions={!isLocked && isOwner}
-          allowTimed={!hideTap}
-          onLaunchIntent={handleLaunchIntent}
-          onStartIle={() => void handleStart("learning")}
-          onStartIleProject={() => void handleStart("project")}
+          showActions={showLaunchActions}
+          allowTimed={!hideTap && !hidePracticeLaunch}
+          onLaunchIntent={showLaunchActions ? handleLaunchIntent : undefined}
+          onStartIle={
+            showLaunchActions ? () => void handleStart("learning") : undefined
+          }
+          onStartIleProject={
+            showLaunchActions ? () => void handleStart("project") : undefined
+          }
           onStartEval={
-            hideTap
-              ? undefined
-              : (e, minutes) => handleStartTimed("conversational", e, minutes)
+            showLaunchActions && !hideTap
+              ? (e, minutes) => handleStartTimed("conversational", e, minutes)
+              : undefined
           }
           onStartExercise={
-            hideTap
-              ? undefined
-              : (e, minutes) => handleStartTimed("exercise", e, minutes)
+            showLaunchActions && !hideTap
+              ? (e, minutes) => handleStartTimed("exercise", e, minutes)
+              : undefined
           }
           promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}

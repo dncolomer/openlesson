@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
+import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 
 export type WorkspaceSectionNavItem = {
   key: WorkspaceSectionKey;
@@ -17,6 +18,11 @@ interface WorkspaceSectionNavProps {
   variant?: "bar" | "pills";
   /** Workspace name shown on the right of the section tabs. */
   workspaceTitle?: string | null;
+  /** Creator vs Learner mode (toggle next to workspace name). */
+  interactionMode?: WorkspaceInteractionMode;
+  onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
+  /** Show mode toggle (default true when onInteractionModeChange provided). */
+  showModeToggle?: boolean;
 }
 
 export function WorkspaceSectionNav({
@@ -25,10 +31,50 @@ export function WorkspaceSectionNav({
   onChange,
   variant = "bar",
   workspaceTitle,
+  interactionMode = "creator",
+  onInteractionModeChange,
+  showModeToggle,
 }: WorkspaceSectionNavProps) {
   const { t } = useI18n();
   const navLabel = t("planView.topLevelSectionsNav");
   const title = workspaceTitle?.trim() || "";
+  const modeToggle =
+    showModeToggle !== false && Boolean(onInteractionModeChange);
+
+  const modeControl = modeToggle ? (
+    <div
+      className="flex shrink-0 items-center gap-0.5 rounded-md border border-neutral-800 bg-neutral-950/80 p-0.5"
+      data-workspace-mode-toggle
+      role="group"
+      aria-label="Workspace mode"
+    >
+      {(
+        [
+          { id: "creator" as const, label: "Creator" },
+          { id: "learner" as const, label: "Learner" },
+        ] as const
+      ).map((m) => {
+        const active = interactionMode === m.id;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            data-workspace-mode={m.id}
+            data-active={active ? "true" : "false"}
+            aria-pressed={active}
+            onClick={() => onInteractionModeChange?.(m.id)}
+            className={`rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
+              active
+                ? "bg-white/15 text-white"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
 
   if (variant === "pills") {
     return (
@@ -60,15 +106,18 @@ export function WorkspaceSectionNav({
             );
           })}
         </nav>
-        {title ? (
-          <p
-            className="max-w-[40%] shrink-0 truncate text-right text-xs font-medium text-neutral-300"
-            title={title}
-            data-workspace-section-title
-          >
-            {title}
-          </p>
-        ) : null}
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
+          {modeControl}
+          {title ? (
+            <p
+              className="max-w-[40%] shrink-0 truncate text-right text-xs font-medium text-neutral-300"
+              title={title}
+              data-workspace-section-title
+            >
+              {title}
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -77,6 +126,7 @@ export function WorkspaceSectionNav({
     <div
       className="flex shrink-0 items-center border-b border-neutral-800/60 bg-[#0b0b0b]"
       data-workspace-section-nav
+      data-workspace-interaction-mode={interactionMode}
     >
       <nav
         className="flex min-w-0 flex-1 overflow-x-auto"
@@ -115,15 +165,18 @@ export function WorkspaceSectionNav({
           );
         })}
       </nav>
-      {title ? (
-        <p
-          className="min-w-0 max-w-[45%] shrink-0 truncate px-3 py-2.5 text-right text-sm font-medium text-neutral-200 sm:max-w-sm sm:px-5"
-          title={title}
-          data-workspace-section-title
-        >
-          {title}
-        </p>
-      ) : null}
+      <div className="flex min-w-0 shrink-0 items-center gap-2 px-2 sm:px-3">
+        {modeControl}
+        {title ? (
+          <p
+            className="min-w-0 max-w-[12rem] truncate text-right text-sm font-medium text-neutral-200 sm:max-w-sm"
+            title={title}
+            data-workspace-section-title
+          >
+            {title}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

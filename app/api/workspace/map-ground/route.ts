@@ -17,6 +17,7 @@ type MapGroundOp =
   | "toggle_unusable"
   | "set_unusable_cells"
   | "set_local_context"
+  | "set_block_status"
   | "get";
 
 /**
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
       col,
       unusableCells,
       localContext,
+      status: statusBody,
     } = body as {
       workspaceId?: string;
       op?: MapGroundOp;
@@ -43,6 +45,8 @@ export async function POST(req: NextRequest) {
       col?: number;
       unusableCells?: Array<{ row: number; col: number }>;
       localContext?: BlockLocalContextInput | null;
+      /** Learner mark-done / status flip. */
+      status?: string;
     };
 
     if (!workspaceId || !op) {
@@ -104,6 +108,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         lock_until_block_ids,
+        updatedNodes: blocks || [],
+      });
+    }
+
+    if (op === "set_block_status") {
+      if (!blockId || typeof statusBody !== "string" || !statusBody.trim()) {
+        return NextResponse.json(
+          { error: "blockId and status are required" },
+          { status: 400 },
+        );
+      }
+      // Learner Done uses completed/done; no "in_progress" product concept here.
+      const status = statusBody.trim().toLowerCase();
+      const allowed = new Set(["available", "completed", "done", "locked", "skipped"]);
+      if (!allowed.has(status)) {
+        return NextResponse.json({ error: "invalid status" }, { status: 400 });
+      }
+      const { error } = await supabase
+        .from("blocks")
+        .update({ status })
+        .eq("id", blockId)
+        .eq("workspace_id", workspaceId);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      const { data: blocks } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId);
+      return NextResponse.json({
+        ok: true,
+        status,
         updatedNodes: blocks || [],
       });
     }

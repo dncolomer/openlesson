@@ -43,6 +43,8 @@ interface SessionListProps {
   highlightedNodes?: Set<string>;
   highlightOpacity?: number;
   isOwner?: boolean;
+  /** Learner map: no authoring strip / empty +; content color cues. */
+  learnerMode?: boolean;
   isGroupPlan?: boolean;
   /** Hide completion/progress styling for public workspaces before fork */
   maskProgress?: boolean;
@@ -148,6 +150,7 @@ export function SessionList({
   highlightedNodes,
   highlightOpacity = 1,
   isOwner = true,
+  learnerMode = false,
   isGroupPlan = false,
   maskProgress = false,
   onRequestFork,
@@ -363,7 +366,9 @@ export function SessionList({
           : null;
       const model = savedModel || DEFAULT_PLANNER_MODEL;
 
-      setIsAddingBlock(true);
+      // Move/resize: no full-map freeze — optimistic map + quiet save under minimap.
+      const silentGeometry = payload.op === "move" || payload.op === "resize";
+      if (!silentGeometry) setIsAddingBlock(true);
       try {
         const response = await fetch("/api/workspace/grid-ops", {
           method: "POST",
@@ -403,11 +408,15 @@ export function SessionList({
             }
           }
         }
-        if (onRefresh) onRefresh();
-        router.refresh();
+        // Geometry already settled optimistically via onNodesUpdate — do not
+        // router.refresh / full plan reload (that felt like a freeze).
+        if (!silentGeometry) {
+          if (onRefresh) onRefresh();
+          router.refresh();
+        }
         return data;
       } finally {
-        setIsAddingBlock(false);
+        if (!silentGeometry) setIsAddingBlock(false);
       }
     },
     [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
@@ -463,7 +472,8 @@ export function SessionList({
                   }
                 : undefined
             }
-            canEdit={isOwner}
+            canEdit={isOwner && !learnerMode}
+            learnerMode={learnerMode}
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
             workspaceId={workspaceId}

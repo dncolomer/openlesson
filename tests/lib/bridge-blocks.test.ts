@@ -251,9 +251,13 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
     expect(pane).toContain("resolveBridgeSelection");
     expect(pane).toContain("onGenerateBridge");
     expect(pane).toContain("Generate bridge");
-    // Corridor highlight while Bridge drawer is open; density defaults to min.
+    // Corridor highlight while Bridge drawer is open; dual width + density sliders.
     expect(pane).toContain("BRIDGE_DENSITY_MIN");
-    expect(pane).toContain("useState(BRIDGE_DENSITY_MIN)");
+    expect(pane).toContain("BRIDGE_WIDTH_MIN");
+    expect(pane).toContain("useState(BRIDGE_WIDTH_MIN)");
+    expect(pane).toContain("useState(BRIDGE_DENSITY_MAX)");
+    expect(pane).toContain("data-bridge-width-input");
+    expect(pane).toContain("data-bridge-density-input");
     expect(pane).toContain('openDrawerId === "bridge"');
     expect(pane).toContain("onBridgePreviewChange");
     expect(pane).toContain("data-bridge-drawer-open");

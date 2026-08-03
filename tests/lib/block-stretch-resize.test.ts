@@ -303,4 +303,29 @@ describe("stretch map UI chrome (structural)", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).not.toMatch(/resize|stretch/i);
   });
+
+  it("move/resize settle optimistically with quiet minimap save (no full-map freeze)", () => {
+    const grid = read("components/BlockSkillGrid.tsx");
+    // Optimistic geometry keeps the map live during network save
+    expect(grid).toContain("optimisticPlacements");
+    expect(grid).toContain("displayNodes");
+    expect(grid).toContain("translateBlocksPreservingShape");
+    expect(grid).toContain("mapSaveJobs");
+    expect(grid).toContain("data-map-geometry-saves");
+    expect(grid).toContain("Saving move");
+    expect(grid).toContain("Saving resize");
+    expect(grid).toContain("geometrySaveChainRef");
+    // Full-map busy blur removed for geometry path
+    expect(grid).not.toMatch(
+      /busy\s*&&\s*\(\s*<div[^>]*backdrop-blur/,
+    );
+    expect(grid).toContain("No full-map freeze on geometry saves");
+
+    const list = read("components/SessionList.tsx");
+    expect(list).toContain("silentGeometry");
+    expect(list).toMatch(/payload\.op === "move" \|\| payload\.op === "resize"/);
+    // Geometry must not set isAddingBlock (that gated the whole map)
+    expect(list).toContain("if (!silentGeometry) setIsAddingBlock(true)");
+    expect(list).toContain("if (!silentGeometry) setIsAddingBlock(false)");
+  });
 });

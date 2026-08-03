@@ -20,18 +20,24 @@ function parseSubjectKey(value: unknown): string {
 
 /**
  * Cookie-auth Evaluation surface for workspace UI.
- * GET ?workspaceId=&quality=&subjectKey=
- * POST { workspaceId, ayclToken?, quality?, subjectKey? }
+ * GET ?workspaceId=&quality=&subjectKey=&blockId=
+ * POST { workspaceId, ayclToken?, quality?, subjectKey?, blockId? }
  */
 async function handle(
   workspaceId: string,
   supabase: import("@supabase/supabase-js").SupabaseClient,
-  filters: { quality: PowQualityFilter; subjectKey: string; currentUserId?: string | null },
+  filters: {
+    quality: PowQualityFilter;
+    subjectKey: string;
+    currentUserId?: string | null;
+    blockId?: string | null;
+  },
 ) {
   return loadWorkspaceProofOfWorkStats(supabase, workspaceId, {
     quality: filters.quality,
     subjectKey: filters.subjectKey,
     currentUserId: filters.currentUserId,
+    blockId: filters.blockId,
   });
 }
 
@@ -44,10 +50,12 @@ export async function GET(req: NextRequest) {
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
+    const blockId = url.searchParams.get("blockId");
     const stats = await handle(workspaceId, auth.supabase, {
       quality: parseQuality(url.searchParams.get("quality")),
       subjectKey: parseSubjectKey(url.searchParams.get("subjectKey")),
       currentUserId: auth.user?.id ?? null,
+      blockId: blockId && blockId.trim() ? blockId.trim() : null,
     });
     return NextResponse.json({ stats });
   } catch (error) {
@@ -68,10 +76,15 @@ export async function POST(req: NextRequest) {
     }
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
+    const blockId =
+      typeof body.blockId === "string" && body.blockId.trim()
+        ? body.blockId.trim()
+        : null;
     const stats = await handle(workspaceId, auth.supabase, {
       quality: parseQuality(body.quality),
       subjectKey: parseSubjectKey(body.subjectKey),
       currentUserId: auth.user?.id ?? null,
+      blockId,
     });
     return NextResponse.json({ stats });
   } catch (error) {

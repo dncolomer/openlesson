@@ -18,6 +18,7 @@ import { WorkspaceMapAuthoringPane } from "@/components/WorkspaceMapAuthoringPan
 import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLocalContextPanel";
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceSimulationPanel } from "@/components/WorkspaceSimulationPanel";
+import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
 import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
@@ -45,6 +46,27 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
+  availableSectionsForMode,
+  mountsCreatorAuthoringDrawers,
+  mountsLearnerPracticeDrawer,
+  normalizeWorkspaceInteractionMode,
+  resolveActiveSectionForMode,
+  resolveWorkspaceModeShell,
+  type WorkspaceInteractionMode,
+} from "@/lib/workspace-mode";
+import { WorkspaceLearnerBlockPane } from "@/components/WorkspaceLearnerBlockPane";
+import {
+  blocksUnlockedAfterDone,
+  parseLearnerPowSummaryFromApi,
+  type LearnerDoneProgressPhase,
+  type LearnerPowSummary,
+} from "@/lib/workspace-learner-done";
+import {
+  isBlockLockedUntilCompleted,
+  type MapGroundBlockRef,
+} from "@/lib/map-ground-rules";
+import { isLearnerMapBlockLocked } from "@/lib/learner-local-dag";
+import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
@@ -69,6 +91,10 @@ import {
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
 import { buildUpdateBlockPayload } from "@/lib/block-starter-flag";
+import {
+  normalizeWorkspaceDags,
+  type WorkspaceDagRecord,
+} from "@/lib/workspace-dags";
 
 export interface Block {
   id: string;
@@ -109,6 +135,8 @@ export interface Workspace {
   cover_image_url?: string;
   is_all_you_can_learn?: boolean;
   unusable_cells?: UnusableCell[] | null;
+  /** Created multi-block DAGs (Creator DAGs tab). */
+  workspace_dags?: WorkspaceDagRecord[] | null;
 }
 
 interface WorkspaceViewProps {
@@ -126,6 +154,7 @@ function parseSectionParam(value: string | null): WorkspaceSectionKey | null {
     value === "workspace" ||
     value === "context" ||
     value === "simulation" ||
+    value === "dags" ||
     value === "knowledge" ||
     value === "settings"
   ) {
@@ -155,6 +184,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(
     () => sectionFromUrl ?? "workspace",
   );
+  /** Creator = authoring (default); Learner = practice map + Knowledge LWM. */
+  const [interactionMode, setInteractionMode] =
+    useState<WorkspaceInteractionMode>("creator");
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -178,6 +210,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   nodesRef.current = nodes;
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
+  const [workspaceDags, setWorkspaceDags] = useState<WorkspaceDagRecord[]>(() =>
+    normalizeWorkspaceDags(initialPlan?.workspace_dags),
+  );
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
   const [mapGroundBusy, setMapGroundBusy] = useState(false);
 
@@ -501,6 +536,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     async (input: {
       blockIds: string[];
       density: number;
+      width?: number;
       userPrompt?: string;
       frozenSlots: Array<{ row: number; col: number }>;
       blockTitles: string[];
@@ -786,6 +822,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           (planData as { unusable_cells?: unknown }).unusable_cells,
         ),
       );
+      setWorkspaceDags(
+        normalizeWorkspaceDags(
+          (planData as { workspace_dags?: unknown }).workspace_dags,
+        ),
+      );
 
       const { data: nodesData, error: nodesError } = await supabase
         .from("blocks")
@@ -1048,6 +1089,150 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     [isOwner, refreshNodes, router, workspaceId],
   );
 
+  /** Multi-select batch delete (combine pane Delete drawer). */
+  const handleDeleteBlocks = useCallback(
+    async (input: { blockIds: string[] }) => {
+      if (!workspaceId || !isOwner) return;
+      const ids = (input.blockIds || []).map((id) => String(id || "").trim()).filter(Boolean);
+      if (ids.length === 0) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "delete_blocks",
+            blockIds: ids,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete blocks");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setEmptySurface(clearWorkspaceAddTarget());
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, refreshNodes, router, workspaceId],
+  );
+
+  /** Multi-select DAG Apply / tab edit → next_block_ids + register created DAG. */
+  const handleApplyDag = useCallback(
+    async (input: {
+      blockIds: string[];
+      dagDraft: {
+        blockIds: string[];
+        edges: Array<{ from: string; to: string; kind: "next" | "lock" }>;
+      };
+      /** When set, updates an existing created-DAG (DAGs tab edit). */
+      dagId?: string;
+    }) => {
+      if (!workspaceId) {
+        throw new Error("Workspace required to apply DAG");
+      }
+      if (!isOwner) {
+        throw new Error("Only the workspace owner can apply or edit DAGs");
+      }
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "apply_dag",
+            blockIds: input.blockIds,
+            dagDraft: input.dagDraft,
+            ...(input.dagId ? { dagId: input.dagId } : {}),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to apply DAG");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        if (data.workspaceDags !== undefined) {
+          setWorkspaceDags(normalizeWorkspaceDags(data.workspaceDags));
+        }
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, refreshNodes, router, workspaceId],
+  );
+
+  /** Creator DAGs tab — delete record + clear within-DAG next links. */
+  const handleDeleteDag = useCallback(
+    async (input: { dagId: string }) => {
+      if (!input.dagId) {
+        throw new Error("dagId required to delete DAG");
+      }
+      if (!workspaceId) {
+        throw new Error("Workspace required to delete DAG");
+      }
+      if (!isOwner) {
+        throw new Error("Only the workspace owner can delete DAGs");
+      }
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            op: "delete_dag",
+            dagId: input.dagId,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete DAG");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        if (data.workspaceDags !== undefined) {
+          setWorkspaceDags(normalizeWorkspaceDags(data.workspaceDags));
+        } else {
+          setWorkspaceDags((prev) => prev.filter((d) => d.id !== input.dagId));
+        }
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [isOwner, refreshNodes, router, workspaceId],
+  );
+
   const saveNotes = async () => {
     if (!plan) return;
     setSavingNotes(true);
@@ -1091,9 +1276,45 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     );
   }
 
+  const modeShell = resolveWorkspaceModeShell({
+    mode: interactionMode,
+    isOwner,
+    isOrgAdmin,
+    isLoggedIn: Boolean(currentUserId),
+  });
   const sectionLayout = resolveWorkspaceSectionLayout(activeSection);
-  const visibleSections = availableWorkspaceSections({ isOwner, isOrgAdmin });
+  // Mode-aware section list (Learner: workspace+knowledge; Creator: shipped registry).
+  const visibleSections =
+    interactionMode === "learner"
+      ? modeShell.sections
+      : availableWorkspaceSections({ isOwner, isOrgAdmin });
+  const isLearnerMode = interactionMode === "learner";
+  const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
+  const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);
 
+  const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
+    const next = normalizeWorkspaceInteractionMode(mode);
+    if (next === interactionMode) return;
+    setInteractionMode(next);
+    // Mode flip always clears active selection (sole block, multi, empty create).
+    setExpandedBlockId(clearWorkspaceBlockSelection());
+    setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+    setEmptySurface(clearWorkspaceAddTarget());
+    setAddExpandPreviewCells(null);
+    if (next === "learner") {
+      setActiveSection(
+        resolveActiveSectionForMode({
+          mode: next,
+          requested: activeSection,
+          isOwner,
+          isOrgAdmin,
+          isLoggedIn: Boolean(currentUserId),
+        }),
+      );
+    }
+  };
+
+  // Nav order: Workspace → DAGs → Context → Simulation → Knowledge → Settings
   const sectionConfig = [
     {
       key: "workspace" as const,
@@ -1104,6 +1325,21 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         </svg>
       ),
     },
+    // Creator owner-only — second tab after Workspace
+    ...(!isLearnerMode && isOwner && visibleSections.includes("dags")
+      ? [
+          {
+            key: "dags" as const,
+            label: t("planView.sectionDags"),
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h3v3h-3v-3zm6 0h3v3h-3v-3zm-6 6h3v3h-3v-3zm6 0h3v3h-3v-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 9h3M9 10.5v3M13.5 13.5h-3M15 13.5v-3" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("context")
       ? [
           {
@@ -1189,9 +1425,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         onChange={selectSection}
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
+        interactionMode={interactionMode}
+        onInteractionModeChange={selectInteractionMode}
       />
 
-      {sectionLayout.mountsContextPanel && (
+      {!isLearnerMode && sectionLayout.mountsContextPanel && (
         <WorkspaceSectionSurface
           kind="settings"
           imageSrc={workspaceImage}
@@ -1228,7 +1466,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         </WorkspaceSectionSurface>
       )}
 
-      {sectionLayout.mountsSimulationPanel && (
+      {!isLearnerMode && sectionLayout.mountsSimulationPanel && (
         <WorkspaceSectionSurface
           kind="settings"
           imageSrc={workspaceImage}
@@ -1257,7 +1495,46 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         </WorkspaceSectionSurface>
       )}
 
-      {canAccessPrivilegedSections && sectionLayout.mountsPerformancePanel && (
+      {!isLearnerMode &&
+        isOwner &&
+        sectionLayout.mountsDagsPanel &&
+        visibleSections.includes("dags") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId,
+            isOwner,
+          }}
+        >
+          <div
+            data-workspace-dags-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceDagsPanel
+              workspaceDags={workspaceDags}
+              blocks={nodes}
+              busy={isAddingBlock}
+              onSaveEdit={async ({ dagId, dagDraft }) => {
+                await handleApplyDag({
+                  blockIds: dagDraft.blockIds,
+                  dagDraft,
+                  dagId,
+                });
+              }}
+              onDelete={handleDeleteDag}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {(canAccessPrivilegedSections || isLearnerMode) &&
+        sectionLayout.mountsPerformancePanel &&
+        visibleSections.includes("knowledge") && (
         <WorkspaceSectionSurface
           kind="knowledge"
           imageSrc={workspaceImage}
@@ -1275,6 +1552,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
               workspaceId={workspaceId}
               isOwner={isOwner}
               currentUserId={currentUserId}
+              lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}
               initialSubview={
                 knowledgeSubviewFromUrl === "insights" ||
                 knowledgeSubviewFromUrl === "score" ||
@@ -1289,7 +1567,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         </WorkspaceSectionSurface>
       )}
 
-      {canAccessPrivilegedSections && sectionLayout.mountsIntegrationPanel && (
+      {!isLearnerMode &&
+        canAccessPrivilegedSections &&
+        sectionLayout.mountsIntegrationPanel && (
         <WorkspaceSectionSurface
           kind="settings"
           imageSrc={workspaceImage}
@@ -1431,6 +1711,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             onDelete={() => {}}
             onFork={() => {}}
             isOwner={isOwner}
+            learnerMode={isLearnerMode}
             isLoggedIn={!!currentUserId}
             supabase={supabase}
             planTopic={plan.root_topic}
@@ -1439,13 +1720,19 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             onNodesUpdate={handleNodesUpdate}
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
-            onEmptySelectionChange={handleEmptySelectionChange}
-            onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
+            onEmptySelectionChange={
+              isLearnerMode ? undefined : handleEmptySelectionChange
+            }
+            onSelectedBlockIdsChange={
+              isLearnerMode ? undefined : handleSelectedBlockIdsChange
+            }
             unusableCells={unusableCells}
-            onMapGround={isOwner ? handleMapGround : undefined}
+            onMapGround={
+              isOwner && !isLearnerMode ? handleMapGround : undefined
+            }
             workspaceNotes={notesContent || plan.notes}
-            previewEmptyCells={addExpandPreviewCells}
-            expandJobs={expandJobs}
+            previewEmptyCells={isLearnerMode ? null : addExpandPreviewCells}
+            expandJobs={isLearnerMode ? [] : expandJobs}
             onAbortExpandJob={handleAbortExpandJob}
           />
         </aside>
@@ -1466,7 +1753,214 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             data-workspace-right-column
             data-workspace-right-pane={rightPane}
           >
-            {rightPane === "combine_blocks" && combineBlockIds.length >= 2 ? (
+            {showLearnerDrawer &&
+            detailBlock &&
+            detailIndex >= 0 ? (
+              <WorkspaceLearnerBlockPane
+                key={`learner-${detailBlock.id}`}
+                block={detailBlock}
+                blocks={nodes}
+                workspaceId={workspaceId}
+                locked={
+                  isLearnerMode
+                    ? isLearnerMapBlockLocked(detailBlock, nodes)
+                    : isBlockLockedUntilCompleted(
+                        detailBlock as MapGroundBlockRef,
+                        new Map(
+                          nodes.map((n) => [n.id, n as MapGroundBlockRef]),
+                        ),
+                      )
+                }
+                onSavePlanningPrompt={async (prompt) => {
+                  await supabase
+                    .from("blocks")
+                    .update({ planning_prompt: prompt.trim() || null })
+                    .eq("id", detailBlock.id);
+                  setNodes((prev) =>
+                    prev.map((n) =>
+                      n.id === detailBlock.id
+                        ? { ...n, planning_prompt: prompt.trim() || undefined }
+                        : n,
+                    ),
+                  );
+                }}
+                onLaunchIntent={
+                  currentUserId
+                    ? async (target, options) => {
+                        // Same product intent map as SessionItem / BlockDetailCard.
+                        if (target.product === "ile") {
+                          const { createSession } = await import("@/lib/storage");
+                          const ileMode =
+                            target.session_mode === "project"
+                              ? "project"
+                              : "learning";
+                          await supabase
+                            .from("blocks")
+                            .update({ status: "in_progress" })
+                            .eq("id", detailBlock.id);
+                          const prompt =
+                            detailBlock.planning_prompt || undefined;
+                          const session = await createSession(
+                            detailBlock.title,
+                            undefined,
+                            prompt,
+                            undefined,
+                            workspaceId,
+                            {
+                              session_mode: ileMode,
+                              ile_session_mode: ileMode,
+                              block_id: detailBlock.id,
+                              block_title: detailBlock.title,
+                            },
+                          );
+                          await supabase
+                            .from("blocks")
+                            .update({ session_id: session.id })
+                            .eq("id", detailBlock.id);
+                          await supabase.from("block_sessions").insert({
+                            block_id: detailBlock.id,
+                            session_id: session.id,
+                            user_id: currentUserId,
+                            workspace_id: workspaceId,
+                          });
+                          router.push(`/session?id=${session.id}`);
+                          return;
+                        }
+                        // TAP timed explore / drill
+                        const params = new URLSearchParams({
+                          blockId: detailBlock.id,
+                        });
+                        if (target.interaction_kind === "exercise") {
+                          params.set("interactionKind", "exercise");
+                        }
+                        if (
+                          typeof options?.minutes === "number" &&
+                          Number.isFinite(options.minutes) &&
+                          options.minutes > 0
+                        ) {
+                          params.set(
+                            "minutes",
+                            String(Math.trunc(options.minutes)),
+                          );
+                        }
+                        if (detailBlock.session_id) {
+                          params.set("sessionId", detailBlock.session_id);
+                        }
+                        router.push(
+                          `/workspace/${workspaceId}/tap?${params.toString()}`,
+                        );
+                      }
+                    : undefined
+                }
+                onFetchPowSummary={async (blockId) => {
+                  try {
+                    // PoW for this block + logged-in user (Progress drawer).
+                    const qs = new URLSearchParams({
+                      workspaceId,
+                      subjectKey: "me",
+                      quality: "all",
+                      blockId,
+                    });
+                    const res = await fetch(
+                      `/api/workspace/proof-of-work-stats?${qs.toString()}`,
+                    );
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                      return {
+                        powCount: 0,
+                        notes: data.error || "Failed to load PoW stats",
+                      } satisfies LearnerPowSummary;
+                    }
+                    return parseLearnerPowSummaryFromApi(data);
+                  } catch {
+                    return { powCount: 0, notes: "PoW stats request failed" };
+                  }
+                }}
+                onMarkDone={async ({ blockId, status, onPhase }) => {
+                  const report = (phase: LearnerDoneProgressPhase) => {
+                    onPhase?.(phase);
+                  };
+
+                  // 1) Persist status via map-ground (await success)
+                  report("marking_done");
+                  const groundRes = await fetch("/api/workspace/map-ground", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      workspaceId,
+                      op: "set_block_status",
+                      blockId,
+                      status,
+                    }),
+                  });
+                  const groundData = await groundRes.json().catch(() => ({}));
+                  if (!groundRes.ok) {
+                    throw new Error(
+                      groundData.error || "Failed to mark block done",
+                    );
+                  }
+
+                  const before = nodes.map((n) => ({
+                    id: n.id,
+                    title: n.title,
+                    status: n.status,
+                    lock_until_block_ids: n.lock_until_block_ids,
+                  }));
+                  const { unlockedIds } = blocksUnlockedAfterDone({
+                    completedBlockId: blockId,
+                    blocks: before as MapGroundBlockRef[],
+                  });
+
+                  if (Array.isArray(groundData.updatedNodes)) {
+                    setNodes(
+                      groundData.updatedNodes.map(
+                        (n: Block & { local_context?: unknown }) => ({
+                          ...n,
+                          local_context: parseBlockLocalContext(n.local_context),
+                        }),
+                      ),
+                    );
+                  } else {
+                    setNodes((prev) =>
+                      prev.map((n) =>
+                        n.id === blockId ? { ...n, status: "completed" } : n,
+                      ),
+                    );
+                  }
+
+                  // 2) Await LWM snapshot update (real host path)
+                  report("snapshot_lwm");
+                  const snapRes = await fetch(
+                    `/api/workspaces/${workspaceId}/snapshot-all`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ workspaceId }),
+                    },
+                  );
+                  // Snapshot may stream NDJSON — treat non-2xx as soft failure after status is saved
+                  if (!snapRes.ok && snapRes.status !== 0) {
+                    // Still apply unlocks locally; surface soft error only if completely failed
+                    const errText = await snapRes.text().catch(() => "");
+                    if (snapRes.status >= 500) {
+                      console.warn(
+                        "[learner-done] snapshot-all failed",
+                        snapRes.status,
+                        errText.slice(0, 200),
+                      );
+                    }
+                  }
+
+                  // 3) Unlock dependents (lock_until rules)
+                  report("applying_unlocks");
+                  refreshNodes();
+                  router.refresh();
+                  return { unlockedIds };
+                }}
+              />
+            ) : showCreatorDrawers &&
+              rightPane === "combine_blocks" &&
+              combineBlockIds.length >= 2 ? (
               <WorkspaceCombineBlocksPane
                 key={`combine-${combineBlockIds.join(",")}`}
                 blockIds={combineBlockIds}
@@ -1475,6 +1969,8 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 unusableCells={unusableCells}
                 onCombine={handleCombineBlocks}
                 onGenerateBridge={handleGenerateBridge}
+                onApplyDag={handleApplyDag}
+                onDeleteBlocks={handleDeleteBlocks}
                 onBridgePreviewChange={setAddExpandPreviewCells}
                 onCancel={handleCloseCombine}
                 labels={{
@@ -1482,7 +1978,10 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   cancel: t("sessionList.gridAddCancel") || "Cancel",
                 }}
               />
-            ) : rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
+            ) : showCreatorDrawers &&
+              rightPane === "block_detail" &&
+              detailBlock &&
+              detailIndex >= 0 ? (
               <WorkspaceBlockDetailPane
                 key={detailBlock.id}
                 title={detailBlock.title}
@@ -1534,9 +2033,11 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   workspaceId={workspaceId}
                   variant="detail"
                   detailLayout="inline"
+                  // Explore/Drill is Learner-only (WorkspaceLearnerBlockPane).
+                  hidePracticeLaunch
                 />
               </WorkspaceBlockDetailPane>
-            ) : rightPane === "add_block" && addTargetCell ? (
+            ) : showCreatorDrawers && rightPane === "add_block" && addTargetCell ? (
               <WorkspaceAddBlockPane
                 key={`add-${addTargetCell.row}-${addTargetCell.col}`}
                 cell={addTargetCell}
@@ -1561,7 +2062,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   suggestError: t("sessionList.gridSuggestError"),
                 }}
               />
-            ) : rightPane === "generate_shape" && generateShapeCells ? (
+            ) : showCreatorDrawers &&
+              rightPane === "generate_shape" &&
+              generateShapeCells ? (
               <WorkspaceGenerateShapePane
                 key={`shape-${generateShapeCells.map((c) => `${c.row}:${c.col}`).join(",")}`}
                 cells={generateShapeCells}
@@ -1583,7 +2086,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 }}
               />
             ) : (
-              <WorkspaceMapAuthoringPane canEdit={isOwner} />
+              <WorkspaceMapAuthoringPane
+                canEdit={isOwner && showCreatorDrawers}
+              />
             )}
           </main>
         </section>

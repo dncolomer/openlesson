@@ -2012,6 +2012,7 @@
     "sectionWorkspace": "Workspace",
     "sectionContext": "Context",
     "sectionSimulation": "Simulation",
+    "sectionDags": "DAGs",
     "sectionKnowledge": "Knowledge",
     "sectionSetting": "Settings",
     "topLevelSectionsNav": "Workspace areas",

@@ -90,6 +90,7 @@ export interface WorkspaceProofOfWorkStats {
   filters: {
     quality: PowQualityFilter;
     subject_key: string;
+    block_id?: string | null;
   };
 }
 
@@ -99,6 +100,8 @@ export type ProofOfWorkStatsFilters = {
   subjectKey?: string;
   /** When subjectKey is "me", match this authenticated user id. */
   currentUserId?: string | null;
+  /** Optional: only artifacts for this block (learner Progress drawer). */
+  blockId?: string | null;
 };
 
 function emptyByType(): ProofOfWorkTypeBreakdown[] {
@@ -194,10 +197,16 @@ export function aggregateProofOfWorkStats(
     }
   }
 
+  const blockId =
+    typeof filters.blockId === "string" && filters.blockId.trim()
+      ? filters.blockId.trim()
+      : null;
+
   const filtered = rows.filter(
     (row) =>
       matchesPowQualityFilter(row.metadata, qualityFilter) &&
-      matchesSubjectFilter(row, subjectKey, filters.currentUserId),
+      matchesSubjectFilter(row, subjectKey, filters.currentUserId) &&
+      (!blockId || row.block_id === blockId),
   );
 
   const byTypeMap = new Map<WorkspaceProofOfWorkType | "other", number>();
@@ -318,6 +327,7 @@ export function aggregateProofOfWorkStats(
     filters: {
       quality: qualityFilter,
       subject_key: subjectKey,
+      block_id: blockId,
     },
   };
 }
@@ -331,8 +341,14 @@ export async function loadWorkspaceProofOfWorkStats(
     quality?: PowQualityFilter;
     subjectKey?: string;
     currentUserId?: string | null;
+    blockId?: string | null;
   },
 ): Promise<WorkspaceProofOfWorkStats> {
+  const blockId =
+    typeof options?.blockId === "string" && options.blockId.trim()
+      ? options.blockId.trim()
+      : null;
+
   let countQuery = supabase
     .from("workspace_proof_of_work")
     .select("id", { count: "exact", head: true })
@@ -350,6 +366,10 @@ export async function loadWorkspaceProofOfWorkStats(
   if (options?.restrictToUser && options.userId) {
     countQuery = countQuery.eq("user_id", options.userId);
     rowsQuery = rowsQuery.eq("user_id", options.userId);
+  }
+  if (blockId) {
+    countQuery = countQuery.eq("block_id", blockId);
+    rowsQuery = rowsQuery.eq("block_id", blockId);
   }
 
   const [countRes, rowsRes] = await Promise.all([countQuery, rowsQuery]);
@@ -369,6 +389,7 @@ export async function loadWorkspaceProofOfWorkStats(
       quality: options?.quality,
       subjectKey: options?.subjectKey,
       currentUserId: options?.currentUserId ?? options?.userId,
+      blockId,
     },
   );
 }

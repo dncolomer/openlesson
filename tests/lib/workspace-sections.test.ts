@@ -118,14 +118,16 @@ describe("privileged Knowledge + Settings gating", () => {
 });
 
 describe("availableWorkspaceSections", () => {
-  it("includes Context then Simulation for everyone; Knowledge/Settings for owners or org admins", () => {
+  it("includes Context then Simulation for everyone; Knowledge/Settings for owners or org admins; DAGs owner-only", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
+      "dags",
       "context",
       "simulation",
       "knowledge",
       "settings",
     ]);
+    // Org admin (not owner): privileged Knowledge/Settings, but not DAGs
     expect(availableWorkspaceSections({ isOrgAdmin: true })).toEqual([
       "workspace",
       "context",
@@ -143,9 +145,12 @@ describe("availableWorkspaceSections", () => {
       "context",
       "simulation",
     ]);
-    // Simulation sits immediately after Context
+    // DAGs is second (right after Workspace) for owners; Simulation after Context
     const owner = availableWorkspaceSections({ isOwner: true });
+    expect(owner.indexOf("dags")).toBe(owner.indexOf("workspace") + 1);
     expect(owner.indexOf("simulation")).toBe(owner.indexOf("context") + 1);
+    expect(owner).toContain("dags");
+    expect(availableWorkspaceSections({ isOrgAdmin: true })).not.toContain("dags");
   });
 });
 
@@ -209,8 +214,11 @@ describe("WorkspaceView section shell wiring", () => {
   it("gates Knowledge and Settings nav + panel mounts to owners or org admins", () => {
     expect(viewSource).toContain('visibleSections.includes("knowledge")');
     expect(viewSource).toContain('visibleSections.includes("settings")');
-    expect(viewSource).toContain("canAccessPrivilegedSections && sectionLayout.mountsPerformancePanel");
-    expect(viewSource).toContain("canAccessPrivilegedSections && sectionLayout.mountsIntegrationPanel");
+    // Knowledge also opens for Learner mode (LWM); Settings stay privileged-only.
+    expect(viewSource).toContain("canAccessPrivilegedSections || isLearnerMode");
+    expect(viewSource).toContain("sectionLayout.mountsPerformancePanel");
+    expect(viewSource).toContain("!isLearnerMode");
+    expect(viewSource).toContain("sectionLayout.mountsIntegrationPanel");
     expect(viewSource).toContain("is_org_admin");
     expect(viewSource).toContain("organization_id");
   });

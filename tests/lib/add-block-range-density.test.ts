@@ -536,9 +536,10 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(grid).toMatch(
       /generationPendingCellKeys[\s\S]*?mergeActiveExpandJobPreviews/,
     );
-    // Map multi-select chrome follows selectedBlockIds (not selectedNodeId alone)
+    // Map multi-select chrome follows selectedBlockIds (+ learner sole highlight)
     expect(grid).toContain("chapterFocusOnly");
-    expect(grid).toContain("selected: multiSelected || chapterFocusOnly");
+    expect(grid).toContain("isBlockHighlighted");
+    expect(grid).toContain("selected: isBlockHighlighted");
     // Generation click-lock while expand jobs run
     expect(grid).toContain("activeExpandJobLockedCellKeys");
     expect(grid).toContain("generationLockedBlockIds");

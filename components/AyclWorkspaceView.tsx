@@ -312,6 +312,7 @@ export function AyclWorkspaceView({
     async (input: {
       blockIds: string[];
       density: number;
+      width?: number;
       userPrompt?: string;
       frozenSlots: Array<{ row: number; col: number }>;
       blockTitles: string[];
@@ -560,6 +561,87 @@ export function AyclWorkspaceView({
       }
     },
     [accessToken, locale, plan.id, router],
+  );
+
+  const handleApplyDag = useCallback(
+    async (input: {
+      blockIds: string[];
+      dagDraft: {
+        blockIds: string[];
+        edges: Array<{ from: string; to: string; kind: "next" | "lock" }>;
+      };
+    }) => {
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "apply_dag",
+            blockIds: input.blockIds,
+            dagDraft: input.dagDraft,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to apply DAG");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, plan.id, router],
+  );
+
+  const handleDeleteBlocks = useCallback(
+    async (input: { blockIds: string[] }) => {
+      const ids = (input.blockIds || [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean);
+      if (ids.length === 0) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: plan.id,
+            ayclToken: accessToken,
+            op: "delete_blocks",
+            blockIds: ids,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete blocks");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [accessToken, plan.id, router],
   );
 
   const handleSplitBlock = useCallback(
@@ -1116,6 +1198,8 @@ export function AyclWorkspaceView({
                     unusableCells={unusableCells}
                     onCombine={handleCombineBlocks}
                     onGenerateBridge={handleGenerateBridge}
+                    onApplyDag={handleApplyDag}
+                    onDeleteBlocks={handleDeleteBlocks}
                     onBridgePreviewChange={setAddExpandPreviewCells}
                     onCancel={handleCloseCombine}
                     labels={{
@@ -1182,6 +1266,7 @@ export function AyclWorkspaceView({
                       variant="detail"
                       detailLayout="inline"
                       hideTap
+                      hidePracticeLaunch
                       onCustomStart={handleCustomStart}
                     />
                   </WorkspaceBlockDetailPane>

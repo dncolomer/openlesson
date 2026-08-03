@@ -24,6 +24,11 @@ interface WorkspacePerformancePanelProps {
   ayclToken?: string;
   /** Optional initial Knowledge subview (e.g. insights deep-link). */
   initialSubview?: PerformanceSubview | "score" | "pow";
+  /**
+   * Learner mode: only LWM + Embeddings (models) subtabs — no Ranking / Strengths & Gaps.
+   * Driven by resolveWorkspaceModeShell().knowledgeLwmEmbeddingsOnly.
+   */
+  lwmEmbeddingsOnly?: boolean;
 }
 
 /** Insights temporarily hidden from nav (may return later). PoW tab removed from Knowledge. */
@@ -34,9 +39,16 @@ const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = [
   "knowledge",
 ];
 
+/** Learner Knowledge = LWM + Embeddings only. */
+const LEARNER_KNOWLEDGE_SUBVIEWS: readonly PerformanceSubview[] = [
+  "lwm",
+  "knowledge",
+];
+
 /**
  * Knowledge surface: Ranking, Strengths & Gaps, LWM (next to Embeddings), Embeddings.
  * Insights tab hidden for now. PoW tab removed. Eval removed — snapshot generation lives in LWM.
+ * Learner (`lwmEmbeddingsOnly`): LWM + Embeddings only.
  */
 export function WorkspacePerformancePanel({
   workspaceId,
@@ -46,32 +58,45 @@ export function WorkspacePerformancePanel({
   hideTap: _hideTap = false,
   ayclToken,
   initialSubview,
+  lwmEmbeddingsOnly = false,
 }: WorkspacePerformancePanelProps) {
   void _hideTap;
   void _isGroup;
   const { t } = useI18n();
+  const allowedSubviews = lwmEmbeddingsOnly
+    ? LEARNER_KNOWLEDGE_SUBVIEWS
+    : PERFORMANCE_SUBVIEWS;
   const [activeSubview, setActiveSubview] = useState<PerformanceSubview>(() => {
     if (initialSubview === "score") return "lwm";
     // Deep-links to insights / legacy pow fall back to LWM while those tabs are hidden.
     if (initialSubview === "insights" || initialSubview === "pow") return "lwm";
-    if (initialSubview && (PERFORMANCE_SUBVIEWS as readonly string[]).includes(initialSubview)) {
+    if (
+      initialSubview &&
+      (allowedSubviews as readonly string[]).includes(initialSubview)
+    ) {
       return initialSubview as PerformanceSubview;
     }
     return "lwm";
   });
 
-  const subTabs: Array<{ id: PerformanceSubview; label: string }> = useMemo(
-    () => [
+  const subTabs: Array<{ id: PerformanceSubview; label: string }> = useMemo(() => {
+    const all: Array<{ id: PerformanceSubview; label: string }> = [
       { id: "ranking", label: t("planView.performanceSubTabRanking") },
       { id: "strengths_gaps", label: t("planView.performanceSubTabStrengthsGaps") },
       { id: "lwm", label: t("planView.performanceSubTabLwm") },
       { id: "knowledge", label: t("planView.performanceSubTabModels") },
-    ],
-    [t],
-  );
+    ];
+    return all.filter((tab) =>
+      (allowedSubviews as readonly string[]).includes(tab.id),
+    );
+  }, [t, allowedSubviews]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden" data-knowledge-panel>
+    <div
+      className="flex h-full min-h-0 flex-col overflow-hidden"
+      data-knowledge-panel
+      data-knowledge-lwm-embeddings-only={lwmEmbeddingsOnly ? "true" : "false"}
+    >
       <WorkspaceSectionSubTabs
         activeId={activeSubview}
         onChange={setActiveSubview}

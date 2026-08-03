@@ -38,6 +38,18 @@ import {
 } from "@/lib/shape-context-select";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
+import {
+  buildMultiBlockDagApplyUpdates,
+  type MultiBlockDagDraft,
+} from "@/lib/multi-block-dag";
+import { normalizeLockUntilBlockIds } from "@/lib/map-ground-rules";
+import {
+  buildWorkspaceDagDeleteUpdates,
+  normalizeWorkspaceDags,
+  registerWorkspaceDagOnApply,
+  removeWorkspaceDag,
+  resolveWorkspaceDagForMutation,
+} from "@/lib/workspace-dags";
 
 type GridOp =
   | "generate_shape"
@@ -46,7 +58,10 @@ type GridOp =
   | "move"
   | "resize"
   | "update_block"
-  | "delete_block";
+  | "delete_block"
+  | "delete_blocks"
+  | "apply_dag"
+  | "delete_dag";
 
 interface AiBlockPayload {
   title: string;
@@ -142,6 +157,8 @@ export async function POST(req: NextRequest) {
       locale,
       weightedNeighbors,
       contextSourceKeys,
+      dagDraft,
+      dagId,
     } = body as {
       workspaceId?: string;
       op?: GridOp;
@@ -162,6 +179,10 @@ export async function POST(req: NextRequest) {
       weightedNeighbors?: WeightedGridNeighbor[];
       /** Selected Context sources for generate_shape (files / external / notes). */
       contextSourceKeys?: string[];
+      /** Multi-select DAG draft for apply_dag. */
+      dagDraft?: MultiBlockDagDraft;
+      /** Existing created-DAG id for edit apply / delete_dag. */
+      dagId?: string;
     };
 
     if (!workspaceId || !op) {
@@ -292,6 +313,271 @@ export async function POST(req: NextRequest) {
         updatedNodes: updatedNodes || [],
         deletedBlockId: blockId,
         explanation: `Deleted block "${existing.title || blockId}".`,
+      });
+    }
+
+    if (op === "delete_blocks") {
+      const ids = Array.isArray(blockIds)
+        ? blockIds.map((id) => String(id || "").trim()).filter(Boolean)
+        : [];
+      if (ids.length === 0) {
+        return NextResponse.json(
+          { error: "blockIds required for delete_blocks" },
+          { status: 400 },
+        );
+      }
+      const idSet = new Set(ids);
+      const existing = nodes.filter((n) => idSet.has(n.id));
+      if (existing.length === 0) {
+        return NextResponse.json({ error: "No matching blocks" }, { status: 404 });
+      }
+      const hadStart = existing.some((n) => n.is_start);
+
+      // Strip deleted ids from peers that remain.
+      for (const n of nodes) {
+        if (idSet.has(n.id)) continue;
+        const nextIds = Array.isArray(n.next_block_ids)
+          ? (n.next_block_ids as string[]).filter((id) => !idSet.has(id))
+          : [];
+        const lockIds = Array.isArray(n.lock_until_block_ids)
+          ? (n.lock_until_block_ids as string[]).filter((id) => !idSet.has(id))
+          : [];
+        const prevNext = Array.isArray(n.next_block_ids) ? n.next_block_ids : [];
+        const prevLock = Array.isArray(n.lock_until_block_ids)
+          ? n.lock_until_block_ids
+          : [];
+        if (
+          nextIds.length !== prevNext.length ||
+          lockIds.length !== prevLock.length
+        ) {
+          await supabase
+            .from("blocks")
+            .update({
+              next_block_ids: nextIds,
+              lock_until_block_ids: lockIds,
+            })
+            .eq("id", n.id);
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from("blocks")
+        .delete()
+        .in("id", ids)
+        .eq("workspace_id", workspaceId);
+
+      if (deleteError) {
+        return NextResponse.json(
+          { error: "Failed to delete blocks" },
+          { status: 500 },
+        );
+      }
+
+      if (hadStart) {
+        const { data: remaining } = await supabase
+          .from("blocks")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        const promoteId = remaining?.[0]?.id;
+        if (promoteId) {
+          await supabase.from("blocks").update({ is_start: true }).eq("id", promoteId);
+        }
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        deletedBlockIds: ids,
+        explanation: `Deleted ${ids.length} block(s).`,
+      });
+    }
+
+    if (op === "apply_dag") {
+      const draft = dagDraft;
+      if (
+        !draft ||
+        !Array.isArray(draft.blockIds) ||
+        draft.blockIds.length < 2
+      ) {
+        return NextResponse.json(
+          { error: "dagDraft with ≥2 blockIds required for apply_dag" },
+          { status: 400 },
+        );
+      }
+      const refs = nodes.map((n) => ({
+        id: n.id,
+        title: n.title,
+        next_block_ids: Array.isArray(n.next_block_ids)
+          ? (n.next_block_ids as string[])
+          : [],
+        lock_until_block_ids: Array.isArray(n.lock_until_block_ids)
+          ? (n.lock_until_block_ids as string[])
+          : [],
+      }));
+      const updates = buildMultiBlockDagApplyUpdates(
+        {
+          blockIds: draft.blockIds.map(String),
+          edges: Array.isArray(draft.edges)
+            ? draft.edges.map((e) => ({
+                from: String(e.from || ""),
+                to: String(e.to || ""),
+                kind: e.kind === "lock" ? "lock" : "next",
+              }))
+            : [],
+        },
+        refs,
+      );
+      for (const u of updates) {
+        const lock_until_block_ids = normalizeLockUntilBlockIds(
+          u.lock_until_block_ids,
+          u.blockId,
+        );
+        const next_block_ids = (u.next_block_ids || [])
+          .map((id) => String(id || "").trim())
+          .filter((id) => id && id !== u.blockId);
+        await supabase
+          .from("blocks")
+          .update({
+            next_block_ids,
+            lock_until_block_ids,
+          })
+          .eq("id", u.blockId)
+          .eq("workspace_id", workspaceId);
+      }
+
+      // Register / update first-class created-DAG for Creator DAGs tab.
+      let workspaceDags = normalizeWorkspaceDags(null);
+      try {
+        const { data: planRow } = await supabase
+          .from("workspaces")
+          .select("workspace_dags")
+          .eq("id", workspaceId)
+          .single();
+        const registered = registerWorkspaceDagOnApply(
+          (planRow as { workspace_dags?: unknown } | null)?.workspace_dags,
+          {
+            dagId: typeof dagId === "string" ? dagId : null,
+            blockIds: draft.blockIds.map(String),
+            title: typeof title === "string" ? title : null,
+          },
+        );
+        workspaceDags = registered.dags;
+        const { error: dagWriteError } = await supabase
+          .from("workspaces")
+          .update({ workspace_dags: workspaceDags })
+          .eq("id", workspaceId);
+        if (dagWriteError) {
+          // Column missing until migration — edges still applied.
+          if (
+            !/schema cache|workspace_dags|does not exist/i.test(
+              dagWriteError.message || "",
+            )
+          ) {
+            console.warn("workspace_dags write failed:", dagWriteError.message);
+          }
+        }
+      } catch (err) {
+        console.warn("workspace_dags register failed:", err);
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        workspaceDags,
+        explanation: `Applied dependency DAG to ${updates.length} block(s).`,
+      });
+    }
+
+    if (op === "delete_dag") {
+      const id = typeof dagId === "string" ? dagId.trim() : "";
+      if (!id) {
+        return NextResponse.json(
+          { error: "dagId required for delete_dag" },
+          { status: 400 },
+        );
+      }
+      const refs = nodes.map((n) => ({
+        id: n.id,
+        title: n.title,
+        next_block_ids: Array.isArray(n.next_block_ids)
+          ? (n.next_block_ids as string[])
+          : [],
+        lock_until_block_ids: Array.isArray(n.lock_until_block_ids)
+          ? (n.lock_until_block_ids as string[])
+          : [],
+      }));
+      let existing: ReturnType<typeof normalizeWorkspaceDags> = [];
+      try {
+        const { data: planRow } = await supabase
+          .from("workspaces")
+          .select("workspace_dags")
+          .eq("id", workspaceId)
+          .single();
+        existing = normalizeWorkspaceDags(
+          (planRow as { workspace_dags?: unknown } | null)?.workspace_dags,
+        );
+      } catch {
+        existing = [];
+      }
+      // Registry or discovered-from-next (so map graphs without workspace_dags still delete)
+      const record = resolveWorkspaceDagForMutation(existing, id, refs);
+      if (!record) {
+        return NextResponse.json({ error: "DAG not found" }, { status: 404 });
+      }
+      const updates = buildWorkspaceDagDeleteUpdates(record.blockIds, refs);
+      for (const u of updates) {
+        const lock_until_block_ids = normalizeLockUntilBlockIds(
+          u.lock_until_block_ids,
+          u.blockId,
+        );
+        const next_block_ids = (u.next_block_ids || [])
+          .map((nid) => String(nid || "").trim())
+          .filter((nid) => nid && nid !== u.blockId);
+        await supabase
+          .from("blocks")
+          .update({
+            next_block_ids,
+            lock_until_block_ids,
+          })
+          .eq("id", u.blockId)
+          .eq("workspace_id", workspaceId);
+      }
+      const workspaceDags = removeWorkspaceDag(existing, id);
+      try {
+        await supabase
+          .from("workspaces")
+          .update({ workspace_dags: workspaceDags })
+          .eq("id", workspaceId);
+      } catch {
+        // Column may be missing — edge clear still applied.
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        workspaceDags,
+        deletedDagId: id,
+        explanation: `Deleted DAG and cleared within-DAG next links (${record.blockIds.length} blocks).`,
       });
     }
 

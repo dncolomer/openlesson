@@ -68,6 +68,7 @@ describe("course authoring tools report", () => {
     const owner = availableWorkspaceSections({ isOwner: true });
     expect(owner).toEqual([
       "workspace",
+      "dags",
       "context",
       "simulation",
       "knowledge",

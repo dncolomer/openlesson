@@ -48,6 +48,7 @@ import {
   selectionIsFreeformLectureShape,
   STRETCH_HANDLES,
   stretchBlockFromHandle,
+  translateBlocksPreservingShape,
   type PlacedBlockRef,
   type StretchHandle,
 } from "@/lib/skill-grid-ops";
@@ -115,6 +116,16 @@ import {
   resolveMapCellStatusIcon,
 } from "@/lib/map-cell-chrome";
 import {
+  learnerMapFreeformColors,
+  resolveOccupiedMapChrome,
+} from "@/lib/workspace-learner-chrome";
+import {
+  incompleteInboundNextPrerequisites,
+  isLearnerMapBlockLocked,
+  learnerBlockHasDependencyChrome,
+  learnerMapDependencyHighlightIds,
+} from "@/lib/learner-local-dag";
+import {
   blockHasLockDependencies,
   isBlockLockedUntilCompleted,
   normalizeLockUntilBlockIds,
@@ -176,6 +187,11 @@ interface BlockSkillGridProps {
    */
   onAddTargetChange?: (cell: GridCell | null) => void;
   canEdit: boolean;
+  /**
+   * Learner interaction mode: no authoring strip, no empty “+”, content color cues.
+   * Pair with canEdit={false} for full learner map (minimap retained).
+   */
+  learnerMode?: boolean;
   showProgress?: boolean;
   isAdding?: boolean;
   workspaceId?: string;
@@ -470,19 +486,28 @@ function MapCellStatusGlyph({
 function BlockDependencyLockBadge({
   dependencyCount,
   currentlyLocked,
+  learnerSpottable = false,
 }: {
   dependencyCount: number;
   currentlyLocked: boolean;
+  /** Learner: small red lock when currently locked (spottable DAG gate). */
+  learnerSpottable?: boolean;
 }) {
   if (dependencyCount <= 0) return null;
+  const redLocked = learnerSpottable && currentlyLocked;
   return (
     <span
       className={`absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
-        currentlyLocked ? "text-neutral-300" : "text-neutral-500"
+        redLocked
+          ? "text-rose-400"
+          : currentlyLocked
+            ? "text-neutral-300"
+            : "text-neutral-500"
       }`}
       data-block-dependency-lock
       data-block-dependency-count={dependencyCount}
       data-block-dependency-locked={currentlyLocked ? "true" : "false"}
+      data-learner-locked-icon={redLocked ? "true" : undefined}
       title={
         currentlyLocked
           ? `Locked until ${dependencyCount} prerequisite${dependencyCount === 1 ? "" : "s"} complete`
@@ -492,10 +517,11 @@ function BlockDependencyLockBadge({
     >
       <svg
         className="h-3 w-3"
-        fill="none"
+        fill={redLocked ? "currentColor" : "none"}
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={2}
+        data-learner-lock-svg={redLocked ? "true" : undefined}
       >
         <path
           strokeLinecap="round"
@@ -536,6 +562,31 @@ function BlockLocalContextDocBadge() {
   );
 }
 
+/** Flag badge for author starter blocks (`is_start`) — map-visible without Edit. */
+function BlockStarterFlagBadge() {
+  return (
+    <span
+      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-amber-300/95"
+      data-block-starter-flag
+      data-block-starter-badge
+      title="Starter block"
+      aria-label="Starter block"
+    >
+      <svg
+        className="h-3 w-3"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        data-block-starter-icon
+        aria-hidden
+      >
+        {/* Flag on pole */}
+        <path d="M6 3.75v16.5a.75.75 0 01-1.5 0V3.75a.75.75 0 011.5 0z" />
+        <path d="M6.75 4.5h8.1c.9 0 1.4.95.9 1.65L14.4 8.4l1.35 2.25c.5.7 0 1.65-.9 1.65H6.75V4.5z" />
+      </svg>
+    </span>
+  );
+}
+
 function cellKey(cell: GridCell) {
   return `${cell.row}:${cell.col}`;
 }
@@ -552,6 +603,7 @@ export function BlockSkillGrid({
   expandJobs = null,
   onAbortExpandJob,
   canEdit,
+  learnerMode = false,
   showProgress = true,
   isAdding = false,
   workspaceId,
@@ -660,6 +712,8 @@ export function BlockSkillGrid({
    */
   const selectedBlockIdsRef = useRef<string[]>([]);
   const selectedEmptyCellsRef = useRef<GridCell[]>([]);
+  /** Tracks Creator/Learner so mode flips can drop map selection chrome. */
+  const learnerModeRef = useRef(learnerMode);
   const activeToolRef = useRef<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
   const [activeTool, setActiveTool] = useState<BlockMapModeTool>(DEFAULT_BLOCK_MAP_MODE);
   /** Lasso geometry for the single Lasso strip tool (submenu). */
@@ -699,6 +753,34 @@ export function BlockSkillGrid({
 
   const [localBusy, setLocalBusy] = useState(false);
   const [visibleAppearing, setVisibleAppearing] = useState<Set<string>>(new Set());
+  /**
+   * Optimistic geometry after move/resize so the map settles instantly
+   * while the server save runs (no full-map freeze).
+   */
+  type OptimisticPlacement = {
+    position_x: number;
+    position_y: number;
+    span_w: number;
+    span_h: number;
+    shape_cells?: ReturnType<typeof parseShapeCells>;
+  };
+  const [optimisticPlacements, setOptimisticPlacements] = useState<
+    Record<string, OptimisticPlacement>
+  >({});
+  /** Quiet save indicator under minimap (move/resize/geometry). */
+  const [mapSaveJobs, setMapSaveJobs] = useState<
+    Array<{
+      id: string;
+      label: string;
+      status: "saving" | "saved" | "error";
+      error?: string;
+    }>
+  >([]);
+  /**
+   * Serialize geometry network ops so rapid drag/resizes keep correct server deltas
+   * while the map stays interactive with optimistic placements.
+   */
+  const geometrySaveChainRef = useRef(Promise.resolve<void>(undefined));
   /** Generate-in-shape: multi-select Context sources (files / external / notes). */
   const [shapeContextOptions, setShapeContextOptions] = useState<ShapeContextSourceOption[]>(
     [],
@@ -706,14 +788,107 @@ export function BlockSkillGrid({
   const [shapeContextSelected, setShapeContextSelected] = useState<string[]>([]);
   const [shapeContextLoading, setShapeContextLoading] = useState(false);
 
-  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
+  // Creator ↔ Learner: drop local map selection (parent clears drawers separately).
+  useEffect(() => {
+    if (learnerModeRef.current === learnerMode) return;
+    learnerModeRef.current = learnerMode;
+    selectedEmptyCellsRef.current = [];
+    selectedBlockIdsRef.current = [];
+    setSelectedEmptyCells([]);
+    setSelectedBlockIds([]);
+    setShapePromptOpen(false);
+    setMergePromptOpen(false);
+    setPrompt("");
+    setLocalPendingCell(null);
+    setPrereqEdit(EMPTY_PREREQ_EDIT);
+    setBlockDragOffset(null);
+    setBlockDragIds(null);
+    setStretchPreview(null);
+    pendingSelectClickRef.current = null;
+    blockDragRef.current = null;
+    stretchDragRef.current = null;
+  }, [learnerMode]);
+
+  // Drop optimistic rows once parent nodes catch up from the server.
+  useEffect(() => {
+    setOptimisticPlacements((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of ids) {
+        const o = next[id];
+        const n = nodes.find((x) => x.id === id);
+        if (!n || n.position_x == null || n.position_y == null) continue;
+        if (
+          n.position_x === o.position_x &&
+          n.position_y === o.position_y &&
+          normalizeSpan(n.span_w) === o.span_w &&
+          normalizeSpan(n.span_h) === o.span_h
+        ) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [nodes]);
+
+  /** Nodes with optimistic move/resize applied for live map chrome. */
+  const displayNodes = useMemo((): SkillGridNode[] => {
+    const keys = Object.keys(optimisticPlacements);
+    if (keys.length === 0) return nodes;
+    return nodes.map((n) => {
+      const o = optimisticPlacements[n.id];
+      if (!o) return n;
+      return {
+        ...n,
+        position_x: o.position_x,
+        position_y: o.position_y,
+        span_w: o.span_w,
+        span_h: o.span_h,
+        shape_cells:
+          o.shape_cells === undefined
+            ? n.shape_cells
+            : (o.shape_cells as SkillGridNode["shape_cells"]),
+      };
+    });
+  }, [nodes, optimisticPlacements]);
+
+  const nodesById = useMemo(
+    () => new Map(displayNodes.map((node) => [node.id, node])),
+    [displayNodes],
+  );
+  /**
+   * Learner: when a block is selected, highlight its local-DAG dependencies
+   * (prereqs / unlocks / next peers) on the map.
+   */
+  const learnerDepHighlightIds = useMemo(() => {
+    if (!learnerMode) return new Set<string>();
+    const focus = selectedNodeId || selectedBlockIds[0] || null;
+    if (!focus) return new Set<string>();
+    return new Set(
+      learnerMapDependencyHighlightIds(
+        focus,
+        displayNodes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          status: n.status,
+          lock_until_block_ids: n.lock_until_block_ids,
+          next_block_ids: n.next_block_ids,
+          position_x: n.position_x,
+          position_y: n.position_y,
+        })),
+      ),
+    );
+  }, [learnerMode, selectedNodeId, selectedBlockIds, displayNodes]);
   const { occupancy, placements, spans, startCell } = useMemo(
-    () => buildSkillGridLayout(nodes),
-    [nodes],
+    () => buildSkillGridLayout(displayNodes),
+    [displayNodes],
   );
   /** Placed refs + occupancy for stretch preview/settle (honors freeform masks). */
   const placedBlocksForStretch = useMemo((): PlacedBlockRef[] => {
-    return nodes
+    return displayNodes
       .filter((n) => n.position_x != null && n.position_y != null)
       .map((n) => ({
         id: n.id,
@@ -723,7 +898,7 @@ export function BlockSkillGrid({
         span_h: normalizeSpan(n.span_h),
         shape_cells: parseShapeCells(n.shape_cells ?? null),
       }));
-  }, [nodes]);
+  }, [displayNodes]);
   const stretchOccupancy = useMemo(
     () => buildOccupancyFromPlaced(placedBlocksForStretch),
     [placedBlocksForStretch],
@@ -739,14 +914,14 @@ export function BlockSkillGrid({
   const generationLockedBlockIds = useMemo(() => {
     const locked = new Set<string>();
     if (generationLockedCellKeys.size === 0) return locked;
-    for (const node of nodes) {
+    for (const node of displayNodes) {
       const cells = skillNodeOccupiedCells(node);
       if (isOccupiedCellsGenerationLocked(cells, generationLockedCellKeys)) {
         locked.add(node.id);
       }
     }
     return locked;
-  }, [generationLockedCellKeys, nodes]);
+  }, [generationLockedCellKeys, displayNodes]);
   const generationLockedBlockIdsRef = useRef(generationLockedBlockIds);
   generationLockedBlockIdsRef.current = generationLockedBlockIds;
   /**
@@ -823,11 +998,11 @@ export function BlockSkillGrid({
   // Render anchors only once per multi-cell block
   const renderedBlockIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const node of nodes) {
+    for (const node of displayNodes) {
       if (placements.has(node.id)) ids.add(node.id);
     }
     return ids;
-  }, [nodes, placements]);
+  }, [displayNodes, placements]);
 
   /** Occupied cells per block for minimap clustering (placements + spans / freeform). */
   const occupiedByBlockId = useMemo(() => {
@@ -1466,6 +1641,14 @@ export function BlockSkillGrid({
       }
 
       if (!canEdit) {
+        // Learner / read-only: sole-select for map highlight + open detail.
+        // Map chrome keys off selectedBlockIds (not only selectedNodeId prop).
+        selectedBlockIdsRef.current = [blockId];
+        setSelectedBlockIds([blockId]);
+        if (selectedEmptyCellsRef.current.length > 0) {
+          selectedEmptyCellsRef.current = [];
+          setSelectedEmptyCells([]);
+        }
         onSelectNode(blockId);
         return;
       }
@@ -1914,19 +2097,154 @@ export function BlockSkillGrid({
 
   const runGridOp = useCallback(
     async (payload: Parameters<NonNullable<typeof onGridOp>>[0]) => {
-      if (!onGridOp || busy) return;
-      setLocalBusy(true);
+      if (!onGridOp) return;
+      const isGeometry = payload.op === "move" || payload.op === "resize";
+      // Geometry ops never freeze the map — optimistic + quiet save under minimap.
+      if (!isGeometry && busy) return;
+
       setAddError(null);
+
+      if (isGeometry) {
+        // ── Instant optimistic settle (map never freezes) ──────────────
+        if (payload.op === "move") {
+          const ids = (payload.blockIds || []).filter(Boolean);
+          const moving = placedBlocksForStretch.filter((b) => ids.includes(b.id));
+          const next = translateBlocksPreservingShape(
+            moving,
+            Number(payload.dRow) || 0,
+            Number(payload.dCol) || 0,
+            stretchOccupancy,
+          );
+          if (!next) {
+            setAddError("Move collides with occupied cells");
+            return;
+          }
+          setOptimisticPlacements((prev) => {
+            const m = { ...prev };
+            for (const b of next) {
+              m[b.id] = {
+                position_x: b.position_x,
+                position_y: b.position_y,
+                span_w: normalizeSpan(b.span_w),
+                span_h: normalizeSpan(b.span_h),
+                shape_cells: parseShapeCells(b.shape_cells ?? null),
+              };
+            }
+            return m;
+          });
+        } else if (payload.op === "resize" && payload.blockId && payload.handle) {
+          const source = placedBlocksForStretch.find((b) => b.id === payload.blockId);
+          if (source) {
+            const settled = stretchBlockFromHandle(
+              source,
+              payload.handle,
+              Number(payload.dRow) || 0,
+              Number(payload.dCol) || 0,
+              stretchOccupancy,
+            );
+            if (!settled) {
+              setAddError("Resize invalid (collision or no-op)");
+              return;
+            }
+            setOptimisticPlacements((prev) => ({
+              ...prev,
+              [settled.id]: {
+                position_x: settled.position_x,
+                position_y: settled.position_y,
+                span_w: normalizeSpan(settled.span_w),
+                span_h: normalizeSpan(settled.span_h),
+                shape_cells: null,
+              },
+            }));
+          }
+        }
+
+        const saveId = `geom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const saveLabel = payload.op === "move" ? "Saving move…" : "Saving resize…";
+        setMapSaveJobs((j) => [
+          ...j,
+          { id: saveId, label: saveLabel, status: "saving" },
+        ]);
+
+        // Network work is queued so rapid successive moves keep correct deltas
+        // while UI already shows the settled geometry.
+        const persistGeometry = async () => {
+          try {
+            await onGridOp(payload);
+            setMapSaveJobs((j) =>
+              j.map((x) =>
+                x.id === saveId ? { ...x, status: "saved", label: "Saved" } : x,
+              ),
+            );
+            window.setTimeout(() => {
+              setMapSaveJobs((j) => j.filter((x) => x.id !== saveId));
+            }, 1200);
+          } catch (error) {
+            // Revert optimistic geometry for this op's blocks only
+            if (payload.op === "move" && payload.blockIds) {
+              setOptimisticPlacements((prev) => {
+                const m = { ...prev };
+                for (const id of payload.blockIds || []) delete m[id];
+                return m;
+              });
+            } else if (payload.op === "resize" && payload.blockId) {
+              setOptimisticPlacements((prev) => {
+                const m = { ...prev };
+                delete m[payload.blockId!];
+                return m;
+              });
+            }
+            const msg =
+              error instanceof Error ? error.message : "Grid operation failed";
+            setMapSaveJobs((j) =>
+              j.map((x) =>
+                x.id === saveId
+                  ? { ...x, status: "error", label: "Save failed", error: msg }
+                  : x,
+              ),
+            );
+            setAddError(msg);
+            window.setTimeout(() => {
+              setMapSaveJobs((j) => j.filter((x) => x.id !== saveId));
+            }, 2800);
+            throw error;
+          }
+        };
+
+        const queued = geometrySaveChainRef.current.then(
+          persistGeometry,
+          persistGeometry,
+        );
+        // Keep the chain alive after errors so later geometry saves still run.
+        geometrySaveChainRef.current = queued.then(
+          () => undefined,
+          () => undefined,
+        );
+        await queued.catch(() => undefined);
+        return;
+      }
+
+      // Heavy ops (merge/split/generate): soft busy, no full-map freeze preferred —
+      // still use localBusy only for double-submit guards; overlay removed globally.
+      setLocalBusy(true);
       try {
         await onGridOp(payload);
         clearSelection();
       } catch (error) {
-        setAddError(error instanceof Error ? error.message : "Grid operation failed");
+        setAddError(
+          error instanceof Error ? error.message : "Grid operation failed",
+        );
       } finally {
         setLocalBusy(false);
       }
     },
-    [busy, clearSelection, onGridOp],
+    [
+      busy,
+      clearSelection,
+      onGridOp,
+      placedBlocksForStretch,
+      stretchOccupancy,
+    ],
   );
 
   const handleBlockPointerUp = useCallback(
@@ -2161,17 +2479,20 @@ export function BlockSkillGrid({
       }
       if (event.button !== 0) return;
       if (isLassoModeTool(activeToolRef.current)) return;
-      if (!canEdit || busy) return;
+      // Pan arm is navigation — available in Learner (!canEdit) as well as Creator.
+      // Authoring multi-select / Add stays gated in the click path.
+      if (busy) return;
 
-      const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
-      // Shift multi-select: let the normal click path handle it.
+      const multiModifier =
+        canEdit && (event.metaKey || event.ctrlKey || event.shiftKey);
+      // Shift multi-select: let the normal click path handle it (Creator only).
       if (multiModifier) {
         emptyCellPointerRef.current = null;
         return;
       }
 
       // Arm pan-vs-click only — do not capture yet (capture before pan breaks click).
-      // Selection happens on onClick when !panning so single-click Add is reliable.
+      // Creator: selection/Add on click when !panning. Learner: pan only (no +/Add).
       emptyCellPointerRef.current = {
         pointerId: event.pointerId,
         cell: { row: cell.row, col: cell.col },
@@ -2580,12 +2901,13 @@ export function BlockSkillGrid({
       data-space-pan={spaceHeld ? "true" : "false"}
       data-selected-block-count={selectedBlockIds.length}
       data-selected-block-ids={selectedBlockIds.join(",")}
+      data-learner-mode={learnerMode ? "true" : "false"}
+      data-map-minimap="true"
     >
-      {busy && (
-        <div className="pointer-events-none absolute inset-0 z-[15] backdrop-blur-[2px] bg-black/20 transition-all duration-500" />
-      )}
+      {/* No full-map freeze on geometry saves — quiet indicator under minimap. */}
       <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
-        {/* Full-height icon rail (not a floating toolbox) */}
+        {/* Full-height icon rail — hidden in Learner mode (no authoring tools). */}
+        {!learnerMode ? (
         <div
           data-block-map-tool-strip
           className="flex h-full w-11 shrink-0 flex-col items-center border-r border-neutral-800/80 bg-neutral-950/95 py-2"
@@ -2644,6 +2966,7 @@ export function BlockSkillGrid({
             </>
           )}
         </div>
+        ) : null}
 
         <div
           ref={viewportRef}
@@ -2790,13 +3113,84 @@ export function BlockSkillGrid({
           )}
         </div>
 
+        {/* Quiet geometry save status (move/resize) — under minimap, map stays interactive */}
+        {mapSaveJobs.length > 0 ? (
+          <div
+            data-map-geometry-saves
+            data-map-geometry-save-count={mapSaveJobs.length}
+            className="pointer-events-none absolute right-2 z-20 flex w-[220px] flex-col gap-1"
+            style={{
+              top: 8 + MINIMAP_FRAME_HEIGHT + 8,
+              width: MINIMAP_FRAME_WIDTH,
+            }}
+          >
+            {mapSaveJobs.map((job) => (
+              <div
+                key={job.id}
+                data-map-geometry-save={job.id}
+                data-map-geometry-save-status={job.status}
+                className="rounded-md border border-white/15 bg-neutral-950/95 px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              >
+                <div className="flex items-center gap-2">
+                  {job.status === "saving" ? (
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-white/80"
+                      data-map-geometry-save-pulse
+                      aria-hidden
+                    />
+                  ) : job.status === "saved" ? (
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/90"
+                      aria-hidden
+                    />
+                  ) : (
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400/90"
+                      aria-hidden
+                    />
+                  )}
+                  <p
+                    className={`min-w-0 flex-1 truncate text-[10px] font-medium ${
+                      job.status === "error"
+                        ? "text-rose-200"
+                        : job.status === "saved"
+                          ? "text-emerald-100/90"
+                          : "text-neutral-100"
+                    }`}
+                  >
+                    {job.label}
+                  </p>
+                </div>
+                {job.status === "saving" ? (
+                  <div
+                    className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-neutral-800"
+                    data-map-geometry-save-bar
+                  >
+                    <div className="h-full w-2/3 animate-pulse rounded-full bg-white/70" />
+                  </div>
+                ) : null}
+                {job.error ? (
+                  <p className="mt-1 text-[10px] text-rose-300/90">{job.error}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {/* Background range/density multi-create jobs — under minimap; map stays interactive */}
         {Array.isArray(expandJobs) && expandJobs.length > 0 ? (
           <div
             data-map-expand-jobs
             data-map-expand-job-count={expandJobs.length}
             className="pointer-events-auto absolute right-2 z-20 flex max-h-[min(40vh,16rem)] w-[220px] flex-col gap-1.5 overflow-y-auto"
-            style={{ top: 8 + MINIMAP_FRAME_HEIGHT + 8, width: MINIMAP_FRAME_WIDTH }}
+            style={{
+              top:
+                8 +
+                MINIMAP_FRAME_HEIGHT +
+                8 +
+                (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0),
+              width: MINIMAP_FRAME_WIDTH,
+            }}
             onPointerDown={(e) => e.stopPropagation()}
           >
             {expandJobs.map((job) => {
@@ -2919,11 +3313,16 @@ export function BlockSkillGrid({
               >
                 <button
                   type="button"
-                  disabled={!canEdit || busy || generationPending}
+                  // Keep enabled for empty-drag pan in Learner (!canEdit).
+                  // Authoring (Add) still gated in handleEmptyCellClick via canEdit.
+                  disabled={busy || generationPending}
                   data-map-cell-unusable={isUnusable ? "true" : "false"}
                   data-map-cell-selected={emptyHighlight ? "true" : "false"}
                   data-empty-preview={previewEmpty && !selectedEmpty ? "true" : "false"}
                   data-generation-pending={generationPending ? "true" : "false"}
+                  data-empty-pan-enabled={
+                    !busy && !generationPending ? "true" : "false"
+                  }
                   onClick={(e) => {
                     // Primary path for empty select / Add (plain + Shift multi).
                     // Empty pan sets suppressEmptyClickRef so this is skipped.
@@ -2946,7 +3345,9 @@ export function BlockSkillGrid({
                           ? MAP_CELL_EMPTY_SELECTED_CLASS
                           : canEdit
                             ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
-                            : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
+                            : learnerMode
+                              ? "cursor-grab border-neutral-800/70 bg-neutral-950/20 text-neutral-600 active:cursor-grabbing"
+                              : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
                   }`}
                   title={
                     generationPending
@@ -2963,13 +3364,23 @@ export function BlockSkillGrid({
                           : activeTool === "select" || activeTool === "move"
                             ? "Click empty to Add · drag empty to pan · Shift multi for shape form · Space/middle pan"
                             : labels.emptyCell
-                        : undefined
+                        : learnerMode
+                          ? "Drag empty to pan · Space/middle pan · click a block to practice"
+                          : undefined
                   }
                 >
                   {isUnusable ? (
                     <span className="text-[9px] uppercase tracking-wide text-neutral-600">∅</span>
                   ) : (
-                    canEdit && <span className="text-xl leading-none text-neutral-600">+</span>
+                    canEdit &&
+                    !learnerMode && (
+                      <span
+                        className="text-xl leading-none text-neutral-600"
+                        data-empty-cell-plus
+                      >
+                        +
+                      </span>
+                    )
                   )}
                 </button>
               </div>
@@ -3012,9 +3423,8 @@ export function BlockSkillGrid({
                 node.shape_cells.length > 0 &&
                 occupiedCells.length > 0 &&
                 occupiedCells.length !== span.span_w * span.span_h;
-            // Map selection chrome follows selectedBlockIds only (drag set source of
-            // truth). Do not also paint selectedNodeId / focusedNodeId as selected —
-            // that made lasso multi-select look broader than the drag membership.
+            // Map multi-select membership. Also treat controlled selectedNodeId as
+            // sole selection in learner / when list is empty (detail focus).
             const multiSelected = selectedBlockIds.includes(node.id);
             /** Active move-drag member (sole or multi) — independent of selection lag. */
             const isDragParticipant = Boolean(blockDragIds?.includes(node.id));
@@ -3031,16 +3441,52 @@ export function BlockSkillGrid({
                 ? blockDragOffset.dRow * SKILL_GRID_PITCH
                 : 0;
 
-            // Chapter focus only when map multi-select list is empty (learner map).
+            // Sole focus from selectedNodeId when multi list empty or learner mode
+            // (read-only click only set selectedNodeId historically).
             const chapterFocusOnly =
-              selectedBlockIds.length === 0 &&
+              (selectedBlockIds.length === 0 || learnerMode) &&
+              !multiSelected &&
               (focusedNodeId === node.id || selectedNodeId === node.id);
-            const dependencyIds = normalizeLockUntilBlockIds(
+            const isBlockHighlighted = multiSelected || chapterFocusOnly;
+            const lockUntilIds = normalizeLockUntilBlockIds(
               node.lock_until_block_ids,
               node.id,
             );
-            const hasDependencies = blockHasLockDependencies(node);
-            const lockedByPrereq = isBlockLockedUntilCompleted(node, nodesById);
+            const learnerNodeRef = {
+              id: node.id,
+              title: node.title,
+              status: node.status,
+              lock_until_block_ids: node.lock_until_block_ids,
+              next_block_ids: node.next_block_ids,
+            };
+            const learnerBlocksRef = displayNodes.map((n) => ({
+              id: n.id,
+              title: n.title,
+              status: n.status,
+              lock_until_block_ids: n.lock_until_block_ids,
+              next_block_ids: n.next_block_ids,
+            }));
+            // Learner: lock_until OR incomplete inbound next (DAG leads-to).
+            // Creator: classic lock_until only.
+            const lockedByPrereq = learnerMode
+              ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
+              : isBlockLockedUntilCompleted(node, nodesById);
+            const inboundNextIncomplete = learnerMode
+              ? incompleteInboundNextPrerequisites(
+                  learnerNodeRef,
+                  learnerBlocksRef,
+                )
+              : [];
+            const dependencyIds = [
+              ...lockUntilIds,
+              ...inboundNextIncomplete.map((b) => b.id),
+            ].filter((id, i, arr) => arr.indexOf(id) === i);
+            const hasDependencies = learnerMode
+              ? learnerBlockHasDependencyChrome(
+                  learnerNodeRef,
+                  learnerBlocksRef,
+                )
+              : blockHasLockDependencies(node);
             const displayStatus = lockedByPrereq ? "locked" : node.status;
             // Prereq dashed preview only for sole map selection that is also the
             // detail focus — not while multi-selecting (avoids "extra selected").
@@ -3059,12 +3505,19 @@ export function BlockSkillGrid({
               isLockedDisplay: lockedByPrereq,
             });
             const isPrereqHighlight = highlightRole === "prereq";
-            const baseChrome = mapCellChromeClasses({
+            const isLearnerDepHighlight =
+              learnerMode &&
+              !isBlockHighlighted &&
+              learnerDepHighlightIds.has(node.id);
+            const baseChrome = resolveOccupiedMapChrome({
+              learnerMode,
               status: displayStatus,
-              selected: multiSelected || chapterFocusOnly,
-              focused: chapterFocusOnly,
-              showProgress,
-              highlightRole,
+              selected: isBlockHighlighted,
+              focused: chapterFocusOnly || isBlockHighlighted,
+              isStart: Boolean(node.is_start),
+              locked: lockedByPrereq && !isBlockHighlighted && !isLearnerDepHighlight,
+              depHighlight: isLearnerDepHighlight,
+              highlightRole: learnerMode ? null : highlightRole,
             });
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
@@ -3085,34 +3538,60 @@ export function BlockSkillGrid({
                   : "opacity-0 scale-95"
                 : ""
             }`;
+            const hasOptimisticGeometry = Boolean(optimisticPlacements[node.id]);
             const tileTransition = {
+              // No ease when live-dragging or holding optimistic settle — feels instant.
               transition: isAppearingTarget
                 ? "opacity 380ms ease, transform 380ms ease, box-shadow 380ms ease"
-                : isDragParticipant && blockDragOffset
+                : (isDragParticipant && blockDragOffset) || hasOptimisticGeometry
                   ? "none"
                   : undefined,
             } as const;
-            const lockBadge = hasDependencies ? (
-              <BlockDependencyLockBadge
-                dependencyCount={dependencyIds.length}
-                currentlyLocked={lockedByPrereq}
-              />
-            ) : null;
+            const lockBadge =
+              hasDependencies || (learnerMode && lockedByPrereq) ? (
+                <BlockDependencyLockBadge
+                  dependencyCount={Math.max(
+                    dependencyIds.length,
+                    lockedByPrereq ? 1 : 0,
+                  )}
+                  currentlyLocked={lockedByPrereq}
+                  learnerSpottable={learnerMode}
+                />
+              ) : null;
+            const learnerLockedLabel =
+              learnerMode && lockedByPrereq ? (
+                <span
+                  className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-rose-300/95"
+                  data-learner-locked-label
+                >
+                  Locked
+                </span>
+              ) : null;
             const hasLocalContext = blockHasAttachedLocalContext(node);
             const localContextBadge = hasLocalContext ? (
               <BlockLocalContextDocBadge />
             ) : null;
+            const isStarter = Boolean(node.is_start);
+            const starterBadge = isStarter ? <BlockStarterFlagBadge /> : null;
 
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
               const labelCell = freeformLabelCell(occupiedCells);
               const freeformColors =
-                isPrereqHighlight
+                isPrereqHighlight && !learnerMode
                   ? mapCellFreeformPrereqColors()
-                  : highlightRole === "target" || multiSelected
-                    ? mapCellFreeformColors(true)
-                    : mapCellFreeformColors(false);
+                  : learnerMode
+                    ? learnerMapFreeformColors(
+                        isBlockHighlighted || highlightRole === "target",
+                        {
+                          locked: lockedByPrereq && !isBlockHighlighted,
+                          depHighlight: isLearnerDepHighlight,
+                        },
+                      )
+                    : highlightRole === "target" || isBlockHighlighted
+                      ? mapCellFreeformColors(true)
+                      : mapCellFreeformColors(false);
               const freeformFill = freeformColors.fill;
               const freeformBorder = freeformColors.border;
               const freeformText = freeformColors.text;
@@ -3156,11 +3635,15 @@ export function BlockSkillGrid({
                         <button
                           type="button"
                           data-block-id={node.id}
-                          data-block-selected={multiSelected ? "true" : "false"}
+                          data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
                           data-block-has-dependencies={hasDependencies ? "true" : "false"}
                           data-block-has-local-context={hasLocalContext ? "true" : "false"}
+                          data-block-is-start={isStarter ? "true" : "false"}
                           data-block-generation-locked={generationLocked ? "true" : "false"}
+                          data-learner-dep-highlight={
+                            isLearnerDepHighlight ? "true" : undefined
+                          }
                           data-block-highlight={highlightRole}
                           data-block-map-draggable={
                             generationLocked
@@ -3244,23 +3727,21 @@ export function BlockSkillGrid({
                             boxShadow:
                               isPrereqHighlight ||
                               highlightRole === "target" ||
-                              multiSelected
+                              isBlockHighlighted
                                 ? freeformColors.shadow
                                 : undefined,
                           }}
                         >
                           {isLabel ? (
                             <>
-                              <span className="absolute left-1.5 top-1 font-mono text-[9px] opacity-60">
-                                {formatGridCoordinate(nodeCell.row, nodeCell.col)}
-                                <span className="opacity-70"> · {occupiedCells.length}c</span>
-                              </span>
                               <MapCellStatusGlyph
                                 status={node.status}
                                 showProgress={showProgress}
                                 title={node.title}
                               />
+                              {learnerLockedLabel}
                               {localContextBadge}
+                              {starterBadge}
                               {lockBadge}
                             </>
                           ) : null}
@@ -3318,11 +3799,15 @@ export function BlockSkillGrid({
                 <button
                   type="button"
                   data-block-id={node.id}
-                  data-block-selected={multiSelected ? "true" : "false"}
+                  data-block-selected={isBlockHighlighted ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
                   data-block-has-local-context={hasLocalContext ? "true" : "false"}
+                  data-block-is-start={isStarter ? "true" : "false"}
                   data-block-generation-locked={generationLocked ? "true" : "false"}
+                  data-learner-dep-highlight={
+                    isLearnerDepHighlight ? "true" : undefined
+                  }
                   data-block-highlight={highlightRole}
                   data-block-stretch-preview={liveStretch ? "true" : undefined}
                   data-block-map-draggable={
@@ -3372,18 +3857,14 @@ export function BlockSkillGrid({
                               : node.title
                   }
                 >
-                  <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
-                    {formatGridCoordinate(renderCell.row, renderCell.col)}
-                    {(span.span_w > 1 || span.span_h > 1) && (
-                      <span className="text-neutral-600"> · {span.span_w}×{span.span_h}</span>
-                    )}
-                  </span>
                   <MapCellStatusGlyph
                     status={node.status}
                     showProgress={showProgress}
                     title={node.title}
                   />
+                  {learnerLockedLabel}
                   {localContextBadge}
+                  {starterBadge}
                   {lockBadge}
                 </button>
                 {renderStretchHandles(node.id)}

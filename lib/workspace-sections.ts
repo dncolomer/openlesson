@@ -7,6 +7,7 @@ export type WorkspaceSectionKey =
   | "workspace"
   | "context"
   | "simulation"
+  | "dags"
   | "knowledge"
   | "settings";
 
@@ -17,11 +18,13 @@ export type WorkspaceMainSurface =
   | "workspace-local"
   | "context"
   | "simulation"
+  | "dags"
   | "knowledge"
   | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
+  "dags",
   "context",
   "simulation",
   "knowledge",
@@ -41,6 +44,8 @@ export type WorkspaceSectionLayout = {
   mountsContextPanel: boolean;
   /** Workspace-level Simulation tab (author learner-journey overview). */
   mountsSimulationPanel: boolean;
+  /** Creator DAGs tab — list/edit/delete created multi-block DAGs. */
+  mountsDagsPanel: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -63,6 +68,7 @@ export function resolveWorkspaceSectionLayout(
         showSessionsColumn: false,
         mountsContextPanel: true,
         mountsSimulationPanel: false,
+        mountsDagsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -75,6 +81,20 @@ export function resolveWorkspaceSectionLayout(
         showSessionsColumn: false,
         mountsContextPanel: false,
         mountsSimulationPanel: true,
+        mountsDagsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+      };
+    case "dags":
+      return {
+        section: "dags",
+        mainSurface: "dags",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -87,6 +107,7 @@ export function resolveWorkspaceSectionLayout(
         showSessionsColumn: false,
         mountsContextPanel: false,
         mountsSimulationPanel: false,
+        mountsDagsPanel: false,
         localTabs: [],
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
@@ -99,6 +120,7 @@ export function resolveWorkspaceSectionLayout(
         showSessionsColumn: false,
         mountsContextPanel: false,
         mountsSimulationPanel: false,
+        mountsDagsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
@@ -112,6 +134,7 @@ export function resolveWorkspaceSectionLayout(
         showSessionsColumn: true,
         mountsContextPanel: false,
         mountsSimulationPanel: false,
+        mountsDagsPanel: false,
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -154,7 +177,11 @@ export function availableWorkspaceSections(options: {
   isOrgAdmin?: boolean;
 }): WorkspaceSectionKey[] {
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    return ["workspace", "context", "simulation", "knowledge", "settings"];
+    // Nav order: Workspace, DAGs (owner only), Context, Simulation, Knowledge, Settings.
+    const sections: WorkspaceSectionKey[] = ["workspace"];
+    if (options.isOwner) sections.push("dags");
+    sections.push("context", "simulation", "knowledge", "settings");
+    return sections;
   }
   // Buyers / consumers: Context + Simulation (author/learner insight) + Workspace.
   return ["workspace", "context", "simulation"];

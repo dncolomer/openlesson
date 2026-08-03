@@ -5,6 +5,7 @@ import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
 } from "@/components/WorkspaceRightPaneDrawer";
+import { MultiBlockDagCanvas } from "@/components/MultiBlockDagCanvas";
 import { areBlocksContiguous, type PlacedBlockRef } from "@/lib/skill-grid-ops";
 import {
   buildSkillGridLayout,
@@ -14,11 +15,21 @@ import {
   BRIDGE_DENSITY_MAX,
   BRIDGE_DENSITY_MIN,
   BRIDGE_MAX_HALF_WIDTH,
+  BRIDGE_WIDTH_MAX,
+  BRIDGE_WIDTH_MIN,
   bridgeAnchorsFromPlacedBlocks,
-  bridgeHalfWidthForDensity,
   resolveBridgeSelection,
 } from "@/lib/bridge-blocks";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
+import {
+  draftMultiBlockDag,
+  MULTI_BLOCK_DAG_MAX_BLOCKS,
+  multiBlockDagEdgeCounts,
+  multiBlockDagHasCycle,
+  multiBlockDagSelectionTooLarge,
+  setMultiBlockDagEdge,
+  type MultiBlockDagDraft,
+} from "@/lib/multi-block-dag";
 
 export type CombineBlockRef = {
   id: string;
@@ -29,11 +40,14 @@ export type CombineBlockRef = {
   span_w?: number | null;
   span_h?: number | null;
   shape_cells?: SkillGridNode["shape_cells"];
+  next_block_ids?: string[] | null;
+  lock_until_block_ids?: string[] | null;
+  is_start?: boolean | null;
 };
 
 /**
  * Right-column surface when ≥2 filled blocks are multi-selected.
- * Combine drawer (merge) + Bridge Blocks drawer (corridor multi-create).
+ * Combine + Bridge + DAG (dependency graph) + Delete.
  */
 export function WorkspaceCombineBlocksPane({
   blockIds,
@@ -42,6 +56,8 @@ export function WorkspaceCombineBlocksPane({
   unusableCells = null,
   onCombine,
   onGenerateBridge,
+  onApplyDag,
+  onDeleteBlocks,
   onBridgePreviewChange,
   onCancel,
   labels,
@@ -61,10 +77,18 @@ export function WorkspaceCombineBlocksPane({
   onGenerateBridge?: (input: {
     blockIds: string[];
     density: number;
+    width: number;
     userPrompt?: string;
     frozenSlots: Array<{ row: number; col: number }>;
     blockTitles: string[];
   }) => Promise<void> | void;
+  /** Persist multi-select dependency DAG (next + lock_until among selection). */
+  onApplyDag?: (input: {
+    blockIds: string[];
+    dagDraft: MultiBlockDagDraft;
+  }) => Promise<void> | void;
+  /** Batch-delete all multi-selected blocks. */
+  onDeleteBlocks?: (input: { blockIds: string[] }) => Promise<void> | void;
   /** Lift bridge corridor preview onto the map. */
   onBridgePreviewChange?: (
     cells: Array<{ row: number; col: number }> | null,
@@ -79,11 +103,19 @@ export function WorkspaceCombineBlocksPane({
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Start at min density (thin centerline); author can thicken via slider. */
-  const [bridgeDensity, setBridgeDensity] = useState(BRIDGE_DENSITY_MIN);
+  /** Width = corridor half-width; density = fill of thickened corridor. */
+  const [bridgeWidth, setBridgeWidth] = useState(BRIDGE_WIDTH_MIN);
+  const [bridgeDensity, setBridgeDensity] = useState(BRIDGE_DENSITY_MAX);
   const [bridgePrompt, setBridgePrompt] = useState("");
   const [bridgeSubmitting, setBridgeSubmitting] = useState(false);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
+  const [dagDraft, setDagDraft] = useState<MultiBlockDagDraft>(() =>
+    draftMultiBlockDag(blockIds, nodes),
+  );
+  const [dagSubmitting, setDagSubmitting] = useState(false);
+  const [dagError, setDagError] = useState<string | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const selected = useMemo(() => {
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -143,11 +175,15 @@ export function WorkspaceCombineBlocksPane({
   useEffect(() => {
     setPrompt("");
     setError(null);
-    setBridgeDensity(BRIDGE_DENSITY_MIN);
+    setBridgeWidth(BRIDGE_WIDTH_MIN);
+    setBridgeDensity(BRIDGE_DENSITY_MAX);
     setBridgePrompt("");
     setBridgeError(null);
+    setDagDraft(draftMultiBlockDag(blockIds, nodes));
+    setDagError(null);
+    setDeleteError(null);
     setOpenDrawerId(contiguous ? "combine" : "bridge");
-  }, [selectionKey, contiguous]);
+  }, [selectionKey, contiguous, blockIds, nodes]);
 
   const allSkillNodes = useMemo(
     () =>
@@ -190,17 +226,21 @@ export function WorkspaceCombineBlocksPane({
     () =>
       resolveBridgeSelection({
         anchors: bridgeAnchors,
+        width: bridgeWidth,
         density: bridgeDensity,
         occupiedKeys,
         unusableKeys,
       }),
-    [bridgeAnchors, bridgeDensity, occupiedKeys, unusableKeys],
+    [bridgeAnchors, bridgeWidth, bridgeDensity, occupiedKeys, unusableKeys],
   );
-  const bridgeHalfWidth = bridgeHalfWidthForDensity(bridgeDensity);
+  const bridgeHalfWidth = bridgeSelection.halfWidth;
   const canBridge =
     Boolean(onGenerateBridge) &&
     bridgeAnchors.length >= 2 &&
     bridgeSelection.selected.length > 0;
+  const dagCounts = multiBlockDagEdgeCounts(dagDraft);
+  const dagHasCycle = multiBlockDagHasCycle(dagDraft, "next");
+  const dagTooManyBlocks = multiBlockDagSelectionTooLarge(selected.length);
 
   // Map preview for bridge corridor while the Bridge drawer is open.
   useEffect(() => {
@@ -242,6 +282,7 @@ export function WorkspaceCombineBlocksPane({
       await onGenerateBridge({
         blockIds: selected.map((n) => n.id),
         density: bridgeDensity,
+        width: bridgeWidth,
         userPrompt: bridgePrompt.trim() || undefined,
         frozenSlots: bridgeSelection.selected.map((c) => ({
           row: c.row,
@@ -257,6 +298,50 @@ export function WorkspaceCombineBlocksPane({
     } finally {
       setBridgeSubmitting(false);
     }
+  };
+
+  const submitDag = async () => {
+    if (!onApplyDag || dagSubmitting || busy || selected.length < 2) return;
+    setDagSubmitting(true);
+    setDagError(null);
+    try {
+      await onApplyDag({
+        blockIds: selected.map((n) => n.id),
+        dagDraft,
+      });
+    } catch (err) {
+      setDagError(err instanceof Error ? err.message : "Failed to apply DAG");
+    } finally {
+      setDagSubmitting(false);
+    }
+  };
+
+  const submitDelete = async () => {
+    if (!onDeleteBlocks || deleteSubmitting || busy || selected.length < 2) {
+      return;
+    }
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      await onDeleteBlocks({ blockIds: selected.map((n) => n.id) });
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete blocks",
+      );
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  const toggleDagEdge = (
+    from: string,
+    to: string,
+    _kind: "next" | "lock",
+    enabled: boolean,
+  ) => {
+    setDagDraft((prev) =>
+      setMultiBlockDagEdge(prev, { from, to, kind: "next" }, enabled),
+    );
   };
 
   return (
@@ -435,18 +520,41 @@ export function WorkspaceCombineBlocksPane({
           <p className="text-[11px] leading-relaxed text-neutral-400">
             Generate a{" "}
             <span className="text-neutral-200">knowledge bridge</span> of new
-            1×1 blocks along a straight path linking the selected topics. Density
-            controls how thick the corridor is (capped so it stays a bridge, not
-            a blob).
+            1×1 blocks along a straight path linking the selected topics.{" "}
+            <span className="text-neutral-300">Width</span> thickens the
+            corridor; <span className="text-neutral-300">density</span> fills
+            placeable cells inside it.
           </p>
+
+          <label className="block space-y-1" data-bridge-width>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-neutral-400">Width</span>
+              <span className="font-mono text-[10px] text-neutral-500">
+                half-width {bridgeHalfWidth}/{BRIDGE_MAX_HALF_WIDTH} ·{" "}
+                {bridgeSelection.candidates.length} corridor cells
+              </span>
+            </div>
+            <input
+              type="range"
+              min={BRIDGE_WIDTH_MIN}
+              max={BRIDGE_WIDTH_MAX}
+              step={1}
+              value={bridgeWidth}
+              disabled={busy || bridgeSubmitting || selected.length < 2}
+              onChange={(e) => setBridgeWidth(Number(e.target.value))}
+              className="w-full accent-white"
+              data-bridge-width-input
+            />
+            <p className="text-[10px] leading-snug text-neutral-600">
+              Corridor thickness (0 = centerline only; max {BRIDGE_WIDTH_MAX}).
+            </p>
+          </label>
 
           <label className="block space-y-1" data-bridge-density>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-neutral-400">Density</span>
               <span className="font-mono text-[10px] text-neutral-500">
-                {bridgeDensity}% · half-width {bridgeHalfWidth}/
-                {BRIDGE_MAX_HALF_WIDTH} · {bridgeSelection.selected.length}{" "}
-                cells
+                {bridgeDensity}% · {bridgeSelection.selected.length} selected
               </span>
             </div>
             <input
@@ -461,8 +569,7 @@ export function WorkspaceCombineBlocksPane({
               data-bridge-density-input
             />
             <p className="text-[10px] leading-snug text-neutral-600">
-              Higher density thickens the line (max half-width{" "}
-              {BRIDGE_MAX_HALF_WIDTH}) and fills more placeable cells.
+              0% = placeable spine only; 100% = full thickened corridor.
             </p>
           </label>
 
@@ -527,6 +634,140 @@ export function WorkspaceCombineBlocksPane({
             Runs in the background like expand create — progress and Stop appear
             under the minimap; bridge tiles stay non-clickable until finished.
           </p>
+        </div>
+      </WorkspaceRightPaneDrawer>
+
+      {/* DAG — visual connect graph among selected blocks */}
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="dag"
+        title="DAG"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-multi-block-dag-drawer"
+      >
+        <div
+          data-multi-block-dag-pane
+          data-dag-edge-count={dagCounts.total}
+          data-dag-next-count={dagCounts.next}
+          data-dag-lock-count={dagCounts.lock}
+          data-dag-max-blocks={MULTI_BLOCK_DAG_MAX_BLOCKS}
+          data-dag-too-many={dagTooManyBlocks ? "true" : "false"}
+          className="space-y-3"
+        >
+          {dagTooManyBlocks ? (
+            <p
+              className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-3 text-[12px] leading-relaxed text-neutral-200"
+              data-dag-too-many-message
+            >
+              You can only have {MULTI_BLOCK_DAG_MAX_BLOCKS} blocks selected at
+              once
+            </p>
+          ) : (
+            <>
+              <p className="text-[11px] leading-relaxed text-neutral-400">
+                Draw <span className="text-neutral-200">leads to</span> links
+                among the selected blocks (journey order). Prerequisites still
+                use the map lock tool. Links outside this selection stay intact.
+                Apply to save.
+              </p>
+
+              <MultiBlockDagCanvas
+                blocks={selected.map((b) => ({
+                  id: b.id,
+                  title: b.title || "Untitled",
+                  position_x: b.position_x,
+                  position_y: b.position_y,
+                }))}
+                draft={dagDraft}
+                disabled={busy || dagSubmitting}
+                onToggleEdge={toggleDagEdge}
+              />
+
+              {dagHasCycle ? (
+                <p
+                  className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] text-amber-200/90"
+                  data-dag-cycle-warning
+                >
+                  Draft has a directed cycle. You can still Apply; prefer
+                  acyclic journeys when order matters.
+                </p>
+              ) : null}
+
+              {dagError ? (
+                <p className="text-xs text-red-400/90" data-dag-error>
+                  {dagError}
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                data-dag-apply
+                disabled={
+                  busy ||
+                  dagSubmitting ||
+                  selected.length < 2 ||
+                  !onApplyDag
+                }
+                onClick={() => void submitDag()}
+                className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+              >
+                {dagSubmitting ? "Applying…" : "Apply"}
+              </button>
+            </>
+          )}
+        </div>
+      </WorkspaceRightPaneDrawer>
+
+      {/* Delete multi-selected blocks */}
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="delete"
+        title="Delete"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-multi-block-delete-drawer"
+      >
+        <div data-multi-block-delete-pane className="space-y-3">
+          <p className="text-[11px] leading-relaxed text-neutral-400">
+            Permanently remove all{" "}
+            <span className="text-neutral-200">{selected.length}</span> selected
+            blocks from the map. Peer next-links and lock-until edges that pointed
+            at them are cleaned up.
+          </p>
+          <ul className="space-y-1" data-delete-block-list>
+            {selected.map((b) => (
+              <li
+                key={b.id}
+                data-delete-block-row={b.id}
+                className="rounded border border-white/10 bg-black/20 px-2 py-1.5 text-[12px] text-neutral-200"
+              >
+                {b.title || "Untitled"}
+              </li>
+            ))}
+          </ul>
+          {deleteError ? (
+            <p className="text-xs text-red-400/90" data-delete-error>
+              {deleteError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            data-multi-block-delete
+            data-delete-blocks-submit
+            disabled={
+              busy ||
+              deleteSubmitting ||
+              selected.length < 2 ||
+              !onDeleteBlocks
+            }
+            onClick={() => void submitDelete()}
+            className="w-full rounded-md border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {deleteSubmitting
+              ? "Deleting…"
+              : `Delete ${selected.length} blocks`}
+          </button>
         </div>
       </WorkspaceRightPaneDrawer>
     </WorkspaceRightPaneDrawerGroup>

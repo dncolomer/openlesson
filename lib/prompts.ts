@@ -69,6 +69,7 @@ GOAL OF THE OPENING:
 - Point at the highest-leverage next practice act for the current chapter/problem (a key distinction, decision, sketch, implementation, or example they must produce).
 - Prefer something that yields deeper work to submit: a canvas sketch, a notebook note, a worked attempt, or a tool-backed artifact — not stage directions about speaking.
 - If a single sharp question is best, make it concrete and problem-specific — not open-ended validation.
+- Ground every opening in the subject matter and workspace/chapter goal even when background is thin (guest) — never invent meta-learning icebreakers.
 
 GOOD patterns (inspiration, don't copy literally):
 - "Sketch [structure] on the Canvas and label the critical path for this problem."
@@ -79,7 +80,7 @@ GOOD patterns (inspiration, don't copy literally):
 
 BAD openings (never do these):
 - Generic icebreakers: "What do you already know about X?"
-- Meta process: "How would you approach this?" or "What assumptions do you have?"
+- Meta process: "How would you approach this?" or "What assumptions do you have?" or "How would you approach learning this?"
 - Abstract philosophy: "What does X mean to you?"
 - Pure quiz trivia a search engine answers.
 - Leading answers that hand them the solution.
@@ -89,7 +90,7 @@ BAD openings (never do these):
 
 Rules:
 - Directly about solving THIS problem (or the current plan chapter/step if provided).
-- Specific concepts, examples, or mechanisms — not feelings.
+- Specific concepts, examples, or mechanisms — not feelings or study-strategy talk.
 - Max 25 words. Warm and practical.
 - Practice tools (Canvas, Notebook, Grokipedia, screen share) MAY be named.
 - ONLY output the opening text. No preamble, no quotes, no formatting.`,

@@ -11,6 +11,62 @@ export interface TapbenchExerciseContext {
   exerciseText?: string | null;
 }
 
+/** Who / which product surface the exercise is for. */
+export type DomainExerciseSurface = "tapbench" | "tap_exercise" | "ile_project";
+
+function surfaceLabel(surface: DomainExerciseSurface): string {
+  switch (surface) {
+    case "tap_exercise":
+      return "human TAP timed drill";
+    case "ile_project":
+      return "ILE Project Mode chapter exercise";
+    default:
+      return "TAPBench agent evaluation";
+  }
+}
+
+/**
+ * Shared domain-exercise author system prompt (live Drill + Simulation samples).
+ * Pure string — safe for client and server.
+ */
+export function buildDomainExerciseAuthorSystemPrompt(
+  surface: DomainExerciseSurface = "tapbench",
+): string {
+  const who =
+    surface === "tapbench"
+      ? "an AI agent under timed evaluation"
+      : surface === "ile_project"
+        ? "a human learner working a longer-horizon project chapter"
+        : "a human learner in a timed TAP drill (solo exercise, no tutor dialogue)";
+
+  const lengthHint =
+    surface === "ile_project"
+      ? "Length: roughly 80–280 words (chapter-scale, still finishable in one sitting)."
+      : "Length: roughly 60–220 words.";
+
+  return [
+    `You are the exercise author for ${surfaceLabel(surface)}.`,
+    `Write ONE self-contained exercise for ${who}.`,
+    "",
+    "Hard requirements:",
+    "- Produce a concrete problem with clear success criteria (a correct answer, artifact, or checkable reasoning).",
+    "- Prefer a single well-scoped problem, or multi-part A/B with explicit subparts.",
+    "- Include any numbers, data, constraints, or definitions needed inside the exercise text.",
+    "- Difficulty should match the domain: not trivia definitions, not multi-hour research.",
+    "- Ground the exercise in the workspace goal and block/subject materials when provided — never generic meta-learning tasks.",
+    "- Do NOT restate the topic list or syllabus blurb as the task.",
+    '- Do NOT open with "Using what you know about…", "Complete this task:", or "Demonstrate your understanding…".',
+    "- Do NOT ask the learner/agent to think aloud or speak out loud.",
+    '- Start the response with "Exercise: " then the problem only (no preamble, no markdown fences).',
+    lengthHint,
+  ].join("\n");
+}
+
+/** @deprecated use buildDomainExerciseAuthorSystemPrompt */
+export function buildTapbenchExerciseAuthorSystemPrompt(): string {
+  return buildDomainExerciseAuthorSystemPrompt("tapbench");
+}
+
 const BANNED_OPENERS = [
   /^using what you know about\b/i,
   /^complete this task:\s*/i,

@@ -310,8 +310,13 @@ describe("structural: Simulation panel 3+3 + compact influence", () => {
     expect(lib).toContain("collectBlockContextInfluenceLabels");
 
     const api = read("app/api/workspace/block-content-samples/route.ts");
-    expect(api).toMatch(/EXACTLY 3/i);
-    expect(api).toContain("contextSources");
+    // Simulation LLM path reuses shared practice-item builders (not ad-hoc out-loud fillers).
+    expect(api).toContain("buildSimulationSamplesSystemPrompt");
+    expect(api).toContain("buildSimulationSamplesUserPrompt");
+    expect(api).toContain("practice-item-builders");
+    const practiceBuilders = read("lib/practice-item-builders.ts");
+    expect(practiceBuilders).toMatch(/Exactly 3 questions and 3 exercises/i);
+    expect(practiceBuilders).toContain("contextSources");
 
     writeEvidence(
       "simulation-context-influence-ui.log",

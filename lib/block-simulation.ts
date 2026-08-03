@@ -11,6 +11,15 @@ import {
   type BlockExampleTopicsInput,
   type BlockExampleTopicsResult,
 } from "@/lib/block-example-topics";
+import {
+  buildGroundedDialogueQuestion,
+  buildGroundedExerciseItem,
+  type PracticeItemContext,
+} from "@/lib/practice-item-builders";
+import {
+  containsOutLoudStageDirection,
+  stripOutLoudStageDirections,
+} from "@/lib/prompt-workspace-context";
 
 export type SimulationAudience = "author" | "learner";
 
@@ -70,6 +79,11 @@ export type BlockSimulationInput = BlockExampleTopicsInput & {
   localFileNames?: string[] | null;
   /** Optional external source labels (for influence chips). */
   externalLabels?: string[] | null;
+  /** Workspace-level grounding (same fields live Explore/Drill use). */
+  workspaceGoal?: string | null;
+  workspaceTitle?: string | null;
+  rootTopic?: string | null;
+  notes?: string | null;
 };
 
 function clean(s: unknown): string {
@@ -208,28 +222,61 @@ export function partitionSimulationProbes(probes: readonly SimulationProbe[]): {
   return { questions, exercises };
 }
 
-function synthQuestion(title: string, i: number, description: string): string {
-  const t = title || "this topic";
-  if (i === 0) return `What is the core idea of “${t}”?`;
-  if (i === 1) return `How would you explain “${t}” to a peer in two sentences?`;
-  if (description) {
-    return `What evidence or steps support: ${clip(description, 100)}?`;
-  }
-  return `Where does “${t}” show up in a real problem or project?`;
+/**
+ * Pad filler for simulation quota — same pure builders as live Explore/Drill fallbacks.
+ * No "out loud" stage directions; subject-matter grounded even when thin.
+ */
+function synthQuestion(
+  title: string,
+  i: number,
+  description: string,
+  extra?: PracticeItemContext,
+): string {
+  return buildGroundedDialogueQuestion(
+    {
+      blockTitle: title,
+      blockDescription: description,
+      workspaceGoal: extra?.workspaceGoal,
+      workspaceTitle: extra?.workspaceTitle,
+      rootTopic: extra?.rootTopic,
+      planningPrompt: extra?.planningPrompt,
+      localNotes: extra?.localNotes,
+      notes: extra?.notes,
+      ...extra,
+    },
+    i,
+  );
 }
 
-function synthExercise(title: string, i: number, description: string): string {
-  const t = title || "this topic";
-  if (i === 0) {
-    return `Complete a short exercise on “${t}”: outline the steps or solution out loud.`;
+function synthExercise(
+  title: string,
+  i: number,
+  description: string,
+  extra?: PracticeItemContext,
+): string {
+  return buildGroundedExerciseItem(
+    {
+      blockTitle: title,
+      blockDescription: description,
+      workspaceGoal: extra?.workspaceGoal,
+      workspaceTitle: extra?.workspaceTitle,
+      rootTopic: extra?.rootTopic,
+      planningPrompt: extra?.planningPrompt,
+      localNotes: extra?.localNotes,
+      notes: extra?.notes,
+      ...extra,
+    },
+    i,
+  );
+}
+
+function sanitizeProbeText(text: string): string {
+  const t = clean(text);
+  if (!t) return t;
+  if (containsOutLoudStageDirection(t)) {
+    return stripOutLoudStageDirections(t) || t;
   }
-  if (i === 1) {
-    return `Drill: apply “${t}” to a concrete case — state the setup, action, and check.`;
-  }
-  if (description) {
-    return `Solo task: demonstrate “${clip(description, 80)}” with one worked example.`;
-  }
-  return `Solo task: invent a mini-problem that requires “${t}” and solve it step by step.`;
+  return t;
 }
 
 /**
@@ -242,17 +289,37 @@ export function enforceSimulationProbeQuota(
     title?: string | null;
     description?: string | null;
     availableInfluence?: readonly string[] | null;
+    /** Optional workspace grounding shared with live Explore/Drill builders. */
+    workspaceGoal?: string | null;
+    workspaceTitle?: string | null;
+    rootTopic?: string | null;
+    planningPrompt?: string | null;
+    localNotes?: string | null;
+    notes?: string | null;
   },
 ): SimulationProbe[] {
   const title = clean(input.title) || "This block";
   const description = clean(input.description);
   const available = [...(input.availableInfluence || [])];
+  const ground: PracticeItemContext = {
+    blockTitle: title,
+    blockDescription: description,
+    workspaceGoal: input.workspaceGoal,
+    workspaceTitle: input.workspaceTitle,
+    rootTopic: input.rootTopic,
+    planningPrompt: input.planningPrompt,
+    localNotes: input.localNotes,
+    notes: input.notes,
+  };
   const { questions: qIn, exercises: eIn } = partitionSimulationProbes(probes);
 
-  const questions: SimulationProbe[] = qIn.slice(0, SIMULATION_QUESTION_COUNT);
+  const questions: SimulationProbe[] = qIn.slice(0, SIMULATION_QUESTION_COUNT).map((p) => ({
+    ...p,
+    question: sanitizeProbeText(p.question),
+  }));
   while (questions.length < SIMULATION_QUESTION_COUNT) {
     const i = questions.length;
-    const question = synthQuestion(title, i, description);
+    const question = synthQuestion(title, i, description, ground);
     questions.push({
       id: `q-${i}`,
       question,
@@ -270,10 +337,13 @@ export function enforceSimulationProbeQuota(
     });
   }
 
-  const exercises: SimulationProbe[] = eIn.slice(0, SIMULATION_EXERCISE_COUNT);
+  const exercises: SimulationProbe[] = eIn.slice(0, SIMULATION_EXERCISE_COUNT).map((p) => ({
+    ...p,
+    question: sanitizeProbeText(p.question),
+  }));
   while (exercises.length < SIMULATION_EXERCISE_COUNT) {
     const i = exercises.length;
-    const question = synthExercise(title, i, description);
+    const question = synthExercise(title, i, description, ground);
     exercises.push({
       id: `ex-${i}`,
       question,
@@ -326,9 +396,12 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
 
   const availableInfluence = collectBlockContextInfluenceLabels(input);
 
+  const goal = clean(input.workspaceGoal);
   const intent = description
     ? clip(`Practice demonstrating: ${description}`, 160)
-    : `Practice the core ideas of “${title}” out loud until the gaps show.`;
+    : goal
+      ? clip(`Practice “${title}” toward: ${goal}`, 160)
+      : `Practice the core ideas of “${title}” with concrete examples until gaps show.`;
 
   const outcome = description
     ? clip(
@@ -338,12 +411,14 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     : `After this block you can teach “${title}” to a peer with an example.`;
 
   // Seed probes from extracted questions + synthetic exercises, then enforce quota.
+  // Sanitize any legacy stage-direction phrasing from extracted seeds.
   const seedProbes: SimulationProbe[] = samples.questions.map((question, i) => {
     const difficulty = difficultyForIndex(i);
+    const q = sanitizeProbeText(question);
     return {
       id: `probe-${i}`,
-      question,
-      coachCue: coachCueForQuestion(question, title),
+      question: q,
+      coachCue: coachCueForQuestion(q, title),
       difficulty,
       kind: "question" as const,
       contextSources: pickInfluence(
@@ -361,6 +436,12 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     title,
     description,
     availableInfluence,
+    workspaceGoal: input.workspaceGoal,
+    workspaceTitle: input.workspaceTitle,
+    rootTopic: input.rootTopic,
+    planningPrompt: planning,
+    localNotes: notes,
+    notes: input.notes,
   });
 
   const hasDescription = description.length >= 12;
@@ -457,7 +538,7 @@ export function normalizeSimulationPayload(
     rec.probes.forEach((p, i) => {
       if (!p || typeof p !== "object") return;
       const pr = p as Record<string, unknown>;
-      const question = clean(pr.question || pr.prompt || pr.text);
+      const question = sanitizeProbeText(clean(pr.question || pr.prompt || pr.text));
       if (question.length < 8) return;
       const diffRaw = clean(pr.difficulty).toLowerCase();
       const difficulty: SimulationProbe["difficulty"] =
@@ -493,10 +574,11 @@ export function normalizeSimulationPayload(
     const title = clean(fallback?.title) || "this block";
     probes = samples.questions.map((question, i) => {
       const difficulty = difficultyForIndex(i);
+      const q = sanitizeProbeText(question);
       return {
         id: `probe-${i}`,
-        question,
-        coachCue: coachCueForQuestion(question, title),
+        question: q,
+        coachCue: coachCueForQuestion(q, title),
         difficulty,
         kind: "question" as const,
         contextSources: pickInfluence(availableInfluence, ["Title", "Description"]),
@@ -515,7 +597,7 @@ export function normalizeSimulationPayload(
       const title = clean(fallback?.title) || "this block";
       const fromEx: SimulationProbe[] = [];
       rec.exercises.forEach((ex, i) => {
-        const question =
+        const question = sanitizeProbeText(
           typeof ex === "string"
             ? clean(ex)
             : ex && typeof ex === "object"
@@ -523,7 +605,8 @@ export function normalizeSimulationPayload(
                   (ex as Record<string, unknown>).question ||
                     (ex as Record<string, unknown>).text,
                 )
-              : "";
+              : "",
+        );
         if (question.length < 8) return;
         const contextSources =
           ex && typeof ex === "object"
@@ -557,7 +640,7 @@ export function normalizeSimulationPayload(
       const title = clean(fallback?.title) || "this block";
       const fromQ: SimulationProbe[] = [];
       rec.questions.forEach((q, i) => {
-        const question =
+        const question = sanitizeProbeText(
           typeof q === "string"
             ? clean(q)
             : q && typeof q === "object"
@@ -565,7 +648,8 @@ export function normalizeSimulationPayload(
                   (q as Record<string, unknown>).question ||
                     (q as Record<string, unknown>).text,
                 )
-              : "";
+              : "",
+        );
         if (question.length < 8) return;
         const contextSources =
           q && typeof q === "object"
@@ -603,6 +687,12 @@ export function normalizeSimulationPayload(
       title: fallback?.title || "This block",
       description: fallback?.description,
       availableInfluence,
+      workspaceGoal: fallback?.workspaceGoal,
+      workspaceTitle: fallback?.workspaceTitle,
+      rootTopic: fallback?.rootTopic,
+      planningPrompt: fallback?.planningPrompt,
+      localNotes: fallback?.localNotes,
+      notes: fallback?.notes,
     },
   );
 

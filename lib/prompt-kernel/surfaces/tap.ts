@@ -74,8 +74,8 @@ Rules for learner-visible turns:
 - Never use "say/talk/think … out loud" stage directions in learner-visible text.
 - Do not pitch platform products or practice routing mid-session.
 
-Suggested opening (adapt to the topic; keep the same natural tone):
-"What is the core idea you took away about this topic, and how would you explain it to someone seeing it for the first time?"
+Suggested opening (adapt to the workspace goal and block substance; keep the same natural tone):
+"What is the central claim of this topic that you must not get wrong, and how would you explain the mechanism with one concrete example?"
 
 ${params.workspaceBlock}`;
 
@@ -97,12 +97,12 @@ ${TAP_SELECTIVE_THOUGHT_OVERLAY}${practiceOverlay}`,
 }
 
 export function buildTapOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. Ground it in the workspace/block context block provided (title, description, notes, file names/excerpts when present). Prefer a concrete domain problem or scenario the learner must work (a specific calculation, design choice, causal chain, worked example, or debugging a misuse) — not a syllabus restatement, not "what is X in general?", not a generic icebreaker, not a meta question about their "approach," and not stage directions about speaking out loud. If the context is only a topic list, invent a small concrete problem inside that scope. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". One or two sentences only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
+  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. Ground it hard in the provided context, in priority order: (1) workspace goal, (2) focused block title + description + local notes/files, (3) map block inventory and topology cues when present, (4) workspace notes/materials. Prefer a concrete domain problem or scenario the learner must work (a specific calculation, design choice, causal chain, worked example, or debugging a misuse) — not a syllabus restatement, not "what is X in general?", not a generic icebreaker, not a meta-learning question ("What do you already know?", "How would you approach learning this?", "What assumptions do you have?"), and not stage directions about speaking out loud. When context is thin (guest / title-only), still stay on the subject matter and workspace goal — invent a small concrete problem inside that scope rather than a process/meta question. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". One or two sentences only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
 }
 
 /** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
 export function buildTapPracticeOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic, but keep difficulty simple — introductory vocabulary, a basic definition, or the most everyday example of the core idea. Avoid deep transfer, edge cases, multi-step causal chains, or advanced synthesis. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names.`;
+  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple — introductory vocabulary, a basic definition, or the most everyday example of the core idea. Avoid deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
 }
 
 export const TAP_PRACTICE_THOUGHT_OVERLAY = `
@@ -115,7 +115,7 @@ This is a short warm-up, not a scored demonstration. Stay on the same domain as 
 `.trim();
 
 export function buildTapStartingTopicsTask(topicCount: number): string {
-  return `Generate exactly ${topicCount} distinct starting topics for a knowledge-verification conversation. Each topic is a concrete angle for demonstrating understanding from the workspace/block context (and file names/excerpts when provided) — not generic study advice, not think-aloud stage directions, and not platform/product language.
+  return `Generate exactly ${topicCount} distinct starting topics for a knowledge-verification conversation. Each topic is a concrete angle for demonstrating understanding from the workspace goal, block materials, inventory/topology cues, and file names/excerpts when provided — not generic study advice, not meta-learning icebreakers, not think-aloud stage directions, and not platform/product language.
 
 Return JSON only:
 {
@@ -130,8 +130,9 @@ Return JSON only:
 }
 
 Rules:
-- Topics must be meaningfully different and grounded in the provided context (block description, notes, files when present).
+- Topics must be meaningfully different and grounded in the provided context (workspace goal, block description, notes, files, map topology when present).
 - openingQuestion must be one sentence, specific, and invite demonstration of domain knowledge (definitions, causal links, examples, transfer, repair) that will yield System 1 and System 2 traces for later analysis.
+- When context is thin, still invent concrete domain angles inside the subject — never "What do you already know?" or "How would you approach learning this?".
 - No preamble inside openingQuestion.
 - No "out loud" / "think aloud" / "say … aloud" stage directions inside title, subtitle, or openingQuestion.
 - Never mention Uncertain Systems, PoW, TAP, tools, scoring, or product names in any field.

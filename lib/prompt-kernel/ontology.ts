@@ -11,7 +11,7 @@ WORKSPACE ONTOLOGY (Uncertain Systems):
 - Product pillars (TAP, ILE, PoW capture) feed a single Learning World Model Snapshot strategy on top of workspaces.
 
 SCORES (single snapshot strategy — one primary score per call):
-1. LWM Snapshot score — 0–100 primary (Learning World Model Snapshot): demonstrated knowledge and workspace exploration coverage/depth. Same mechanics as the former LWM Snapshot. Closing/ending TAP or ILE always generates a snapshot update. Manual generation uses the same generator when new PoW exists.
+1. LWM Snapshot score — 0–100 primary (Learning World Model Snapshot): demonstrated knowledge and workspace exploration coverage/depth. Same mechanics as the former LWM Snapshot. LWM Snapshot is produced only by a conscious trigger (Knowledge UI, Snapshot API / MCP lwm_snapshot) — never auto-run when a TAP or ILE session ends. Sessions produce proof of work; scores are separate and explicit.
 - GHC (ghc_score) is a secondary cognition authenticity signal on the same snapshot report — not a second primary strategy.
 - There are no peer runnable augmentation or optimization score types in the product path.
 

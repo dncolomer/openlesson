@@ -9,6 +9,10 @@ import {
   buildTapStartingTopicsTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
 import {
+  buildGroundedDialogueQuestion,
+  buildGroundedExerciseItem,
+} from "@/lib/practice-item-builders";
+import {
   formatPromptWorkspaceContextBlock,
   parseBlockLocalContext,
   type PromptBlockInventoryItem,
@@ -362,26 +366,19 @@ Learner-visible prompts must stay on this domain context. Never invent unrelated
 
 export function buildTapOpeningQuestionFallback(brief: TapScoreBrief) {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  const substance = (
-    focusedBlock?.description ||
-    brief.plan.workspace_goal ||
-    brief.plan.description ||
-    ""
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 220);
-  if (focusedBlock) {
-    if (substance) {
-      return `What is the core idea of "${focusedBlock.title}" (${substance.slice(0, 120)}), and how would you explain what would break if you got it wrong?`;
-    }
-    return `What is the core idea of "${focusedBlock.title}", and how would you explain it to someone encountering it for the first time?`;
-  }
-  const title = brief.plan.title || brief.plan.root_topic || "this workspace";
-  if (substance) {
-    return `What is the most important idea you learned in "${title}" (${substance.slice(0, 120)}), and how would you explain why it matters in practice?`;
-  }
-  return `What stands out as most important in "${title}", and how would you explain that you understand it?`;
+  // Same pure dialogue builder used by Simulation so author previews match live fallbacks.
+  return buildGroundedDialogueQuestion(
+    {
+      blockTitle: focusedBlock?.title || null,
+      blockDescription: focusedBlock?.description || null,
+      workspaceTitle: brief.plan.title,
+      rootTopic: brief.plan.root_topic,
+      workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
+      workspaceDescription: brief.plan.description,
+      notes: brief.plan.notes,
+    },
+    0,
+  );
 }
 
 function slugifyTopicId(value: string, index: number) {
@@ -420,38 +417,42 @@ function normalizeTapStartingTopics(raw: unknown): TapStartingTopic[] | null {
 export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartingTopic[] {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const planTitle = brief.plan.title || brief.plan.root_topic;
-  const descCue = (focusedBlock?.description || brief.plan.description || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 120);
-  const fileCue =
-    brief.files && brief.files.length > 0
-      ? ` (materials: ${brief.files
-          .slice(0, 2)
-          .map((f) => f.name)
-          .join(", ")})`
-      : "";
+  const shared = {
+    workspaceTitle: brief.plan.title,
+    rootTopic: brief.plan.root_topic,
+    workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
+    workspaceDescription: brief.plan.description,
+    notes: brief.plan.notes,
+  };
 
   if (focusedBlock) {
-    const substance = descCue || focusedBlock.title;
     return [
       {
         id: "core-idea",
         title: `Core idea of ${focusedBlock.title}`.slice(0, 48),
         subtitle: "Define the central mechanism.",
-        openingQuestion: `What is the core idea of "${focusedBlock.title}"${descCue ? ` — given: ${descCue}` : ""}, and how would you define it precisely?`,
+        openingQuestion: buildGroundedDialogueQuestion(
+          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
+          0,
+        ),
       },
       {
         id: "why-it-matters",
         title: "Why it matters",
         subtitle: "Connect concept to a real decision.",
-        openingQuestion: `Why does "${focusedBlock.title}" matter in practice${fileCue}, and where would misunderstanding "${substance.slice(0, 60)}" cause trouble?`,
+        openingQuestion: buildGroundedDialogueQuestion(
+          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
+          1,
+        ),
       },
       {
         id: "transfer",
         title: "Apply and transfer",
         subtitle: "Use it in a new scenario.",
-        openingQuestion: `How would you apply "${focusedBlock.title}" in a new scenario? Walk through one concrete example${fileCue}.`,
+        openingQuestion: buildGroundedDialogueQuestion(
+          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
+          2,
+        ),
       },
     ];
   }
@@ -460,35 +461,33 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
     id: slugifyTopicId(node.title, index),
     title: node.title,
     subtitle: node.description?.trim().slice(0, 80) || `Key ideas in ${node.title}.`,
-    openingQuestion: node.description?.trim()
-      ? `For "${node.title}": ${node.description.trim().slice(0, 140)} — what is the key idea you must not get wrong?`
-      : `What is the key idea of "${node.title}", and how would you demonstrate that you understand it?`,
+    openingQuestion: buildGroundedDialogueQuestion(
+      { ...shared, blockTitle: node.title, blockDescription: node.description },
+      index,
+    ),
   }));
 
   if (nodeTopics.length === TAP_STARTING_TOPIC_COUNT) {
     return nodeTopics;
   }
 
-  const fillers: TapStartingTopic[] = [
-    {
-      id: "big-picture",
-      title: `${planTitle}: big picture`.slice(0, 48),
-      subtitle: "What matters most across the workspace.",
-      openingQuestion: `What is the most important idea in "${planTitle}"${descCue ? ` (${descCue})` : ""}, and why does it stand out?`,
-    },
-    {
-      id: "causal-links",
-      title: "Causal connections",
-      subtitle: "How ideas depend on each other.",
-      openingQuestion: `In "${planTitle}", what causes what? Pick one relationship and explain the mechanism.`,
-    },
-    {
-      id: "blind-spots",
-      title: "Gaps and blind spots",
-      subtitle: "What still feels fragile.",
-      openingQuestion: `Where is your understanding of "${planTitle}" still weakest, and how would you test that you've actually learned it?`,
-    },
-  ];
+  const fillers: TapStartingTopic[] = [0, 1, 2].map((index) => ({
+    id: ["big-picture", "causal-links", "blind-spots"][index],
+    title: [
+      `${planTitle}: big picture`.slice(0, 48),
+      "Causal connections",
+      "Gaps and blind spots",
+    ][index],
+    subtitle: [
+      "What matters most across the workspace.",
+      "How ideas depend on each other.",
+      "What still feels fragile.",
+    ][index],
+    openingQuestion: buildGroundedDialogueQuestion(
+      { ...shared, blockTitle: planTitle, blockDescription: brief.plan.description },
+      index,
+    ),
+  }));
 
   return [...nodeTopics, ...fillers].slice(0, TAP_STARTING_TOPIC_COUNT);
 }
@@ -520,10 +519,31 @@ export function buildTapPracticeOpeningQuestionFallback(brief: TapScoreBrief): s
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const target = focusedBlock?.title || brief.plan.title || brief.plan.root_topic || "this topic";
   const hint = (focusedBlock?.description || brief.plan.description || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  const goal = (brief.plan.workspace_goal || "").replace(/\s+/g, " ").trim().slice(0, 80);
   if (hint) {
     return `In simple terms, what is the basic idea behind "${target}" (${hint})?`;
   }
+  if (goal) {
+    return `In simple terms, what is "${target}" — just the basic idea that matters for "${goal}"?`;
+  }
   return `In simple terms, what is "${target}" — just the basic idea in a sentence or two?`;
+}
+
+/** Drill-style solo exercise fallback (timed drill / exercise TAP) — shared with Simulation. */
+export function buildTapExerciseFallbackFromBrief(brief: TapScoreBrief): string {
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  return buildGroundedExerciseItem(
+    {
+      blockTitle: focusedBlock?.title || null,
+      blockDescription: focusedBlock?.description || null,
+      workspaceTitle: brief.plan.title,
+      rootTopic: brief.plan.root_topic,
+      workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
+      workspaceDescription: brief.plan.description,
+      notes: brief.plan.notes,
+    },
+    0,
+  );
 }
 
 export async function generateTapOpeningQuestion(

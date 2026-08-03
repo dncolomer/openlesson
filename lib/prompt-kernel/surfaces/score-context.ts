@@ -14,7 +14,7 @@ You are scoring an LWM Snapshot from **proof-of-work (PoW) data only**.
 
 Allowed evidence (INPUT):
 - Attached PoW artifacts: tool traces, screen/screenshots, video, EEG, and any other uploaded proof-of-work files
-- TAP / ILE selective thought traces and transcripts when present as PoW
+- TAP / ILE selective thought traces and transcripts when present as PoW — including the **actual text content** of stashed/submitted thoughts, chat exchanges, and exercise submissions
 - Temporally stamped events (timestamps, inter-event gaps, idle, dwell, bursts)
 - The workspace performance context JSON that catalogs those PoW refs, block scopes, and counts
 
@@ -22,13 +22,15 @@ Forbidden evidence (do NOT use to invent scores):
 - Product marketing, brand claims, or sales copy about Uncertain Systems or partner products
 - Unattached world knowledge, resumes, or speculation not grounded in the attached PoW corpus
 - Imagined learner history, hypothetical tool runs, or narrative filler when PoW is silent
+- LLM-style fluff that restates the workspace goal without citing specific PoW text, events, or absences
 
 Rules:
-1. Every primary score, marker score, strength, growth area, and gap must be grounded in concrete PoW you can point to (artifact type, tool event, trace fragment, timestamp pattern, or explicit absence of PoW).
+1. Every primary score, marker score, strength, growth area, and gap must be grounded in concrete PoW you can point to (artifact type, tool event, **quoted or paraphrased trace/transcript text**, timestamp pattern, or explicit absence of PoW).
 2. When PoW is sparse or missing for a claim, lower scores and state the thin-signal honestly — never fabricate competency, readiness, or goal progress.
 3. Timestamps and event ordering are first-class: use them for temporal_summary and authenticity (GHC) when present.
 4. Remediation outputs (gap repairs, next_steps, suggestions) stay in domain/product/workflow language — never recommend TAP, ILE, block completion, or other Uncertain Systems platform mechanics as outputs. Those products may supply scoring INPUT only.
 5. Do not score "potential" or "intent" detached from observed PoW.
+6. Do not produce generic coaching essays; prefer short claims tied to evidence in the attached corpus.
 `.trim();
 
 /**

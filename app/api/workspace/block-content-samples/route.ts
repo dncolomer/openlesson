@@ -10,7 +10,12 @@ import {
   normalizeBlockLocalContext,
   parseBlockLocalContext,
   type BlockLocalContextInput,
+  type PromptBlockInventoryItem,
 } from "@/lib/prompt-workspace-context";
+import {
+  buildSimulationSamplesSystemPrompt,
+  buildSimulationSamplesUserPrompt,
+} from "@/lib/practice-item-builders";
 
 type SamplesResponse = {
   topics?: string[];
@@ -28,8 +33,9 @@ type SamplesResponse = {
 };
 
 /**
- * POST — regenerate Content Samples (topics + practice questions) for a block,
- * using title/description/planning prompt and the latest local context.
+ * POST — regenerate Content Samples / Simulation for a block.
+ * Uses the same practice-item builders (TAP opening + domain exercise rules)
+ * as live Explore/Drill generation — not a separate ad-hoc author prompt.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -70,7 +76,9 @@ export async function POST(req: NextRequest) {
 
     const { data: block, error: blockError } = await supabase
       .from("blocks")
-      .select("id, title, description, planning_prompt, local_context")
+      .select(
+        "id, title, description, planning_prompt, local_context, position_x, position_y, span_w, span_h, is_start, next_block_ids, lock_until_block_ids",
+      )
       .eq("id", blockId)
       .eq("workspace_id", workspaceId)
       .single();
@@ -81,9 +89,18 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("title, root_topic, notes, workspace_goal")
+      .select("title, root_topic, notes, workspace_goal, description")
       .eq("id", workspaceId)
       .single();
+
+    // Optional map inventory for topology grounding (same layers as live TAP/ILE).
+    const { data: siblingBlocks } = await supabase
+      .from("blocks")
+      .select(
+        "id, title, description, position_x, position_y, span_w, span_h, is_start, next_block_ids, lock_until_block_ids",
+      )
+      .eq("workspace_id", workspaceId)
+      .limit(24);
 
     const title =
       (typeof titleOverride === "string" && titleOverride.trim()) ||
@@ -108,58 +125,47 @@ export async function POST(req: NextRequest) {
     );
     const local = fromClient?.hasLocalMaterials ? fromClient : fromDb;
 
-    const localParts: string[] = [];
-    if (local.notes) localParts.push(`Block local notes:\n${local.notes}`);
-    if (local.globalFileRefs.length) {
-      localParts.push(
-        `Referenced workspace files:\n${local.globalFileRefs.map((n) => `- ${n}`).join("\n")}`,
-      );
-    }
-    if (local.localFiles.length) {
-      localParts.push(
-        `Local materials:\n${local.localFiles
-          .map((f) => `- ${f.name}${f.excerpt ? `: ${String(f.excerpt).slice(0, 400)}` : ""}`)
-          .join("\n")}`,
-      );
-    }
-    if (local.externalResourceIds.length) {
-      localParts.push(
-        `External resource ids: ${local.externalResourceIds.join(", ")}`,
-      );
-    }
+    const inventory: PromptBlockInventoryItem[] = (siblingBlocks || []).map((b) => ({
+      id: b.id,
+      title: String(b.title || "Block"),
+      description: (b.description as string | null) ?? null,
+      is_start: b.is_start as boolean | null,
+      position_x: b.position_x as number | null,
+      position_y: b.position_y as number | null,
+      span_w: b.span_w as number | null,
+      span_h: b.span_h as number | null,
+      next_block_ids: (b.next_block_ids as string[] | null) ?? null,
+      lock_until_block_ids: (b.lock_until_block_ids as string[] | null) ?? null,
+    }));
 
-    const languageNote =
-      locale && locale !== "en"
-        ? `Respond in ${locale}. Topics and questions must be in that language.`
-        : "";
+    const files = [
+      ...local.localFiles.map((f) => ({
+        name: f.name,
+        excerpt: f.excerpt ?? null,
+      })),
+      ...local.globalFileRefs.map((name) => ({ name, excerpt: null as string | null })),
+    ];
 
-    const workspaceTitle =
-      workspace?.title || workspace?.root_topic || "Workspace";
-    const goal = workspace?.workspace_goal || workspace?.root_topic || "";
-
-    const userPrompt = `Workspace: ${workspaceTitle}
-${goal ? `Goal: ${goal}\n` : ""}${workspace?.notes ? `Workspace notes (excerpt):\n${String(workspace.notes).slice(0, 1200)}\n` : ""}
-Block title: ${title}
-${description ? `Block description: ${description}\n` : ""}${planningPrompt ? `Planning prompt: ${planningPrompt}\n` : ""}
-${localParts.length ? `LOCAL CONTEXT (prioritize this when generating simulation content):\n${localParts.join("\n\n")}\n` : "No local context attached yet.\n"}
-Generate sample practice items for this block (what might appear in Explore or Drill):
-- questions: EXACTLY 3 dialogue / think-aloud questions a partner or coach might ask
-- exercises: EXACTLY 3 short solo exercise prompts (do/solve/outline out loud)
-- topics: optional 3–6 short topic phrases
-- probes (preferred): 6 items total — 3 with kind "question" and 3 with kind "exercise"
-  Each probe: { "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }
-  contextSources: short labels for what influenced the item (e.g. "Title", "Description", "Planning prompt", "Local notes", file names). Omit if none.
-
-Prioritize the latest local context and block text. Avoid generic fluff.
-${languageNote}`;
+    const system = buildSimulationSamplesSystemPrompt();
+    const userPrompt = buildSimulationSamplesUserPrompt({
+      workspaceTitle: workspace?.title || workspace?.root_topic || "Workspace",
+      rootTopic: workspace?.root_topic,
+      workspaceGoal:
+        workspace?.workspace_goal || workspace?.description || workspace?.root_topic || "",
+      workspaceDescription: workspace?.description,
+      notes: workspace?.notes,
+      blockTitle: title,
+      blockDescription: description,
+      planningPrompt,
+      localNotes: local.notes,
+      files,
+      blocks: inventory,
+      focusedBlockId: blockId,
+      locale,
+    });
 
     const ai = await callXaiJSON<SamplesResponse>(
-      [
-        systemMessage(
-          'You write sample practice items for a learning block. Return JSON only: { "topics": string[], "questions": string[3], "exercises": string[3], "probes": [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }] }. Exactly 3 questions and 3 exercises.',
-        ),
-        userMessage(userPrompt),
-      ],
+      [systemMessage(system), userMessage(userPrompt)],
       {
         model: userModel || DEFAULT_MODEL,
         maxTokens: 1400,
@@ -182,6 +188,11 @@ ${languageNote}`;
       localNotes: local.notes,
       hasLocalContext: local.hasLocalMaterials,
       hasPlanningPrompt: Boolean(planningPrompt.trim()),
+      workspaceGoal:
+        workspace?.workspace_goal || workspace?.description || workspace?.root_topic || null,
+      workspaceTitle: workspace?.title || workspace?.root_topic || null,
+      rootTopic: workspace?.root_topic || null,
+      notes: workspace?.notes || null,
     });
     if (
       samples.topics.length === 0 &&
@@ -211,6 +222,6 @@ ${languageNote}`;
     console.error("block-content-samples error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: status });
   }
 }

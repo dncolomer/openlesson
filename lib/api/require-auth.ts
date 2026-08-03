@@ -5,9 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
+import type { AyclCapabilities } from "@/lib/aycl-shared";
 
 export type AuthenticatedRequest =
-  | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean; ileAccess?: boolean }
+  | {
+      ok: true;
+      user: User;
+      supabase: SupabaseClient;
+      ayclAccess?: boolean;
+      ileAccess?: boolean;
+      ayclCapabilities?: AyclCapabilities;
+    }
   | { ok: false; response: NextResponse };
 
 export function ayclTokenFromBody(body: Record<string, unknown>): string | null {
@@ -71,7 +79,13 @@ async function enforceProductAccessUnlessAycl(
 /** Auth for workspace-scoped routes (builder, performance, notes, grid). */
 export async function guardWorkspaceRoute(
   workspaceId: string,
-  options?: { ayclToken?: string | null; ileToken?: string | null; requireProductAccess?: boolean }
+  options?: {
+    ayclToken?: string | null;
+    ileToken?: string | null;
+    requireProductAccess?: boolean;
+    /** When true, AYCL practice-only tier is rejected (creation / grow). */
+    requireAyclAuthoring?: boolean;
+  }
 ): Promise<AuthenticatedRequest> {
   const normalizedWorkspaceId = workspaceId.trim();
   if (!normalizedWorkspaceId) {
@@ -96,11 +110,26 @@ export async function guardWorkspaceRoute(
         response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
       };
     }
+    if (options?.requireAyclAuthoring && !aycl.capabilities.canAuthor) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            error:
+              "This access does not include creation tools. Upgrade to unlock creation on this workspace.",
+            code: "aycl_authoring_required",
+            accessTier: aycl.accessTier,
+          },
+          { status: 403 },
+        ),
+      };
+    }
     return {
       ok: true,
       user: aycl.actingUser as User,
       supabase: aycl.supabase,
       ayclAccess: true,
+      ayclCapabilities: aycl.capabilities,
     };
   }
 

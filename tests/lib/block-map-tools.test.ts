@@ -25,6 +25,7 @@ import {
   enterPrereqEditMode,
   isBlockMapManipulationMode,
   isBlockMapToolEnabled,
+  isCloneMapToolEnabled,
   isBlockMultiSelectGesture,
   isEmptyCellMultiSelectGesture,
   isLassoModeTool,
@@ -136,6 +137,30 @@ describe("block-map-tools", () => {
     expect(nextActiveModeTool("select", "merge")).toBe("select");
     expect(nextActiveModeTool("select", "zoom_in")).toBe("select");
     expect(nextActiveModeTool("lasso", "zoom_in")).toBe("lasso");
+  });
+
+  it("enables clone only with exactly one filled block selected", () => {
+    expect(BLOCK_MAP_TOOL_STRIP).toContain("clone");
+    expect(blockMapToolKind("clone")).toBe("action");
+    expect(isCloneMapToolEnabled(state({ selectedBlockCount: 1 }))).toBe(true);
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 0 }))).toBe(
+      false,
+    );
+    expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 2 }))).toBe(
+      false,
+    );
+    expect(
+      isBlockMapToolEnabled("clone", state({ selectedBlockCount: 1, busy: true })),
+    ).toBe(false);
+    expect(
+      isBlockMapToolEnabled(
+        "clone",
+        state({ selectedBlockCount: 1, hasGridOps: false }),
+      ),
+    ).toBe(false);
+    expect(
+      visibleBlockMapTools({ canEdit: true, hasGridOps: true }),
+    ).toContain("clone");
   });
 
   it("enables merge only with 2+ contiguous selected blocks", () => {

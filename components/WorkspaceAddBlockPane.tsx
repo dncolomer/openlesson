@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSkillGridLayout,
   formatGridCoordinate,
@@ -199,17 +199,33 @@ export function WorkspaceAddBlockPane({
   );
 
   // Lift expand highlight for draft Range/Density (host jobs use their own previews).
+  // Use a content key + callback ref so parent re-renders / new array identities
+  // do not cause setState → re-render → effect loops (max update depth).
+  const onExpandPreviewChangeRef = useRef(onExpandPreviewChange);
+  onExpandPreviewChangeRef.current = onExpandPreviewChange;
+  const expandPreviewKey = useMemo(
+    () => expandSelection.selected.map((c) => `${c.row}:${c.col}`).join(","),
+    [expandSelection.selected],
+  );
   useEffect(() => {
-    if (!onExpandPreviewChange) return;
-    onExpandPreviewChange(
-      expandSelection.selected.length > 0
-        ? expandSelection.selected.map((c) => ({ row: c.row, col: c.col }))
-        : null,
+    const cb = onExpandPreviewChangeRef.current;
+    if (!cb) return;
+    if (!expandPreviewKey) {
+      cb(null);
+      return;
+    }
+    cb(
+      expandPreviewKey.split(",").map((pair) => {
+        const [row, col] = pair.split(":").map(Number);
+        return { row, col };
+      }),
     );
+  }, [expandPreviewKey]);
+  useEffect(() => {
     return () => {
-      onExpandPreviewChange(null);
+      onExpandPreviewChangeRef.current?.(null);
     };
-  }, [expandSelection.selected, onExpandPreviewChange]);
+  }, []);
 
   const weightedNeighbors = useMemo(
     () =>

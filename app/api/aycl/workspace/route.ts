@@ -11,9 +11,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: ctx.error }, { status: ctx.status });
   }
 
+  // Full workspace row (includes unusable_cells, workspace_dags, etc.) — AYCL is a clone.
   const { data: workspace, error: workspaceError } = await ctx.supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, status, original_workspace_id")
+    .select("*")
     .eq("id", ctx.workspaceId)
     .single();
 
@@ -34,5 +35,7 @@ export async function GET(request: NextRequest) {
     workspace,
     blocks: blocks || [],
     purchaseId: ctx.purchase.id,
+    accessTier: ctx.accessTier,
+    capabilities: ctx.capabilities,
   });
 }

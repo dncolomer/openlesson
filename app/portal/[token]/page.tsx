@@ -166,6 +166,7 @@ export default async function PracticePortalPage({ params }: PageProps) {
         products={landing.products}
         blocks={landing.blocks}
         fixedBlockId={landing.fixed_block_id}
+        forceWorkspaceScope={landing.force_workspace_scope}
       />
     </PracticePortalShell>
   );

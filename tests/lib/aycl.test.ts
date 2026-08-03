@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { AYCL_PRICE_CENTS, AYCL_PRICE_LABEL, buildAyclAccessUrl } from "@/lib/aycl-shared";
+import {
+  AYCL_FULL_PRICE_CENTS,
+  AYCL_PRICE_CENTS,
+  AYCL_PRICE_LABEL,
+  buildAyclAccessUrl,
+} from "@/lib/aycl-shared";
 import { checkoutModeForPriceType } from "@/lib/stripe-checkout";
 
 describe("All-You-Can-Learn helpers", () => {
-  it("uses the $19.99 one-time price", () => {
+  it("legacy price aliases match full pack ($19.99)", () => {
     expect(AYCL_PRICE_CENTS).toBe(1999);
+    expect(AYCL_PRICE_CENTS).toBe(AYCL_FULL_PRICE_CENTS);
     expect(AYCL_PRICE_LABEL).toBe("$19.99");
   });
 

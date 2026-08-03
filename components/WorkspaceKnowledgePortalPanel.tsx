@@ -10,6 +10,7 @@ import {
   PRACTICE_PORTAL_TIMED_EXPLORE_OPTIONS,
   type PracticePortalConfig,
   type PracticePortalProductId,
+  type PracticePortalScopeMode,
 } from "@/lib/practice-portal";
 import { PRODUCT_INTENT_LABELS } from "@/lib/product-intent";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -71,6 +72,9 @@ export function WorkspaceKnowledgePortalPanel({
     ...PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
   ]);
   const [portalLabel, setPortalLabel] = useState("");
+  /** visitor_pick | fixed_block | workspace — workspace forces no block choice. */
+  const [portalScopeMode, setPortalScopeMode] =
+    useState<PracticePortalScopeMode>("visitor_pick");
   const [portalBlockId, setPortalBlockId] = useState("");
   const [creatingPortal, setCreatingPortal] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -109,6 +113,7 @@ export function WorkspaceKnowledgePortalPanel({
         portal.status,
         products,
         portal.config?.block_id || "",
+        portal.config?.scope_mode || "",
         portal.url || "",
         portal.public_token || "",
       ]
@@ -162,16 +167,45 @@ export function WorkspaceKnowledgePortalPanel({
     }
   }, [currentUserId, isOwner, loadPortals]);
 
-  const togglePortalProduct = useCallback((id: PracticePortalProductId) => {
-    setPortalProducts((current) => {
-      if (current.includes(id)) {
-        if (current.length <= 1) return current;
-        return current.filter((p) => p !== id);
+  const togglePortalProduct = useCallback(
+    (id: PracticePortalProductId) => {
+      // Workspace-level portals only support timed products (null block_id).
+      if (
+        portalScopeMode === "workspace" &&
+        (id === "open_ended_explore" || id === "open_ended_drill")
+      ) {
+        return;
       }
-      return PRACTICE_PORTAL_PRODUCT_IDS.filter(
-        (p) => p === id || current.includes(p),
-      );
-    });
+      setPortalProducts((current) => {
+        if (current.includes(id)) {
+          if (current.length <= 1) return current;
+          return current.filter((p) => p !== id);
+        }
+        return PRACTICE_PORTAL_PRODUCT_IDS.filter(
+          (p) => p === id || current.includes(p),
+        );
+      });
+    },
+    [portalScopeMode],
+  );
+
+  const setScopeMode = useCallback((mode: PracticePortalScopeMode) => {
+    setPortalScopeMode(mode);
+    if (mode === "workspace") {
+      setPortalBlockId("");
+      // Drop open-ended products — ILE requires a block.
+      setPortalProducts((current) => {
+        const next = current.filter(
+          (p) => p !== "open_ended_explore" && p !== "open_ended_drill",
+        );
+        return next.length > 0
+          ? next
+          : (["timed_explore", "timed_drill"] as PracticePortalProductId[]);
+      });
+    }
+    if (mode === "visitor_pick") {
+      setPortalBlockId("");
+    }
   }, []);
 
   const togglePortalMinutes = useCallback(
@@ -195,6 +229,9 @@ export function WorkspaceKnowledgePortalPanel({
       if (portalProducts.length === 0) {
         throw new Error(t("planView.practicePortalCreateError"));
       }
+      if (portalScopeMode === "fixed_block" && !portalBlockId) {
+        throw new Error(t("planView.practicePortalBlockRequired"));
+      }
       const config = {
         allowed_products: portalProducts,
         timings: {
@@ -203,7 +240,11 @@ export function WorkspaceKnowledgePortalPanel({
             : [],
           timed_drill: portalProducts.includes("timed_drill") ? portalDrillMinutes : [],
         },
-        block_id: portalBlockId || null,
+        scope_mode: portalScopeMode,
+        block_id:
+          portalScopeMode === "fixed_block" && portalBlockId
+            ? portalBlockId
+            : null,
       };
       const response = await fetch("/api/workspace/practice-portals", {
         method: "POST",
@@ -235,6 +276,7 @@ export function WorkspaceKnowledgePortalPanel({
     portalExploreMinutes,
     portalLabel,
     portalProducts,
+    portalScopeMode,
     t,
     workspaceId,
   ]);
@@ -354,29 +396,108 @@ export function WorkspaceKnowledgePortalPanel({
               />
             </label>
 
-            <label
-              className="block text-xs text-neutral-400"
-              data-practice-portal-block
+            <fieldset
+              className="space-y-2"
+              data-practice-portal-scope
+              data-practice-portal-scope-control
             >
-              {t("planView.practicePortalBlock")}
-              <select
-                value={portalBlockId}
-                onChange={(e) => setPortalBlockId(e.target.value)}
-                className={fieldClass}
-                data-practice-portal-block-select
+              <legend className="text-xs text-neutral-400">
+                {t("planView.practicePortalScope")}
+              </legend>
+              <p className="text-[10px] leading-relaxed text-neutral-500">
+                {t("planView.practicePortalScopeHint")}
+              </p>
+              {(
+                [
+                  {
+                    mode: "visitor_pick" as const,
+                    labelKey: "planView.practicePortalScopeVisitor" as const,
+                    descKey: "planView.practicePortalScopeVisitorDesc" as const,
+                    dataAttr: "data-practice-portal-scope-visitor",
+                  },
+                  {
+                    mode: "fixed_block" as const,
+                    labelKey: "planView.practicePortalScopeFixed" as const,
+                    descKey: "planView.practicePortalScopeFixedDesc" as const,
+                    dataAttr: "data-practice-portal-scope-fixed",
+                  },
+                  {
+                    mode: "workspace" as const,
+                    labelKey: "planView.practicePortalScopeWorkspace" as const,
+                    descKey: "planView.practicePortalScopeWorkspaceDesc" as const,
+                    dataAttr: "data-practice-portal-scope-workspace",
+                  },
+                ] as const
+              ).map((opt) => {
+                const selected = portalScopeMode === opt.mode;
+                return (
+                  <label
+                    key={opt.mode}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
+                      selected
+                        ? "border-white bg-white/5 text-white"
+                        : "border-neutral-700 bg-neutral-900 text-neutral-400"
+                    }`}
+                    data-practice-portal-scope-option={opt.mode}
+                    {...{ [opt.dataAttr]: true }}
+                  >
+                    <input
+                      type="radio"
+                      name="practice-portal-scope"
+                      className="mt-0.5"
+                      checked={selected}
+                      onChange={() => setScopeMode(opt.mode)}
+                      data-practice-portal-scope-radio={opt.mode}
+                    />
+                    <span>
+                      <span className="block font-medium text-neutral-100">
+                        {t(opt.labelKey)}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] text-neutral-500">
+                        {t(opt.descKey)}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
+
+            {portalScopeMode === "fixed_block" ? (
+              <label
+                className="block text-xs text-neutral-400"
+                data-practice-portal-block
               >
-                <option value="">{t("planView.practicePortalBlockOptional")}</option>
-                {blocks.map((block) => (
-                  <option key={block.id} value={block.id}>
-                    {block.title || block.id}
-                    {block.is_start ? " (start)" : ""}
+                {t("planView.practicePortalBlock")}
+                <select
+                  value={portalBlockId}
+                  onChange={(e) => setPortalBlockId(e.target.value)}
+                  className={fieldClass}
+                  data-practice-portal-block-select
+                >
+                  <option value="">
+                    {t("planView.practicePortalBlockSelectPlaceholder")}
                   </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-[10px] text-neutral-500">
-                {t("planView.practicePortalBlockHint")}
-              </span>
-            </label>
+                  {blocks.map((block) => (
+                    <option key={block.id} value={block.id}>
+                      {block.title || block.id}
+                      {block.is_start ? " (start)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[10px] text-neutral-500">
+                  {t("planView.practicePortalBlockHint")}
+                </span>
+              </label>
+            ) : null}
+
+            {portalScopeMode === "workspace" ? (
+              <p
+                className="rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-[11px] leading-relaxed text-neutral-500"
+                data-practice-portal-workspace-scope-note
+              >
+                {t("planView.practicePortalScopeWorkspaceNote")}
+              </p>
+            ) : null}
 
             <fieldset data-practice-portal-products>
               <legend className="text-xs text-neutral-400">
@@ -385,20 +506,29 @@ export function WorkspaceKnowledgePortalPanel({
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {PRACTICE_PORTAL_PRODUCT_IDS.map((id) => {
                   const checked = portalProducts.includes(id);
+                  const openEndedDisabled =
+                    portalScopeMode === "workspace" &&
+                    (id === "open_ended_explore" || id === "open_ended_drill");
                   return (
                     <label
                       key={id}
                       className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
-                        checked
-                          ? "border-white bg-white/5 text-white"
-                          : "border-neutral-700 bg-neutral-900 text-neutral-400"
+                        openEndedDisabled
+                          ? "cursor-not-allowed border-neutral-800 bg-neutral-950 text-neutral-600 opacity-60"
+                          : checked
+                            ? "border-white bg-white/5 text-white"
+                            : "border-neutral-700 bg-neutral-900 text-neutral-400"
                       }`}
                       data-practice-portal-product={id}
+                      data-practice-portal-product-disabled={
+                        openEndedDisabled ? "true" : undefined
+                      }
                     >
                       <input
                         type="checkbox"
                         className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-                        checked={checked}
+                        checked={checked && !openEndedDisabled}
+                        disabled={openEndedDisabled}
                         onChange={() => togglePortalProduct(id)}
                       />
                       <span className="font-medium">{PRODUCT_CREATE_LABELS[id]}</span>
@@ -570,16 +700,25 @@ export function WorkspaceKnowledgePortalPanel({
                   const productSummary = (
                     portal.config?.allowed_products || []
                   ).join(", ");
+                  const scopeMode = portal.config?.scope_mode || "visitor_pick";
                   const fixedBlock =
+                    scopeMode === "fixed_block" &&
                     portal.config?.block_id &&
                     (blockTitleById.get(portal.config.block_id) ||
                       portal.config.block_id.slice(0, 8));
+                  const scopeLabel =
+                    scopeMode === "workspace"
+                      ? "workspace"
+                      : fixedBlock
+                        ? `block: ${fixedBlock}`
+                        : "visitor pick";
                   return (
                     <li
                       key={portal.id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
                       data-practice-portal-row={portal.id}
                       data-practice-portal-status={portal.status}
+                      data-practice-portal-scope-mode={scopeMode}
                     >
                       <div className="min-w-0 text-neutral-400">
                         <p className="text-neutral-300">
@@ -592,7 +731,7 @@ export function WorkspaceKnowledgePortalPanel({
                         </p>
                         <p className="mt-0.5 truncate text-[10px] text-neutral-500">
                           {productSummary || "—"}
-                          {fixedBlock ? ` · block: ${fixedBlock}` : ""}
+                          {` · ${scopeLabel}`}
                         </p>
                         <p className="font-mono text-[10px] text-neutral-600">
                           {portal.id}

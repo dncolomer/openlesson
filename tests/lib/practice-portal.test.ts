@@ -5,12 +5,14 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
   buildPracticePortalLandingView,
   buildPracticePortalUrl,
   classifyPracticePortalLookup,
   isPracticePortalProductAllowed,
   isPracticePortalTimingAllowed,
+  isPracticePortalWorkspaceScope,
   launchTargetForPracticePortalProduct,
   normalizePracticePortalConfig,
   parsePracticePortalProductId,
@@ -19,16 +21,27 @@ import {
   PRACTICE_PORTAL_PRODUCT_IDS,
   PRACTICE_PORTAL_PUBLIC_PATH,
   practicePortalMintToCreateFields,
+  practicePortalProductsForScope,
+  resolvePracticePortalMintBlockId,
   validatePracticePortalMintRequest,
 } from "@/lib/practice-portal";
 import { productIntentToCreateFields, resolveProductIntent } from "@/lib/product-intent";
 
 const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.GROK_SCRATCH ||
+  process.env.GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-60457f8fcc6e/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");
+}
+
+function writeLog(name: string, body: string) {
+  mkdirSync(SCRATCH, { recursive: true });
+  writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
 describe("normalizePracticePortalConfig", () => {
@@ -77,17 +90,51 @@ describe("normalizePracticePortalConfig", () => {
 
   it("persists optional fixed block_id (and defaults null)", () => {
     expect(normalizePracticePortalConfig({}).block_id).toBeNull();
+    expect(normalizePracticePortalConfig({}).scope_mode).toBe("visitor_pick");
     const withBlock = normalizePracticePortalConfig({
       allowed_products: ["open_ended_explore"],
       block_id: "  block-fixed-1  ",
     });
     expect(withBlock.block_id).toBe("block-fixed-1");
+    expect(withBlock.scope_mode).toBe("fixed_block");
     expect(
       normalizePracticePortalConfig({
         allowed_products: ["timed_explore"],
         fixedBlockId: "camel-block",
       }).block_id,
     ).toBe("camel-block");
+  });
+
+  it("workspace scope is distinct from visitor_pick and fixed_block; clears block_id", () => {
+    const ws = normalizePracticePortalConfig({
+      allowed_products: ["timed_explore", "open_ended_explore"],
+      scope_mode: "workspace",
+      block_id: "should-be-cleared",
+    });
+    expect(ws.scope_mode).toBe("workspace");
+    expect(ws.block_id).toBeNull();
+    expect(isPracticePortalWorkspaceScope(ws)).toBe(true);
+
+    const visitor = normalizePracticePortalConfig({
+      allowed_products: ["timed_explore"],
+      scope_mode: "visitor_pick",
+    });
+    expect(visitor.scope_mode).toBe("visitor_pick");
+    expect(visitor.block_id).toBeNull();
+    expect(isPracticePortalWorkspaceScope(visitor)).toBe(false);
+
+    const fixed = normalizePracticePortalConfig({
+      allowed_products: ["open_ended_explore"],
+      scope_mode: "fixed_block",
+      block_id: "b-fixed",
+    });
+    expect(fixed.scope_mode).toBe("fixed_block");
+    expect(fixed.block_id).toBe("b-fixed");
+
+    // force_workspace boolean alias
+    expect(
+      normalizePracticePortalConfig({ force_workspace: true }).scope_mode,
+    ).toBe("workspace");
   });
 });
 
@@ -164,14 +211,78 @@ describe("validatePracticePortalMintRequest", () => {
     if (!v.ok) return;
     expect(v.block_id).toBe("fixed-block-uuid");
 
-    // Visitor override still wins
+    // Fixed scope ignores visitor override (forced block holds)
     const override = validatePracticePortalMintRequest(fixed, {
       product_id: "open_ended_explore",
       block_id: "visitor-block",
     });
     expect(override.ok).toBe(true);
     if (!override.ok) return;
-    expect(override.block_id).toBe("visitor-block");
+    expect(override.block_id).toBe("fixed-block-uuid");
+  });
+
+  it("workspace scope: timed mint yields null block_id; visitor block_id ignored", () => {
+    const ws = normalizePracticePortalConfig({
+      allowed_products: ["timed_explore", "timed_drill", "open_ended_explore"],
+      timings: { timed_explore: [10, 30], timed_drill: [15, 45] },
+      scope_mode: "workspace",
+    });
+    expect(ws.scope_mode).toBe("workspace");
+    expect(ws.block_id).toBeNull();
+
+    const timed = validatePracticePortalMintRequest(ws, {
+      product_id: "timed_explore",
+      minutes: 10,
+      block_id: "visitor-should-not-win",
+    });
+    expect(timed.ok).toBe(true);
+    if (!timed.ok) return;
+    expect(timed.block_id).toBeNull();
+    expect(timed.minutes).toBe(10);
+    expect(timed.launch.product).toBe("tap");
+
+    const timedDrill = validatePracticePortalMintRequest(ws, {
+      product_id: "timed_drill",
+      minutes: 15,
+    });
+    expect(timedDrill.ok).toBe(true);
+    if (!timedDrill.ok) return;
+    expect(timedDrill.block_id).toBeNull();
+
+    // Open-ended not mintable under workspace force (ILE requires a block)
+    const openEnded = validatePracticePortalMintRequest(ws, {
+      product_id: "open_ended_explore",
+      block_id: "b1",
+    });
+    expect(openEnded.ok).toBe(false);
+    if (!openEnded.ok) expect(openEnded.code).toBe("product_not_allowed");
+
+    // resolve helper ignores visitor under workspace
+    expect(
+      resolvePracticePortalMintBlockId(ws, "visitor-block"),
+    ).toBeNull();
+
+    // create fields carry null block for TAP path
+    const fields = practicePortalMintToCreateFields(timed);
+    expect(fields.linkKind).toBe("tap");
+    expect(fields.blockId).toBeNull();
+
+    writeLog(
+      "portal-workspace-scope-helpers.log",
+      [
+        "scope_mode=" + ws.scope_mode,
+        "is_workspace=" + isPracticePortalWorkspaceScope(ws),
+        "timed_ok=" + timed.ok,
+        "timed_block_id_null=" + String(timed.block_id === null),
+        "timed_drill_ok=" + timedDrill.ok,
+        "open_ended_rejected=" + String(!openEnded.ok),
+        "visitor_override_ignored=" +
+          String(resolvePracticePortalMintBlockId(ws, "x") === null),
+        "products_for_scope=" +
+          practicePortalProductsForScope(ws).join(","),
+        "create_blockId_null=" + String(fields.blockId === null),
+      ].join("\n") + "\n",
+    );
   });
 
   it("accepts allowed timed product + timing; defaults minutes when omitted", () => {
@@ -308,7 +419,39 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
       ],
     });
     expect(view.fixed_block_id).toBe("b2");
+    expect(view.force_workspace_scope).toBe(false);
+    expect(view.scope_mode).toBe("fixed_block");
     expect(view.blocks.map((b) => b.id)).toEqual(["b2"]);
+  });
+
+  it("landing view workspace scope: empty blocks, no fixed block, timed products only", () => {
+    const view = buildPracticePortalLandingView({
+      config: {
+        allowed_products: [
+          "open_ended_explore",
+          "open_ended_drill",
+          "timed_explore",
+          "timed_drill",
+        ],
+        timings: { timed_explore: [10], timed_drill: [30] },
+        scope_mode: "workspace",
+        block_id: "ignored",
+      },
+      workspace: { id: "ws-1", title: "Algebra" },
+      blocks: [
+        { id: "b1", title: "A", is_start: true },
+        { id: "b2", title: "B", is_start: false },
+      ],
+    });
+    expect(view.force_workspace_scope).toBe(true);
+    expect(view.scope_mode).toBe("workspace");
+    expect(view.fixed_block_id).toBeNull();
+    expect(view.blocks).toEqual([]);
+    expect(view.products.map((p) => p.id)).toEqual([
+      "timed_explore",
+      "timed_drill",
+    ]);
+    expect(view.config.block_id).toBeNull();
   });
 
   it("buildPracticePortalUrl uses /portal/{token} (not practice-portal)", () => {
@@ -366,7 +509,9 @@ describe("Practice Portal structural wiring", () => {
     expect(portalPanel).toMatch(/data-knowledge-portal-panel/);
     expect(portalPanel).toMatch(/data-knowledge-portal-inner-tab="create"/);
     expect(portalPanel).toMatch(/data-knowledge-portal-inner-tab="browse"/);
-    expect(portalPanel).toMatch(/data-practice-portal-block/);
+    expect(portalPanel).toMatch(/data-practice-portal-scope/);
+    expect(portalPanel).toMatch(/data-practice-portal-scope-workspace/);
+    expect(portalPanel).toMatch(/scope_mode/);
     expect(portalPanel).toMatch(/portalBlockId|block_id/);
     expect(portalPanel).not.toMatch(/practicePortalUrlOnce/);
 
@@ -427,6 +572,64 @@ describe("Practice Portal structural wiring", () => {
     expect(landingClient).toMatch(/font-mono|tracking-\[/);
     expect(landingClient).toMatch(/zinc-|amber-/);
     expect(landingClient).toMatch(/items-center text-center|text-center/);
+    // Workspace-level force: hide block picker / no block_id on mint
+    expect(landingClient).toMatch(/forceWorkspaceScope/);
+    expect(landingClient).toMatch(/data-practice-portal-force-workspace/);
+    expect(landingClient).toMatch(
+      /data-practice-portal-workspace-scope|data-practice-portal-no-block-choice/,
+    );
+    expect(landingClient).toMatch(/!forceWorkspaceScope/);
+
+    expect(pure).toContain("scope_mode");
+    expect(pure).toContain('"workspace"');
+    expect(pure).toContain("isPracticePortalWorkspaceScope");
+    expect(pure).toContain("force_workspace_scope");
+    expect(pure).toContain("resolvePracticePortalMintBlockId");
+
+    expect(mintApi).toContain("validatePracticePortalMintRequest");
+    expect(mintApi).toContain("normalizePracticePortalConfig");
+
+    expect(landing).toMatch(/forceWorkspaceScope|force_workspace_scope/);
+
+    const en = read("messages/en.json");
+    expect(en).toContain("practicePortalScopeWorkspace");
+
+    writeLog(
+      "portal-workspace-scope-ui.log",
+      [
+        "owner_scope_control=" + portalPanel.includes("data-practice-portal-scope"),
+        "owner_workspace_option=" +
+          portalPanel.includes("data-practice-portal-scope-workspace"),
+        "owner_scope_mode_payload=" + portalPanel.includes("scope_mode"),
+        "landing_force_prop=" + landingClient.includes("forceWorkspaceScope"),
+        "landing_no_block_hook=" +
+          String(
+            /data-practice-portal-workspace-scope|data-practice-portal-no-block-choice/.test(
+              landingClient,
+            ),
+          ),
+        "landing_hides_picker_when_workspace=" +
+          landingClient.includes("forceWorkspaceScope"),
+        "page_passes_force=" +
+          String(/forceWorkspaceScope|force_workspace_scope/.test(landing)),
+        "i18n_workspace=" + en.includes("practicePortalScopeWorkspace"),
+        "pure_scope_mode=" + pure.includes("scope_mode"),
+      ].join("\n") + "\n",
+    );
+
+    writeLog(
+      "portal-workspace-scope-mint.log",
+      [
+        "mint_uses_validate=" +
+          mintApi.includes("validatePracticePortalMintRequest"),
+        "mint_uses_normalize=" + mintApi.includes("normalizePracticePortalConfig"),
+        "pure_workspace_branch=" +
+          pure.includes('scope_mode === "workspace"'),
+        "pure_has_workspace_helper=" +
+          pure.includes("isPracticePortalWorkspaceScope"),
+        "create_fields_blockId=" + pure.includes("blockId: validated.block_id"),
+      ].join("\n") + "\n",
+    );
     expect(landingClient).toMatch(/Knowledge Portal/);
     expect(landingClient).toMatch(
       /Choose the session type that best fits your style/,

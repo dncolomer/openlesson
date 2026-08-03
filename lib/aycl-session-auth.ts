@@ -5,6 +5,11 @@ import {
   sessionBelongsToAyclFork,
   type AyclPurchase,
 } from "@/lib/aycl";
+import {
+  normalizeAyclAccessTier,
+  resolveAyclCapabilities,
+  type AyclCapabilities,
+} from "@/lib/aycl-shared";
 
 export interface ResolvedAyclContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -13,6 +18,8 @@ export interface ResolvedAyclContext {
   ownerUserId: string;
   /** Synthetic user for routes that expect a user id (workspace owner). */
   actingUser: Pick<User, "id">;
+  accessTier: ReturnType<typeof normalizeAyclAccessTier>;
+  capabilities: AyclCapabilities;
 }
 
 export async function resolveAyclAccess(
@@ -38,12 +45,17 @@ export async function resolveAyclAccess(
     return { error: "Workspace not found", status: 404 };
   }
 
+  const accessTier = normalizeAyclAccessTier(purchase.access_tier);
+  const capabilities = resolveAyclCapabilities(accessTier);
+
   return {
     supabase,
     purchase,
     workspaceId: workspace.id,
     ownerUserId: workspace.user_id,
     actingUser: { id: workspace.user_id },
+    accessTier,
+    capabilities,
   };
 }
 

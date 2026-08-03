@@ -31,6 +31,17 @@ export async function GET(request: NextRequest) {
       purchase = await getAyclPurchaseByCheckoutSession(admin, sessionId);
     }
 
+    // Upgrade checkouts re-bind stripe_checkout_session_id on the same row;
+    // if still missing, try fulfill via metadata then re-lookup.
+    if (
+      (!purchase || purchase.status !== "completed") &&
+      (stripeSession.metadata?.aycl_upgrade === "1" ||
+        stripeSession.metadata?.aycl_upgrade === "true")
+    ) {
+      await fulfillAyclPurchase(admin, stripeSession);
+      purchase = await getAyclPurchaseByCheckoutSession(admin, sessionId);
+    }
+
     if (!purchase || purchase.status !== "completed" || !purchase.forked_workspace_id) {
       return NextResponse.json({ ready: false }, { status: 202 });
     }
@@ -39,6 +50,11 @@ export async function GET(request: NextRequest) {
       ready: true,
       forkedWorkspaceId: purchase.forked_workspace_id,
       sourceWorkspaceId: purchase.source_workspace_id,
+      accessTier: purchase.access_tier ?? "full",
+      upgraded:
+        stripeSession.metadata?.aycl_upgrade === "1" ||
+        stripeSession.metadata?.aycl_upgrade === "true" ||
+        false,
     });
   } catch (error) {
     console.error("[aycl/verify-session]", error);

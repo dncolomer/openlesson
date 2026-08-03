@@ -9,7 +9,14 @@ import { LandingNav } from "@/components/LandingNav";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { aestheticImageForId } from "@/lib/aesthetics";
-import { AYCL_PRICE_LABEL, AYCL_TOKEN_STORAGE_KEY } from "@/lib/aycl-shared";
+import {
+  AYCL_FULL_PRICE_LABEL,
+  AYCL_LEARNER_PRICE_LABEL,
+  AYCL_TOKEN_STORAGE_KEY,
+  ayclOfferDescription,
+  ayclOfferLabel,
+  type AyclAccessTier,
+} from "@/lib/aycl-shared";
 
 const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn", [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -20,12 +27,24 @@ const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn", [
 
 type AyclTab = "lifetime" | "hackathons";
 
+interface CatalogOffer {
+  tier: AyclAccessTier;
+  label: string;
+  description: string;
+  priceLabel: string;
+}
+
 interface CatalogWorkspace {
   id: string;
   title: string;
   description?: string | null;
   cover_image_url?: string | null;
+  /** @deprecated prefer offers.full.priceLabel */
   priceLabel: string;
+  offers?: {
+    learner: CatalogOffer;
+    full: CatalogOffer;
+  };
 }
 
 const HACKATHONS = [
@@ -78,7 +97,7 @@ function AllYouCanLearnContent() {
   const [activeTab, setActiveTab] = useState<AyclTab>(() => parseTab(searchParams.get("tab")));
   const [workspaces, setWorkspaces] = useState<CatalogWorkspace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [checkoutWorkspaceId, setCheckoutWorkspaceId] = useState<string | null>(null);
+  const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -100,8 +119,12 @@ function AllYouCanLearnContent() {
     router.replace(`/all-you-can-learn?tab=${tab}`, { scroll: false });
   };
 
-  const startCheckout = async (workspaceId: string) => {
-    setCheckoutWorkspaceId(workspaceId);
+  const startCheckout = async (
+    workspaceId: string,
+    tier: AyclAccessTier = "full",
+  ) => {
+    const key = `${workspaceId}:${tier}`;
+    setCheckoutKey(key);
     setError("");
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -110,6 +133,7 @@ function AllYouCanLearnContent() {
         body: JSON.stringify({
           priceType: "all_you_can_learn",
           workspaceId,
+          ayclAccessTier: tier,
         }),
       });
       const data = await res.json();
@@ -122,7 +146,7 @@ function AllYouCanLearnContent() {
       window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Checkout failed");
-      setCheckoutWorkspaceId(null);
+      setCheckoutKey(null);
     }
   };
 
@@ -205,7 +229,7 @@ function AllYouCanLearnContent() {
           <LifetimeAccessTab
             workspaces={workspaces}
             loading={loading}
-            checkoutWorkspaceId={checkoutWorkspaceId}
+            checkoutKey={checkoutKey}
             onCheckout={startCheckout}
           />
         ) : (
@@ -223,19 +247,24 @@ function AllYouCanLearnContent() {
 function LifetimeAccessTab({
   workspaces,
   loading,
-  checkoutWorkspaceId,
+  checkoutKey,
   onCheckout,
 }: {
   workspaces: CatalogWorkspace[];
   loading: boolean;
-  checkoutWorkspaceId: string | null;
-  onCheckout: (workspaceId: string) => void;
+  checkoutKey: string | null;
+  onCheckout: (workspaceId: string, tier: AyclAccessTier) => void;
 }) {
   return (
     <>
       <div className="mb-5 text-center">
         <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
           Curated learning environments
+        </p>
+        <p className="mx-auto mt-2 max-w-xl text-xs leading-relaxed text-zinc-500">
+          Choose practice-only access (fixed private copy) or full access with
+          creation tools so you can grow the map. You can upgrade later on the
+          same access link.
         </p>
       </div>
 
@@ -249,48 +278,117 @@ function LifetimeAccessTab({
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">
-          {workspaces.map((workspace) => (
-            <article
-              key={workspace.id}
-              className="group overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
-            >
-              <WorkspaceCardHero
-                workspaceId={workspace.id}
-                coverImageUrl={workspace.cover_image_url}
-                fallback="aesthetic"
-                heightClassName="h-44 sm:h-48"
-                badges={
-                  <span className="border border-amber-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90 backdrop-blur-sm">
-                    Lifetime access
-                  </span>
-                }
-              />
-              <div className="space-y-4 p-5">
-                <div>
-                  <h2 className="text-xl font-medium leading-tight text-white">{workspace.title}</h2>
-                  {workspace.description ? (
-                    <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                      {workspace.description}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex items-center justify-between gap-3">
+          {workspaces.map((workspace) => {
+            const learnerOffer = workspace.offers?.learner ?? {
+              tier: "learner" as const,
+              label: ayclOfferLabel("learner"),
+              description: ayclOfferDescription("learner"),
+              priceLabel: AYCL_LEARNER_PRICE_LABEL,
+            };
+            const fullOffer = workspace.offers?.full ?? {
+              tier: "full" as const,
+              label: ayclOfferLabel("full"),
+              description: ayclOfferDescription("full"),
+              priceLabel:
+                workspace.priceLabel || AYCL_FULL_PRICE_LABEL,
+            };
+            const learnerBusy = checkoutKey === `${workspace.id}:learner`;
+            const fullBusy = checkoutKey === `${workspace.id}:full`;
+            const anyBusy = learnerBusy || fullBusy;
+            return (
+              <article
+                key={workspace.id}
+                className="group overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
+                data-aycl-catalog-card
+              >
+                <WorkspaceCardHero
+                  workspaceId={workspace.id}
+                  coverImageUrl={workspace.cover_image_url}
+                  fallback="aesthetic"
+                  heightClassName="h-44 sm:h-48"
+                  badges={
+                    <span className="border border-amber-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90 backdrop-blur-sm">
+                      Lifetime access
+                    </span>
+                  }
+                />
+                <div className="space-y-4 p-5">
                   <div>
-                    <p className="text-xl font-semibold text-white">{workspace.priceLabel}</p>
-                    <p className="text-xs text-zinc-500">One-time · Fork yours for life</p>
+                    <h2 className="text-xl font-medium leading-tight text-white">
+                      {workspace.title}
+                    </h2>
+                    {workspace.description ? (
+                      <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+                        {workspace.description}
+                      </p>
+                    ) : null}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onCheckout(workspace.id)}
-                    disabled={checkoutWorkspaceId === workspace.id}
-                    className="rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
-                  >
-                    {checkoutWorkspaceId === workspace.id ? "Redirecting…" : "Get access"}
-                  </button>
+
+                  <div className="grid gap-3" data-aycl-dual-offers>
+                    <div
+                      className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3"
+                      data-aycl-offer="learner"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white">
+                            {learnerOffer.label}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                            {learnerOffer.description}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-lg font-semibold text-white">
+                          {learnerOffer.priceLabel}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        data-aycl-checkout-learner
+                        onClick={() => onCheckout(workspace.id, "learner")}
+                        disabled={anyBusy}
+                        className="mt-3 w-full rounded-sm border border-zinc-600 bg-transparent px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
+                      >
+                        {learnerBusy ? "Redirecting…" : "Get practice access"}
+                      </button>
+                    </div>
+
+                    <div
+                      className="rounded-lg border border-zinc-700 bg-zinc-900/80 p-3"
+                      data-aycl-offer="full"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white">
+                            {fullOffer.label}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                            {fullOffer.description}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-lg font-semibold text-white">
+                          {fullOffer.priceLabel}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        data-aycl-checkout-full
+                        onClick={() => onCheckout(workspace.id, "full")}
+                        disabled={anyBusy}
+                        className="mt-3 w-full rounded-sm bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        {fullBusy ? "Redirecting…" : "Get full access"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-600">
+                    One-time · Private fork · Upgrade anytime from practice
+                  </p>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -374,4 +472,4 @@ function HackathonsTab() {
   );
 }
 
-export { AYCL_PRICE_LABEL, AYCL_TOKEN_STORAGE_KEY };
+export { AYCL_FULL_PRICE_LABEL as AYCL_PRICE_LABEL, AYCL_TOKEN_STORAGE_KEY };

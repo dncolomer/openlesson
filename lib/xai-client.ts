@@ -103,34 +103,121 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Strip common model wrappers (markdown fences, leading labels) so JSON.parse
+ * has a cleaner shot at the payload.
+ */
+function stripJsonWrappers(text: string): string {
+  let t = String(text ?? "").trim();
+  // ```json ... ``` or ``` ... ```
+  const fenced = t.match(/```(?:json|JSON)?\s*([\s\S]*?)```/);
+  if (fenced?.[1]) {
+    t = fenced[1].trim();
+  }
+  // Leading "json" / "JSON:" labels some models emit before the object
+  t = t.replace(/^(?:json|JSON)\s*[:\n]\s*/i, "").trim();
+  return t;
+}
+
+/**
+ * Whether `s` ends inside an open double-quoted string (best-effort, handles \").
+ */
+function endsInsideJsonString(s: string): boolean {
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') inString = !inString;
+  }
+  return inString;
+}
+
+/**
+ * Close unbalanced braces/brackets (truncated model output). Best-effort only —
+ * string-interior brackets can still confuse this heuristic.
+ */
+function closeTruncatedJson(fragment: string): string {
+  let s = fragment.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ");
+
+  // Close a cut-off string before balancing containers.
+  if (endsInsideJsonString(s)) {
+    s += '"';
+  }
+
+  s = s.replace(/,\s*([}\]])/g, "$1");
+  // Drop trailing incomplete key or bare comma after value
+  s = s.replace(/,\s*"[^"]*"\s*:\s*$/g, "");
+  s = s.replace(/,\s*$/g, "");
+
+  const openBraces = (s.match(/\{/g) || []).length;
+  const closeBraces = (s.match(/\}/g) || []).length;
+  const openBrackets = (s.match(/\[/g) || []).length;
+  const closeBrackets = (s.match(/\]/g) || []).length;
+  s += "]".repeat(Math.max(0, openBrackets - closeBrackets));
+  s += "}".repeat(Math.max(0, openBraces - closeBraces));
+  return s;
+}
+
+/**
+ * Slice from first `{` or `[` through last matching closer when complete,
+ * or through end of string when truncated (repair step closes containers).
+ */
+function extractJsonCandidate(text: string): string | null {
+  const objStart = text.indexOf("{");
+  const arrStart = text.indexOf("[");
+  let start = -1;
+  if (objStart >= 0 && (arrStart < 0 || objStart < arrStart)) start = objStart;
+  else if (arrStart >= 0) start = arrStart;
+  if (start < 0) return null;
+
+  // Prefer complete balanced slice when a closer exists after start.
+  const completeObj = text.slice(start).match(/^\{[\s\S]*\}/);
+  const completeArr = text.slice(start).match(/^\[[\s\S]*\]/);
+  if (text[start] === "{" && completeObj) return completeObj[0];
+  if (text[start] === "[" && completeArr) return completeArr[0];
+
+  // Truncated: take from first opener to end for repair.
+  return text.slice(start).trim();
+}
+
+/**
  * Parse a response body as JSON, with a few fallbacks:
- *   1. direct JSON.parse
- *   2. extract the first {...} block and parse
- *   3. strip control chars (except newlines/tabs) and dangling commas, then parse
+ *   1. direct JSON.parse (after stripping markdown fences)
+ *   2. extract the first {...} or [...] block and parse
+ *   3. strip control chars / dangling commas / repair truncation, then parse
  * Returns { ok: true, data } on success, { ok: false } on failure.
  */
 export function parseJsonLoose<T>(text: string): { ok: true; data: T } | { ok: false } {
+  const prepared = stripJsonWrappers(text);
+
   try {
-    return { ok: true, data: JSON.parse(text) as T };
+    return { ok: true, data: JSON.parse(prepared) as T };
   } catch {
     // fall through
   }
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return { ok: false };
+
+  const candidate = extractJsonCandidate(prepared);
+  if (!candidate) return { ok: false };
+
   try {
-    return { ok: true, data: JSON.parse(match[0]) as T };
+    return { ok: true, data: JSON.parse(candidate) as T };
   } catch {
-    // Last-ditch cleanup. Preserve newlines/tabs inside strings — only strip
-    // the control chars that never belong in JSON text at all.
-    const cleaned = match[0]
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ")
-      .replace(/,\s*}/g, "}")
-      .replace(/,\s*]/g, "]");
-    try {
-      return { ok: true, data: JSON.parse(cleaned) as T };
-    } catch {
-      return { ok: false };
-    }
+    // fall through
+  }
+
+  // Cleanup + truncated-JSON repair (common when max_tokens cuts mid-object).
+  const cleaned = closeTruncatedJson(candidate);
+  try {
+    return { ok: true, data: JSON.parse(cleaned) as T };
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -275,18 +362,41 @@ export async function callXai<T = string>(
       }
 
       const data: ChatAPIResponse = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) return { success: false, error: "No content in response" };
+      const rawMessageContent = data.choices?.[0]?.message?.content;
+      // Some multimodal/reasoning payloads return content parts; flatten to text.
+      const content =
+        typeof rawMessageContent === "string"
+          ? rawMessageContent
+          : Array.isArray(rawMessageContent)
+            ? (rawMessageContent as Array<{ type?: string; text?: string }>)
+                .map((p) => (typeof p?.text === "string" ? p.text : ""))
+                .filter(Boolean)
+                .join("\n")
+            : rawMessageContent == null
+              ? ""
+              : String(rawMessageContent);
+      if (!content.trim()) return { success: false, error: "No content in response" };
 
       if (config.responseFormat === "json" || config.responseFormat === "json_schema") {
         const parsed = parseJsonLoose<T>(content);
         if (parsed.ok) {
           return { success: true, data: parsed.data, rawContent: content, usage: data.usage };
         }
-        console.error("[xai] failed to parse JSON. Raw content:", content.substring(0, 500));
+        console.error(
+          "[xai] failed to parse JSON (attempt",
+          attempt + 1,
+          "). Raw content:",
+          content.substring(0, 500),
+        );
+        lastError = "Failed to parse JSON from response";
+        // Retry — models occasionally emit fences/prose or get truncated mid-JSON.
+        if (attempt < maxRetries - 1) {
+          await sleep(baseDelay * Math.pow(2, attempt));
+          continue;
+        }
         return {
           success: false,
-          error: "Failed to parse JSON from response",
+          error: lastError,
           rawContent: content,
         };
       }

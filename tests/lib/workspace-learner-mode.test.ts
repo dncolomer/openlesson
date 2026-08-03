@@ -342,10 +342,14 @@ describe("learner mode UI structural", () => {
     expect(learner).toContain("onPhase");
     // Creator drawer not in learner pane
     expect(learner).not.toContain("WorkspaceBlockDetailPane");
-    // Knowledge LWM+embeddings only
+    // Knowledge LWM+embeddings only; subject locked to self (no multi-user inspect)
     expect(perf).toContain("lwmEmbeddingsOnly");
     expect(perf).toContain("data-knowledge-lwm-embeddings-only");
     expect(perf).toContain("LEARNER_KNOWLEDGE_SUBVIEWS");
+    expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
+    const knowledgePanel = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(knowledgePanel).toContain("resolveModelsTabCanInspectOthers");
+    expect(knowledgePanel).toContain("lockSubjectToSelf");
     expect(mapGround).toContain("set_block_status");
 
     mkdirSync(SCRATCH, { recursive: true });

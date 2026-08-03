@@ -30,6 +30,8 @@ export interface SkillGridNode {
     global_file_refs?: string[] | null;
     external_resource_ids?: string[] | null;
   } | null;
+  /** Author practice launch limits (Explore/Drill × open/timed). */
+  practice_options?: unknown;
 }
 
 /**

@@ -34,6 +34,23 @@ import {
   type AddExpandJob,
 } from "@/lib/add-block-range-density";
 import {
+  createLearnerMapNote,
+  deleteLearnerMapNote,
+  learnerNoteLayerStyle,
+  loadLearnerMapNotes,
+  saveLearnerMapNotes,
+  shouldMountLearnerMapNotes,
+  toggleLearnerMapNoteCollapsed,
+  updateLearnerMapNote,
+  upsertLearnerMapNote,
+  type LearnerMapNote,
+} from "@/lib/learner-map-notes";
+import { LearnerMapNotePostIt } from "@/components/LearnerMapNotePostIt";
+import {
+  parseBlockPracticeOptions,
+  practiceOptionsIconKeys,
+} from "@/lib/block-practice-options";
+import {
   areBlocksContiguous,
   buildOccupancyFromPlaced,
   footprintFromBlock,
@@ -192,6 +209,18 @@ interface BlockSkillGridProps {
    * Pair with canEdit={false} for full learner map (minimap retained).
    */
   learnerMode?: boolean;
+  /**
+   * Scope id for learner map notes persistence (user id / aycl token / guest).
+   * Defaults to ayclToken or "local" when omitted.
+   */
+  learnerScopeId?: string | null;
+  /**
+   * Creator clone-paste: left-strip Clone arms host paste mode for sole selection.
+   * Host owns arm state + empty-cell paste persist.
+   */
+  cloneArmed?: boolean;
+  onCloneArm?: (blockId: string) => void;
+  onCloneCancel?: () => void;
   showProgress?: boolean;
   isAdding?: boolean;
   workspaceId?: string;
@@ -263,7 +292,11 @@ interface BlockSkillGridProps {
   };
 }
 
-function toolTooltip(id: BlockMapToolId, labels: BlockSkillGridProps["labels"]): string {
+function toolTooltip(
+  id: BlockMapToolId,
+  labels: BlockSkillGridProps["labels"],
+  opts?: { cloneArmed?: boolean },
+): string {
   switch (id) {
     case "select":
       return (
@@ -282,6 +315,10 @@ function toolTooltip(id: BlockMapToolId, labels: BlockSkillGridProps["labels"]):
       return labels.merge || "Merge";
     case "split":
       return labels.split || "Split";
+    case "clone":
+      return opts?.cloneArmed
+        ? "Clone armed — click an empty cell to paste (click again to cancel)"
+        : "Clone — select one block, then click empty cell to paste a copy";
     case "generate_shape":
       return labels.generateShape || "Generate in shape";
     case "lock_until":
@@ -416,6 +453,24 @@ function ToolIcon({
       return (
         <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v8a2 2 0 002 2h3m8-12h3a2 2 0 012 2v8a2 2 0 01-2 2h-3M12 3v18" />
+        </svg>
+      );
+    case "clone":
+      return (
+        <svg
+          className={common}
+          data-tool-icon="clone"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2M16 3H10a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7l-4-4z"
+          />
         </svg>
       );
     case "generate_shape":
@@ -587,6 +642,99 @@ function BlockStarterFlagBadge() {
   );
 }
 
+/**
+ * Micro icons for author practice limits (Explore/Drill × open/timed).
+ * Always shown so enabled combos are visible on the map.
+ */
+function BlockPracticeOptionsBadge({
+  keys,
+}: {
+  keys: Array<"explore" | "drill" | "open" | "timed">;
+}) {
+  if (keys.length === 0) return null;
+  const title = keys
+    .map((k) =>
+      k === "explore"
+        ? "Explore"
+        : k === "drill"
+          ? "Drill"
+          : k === "open"
+            ? "Open-ended"
+            : "Timed",
+    )
+    .join(" · ");
+  return (
+    <span
+      className="absolute left-1 top-1 z-[1] inline-flex max-w-[calc(100%-8px)] flex-wrap items-center gap-0.5 rounded bg-black/45 px-0.5 py-px"
+      data-block-practice-icons
+      data-practice-icon-keys={keys.join(",")}
+      title={title}
+      aria-label={`Practice: ${title}`}
+    >
+      {keys.includes("explore") ? (
+        <svg
+          className="h-2.5 w-2.5 text-sky-200/95"
+          data-practice-icon="explore"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <circle cx="12" cy="12" r="8" />
+          <path strokeLinecap="round" d="M14 10l-2 5-5 2 2-5 5-2z" />
+        </svg>
+      ) : null}
+      {keys.includes("drill") ? (
+        <svg
+          className="h-2.5 w-2.5 text-violet-200/95"
+          data-practice-icon="drill"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="3.5" />
+          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      ) : null}
+      {keys.includes("open") ? (
+        <svg
+          className="h-2.5 w-2.5 text-emerald-200/90"
+          data-practice-icon="open"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          {/* Infinity-ish open-ended mark */}
+          <path
+            strokeLinecap="round"
+            d="M8 12c0-1.5 1.2-2.5 2.5-2.5S13 10.5 13 12s-1.2 2.5-2.5 2.5S8 13.5 8 12zm5.5 0c0-1.5 1.2-2.5 2.5-2.5s2.5 1 2.5 2.5-1.2 2.5-2.5 2.5-2.5-1-2.5-2.5z"
+          />
+        </svg>
+      ) : null}
+      {keys.includes("timed") ? (
+        <svg
+          className="h-2.5 w-2.5 text-amber-200/95"
+          data-practice-icon="timed"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <circle cx="12" cy="13" r="7" />
+          <path strokeLinecap="round" d="M12 10v3.5l2 1.5M9 4h6" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
 function cellKey(cell: GridCell) {
   return `${cell.row}:${cell.col}`;
 }
@@ -604,6 +752,10 @@ export function BlockSkillGrid({
   onAbortExpandJob,
   canEdit,
   learnerMode = false,
+  learnerScopeId = null,
+  cloneArmed = false,
+  onCloneArm,
+  onCloneCancel,
   showProgress = true,
   isAdding = false,
   workspaceId,
@@ -626,6 +778,91 @@ export function BlockSkillGrid({
   const unusableKeys = useMemo(
     () => unusableCellKeySet(unusableCells || []),
     [unusableCells],
+  );
+
+  /** Learner post-it notes: personal, map-coords only (no block linkage). */
+  const mountLearnerNotes = shouldMountLearnerMapNotes({ learnerMode });
+  const resolvedLearnerScope = String(
+    learnerScopeId || ayclToken || "local",
+  ).trim() || "local";
+  const [learnerNotes, setLearnerNotes] = useState<LearnerMapNote[]>([]);
+  const [learnerNotePlaceArmed, setLearnerNotePlaceArmed] = useState(false);
+
+  useEffect(() => {
+    if (!mountLearnerNotes || !workspaceId) {
+      setLearnerNotes([]);
+      setLearnerNotePlaceArmed(false);
+      return;
+    }
+    setLearnerNotes(
+      loadLearnerMapNotes({
+        workspaceId,
+        learnerScopeId: resolvedLearnerScope,
+      }),
+    );
+  }, [mountLearnerNotes, workspaceId, resolvedLearnerScope]);
+
+  const persistLearnerNotes = useCallback(
+    (next: LearnerMapNote[]) => {
+      setLearnerNotes(next);
+      if (!workspaceId) return;
+      saveLearnerMapNotes({
+        workspaceId,
+        learnerScopeId: resolvedLearnerScope,
+        notes: next,
+      });
+    },
+    [resolvedLearnerScope, workspaceId],
+  );
+
+  const handleLearnerNoteToggle = useCallback(
+    (noteId: string) => {
+      const existing = learnerNotes.find((n) => n.id === noteId);
+      if (!existing) return;
+      persistLearnerNotes(
+        upsertLearnerMapNote(
+          learnerNotes,
+          toggleLearnerMapNoteCollapsed(existing),
+        ),
+      );
+    },
+    [learnerNotes, persistLearnerNotes],
+  );
+
+  const handleLearnerNoteSaveBody = useCallback(
+    (noteId: string, body: string) => {
+      const existing = learnerNotes.find((n) => n.id === noteId);
+      if (!existing) return;
+      persistLearnerNotes(
+        upsertLearnerMapNote(
+          learnerNotes,
+          updateLearnerMapNote(existing, { body }),
+        ),
+      );
+    },
+    [learnerNotes, persistLearnerNotes],
+  );
+
+  const handleLearnerNoteDelete = useCallback(
+    (noteId: string) => {
+      persistLearnerNotes(deleteLearnerMapNote(learnerNotes, noteId));
+    },
+    [learnerNotes, persistLearnerNotes],
+  );
+
+  const handleLearnerNoteCreateAtCell = useCallback(
+    (cell: GridCell) => {
+      if (!mountLearnerNotes || !workspaceId) return;
+      const note = createLearnerMapNote({
+        body: "",
+        col: cell.col,
+        row: cell.row,
+        collapsed: false,
+      });
+      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
+      setLearnerNotePlaceArmed(false);
+    },
+    [learnerNotes, mountLearnerNotes, persistLearnerNotes, workspaceId],
   );
   /** Right-pane hosts empty create when either callback is wired. */
   const useRightPaneEmpty =
@@ -1911,10 +2148,6 @@ export function BlockSkillGrid({
 
   const handleEmptyCellClick = useCallback(
     (cell: GridCell, event: React.MouseEvent | React.PointerEvent) => {
-      if (!canEdit || busy) return;
-      if (isCellOccupied(occupancy, cell.row, cell.col)) return;
-      // Lasso modes own the gesture — never open add or select empties from click.
-      if (isLassoModeTool(activeToolRef.current)) return;
       // Swallow only after empty-cell pan (do NOT share suppressBlockClickRef —
       // block click-and-drag left that true and blocked every empty select).
       if (suppressEmptyClickRef.current) {
@@ -1923,6 +2156,19 @@ export function BlockSkillGrid({
         event.stopPropagation?.();
         return;
       }
+
+      // Learner: place a personal post-it when "Add note" is armed.
+      if (mountLearnerNotes && learnerNotePlaceArmed && !busy) {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        handleLearnerNoteCreateAtCell(cell);
+        return;
+      }
+
+      if (!canEdit || busy) return;
+      if (isCellOccupied(occupancy, cell.row, cell.col)) return;
+      // Lasso modes own the gesture — never open add or select empties from click.
+      if (isLassoModeTool(activeToolRef.current)) return;
 
       const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -1949,6 +2195,9 @@ export function BlockSkillGrid({
       applyEmptyCellSelection,
       busy,
       canEdit,
+      handleLearnerNoteCreateAtCell,
+      learnerNotePlaceArmed,
+      mountLearnerNotes,
       occupancy,
       onSelectNode,
       selectedNodeId,
@@ -2677,6 +2926,20 @@ export function BlockSkillGrid({
           }
         }
         return;
+      case "clone": {
+        if (!onCloneArm || !isBlockMapToolEnabled("clone", toolEnablement)) {
+          // Toggle cancel when already armed even if selection changed mid-arm.
+          if (cloneArmed && onCloneCancel) onCloneCancel();
+          return;
+        }
+        if (cloneArmed) {
+          onCloneCancel?.();
+          return;
+        }
+        const sourceId = selectedBlockIds[0] || selectedNodeId;
+        if (sourceId) onCloneArm(sourceId);
+        return;
+      }
       case "generate_shape":
         // Toolbar opener removed — multi empty selection opens the form in the
         // right pane (or local modal when no right-pane host). Keep case for
@@ -2849,24 +3112,32 @@ export function BlockSkillGrid({
   };
 
   const renderToolButton = (tool: BlockMapToolId) => {
-    const enabled = isBlockMapToolEnabled(tool, toolEnablement);
+    // Clone stays clickable while armed so creators can cancel even if selection
+    // briefly fails enablement mid-arm.
+    const enabled =
+      isBlockMapToolEnabled(tool, toolEnablement) ||
+      (tool === "clone" && cloneArmed && Boolean(onCloneCancel));
     const isActiveMode =
       ((tool === "select" || tool === "lasso") && activeTool === tool) ||
-      (tool === "lock_until" && prereqEdit.active);
+      (tool === "lock_until" && prereqEdit.active) ||
+      (tool === "clone" && cloneArmed);
     const title =
       tool === "lock_until" && prereqEdit.active
         ? prereqEdit.stagedPrereqIds.length === 0
           ? "Confirm: clear all prerequisites for this block"
           : "Confirm: save staged prerequisites (empty set clears all)"
         : tool === "lasso"
-          ? `${toolTooltip(tool, labels)} · ${lassoShapeTooltip(lassoShape)}`
-          : toolTooltip(tool, labels);
+          ? `${toolTooltip(tool, labels, { cloneArmed })} · ${lassoShapeTooltip(lassoShape)}`
+          : toolTooltip(tool, labels, { cloneArmed });
     return (
       <button
         key={tool}
         type="button"
         data-block-map-tool={tool}
         data-active={isActiveMode ? "true" : "false"}
+        data-clone-armed={
+          tool === "clone" ? (cloneArmed ? "true" : "false") : undefined
+        }
         data-lasso-shape={tool === "lasso" ? lassoShape : undefined}
         data-prereq-edit-active={
           tool === "lock_until" && prereqEdit.active ? "true" : undefined
@@ -2876,7 +3147,10 @@ export function BlockSkillGrid({
         title={title}
         aria-label={title}
         aria-pressed={
-          tool === "select" || tool === "lasso" || tool === "lock_until"
+          tool === "select" ||
+          tool === "lasso" ||
+          tool === "lock_until" ||
+          tool === "clone"
             ? isActiveMode
             : undefined
         }
@@ -2902,6 +3176,11 @@ export function BlockSkillGrid({
       data-selected-block-count={selectedBlockIds.length}
       data-selected-block-ids={selectedBlockIds.join(",")}
       data-learner-mode={learnerMode ? "true" : "false"}
+      data-learner-notes={mountLearnerNotes ? "true" : "false"}
+      data-learner-note-place-armed={
+        mountLearnerNotes && learnerNotePlaceArmed ? "true" : "false"
+      }
+      data-clone-armed={cloneArmed ? "true" : "false"}
       data-map-minimap="true"
     >
       {/* No full-map freeze on geometry saves — quiet indicator under minimap. */}
@@ -3026,6 +3305,43 @@ export function BlockSkillGrid({
             />
           </svg>
         ) : null}
+        {/* Learner-only: arm place-note, then click a map cell for a personal post-it. */}
+        {mountLearnerNotes ? (
+          <div
+            data-learner-map-notes-toolbar
+            className="pointer-events-auto absolute left-2 top-2 z-20 flex flex-col gap-1"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              data-learner-note-add
+              data-learner-note-place-toggle
+              aria-pressed={learnerNotePlaceArmed}
+              title={
+                learnerNotePlaceArmed
+                  ? "Cancel placing note"
+                  : "Add a short note on the map"
+              }
+              onClick={() => setLearnerNotePlaceArmed((v) => !v)}
+              className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
+                learnerNotePlaceArmed
+                  ? "border-amber-400/50 bg-amber-400/20 text-amber-50"
+                  : "border-neutral-700/90 bg-neutral-950/90 text-neutral-200 hover:border-neutral-500 hover:text-white"
+              }`}
+            >
+              {learnerNotePlaceArmed ? "Cancel note" : "Add note"}
+            </button>
+            {learnerNotePlaceArmed ? (
+              <p
+                className="max-w-[9.5rem] rounded-md border border-amber-500/25 bg-amber-950/80 px-2 py-1 text-[10px] leading-snug text-amber-100/90"
+                data-learner-note-place-banner
+              >
+                Click any map cell to drop a post-it
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Rectangular minimap: cluster graph, top-right overlay (always shown) */}
         <div
           data-block-minimap
@@ -3365,7 +3681,9 @@ export function BlockSkillGrid({
                             ? "Click empty to Add · drag empty to pan · Shift multi for shape form · Space/middle pan"
                             : labels.emptyCell
                         : learnerMode
-                          ? "Drag empty to pan · Space/middle pan · click a block to practice"
+                          ? learnerNotePlaceArmed
+                            ? "Click a cell to place a note"
+                            : "Drag empty to pan · Space/middle pan · click a block to practice"
                           : undefined
                   }
                 >
@@ -3382,10 +3700,36 @@ export function BlockSkillGrid({
                       </span>
                     )
                   )}
+                  {mountLearnerNotes && learnerNotePlaceArmed && !isUnusable ? (
+                    <span
+                      className="text-sm leading-none text-amber-200/90"
+                      data-learner-note-place-hint
+                      aria-hidden
+                    >
+                      📌
+                    </span>
+                  ) : null}
                 </button>
               </div>
             );
           })}
+
+          {/* Learner post-it notes — same pan/zoom layer as blocks (map coords). */}
+          {mountLearnerNotes
+            ? learnerNotes.map((note) => {
+                const layer = learnerNoteLayerStyle(note);
+                return (
+                  <LearnerMapNotePostIt
+                    key={note.id}
+                    note={note}
+                    style={layer}
+                    onToggleCollapsed={handleLearnerNoteToggle}
+                    onSaveBody={handleLearnerNoteSaveBody}
+                    onDelete={handleLearnerNoteDelete}
+                  />
+                );
+              })
+            : null}
 
           {/* Occupied blocks: solid rect or freeform multi-tile lecture */}
           {[...renderedBlockIds].map((blockId) => {
@@ -3573,6 +3917,15 @@ export function BlockSkillGrid({
             ) : null;
             const isStarter = Boolean(node.is_start);
             const starterBadge = isStarter ? <BlockStarterFlagBadge /> : null;
+            const practiceKeys = practiceOptionsIconKeys(
+              parseBlockPracticeOptions(
+                (node as { practice_options?: unknown }).practice_options,
+              ),
+            );
+            const practiceBadge =
+              practiceKeys.length > 0 ? (
+                <BlockPracticeOptionsBadge keys={practiceKeys} />
+              ) : null;
 
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
@@ -3740,6 +4093,7 @@ export function BlockSkillGrid({
                                 title={node.title}
                               />
                               {learnerLockedLabel}
+                              {practiceBadge}
                               {localContextBadge}
                               {starterBadge}
                               {lockBadge}
@@ -3863,6 +4217,7 @@ export function BlockSkillGrid({
                     title={node.title}
                   />
                   {learnerLockedLabel}
+                  {practiceBadge}
                   {localContextBadge}
                   {starterBadge}
                   {lockBadge}

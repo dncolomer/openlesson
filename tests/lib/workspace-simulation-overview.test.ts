@@ -12,7 +12,8 @@ import {
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d1253e1103eb/implementer";
+  process.env.GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-46f9864a291e/implementer";
 
 function read(rel: string) {
   return require("node:fs").readFileSync(
@@ -105,14 +106,18 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(view).toContain("mountsSimulationPanel");
     expect(view).toContain("WorkspaceSimulationPanel");
     expect(view).toContain("data-workspace-simulation-host");
-    expect(aycl).toContain('key: "simulation"');
-    expect(aycl).toContain("WorkspaceSimulationPanel");
+    expect(view).toMatch(/workspaceId=\{workspaceId\}/);
+    // AYCL mounts Simulation via WorkspaceView clone
+    expect(aycl).toContain("WorkspaceView");
     expect(panel).toContain("data-workspace-simulation-section");
     expect(panel).toContain("data-workspace-simulation-panel");
-    expect(panel).toContain("deriveWorkspaceSimulationOverview");
-    // Workspace tab (not the per-block drawer chrome)
-    expect(panel).toContain("data-workspace-simulation-section");
-    expect(panel).toContain("author preview");
+    // Redo: scope picker + generate + question/exercise surfaces (not validation-only)
+    expect(panel).toContain("data-simulation-scope");
+    expect(panel).toContain("data-simulation-generate");
+    expect(panel).toContain("data-simulation-questions");
+    expect(panel).toContain("data-simulation-exercises");
+    expect(panel).toContain("deriveSimulationSamples");
+    expect(panel).toContain("/api/workspace/simulation-samples");
     expect(panel).toContain("Block Simulation"); // points authors to per-block drawer
 
     mkdirSync(SCRATCH, { recursive: true });
@@ -149,9 +154,31 @@ describe("workspace Simulation section helpers + UI structure", () => {
         "view_nav=" + view.includes('key: "simulation"'),
         "view_mount=" + view.includes("mountsSimulationPanel"),
         "view_panel=" + view.includes("WorkspaceSimulationPanel"),
-        "aycl_nav=" + aycl.includes('key: "simulation"'),
+        "aycl_via_workspace_view=" + aycl.includes("WorkspaceView"),
         "panel_hook=" + panel.includes("data-workspace-simulation-section"),
+        "scope_control=" + panel.includes("data-simulation-scope"),
+        "generate_control=" + panel.includes("data-simulation-generate"),
+        "questions_surface=" + panel.includes("data-simulation-questions"),
+        "exercises_surface=" + panel.includes("data-simulation-exercises"),
         "i18n=" + en.includes("sectionSimulation"),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(SCRATCH, "simulation-tab-ui.log"),
+      [
+        "scope_control=" + panel.includes("data-simulation-scope-control"),
+        "scope_workspace=" + panel.includes("data-simulation-scope-workspace"),
+        "scope_block=" + panel.includes("data-simulation-scope-block"),
+        "block_select=" + panel.includes("data-simulation-block-select"),
+        "generate=" + panel.includes("data-simulation-generate"),
+        "questions=" + panel.includes("data-simulation-questions"),
+        "exercises=" + panel.includes("data-simulation-exercises"),
+        "api_path=" + panel.includes("/api/workspace/simulation-samples"),
+        "shell_mount=" + view.includes("data-workspace-simulation-host"),
+        "shell_workspace_id=" + /workspaceId=\{workspaceId\}/.test(view),
+        "uses_deriveSimulationSamples=" +
+          panel.includes("deriveSimulationSamples"),
       ].join("\n") + "\n",
       "utf8",
     );

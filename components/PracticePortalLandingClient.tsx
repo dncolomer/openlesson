@@ -33,6 +33,11 @@ export type PracticePortalLandingProps = {
   blocks: LandingBlock[];
   /** When set by portal config, block is fixed and visitor cannot change it. */
   fixedBlockId?: string | null;
+  /**
+   * When true, practice is forced at workspace level — no block picker or
+   * fixed-block chrome; mint never sends block_id.
+   */
+  forceWorkspaceScope?: boolean;
 };
 
 type MintResult = {
@@ -95,16 +100,18 @@ export function PracticePortalLandingClient({
   products,
   blocks,
   fixedBlockId = null,
+  forceWorkspaceScope = false,
 }: PracticePortalLandingProps) {
   const defaultBlockId = useMemo(() => {
+    if (forceWorkspaceScope) return "";
     if (fixedBlockId) return fixedBlockId;
     if (blocks.length === 0) return "";
     const start = blocks.find((b) => b.is_start);
     return (start || blocks[0]).id;
-  }, [blocks, fixedBlockId]);
+  }, [blocks, fixedBlockId, forceWorkspaceScope]);
 
   const [selectedBlockId, setSelectedBlockId] = useState(defaultBlockId);
-  const blockIsFixed = Boolean(fixedBlockId);
+  const blockIsFixed = Boolean(fixedBlockId) && !forceWorkspaceScope;
   const [selectedMinutes, setSelectedMinutes] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     for (const p of products) {
@@ -134,11 +141,14 @@ export function PracticePortalLandingClient({
         if (product.timings.length > 0) {
           body.minutes = selectedMinutes[productId] ?? product.timings[0];
         }
-        if (productId.startsWith("open_ended_")) {
-          if (!selectedBlockId) throw new Error("Select a practice block first");
-          body.block_id = selectedBlockId;
-        } else if (selectedBlockId) {
-          body.block_id = selectedBlockId;
+        // Workspace-forced: never send block_id (server also ignores overrides).
+        if (!forceWorkspaceScope) {
+          if (productId.startsWith("open_ended_")) {
+            if (!selectedBlockId) throw new Error("Select a practice block first");
+            body.block_id = selectedBlockId;
+          } else if (selectedBlockId) {
+            body.block_id = selectedBlockId;
+          }
         }
 
         const res = await fetch(
@@ -172,7 +182,7 @@ export function PracticePortalLandingClient({
         setMinting(null);
       }
     },
-    [products, selectedBlockId, selectedMinutes, token],
+    [forceWorkspaceScope, products, selectedBlockId, selectedMinutes, token],
   );
 
   const copyUrl = useCallback(async () => {
@@ -191,6 +201,14 @@ export function PracticePortalLandingClient({
       className="flex w-full flex-col items-stretch gap-6"
       data-practice-portal-landing
       data-practice-portal-workspace={workspace.id}
+      data-practice-portal-scope={
+        forceWorkspaceScope
+          ? "workspace"
+          : blockIsFixed
+            ? "fixed_block"
+            : "visitor_pick"
+      }
+      data-practice-portal-force-workspace={forceWorkspaceScope ? "true" : "false"}
     >
       <header className="flex flex-col items-center text-center">
         <div
@@ -218,7 +236,21 @@ export function PracticePortalLandingClient({
         className="rounded-sm border border-zinc-800 bg-zinc-950/70 p-4 backdrop-blur-sm sm:p-5"
         data-practice-portal-desk
       >
-        {blockIsFixed && selectedBlockId ? (
+        {forceWorkspaceScope ? (
+          <div
+            className="mb-5 rounded-sm border border-zinc-800/80 bg-black/30 px-3 py-2.5"
+            data-practice-portal-workspace-scope
+            data-practice-portal-no-block-choice
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+              Practice scope
+            </p>
+            <p className="mt-1 text-sm text-zinc-200">Entire workspace</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-zinc-600">
+              Sessions use the full workspace — no block to choose.
+            </p>
+          </div>
+        ) : blockIsFixed && selectedBlockId ? (
           <div
             className="mb-5 rounded-sm border border-zinc-800/80 bg-black/30 px-3 py-2.5"
             data-practice-portal-block-fixed
@@ -271,7 +303,8 @@ export function PracticePortalLandingClient({
               const styles = ACCENT_CLASSES[accent];
               const isTimed = product.timings.length > 0;
               const mins = selectedMinutes[product.id] ?? product.timings[0];
-              const needsBlock = product.id.startsWith("open_ended_");
+              const needsBlock =
+                !forceWorkspaceScope && product.id.startsWith("open_ended_");
               const disabled =
                 minting !== null ||
                 (needsBlock && !selectedBlockId);

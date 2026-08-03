@@ -17,6 +17,10 @@ import {
 } from "@/lib/shape-context-select";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
+import {
+  composeAddBlockAtSlotSystemMessage,
+  composeJourneyGraphPromptSnippet,
+} from "@/lib/workspace-authoring-prompt-context";
 
 interface AddBlockResponse {
   title: string;
@@ -37,13 +41,18 @@ export async function POST(req: NextRequest) {
       contextSourceKeys,
       is_start: isStartBody,
       isStart: isStartCamel,
+      /** "bridge" → knowledge-bridge system framing (suggestion 7). */
+      intent,
     } = body;
 
     if (!workspaceId || typeof row !== "number" || typeof col !== "number" || !prompt?.trim()) {
       return NextResponse.json({ error: "Plan ID, grid position, and prompt are required" }, { status: 400 });
     }
 
-    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardWorkspaceRoute(workspaceId, {
+      ayclToken: ayclTokenFromBody(body),
+      requireAyclAuthoring: true,
+    });
     if (!auth.ok) return auth.response;
 
     const { supabase } = auth;
@@ -163,6 +172,26 @@ export async function POST(req: NextRequest) {
       selectedSnippet,
     });
 
+    const journeySnippet = composeJourneyGraphPromptSnippet(
+      (nodes || []).map((n: {
+        id: string;
+        title?: string | null;
+        next_block_ids?: string[] | null;
+        lock_until_block_ids?: string[] | null;
+      }) => ({
+        id: n.id,
+        title: n.title,
+        next_block_ids: n.next_block_ids,
+        lock_until_block_ids: n.lock_until_block_ids,
+      })),
+      {
+        focusBlockIds: Array.isArray(weightedNeighbors)
+          ? (weightedNeighbors as WeightedGridNeighbor[]).map((n) => n.id)
+          : undefined,
+        maxLines: 20,
+      },
+    );
+
     const aiPrompt = `${withSelected}
 ${plan.description ? `Description: ${plan.description}\n` : ""}Existing blocks:
 ${blockList || "(none yet)"}
@@ -170,15 +199,17 @@ ${blockList || "(none yet)"}
 Target grid slot: row ${row}, column ${col}
 Nearby blocks (distance-weighted influence — closer blocks matter more):
 ${neighborSummary}
-
+${journeySnippet ? `\n${journeySnippet}\n` : ""}
 User request for the new block: "${prompt.trim()}"
 
-Create exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence.${selectedKeys.length > 0 ? " Prioritize the creator-selected materials above." : " Always honor workspace files and notes as context."}${languageNote ? `\n\n${languageNote}` : ""}`;
+Create exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence and any journey/DAG edges above.${selectedKeys.length > 0 ? " Prioritize the creator-selected materials above." : " Always honor workspace files and notes as context."}${languageNote ? `\n\n${languageNote}` : ""}`;
 
     const aiResponse = await callXaiJSON<AddBlockResponse>(
       [
         systemMessage(
-          'You create a single learning block for a workspace skill grid slot. Return JSON only: { "title": "...", "description": "..." }. Title: 4-14 words. Description: 1-3 sentences.',
+          composeAddBlockAtSlotSystemMessage(
+            typeof intent === "string" ? intent : null,
+          ),
         ),
         userMessage(aiPrompt),
       ],

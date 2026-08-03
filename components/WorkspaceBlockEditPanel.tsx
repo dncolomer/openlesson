@@ -1,7 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { normalizeStarterFlag } from "@/lib/block-starter-flag";
+import {
+  BLOCK_PRACTICE_DURATION_OPTIONS,
+  normalizeBlockPracticeOptions,
+  serializeBlockPracticeOptions,
+  type BlockPracticeOptions,
+} from "@/lib/block-practice-options";
+
+function practiceOptionsEqual(a: BlockPracticeOptions, b: BlockPracticeOptions): boolean {
+  if (a.allowExplore !== b.allowExplore) return false;
+  if (a.allowDrill !== b.allowDrill) return false;
+  if (a.allowOpenEnded !== b.allowOpenEnded) return false;
+  if (a.allowTimed !== b.allowTimed) return false;
+  if (a.allowedDurationsMinutes.length !== b.allowedDurationsMinutes.length) {
+    return false;
+  }
+  return a.allowedDurationsMinutes.every((m, i) => m === b.allowedDurationsMinutes[i]);
+}
 
 /**
  * Owner-facing block update/delete form for the block-detail Edit drawer.
@@ -12,6 +29,7 @@ export function WorkspaceBlockEditPanel({
   title,
   description,
   isStart = false,
+  practiceOptions: practiceOptionsProp = null,
   canEdit,
   busy = false,
   onUpdate,
@@ -22,6 +40,8 @@ export function WorkspaceBlockEditPanel({
   description?: string | null;
   /** Current starter / potential start flag on the block. */
   isStart?: boolean | null;
+  /** Author practice launch limits (Explore/Drill × open/timed + durations). */
+  practiceOptions?: BlockPracticeOptions | null;
   canEdit: boolean;
   busy?: boolean;
   onUpdate?: (input: {
@@ -29,12 +49,18 @@ export function WorkspaceBlockEditPanel({
     title: string;
     description: string;
     isStart: boolean;
+    practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
   onDelete?: (blockId: string) => Promise<void> | void;
 }) {
+  const savedPractice = useMemo(
+    () => normalizeBlockPracticeOptions(practiceOptionsProp ?? null),
+    [practiceOptionsProp],
+  );
   const [editTitle, setEditTitle] = useState(title);
   const [editDescription, setEditDescription] = useState(description || "");
   const [editIsStart, setEditIsStart] = useState(Boolean(isStart));
+  const [editPractice, setEditPractice] = useState<BlockPracticeOptions>(savedPractice);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -45,9 +71,10 @@ export function WorkspaceBlockEditPanel({
     setEditTitle(title);
     setEditDescription(description || "");
     setEditIsStart(Boolean(isStart));
+    setEditPractice(normalizeBlockPracticeOptions(practiceOptionsProp ?? null));
     setConfirmDelete(false);
     setError(null);
-  }, [blockId, title, description, isStart]);
+  }, [blockId, title, description, isStart, practiceOptionsProp]);
 
   if (!canEdit) {
     return (
@@ -64,6 +91,22 @@ export function WorkspaceBlockEditPanel({
             Starter block
           </p>
         ) : null}
+        <p
+          className="text-[10px] text-neutral-500"
+          data-block-edit-practice-readonly
+        >
+          Practice:{" "}
+          {[
+            savedPractice.allowExplore ? "Explore" : null,
+            savedPractice.allowDrill ? "Drill" : null,
+            savedPractice.allowOpenEnded ? "Open-ended" : null,
+            savedPractice.allowTimed
+              ? `Timed (${savedPractice.allowedDurationsMinutes.join("/")}m)`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "—"}
+        </p>
       </div>
     );
   }
@@ -71,7 +114,28 @@ export function WorkspaceBlockEditPanel({
   const dirty =
     editTitle.trim() !== (title || "").trim() ||
     (editDescription || "").trim() !== (description || "").trim() ||
-    editIsStart !== Boolean(isStart);
+    editIsStart !== Boolean(isStart) ||
+    !practiceOptionsEqual(editPractice, savedPractice);
+
+  const patchPractice = (patch: Partial<BlockPracticeOptions>) => {
+    setEditPractice((prev) =>
+      normalizeBlockPracticeOptions({ ...prev, ...patch }),
+    );
+  };
+
+  const toggleDuration = (mins: number) => {
+    setEditPractice((prev) => {
+      if (!prev.allowTimed) return prev;
+      const has = prev.allowedDurationsMinutes.includes(mins);
+      const next = has
+        ? prev.allowedDurationsMinutes.filter((m) => m !== mins)
+        : [...prev.allowedDurationsMinutes, mins].sort((a, b) => a - b);
+      return normalizeBlockPracticeOptions({
+        ...prev,
+        allowedDurationsMinutes: next,
+      });
+    });
+  };
 
   const save = async () => {
     if (!onUpdate || !editTitle.trim()) return;
@@ -83,6 +147,7 @@ export function WorkspaceBlockEditPanel({
         title: editTitle.trim(),
         description: editDescription.trim(),
         isStart: normalizeStarterFlag(editIsStart),
+        practiceOptions: normalizeBlockPracticeOptions(editPractice),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save block");
@@ -157,6 +222,103 @@ export function WorkspaceBlockEditPanel({
           </span>
         </span>
       </label>
+
+      {/* Practice launch limits — granular Explore/Drill × open/timed + durations */}
+      <div
+        className="space-y-2.5 rounded-md border border-neutral-800 bg-neutral-950/50 p-2.5"
+        data-block-edit-practice-options
+      >
+        <div>
+          <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
+            Limit what learners can launch from this block. Map icons show the
+            enabled combo.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+            <input
+              type="checkbox"
+              data-block-edit-allow-explore
+              checked={editPractice.allowExplore}
+              disabled={disabled}
+              onChange={(e) => patchPractice({ allowExplore: e.target.checked })}
+            />
+            <span className="text-[11px] text-neutral-200">Explore</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+            <input
+              type="checkbox"
+              data-block-edit-allow-drill
+              checked={editPractice.allowDrill}
+              disabled={disabled}
+              onChange={(e) => patchPractice({ allowDrill: e.target.checked })}
+            />
+            <span className="text-[11px] text-neutral-200">Drill</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-horizons>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+            <input
+              type="checkbox"
+              data-block-edit-allow-open-ended
+              checked={editPractice.allowOpenEnded}
+              disabled={disabled}
+              onChange={(e) =>
+                patchPractice({ allowOpenEnded: e.target.checked })
+              }
+            />
+            <span className="text-[11px] text-neutral-200">Open-ended</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+            <input
+              type="checkbox"
+              data-block-edit-allow-timed
+              checked={editPractice.allowTimed}
+              disabled={disabled}
+              onChange={(e) => patchPractice({ allowTimed: e.target.checked })}
+            />
+            <span className="text-[11px] text-neutral-200">Timed</span>
+          </label>
+        </div>
+
+        {editPractice.allowTimed ? (
+          <div data-block-edit-practice-durations>
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+              Allowed timed lengths
+            </p>
+            <div className="grid grid-cols-4 gap-1">
+              {BLOCK_PRACTICE_DURATION_OPTIONS.map((mins) => {
+                const on = editPractice.allowedDurationsMinutes.includes(mins);
+                return (
+                  <button
+                    key={mins}
+                    type="button"
+                    data-block-edit-duration={mins}
+                    data-selected={on ? "true" : "false"}
+                    disabled={disabled}
+                    onClick={() => toggleDuration(mins)}
+                    className={`h-7 rounded border text-[10px] font-semibold transition disabled:opacity-40 ${
+                      on
+                        ? "border-white/40 bg-white/10 text-white"
+                        : "border-neutral-700 bg-transparent text-neutral-500 hover:border-neutral-500"
+                    }`}
+                  >
+                    {mins}m
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Hidden serialized snapshot for structural/tests */}
+        <span className="sr-only" data-block-edit-practice-serialized>
+          {JSON.stringify(serializeBlockPracticeOptions(editPractice))}
+        </span>
+      </div>
 
       {error ? (
         <p className="text-[11px] text-red-400/90" data-block-edit-error>

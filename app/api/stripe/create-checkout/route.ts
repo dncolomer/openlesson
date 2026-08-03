@@ -8,7 +8,22 @@ import {
   formatTapSessionPrice,
   TRIAL_PRICE_CENTS,
 } from "@/lib/plans";
-import { AYCL_PRICE_CENTS, createPendingAyclPurchase } from "@/lib/aycl";
+import {
+  ayclPriceCentsForTier,
+  ayclPurchaseEligibleForUpgrade,
+  createPendingAyclPurchase,
+  getAyclPurchaseByToken,
+  normalizeAyclAccessTier,
+  type AyclAccessTier,
+} from "@/lib/aycl";
+import {
+  ayclOfferDescription,
+  ayclOfferLabel,
+  ayclUpgradeOfferDescription,
+  ayclUpgradeOfferLabel,
+  AYCL_UPGRADE_PRICE_CENTS,
+  isAyclAccessTier,
+} from "@/lib/aycl-shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppOrigin } from "@/lib/app-url";
 import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
@@ -34,12 +49,23 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const body = await request.json();
     const {
       priceType,
       workspaceId: rawWorkspaceId,
-    } = await request.json();
+      ayclAccessTier: rawTier,
+      ayclToken: rawAyclToken,
+      upgradeFromPurchaseId: rawUpgradeId,
+    } = body as {
+      priceType?: string;
+      workspaceId?: string;
+      ayclAccessTier?: string;
+      ayclToken?: string;
+      upgradeFromPurchaseId?: string;
+    };
 
     if (
+      !priceType ||
       ![
         "api_metered",
         "trial_3day",
@@ -49,23 +75,34 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
     }
+    const priceTypeResolved = priceType as CheckoutPriceType;
 
     const workspaceId = typeof rawWorkspaceId === "string" ? rawWorkspaceId.trim() : "";
-    if (priceType === "all_you_can_learn" && !workspaceId) {
+    const ayclTokenEarly =
+      typeof rawAyclToken === "string" ? rawAyclToken.trim() : "";
+    const upgradeFromIdEarly =
+      typeof rawUpgradeId === "string" ? rawUpgradeId.trim() : "";
+    // Fresh purchase needs catalog workspaceId; upgrade uses token / purchase id.
+    if (
+      priceTypeResolved === "all_you_can_learn" &&
+      !workspaceId &&
+      !ayclTokenEarly &&
+      !upgradeFromIdEarly
+    ) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     }
 
-    const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceType as CheckoutPriceType) && !user;
+    const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceTypeResolved) && !user;
 
-    if (priceType === "rabbit_hole_plays" && !user) {
+    if (priceTypeResolved === "rabbit_hole_plays" && !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     let priceId = "";
-    const mode = checkoutModeForPriceType(priceType as CheckoutPriceType);
+    const mode = checkoutModeForPriceType(priceTypeResolved);
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
-    if (priceType === "api_metered") {
+    if (priceTypeResolved === "api_metered") {
       lineItem = {
         price_data: {
           currency: "usd",
@@ -78,7 +115,7 @@ export async function POST(request: NextRequest) {
         },
         quantity: 1,
       };
-    } else if (priceType === "trial_3day") {
+    } else if (priceTypeResolved === "trial_3day") {
       lineItem = {
         price_data: {
           currency: "usd",
@@ -90,37 +127,100 @@ export async function POST(request: NextRequest) {
         },
         quantity: 1,
       };
-    } else if (priceType === "all_you_can_learn") {
+    } else if (priceTypeResolved === "all_you_can_learn") {
       const admin = createAdminClient();
-      const { data: catalogWorkspace } = await admin
-        .from("workspaces")
-        .select("id, title, root_topic, is_all_you_can_learn")
-        .eq("id", workspaceId)
-        .single();
+      const upgradeFromId =
+        typeof rawUpgradeId === "string" ? rawUpgradeId.trim() : "";
+      const ayclTokenIn =
+        typeof rawAyclToken === "string" ? rawAyclToken.trim() : "";
+      const isUpgradeCheckout = Boolean(upgradeFromId || ayclTokenIn);
 
-      if (!catalogWorkspace?.is_all_you_can_learn) {
-        return NextResponse.json({ error: "Workspace is not available for All-You-Can-Learn" }, { status: 404 });
-      }
-
-      const workspaceTitle = catalogWorkspace.title || catalogWorkspace.root_topic || "Learning Workspace";
-      lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: AYCL_PRICE_CENTS,
-          product_data: {
-            name: `All-You-Can-Learn: ${workspaceTitle}`,
-            description: "Lifetime access to your personal copy. ILE included. No account required.",
+      if (isUpgradeCheckout) {
+        // Promote existing practice-access purchase → full (same fork + link).
+        let purchase =
+          upgradeFromId
+            ? (
+                await admin
+                  .from("aycl_purchases")
+                  .select("*")
+                  .eq("id", upgradeFromId)
+                  .eq("status", "completed")
+                  .maybeSingle()
+              ).data
+            : null;
+        if (!purchase && ayclTokenIn) {
+          purchase = await getAyclPurchaseByToken(admin, ayclTokenIn);
+        }
+        if (!purchase || !ayclPurchaseEligibleForUpgrade(purchase as import("@/lib/aycl").AyclPurchase)) {
+          return NextResponse.json(
+            { error: "This access cannot be upgraded (already full or invalid)." },
+            { status: 400 },
+          );
+        }
+        const { data: catalogWorkspace } = await admin
+          .from("workspaces")
+          .select("id, title, root_topic")
+          .eq("id", purchase.source_workspace_id)
+          .single();
+        const workspaceTitle =
+          catalogWorkspace?.title ||
+          catalogWorkspace?.root_topic ||
+          "Learning Workspace";
+        lineItem = {
+          price_data: {
+            currency: "usd",
+            unit_amount: AYCL_UPGRADE_PRICE_CENTS,
+            product_data: {
+              name: `Unlock creation: ${workspaceTitle}`,
+              description: ayclUpgradeOfferDescription(),
+            },
           },
-        },
-        quantity: 1,
-      };
+          quantity: 1,
+        };
+        // Stash for metadata block below via mutable locals
+        (body as { __ayclUpgradePurchaseId?: string }).__ayclUpgradePurchaseId =
+          purchase.id;
+        (body as { __ayclUpgradeSourceWorkspaceId?: string }).__ayclUpgradeSourceWorkspaceId =
+          purchase.source_workspace_id;
+      } else {
+        const { data: catalogWorkspace } = await admin
+          .from("workspaces")
+          .select("id, title, root_topic, is_all_you_can_learn")
+          .eq("id", workspaceId)
+          .single();
+
+        if (!catalogWorkspace?.is_all_you_can_learn) {
+          return NextResponse.json(
+            { error: "Workspace is not available for All-You-Can-Learn" },
+            { status: 404 },
+          );
+        }
+
+        const tier: AyclAccessTier = isAyclAccessTier(rawTier)
+          ? rawTier
+          : normalizeAyclAccessTier(rawTier || "full");
+        const workspaceTitle =
+          catalogWorkspace.title || catalogWorkspace.root_topic || "Learning Workspace";
+        lineItem = {
+          price_data: {
+            currency: "usd",
+            unit_amount: ayclPriceCentsForTier(tier),
+            product_data: {
+              name: `${ayclOfferLabel(tier)}: ${workspaceTitle}`,
+              description: ayclOfferDescription(tier),
+            },
+          },
+          quantity: 1,
+        };
+        (body as { __ayclAccessTier?: AyclAccessTier }).__ayclAccessTier = tier;
+      }
     } else {
       priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || "";
     }
 
-    if (!priceId && !lineItem && priceType !== "rabbit_hole_plays") {
+    if (!priceId && !lineItem && priceTypeResolved !== "rabbit_hole_plays") {
       return NextResponse.json(
-        { error: `Stripe price not configured for ${priceType}` },
+        { error: `Stripe price not configured for ${priceTypeResolved}` },
         { status: 500 }
       );
     }
@@ -155,28 +255,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const ayclUpgradePurchaseId = (body as { __ayclUpgradePurchaseId?: string })
+      .__ayclUpgradePurchaseId;
+    const ayclUpgradeSourceWorkspaceId = (
+      body as { __ayclUpgradeSourceWorkspaceId?: string }
+    ).__ayclUpgradeSourceWorkspaceId;
+    const ayclAccessTierResolved = (body as { __ayclAccessTier?: AyclAccessTier })
+      .__ayclAccessTier;
+
     const metadata: Record<string, string> = {
-      price_type: priceType,
+      price_type: priceTypeResolved,
       quantity: "1",
       monthly_volume: "0",
       volume_unit: "",
       ...(user ? { supabase_user_id: user.id } : {}),
-      ...(priceType === "all_you_can_learn" ? { workspace_id: workspaceId } : {}),
+      ...(priceTypeResolved === "all_you_can_learn" && workspaceId
+        ? { workspace_id: workspaceId }
+        : {}),
+      ...(priceTypeResolved === "all_you_can_learn" && ayclUpgradeSourceWorkspaceId
+        ? { workspace_id: ayclUpgradeSourceWorkspaceId }
+        : {}),
+      ...(ayclAccessTierResolved
+        ? { aycl_access_tier: ayclAccessTierResolved }
+        : {}),
+      ...(ayclUpgradePurchaseId
+        ? {
+            aycl_upgrade: "1",
+            upgrade_from_purchase_id: ayclUpgradePurchaseId,
+          }
+        : {}),
     };
 
     const successUrl =
-      priceType === "all_you_can_learn"
+      priceTypeResolved === "all_you_can_learn"
         ? `${origin}/all-you-can-learn/success?session_id={CHECKOUT_SESSION_ID}`
         : isGuestCheckout
           ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
-          : priceType === "rabbit_hole_plays"
+          : priceTypeResolved === "rabbit_hole_plays"
             ? `${origin}/rabbit-hole?unlocked=1`
             : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
     const cancelUrl =
-      priceType === "all_you_can_learn"
+      priceTypeResolved === "all_you_can_learn"
         ? `${origin}/all-you-can-learn`
-        : priceType === "rabbit_hole_plays"
+        : priceTypeResolved === "rabbit_hole_plays"
           ? `${origin}/rabbit-hole`
           : `${origin}/pricing`;
 
@@ -185,7 +307,7 @@ export async function POST(request: NextRequest) {
       mode,
       line_items: [
         lineItem ??
-          (priceType === "rabbit_hole_plays" && !priceId
+          (priceTypeResolved === "rabbit_hole_plays" && !priceId
             ? {
                 price_data: {
                   currency: "usd",
@@ -211,14 +333,22 @@ export async function POST(request: NextRequest) {
     });
 
     let ayclAccessToken: string | undefined;
-    if (priceType === "all_you_can_learn") {
+    if (priceTypeResolved === "all_you_can_learn" && !ayclUpgradePurchaseId) {
       const admin = createAdminClient();
       const pending = await createPendingAyclPurchase(admin, {
         sourceWorkspaceId: workspaceId,
         stripeCheckoutSessionId: session.id,
         purchaserEmail: user?.email ?? null,
+        accessTier: ayclAccessTierResolved || "full",
       });
       ayclAccessToken = pending.accessToken;
+    } else if (
+      priceTypeResolved === "all_you_can_learn" &&
+      ayclUpgradePurchaseId &&
+      ayclTokenEarly
+    ) {
+      // Same lifetime access token as the practice purchase (no new hash/link).
+      ayclAccessToken = ayclTokenEarly;
     }
 
     return NextResponse.json({

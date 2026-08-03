@@ -1,89 +1,209 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { WorkspaceSimulationBlockRef } from "@/lib/workspace-simulation-overview";
 import {
-  deriveWorkspaceSimulationOverview,
-  type WorkspaceSimulationBlockRef,
-} from "@/lib/workspace-simulation-overview";
-import {
-  validateWorkspaceSimulation,
-  type WorkspaceValidationResult,
-} from "@/lib/workspace-simulation-validation";
+  deriveSimulationSamples,
+  type SimulationSampleScope,
+  type SimulationSampleScopeKind,
+} from "@/lib/workspace-simulation-samples";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 /**
- * Workspace-level Simulation tab: helps course authors understand how a
- * learner might navigate blocks (starts, locks, Explore/Drill, sample probes).
- * Distinct from the per-block "Block Simulation" drawer.
- *
- * Includes holistic workspace validation (name, goal, blocks, context) with
- * actionable improvement ideas — pure/deterministic, author-triggered.
+ * Workspace Simulation tab: pick a block or the entire workspace, then
+ * generate Explore (questions) + Drill (exercises) samples using the same
+ * real prompt builders as live practice interfaces.
  */
 export function WorkspaceSimulationPanel({
+  workspaceId,
   blocks,
   workspaceTitle,
   workspaceGoal,
   workspaceDescription,
   workspaceNotes,
-  workspaceFileCount,
-  externalResourceCount,
+  rootTopic,
+  ayclToken,
+  locale = "en",
 }: {
+  workspaceId?: string | null;
   blocks: readonly WorkspaceSimulationBlockRef[];
   workspaceTitle?: string | null;
   workspaceGoal?: string | null;
   workspaceDescription?: string | null;
   workspaceNotes?: string | null;
-  workspaceFileCount?: number | null;
-  externalResourceCount?: number | null;
+  rootTopic?: string | null;
+  ayclToken?: string | null;
+  locale?: string;
 }) {
-  const overview = useMemo(
+  const title = String(workspaceTitle || rootTopic || "").trim() || "Workspace";
+
+  const blockOptions = useMemo(
     () =>
-      deriveWorkspaceSimulationOverview(blocks, {
-        workspaceTitle,
-        workspaceGoal,
-        rootTopic: workspaceTitle,
-        notes: workspaceNotes,
-      }),
-    [blocks, workspaceGoal, workspaceNotes, workspaceTitle],
+      blocks.map((b) => ({
+        id: b.id,
+        title: String(b.title || "").trim() || "Untitled block",
+      })),
+    [blocks],
   );
 
-  const validationInput = useMemo(
+  const [scopeKind, setScopeKind] = useState<SimulationSampleScopeKind>(
+    () => (blockOptions.length > 0 ? "block" : "workspace"),
+  );
+  const [selectedBlockId, setSelectedBlockId] = useState<string>(
+    () => blockOptions[0]?.id ?? "",
+  );
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [exercises, setExercises] = useState<string[]>([]);
+  const [generatedScope, setGeneratedScope] =
+    useState<SimulationSampleScope | null>(null);
+
+  const activeScope: SimulationSampleScope | null = useMemo(() => {
+    if (scopeKind === "workspace") return { kind: "workspace" };
+    if (!selectedBlockId) return null;
+    return { kind: "block", blockId: selectedBlockId };
+  }, [scopeKind, selectedBlockId]);
+
+  const canGenerate =
+    Boolean(workspaceId) &&
+    !generating &&
+    activeScope != null &&
+    (activeScope.kind === "workspace" || Boolean(activeScope.blockId));
+
+  const workspaceCtx = useMemo(
     () => ({
-      name: workspaceTitle,
-      goal: workspaceGoal,
-      description: workspaceDescription,
+      workspaceTitle: title,
+      rootTopic: rootTopic ?? workspaceTitle,
+      workspaceGoal,
+      workspaceDescription,
       notes: workspaceNotes,
-      blocks,
-      workspaceFileCount: workspaceFileCount ?? 0,
-      externalResourceCount: externalResourceCount ?? 0,
+      locale,
+      blocks: blocks.map((b) => ({
+        id: b.id,
+        title: b.title,
+        description: b.description,
+        planning_prompt: b.planning_prompt,
+        local_context: b.local_context,
+        is_start: b.is_start,
+        next_block_ids: b.next_block_ids,
+        lock_until_block_ids: b.lock_until_block_ids,
+      })),
     }),
     [
       blocks,
-      externalResourceCount,
+      locale,
+      rootTopic,
+      title,
       workspaceDescription,
-      workspaceFileCount,
       workspaceGoal,
       workspaceNotes,
       workspaceTitle,
     ],
   );
 
-  const [validation, setValidation] = useState<WorkspaceValidationResult | null>(
-    null,
-  );
+  /** Offline seed preview (same pure builders as live Explore/Drill fallbacks). */
+  const seedPreview = useMemo(() => {
+    if (!activeScope) return null;
+    return deriveSimulationSamples(activeScope, workspaceCtx);
+  }, [activeScope, workspaceCtx]);
 
-  const runValidation = () => {
-    // Pure sync evaluation — same shipped path unit tests drive.
-    setValidation(validateWorkspaceSimulation(validationInput));
+  const displayQuestions =
+    questions.length > 0 ? questions : seedPreview?.questions ?? [];
+  const displayExercises =
+    exercises.length > 0 ? exercises : seedPreview?.exercises ?? [];
+  const showingSeed =
+    questions.length === 0 &&
+    exercises.length === 0 &&
+    (seedPreview?.questions.length ?? 0) > 0;
+
+  const generate = async () => {
+    if (!workspaceId || !activeScope || generating) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      const res = await fetch("/api/workspace/simulation-samples", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          scope: activeScope.kind,
+          blockId:
+            activeScope.kind === "block" ? activeScope.blockId : undefined,
+          model,
+          locale,
+          ...(ayclToken ? { ayclToken } : {}),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        questions?: string[];
+        exercises?: string[];
+        scope?: string;
+        blockId?: string | null;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate samples");
+      }
+      const nextQ = Array.isArray(data.questions)
+        ? data.questions.filter((q) => typeof q === "string" && q.trim())
+        : [];
+      const nextE = Array.isArray(data.exercises)
+        ? data.exercises.filter((q) => typeof q === "string" && q.trim())
+        : [];
+      if (nextQ.length === 0 && nextE.length === 0) {
+        throw new Error("No samples returned");
+      }
+      setQuestions(nextQ);
+      setExercises(nextE);
+      setGeneratedScope(activeScope);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generate failed");
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const title = String(workspaceTitle || "").trim() || "Workspace";
+  const onScopeKindChange = (kind: SimulationSampleScopeKind) => {
+    setScopeKind(kind);
+    setError(null);
+    // Keep prior results until regenerate so authors can compare; clear only
+    // if they switch away from the scope that produced the last generate.
+    if (
+      generatedScope &&
+      ((kind === "workspace" && generatedScope.kind !== "workspace") ||
+        (kind === "block" && generatedScope.kind !== "block"))
+    ) {
+      setQuestions([]);
+      setExercises([]);
+      setGeneratedScope(null);
+    }
+  };
+
+  const onBlockChange = (id: string) => {
+    setSelectedBlockId(id);
+    setError(null);
+    if (
+      generatedScope?.kind === "block" &&
+      generatedScope.blockId !== id
+    ) {
+      setQuestions([]);
+      setExercises([]);
+      setGeneratedScope(null);
+    }
+  };
 
   return (
     <div
       data-workspace-simulation-section
       data-workspace-simulation-panel
-      data-simulation-block-count={overview.blockCount}
-      data-simulation-start-count={overview.startCount}
+      data-simulation-scope={scopeKind}
+      data-simulation-block-count={blocks.length}
       className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain p-1 sm:p-2"
     >
       <header className="space-y-1" data-workspace-simulation-header>
@@ -91,304 +211,219 @@ export function WorkspaceSimulationPanel({
           Simulation
         </h2>
         <p className="max-w-2xl text-[12px] leading-relaxed text-neutral-400">
-          How a learner might interact with{" "}
-          <span className="text-neutral-200">{title}</span> — entry points,
-          practice modes, sample paths, and probes derived from your blocks.
-          This is an author preview, not a live learner session.
+          Preview sample{" "}
+          <span className="text-neutral-200">Explore questions</span> and{" "}
+          <span className="text-neutral-200">Drill exercises</span> for{" "}
+          <span className="text-neutral-200">{title}</span> using the same
+          prompts as live practice. Pick a block or the entire workspace, then
+          generate.
         </p>
       </header>
 
-      {/* Workspace validation */}
+      {/* Scope picker + generate */}
       <section
         className="rounded-lg border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
-        data-workspace-simulation-validation
+        data-workspace-simulation-scope
+        data-simulation-scope-control
       >
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0 flex-1 space-y-1">
-            <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              Workspace validation
-            </h3>
-            <p className="text-[12px] leading-relaxed text-neutral-400">
-              Holistic check of name, goal, blocks, context, and learner path —
-              returns readiness findings and improvement ideas.
-            </p>
-          </div>
+        <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+          Scope
+        </h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-neutral-400">
+          Samples are grounded in workspace goal and map context. Block scope
+          also uses that block&apos;s text; entire workspace samples across the
+          map.
+        </p>
+
+        <div
+          className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+          data-simulation-scope-picker
+        >
+          <fieldset className="min-w-0 flex-1 space-y-2">
+            <legend className="sr-only">Simulation scope</legend>
+            <label
+              className="flex cursor-pointer items-start gap-2 rounded-md border border-white/10 bg-black/20 px-2.5 py-2 has-[:checked]:border-white/25 has-[:checked]:bg-white/[0.06]"
+              data-simulation-scope-option="workspace"
+            >
+              <input
+                type="radio"
+                name="simulation-scope"
+                value="workspace"
+                checked={scopeKind === "workspace"}
+                onChange={() => onScopeKindChange("workspace")}
+                data-simulation-scope-workspace
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-[12px] font-medium text-neutral-100">
+                  Entire workspace
+                </span>
+                <span className="block text-[11px] text-neutral-500">
+                  Goal, notes, and map inventory
+                </span>
+              </span>
+            </label>
+            <label
+              className="flex cursor-pointer items-start gap-2 rounded-md border border-white/10 bg-black/20 px-2.5 py-2 has-[:checked]:border-white/25 has-[:checked]:bg-white/[0.06]"
+              data-simulation-scope-option="block"
+            >
+              <input
+                type="radio"
+                name="simulation-scope"
+                value="block"
+                checked={scopeKind === "block"}
+                onChange={() => onScopeKindChange("block")}
+                disabled={blockOptions.length === 0}
+                data-simulation-scope-block
+                className="mt-0.5"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12px] font-medium text-neutral-100">
+                  Single block
+                </span>
+                <span className="block text-[11px] text-neutral-500">
+                  Focus one block plus shared workspace context
+                </span>
+                {scopeKind === "block" ? (
+                  <select
+                    data-simulation-block-select
+                    value={selectedBlockId}
+                    onChange={(e) => onBlockChange(e.target.value)}
+                    disabled={blockOptions.length === 0}
+                    className="mt-2 w-full max-w-md rounded-md border border-white/15 bg-neutral-900 px-2 py-1.5 text-[12px] text-neutral-100"
+                  >
+                    {blockOptions.length === 0 ? (
+                      <option value="">No blocks yet</option>
+                    ) : (
+                      blockOptions.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.title}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                ) : null}
+              </span>
+            </label>
+          </fieldset>
+
           <button
             type="button"
-            data-simulation-validation-run
-            onClick={runValidation}
-            className="shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[12px] font-medium text-neutral-100 transition hover:border-white/25 hover:bg-white/[0.1]"
+            data-simulation-generate
+            data-simulation-generate-samples
+            disabled={!canGenerate}
+            onClick={() => void generate()}
+            className="shrink-0 rounded-md border border-white/15 bg-white/[0.08] px-4 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Run validation
+            {generating ? "Generating…" : "Generate samples"}
           </button>
         </div>
 
-        {validation ? (
-          <div
-            className="mt-3 space-y-3"
-            data-simulation-validation-result
-            data-simulation-validation-score={validation.score}
-            data-simulation-validation-criticals={validation.stats.criticalCount}
-            data-simulation-validation-ideas={validation.stats.ideaCount}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[12px] text-white"
-                data-simulation-validation-score-badge
-              >
-                Score {validation.score}
-              </span>
-              {validation.stats.criticalCount > 0 ? (
-                <span className="rounded border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
-                  {validation.stats.criticalCount} critical
-                </span>
-              ) : null}
-              {validation.stats.warningCount > 0 ? (
-                <span className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
-                  {validation.stats.warningCount} warning
-                  {validation.stats.warningCount === 1 ? "" : "s"}
-                </span>
-              ) : null}
-            </div>
-            <p
-              className="text-[12px] leading-relaxed text-neutral-300"
-              data-simulation-validation-summary
-            >
-              {validation.summary}
-            </p>
-
-            <div className="space-y-1.5" data-simulation-validation-findings>
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                Findings
-              </p>
-              <ul className="space-y-1.5">
-                {validation.findings.map((f) => (
-                  <li
-                    key={f.id}
-                    data-simulation-validation-finding={f.id}
-                    data-simulation-validation-dimension={f.dimension}
-                    data-simulation-validation-severity={f.severity}
-                    className="rounded-md border border-white/10 bg-black/20 px-2.5 py-2"
-                  >
-                    <p className="text-[12px] font-medium text-neutral-100">
-                      <span
-                        className={
-                          f.severity === "critical"
-                            ? "text-rose-300"
-                            : f.severity === "warning"
-                              ? "text-amber-300"
-                              : f.severity === "ok"
-                                ? "text-emerald-400/90"
-                                : "text-neutral-500"
-                        }
-                      >
-                        {f.severity}
-                      </span>
-                      <span className="mx-1.5 text-neutral-600">·</span>
-                      {f.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
-                      {f.detail}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-1.5" data-simulation-validation-ideas>
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                Improvement ideas
-              </p>
-              <ul className="space-y-1.5">
-                {validation.ideas.map((idea) => (
-                  <li
-                    key={idea.id}
-                    data-simulation-validation-idea={idea.id}
-                    data-simulation-validation-idea-dimension={idea.dimension}
-                    data-simulation-validation-idea-priority={idea.priority}
-                    className="rounded-md border border-sky-500/20 bg-sky-500/[0.06] px-2.5 py-2"
-                  >
-                    <p className="text-[12px] font-medium text-sky-100/95">
-                      <span className="text-[10px] uppercase tracking-wide text-sky-400/80">
-                        {idea.priority}
-                      </span>
-                      <span className="mx-1.5 text-neutral-600">·</span>
-                      {idea.action}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
-                      {idea.rationale}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : (
+        {!workspaceId ? (
+          <p className="mt-2 text-[11px] text-amber-300/90">
+            Workspace id missing — open this tab from a saved workspace to
+            generate.
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-2 text-[11px] text-amber-300/90" data-simulation-error>
+            {error}
+          </p>
+        ) : null}
+        {showingSeed ? (
           <p
             className="mt-2 text-[11px] text-neutral-600"
-            data-simulation-validation-idle
+            data-simulation-seed-hint
           >
-            Run validation to evaluate this workspace holistically.
+            Showing deterministic preview from live Explore/Drill builders.
+            Click Generate for model samples.
           </p>
-        )}
+        ) : null}
       </section>
 
-      {/* Inventory stats */}
+      {/* Questions (Explore) */}
       <section
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-        data-workspace-simulation-stats
-      >
-        {[
-          { label: "Blocks", value: overview.blockCount, key: "blocks" },
-          { label: "Starters", value: overview.startCount, key: "starts" },
-          { label: "Locked", value: overview.lockedCount, key: "locked" },
-          {
-            label: "With local context",
-            value: overview.withLocalContextCount,
-            key: "local",
-          },
-        ].map((s) => (
-          <div
-            key={s.key}
-            data-simulation-stat={s.key}
-            className="rounded-lg border border-white/10 bg-neutral-950/70 px-3 py-2.5"
-          >
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              {s.label}
-            </p>
-            <p className="mt-0.5 font-mono text-lg text-white">{s.value}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* Journey */}
-      <section
-        className="rounded-lg border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
-        data-workspace-simulation-journey
+        className="space-y-2"
+        data-workspace-simulation-questions
+        data-simulation-questions
       >
         <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Learner journey
+          Questions
+          <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
+            Explore / dialogue
+          </span>
+          <span className="ml-1 font-mono text-neutral-600">
+            ({displayQuestions.length})
+          </span>
         </h3>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-neutral-300">
-          {overview.journeySummary}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5" data-simulation-modes>
-          {overview.interactionModes.map((mode) => (
-            <span
-              key={mode}
-              data-simulation-mode={mode}
-              className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-neutral-400"
-            >
-              {mode}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* Sample paths */}
-      <section className="space-y-2" data-workspace-simulation-paths>
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Sample paths
-        </h3>
-        {overview.samplePaths.length === 0 ? (
-          <p className="text-[12px] text-neutral-600" data-simulation-paths-empty>
-            No paths yet — add blocks and mark starters on the map.
+        {displayQuestions.length === 0 ? (
+          <p
+            className="text-[12px] text-neutral-600"
+            data-simulation-questions-empty
+          >
+            No questions yet — choose a scope and generate samples.
           </p>
         ) : (
-          overview.samplePaths.map((path, pi) => (
-            <ol
-              key={`path-${pi}-${path[0]?.blockId || pi}`}
-              data-simulation-path={pi}
-              className="space-y-1.5 rounded-lg border border-white/10 bg-neutral-950/50 p-2.5"
-            >
-              {path.map((step, si) => (
-                <li
-                  key={step.blockId}
-                  data-simulation-path-step={step.blockId}
-                  className="flex items-start gap-2 text-[12px]"
-                >
-                  <span className="mt-0.5 font-mono text-[10px] text-neutral-600">
-                    {si + 1}.
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-neutral-100">
-                      {step.title}
-                      {step.isStart ? (
-                        <span className="ml-1.5 text-[9px] uppercase tracking-wide text-neutral-500">
-                          start
-                        </span>
-                      ) : null}
-                      {step.locked ? (
-                        <span className="ml-1.5 text-[9px] uppercase tracking-wide text-amber-500/80">
-                          locked
-                        </span>
-                      ) : null}
-                    </p>
-                    {step.locked && step.lockUntilTitles.length > 0 ? (
-                      <p className="text-[10px] text-neutral-500">
-                        Until: {step.lockUntilTitles.join(", ")}
-                      </p>
-                    ) : null}
-                    <p className="text-[10px] text-neutral-600">
-                      {step.practiceModes.join(" · ")}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          ))
+          <ul className="space-y-1.5" data-simulation-question-list>
+            {displayQuestions.map((q, i) => (
+              <li
+                key={`q-${i}`}
+                data-simulation-question={i}
+                data-simulation-probe-kind="question"
+                className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+              >
+                {q}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
-      {/* Sample probes */}
-      <section className="space-y-2" data-workspace-simulation-probes>
+      {/* Exercises (Drill) */}
+      <section
+        className="space-y-2"
+        data-workspace-simulation-exercises
+        data-simulation-exercises
+      >
         <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Sample practice (from blocks)
+          Exercises
+          <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
+            Drill / solo
+          </span>
+          <span className="ml-1 font-mono text-neutral-600">
+            ({displayExercises.length})
+          </span>
         </h3>
-        <p className="text-[11px] text-neutral-600">
-          Preview questions and exercises a learner might see. For full 3+3
-          probes and regenerate, open a block → Block Simulation.
-        </p>
-        {overview.sampleProbes.length === 0 ? (
-          <p className="text-[12px] text-neutral-600" data-simulation-probes-empty>
-            No probe samples until blocks exist.
+        {displayExercises.length === 0 ? (
+          <p
+            className="text-[12px] text-neutral-600"
+            data-simulation-exercises-empty
+          >
+            No exercises yet — choose a scope and generate samples.
           </p>
         ) : (
-          overview.sampleProbes.map((group) => (
-            <div
-              key={group.blockId}
-              data-simulation-probe-group={group.blockId}
-              className="rounded-lg border border-white/10 bg-neutral-950/50 p-2.5"
-            >
-              <p className="text-[11px] font-medium text-neutral-200">
-                {group.blockTitle}
-              </p>
-              <ul className="mt-1.5 space-y-1">
-                {group.questions.map((q) => (
-                  <li
-                    key={q.id}
-                    data-simulation-probe-kind="question"
-                    className="text-[11px] leading-snug text-neutral-400"
-                  >
-                    <span className="text-neutral-600">Q · </span>
-                    {q.question}
-                  </li>
-                ))}
-                {group.exercises.map((ex) => (
-                  <li
-                    key={ex.id}
-                    data-simulation-probe-kind="exercise"
-                    className="text-[11px] leading-snug text-neutral-400"
-                  >
-                    <span className="text-neutral-600">Ex · </span>
-                    {ex.question}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+          <ul className="space-y-1.5" data-simulation-exercise-list>
+            {displayExercises.map((ex, i) => (
+              <li
+                key={`ex-${i}`}
+                data-simulation-exercise={i}
+                data-simulation-probe-kind="exercise"
+                className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+              >
+                {ex}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
+
+      <p
+        className="text-[11px] leading-relaxed text-neutral-600"
+        data-workspace-simulation-footer
+      >
+        Per-block full readiness and influence chips live in the block drawer →
+        Block Simulation. This tab previews practice items for authors.
+      </p>
     </div>
   );
 }

@@ -53,8 +53,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "workspaceId and op are required" }, { status: 400 });
     }
 
+    // Practice-tier AYCL may mark done / read ground; cannot reshape map.
+    const authoringOps = new Set([
+      "set_lock_until",
+      "toggle_unusable",
+      "set_unusable_cells",
+      "set_local_context",
+    ]);
     const auth = await guardWorkspaceRoute(workspaceId, {
       ayclToken: ayclTokenFromBody(body),
+      requireAyclAuthoring: authoringOps.has(String(op || "")),
     });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;

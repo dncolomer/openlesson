@@ -16,6 +16,42 @@ export interface ModelsTabSubjectRef {
   guest_user_id?: string | null;
 }
 
+/**
+ * Whether Knowledge LWM/Embeddings may pick subjects other than the logged-in user.
+ * Learner mode always locks to self — even when the viewer is the workspace owner.
+ */
+export function resolveModelsTabCanInspectOthers(input: {
+  isOwner?: boolean;
+  /**
+   * Learner Knowledge (LWM + Embeddings only): force self subject.
+   * Also set when interaction mode is learner.
+   */
+  lockSubjectToSelf?: boolean;
+  /** Alias for lockSubjectToSelf (shell flag knowledgeLwmEmbeddingsOnly). */
+  lwmEmbeddingsOnly?: boolean;
+  interactionMode?: "creator" | "learner" | string | null;
+}): boolean {
+  if (shouldLockModelsTabSubjectToSelf(input)) return false;
+  return Boolean(input.isOwner);
+}
+
+/**
+ * Pure: learner Knowledge forces self-scope (no multi-user inspect).
+ */
+export function shouldLockModelsTabSubjectToSelf(input: {
+  lockSubjectToSelf?: boolean;
+  lwmEmbeddingsOnly?: boolean;
+  interactionMode?: "creator" | "learner" | string | null;
+}): boolean {
+  if (input.lockSubjectToSelf) return true;
+  if (input.lwmEmbeddingsOnly) return true;
+  const mode =
+    typeof input.interactionMode === "string"
+      ? input.interactionMode.trim().toLowerCase()
+      : "";
+  return mode === "learner";
+}
+
 export interface ModelsTabScopeInput {
   mode: ModelsTabScopeMode;
   /** Caller identity (defaults single-user "me" when mode=user with no target). */
@@ -31,6 +67,11 @@ export interface ModelsTabScopeInput {
   groupMembers?: ModelsTabSubjectRef[] | null;
   /** When false, non-self targets are forced back to the current user. */
   canInspectOthers?: boolean;
+  /**
+   * Learner self-lock: forces single self subject even if canInspectOthers is true
+   * (owner in learner mode).
+   */
+  lockSubjectToSelf?: boolean;
 }
 
 export interface ResolvedModelsTabScope {
@@ -83,12 +124,14 @@ export function dedupeSubjectRefs(subjects: ModelsTabSubjectRef[]): SubjectRef[]
 /**
  * Resolve Models tab scope selection into a subject list + API query fields.
  * Non-inspectors always resolve to the current user (single).
+ * Learner `lockSubjectToSelf` also forces self even when canInspectOthers is true.
  */
 export function resolveModelsTabScope(input: ModelsTabScopeInput): ResolvedModelsTabScope {
-  const canInspect = Boolean(input.canInspectOthers);
+  const lockSelf = Boolean(input.lockSubjectToSelf);
+  const canInspect = Boolean(input.canInspectOthers) && !lockSelf;
   const me = cleanId(input.currentUserId);
 
-  // Non-inspectors: always self via unique user_id (or empty if unauthenticated).
+  // Non-inspectors / learner self-lock: always self via unique user_id.
   if (!canInspect) {
     const subjects: SubjectRef[] = me ? [{ user_id: me }] : [];
     return {
@@ -203,8 +246,11 @@ export function resolveEmbeddingsSubjectSelection(input: {
   selectedKeys: string[];
   currentUserId?: string | null;
   canInspectOthers?: boolean;
+  /** Learner self-lock (overrides canInspectOthers). */
+  lockSubjectToSelf?: boolean;
 }): ResolvedModelsTabScope {
-  const canInspect = Boolean(input.canInspectOthers);
+  const lockSelf = Boolean(input.lockSubjectToSelf);
+  const canInspect = Boolean(input.canInspectOthers) && !lockSelf;
   const me = cleanId(input.currentUserId);
   const keys = Array.isArray(input.selectedKeys) ? input.selectedKeys : [];
 
@@ -213,6 +259,7 @@ export function resolveEmbeddingsSubjectSelection(input: {
       mode: "user",
       currentUserId: me,
       canInspectOthers: false,
+      lockSubjectToSelf: lockSelf,
     });
   }
 

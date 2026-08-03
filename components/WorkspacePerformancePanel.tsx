@@ -112,6 +112,7 @@ export function WorkspacePerformancePanel({
             currentUserId={currentUserId}
             isOwner={isOwner}
             ayclToken={ayclToken}
+            lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="models"
           />
         )}
@@ -122,6 +123,7 @@ export function WorkspacePerformancePanel({
             currentUserId={currentUserId}
             isOwner={isOwner}
             ayclToken={ayclToken}
+            lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="lwm"
           />
         )}

@@ -48,15 +48,35 @@ export type PracticePortalTimings = {
   timed_drill: number[];
 };
 
+/**
+ * Practice scope for portal visitors.
+ * - visitor_pick: visitor chooses a block (block_id null)
+ * - fixed_block: single fixed block_id (visitor cannot change)
+ * - workspace: force entire workspace — no block choice; mint with null block_id
+ */
+export type PracticePortalScopeMode = "visitor_pick" | "fixed_block" | "workspace";
+
+export const PRACTICE_PORTAL_SCOPE_MODES = [
+  "visitor_pick",
+  "fixed_block",
+  "workspace",
+] as const;
+
 export type PracticePortalConfig = {
   allowed_products: PracticePortalProductId[];
   timings: PracticePortalTimings;
   /**
    * Optional fixed workspace block for this portal.
-   * When set, open-ended mints use it without a visitor block pick;
-   * timed mints also default to this block when provided.
+   * When set (and scope_mode is fixed_block), open-ended mints use it without
+   * a visitor block pick; timed mints also default to this block when provided.
+   * Always null when scope_mode is workspace.
    */
   block_id: string | null;
+  /**
+   * Explicit scope policy. Distinct from `block_id: null` alone (visitor pick).
+   * `workspace` forces map-level practice with no block choice on the public desk.
+   */
+  scope_mode: PracticePortalScopeMode;
 };
 
 export type PracticePortalMintRequest = {
@@ -214,20 +234,102 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
           : typeof record.fixedBlockId === "string"
             ? record.fixedBlockId
             : "";
-  const block_id = blockRaw.trim() || null;
+  let block_id = blockRaw.trim() || null;
+
+  const scopeRaw =
+    typeof record.scope_mode === "string"
+      ? record.scope_mode
+      : typeof record.scopeMode === "string"
+        ? record.scopeMode
+        : typeof record.scope === "string"
+          ? record.scope
+          : typeof record.force_workspace === "boolean" && record.force_workspace
+            ? "workspace"
+            : typeof record.forceWorkspace === "boolean" && record.forceWorkspace
+              ? "workspace"
+              : "";
+  const scopeNormalized = String(scopeRaw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+
+  let scope_mode: PracticePortalScopeMode;
+  if (
+    scopeNormalized === "workspace" ||
+    scopeNormalized === "entire_workspace" ||
+    scopeNormalized === "workspace_level" ||
+    scopeNormalized === "force_workspace"
+  ) {
+    scope_mode = "workspace";
+    block_id = null;
+  } else if (
+    scopeNormalized === "fixed_block" ||
+    scopeNormalized === "fixed" ||
+    scopeNormalized === "block"
+  ) {
+    scope_mode = block_id ? "fixed_block" : "visitor_pick";
+  } else if (
+    scopeNormalized === "visitor_pick" ||
+    scopeNormalized === "visitor" ||
+    scopeNormalized === "pick"
+  ) {
+    scope_mode = "visitor_pick";
+    // visitor pick does not pin a block
+    block_id = null;
+  } else {
+    // Infer from legacy configs: block_id set → fixed; else visitor pick
+    scope_mode = block_id ? "fixed_block" : "visitor_pick";
+  }
+
+  // fixed_block without a concrete id falls back to visitor pick
+  if (scope_mode === "fixed_block" && !block_id) {
+    scope_mode = "visitor_pick";
+  }
 
   return {
     allowed_products: allowed,
     timings: { timed_explore, timed_drill },
-    block_id,
+    block_id: scope_mode === "workspace" ? null : block_id,
+    scope_mode,
   };
 }
 
-/** Resolve effective block for a mint: visitor override wins when present, else fixed config. */
+/** True when the portal forces entire-workspace practice (no block choice). */
+export function isPracticePortalWorkspaceScope(
+  config: PracticePortalConfig | null | undefined,
+): boolean {
+  return config?.scope_mode === "workspace";
+}
+
+/**
+ * Products that can actually mint under the portal's scope.
+ * Workspace-level force only supports products that allow null block_id (timed TAP);
+ * open-ended ILE requires a concrete block and is excluded from the public desk.
+ */
+export function practicePortalProductsForScope(
+  config: PracticePortalConfig,
+): PracticePortalProductId[] {
+  const cfg = normalizePracticePortalConfig(config);
+  if (cfg.scope_mode !== "workspace") return cfg.allowed_products;
+  return cfg.allowed_products.filter((id) => !isOpenEndedProduct(id));
+}
+
+/**
+ * Resolve effective block for a mint.
+ * - workspace scope: always null (visitor/fixed overrides ignored)
+ * - fixed_block: config.block_id (visitor override ignored)
+ * - visitor_pick: visitor request when present, else null
+ */
 export function resolvePracticePortalMintBlockId(
   config: PracticePortalConfig,
   requestBlockId: unknown,
 ): string | null {
+  if (config.scope_mode === "workspace") {
+    return null;
+  }
+  if (config.scope_mode === "fixed_block") {
+    return config.block_id ?? null;
+  }
   const fromRequest =
     typeof requestBlockId === "string" && requestBlockId.trim()
       ? requestBlockId.trim()
@@ -297,6 +399,16 @@ export function validatePracticePortalMintRequest(
   const launch = launchTargetForPracticePortalProduct(productId);
   const block_id = resolvePracticePortalMintBlockId(config, body?.block_id);
 
+  // Workspace-forced portals cannot mint open-ended (ILE requires a block).
+  if (config.scope_mode === "workspace" && isOpenEndedProduct(productId)) {
+    return {
+      ok: false,
+      error:
+        "Open-ended products are not available on workspace-level Knowledge Portals (they require a practice block). Enable a timed product or switch the portal off workspace scope.",
+      code: "product_not_allowed",
+    };
+  }
+
   if (isOpenEndedProduct(productId)) {
     if (!block_id) {
       return {
@@ -315,7 +427,7 @@ export function validatePracticePortalMintRequest(
     };
   }
 
-  // Timed products
+  // Timed products — workspace scope always yields block_id null (enforced above).
   const timingList =
     productId === "timed_drill"
       ? config.timings.timed_drill
@@ -366,7 +478,7 @@ export function validatePracticePortalMintRequest(
     product_id: productId,
     minutes,
     launch,
-    block_id,
+    block_id: config.scope_mode === "workspace" ? null : block_id,
   };
 }
 
@@ -457,7 +569,8 @@ export function classifyPracticePortalLookup(input: {
  * Pure — no DB.
  */
 export function buildPracticePortalLandingView(input: {
-  config: PracticePortalConfig;
+  /** Raw or normalized portal config (normalized inside). */
+  config: PracticePortalConfig | Record<string, unknown> | null | undefined;
   workspace: {
     id: string;
     title?: string | null;
@@ -475,6 +588,12 @@ export function buildPracticePortalLandingView(input: {
   config: PracticePortalConfig;
   /** Fixed block from portal config when set (visitor cannot change). */
   fixed_block_id: string | null;
+  /**
+   * When true, public desk forces workspace-level practice: no block picker
+   * and no fixed-block chrome; mint always uses null block_id.
+   */
+  force_workspace_scope: boolean;
+  scope_mode: PracticePortalScopeMode;
   products: Array<{
     id: PracticePortalProductId;
     launch: ProductLaunchTarget;
@@ -483,7 +602,8 @@ export function buildPracticePortalLandingView(input: {
   blocks: Array<{ id: string; title: string | null; is_start: boolean }>;
 } {
   const config = normalizePracticePortalConfig(input.config);
-  const products = config.allowed_products.map((id) => {
+  const productIds = practicePortalProductsForScope(config);
+  const products = productIds.map((id) => {
     const launch = launchTargetForPracticePortalProduct(id);
     const timings =
       id === "timed_explore"
@@ -499,12 +619,17 @@ export function buildPracticePortalLandingView(input: {
     title: b.title ?? null,
     is_start: b.is_start === true,
   }));
-  // When a fixed block is configured, only surface that block (if present).
-  const blocks =
-    config.block_id != null
-      ? allBlocks.filter((b) => b.id === config.block_id)
-      : allBlocks;
 
+  // Workspace force: no block list (hides picker). Fixed: only that block.
+  // Visitor pick: full inventory.
+  let blocks: Array<{ id: string; title: string | null; is_start: boolean }>;
+  if (config.scope_mode === "workspace") {
+    blocks = [];
+  } else if (config.scope_mode === "fixed_block" && config.block_id != null) {
+    blocks = allBlocks.filter((b) => b.id === config.block_id);
+  } else {
+    blocks = allBlocks;
+  }
 
   return {
     portal_id: input.portal_id ?? null,
@@ -514,7 +639,10 @@ export function buildPracticePortalLandingView(input: {
       root_topic: input.workspace.root_topic ?? null,
     },
     config,
-    fixed_block_id: config.block_id,
+    fixed_block_id:
+      config.scope_mode === "fixed_block" ? config.block_id : null,
+    force_workspace_scope: config.scope_mode === "workspace",
+    scope_mode: config.scope_mode,
     products,
     blocks,
   };

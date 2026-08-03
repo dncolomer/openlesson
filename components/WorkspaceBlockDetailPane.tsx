@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   WorkspaceRightPaneDrawer,
@@ -11,6 +11,10 @@ import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
 import { WorkspaceBlockSimulationPanel } from "@/components/WorkspaceBlockSimulationPanel";
 import { WorkspaceSplitBlockPane } from "@/components/WorkspaceSplitBlockPane";
 import {
+  WorkspaceExpandBlockPane,
+  type WorkspaceExpandBlockSubmitOpts,
+} from "@/components/WorkspaceExpandBlockPane";
+import {
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
 } from "@/lib/workspace-right-pane";
@@ -18,10 +22,16 @@ import {
   normalizeBlockLocalContext,
   type BlockLocalContextInput,
 } from "@/lib/prompt-workspace-context";
+import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
+import type { SkillGridNode } from "@/lib/block-skill-grid";
+import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
+import type { BlockPracticeOptions } from "@/lib/block-practice-options";
 
 /**
  * Block-detail right column: peer top-level drawers —
- * 1 Details (expanded), 2 Simulation, 3 Split (multi-cell only), 4 Edit (owners), 5 Local context.
+ * 1 Details (expanded), 2 Simulation, 3 Split (multi-cell only),
+ * 4 Expand block (owners), 5 Edit (owners), 6 Local context.
+ * Clone is a left map-strip tool (not a drawer).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
  */
@@ -36,10 +46,13 @@ export function WorkspaceBlockDetailPane({
   localContext,
   blockStatus,
   isStart,
+  practiceOptions = null,
   lockUntilTitles,
   spanW,
   spanH,
   shapeCells,
+  positionX = null,
+  positionY = null,
   workspaceId,
   ayclToken,
   locale = "en",
@@ -48,6 +61,10 @@ export function WorkspaceBlockDetailPane({
   onUpdateBlock,
   onDeleteBlock,
   onSplitBlock,
+  expandNodes,
+  unusableCells = null,
+  onExpandBlock,
+  onExpandPreviewChange,
   workspaceGoal,
   workspaceTitle,
   rootTopic,
@@ -64,10 +81,14 @@ export function WorkspaceBlockDetailPane({
   localContext?: BlockLocalContextInput | null;
   blockStatus?: string | null;
   isStart?: boolean | null;
+  practiceOptions?: BlockPracticeOptions | null;
   lockUntilTitles?: string[];
   spanW?: number | null;
   spanH?: number | null;
   shapeCells?: SplitCandidateBlock["shape_cells"];
+  /** Map anchor for Expand block center (col / row). */
+  positionX?: number | null;
+  positionY?: number | null;
   workspaceId?: string;
   ayclToken?: string;
   locale?: string;
@@ -83,12 +104,23 @@ export function WorkspaceBlockDetailPane({
     title: string;
     description: string;
     isStart: boolean;
+    practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
   onDeleteBlock?: (blockId: string) => Promise<void> | void;
   onSplitBlock?: (input: {
     blockId: string;
     prompt?: string;
   }) => Promise<void> | void;
+  /** Map nodes for Expand block range/density occupancy. */
+  expandNodes?: SkillGridNode[];
+  unusableCells?: Array<{ row: number; col: number }> | null;
+  onExpandBlock?: (
+    source: ExpandSourceIdentity,
+    opts: WorkspaceExpandBlockSubmitOpts,
+  ) => Promise<void> | void;
+  onExpandPreviewChange?: (
+    cells: Array<{ row: number; col: number }> | null,
+  ) => void;
   /** @deprecated Selection-driven dismiss; no drawer X. */
   onClose?: () => void;
 }) {
@@ -109,6 +141,28 @@ export function WorkspaceBlockDetailPane({
   };
   const showSplitDrawer =
     canEdit && Boolean(onSplitBlock) && blockOffersSplitDrawer(splitCandidate);
+  const showExpandDrawer =
+    canEdit && Boolean(onExpandBlock) && Array.isArray(expandNodes);
+
+  // Memoize so Expand pane does not see a new object every parent render
+  // (that retriggers selection + map preview setState loops).
+  const expandPlaced: PlacedBlockRef = useMemo(
+    () => ({
+      id: blockId,
+      position_x:
+        typeof positionX === "number" && Number.isFinite(positionX)
+          ? Math.trunc(positionX)
+          : 0,
+      position_y:
+        typeof positionY === "number" && Number.isFinite(positionY)
+          ? Math.trunc(positionY)
+          : 0,
+      span_w: spanW ?? 1,
+      span_h: spanH ?? 1,
+      shape_cells: (shapeCells as PlacedBlockRef["shape_cells"]) ?? null,
+    }),
+    [blockId, positionX, positionY, shapeCells, spanH, spanW],
+  );
 
   const defaultOpenId = resolveDetailDrawerDefaultOpenId({
     hasLocalMaterials,
@@ -183,6 +237,36 @@ export function WorkspaceBlockDetailPane({
         </WorkspaceRightPaneDrawer>
       ) : null}
 
+      {showExpandDrawer ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="expand_block"
+          title="Expand block"
+          defaultExpanded={false}
+          bodyClassName="space-y-3"
+        >
+          <div
+            data-block-detail-tab-content="expand_block"
+            data-expand-block-drawer
+          >
+            <WorkspaceExpandBlockPane
+              sourceBlock={expandPlaced}
+              sourceIdentity={{
+                id: blockId,
+                title: blockTitle,
+                description: blockDescription,
+                planning_prompt: planningPrompt,
+              }}
+              nodes={expandNodes!}
+              unusableCells={unusableCells}
+              busy={editBusy}
+              onSubmit={onExpandBlock!}
+              onExpandPreviewChange={onExpandPreviewChange}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
       {canEdit ? (
         <WorkspaceRightPaneDrawer
           variant="section"
@@ -197,6 +281,7 @@ export function WorkspaceBlockDetailPane({
               title={blockTitle}
               description={blockDescription}
               isStart={isStart}
+              practiceOptions={practiceOptions}
               canEdit={canEdit}
               busy={editBusy}
               onUpdate={onUpdateBlock}

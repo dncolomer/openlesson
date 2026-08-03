@@ -37,6 +37,7 @@ export type BlockMapToolId =
   | "lasso_freehand"
   | "merge"
   | "split"
+  | "clone"
   | "generate_shape"
   | "lock_until"
   | "mark_unusable"
@@ -111,6 +112,7 @@ export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [
   "lasso",
   "merge",
   "split",
+  "clone",
   "lock_until",
   "mark_unusable",
   "clear_selection",
@@ -1283,6 +1285,14 @@ export function isBlockMapToolEnabled(
         !state.busy &&
         (state.selectedMultiCellBlockCount ?? 0) >= 1
       );
+    case "clone":
+      // Sole filled block → arm paste; multi/empty/zero disabled.
+      return (
+        state.canEdit &&
+        state.hasGridOps &&
+        !state.busy &&
+        state.selectedBlockCount === 1
+      );
     case "generate_shape":
       // Allow opening the dialog with any empty multi-select; solid-rectangle is
       // enforced on submit so users see "fill the gaps" guidance in the dialog.
@@ -1353,9 +1363,19 @@ export function visibleBlockMapTools(
     if (tool === "lock_until" || tool === "mark_unusable") {
       return Boolean(state.hasMapGroundOps ?? state.hasGridOps);
     }
-    // merge/split need grid-ops wiring
+    // merge/split/clone need grid-ops wiring
     return state.hasGridOps;
   });
+}
+
+/**
+ * Pure: whether Clone left-strip tool is enabled for the current selection.
+ * Creator + grid ops + exactly one filled block (source for paste).
+ */
+export function isCloneMapToolEnabled(
+  state: BlockMapToolEnablementInput,
+): boolean {
+  return isBlockMapToolEnabled("clone", state);
 }
 
 /** Human labels for map-ground tools (shared by strip + authoring pane). */
@@ -1375,6 +1395,8 @@ export function blockMapToolLabel(tool: BlockMapToolId): string {
       return "Merge";
     case "split":
       return "Split";
+    case "clone":
+      return "Clone — copy sole selected block onto an empty cell";
     case "generate_shape":
       return "Generate shape";
     case "lock_until":

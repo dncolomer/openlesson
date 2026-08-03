@@ -14,7 +14,7 @@ export default async function AyclLearnPage({ params }: PageProps) {
 
   const { data: workspace, error: workspaceError } = await ctx.supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, status, original_workspace_id, user_id")
+    .select("*")
     .eq("id", ctx.workspaceId)
     .single();
 
@@ -31,6 +31,7 @@ export default async function AyclLearnPage({ params }: PageProps) {
       ownerUserId={ctx.ownerUserId}
       initialPlan={workspace}
       initialNodes={blocks || []}
+      accessTier={ctx.accessTier}
     />
   );
 }

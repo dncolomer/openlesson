@@ -238,6 +238,7 @@ export function buildSimulationSamplesSystemPrompt(): string {
 
 /**
  * User prompt for Simulation LLM regenerate — shared workspace context assembly.
+ * Supports block scope (focused block) and entire-workspace scope (goal + map).
  */
 export function buildSimulationSamplesUserPrompt(
   ctx: PracticeItemContext & {
@@ -245,16 +246,26 @@ export function buildSimulationSamplesUserPrompt(
     focusedBlockId?: string | null;
     unusableCells?: PromptWorkspaceContextInput["unusableCells"];
     locale?: string | null;
+    /**
+     * "block" (default when focusedBlockId set) or "workspace" for entire-map
+     * samples with no single focused block.
+     */
+    sampleScope?: "block" | "workspace" | null;
   },
 ): string {
+  const isWorkspaceScope =
+    ctx.sampleScope === "workspace" ||
+    (!ctx.focusedBlockId && ctx.sampleScope !== "block");
+
   const assembled = assemblePromptWorkspaceContext(
     practiceContextToPromptInput(ctx, {
       blocks: ctx.blocks,
-      focusedBlockId: ctx.focusedBlockId,
+      focusedBlockId: isWorkspaceScope ? null : ctx.focusedBlockId,
       unusableCells: ctx.unusableCells,
-      blockLocalContext: ctx.localNotes
-        ? { notes: ctx.localNotes }
-        : undefined,
+      blockLocalContext:
+        !isWorkspaceScope && ctx.localNotes
+          ? { notes: ctx.localNotes }
+          : undefined,
     }),
   );
   const languageNote =
@@ -262,10 +273,20 @@ export function buildSimulationSamplesUserPrompt(
       ? `Respond in ${ctx.locale}. Topics and items must be in that language.`
       : "";
 
+  const scopeLead = isWorkspaceScope
+    ? [
+        "Generate sample practice items for the ENTIRE WORKSPACE (what might appear in Explore dialogue or Drill solo exercise across this course).",
+        "Ground items in the workspace goal, title, notes, and map inventory/topology. Do not lock every item to a single block; sample across the map when inventory is present.",
+        "Avoid generic fluff. Prefer concrete domain problems over syllabus restatements.",
+      ]
+    : [
+        "Generate sample practice items for this block (what might appear in Explore dialogue or Drill solo exercise).",
+        "Prioritize workspace goal, focused block text, local materials, map inventory/topology when present.",
+        "Avoid generic fluff. Prefer concrete domain problems over syllabus restatements.",
+      ];
+
   return [
-    "Generate sample practice items for this block (what might appear in Explore dialogue or Drill solo exercise).",
-    "Prioritize workspace goal, focused block text, local materials, map inventory/topology when present.",
-    "Avoid generic fluff. Prefer concrete domain problems over syllabus restatements.",
+    ...scopeLead,
     "",
     assembled.contextBlock,
     ctx.planningPrompt

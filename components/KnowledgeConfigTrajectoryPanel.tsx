@@ -11,6 +11,7 @@ import {
 import type { KnowledgeRegionListItem } from "@/components/CustomVerificationModelsPanel";
 import {
   resolveEmbeddingsSubjectSelection,
+  resolveModelsTabCanInspectOthers,
   resolveModelsTabScope,
   type ModelsTabSubjectRef,
 } from "@/lib/pow-api/models-tab-scope";
@@ -1034,9 +1035,14 @@ export type KnowledgePanelView = "models" | "lwm" | "ranking" | "strengths_gaps"
 interface KnowledgeConfigTrajectoryPanelProps {
   workspaceId: string;
   currentUserId?: string | null;
-  /** Owners may inspect other users. */
+  /** Owners may inspect other users (creator Knowledge). */
   isOwner?: boolean;
   ayclToken?: string;
+  /**
+   * Learner mode: force LWM + Embeddings to the logged-in user only —
+   * no interactive subject picker even when isOwner is true.
+   */
+  lockSubjectToSelf?: boolean;
   /**
    * models — embeddings + custom knowledge regions
    * lwm — Learning World Model only (own Knowledge tab)
@@ -1051,6 +1057,7 @@ export function KnowledgeConfigTrajectoryPanel({
   currentUserId = null,
   isOwner = false,
   ayclToken,
+  lockSubjectToSelf = false,
   panelView = "models",
 }: KnowledgeConfigTrajectoryPanelProps) {
   const showModels = panelView === "models";
@@ -1059,7 +1066,10 @@ export function KnowledgeConfigTrajectoryPanel({
   const showStrengthsGaps = panelView === "strengths_gaps";
   /** Ranking + Strengths & Gaps share latest-per-subject snapshot history. */
   const needsSubjectSnapshots = showRanking || showStrengthsGaps;
-  const canInspectOthers = Boolean(isOwner);
+  const canInspectOthers = resolveModelsTabCanInspectOthers({
+    isOwner,
+    lockSubjectToSelf,
+  });
 
   // Embeddings: multiselect subject keys (`u:` / `g:`). LWM stays single-select.
   const [embSelectedKeys, setEmbSelectedKeys] = useState<string[]>([]);
@@ -1197,13 +1207,15 @@ export function KnowledgeConfigTrajectoryPanel({
     if (!lwmUserId && !lwmGuestUserId) setLwmUserId(currentUserId);
   }, [currentUserId, lwmGuestUserId, lwmUserId]);
 
-  // Non-owners cannot keep multi-select; force self.
+  // Non-inspectors / learner self-lock: force Embeddings + LWM to logged-in user.
   useEffect(() => {
     if (canInspectOthers || !currentUserId) return;
     const selfKey = `u:${currentUserId}`;
     setEmbSelectedKeys((prev) =>
       prev.length === 1 && prev[0] === selfKey ? prev : [selfKey],
     );
+    setLwmUserId(currentUserId);
+    setLwmGuestUserId("");
   }, [canInspectOthers, currentUserId]);
 
   const embScope = useMemo(
@@ -1212,8 +1224,9 @@ export function KnowledgeConfigTrajectoryPanel({
         selectedKeys: embSelectedKeys,
         currentUserId,
         canInspectOthers,
+        lockSubjectToSelf,
       }),
-    [canInspectOthers, currentUserId, embSelectedKeys],
+    [canInspectOthers, currentUserId, embSelectedKeys, lockSubjectToSelf],
   );
 
   /** Primary subject for Knowledge-distance overlay (first selected / self). */
@@ -1228,8 +1241,15 @@ export function KnowledgeConfigTrajectoryPanel({
         targetUserId: lwmUserId || null,
         targetGuestUserId: lwmGuestUserId || null,
         canInspectOthers,
+        lockSubjectToSelf,
       }),
-    [canInspectOthers, currentUserId, lwmGuestUserId, lwmUserId],
+    [
+      canInspectOthers,
+      currentUserId,
+      lockSubjectToSelf,
+      lwmGuestUserId,
+      lwmUserId,
+    ],
   );
 
   const fetchKnowledgeConfig = useCallback(
@@ -2142,6 +2162,8 @@ export function KnowledgeConfigTrajectoryPanel({
       data-ranking-tab={showRanking ? "true" : undefined}
       data-strengths-gaps-tab={showStrengthsGaps ? "true" : undefined}
       data-knowledge-panel-view={panelView}
+      data-knowledge-lock-subject-to-self={lockSubjectToSelf ? "true" : "false"}
+      data-knowledge-can-inspect-others={canInspectOthers ? "true" : "false"}
     >
       {/* Embeddings: left pickers | center projection | right selected regions — no whole-tab scroll */}
       {showModels ? (

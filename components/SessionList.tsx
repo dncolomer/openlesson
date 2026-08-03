@@ -33,6 +33,8 @@ interface Block {
     global_file_refs?: string[] | null;
     external_resource_ids?: string[] | null;
   } | null;
+  /** Author practice launch limits (parsed by parseBlockPracticeOptions). */
+  practice_options?: unknown;
 }
 
 interface SessionListProps {
@@ -59,6 +61,12 @@ interface SessionListProps {
   hideTap?: boolean;
   onCustomStart?: (node: Block) => Promise<void>;
   ayclToken?: string;
+  /** Learner map notes scope (user id / aycl token). */
+  learnerScopeId?: string | null;
+  /** Creator clone-paste (left-strip tool). */
+  cloneArmed?: boolean;
+  onCloneArm?: (blockId: string) => void;
+  onCloneCancel?: () => void;
   /**
    * Controlled open-block id for the workspace right pane (double-click detail).
    * When provided with onExpandedNodeIdChange, SessionList does not host a modal.
@@ -164,6 +172,10 @@ export function SessionList({
   hideTap = false,
   onCustomStart,
   ayclToken,
+  learnerScopeId = null,
+  cloneArmed = false,
+  onCloneArm,
+  onCloneCancel,
   expandedNodeId: expandedNodeIdProp,
   onExpandedNodeIdChange,
   onEmptySelectionChange,
@@ -474,6 +486,10 @@ export function SessionList({
             }
             canEdit={isOwner && !learnerMode}
             learnerMode={learnerMode}
+            learnerScopeId={learnerScopeId || ayclToken || null}
+            cloneArmed={cloneArmed}
+            onCloneArm={onCloneArm}
+            onCloneCancel={onCloneCancel}
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
             workspaceId={workspaceId}

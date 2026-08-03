@@ -28,6 +28,10 @@ import {
 } from "@/components/BlockDetailCard";
 import { MultiBlockDagCanvas } from "@/components/MultiBlockDagCanvas";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
+import {
+  parseBlockPracticeOptions,
+  type BlockPracticeOptions,
+} from "@/lib/block-practice-options";
 
 export type LearnerBlockRef = {
   id: string;
@@ -36,6 +40,7 @@ export type LearnerBlockRef = {
   status?: string | null;
   is_start?: boolean | null;
   planning_prompt?: string | null;
+  practice_options?: BlockPracticeOptions | unknown | null;
   lock_until_block_ids?: string[] | null;
   next_block_ids?: string[] | null;
   position_x?: number | null;
@@ -314,6 +319,7 @@ export function WorkspaceLearnerBlockPane({
               isLocked={locked}
               showActions={Boolean(onLaunchIntent) && !locked}
               allowTimed
+              practiceOptions={parseBlockPracticeOptions(block.practice_options)}
               onLaunchIntent={(target, options) => {
                 void handleLaunch(target, options);
               }}

@@ -342,8 +342,11 @@ describe("Simulation shares live practice builders", () => {
     );
 
     const tab = read("components/WorkspaceSimulationPanel.tsx");
-    expect(tab).toContain("deriveWorkspaceSimulationOverview(blocks,");
+    // Tab redo: scope + generate samples via real builders (not overview-only)
+    expect(tab).toContain("deriveSimulationSamples");
     expect(tab).toContain("workspaceGoal");
+    expect(tab).toContain("data-simulation-generate");
+    expect(tab).toContain("/api/workspace/simulation-samples");
   });
 
   it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {
@@ -376,9 +379,20 @@ describe("Simulation shares live practice builders", () => {
     expect(route).not.toMatch(/outline the steps or solution out loud/i);
     expect(route).toContain("practice-item-builders");
 
+    // Workspace Simulation tab API also uses shared real-prompt path
+    const tabRoute = read("app/api/workspace/simulation-samples/route.ts");
+    expect(tabRoute).toContain("buildSimulationSamplePrompts");
+    expect(tabRoute).toContain("workspace-simulation-samples");
+    expect(tabRoute).toMatch(/scope|blockId/);
+
     const lib = read("lib/block-simulation.ts");
     expect(lib).toContain("buildGroundedDialogueQuestion");
     expect(lib).toContain("buildGroundedExerciseItem");
+
+    const samplesLib = read("lib/workspace-simulation-samples.ts");
+    expect(samplesLib).toContain("buildGroundedDialogueQuestion");
+    expect(samplesLib).toContain("buildGroundedExerciseItem");
+    expect(samplesLib).toContain("buildSimulationSamplesSystemPrompt");
   });
 });
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { AYCL_PRICE_LABEL } from "@/lib/aycl";
+import {
+  AYCL_FULL_PRICE_LABEL,
+  AYCL_LEARNER_PRICE_LABEL,
+  ayclOfferDescription,
+  ayclOfferLabel,
+} from "@/lib/aycl-shared";
 
 export const runtime = "nodejs";
 
@@ -23,7 +28,22 @@ export async function GET() {
         title: workspace.title || workspace.root_topic,
         description: workspace.description,
         cover_image_url: workspace.cover_image_url,
-        priceLabel: AYCL_PRICE_LABEL,
+        /** @deprecated use offers.full.priceLabel */
+        priceLabel: AYCL_FULL_PRICE_LABEL,
+        offers: {
+          learner: {
+            tier: "learner" as const,
+            label: ayclOfferLabel("learner"),
+            description: ayclOfferDescription("learner"),
+            priceLabel: AYCL_LEARNER_PRICE_LABEL,
+          },
+          full: {
+            tier: "full" as const,
+            label: ayclOfferLabel("full"),
+            description: ayclOfferDescription("full"),
+            priceLabel: AYCL_FULL_PRICE_LABEL,
+          },
+        },
       })),
     });
   } catch (error) {

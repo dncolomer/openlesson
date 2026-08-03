@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   aggregateLearningWorldModels,
   dedupeSubjectRefs,
   parseIdList,
   parseSubjectOptionKey,
   resolveEmbeddingsSubjectSelection,
+  resolveModelsTabCanInspectOthers,
   resolveModelsTabScope,
   resolveModelsTabScopeFromRequest,
+  shouldLockModelsTabSubjectToSelf,
   subjectOptionKeyFromRef,
 } from "@/lib/pow-api/models-tab-scope";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
@@ -14,6 +18,160 @@ import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 const ME = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
 const GUEST = "33333333-3333-3333-3333-333333333333";
+
+const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.LEARNER_LWM_EMB_SCRATCH ||
+  process.env.GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e257e60caf66/implementer";
+
+function read(rel: string) {
+  const path = join(ROOT, rel);
+  expect(existsSync(path), `missing ${rel}`).toBe(true);
+  return readFileSync(path, "utf8");
+}
+
+function writeEvidence(name: string, body: string) {
+  try {
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(join(SCRATCH, name), body, "utf8");
+  } catch {
+    /* optional */
+  }
+}
+
+describe("learner self-lock for LWM + Embeddings", () => {
+  it("owner in learner mode cannot inspect others; scope forces self user_id", () => {
+    // Owner would normally inspect; learner lock wins.
+    expect(
+      resolveModelsTabCanInspectOthers({
+        isOwner: true,
+        lockSubjectToSelf: true,
+      }),
+    ).toBe(false);
+    expect(
+      resolveModelsTabCanInspectOthers({
+        isOwner: true,
+        lwmEmbeddingsOnly: true,
+      }),
+    ).toBe(false);
+    expect(
+      resolveModelsTabCanInspectOthers({
+        isOwner: true,
+        interactionMode: "learner",
+      }),
+    ).toBe(false);
+    // Creator owner still inspects
+    expect(
+      resolveModelsTabCanInspectOthers({
+        isOwner: true,
+        interactionMode: "creator",
+      }),
+    ).toBe(true);
+    expect(
+      resolveModelsTabCanInspectOthers({
+        isOwner: false,
+        interactionMode: "creator",
+      }),
+    ).toBe(false);
+
+    expect(shouldLockModelsTabSubjectToSelf({ interactionMode: "learner" })).toBe(
+      true,
+    );
+    expect(shouldLockModelsTabSubjectToSelf({ lwmEmbeddingsOnly: true })).toBe(
+      true,
+    );
+    expect(shouldLockModelsTabSubjectToSelf({ interactionMode: "creator" })).toBe(
+      false,
+    );
+
+    // Even with canInspectOthers true + other target, lock forces self
+    const locked = resolveModelsTabScope({
+      mode: "all",
+      currentUserId: ME,
+      targetUserId: OTHER,
+      targetGuestUserId: GUEST,
+      canInspectOthers: true,
+      lockSubjectToSelf: true,
+    });
+    expect(locked.mode).toBe("user");
+    expect(locked.kind).toBe("single");
+    expect(locked.subjects).toEqual([{ user_id: ME }]);
+    expect(locked.query).toEqual({ scope: "user", user_id: ME });
+    expect(locked.label).toBe("You");
+
+    const embLocked = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [`u:${OTHER}`, `g:${GUEST}`],
+      currentUserId: ME,
+      canInspectOthers: true,
+      lockSubjectToSelf: true,
+    });
+    expect(embLocked.kind).toBe("single");
+    expect(embLocked.subjects).toEqual([{ user_id: ME }]);
+    expect(embLocked.query.user_id).toBe(ME);
+    expect(embLocked.query.user_ids).toBeUndefined();
+    expect(embLocked.query.guest_user_id).toBeUndefined();
+
+    writeEvidence(
+      "learner-lwm-emb-scope.log",
+      [
+        "owner_learner_inspect=" +
+          resolveModelsTabCanInspectOthers({
+            isOwner: true,
+            interactionMode: "learner",
+          }),
+        "owner_creator_inspect=" +
+          resolveModelsTabCanInspectOthers({
+            isOwner: true,
+            interactionMode: "creator",
+          }),
+        "locked_scope=" + JSON.stringify(locked),
+        "emb_locked=" + JSON.stringify(embLocked),
+      ].join("\n"),
+    );
+  });
+
+  it("learner Knowledge path locks pickers; creator still inspects", () => {
+    const panel = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const perf = read("components/WorkspacePerformancePanel.tsx");
+    const view = read("components/WorkspaceView.tsx");
+
+    expect(panel).toContain("resolveModelsTabCanInspectOthers");
+    expect(panel).toContain("lockSubjectToSelf");
+    expect(panel).toContain("data-knowledge-lock-subject-to-self");
+    expect(panel).toContain("data-knowledge-can-inspect-others");
+    // canInspect derived from pure helper — not bare isOwner alone
+    expect(panel).toMatch(
+      /canInspectOthers\s*=\s*resolveModelsTabCanInspectOthers/,
+    );
+    // Force LWM + emb to self when locked
+    expect(panel).toContain("setLwmUserId(currentUserId)");
+    expect(panel).toContain("setLwmGuestUserId(\"\")");
+
+    // Performance panel threads lock for LWM + Embeddings (not ranking)
+    expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
+    expect(perf).toContain('panelView="models"');
+    expect(perf).toContain('panelView="lwm"');
+    // Creator ranking path does not force lock via lwmEmbeddingsOnly
+    expect(view).toContain("lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}");
+
+    // UserPicker / multi: disabled self when !canInspectOthers
+    expect(panel).toContain("if (!canInspectOthers)");
+    expect(panel).toContain("disabled");
+    expect(panel).toContain("data-embeddings-user-multiselect=\"false\"");
+
+    writeEvidence(
+      "learner-lwm-emb-ui.log",
+      [
+        "panel_lock_prop=true",
+        "panel_resolve_can_inspect=true",
+        "perf_lockSubjectToSelf=lwmEmbeddingsOnly",
+        "view_shell_flag=true",
+        "disabled_picker_when_locked=true",
+      ].join("\n"),
+    );
+  });
+});
 
 describe("resolveModelsTabScope", () => {
   it("non-inspectors always resolve to self user scope", () => {

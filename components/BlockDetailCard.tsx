@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   PRODUCT_INTENT_LABELS,
@@ -9,6 +9,15 @@ import {
   type ProductLaunchTarget,
 } from "@/lib/product-intent";
 import { DEFAULT_DURATION_MINUTES, DURATIONS } from "@/lib/tap-score-client-helpers";
+import {
+  blockAllowedDurations,
+  blockAllowsLaunchTarget,
+  blockAllowsPracticeStyle,
+  clampPracticeDuration,
+  normalizeBlockPracticeOptions,
+  resolveDefaultPracticeLaunchUi,
+  type BlockPracticeOptions,
+} from "@/lib/block-practice-options";
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
@@ -49,6 +58,11 @@ type BlockDetailCardProps = {
   onStartExercise?: (event: React.MouseEvent, minutes?: number) => void;
   /** When false, hide timed (TAP) options / timebox control. */
   allowTimed?: boolean;
+  /**
+   * Author limits on Explore/Drill × open/timed + durations.
+   * When set, further constrains which styles/horizons/durations appear.
+   */
+  practiceOptions?: BlockPracticeOptions | null;
   forkCallout?: ReactNode;
   promptSection?: ReactNode;
   highlighted?: boolean;
@@ -172,25 +186,61 @@ export function BlockDetailCard({
   onStartEval,
   onStartExercise,
   allowTimed = true,
+  practiceOptions = null,
   forkCallout,
   promptSection,
   highlighted,
   highlightOpacity = 1,
 }: BlockDetailCardProps) {
   const { t } = useI18n();
-  const [style, setStyle] = useState<LearningStyle>("explore");
-  const [timebox, setTimebox] = useState(false);
-  const [durationMinutes, setDurationMinutes] = useState<number>(DEFAULT_DURATION_MINUTES);
+  const practiceLimits = useMemo(
+    () => normalizeBlockPracticeOptions(practiceOptions ?? null),
+    [practiceOptions],
+  );
+  const defaults = useMemo(
+    () => resolveDefaultPracticeLaunchUi(practiceLimits),
+    [practiceLimits],
+  );
+  const [style, setStyle] = useState<LearningStyle>(defaults.style);
+  const [timebox, setTimebox] = useState(defaults.timebox);
+  const [durationMinutes, setDurationMinutes] = useState<number>(
+    defaults.durationMinutes,
+  );
   const isStacked = layout === "stacked";
   const isModal = layout === "modal";
 
-  const effectiveTimebox = allowTimed && timebox;
+  // Re-seed when author limits change (e.g. after Edit save).
+  useEffect(() => {
+    setStyle(defaults.style);
+    setTimebox(defaults.timebox);
+    setDurationMinutes(defaults.durationMinutes);
+  }, [defaults.style, defaults.timebox, defaults.durationMinutes]);
+
+  const allowedDurations = useMemo(() => {
+    const list = blockAllowedDurations(practiceLimits);
+    return list.length > 0 ? list : [...DURATIONS];
+  }, [practiceLimits]);
+
+  const timedAllowed = allowTimed && practiceLimits.allowTimed;
+  const openEndedAllowed = practiceLimits.allowOpenEnded;
+  // If only timed is allowed, force timebox on; if only open-ended, force off.
+  const effectiveTimebox =
+    timedAllowed && openEndedAllowed
+      ? timebox
+      : timedAllowed
+        ? true
+        : false;
+
   const resolvedTarget = useMemo(
     () => resolveLaunchFromStyleAndTimebox(style, effectiveTimebox),
     [style, effectiveTimebox],
   );
 
   const canLaunchStyle = (s: LearningStyle) => {
+    if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
+    if (!blockAllowsLaunchTarget(practiceLimits, s, effectiveTimebox)) {
+      return false;
+    }
     const target = resolveLaunchFromStyleAndTimebox(s, effectiveTimebox);
     if (onLaunchIntent) return true;
     if (target.id === "open_ended_explore") return Boolean(onStartIle);
@@ -203,7 +253,10 @@ export function BlockDetailCard({
   const canStart = canLaunchStyle(style);
 
   const launch = (target: ProductLaunchTarget, event?: React.MouseEvent) => {
-    const minutes = target.product === "tap" ? durationMinutes : undefined;
+    const minutes =
+      target.product === "tap"
+        ? clampPracticeDuration(practiceLimits, durationMinutes)
+        : undefined;
     if (onLaunchIntent) {
       onLaunchIntent(target, minutes != null ? { minutes } : undefined);
       return;
@@ -253,7 +306,13 @@ export function BlockDetailCard({
       </p>
 
       {/* Select-only style tools — same chrome for Explore and Drill; launch via Start */}
-      <div className="grid grid-cols-2 gap-2" data-block-mode-tools data-product-intent-style-grid>
+      <div
+        className="grid grid-cols-2 gap-2"
+        data-block-mode-tools
+        data-product-intent-style-grid
+        data-practice-allow-explore={practiceLimits.allowExplore ? "true" : "false"}
+        data-practice-allow-drill={practiceLimits.allowDrill ? "true" : "false"}
+      >
         {(
           [
             {
@@ -267,7 +326,9 @@ export function BlockDetailCard({
               Icon: DrillIcon,
             },
           ] as const
-        ).map(({ id, label, Icon }) => {
+        )
+          .filter(({ id }) => blockAllowsPracticeStyle(practiceLimits, id))
+          .map(({ id, label, Icon }) => {
           const selected = style === id;
           const target = resolveLaunchFromStyleAndTimebox(id, effectiveTimebox);
           return (
@@ -295,7 +356,7 @@ export function BlockDetailCard({
         })}
       </div>
 
-      {allowTimed ? (
+      {timedAllowed && openEndedAllowed ? (
         <div
           className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-neutral-900/40 px-3 py-2"
           data-timebox-control
@@ -311,28 +372,42 @@ export function BlockDetailCard({
           <button
             type="button"
             role="switch"
-            aria-checked={timebox}
+            aria-checked={effectiveTimebox}
             data-timebox-toggle
-            data-timebox-on={timebox ? "true" : "false"}
+            data-timebox-on={effectiveTimebox ? "true" : "false"}
             disabled={isStarting || isLocked}
             onClick={() => setTimebox((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-full border transition ${
-              timebox
+              effectiveTimebox
                 ? "border-white/40 bg-white/25"
                 : "border-neutral-600 bg-neutral-800"
             } disabled:opacity-40`}
           >
             <span
               className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition ${
-                timebox ? "left-5" : "left-0.5"
+                effectiveTimebox ? "left-5" : "left-0.5"
               }`}
               style={{ width: 18, height: 18 }}
             />
           </button>
         </div>
+      ) : timedAllowed ? (
+        <p
+          className="mt-2 text-[10px] text-neutral-500"
+          data-timebox-forced="timed"
+        >
+          Timed sessions only for this block.
+        </p>
+      ) : openEndedAllowed ? (
+        <p
+          className="mt-2 text-[10px] text-neutral-500"
+          data-timebox-forced="open"
+        >
+          Open-ended only (no timer) for this block.
+        </p>
       ) : null}
 
-      {effectiveTimebox ? (
+      {effectiveTimebox && timedAllowed ? (
         <div className="mt-3" data-launch-duration-picker>
           <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Session length
@@ -343,7 +418,7 @@ export function BlockDetailCard({
             aria-label="Session length"
             data-launch-duration-options
           >
-            {DURATIONS.map((mins) => {
+            {allowedDurations.map((mins) => {
               const selected = durationMinutes === mins;
               return (
                 <button

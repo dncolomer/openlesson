@@ -29,6 +29,7 @@ import {
   composeSplitBlockSystemMessage,
   composeSplitBlockUserPrompt,
 } from "@/lib/block-footprint-prompt";
+import { composeJourneyGraphPromptSnippet } from "@/lib/workspace-authoring-prompt-context";
 import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-rules";
 import {
   buildShapeContextSourceOptions,
@@ -50,6 +51,12 @@ import {
   removeWorkspaceDag,
   resolveWorkspaceDagForMutation,
 } from "@/lib/workspace-dags";
+import { buildCloneInsertPayload } from "@/lib/clone-block";
+import { isCellOccupied } from "@/lib/block-skill-grid";
+import {
+  normalizeBlockPracticeOptions,
+  serializeBlockPracticeOptions,
+} from "@/lib/block-practice-options";
 
 type GridOp =
   | "generate_shape"
@@ -61,7 +68,8 @@ type GridOp =
   | "delete_block"
   | "delete_blocks"
   | "apply_dag"
-  | "delete_dag";
+  | "delete_dag"
+  | "clone_block";
 
 interface AiBlockPayload {
   title: string;
@@ -174,6 +182,9 @@ export async function POST(req: NextRequest) {
       handle?: string;
       /** Author starter flag (update_block / generate_shape). */
       is_start?: boolean;
+      /** Author practice launch limits (update_block). */
+      practice_options?: unknown;
+      practiceOptions?: unknown;
       model?: string;
       locale?: string;
       weightedNeighbors?: WeightedGridNeighbor[];
@@ -183,13 +194,21 @@ export async function POST(req: NextRequest) {
       dagDraft?: MultiBlockDagDraft;
       /** Existing created-DAG id for edit apply / delete_dag. */
       dagId?: string;
+      /** clone_block: source filled block id. */
+      sourceBlockId?: string;
+      /** clone_block target cell. */
+      row?: number;
+      col?: number;
     };
 
     if (!workspaceId || !op) {
       return NextResponse.json({ error: "workspaceId and op are required" }, { status: 400 });
     }
 
-    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardWorkspaceRoute(workspaceId, {
+      ayclToken: ayclTokenFromBody(body),
+      requireAyclAuthoring: true,
+    });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 
@@ -207,6 +226,155 @@ export async function POST(req: NextRequest) {
     const { occupancy } = buildSkillGridLayout(skillNodes);
     const placed = placedFromNodes(nodes);
     const placedOccupancy = buildOccupancyFromPlaced(placed);
+
+    // Content clone: copy source payload into a new 1×1 at a placeable empty cell.
+    if (op === "clone_block") {
+      const sourceId =
+        typeof (body as { sourceBlockId?: unknown }).sourceBlockId === "string"
+          ? String((body as { sourceBlockId?: string }).sourceBlockId).trim()
+          : typeof blockId === "string"
+            ? blockId.trim()
+            : "";
+      const row =
+        typeof (body as { row?: unknown }).row === "number"
+          ? Math.trunc((body as { row: number }).row)
+          : NaN;
+      const col =
+        typeof (body as { col?: unknown }).col === "number"
+          ? Math.trunc((body as { col: number }).col)
+          : NaN;
+      if (!sourceId || !Number.isFinite(row) || !Number.isFinite(col)) {
+        return NextResponse.json(
+          { error: "sourceBlockId, row, and col are required for clone_block" },
+          { status: 400 },
+        );
+      }
+      const source = nodes.find((n) => n.id === sourceId);
+      if (!source) {
+        return NextResponse.json({ error: "Source block not found" }, { status: 404 });
+      }
+      if (isCellOccupied(occupancy, row, col)) {
+        return NextResponse.json(
+          { error: "That grid slot is already occupied" },
+          { status: 409 },
+        );
+      }
+      const { unusableCells: cloneUnusable } = await loadWorkspaceContext(
+        supabase,
+        workspaceId,
+      );
+      const ground = canPlaceOnMapGround([{ row, col }], cloneUnusable);
+      if (!ground.ok && ground.reason === "unusable") {
+        return NextResponse.json(
+          { error: "Target cell is unusable ground", code: "unusable_ground" },
+          { status: 409 },
+        );
+      }
+
+      const built = buildCloneInsertPayload({
+        source: {
+          title: source.title,
+          description: source.description,
+          planning_prompt:
+            typeof (source as { planning_prompt?: unknown }).planning_prompt ===
+            "string"
+              ? String((source as { planning_prompt?: string }).planning_prompt)
+              : null,
+          local_context:
+            (source as { local_context?: unknown }).local_context ?? null,
+        },
+        target: { row, col },
+      });
+
+      const insertPayload: Record<string, unknown> = {
+        workspace_id: workspaceId,
+        title: built.title,
+        description: built.description,
+        is_start: built.is_start,
+        next_block_ids: built.next_block_ids,
+        lock_until_block_ids: built.lock_until_block_ids,
+        status: built.status,
+        position_x: built.position_x,
+        position_y: built.position_y,
+        span_w: built.span_w,
+        span_h: built.span_h,
+        shape_cells: built.shape_cells,
+        ...(built.planning_prompt
+          ? { planning_prompt: built.planning_prompt }
+          : {}),
+        ...(built.local_context != null
+          ? { local_context: built.local_context }
+          : {}),
+      };
+
+      let { data: newNode, error: insertError } = await supabase
+        .from("blocks")
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (
+        insertError &&
+        /span_w|span_h|shape_cells|local_context|planning_prompt|lock_until|schema cache/i.test(
+          insertError.message || "",
+        )
+      ) {
+        const {
+          span_w: _sw,
+          span_h: _sh,
+          shape_cells: _sc,
+          local_context: _lc,
+          planning_prompt: _pp,
+          lock_until_block_ids: _lu,
+          ...rest
+        } = insertPayload;
+        let retryPayload: Record<string, unknown> = { ...rest };
+        let retry = await supabase
+          .from("blocks")
+          .insert(retryPayload)
+          .select()
+          .single();
+        if (
+          retry.error &&
+          /local_context|planning_prompt|schema cache/i.test(
+            retry.error.message || "",
+          )
+        ) {
+          const {
+            local_context: __lc,
+            planning_prompt: __pp,
+            ...withoutOptional
+          } = retryPayload;
+          retry = await supabase
+            .from("blocks")
+            .insert(withoutOptional)
+            .select()
+            .single();
+        }
+        newNode = retry.data;
+        insertError = retry.error;
+      }
+
+      if (insertError || !newNode) {
+        return NextResponse.json(
+          { error: insertError?.message || "Failed to clone block" },
+          { status: 500 },
+        );
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        placedNodeId: newNode.id,
+        explanation: `Cloned "${built.title}" to (${row}, ${col}).`,
+      });
+    }
 
     if (op === "update_block") {
       if (!blockId || typeof title !== "string" || !title.trim()) {
@@ -226,11 +394,36 @@ export async function POST(req: NextRequest) {
       if (typeof isStartBody === "boolean") {
         updateFields.is_start = isStartBody;
       }
+      // Practice launch limits when provided.
+      const practiceRaw =
+        (body as { practice_options?: unknown; practiceOptions?: unknown })
+          .practice_options ??
+        (body as { practiceOptions?: unknown }).practiceOptions;
+      if (practiceRaw !== undefined) {
+        updateFields.practice_options = serializeBlockPracticeOptions(
+          normalizeBlockPracticeOptions(
+            practiceRaw as Parameters<typeof normalizeBlockPracticeOptions>[0],
+          ),
+        );
+      }
 
-      const { error: updateError } = await supabase
+      let { error: updateError } = await supabase
         .from("blocks")
         .update(updateFields)
         .eq("id", blockId);
+
+      // Graceful if practice_options column not migrated yet.
+      if (
+        updateError &&
+        /practice_options|schema cache/i.test(updateError.message || "")
+      ) {
+        const { practice_options: _po, ...withoutPractice } = updateFields;
+        const retry = await supabase
+          .from("blocks")
+          .update(withoutPractice)
+          .eq("id", blockId);
+        updateError = retry.error;
+      }
 
       if (updateError) {
         return NextResponse.json({ error: "Failed to update block" }, { status: 500 });
@@ -1040,7 +1233,7 @@ export async function POST(req: NextRequest) {
         selectedSnippet,
       });
 
-      const neighborSummary =
+      const spatialNeighbors =
         Array.isArray(weightedNeighbors) && weightedNeighbors.length > 0
           ? weightedNeighbors
               .map(
@@ -1049,6 +1242,23 @@ export async function POST(req: NextRequest) {
               )
               .join("\n")
           : "none";
+      const journeySnippet = composeJourneyGraphPromptSnippet(
+        nodes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          next_block_ids: n.next_block_ids as string[] | null,
+          lock_until_block_ids: n.lock_until_block_ids as string[] | null,
+        })),
+        {
+          focusBlockIds: Array.isArray(weightedNeighbors)
+            ? weightedNeighbors.map((n) => String(n.id || "")).filter(Boolean)
+            : undefined,
+          maxLines: 20,
+        },
+      );
+      const neighborSummary = journeySnippet
+        ? `${spatialNeighbors}\n\n${journeySnippet}`
+        : spatialNeighbors;
 
       const languageNote =
         locale && locale !== "en"

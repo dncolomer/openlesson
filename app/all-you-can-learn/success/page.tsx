@@ -14,6 +14,7 @@ function SuccessContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [wasUpgrade, setWasUpgrade] = useState(false);
 
   useEffect(() => {
     if (!sessionId) {
@@ -22,17 +23,30 @@ function SuccessContent() {
       return;
     }
 
-    const storedToken = sessionStorage.getItem(AYCL_TOKEN_STORAGE_KEY) || "";
     let attempts = 0;
 
     const poll = async () => {
       attempts += 1;
       try {
-        const res = await fetch(`/api/aycl/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+        // Re-read each attempt — upgrade checkout stores token right before Stripe redirect.
+        const storedToken = sessionStorage.getItem(AYCL_TOKEN_STORAGE_KEY) || "";
+        const res = await fetch(
+          `/api/aycl/verify-session?session_id=${encodeURIComponent(sessionId)}`,
+        );
         const data = await res.json();
         if (res.ok && data.ready && storedToken) {
           const url = buildAyclAccessUrl(window.location.origin, storedToken);
           setAccessUrl(url);
+          setWasUpgrade(Boolean(data.upgraded));
+          setLoading(false);
+          return;
+        }
+        if (res.ok && data.ready && !storedToken) {
+          // Payment fulfilled but client lost the access token (new device / cleared storage).
+          setError(
+            "Payment confirmed, but this browser does not have your access token. Open the original access link you saved, or contact support with your receipt.",
+          );
+          setWasUpgrade(Boolean(data.upgraded));
           setLoading(false);
           return;
         }
@@ -61,7 +75,13 @@ function SuccessContent() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       {loading ? (
-        <LoadingStatusMessage message="Preparing your lifetime access link" />
+        <LoadingStatusMessage
+          message={
+            wasUpgrade
+              ? "Unlocking creation tools"
+              : "Preparing your lifetime access link"
+          }
+        />
       ) : error ? (
         <>
           <h1 className="mb-2 text-2xl font-semibold text-white">Almost there</h1>
@@ -74,10 +94,13 @@ function SuccessContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="mb-2 text-2xl font-semibold text-white">You&apos;re in for life</h1>
+          <h1 className="mb-2 text-2xl font-semibold text-white">
+            {wasUpgrade ? "Creation tools unlocked" : "You're in for life"}
+          </h1>
           <p className="mb-6 max-w-lg text-sm leading-relaxed text-neutral-500">
-            Save this link — it&apos;s your private lifetime access to your forked workspace. No
-            account needed. ILE included.
+            {wasUpgrade
+              ? "Your private copy is the same — creation tools are now available on this access link. Open it to grow the map."
+              : "Save this link — it's your private lifetime access to your forked workspace. No account needed. ILE included."}
           </p>
           {accessUrl ? (
             <div className="mb-6 w-full max-w-xl rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-3 text-left">

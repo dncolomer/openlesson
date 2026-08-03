@@ -37,6 +37,20 @@ import {
   upsertAddExpandJob,
   type AddExpandJob,
 } from "@/lib/add-block-range-density";
+import {
+  afterClonePaste,
+  armClone,
+  cancelCloneArm,
+  createDisarmedCloneState,
+  resolveClonePasteTarget,
+  shouldInterceptEmptyClickForClone,
+  type CloneArmState,
+} from "@/lib/clone-block";
+import {
+  buildExpandFromSourceSlotPrompt,
+  type ExpandSourceIdentity,
+} from "@/lib/expand-block-from-source";
+import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
 import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import {
   availableWorkspaceSections,
@@ -92,12 +106,18 @@ import {
 } from "@/lib/prompt-workspace-context";
 import { buildUpdateBlockPayload } from "@/lib/block-starter-flag";
 import {
+  parseBlockPracticeOptions,
+  serializeBlockPracticeOptions,
+  type BlockPracticeOptions,
+} from "@/lib/block-practice-options";
+import {
   normalizeWorkspaceDags,
   type WorkspaceDagRecord,
 } from "@/lib/workspace-dags";
 import {
   ayclUpgradeOfferDescription,
   ayclUpgradeOfferLabel,
+  AYCL_TOKEN_STORAGE_KEY,
   AYCL_UPGRADE_PRICE_LABEL,
   resolveAyclCapabilities,
   type AyclCapabilities,
@@ -119,6 +139,8 @@ export interface Block {
   shape_cells?: Array<{ dr: number; dc: number }> | null;
   lock_until_block_ids?: string[] | null;
   local_context?: BlockLocalContextInput | null;
+  /** Author limits on Explore/Drill × open/timed launches (raw JSON or parsed). */
+  practice_options?: unknown;
 }
 
 export interface Workspace {
@@ -250,6 +272,10 @@ export function WorkspaceView({
   const [expandJobs, setExpandJobs] = useState<AddExpandJob[]>([]);
   const expandAbortRef = useRef(new Map<string, boolean>());
   const expandJobSeqRef = useRef(0);
+  /** Creator clone-paste arm (source filled block → empty target). */
+  const [cloneArm, setCloneArm] = useState<CloneArmState>(() =>
+    createDisarmedCloneState(),
+  );
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
   const [isAddingBlock, setIsAddingBlock] = useState(false);
@@ -299,28 +325,30 @@ export function WorkspaceView({
       setEmptySurface(clearWorkspaceAddTarget());
       setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
       setMobileColumn("workspace");
+      // Keep arm only if same source remains selected.
+      setCloneArm((prev) =>
+        prev.armed && prev.sourceBlockId === next
+          ? prev
+          : createDisarmedCloneState(),
+      );
+    } else {
+      setCloneArm(createDisarmedCloneState());
     }
   }, [expandedBlockId]);
 
   const handleCloseBlockDetail = useCallback(() => {
     setExpandedBlockId(clearWorkspaceBlockSelection());
+    setCloneArm(createDisarmedCloneState());
   }, []);
 
-  const handleEmptySelectionChange = useCallback(
-    (cells: Array<{ row: number; col: number }> | null) => {
-      const surface = resolveEmptySelectionSurface({
-        selectedEmptyCells: cells || [],
-        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-      });
-      setEmptySurface(surface);
-      if (surface) {
-        setExpandedBlockId(clearWorkspaceBlockSelection());
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        setMobileColumn("workspace");
-      }
-    },
-    [unusableCells],
-  );
+  const handleCloneArm = useCallback((blockId: string) => {
+    setCloneArm(armClone(blockId));
+    setEmptySurface(clearWorkspaceAddTarget());
+  }, []);
+
+  const handleCloneCancel = useCallback(() => {
+    setCloneArm(cancelCloneArm());
+  }, []);
 
   const handleSelectedBlockIdsChange = useCallback((ids: string[] | null) => {
     const next = (ids || []).map((id) => String(id).trim()).filter(Boolean);
@@ -328,6 +356,7 @@ export function WorkspaceView({
     if (next.length >= 2) {
       setExpandedBlockId(clearWorkspaceBlockSelection());
       setEmptySurface(clearWorkspaceAddTarget());
+      setCloneArm(createDisarmedCloneState());
       setMobileColumn("workspace");
     }
   }, []);
@@ -375,6 +404,227 @@ export function WorkspaceView({
   const refreshNodes = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
+
+  const handleClonePaste = useCallback(
+    async (sourceBlockId: string, target: { row: number; col: number }) => {
+      if (!workspaceId || !isOwner) return;
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            withAycl({
+              workspaceId,
+              op: "clone_block",
+              sourceBlockId,
+              row: target.row,
+              col: target.col,
+            }),
+          ),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            (errorData as { error?: string }).error || "Failed to clone block",
+          );
+        }
+        const data = await response.json();
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setCloneArm(afterClonePaste());
+        setEmptySurface(clearWorkspaceAddTarget());
+        refreshNodes();
+        router.refresh();
+      } catch (err) {
+        console.error("[clone_block]", err);
+        // Stay armed so user can try another empty cell.
+      }
+    },
+    [isOwner, refreshNodes, router, withAycl, workspaceId],
+  );
+
+  const handleEmptySelectionChange = useCallback(
+    (cells: Array<{ row: number; col: number }> | null) => {
+      // Clone paste: intercept single empty click while armed (no Add pane).
+      if (shouldInterceptEmptyClickForClone(cloneArm)) {
+        const placeable = (cells || []).filter((c) => {
+          const k = `${c.row}:${c.col}`;
+          return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
+        });
+        if (placeable.length === 1) {
+          const { occupancy } = buildSkillGridLayout(nodesRef.current);
+          const occupiedKeys = [...occupancy.keys()];
+          const resolved = resolveClonePasteTarget({
+            state: cloneArm,
+            target: placeable[0],
+            occupiedKeys,
+            unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+          });
+          if (resolved.ok) {
+            void handleClonePaste(resolved.sourceBlockId, resolved.target);
+            return;
+          }
+          // Occupied/unusable: ignore, keep arm, do not open Add.
+          return;
+        }
+        // Multi empty or clear while armed: disarm and fall through.
+        setCloneArm(createDisarmedCloneState());
+      }
+
+      const surface = resolveEmptySelectionSurface({
+        selectedEmptyCells: cells || [],
+        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+      });
+      setEmptySurface(surface);
+      if (surface) {
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setCloneArm(createDisarmedCloneState());
+        setMobileColumn("workspace");
+      }
+    },
+    [cloneArm, handleClonePaste, unusableCells],
+  );
+
+  const handleExpandFromSourceBlock = useCallback(
+    async (
+      source: ExpandSourceIdentity,
+      opts: WorkspaceExpandBlockSubmitOpts,
+    ) => {
+      if (!workspaceId || !isOwner) return;
+      const slots = (opts.frozenSlots || []).map((c) => ({
+        row: c.row,
+        col: c.col,
+      }));
+      if (slots.length === 0) return;
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("planner-model")?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_MODEL;
+      const baseLabel =
+        String(source.title || "").trim() || "Expand block";
+      expandJobSeqRef.current += 1;
+      const jobId = createAddExpandJobId(
+        `expand-src-${Date.now()}-${expandJobSeqRef.current}`,
+      );
+      const job = createAddExpandJob({
+        id: jobId,
+        frozenSlots: slots,
+        label: `Expand: ${baseLabel}`,
+      });
+      expandAbortRef.current.set(jobId, false);
+      setExpandJobs((prev) => {
+        const next = upsertAddExpandJob(prev, job);
+        const merged = mergeActiveExpandJobPreviews(next);
+        setAddExpandPreviewCells(merged.length ? merged : null);
+        return next;
+      });
+      // Free selection chrome; job continues under minimap.
+      setCloneArm(createDisarmedCloneState());
+
+      void (async () => {
+        try {
+          const result = await runAddExpandCreateLoop({
+            frozenSlots: slots,
+            isAborted: () => expandAbortRef.current.get(jobId) === true,
+            onProgress: (progress) => {
+              setExpandJobs((prev) => {
+                const next = applyAddExpandJobProgress(prev, jobId, progress);
+                const merged = mergeActiveExpandJobPreviews(next);
+                setAddExpandPreviewCells(merged.length ? merged : null);
+                return next;
+              });
+            },
+            createSlot: async (slot, i) => {
+              const lastNodes = nodesRef.current;
+              const nodesById = new Map(lastNodes.map((node) => [node.id, node]));
+              const { placements } = buildSkillGridLayout(lastNodes);
+              const weightedNeighbors = getWeightedNeighborhood(
+                { row: slot.row, col: slot.col },
+                placements,
+                nodesById,
+              );
+              const slotPrompt = buildExpandFromSourceSlotPrompt({
+                source,
+                slot,
+                slotIndex: i,
+                totalSlots: slots.length,
+              });
+              const response = await fetch("/api/workspace/add-block-at-slot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  workspaceId,
+                  row: slot.row,
+                  col: slot.col,
+                  prompt: slotPrompt,
+                  weightedNeighbors,
+                  model,
+                  locale,
+                  ...(ayclToken ? { ayclToken } : {}),
+                }),
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(
+                  errorData.error ||
+                    `Failed to expand block at (${slot.row}, ${slot.col})`,
+                );
+              }
+              const data = await response.json();
+              if (data.updatedNodes?.length > 0) {
+                const nextNodes = data.updatedNodes.map(
+                  (n: Block & { local_context?: unknown }) => ({
+                    ...n,
+                    local_context: parseBlockLocalContext(n.local_context),
+                  }),
+                );
+                nodesRef.current = nextNodes;
+                setNodes(nextNodes);
+              }
+            },
+          });
+          setExpandJobs((prev) =>
+            applyAddExpandJobProgress(
+              prev,
+              jobId,
+              { completed: result.completed, total: result.total },
+              { stopped: result.stopped },
+            ),
+          );
+          refreshNodes();
+          router.refresh();
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Failed to expand block";
+          setExpandJobs((prev) =>
+            patchAddExpandJob(prev, jobId, {
+              status: "error",
+              error: message,
+            }),
+          );
+        } finally {
+          expandAbortRef.current.delete(jobId);
+          window.setTimeout(() => {
+            setExpandJobs((prev) => {
+              const next = removeAddExpandJob(prev, jobId);
+              const merged = mergeActiveExpandJobPreviews(next);
+              setAddExpandPreviewCells(merged.length ? merged : null);
+              return next;
+            });
+          }, 1800);
+        }
+      })();
+    },
+    [ayclToken, isOwner, locale, refreshNodes, router, workspaceId],
+  );
 
   // AYCL: reload plan/blocks via token API (no cookie session required).
   const refreshAyclWorkspace = useCallback(async () => {
@@ -1144,13 +1394,14 @@ export function WorkspaceView({
     [postMapGround],
   );
 
-  /** Update title/description/starter from the block-detail Edit drawer. */
+  /** Update title/description/starter/practice limits from the Edit drawer. */
   const handleUpdateBlock = useCallback(
     async (input: {
       blockId: string;
       title: string;
       description: string;
       isStart?: boolean;
+      practiceOptions?: BlockPracticeOptions;
     }) => {
       if (!workspaceId || !isOwner) return;
       setIsAddingBlock(true);
@@ -1170,6 +1421,13 @@ export function WorkspaceView({
             ...(ayclToken ? { ayclToken } : {}),
             op: "update_block",
             ...fields,
+            ...(input.practiceOptions
+              ? {
+                  practice_options: serializeBlockPracticeOptions(
+                    input.practiceOptions,
+                  ),
+                }
+              : {}),
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -1178,10 +1436,13 @@ export function WorkspaceView({
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
-            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
-              ...n,
-              local_context: parseBlockLocalContext(n.local_context),
-            })),
+            data.updatedNodes.map(
+              (n: Block & { local_context?: unknown; practice_options?: unknown }) => ({
+                ...n,
+                local_context: parseBlockLocalContext(n.local_context),
+                practice_options: parseBlockPracticeOptions(n.practice_options),
+              }),
+            ),
           );
         }
         refreshNodes();
@@ -1403,6 +1664,46 @@ export function WorkspaceView({
     }
   };
 
+  // Must stay above loading/error early returns (Rules of Hooks).
+  const startAyclUpgradeCheckout = useCallback(async () => {
+    if (!ayclToken || ayclUpgradeBusy) return;
+    setAyclUpgradeBusy(true);
+    try {
+      // Success page rebuilds /learn/{token} from sessionStorage after Stripe.
+      try {
+        sessionStorage.setItem(AYCL_TOKEN_STORAGE_KEY, ayclToken);
+      } catch {
+        /* ignore */
+      }
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceType: "all_you_can_learn",
+          ayclToken,
+          // Optional; server resolves source workspace from the purchase.
+          ...(workspaceId ? { workspaceId } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Upgrade checkout failed");
+      }
+      // Echo token if server returns it (upgrade reuses same access token).
+      if (typeof data.ayclAccessToken === "string" && data.ayclAccessToken) {
+        try {
+          sessionStorage.setItem(AYCL_TOKEN_STORAGE_KEY, data.ayclAccessToken);
+        } catch {
+          /* ignore */
+        }
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upgrade checkout failed");
+      setAyclUpgradeBusy(false);
+    }
+  }, [ayclToken, ayclUpgradeBusy, workspaceId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -1437,31 +1738,6 @@ export function WorkspaceView({
   const isLearnerMode = interactionMode === "learner";
   const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
   const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);
-
-  const startAyclUpgradeCheckout = useCallback(async () => {
-    if (!ayclToken || ayclUpgradeBusy) return;
-    setAyclUpgradeBusy(true);
-    try {
-      const res = await fetch("/api/stripe/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceType: "all_you_can_learn",
-          ayclToken,
-          // Optional; server resolves source workspace from the purchase.
-          ...(workspaceId ? { workspaceId } : {}),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || "Upgrade checkout failed");
-      }
-      window.location.href = data.url;
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Upgrade checkout failed");
-      setAyclUpgradeBusy(false);
-    }
-  }, [ayclToken, ayclUpgradeBusy, workspaceId]);
 
   const selectInteractionMode = (mode: WorkspaceInteractionMode) => {
     // Practice-only AYCL cannot switch into Creator tools.
@@ -1698,12 +1974,14 @@ export function WorkspaceView({
             className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
           >
             <WorkspaceSimulationPanel
+              workspaceId={workspaceId}
               blocks={nodes}
               workspaceTitle={plan.title || plan.root_topic}
               workspaceGoal={plan.workspace_goal}
               workspaceDescription={plan.description}
               workspaceNotes={notesContent || plan.notes}
-              workspaceFileCount={workspaceFileItems.length}
+              rootTopic={plan.root_topic}
+              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceSectionSurface>
@@ -1926,6 +2204,10 @@ export function WorkspaceView({
             onFork={() => {}}
             isOwner={isOwner}
             learnerMode={isLearnerMode}
+            learnerScopeId={currentUserId || ayclToken || "local"}
+            cloneArmed={cloneArm.armed}
+            onCloneArm={isOwner && !isLearnerMode ? handleCloneArm : undefined}
+            onCloneCancel={handleCloneCancel}
             isLoggedIn={!!currentUserId || isAycl}
             supabase={supabase}
             planTopic={plan.root_topic}
@@ -2208,10 +2490,15 @@ export function WorkspaceView({
                 localContext={detailBlock.local_context}
                 blockStatus={detailBlock.status}
                 isStart={detailBlock.is_start}
+                practiceOptions={parseBlockPracticeOptions(
+                  detailBlock.practice_options,
+                )}
                 lockUntilTitles={detailLockTitles}
                 spanW={detailBlock.span_w}
                 spanH={detailBlock.span_h}
                 shapeCells={detailBlock.shape_cells}
+                positionX={detailBlock.position_x}
+                positionY={detailBlock.position_y}
                 workspaceId={workspaceId}
                 ayclToken={ayclToken}
                 locale={locale}
@@ -2224,6 +2511,12 @@ export function WorkspaceView({
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}
                 onSplitBlock={isOwner ? handleSplitBlock : undefined}
+                expandNodes={isOwner ? nodes : undefined}
+                unusableCells={unusableCells}
+                onExpandBlock={
+                  isOwner ? handleExpandFromSourceBlock : undefined
+                }
+                onExpandPreviewChange={setAddExpandPreviewCells}
                 localContextPanel={
                   <WorkspaceBlockLocalContextPanel
                     key={detailBlock.id}

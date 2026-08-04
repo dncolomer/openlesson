@@ -312,6 +312,27 @@ function sanitizeExerciseProbeText(
 }
 
 /**
+ * Replace generic meta dialogue questions (core mechanism / explain precisely /
+ * syllabus restatement wrappers) with a concrete grounded dialogue item.
+ */
+function sanitizeQuestionProbeText(
+  text: string,
+  ground: PracticeItemContext,
+  index: number,
+): string {
+  let t = sanitizeProbeText(text);
+  if (!t || isMetaLearningFluff(t)) {
+    return synthQuestion(
+      clean(ground.blockTitle) || "This block",
+      index,
+      clean(ground.blockDescription),
+      ground,
+    );
+  }
+  return t;
+}
+
+/**
  * Enforce exactly 3 questions + 3 exercises. Pads with synthetic prompts when short;
  * trims when long. Preserves contextSources when present.
  */
@@ -345,10 +366,12 @@ export function enforceSimulationProbeQuota(
   };
   const { questions: qIn, exercises: eIn } = partitionSimulationProbes(probes);
 
-  const questions: SimulationProbe[] = qIn.slice(0, SIMULATION_QUESTION_COUNT).map((p) => ({
-    ...p,
-    question: sanitizeProbeText(p.question),
-  }));
+  const questions: SimulationProbe[] = qIn
+    .slice(0, SIMULATION_QUESTION_COUNT)
+    .map((p, i) => ({
+      ...p,
+      question: sanitizeQuestionProbeText(p.question, ground, i),
+    }));
   while (questions.length < SIMULATION_QUESTION_COUNT) {
     const i = questions.length;
     const question = synthQuestion(title, i, description, ground);

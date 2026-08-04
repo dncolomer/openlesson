@@ -77,8 +77,9 @@ export function practiceDomainSubstance(ctx: PracticeItemContext): string {
 
 /**
  * Pure dialogue question (Explore / conversational TAP style).
- * Index varies angle: core mechanism → failure mode → concrete application.
- * Never meta ("how would you approach learning") or stage directions.
+ * Index varies angle: work a concrete instance → catch a misuse → verify correctness.
+ * Never meta-learning fluff, never syllabus restatement, never
+ * "core mechanism… explain it precisely" wrappers around a blurb.
  */
 export function buildGroundedDialogueQuestion(
   ctx: PracticeItemContext,
@@ -90,32 +91,40 @@ export function buildGroundedDialogueQuestion(
   const planning = clean(ctx.planningPrompt);
   const i = ((index % 3) + 3) % 3;
 
-  if (substance && !looksLikeTopicOverview(substance)) {
+  // Workable domain substance (not a topic-catalog blurb).
+  const work =
+    substance && !looksLikeTopicOverview(substance)
+      ? clip(substance, 110)
+      : "";
+
+  if (work) {
     if (i === 0) {
-      return `What is the core mechanism in “${subject}” — specifically: ${clip(substance, 140)} — and how would you explain it precisely?`;
+      return goal
+        ? `Using “${subject}” on this setup — ${work} — produce one concrete intermediate result that advances “${clip(goal, 70)}”. What is that result?`
+        : `Using “${subject}” on this setup — ${work} — pick concrete numbers or a named instance and give the first checkable intermediate result.`;
     }
     if (i === 1) {
-      return `Given “${clip(substance, 120)}”, what would break or go wrong if someone applied “${subject}” incorrectly?`;
+      return `Someone applies “${subject}” to: ${work}. Name one concrete mistake that yields a wrong answer, and the first signal that would catch it.`;
     }
     return goal
-      ? `Walk through one concrete example of “${subject}” that advances “${clip(goal, 80)}”. What evidence shows you got it right?`
-      : `Walk through one concrete example of “${subject}” using: ${clip(substance, 120)}. What would you check to know you are correct?`;
+      ? `Finish one worked instance of “${subject}” for “${clip(goal, 70)}” using: ${work}. What evidence shows the answer is correct?`
+      : `Finish one worked instance of “${subject}” using: ${work}. What would you check immediately to know you are correct?`;
   }
 
-  // Thin / guest-like context: still subject-matter, never meta-learning fluff.
+  // Thin / guest-like context: still a checkable domain act, never meta fluff.
   if (i === 0) {
     return goal
-      ? `What is the central claim of “${subject}” that matters for “${clip(goal, 90)}”, and how would you state it precisely?`
-      : `What is the central claim of “${subject}” that someone studying this subject must not get wrong?`;
+      ? `Give one concrete numerical or situational example of “${subject}” that matters for “${clip(goal, 80)}”, and state the key intermediate result.`
+      : `Give one concrete example of “${subject}” with specific numbers or a named situation — what is the key intermediate result?`;
   }
   if (i === 1) {
     return planning
-      ? `How does “${subject}” show up when ${clip(planning, 100)}? Name the mechanism, not a study strategy.`
-      : `Give one concrete example of “${subject}” in practice, and what misapplication would look like.`;
+      ? `When ${clip(planning, 90)}, apply “${subject}” once. What goes wrong first if a key assumption is inverted?`
+      : `What breaks if you apply “${subject}” with the wrong assumption? Name the failure and the first check that would catch it.`;
   }
   return goal
-    ? `How does mastering “${subject}” move you toward “${clip(goal, 90)}”? Point at a specific decision or result.`
-    : `Where does “${subject}” connect to a real problem or decision, and what would you check first?`;
+    ? `Name one calculation or decision in “${subject}” that moves you toward “${clip(goal, 80)}”, and the evidence that shows you got it right.`
+    : `Where would you use “${subject}” on a real problem today, and what is the first checkable output you would produce?`;
 }
 
 /**
@@ -187,6 +196,11 @@ export function buildSimulationSamplesSystemPrompt(): string {
     "SOLO EXERCISES (Drill) — follow these rules:",
     exerciseRules,
     "",
+    "CRITICAL for dialogue questions:",
+    "- Each question must demand a concrete intermediate result, worked instance, failure mode with a catch signal, or checkable output — NOT a syllabus restatement.",
+    '- FORBIDDEN dialogue wrappers: "What is the core mechanism in…", "how would you explain it precisely", "central claim … must not get wrong", "Explore how X intersects with Y…", "in your own words what is…", pure "what is X?" overview questions.',
+    "- Do NOT paste the block description after \"specifically:\" and ask for a definition of the blurb.",
+    "",
     "CRITICAL for exercises:",
     "- Each exercise MUST be a fixed, fully-specified problem with concrete numbers/data/constraints inside the text.",
     "- The learner must NOT invent, choose, or design their own problem — never say \"state the problem you chose\", \"solve a non-trivial problem in <topic>\", or \"stay within this scope\" + invent.",
@@ -195,7 +209,7 @@ export function buildSimulationSamplesSystemPrompt(): string {
     "OUTPUT: JSON only with:",
     '{ "topics": string[], "questions": string[3], "exercises": string[3], "probes": [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }] }',
     "Exactly 3 questions and 3 exercises (probes preferred: 3 question + 3 exercise).",
-    "Never use say/talk/think out loud stage directions. Never meta-learning icebreakers.",
+    "Never use say/talk/think out loud stage directions. Never meta-learning icebreakers or generic meta domain questions.",
     "Every item must be grounded in the workspace goal and block subject matter provided.",
   ].join("\n");
 }
@@ -264,7 +278,11 @@ export function buildSimulationSamplesUserPrompt(
     .join("\n");
 }
 
-/** True if text is a banned meta-learning / icebreaker pattern. */
+/**
+ * True if text is a banned meta-learning / icebreaker / generic meta-domain
+ * pattern (syllabus restatement wrappers, "explain it precisely", invent-your-own).
+ * Used for live fallbacks, Simulation sanitize, and structural guards.
+ */
 export function isMetaLearningFluff(text: string | null | undefined): boolean {
   const t = clean(text);
   if (!t) return false;
@@ -276,6 +294,18 @@ export function isMetaLearningFluff(text: string | null | undefined): boolean {
     /how do you feel about\b/i.test(t) ||
     /reflect on your learning\b/i.test(t) ||
     /what is your study strategy\b/i.test(t) ||
+    // Generic meta domain wrappers (not a checkable task)
+    /what is the core mechanism in\b/i.test(t) ||
+    /how would you explain it precisely\b/i.test(t) ||
+    /how would you explain the mechanism\b/i.test(t) ||
+    /how would you state it precisely\b/i.test(t) ||
+    /what is the central claim of\b/i.test(t) ||
+    /must not get wrong\b/i.test(t) ||
+    /in your own words,?\s*what is\b/i.test(t) ||
+    /demonstrate your understanding of\b/i.test(t) ||
+    /\bspecifically:\s*explore how\b/i.test(t) ||
+    /^explore how\b/i.test(t) ||
+    /\b— specifically:\s*.{20,}\s*— and how would you explain\b/i.test(t) ||
     // Invent-your-own exercise templates (meta drill framing)
     /state the problem you chose\b/i.test(t) ||
     /solve a non-trivial problem in\b/i.test(t) ||

@@ -19,6 +19,7 @@ import {
   buildGroundedExerciseItem,
   buildSimulationSamplesSystemPrompt,
   buildSimulationSamplesUserPrompt,
+  isMetaLearningFluff,
   type PracticeItemContext,
 } from "@/lib/practice-item-builders";
 import type { PromptBlockInventoryItem } from "@/lib/prompt-workspace-context";
@@ -316,7 +317,7 @@ export function normalizeSimulationSampleResponse(
 
   const fromQuestions = questionsRaw
     .map((q) => (typeof q === "string" ? clean(q) : ""))
-    .filter((q) => q.length >= 8);
+    .filter((q) => q.length >= 8 && !isMetaLearningFluff(q));
   const fromExercises = exercisesRaw
     .map((ex) => {
       if (typeof ex === "string") return clean(ex);
@@ -328,7 +329,7 @@ export function normalizeSimulationSampleResponse(
       }
       return "";
     })
-    .filter((q) => q.length >= 8);
+    .filter((q) => q.length >= 8 && !isMetaLearningFluff(q));
 
   const probeQs: string[] = [];
   const probeEx: string[] = [];
@@ -336,7 +337,7 @@ export function normalizeSimulationSampleResponse(
     if (!p || typeof p !== "object") continue;
     const pr = p as Record<string, unknown>;
     const text = clean(pr.question || pr.prompt || pr.text);
-    if (text.length < 8) continue;
+    if (text.length < 8 || isMetaLearningFluff(text)) continue;
     const kind = clean(pr.kind || pr.type).toLowerCase();
     const diff = clean(pr.difficulty).toLowerCase();
     if (kind === "exercise" || (!kind && diff === "stretch")) {
@@ -346,38 +347,26 @@ export function normalizeSimulationSampleResponse(
     }
   }
 
-  const questions = [
+  const questionsDraft = [
     ...fromQuestions,
     ...probeQs.filter((q) => !fromQuestions.includes(q)),
   ].slice(0, SIMULATION_QUESTION_COUNT);
-  const exercises = [
+  const exercisesDraft = [
     ...fromExercises,
     ...probeEx.filter((q) => !fromExercises.includes(q)),
   ].slice(0, SIMULATION_EXERCISE_COUNT);
 
-  // Pad with pure builders so shape is never empty when seed has substance.
-  while (questions.length < SIMULATION_QUESTION_COUNT) {
-    questions.push(
-      seed.questions[questions.length] ||
-        buildGroundedDialogueQuestion(seed.practiceContext, questions.length),
-    );
-  }
-  while (exercises.length < SIMULATION_EXERCISE_COUNT) {
-    exercises.push(
-      seed.exercises[exercises.length] ||
-        buildGroundedExerciseItem(seed.practiceContext, exercises.length),
-    );
-  }
-
-  const probes: SimulationProbe[] = [
-    ...questions.map((question, i) => ({
+  // Build probes then re-run enforceSimulationProbeQuota so meta LLM output is
+  // replaced with the same pure builders live Explore/Drill use.
+  const draftProbes: SimulationProbe[] = [
+    ...questionsDraft.map((question, i) => ({
       id: `q-${i}`,
       question,
       coachCue: "",
       difficulty: (i === 0 ? "warmup" : "core") as SimulationProbe["difficulty"],
       kind: "question" as const,
     })),
-    ...exercises.map((question, i) => ({
+    ...exercisesDraft.map((question, i) => ({
       id: `ex-${i}`,
       question,
       coachCue: "",
@@ -386,5 +375,23 @@ export function normalizeSimulationSampleResponse(
     })),
   ];
 
-  return { questions, exercises, probes, scope };
+  const probes = enforceSimulationProbeQuota(draftProbes, {
+    title: seed.practiceContext.blockTitle,
+    description: seed.practiceContext.blockDescription,
+    workspaceGoal: seed.practiceContext.workspaceGoal,
+    workspaceTitle: seed.practiceContext.workspaceTitle,
+    rootTopic: seed.practiceContext.rootTopic,
+    planningPrompt: seed.practiceContext.planningPrompt,
+    localNotes: seed.practiceContext.localNotes,
+    notes: seed.practiceContext.notes,
+  });
+  const { questions: qProbes, exercises: eProbes } =
+    partitionSimulationProbes(probes);
+
+  return {
+    questions: qProbes.map((p) => p.question),
+    exercises: eProbes.map((p) => p.question),
+    probes,
+    scope,
+  };
 }

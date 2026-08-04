@@ -3791,9 +3791,6 @@ export function BlockSkillGrid({
               >
                 ✕
               </button>
-              <p className="mt-1 max-w-[2.5rem] text-center text-[7px] leading-tight text-neutral-600">
-                white only
-              </p>
             </div>
           ) : (
             <>

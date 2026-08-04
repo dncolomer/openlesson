@@ -82,6 +82,7 @@ BAD openings (never do these):
 - Generic icebreakers: "What do you already know about X?"
 - Meta process: "How would you approach this?" or "What assumptions do you have?" or "How would you approach learning this?"
 - Abstract philosophy: "What does X mean to you?"
+- Generic meta domain wrappers: "What is the core mechanism in…?", "how would you explain it precisely", "central claim you must not get wrong", pasting "Explore how X intersects with Y…" as the task.
 - Pure quiz trivia a search engine answers.
 - Leading answers that hand them the solution.
 - Suggesting breaks.

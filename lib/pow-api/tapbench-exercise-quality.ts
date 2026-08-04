@@ -58,6 +58,7 @@ export function buildDomainExerciseAuthorSystemPrompt(
     "- Ground the exercise in the workspace goal and block/subject materials when provided — never generic meta-learning tasks.",
     "- Do NOT restate the topic list or syllabus blurb as the task.",
     '- Do NOT open with "Using what you know about…", "Complete this task:", or "Demonstrate your understanding…".',
+    '- Do NOT write "What is the core mechanism in…", "how would you explain it precisely", or paste an "Explore how…" blurb as the problem.',
     "- Do NOT ask the learner/agent to think aloud or speak out loud.",
     '- Start the response with "Exercise: " then the problem only (no preamble, no markdown fences).',
     lengthHint,
@@ -94,6 +95,10 @@ export function looksLikeTopicOverview(text: string | null | undefined): boolean
     return false;
   }
   if (/\?/.test(t)) return false;
+  // Syllabus / survey blurbs often open with "Explore how…" without posing a problem.
+  if (/^explore how\b/i.test(t) && !/\b(prove|compute|calculate|find|solve|given)\b/i.test(t)) {
+    return true;
+  }
   const commaParts = t.split(",").map((p) => p.trim()).filter(Boolean);
   if (commaParts.length >= 2) {
     const hasFiniteVerb = /\b(is|are|was|were|has|have|does|do|can|should|must|will|involves|covers|includes)\b/i.test(

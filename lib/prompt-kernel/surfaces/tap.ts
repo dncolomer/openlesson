@@ -75,7 +75,7 @@ Rules for learner-visible turns:
 - Do not pitch platform products or practice routing mid-session.
 
 Suggested opening (adapt to the workspace goal and block substance; keep the same natural tone):
-"What is the central claim of this topic that you must not get wrong, and how would you explain the mechanism with one concrete example?"
+"Using [block setup], give the first checkable intermediate result — not a definition of the topic."
 
 ${params.workspaceBlock}`;
 
@@ -97,12 +97,12 @@ ${TAP_SELECTIVE_THOUGHT_OVERLAY}${practiceOverlay}`,
 }
 
 export function buildTapOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. Ground it hard in the provided context, in priority order: (1) workspace goal, (2) focused block title + description + local notes/files, (3) map block inventory and topology cues when present, (4) workspace notes/materials. Prefer a concrete domain problem or scenario the learner must work (a specific calculation, design choice, causal chain, worked example, or debugging a misuse) — not a syllabus restatement, not "what is X in general?", not a generic icebreaker, not a meta-learning question ("What do you already know?", "How would you approach learning this?", "What assumptions do you have?"), and not stage directions about speaking out loud. When context is thin (guest / title-only), still stay on the subject matter and workspace goal — invent a small concrete problem inside that scope rather than a process/meta question. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". One or two sentences only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
+  return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. Ground it hard in the provided context, in priority order: (1) workspace goal, (2) focused block title + description + local notes/files, (3) map block inventory and topology cues when present, (4) workspace notes/materials. Prefer a concrete domain problem or scenario the learner must work (a specific calculation, design choice, causal chain, worked example, or debugging a misuse) — demand a checkable intermediate result, named failure mode with a catch signal, or concrete decision. FORBIDDEN: syllabus restatement; "what is X in general?"; "What is the core mechanism in…?"; "how would you explain it precisely"; "central claim … must not get wrong"; "Explore how X intersects with Y…" pasted as the task; generic icebreakers; meta-learning ("What do you already know?", "How would you approach learning this?", "What assumptions do you have?"); stage directions about speaking out loud. Do NOT wrap the block description after "specifically:" and ask for a definition. When context is thin (guest / title-only), invent a small concrete problem inside the subject/goal rather than a process/meta question. NEVER use think-aloud stage directions such as "say … out loud", "talk … out loud", "think out loud", or "verbalize out loud". One or two sentences only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
 }
 
 /** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
 export function buildTapPracticeOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple — introductory vocabulary, a basic definition, or the most everyday example of the core idea. Avoid deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
+  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple — one everyday example with a checkable micro-result, a tiny calculation, or the plain-language name of the key quantity. Avoid "core mechanism… explain precisely", syllabus restatements, deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
 }
 
 export const TAP_PRACTICE_THOUGHT_OVERLAY = `

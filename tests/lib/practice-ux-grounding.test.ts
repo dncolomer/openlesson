@@ -149,9 +149,14 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     const ex0 = buildGroundedExerciseItem(richCtx, 0);
 
     expect(q0).toMatch(/Positive predictive value|PPV|sensitivity|prevalence/i);
-    expect(q1).toMatch(/Positive predictive value|break|incorrectly|evidence/i);
-    expect(isMetaLearningFluff(q0)).toBe(false);
-    expect(isMetaLearningFluff(q1)).toBe(false);
+    expect(q1).toMatch(/Positive predictive value|mistake|wrong|catch|signal|break/i);
+    // Never the banned meta wrapper the product was still shipping
+    for (const q of [q0, q1, buildGroundedDialogueQuestion(richCtx, 2)]) {
+      expect(q).not.toMatch(/core mechanism/i);
+      expect(q).not.toMatch(/explain it precisely/i);
+      expect(q).not.toMatch(/central claim/i);
+      expect(isMetaLearningFluff(q)).toBe(false);
+    }
     expect(ex0).toMatch(/Exercise:/i);
     expect(ex0).toMatch(/PPV|sensitivity|prevalence|Positive predictive|Bayes|diagnostic/i);
     expect(ex0).toMatch(/\d/); // concrete numbers, not invent-your-own
@@ -171,10 +176,16 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
       workspaceDescription: "Update clinical beliefs from test evidence",
       notes: null,
     }, 0));
+    expect(liveOpen).not.toMatch(/core mechanism|explain it precisely/i);
 
     const task = kernelOpeningTask();
     expect(task).toMatch(/workspace goal/i);
     expect(task).toMatch(/meta-learning|already know|approach learning/i);
+    expect(task).toMatch(/core mechanism|explain it precisely/i);
+
+    const simSys = buildSimulationSamplesSystemPrompt();
+    expect(simSys).toMatch(/core mechanism|explain it precisely/i);
+    expect(simSys).toMatch(/FORBIDDEN/i);
 
     const runtime = buildTapScoreInstructions(sampleBrief, "curious", 15);
     expect(runtime).toContain("Bayesian clinical reasoning");
@@ -187,6 +198,54 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
         "ex0=" + ex0.slice(0, 240),
         "liveOpen=" + liveOpen.slice(0, 200),
         "taskHasGoal=" + /workspace goal/i.test(task),
+        "noCoreMechanism=" + !/core mechanism/i.test(q0),
+      ].join("\n"),
+    );
+  });
+
+  it("rejects the quantum-style generic meta wrapper and rewrites via builders", () => {
+    const bad =
+      'What is the core mechanism in "Bridging Quantum Optimization and Linear Algebra Techniques" — specifically: Explore how quantum optimization methods intersect with linear algebra primitives such as HHL and quantum singular value estimation. This b… — and how would you explain it precisely?';
+    expect(isMetaLearningFluff(bad)).toBe(true);
+
+    // Same block fields would have produced the old meta template; new builder is concrete.
+    const fixed = buildGroundedDialogueQuestion(
+      {
+        blockTitle: "Bridging Quantum Optimization and Linear Algebra Techniques",
+        blockDescription:
+          "Explore how quantum optimization methods intersect with linear algebra primitives such as HHL and quantum singular value estimation.",
+        workspaceTitle: "Quantum computing",
+        workspaceGoal: "Connect optimization algorithms to linear-algebra primitives",
+      },
+      0,
+    );
+    expect(isMetaLearningFluff(fixed)).toBe(false);
+    expect(fixed).not.toMatch(/core mechanism/i);
+    expect(fixed).not.toMatch(/explain it precisely/i);
+    // Description is an Explore-how blurb → treated as overview; still subject-grounded
+    expect(fixed).toMatch(
+      /Quantum|HHL|optimization|Linear Algebra|Bridging/i,
+    );
+
+    // Simulation sanitize path replaces LLM meta questions
+    const sim = deriveBlockSimulation({
+      title: "Bridging Quantum Optimization and Linear Algebra Techniques",
+      description:
+        "Explore how quantum optimization methods intersect with linear algebra primitives such as HHL and quantum singular value estimation.",
+      workspaceGoal: "Connect optimization algorithms to linear-algebra primitives",
+      workspaceTitle: "Quantum computing",
+    });
+    for (const p of partitionSimulationProbes(sim.probes).questions) {
+      expect(isMetaLearningFluff(p.question), p.question).toBe(false);
+      expect(p.question).not.toMatch(/core mechanism|explain it precisely/i);
+    }
+
+    writeEvidence(
+      "ux-meta-question-ban.txt",
+      [
+        "bad_is_meta=" + isMetaLearningFluff(bad),
+        "fixed=" + fixed,
+        "sim_q0=" + partitionSimulationProbes(sim.probes).questions[0]?.question,
       ].join("\n"),
     );
   });
@@ -197,7 +256,7 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
       const ex = buildGroundedExerciseItem(thinCtx, i);
       expect(isMetaLearningFluff(q), `q${i}=${q}`).toBe(false);
       expect(q).toMatch(/Modular arithmetic|Number theory/i);
-      expect(q).not.toMatch(/out loud/i);
+      expect(q).not.toMatch(/out loud|core mechanism|explain it precisely|central claim/i);
       expect(ex).toMatch(/Exercise:|Modular arithmetic|mod /i);
       expect(ex).not.toMatch(/out loud/i);
       expect(ex).not.toMatch(

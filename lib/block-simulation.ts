@@ -14,8 +14,13 @@ import {
 import {
   buildGroundedDialogueQuestion,
   buildGroundedExerciseItem,
+  isMetaLearningFluff,
   type PracticeItemContext,
 } from "@/lib/practice-item-builders";
+import {
+  isInventYourOwnExerciseMeta,
+  isLowQualityTapbenchExercise,
+} from "@/lib/pow-api/tapbench-exercise-quality";
 import {
   containsOutLoudStageDirection,
   stripOutLoudStageDirections,
@@ -279,6 +284,33 @@ function sanitizeProbeText(text: string): string {
   return t;
 }
 
+/** Replace invent-your-own / meta exercise templates with a concrete grounded item. */
+function sanitizeExerciseProbeText(
+  text: string,
+  ground: PracticeItemContext,
+  index: number,
+): string {
+  let t = sanitizeProbeText(text);
+  if (
+    !t ||
+    isMetaLearningFluff(t) ||
+    isInventYourOwnExerciseMeta(t) ||
+    isLowQualityTapbenchExercise(t, {
+      blockTitle: ground.blockTitle,
+      blockDescription: ground.blockDescription,
+      workspaceTitle: ground.workspaceTitle,
+    })
+  ) {
+    return synthExercise(
+      clean(ground.blockTitle) || "This block",
+      index,
+      clean(ground.blockDescription),
+      ground,
+    );
+  }
+  return t;
+}
+
 /**
  * Enforce exactly 3 questions + 3 exercises. Pads with synthetic prompts when short;
  * trims when long. Preserves contextSources when present.
@@ -337,10 +369,12 @@ export function enforceSimulationProbeQuota(
     });
   }
 
-  const exercises: SimulationProbe[] = eIn.slice(0, SIMULATION_EXERCISE_COUNT).map((p) => ({
-    ...p,
-    question: sanitizeProbeText(p.question),
-  }));
+  const exercises: SimulationProbe[] = eIn
+    .slice(0, SIMULATION_EXERCISE_COUNT)
+    .map((p, i) => ({
+      ...p,
+      question: sanitizeExerciseProbeText(p.question, ground, i),
+    }));
   while (exercises.length < SIMULATION_EXERCISE_COUNT) {
     const i = exercises.length;
     const question = synthExercise(title, i, description, ground);

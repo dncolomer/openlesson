@@ -1,42 +1,53 @@
 /**
- * Learner map post-it notes: pure model, placement math, store, UI wiring.
- * Drives shipped helpers — no re-implementation of CRUD or transform.
+ * Learner map notes on a continuous plane: center-drop, drag, resize, persist.
+ * Drives shipped helpers — no re-implementation of transform/CRUD.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
 import {
-  SKILL_GRID_PITCH,
-} from "@/lib/block-skill-grid";
-import {
-  clientPointToLearnerNoteCoords,
+  applyLearnerNoteDragDelta,
+  applyLearnerNoteResize,
+  canDeleteMapNote,
+  canEditMapNoteContent,
   createLearnerMapNote,
+  createLearnerMapNoteAtViewportCenter,
+  creatorMapNotesStorageKey,
+  creatorMapNotesStoreOps,
   deleteLearnerMapNote,
+  LEARNER_NOTE_DEFAULT_HEIGHT,
+  LEARNER_NOTE_DEFAULT_WIDTH,
+  LEARNER_NOTE_MAX_WIDTH,
+  LEARNER_NOTE_MIN_HEIGHT,
+  LEARNER_NOTE_MIN_WIDTH,
   learnerMapNoteIsBlockAgnostic,
   learnerMapNotesStorageKey,
   learnerMapNotesStoreOps,
+  learnerNoteCommitFromGestureBox,
   learnerNoteLayerStyle,
+  learnerNoteLiveBoxFromPointerMove,
+  learnerNotePointerAllowsDragStart,
   learnerNoteScreenPosition,
-  learnerNoteWorldOrigin,
+  listVisibleMapNotes,
+  loadCreatorMapNotes,
   loadLearnerMapNotes,
-  normalizeLearnerNoteBody,
-  normalizeLearnerNoteCoord,
   parseLearnerMapNotes,
-  pointerLocalToLearnerNoteCoords,
   saveLearnerMapNotes,
-  shouldMountLearnerMapNotes,
+  shouldMountMapNotes,
   toggleLearnerMapNoteCollapsed,
   updateLearnerMapNote,
   upsertLearnerMapNote,
-  LEARNER_NOTE_BODY_MAX,
+  viewportCenterToWorldPlane,
+  type LearnerNotePointerTargetLike,
   type LearnerNotesStorage,
 } from "@/lib/learner-map-notes";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
-  process.env.LEARNER_MAP_NOTES_SCRATCH ||
+  process.env.LEARNER_NOTES_PLANE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e24e312399ae/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-51f1681edf19/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -66,309 +77,567 @@ function memoryStore(): LearnerNotesStorage {
   };
 }
 
-describe("learner note model CRUD + collapse", () => {
-  it("create/update/delete + collapse; coords independent of block ids", () => {
-    const note = createLearnerMapNote({
-      id: "n1",
-      body: "  remember the quadratic  ",
-      col: 3,
-      row: 5,
+describe("continuous plane model: create / drag / resize", () => {
+  it("viewport center drop, drag delta, resize clamp; block-agnostic", () => {
+    const viewport = {
+      viewportWidth: 800,
+      viewportHeight: 600,
+      panX: 100,
+      panY: 50,
+      zoom: 1,
+    };
+    const center = viewportCenterToWorldPlane(viewport);
+    // world = (local - pan) / zoom
+    expect(center.x).toBe((800 / 2 - 100) / 1);
+    expect(center.y).toBe((600 / 2 - 50) / 1);
+
+    const note = createLearnerMapNoteAtViewportCenter({
+      ...viewport,
+      id: "c1",
+      body: "hello",
       now: 1000,
     });
-    expect(note.id).toBe("lnote-n1");
-    expect(note.body).toBe("  remember the quadratic  ".slice(0, LEARNER_NOTE_BODY_MAX));
-    expect(note.col).toBe(3);
-    expect(note.row).toBe(5);
-    expect(note.collapsed).toBe(false);
+    expect(note.id).toBe("lnote-c1");
+    expect(note.body).toBe("hello");
+    expect(note.width).toBe(LEARNER_NOTE_DEFAULT_WIDTH);
+    expect(note.height).toBe(LEARNER_NOTE_DEFAULT_HEIGHT);
+    // top-left so note is roughly centered
+    expect(note.x).toBeCloseTo(center.x - LEARNER_NOTE_DEFAULT_WIDTH / 2, 5);
+    expect(note.y).toBeCloseTo(center.y - LEARNER_NOTE_DEFAULT_HEIGHT / 2, 5);
     expect(learnerMapNoteIsBlockAgnostic(note)).toBe(true);
-    // No block linkage fields on model
     expect("blockId" in note).toBe(false);
-    expect("block_id" in note).toBe(false);
 
-    const updated = updateLearnerMapNote(note, {
-      body: "new text",
-      col: 4.5,
+    // Drag 40px right, 20px down at zoom 2 → world +20, +10
+    const dragged = applyLearnerNoteDragDelta(note, {
+      dxScreen: 40,
+      dyScreen: 20,
+      zoom: 2,
       now: 2000,
     });
-    expect(updated.body).toBe("new text");
-    expect(updated.col).toBe(4.5);
-    expect(updated.row).toBe(5);
-    expect(updated.updatedAt).toBe(2000);
-    expect(updated.createdAt).toBe(1000);
+    expect(dragged.x).toBeCloseTo(note.x + 20, 5);
+    expect(dragged.y).toBeCloseTo(note.y + 10, 5);
+    expect(dragged.updatedAt).toBe(2000);
 
-    const collapsed = toggleLearnerMapNoteCollapsed(updated, 3000);
+    // Resize clamp
+    const tiny = applyLearnerNoteResize(note, { width: 10, height: 5 });
+    expect(tiny.width).toBe(LEARNER_NOTE_MIN_WIDTH);
+    expect(tiny.height).toBe(LEARNER_NOTE_MIN_HEIGHT);
+    const huge = applyLearnerNoteResize(note, { width: 9999, height: 40 });
+    expect(huge.width).toBe(LEARNER_NOTE_MAX_WIDTH);
+
+    // Screen position shares block transform
+    const screen = learnerNoteScreenPosition({
+      x: note.x,
+      y: note.y,
+      panX: 100,
+      panY: 50,
+      zoom: 1,
+    });
+    expect(screen.left).toBeCloseTo(note.x + 100, 5);
+    expect(screen.top).toBeCloseTo(note.y + 50, 5);
+
+    const layer = learnerNoteLayerStyle(note);
+    expect(layer.left).toBe(note.x);
+    expect(layer.top).toBe(note.y);
+    expect(layer.width).toBe(note.width);
+
+    // Collapse + CRUD
+    const collapsed = toggleLearnerMapNoteCollapsed(note);
     expect(collapsed.collapsed).toBe(true);
-    const expanded = toggleLearnerMapNoteCollapsed(collapsed, 4000);
-    expect(expanded.collapsed).toBe(false);
-
     let list = upsertLearnerMapNote([], note);
-    list = upsertLearnerMapNote(list, updated);
-    expect(list).toHaveLength(1);
-    expect(list[0].body).toBe("new text");
     list = deleteLearnerMapNote(list, note.id);
     expect(list).toHaveLength(0);
 
-    // Body normalize caps length; invalid coords fall back
-    expect(normalizeLearnerNoteBody("x".repeat(500)).length).toBe(
-      LEARNER_NOTE_BODY_MAX,
-    );
-    expect(normalizeLearnerNoteCoord(Number.NaN, 7)).toBe(7);
-    expect(normalizeLearnerNoteCoord("2.25")).toBe(2.25);
-
-    // parse strips accidental blockId and keeps map coords
-    const parsed = parseLearnerMapNotes([
-      {
-        id: "a",
-        body: "hi",
-        col: 1,
-        row: 2,
-        blockId: "SHOULD_IGNORE",
-        collapsed: true,
-      },
-      { id: "", body: "bad" },
-      null,
+    // v1 col/row migrates to world
+    const fromV1 = parseLearnerMapNotes([
+      { id: "old", body: "m", col: 2, row: 3, collapsed: false },
     ]);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0].col).toBe(1);
-    expect(parsed[0].row).toBe(2);
-    expect(parsed[0].collapsed).toBe(true);
-    expect(learnerMapNoteIsBlockAgnostic(parsed[0])).toBe(true);
+    expect(fromV1[0].x).toBe(2 * SKILL_GRID_PITCH);
+    expect(fromV1[0].y).toBe(3 * SKILL_GRID_PITCH);
 
     writeEvidence(
-      "learner-map-notes-model.log",
+      "learner-notes-plane-model.log",
       [
-        "create=" + JSON.stringify(note),
-        "update=" + JSON.stringify(updated),
-        "collapsed=" + collapsed.collapsed,
-        "expanded=" + expanded.collapsed,
-        "after_delete_n=" + list.length,
-        "body_max=" + LEARNER_NOTE_BODY_MAX,
-        "parsed=" + JSON.stringify(parsed),
+        "center=" + JSON.stringify(center),
+        "note=" + JSON.stringify(note),
+        "dragged_x=" + dragged.x,
+        "tiny_w=" + tiny.width,
+        "layer=" + JSON.stringify(layer),
+        "v1_x=" + fromV1[0].x,
         "agnostic=" + learnerMapNoteIsBlockAgnostic(note),
       ].join("\n"),
     );
   });
 });
 
-describe("learner note map placement transform", () => {
-  it("world origin matches block cell layout; screen moves with pan/zoom/coords", () => {
-    // Blocks use left = col * PITCH, top = row * PITCH
-    const world = learnerNoteWorldOrigin({ col: 2, row: 3 });
-    expect(world.x).toBe(2 * SKILL_GRID_PITCH);
-    expect(world.y).toBe(3 * SKILL_GRID_PITCH);
-
-    const layer = learnerNoteLayerStyle({ col: 2, row: 3 });
-    expect(layer.left).toBe(world.x);
-    expect(layer.top).toBe(world.y);
-
-    const atIdentity = learnerNoteScreenPosition({
-      col: 2,
-      row: 3,
-      panX: 0,
-      panY: 0,
-      zoom: 1,
+describe("plane coords under pan/zoom", () => {
+  it("center drop and drag move predictably with pan/zoom", () => {
+    const zoom = 1.5;
+    const panX = -40;
+    const panY = 80;
+    const vw = 1000;
+    const vh = 700;
+    const note = createLearnerMapNoteAtViewportCenter({
+      viewportWidth: vw,
+      viewportHeight: vh,
+      panX,
+      panY,
+      zoom,
+      id: "z1",
     });
-    expect(atIdentity.left).toBe(world.x);
-    expect(atIdentity.top).toBe(world.y);
-
-    const panned = learnerNoteScreenPosition({
-      col: 2,
-      row: 3,
-      panX: 40,
-      panY: -10,
-      zoom: 1,
+    const screenBefore = learnerNoteScreenPosition({
+      x: note.x,
+      y: note.y,
+      panX,
+      panY,
+      zoom,
     });
-    expect(panned.left).toBe(atIdentity.left + 40);
-    expect(panned.top).toBe(atIdentity.top - 10);
+    // Center of note roughly at viewport center
+    const noteCenterScreenX = screenBefore.left + (note.width * zoom) / 2;
+    const noteCenterScreenY = screenBefore.top + (note.height * zoom) / 2;
+    expect(noteCenterScreenX).toBeCloseTo(vw / 2, 0);
+    expect(noteCenterScreenY).toBeCloseTo(vh / 2, 0);
 
-    const zoomed = learnerNoteScreenPosition({
-      col: 2,
-      row: 3,
-      panX: 0,
-      panY: 0,
-      zoom: 2,
+    // Pan change moves screen position but not stored world coords
+    const screenPanned = learnerNoteScreenPosition({
+      x: note.x,
+      y: note.y,
+      panX: panX + 30,
+      panY,
+      zoom,
     });
-    expect(zoomed.left).toBe(world.x * 2);
-    expect(zoomed.top).toBe(world.y * 2);
+    expect(screenPanned.left - screenBefore.left).toBeCloseTo(30, 5);
 
-    // Moving the note's stored coords moves placement predictably
-    const moved = learnerNoteScreenPosition({
-      col: 3,
-      row: 3,
-      panX: 0,
-      panY: 0,
-      zoom: 1,
+    // Drag at zoom: 15 screen px → 10 world
+    const moved = applyLearnerNoteDragDelta(note, {
+      dxScreen: 15,
+      dyScreen: 0,
+      zoom,
     });
-    expect(moved.left - atIdentity.left).toBe(SKILL_GRID_PITCH);
-    expect(moved.top).toBe(atIdentity.top);
-
-    // Inverse pointer → coords (shared transform)
-    const coords = pointerLocalToLearnerNoteCoords({
-      localX: world.x + 40,
-      localY: world.y - 10,
-      panX: 40,
-      panY: -10,
-      zoom: 1,
-    });
-    expect(coords.col).toBeCloseTo(2, 5);
-    expect(coords.row).toBeCloseTo(3, 5);
-
-    const fromClient = clientPointToLearnerNoteCoords({
-      clientX: 100 + world.x,
-      clientY: 50 + world.y,
-      viewportLeft: 100,
-      viewportTop: 50,
-      panX: 0,
-      panY: 0,
-      zoom: 1,
-    });
-    expect(fromClient.col).toBeCloseTo(2, 5);
-    expect(fromClient.row).toBeCloseTo(3, 5);
+    expect(moved.x - note.x).toBeCloseTo(15 / zoom, 5);
 
     writeEvidence(
-      "learner-map-notes-coords.log",
+      "learner-notes-plane-coords.log",
       [
-        "pitch=" + SKILL_GRID_PITCH,
-        "world=" + JSON.stringify(world),
-        "layer=" + JSON.stringify(layer),
-        "screen_id=" + JSON.stringify(atIdentity),
-        "screen_pan=" + JSON.stringify(panned),
-        "screen_zoom=" + JSON.stringify(zoomed),
-        "moved_col=" + JSON.stringify(moved),
-        "inverse=" + JSON.stringify(coords),
+        "note=" + JSON.stringify({ x: note.x, y: note.y, w: note.width, h: note.height }),
+        "screen_center_x=" + noteCenterScreenX,
+        "screen_center_y=" + noteCenterScreenY,
+        "pan_delta_screen=" + (screenPanned.left - screenBefore.left),
+        "drag_world_dx=" + (moved.x - note.x),
+        "zoom=" + zoom,
       ].join("\n"),
     );
   });
 });
 
-describe("learner notes store persistence", () => {
-  it("load/save/CRUD survive reload for same workspace+learner scope", () => {
-    const storage = memoryStore();
-    const ops = learnerMapNotesStoreOps({
-      workspaceId: "ws-1",
-      learnerScopeId: "user-9",
-      storage,
-    });
-    expect(ops.list()).toEqual([]);
-    const created = ops.create({
-      id: "sticky1",
-      body: "persist me",
-      col: 1,
-      row: 2,
-      now: 10,
-    });
-    expect(ops.list()).toHaveLength(1);
-    expect(ops.list()[0].body).toBe("persist me");
+/**
+ * Build a tiny Element.closest-like tree for drag-start gate tests.
+ * Selectors supported: tag names, [attr], [attr=value] (quoted).
+ */
+function makePointerTree(spec: {
+  tag: string;
+  attrs?: Record<string, string>;
+  children?: ReturnType<typeof makePointerTree>[];
+}): LearnerNotePointerTargetLike & {
+  tagName: string;
+  attrs: Record<string, string>;
+  parent: (LearnerNotePointerTargetLike & { tagName: string; attrs: Record<string, string> }) | null;
+  children: ReturnType<typeof makePointerTree>[];
+} {
+  const node: ReturnType<typeof makePointerTree> = {
+    tagName: spec.tag.toUpperCase(),
+    attrs: spec.attrs ?? {},
+    parent: null,
+    children: [],
+    closest(selector: string) {
+      let cur: typeof node | null = node;
+      while (cur) {
+        if (matchesSelector(cur, selector)) return cur;
+        cur = cur.parent as typeof node | null;
+      }
+      return null;
+    },
+  };
+  for (const child of spec.children ?? []) {
+    child.parent = node;
+    node.children.push(child);
+  }
+  return node;
+}
 
-    // Simulate reload: new ops instance same storage/key
-    const reloaded = loadLearnerMapNotes({
-      workspaceId: "ws-1",
-      learnerScopeId: "user-9",
-      storage,
+function matchesSelector(
+  node: { tagName: string; attrs: Record<string, string> },
+  selector: string,
+): boolean {
+  // comma-separated alternatives
+  const parts = selector.split(",").map((s) => s.trim());
+  return parts.some((sel) => {
+    if (sel.startsWith("[") && sel.endsWith("]")) {
+      const inner = sel.slice(1, -1);
+      const eq = inner.indexOf("=");
+      if (eq === -1) return Object.prototype.hasOwnProperty.call(node.attrs, inner);
+      const key = inner.slice(0, eq);
+      let val = inner.slice(eq + 1);
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      return node.attrs[key] === val;
+    }
+    return node.tagName === sel.toUpperCase();
+  });
+}
+
+describe("drag-start gate + pure gesture commit path", () => {
+  it("allows drag on dedicated handle surface; rejects button-covered targets", () => {
+    // Shipped layout: drag-handle div (non-button) + separate collapse/delete buttons.
+    const label = makePointerTree({
+      tag: "span",
+      attrs: { "data-learner-note-label": "true" },
     });
-    expect(reloaded).toHaveLength(1);
-    expect(reloaded[0].id).toBe(created.id);
-    expect(reloaded[0].col).toBe(1);
-
-    ops.update(created.id, { body: "updated", collapsed: true, now: 20 });
-    expect(ops.list()[0].body).toBe("updated");
-    expect(ops.list()[0].collapsed).toBe(true);
-
-    // Different scope → empty
-    expect(
-      loadLearnerMapNotes({
-        workspaceId: "ws-1",
-        learnerScopeId: "other-user",
-        storage,
-      }),
-    ).toHaveLength(0);
-
-    ops.remove(created.id);
-    expect(ops.list()).toHaveLength(0);
-
-    const key = learnerMapNotesStorageKey({
-      workspaceId: "ws-1",
-      learnerScopeId: "user-9",
+    const dragHandle = makePointerTree({
+      tag: "div",
+      attrs: { "data-learner-note-drag-handle": "true" },
+      children: [label],
     });
-    expect(key).toContain("ws-1");
-    expect(key).toContain("user-9");
+    const collapseBtn = makePointerTree({
+      tag: "button",
+      attrs: {
+        "data-learner-note-collapse": "true",
+        "data-learner-note-no-drag": "true",
+      },
+    });
+    const header = makePointerTree({
+      tag: "div",
+      attrs: { "data-learner-note-header": "true" },
+      children: [dragHandle, collapseBtn],
+    });
+    void header;
 
-    // Direct save round-trip
-    const n = createLearnerMapNote({
-      id: "r",
-      body: "round",
-      col: 0,
-      row: 0,
+    // Pointer on label inside drag handle → drag allowed
+    expect(learnerNotePointerAllowsDragStart(label)).toBe(true);
+    expect(learnerNotePointerAllowsDragStart(dragHandle)).toBe(true);
+    // Pointer on collapse button → drag rejected (control)
+    expect(learnerNotePointerAllowsDragStart(collapseBtn)).toBe(false);
+
+    // Anti-pattern: button-covered header (old bug) — entire surface is a button
+    const coveredLabel = makePointerTree({ tag: "span" });
+    const coveredButton = makePointerTree({
+      tag: "button",
+      attrs: { "data-learner-note-collapse": "true", class: "flex-1" },
+      children: [coveredLabel],
     });
-    saveLearnerMapNotes({
-      workspaceId: "ws-2",
-      learnerScopeId: "u",
-      notes: [n],
-      storage,
+    const brokenHandle = makePointerTree({
+      tag: "div",
+      attrs: { "data-learner-note-drag-handle": "true" },
+      children: [coveredButton],
     });
-    expect(
-      loadLearnerMapNotes({
-        workspaceId: "ws-2",
-        learnerScopeId: "u",
-        storage,
-      })[0].body,
-    ).toBe("round");
+    void brokenHandle;
+    // Clicking the visible "drag" label inside the button must NOT start drag
+    expect(learnerNotePointerAllowsDragStart(coveredLabel)).toBe(false);
+    expect(learnerNotePointerAllowsDragStart(coveredButton)).toBe(false);
+
+    // Outside any handle
+    const orphan = makePointerTree({ tag: "div" });
+    expect(learnerNotePointerAllowsDragStart(orphan)).toBe(false);
+    expect(learnerNotePointerAllowsDragStart(null)).toBe(false);
+
+    // Pure move/resize live box + commit-from-ref (no React state lag)
+    const origin = {
+      originLeft: 100,
+      originTop: 200,
+      originWidth: 168,
+      originHeight: 120,
+      startClientX: 50,
+      startClientY: 50,
+      zoom: 2,
+    };
+    // 20 screen px → 10 world at zoom 2
+    const moved = learnerNoteLiveBoxFromPointerMove({
+      kind: "move",
+      ...origin,
+      clientX: 70,
+      clientY: 60,
+    });
+    expect(moved.left).toBe(110);
+    expect(moved.top).toBe(205);
+    // Commit from last box on the drag ref (simulate pointerup with no re-render)
+    const dragRefLast = moved;
+    const commitMove = learnerNoteCommitFromGestureBox("move", dragRefLast);
+    expect(commitMove).toEqual({ kind: "move", x: 110, y: 205 });
+
+    // Zero-move release still commits origin (ref holds last = origin at start)
+    const originBox = learnerNoteLiveBoxFromPointerMove({
+      kind: "move",
+      ...origin,
+      clientX: origin.startClientX,
+      clientY: origin.startClientY,
+    });
+    expect(learnerNoteCommitFromGestureBox("move", originBox)).toEqual({
+      kind: "move",
+      x: 100,
+      y: 200,
+    });
+
+    const resized = learnerNoteLiveBoxFromPointerMove({
+      kind: "resize",
+      ...origin,
+      clientX: 90,
+      clientY: 90,
+    });
+    // +40/+40 screen → +20/+20 world
+    expect(resized.width).toBe(188);
+    expect(resized.height).toBe(140);
+    const commitResize = learnerNoteCommitFromGestureBox("resize", resized);
+    expect(commitResize.kind).toBe("resize");
+    if (commitResize.kind === "resize") {
+      expect(commitResize.width).toBe(188);
+      expect(commitResize.height).toBe(140);
+    }
+
+    writeEvidence(
+      "learner-notes-plane-drag-gate.log",
+      [
+        "handle_label_allows=" + learnerNotePointerAllowsDragStart(label),
+        "collapse_button_rejects=" + !learnerNotePointerAllowsDragStart(collapseBtn),
+        "button_covered_label_rejects=" +
+          !learnerNotePointerAllowsDragStart(coveredLabel),
+        "commit_move=" + JSON.stringify(commitMove),
+        "commit_resize=" + JSON.stringify(commitResize),
+        "zero_move_commit=" +
+          JSON.stringify(learnerNoteCommitFromGestureBox("move", originBox)),
+      ].join("\n"),
+    );
   });
 });
 
-describe("learner notes UI wiring (structural)", () => {
-  it("learner map mounts post-it CRUD; creator chrome does not", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
-    const postIt = read("components/LearnerMapNotePostIt.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const sessions = read("components/SessionList.tsx");
-    const lib = read("lib/learner-map-notes.ts");
+describe("creator notes: visible in learner; not deletable by learner", () => {
+  it("workspace creator notes merge into learner view; delete gated", () => {
+    const storage = memoryStore();
+    const creatorOps = creatorMapNotesStoreOps({
+      workspaceId: "ws",
+      storage,
+    });
+    const learnerOps = learnerMapNotesStoreOps({
+      workspaceId: "ws",
+      learnerScopeId: "u1",
+      storage,
+    });
 
-    expect(shouldMountLearnerMapNotes({ learnerMode: true })).toBe(true);
-    expect(shouldMountLearnerMapNotes({ learnerMode: false })).toBe(false);
+    const authorNote = creatorOps.createAtViewportCenter(
+      {
+        viewportWidth: 400,
+        viewportHeight: 300,
+        panX: 0,
+        panY: 0,
+        zoom: 1,
+      },
+      { id: "auth1", body: "read me" },
+    );
+    expect(authorNote.source).toBe("creator");
+    expect(creatorMapNotesStorageKey({ workspaceId: "ws" })).toMatch(
+      /creatorMapNotes/,
+    );
 
-    // Post-it component: collapsible + edit/delete
-    expect(postIt).toContain("data-learner-map-note");
-    expect(postIt).toContain("data-learner-note-collapse");
-    expect(postIt).toContain("data-learner-note-delete");
-    expect(postIt).toContain("data-learner-note-edit");
-    expect(postIt).toContain("data-learner-note-save");
-    expect(postIt).toContain("data-learner-note-postit");
+    const personal = learnerOps.createAtViewportCenter(
+      {
+        viewportWidth: 400,
+        viewportHeight: 300,
+        panX: 0,
+        panY: 0,
+        zoom: 1,
+      },
+      { id: "mine", body: "private" },
+    );
+    expect(personal.source).toBe("learner");
 
-    // Map mounts notes + add toolbar only via shouldMountLearnerMapNotes / learnerMode
-    expect(grid).toContain("LearnerMapNotePostIt");
-    expect(grid).toContain("shouldMountLearnerMapNotes");
-    expect(grid).toContain("data-learner-map-notes-toolbar");
-    expect(grid).toContain("data-learner-note-add");
-    expect(grid).toContain("handleLearnerNoteCreateAtCell");
-    expect(grid).toContain("loadLearnerMapNotes");
-    expect(grid).toContain("saveLearnerMapNotes");
-    expect(grid).toContain("learnerNoteLayerStyle");
-    // Creator tool strip remains gated off in learner mode
-    expect(grid).toMatch(/!learnerMode\s*\?\s*\(/);
+    // Creator mode: only author notes
+    const creatorView = listVisibleMapNotes({
+      workspaceId: "ws",
+      learnerMode: false,
+      storage,
+    });
+    expect(creatorView).toHaveLength(1);
+    expect(creatorView[0].id).toBe(authorNote.id);
+    expect(creatorView[0].source).toBe("creator");
 
-    // Host wires learner scope
-    expect(view).toContain("learnerScopeId");
-    expect(sessions).toContain("learnerScopeId");
+    // Learner mode: author + personal
+    const learnerView = listVisibleMapNotes({
+      workspaceId: "ws",
+      learnerMode: true,
+      learnerScopeId: "u1",
+      storage,
+    });
+    expect(learnerView).toHaveLength(2);
+    expect(learnerView.map((n) => n.id).sort()).toEqual(
+      [authorNote.id, personal.id].sort(),
+    );
 
-    // Model has no block id fields in create path
-    expect(lib).toContain("block-agnostic");
-    expect(lib).not.toMatch(/createLearnerMapNote[\s\S]{0,200}blockId/);
+    // Permissions
+    expect(
+      canDeleteMapNote(authorNote, { learnerMode: true }),
+    ).toBe(false);
+    expect(
+      canEditMapNoteContent(authorNote, { learnerMode: true }),
+    ).toBe(false);
+    expect(
+      canDeleteMapNote(authorNote, { learnerMode: false }),
+    ).toBe(true);
+    expect(
+      canDeleteMapNote(personal, { learnerMode: true }),
+    ).toBe(true);
+
+    // Learner store must not absorb creator notes
+    const personalOnly = loadLearnerMapNotes({
+      workspaceId: "ws",
+      learnerScopeId: "u1",
+      storage,
+    });
+    expect(personalOnly.every((n) => n.source === "learner")).toBe(true);
+    expect(loadCreatorMapNotes({ workspaceId: "ws", storage })).toHaveLength(1);
 
     writeEvidence(
-      "learner-map-notes-ui.log",
+      "learner-notes-creator-visible.log",
       [
-        "mount_learner_true=" + shouldMountLearnerMapNotes({ learnerMode: true }),
-        "mount_learner_false=" + shouldMountLearnerMapNotes({ learnerMode: false }),
-        "grid_has_postit=true",
-        "grid_has_add_toolbar=true",
-        "postit_collapse_edit_delete=true",
-        "view_scope=true",
-        "storage_key_sample=" +
-          learnerMapNotesStorageKey({
-            workspaceId: "w",
-            learnerScopeId: "u",
+        "creator_view_count=" + creatorView.length,
+        "learner_view_count=" + learnerView.length,
+        "learner_cannot_delete_creator=" +
+          !canDeleteMapNote(authorNote, { learnerMode: true }),
+        "creator_can_delete_creator=" +
+          canDeleteMapNote(authorNote, { learnerMode: false }),
+        "learner_can_delete_personal=" +
+          canDeleteMapNote(personal, { learnerMode: true }),
+      ].join("\n"),
+    );
+  });
+});
+
+describe("store + UI structural", () => {
+  it("persists free position/size; Add under minimap in creator+learner; no empty-cell arm", () => {
+    const storage = memoryStore();
+    const ops = learnerMapNotesStoreOps({
+      workspaceId: "ws",
+      learnerScopeId: "u1",
+      storage,
+    });
+    const n = ops.createAtViewportCenter(
+      {
+        viewportWidth: 400,
+        viewportHeight: 300,
+        panX: 0,
+        panY: 0,
+        zoom: 1,
+      },
+      { id: "p1", body: "persist" },
+    );
+    ops.update(n.id, { x: 11, y: 22, width: 200, height: 100 });
+    const reloaded = loadLearnerMapNotes({
+      workspaceId: "ws",
+      learnerScopeId: "u1",
+      storage,
+    });
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0].x).toBe(11);
+    expect(reloaded[0].y).toBe(22);
+    expect(reloaded[0].width).toBe(200);
+    expect(reloaded[0].height).toBe(100);
+    expect(reloaded[0].body).toBe("persist");
+    expect(learnerMapNotesStorageKey({ workspaceId: "ws", learnerScopeId: "u1" })).toMatch(
+      /v2/,
+    );
+
+    // Notes mount in both creator and learner when workspaceId is set
+    expect(shouldMountMapNotes({ workspaceId: "ws", learnerMode: true })).toBe(
+      true,
+    );
+    expect(shouldMountMapNotes({ workspaceId: "ws", learnerMode: false })).toBe(
+      true,
+    );
+    expect(shouldMountMapNotes({ workspaceId: "", learnerMode: true })).toBe(
+      false,
+    );
+
+    const grid = read("components/BlockSkillGrid.tsx");
+    const postIt = read("components/LearnerMapNotePostIt.tsx");
+    const lib = read("lib/learner-map-notes.ts");
+
+    // Under minimap, one-shot create, no arm place — both modes
+    expect(grid).toContain("data-learner-notes-under-minimap");
+    expect(grid).toContain("handleMapNoteAddAtCenter");
+    expect(grid).toContain("createLearnerMapNoteAtViewportCenter");
+    expect(grid).toContain("data-learner-note-add");
+    expect(grid).toContain("source: \"creator\"");
+    expect(grid).toContain("source: \"learner\"");
+    expect(grid).toContain("canDeleteMapNote");
+    expect(grid).toContain("loadCreatorMapNotes");
+    expect(grid).not.toContain("learnerNotePlaceArmed");
+    expect(grid).not.toContain("handleLearnerNoteCreateAtCell");
+    expect(grid).not.toContain("data-learner-note-place-toggle");
+    expect(grid).toContain("shouldMountMapNotes");
+    // Creator strip still gated for authoring tools (not notes)
+    expect(grid).toMatch(/!learnerMode\s*\?\s*\(/);
+
+    // Post-it drag + resize — dedicated non-button handle, commit from ref
+    expect(postIt).toContain("data-learner-note-drag-handle");
+    expect(postIt).toContain("data-learner-note-resize-handle");
+    expect(postIt).toContain("onDragEnd");
+    expect(postIt).toContain("onResizeEnd");
+    expect(postIt).toContain("data-learner-map-note");
+    expect(postIt).toContain("canDelete");
+    expect(postIt).toContain("data-learner-note-can-delete");
+    expect(postIt).toContain("learnerNotePointerAllowsDragStart");
+    expect(postIt).toContain("learnerNoteLiveBoxFromPointerMove");
+    expect(postIt).toContain("learnerNoteCommitFromGestureBox");
+    expect(postIt).toContain("drag.last");
+    // Drag handle is a non-button presentation surface; collapse is a sibling button
+    expect(postIt).toMatch(
+      /role="presentation"[\s\S]{0,80}data-learner-note-drag-handle/,
+    );
+    // Old bug: flex-1 collapse button inside the drag handle covering the surface
+    const handleBlock = postIt.slice(
+      postIt.indexOf("data-learner-note-drag-handle"),
+      postIt.indexOf("data-learner-note-collapse"),
+    );
+    expect(handleBlock).not.toMatch(/<button/);
+    expect(handleBlock).not.toMatch(/flex-1/);
+    // Collapse/delete are separate controls with no-drag marker
+    expect(postIt).toContain("data-learner-note-collapse");
+    expect(postIt).toContain("data-learner-note-no-drag");
+    // Must not gate move solely on React `live` state
+    expect(postIt).not.toMatch(/if\s*\(\s*!live\s*\)\s*return/);
+
+    expect(lib).toContain("createLearnerMapNoteAtViewportCenter");
+    expect(lib).toContain("applyLearnerNoteDragDelta");
+    expect(lib).toContain("applyLearnerNoteResize");
+    expect(lib).toContain("viewportCenterToWorldPlane");
+    expect(lib).toContain("learnerNotePointerAllowsDragStart");
+    expect(lib).toContain("canDeleteMapNote");
+    expect(lib).toContain("creatorMapNotesStorageKey");
+    expect(lib).toContain("listVisibleMapNotes");
+
+    writeEvidence(
+      "learner-notes-plane-ui.log",
+      [
+        "under_minimap=true",
+        "center_drop=true",
+        "no_arm_place=true",
+        "drag_resize=true",
+        "drag_handle_not_button=true",
+        "commit_from_drag_ref=true",
+        "creator_and_learner_add=true",
+        "persist_xywh=" +
+          JSON.stringify({
+            x: reloaded[0].x,
+            y: reloaded[0].y,
+            w: reloaded[0].width,
+            h: reloaded[0].height,
           }),
+        "mount_learner=" +
+          shouldMountMapNotes({ workspaceId: "ws", learnerMode: true }),
+        "mount_creator=" +
+          shouldMountMapNotes({ workspaceId: "ws", learnerMode: false }),
       ].join("\n"),
     );
   });

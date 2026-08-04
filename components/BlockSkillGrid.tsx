@@ -34,17 +34,48 @@ import {
   type AddExpandJob,
 } from "@/lib/add-block-range-density";
 import {
-  createLearnerMapNote,
+  applyLearnerNoteResize,
+  canDeleteMapNote,
+  canEditMapNoteContent,
+  canMutateMapNoteGeometry,
+  createLearnerMapNoteAtViewportCenter,
   deleteLearnerMapNote,
   learnerNoteLayerStyle,
+  loadCreatorMapNotes,
   loadLearnerMapNotes,
+  mapNoteSourceOf,
+  saveCreatorMapNotes,
   saveLearnerMapNotes,
-  shouldMountLearnerMapNotes,
+  shouldMountMapNotes,
   toggleLearnerMapNoteCollapsed,
   updateLearnerMapNote,
   upsertLearnerMapNote,
   type LearnerMapNote,
 } from "@/lib/learner-map-notes";
+import {
+  ANNOTATION_DEFAULT_STROKE_WIDTH,
+  ANNOTATION_STROKE_COLOR,
+  ANNOTATION_STROKE_THICKNESSES,
+  annotationEraserRadiusForThickness,
+  annotationFreehandPathD,
+  annotationScreenToWorld,
+  appendAnnotationStroke,
+  buildAnnotationStrokeFromGesture,
+  canDeleteAnnotationLayer,
+  canDrawOnAnnotationLayer,
+  createAnnotationLayer,
+  deleteAnnotationLayer,
+  eraseAnnotationStrokesAlongPath,
+  isAnnotationStrokeKind,
+  loadAnnotationLayers,
+  saveAnnotationLayers,
+  toggleAnnotationLayerVisible,
+  upsertAnnotationLayer,
+  type AnnotationDrawTool,
+  type AnnotationLayer,
+  type AnnotationPoint,
+  type AnnotationStrokeThickness,
+} from "@/lib/map-annotation-layers";
 import { LearnerMapNotePostIt } from "@/components/LearnerMapNotePostIt";
 import {
   parseBlockPracticeOptions,
@@ -143,7 +174,6 @@ import {
   learnerMapDependencyHighlightIds,
 } from "@/lib/learner-local-dag";
 import {
-  blockHasLockDependencies,
   isBlockLockedUntilCompleted,
   normalizeLockUntilBlockIds,
   unusableCellKeySet,
@@ -537,7 +567,7 @@ function MapCellStatusGlyph({
   );
 }
 
-/** Small lock badge for blocks that declare lock-until dependencies. */
+/** Small lock badge for blocks with dependencies (lock-until and/or inbound DAG). */
 function BlockDependencyLockBadge({
   dependencyCount,
   currentlyLocked,
@@ -552,12 +582,13 @@ function BlockDependencyLockBadge({
   const redLocked = learnerSpottable && currentlyLocked;
   return (
     <span
-      className={`absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
+      // Bottom-left so it does not collide with starter flag (bottom-right).
+      className={`absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
         redLocked
           ? "text-rose-400"
           : currentlyLocked
             ? "text-neutral-300"
-            : "text-neutral-500"
+            : "text-neutral-400"
       }`}
       data-block-dependency-lock
       data-block-dependency-count={dependencyCount}
@@ -673,7 +704,7 @@ function BlockPracticeOptionsBadge({
     >
       {keys.includes("explore") ? (
         <svg
-          className="h-2.5 w-2.5 text-sky-200/95"
+          className="h-2.5 w-2.5 text-white"
           data-practice-icon="explore"
           fill="none"
           viewBox="0 0 24 24"
@@ -687,7 +718,7 @@ function BlockPracticeOptionsBadge({
       ) : null}
       {keys.includes("drill") ? (
         <svg
-          className="h-2.5 w-2.5 text-violet-200/95"
+          className="h-2.5 w-2.5 text-white"
           data-practice-icon="drill"
           fill="none"
           viewBox="0 0 24 24"
@@ -702,7 +733,7 @@ function BlockPracticeOptionsBadge({
       ) : null}
       {keys.includes("open") ? (
         <svg
-          className="h-2.5 w-2.5 text-emerald-200/90"
+          className="h-2.5 w-2.5 text-white"
           data-practice-icon="open"
           fill="none"
           viewBox="0 0 24 24"
@@ -719,7 +750,7 @@ function BlockPracticeOptionsBadge({
       ) : null}
       {keys.includes("timed") ? (
         <svg
-          className="h-2.5 w-2.5 text-amber-200/95"
+          className="h-2.5 w-2.5 text-white"
           data-practice-icon="timed"
           fill="none"
           viewBox="0 0 24 24"
@@ -780,27 +811,57 @@ export function BlockSkillGrid({
     [unusableCells],
   );
 
-  /** Learner post-it notes: personal, map-coords only (no block linkage). */
-  const mountLearnerNotes = shouldMountLearnerMapNotes({ learnerMode });
-  const resolvedLearnerScope = String(
-    learnerScopeId || ayclToken || "local",
-  ).trim() || "local";
+  /**
+   * Map post-it notes (continuous plane):
+   * - Creator notes: workspace-scoped, always visible in learner mode, not deletable by learners
+   * - Learner notes: personal, learner mode only
+   */
+  const mountMapNotes = shouldMountMapNotes({ workspaceId, learnerMode });
+  const resolvedLearnerScope =
+    String(learnerScopeId || ayclToken || "local").trim() || "local";
+  const [creatorNotes, setCreatorNotes] = useState<LearnerMapNote[]>([]);
   const [learnerNotes, setLearnerNotes] = useState<LearnerMapNote[]>([]);
-  const [learnerNotePlaceArmed, setLearnerNotePlaceArmed] = useState(false);
 
   useEffect(() => {
-    if (!mountLearnerNotes || !workspaceId) {
+    if (!mountMapNotes || !workspaceId) {
+      setCreatorNotes([]);
       setLearnerNotes([]);
-      setLearnerNotePlaceArmed(false);
       return;
     }
-    setLearnerNotes(
-      loadLearnerMapNotes({
-        workspaceId,
-        learnerScopeId: resolvedLearnerScope,
-      }),
-    );
-  }, [mountLearnerNotes, workspaceId, resolvedLearnerScope]);
+    setCreatorNotes(loadCreatorMapNotes({ workspaceId }));
+    if (learnerMode) {
+      setLearnerNotes(
+        loadLearnerMapNotes({
+          workspaceId,
+          learnerScopeId: resolvedLearnerScope,
+        }),
+      );
+    } else {
+      setLearnerNotes([]);
+    }
+  }, [mountMapNotes, workspaceId, resolvedLearnerScope, learnerMode]);
+
+  const mapNotes = useMemo(() => {
+    if (!mountMapNotes) return [] as LearnerMapNote[];
+    if (!learnerMode) return creatorNotes;
+    const seen = new Set(creatorNotes.map((n) => n.id));
+    const merged = [...creatorNotes];
+    for (const n of learnerNotes) {
+      if (seen.has(n.id)) continue;
+      seen.add(n.id);
+      merged.push(n);
+    }
+    return merged;
+  }, [mountMapNotes, learnerMode, creatorNotes, learnerNotes]);
+
+  const persistCreatorNotes = useCallback(
+    (next: LearnerMapNote[]) => {
+      setCreatorNotes(next);
+      if (!workspaceId) return;
+      saveCreatorMapNotes({ workspaceId, notes: next });
+    },
+    [workspaceId],
+  );
 
   const persistLearnerNotes = useCallback(
     (next: LearnerMapNote[]) => {
@@ -815,55 +876,245 @@ export function BlockSkillGrid({
     [resolvedLearnerScope, workspaceId],
   );
 
+  const findMapNote = useCallback(
+    (noteId: string): LearnerMapNote | undefined =>
+      mapNotes.find((n) => n.id === noteId),
+    [mapNotes],
+  );
+
+  const patchMapNote = useCallback(
+    (noteId: string, updater: (existing: LearnerMapNote) => LearnerMapNote) => {
+      const existing = findMapNote(noteId);
+      if (!existing) return;
+      const updated = updater(existing);
+      if (mapNoteSourceOf(existing) === "creator") {
+        persistCreatorNotes(upsertLearnerMapNote(creatorNotes, updated));
+      } else {
+        persistLearnerNotes(upsertLearnerMapNote(learnerNotes, updated));
+      }
+    },
+    [
+      creatorNotes,
+      findMapNote,
+      learnerNotes,
+      persistCreatorNotes,
+      persistLearnerNotes,
+    ],
+  );
+
   const handleLearnerNoteToggle = useCallback(
     (noteId: string) => {
-      const existing = learnerNotes.find((n) => n.id === noteId);
-      if (!existing) return;
-      persistLearnerNotes(
-        upsertLearnerMapNote(
-          learnerNotes,
-          toggleLearnerMapNoteCollapsed(existing),
-        ),
+      // Collapse allowed for everyone (including creator notes in learner mode).
+      patchMapNote(noteId, (existing) =>
+        toggleLearnerMapNoteCollapsed(existing),
       );
     },
-    [learnerNotes, persistLearnerNotes],
+    [patchMapNote],
   );
 
   const handleLearnerNoteSaveBody = useCallback(
     (noteId: string, body: string) => {
-      const existing = learnerNotes.find((n) => n.id === noteId);
+      const existing = findMapNote(noteId);
       if (!existing) return;
-      persistLearnerNotes(
-        upsertLearnerMapNote(
-          learnerNotes,
-          updateLearnerMapNote(existing, { body }),
-        ),
-      );
+      if (!canEditMapNoteContent(existing, { learnerMode })) return;
+      patchMapNote(noteId, (n) => updateLearnerMapNote(n, { body }));
     },
-    [learnerNotes, persistLearnerNotes],
+    [findMapNote, learnerMode, patchMapNote],
   );
 
   const handleLearnerNoteDelete = useCallback(
     (noteId: string) => {
-      persistLearnerNotes(deleteLearnerMapNote(learnerNotes, noteId));
+      const existing = findMapNote(noteId);
+      if (!existing) return;
+      if (!canDeleteMapNote(existing, { learnerMode })) return;
+      if (mapNoteSourceOf(existing) === "creator") {
+        persistCreatorNotes(deleteLearnerMapNote(creatorNotes, noteId));
+      } else {
+        persistLearnerNotes(deleteLearnerMapNote(learnerNotes, noteId));
+      }
     },
-    [learnerNotes, persistLearnerNotes],
+    [
+      creatorNotes,
+      findMapNote,
+      learnerMode,
+      learnerNotes,
+      persistCreatorNotes,
+      persistLearnerNotes,
+    ],
   );
 
-  const handleLearnerNoteCreateAtCell = useCallback(
-    (cell: GridCell) => {
-      if (!mountLearnerNotes || !workspaceId) return;
-      const note = createLearnerMapNote({
-        body: "",
-        col: cell.col,
-        row: cell.row,
-        collapsed: false,
-      });
-      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
-      setLearnerNotePlaceArmed(false);
+  const handleLearnerNoteDragEnd = useCallback(
+    (noteId: string, next: { x: number; y: number }) => {
+      const existing = findMapNote(noteId);
+      if (!existing) return;
+      if (!canMutateMapNoteGeometry(existing, { learnerMode })) return;
+      patchMapNote(noteId, (n) =>
+        updateLearnerMapNote(n, { x: next.x, y: next.y }),
+      );
     },
-    [learnerNotes, mountLearnerNotes, persistLearnerNotes, workspaceId],
+    [findMapNote, learnerMode, patchMapNote],
   );
+
+  const handleLearnerNoteResizeEnd = useCallback(
+    (noteId: string, next: { width: number; height: number }) => {
+      const existing = findMapNote(noteId);
+      if (!existing) return;
+      if (!canMutateMapNoteGeometry(existing, { learnerMode })) return;
+      patchMapNote(noteId, (n) =>
+        applyLearnerNoteResize(n, {
+          width: next.width,
+          height: next.height,
+        }),
+      );
+    },
+    [findMapNote, learnerMode, patchMapNote],
+  );
+
+  // ── Annotation layers (stacked freehand; white-only; creator draws/deletes) ──
+  const [annotationLayers, setAnnotationLayers] = useState<AnnotationLayer[]>(
+    [],
+  );
+  /** Creator: selected layer id enables left-strip annotation toolbox. */
+  const [activeAnnotationLayerId, setActiveAnnotationLayerId] = useState<
+    string | null
+  >(null);
+  const [annotationDrawTool, setAnnotationDrawTool] =
+    useState<AnnotationDrawTool>("freehand");
+  const [annotationStrokeThickness, setAnnotationStrokeThickness] =
+    useState<AnnotationStrokeThickness>(ANNOTATION_DEFAULT_STROKE_WIDTH);
+  const [annotationNameDraft, setAnnotationNameDraft] = useState("");
+  const [annotationNameOpen, setAnnotationNameOpen] = useState(false);
+  const annotationDrawRef = useRef<{
+    pointerId: number;
+    layerId: string;
+    kind: AnnotationDrawTool;
+    startLocal: AnnotationPoint;
+    curLocal: AnnotationPoint;
+    pointsLocal: AnnotationPoint[];
+  } | null>(null);
+  const [annotationDrawPreview, setAnnotationDrawPreview] = useState<{
+    kind: AnnotationDrawTool;
+    startX: number;
+    startY: number;
+    curX: number;
+    curY: number;
+    points: AnnotationPoint[];
+    strokeWidth: number;
+  } | null>(null);
+  const minimapStackRef = useRef<HTMLDivElement>(null);
+  const [minimapStackHeight, setMinimapStackHeight] = useState(0);
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setAnnotationLayers([]);
+      setActiveAnnotationLayerId(null);
+      return;
+    }
+    setAnnotationLayers(loadAnnotationLayers({ workspaceId }));
+  }, [workspaceId]);
+
+  useEffect(() => {
+    const el = minimapStackRef.current;
+    if (!el || typeof ResizeObserver === "undefined") {
+      setMinimapStackHeight(el?.offsetHeight ?? 0);
+      return;
+    }
+    const ro = new ResizeObserver(() => {
+      setMinimapStackHeight(el.offsetHeight);
+    });
+    ro.observe(el);
+    setMinimapStackHeight(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [annotationLayers.length, mountMapNotes, learnerMode, annotationNameOpen]);
+
+  // Leaving creator annotation mode when switching to learner
+  useEffect(() => {
+    if (learnerMode) {
+      setActiveAnnotationLayerId(null);
+      setAnnotationNameOpen(false);
+      annotationDrawRef.current = null;
+      setAnnotationDrawPreview(null);
+    }
+  }, [learnerMode]);
+
+  const persistAnnotationLayers = useCallback(
+    (next: AnnotationLayer[]) => {
+      setAnnotationLayers(next);
+      if (!workspaceId) return;
+      saveAnnotationLayers({ workspaceId, layers: next });
+    },
+    [workspaceId],
+  );
+
+  const annotationDrawingActive =
+    !learnerMode &&
+    canDrawOnAnnotationLayer({ learnerMode }) &&
+    Boolean(activeAnnotationLayerId);
+
+  const handleAnnotationLayerAdd = useCallback(() => {
+    if (learnerMode || !workspaceId) return;
+    const name =
+      annotationNameDraft.trim() ||
+      `Layer ${annotationLayers.length + 1}`;
+    const layer = createAnnotationLayer({ name });
+    persistAnnotationLayers(
+      upsertAnnotationLayer(annotationLayers, layer),
+    );
+    setAnnotationNameDraft("");
+    setAnnotationNameOpen(false);
+    setActiveAnnotationLayerId(layer.id);
+    setAnnotationDrawTool("freehand");
+  }, [
+    annotationLayers,
+    annotationNameDraft,
+    learnerMode,
+    persistAnnotationLayers,
+    workspaceId,
+  ]);
+
+  const handleAnnotationLayerSelect = useCallback(
+    (layerId: string) => {
+      if (learnerMode) return;
+      setActiveAnnotationLayerId((prev) =>
+        prev === layerId ? null : layerId,
+      );
+    },
+    [learnerMode],
+  );
+
+  const handleAnnotationLayerDelete = useCallback(
+    (layerId: string) => {
+      if (!canDeleteAnnotationLayer({ learnerMode })) return;
+      const next = deleteAnnotationLayer(annotationLayers, layerId, {
+        learnerMode,
+      });
+      persistAnnotationLayers(next);
+      if (activeAnnotationLayerId === layerId) {
+        setActiveAnnotationLayerId(null);
+      }
+    },
+    [
+      activeAnnotationLayerId,
+      annotationLayers,
+      learnerMode,
+      persistAnnotationLayers,
+    ],
+  );
+
+  const handleAnnotationLayerToggle = useCallback(
+    (layerId: string) => {
+      const existing = annotationLayers.find((l) => l.id === layerId);
+      if (!existing) return;
+      persistAnnotationLayers(
+        upsertAnnotationLayer(
+          annotationLayers,
+          toggleAnnotationLayerVisible(existing),
+        ),
+      );
+    },
+    [annotationLayers, persistAnnotationLayers],
+  );
+
   /** Right-pane hosts empty create when either callback is wired. */
   const useRightPaneEmpty =
     typeof onEmptySelectionChange === "function" ||
@@ -938,6 +1189,52 @@ export function BlockSkillGrid({
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE);
+
+  /** One-shot: drop a note at the center of the current viewport (continuous plane). */
+  const handleMapNoteAddAtCenter = useCallback(() => {
+    if (!mountMapNotes || !workspaceId) return;
+    const el = viewportRef.current;
+    const vw = el?.clientWidth || viewportSize.width || 640;
+    const vh = el?.clientHeight || viewportSize.height || 480;
+    if (learnerMode) {
+      const note = createLearnerMapNoteAtViewportCenter({
+        viewportWidth: vw,
+        viewportHeight: vh,
+        panX: pan.x,
+        panY: pan.y,
+        zoom,
+        body: "",
+        source: "learner",
+      });
+      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
+    } else {
+      const note = createLearnerMapNoteAtViewportCenter({
+        viewportWidth: vw,
+        viewportHeight: vh,
+        panX: pan.x,
+        panY: pan.y,
+        zoom,
+        body: "",
+        source: "creator",
+      });
+      persistCreatorNotes(upsertLearnerMapNote(creatorNotes, note));
+    }
+  }, [
+    creatorNotes,
+    learnerMode,
+    learnerNotes,
+    mountMapNotes,
+    pan.x,
+    pan.y,
+    persistCreatorNotes,
+    persistLearnerNotes,
+    viewportSize.height,
+    viewportSize.width,
+    workspaceId,
+    zoom,
+  ]);
+  // Alias for any residual call sites / structural tests.
+  const handleLearnerNoteAddAtCenter = handleMapNoteAddAtCenter;
 
   // Multi-select + Photoshop-style tool mode
   const [selectedEmptyCells, setSelectedEmptyCells] = useState<GridCell[]>([]);
@@ -1483,6 +1780,41 @@ export function BlockSkillGrid({
 
       if (event.button !== 0) return;
 
+      // Annotation draw mode (creator + selected layer): draw white strokes anywhere.
+      if (
+        !learnerMode &&
+        activeAnnotationLayerId &&
+        canDrawOnAnnotationLayer({ learnerMode: false })
+      ) {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        const rect = viewport.getBoundingClientRect();
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        const kind = annotationDrawTool;
+        annotationDrawRef.current = {
+          pointerId: event.pointerId,
+          layerId: activeAnnotationLayerId,
+          kind,
+          startLocal: { x: localX, y: localY },
+          curLocal: { x: localX, y: localY },
+          pointsLocal: [{ x: localX, y: localY }],
+        };
+        setAnnotationDrawPreview({
+          kind,
+          startX: localX,
+          startY: localY,
+          curX: localX,
+          curY: localY,
+          points: [{ x: localX, y: localY }],
+          strokeWidth: annotationStrokeThickness,
+        });
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       // Lasso mode: draw region anywhere (including over cells).
       const shape = resolveActiveLassoShape({
         activeTool: activeToolRef.current,
@@ -1520,10 +1852,52 @@ export function BlockSkillGrid({
 
       beginViewportPan(event);
     },
-    [beginViewportPan, canEdit, mergePromptOpen, shapePromptOpen],
+    [
+      activeAnnotationLayerId,
+      annotationDrawTool,
+      annotationStrokeThickness,
+      beginViewportPan,
+      canEdit,
+      learnerMode,
+      mergePromptOpen,
+      shapePromptOpen,
+    ],
   );
 
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+    const ann = annotationDrawRef.current;
+    if (ann && ann.pointerId === event.pointerId) {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      ann.curLocal = { x: localX, y: localY };
+      if (ann.kind === "freehand" || ann.kind === "eraser") {
+        const last = ann.pointsLocal[ann.pointsLocal.length - 1];
+        const step = last
+          ? Math.hypot(localX - last.x, localY - last.y)
+          : Infinity;
+        if (step >= 3) {
+          ann.pointsLocal.push({ x: localX, y: localY });
+        } else if (last) {
+          last.x = localX;
+          last.y = localY;
+        }
+      }
+      setAnnotationDrawPreview({
+        kind: ann.kind,
+        startX: ann.startLocal.x,
+        startY: ann.startLocal.y,
+        curX: localX,
+        curY: localY,
+        points: [...ann.pointsLocal],
+        strokeWidth: annotationStrokeThickness,
+      });
+      return;
+    }
+
     const lasso = lassoDragRef.current;
     if (lasso && lasso.pointerId === event.pointerId) {
       const viewport = viewportRef.current;
@@ -1572,10 +1946,89 @@ export function BlockSkillGrid({
 
     panMovedRef.current = true;
     setPan({ x: drag.panStartX + dx, y: drag.panStartY + dy });
-  }, []);
+  },
+  [annotationStrokeThickness],
+  );
 
   const endDrag = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      const ann = annotationDrawRef.current;
+      if (ann && ann.pointerId === event.pointerId) {
+        annotationDrawRef.current = null;
+        setAnnotationDrawPreview(null);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        if (learnerMode || !canDrawOnAnnotationLayer({ learnerMode: false })) {
+          return;
+        }
+        const dragPx = Math.hypot(
+          ann.curLocal.x - ann.startLocal.x,
+          ann.curLocal.y - ann.startLocal.y,
+        );
+        const toWorld = (p: AnnotationPoint) =>
+          annotationScreenToWorld({
+            localX: p.x,
+            localY: p.y,
+            panX: pan.x,
+            panY: pan.y,
+            zoom,
+          });
+        const existing = annotationLayers.find((l) => l.id === ann.layerId);
+        if (!existing) return;
+
+        // Eraser: remove strokes under the brush path
+        if (ann.kind === "eraser") {
+          if (ann.pointsLocal.length < 1 && dragPx < 1) return;
+          const pointsW =
+            ann.pointsLocal.length > 0
+              ? ann.pointsLocal.map(toWorld)
+              : [toWorld(ann.startLocal), toWorld(ann.curLocal)];
+          const radius = annotationEraserRadiusForThickness(
+            annotationStrokeThickness,
+          );
+          // Convert screen-ish radius via 1/zoom so brush matches thickness feel
+          const worldRadius = radius / (Number.isFinite(zoom) && zoom > 0 ? zoom : 1);
+          persistAnnotationLayers(
+            upsertAnnotationLayer(
+              annotationLayers,
+              eraseAnnotationStrokesAlongPath(
+                existing,
+                pointsW,
+                worldRadius,
+              ),
+            ),
+          );
+          return;
+        }
+
+        if (!isAnnotationStrokeKind(ann.kind)) return;
+        if (ann.kind !== "freehand" && dragPx < 3) return;
+        if (ann.kind === "freehand" && ann.pointsLocal.length < 2 && dragPx < 2) {
+          return;
+        }
+        const startW = toWorld(ann.startLocal);
+        const endW = toWorld(ann.curLocal);
+        const pointsW =
+          ann.kind === "freehand"
+            ? ann.pointsLocal.map(toWorld)
+            : undefined;
+        const stroke = buildAnnotationStrokeFromGesture({
+          kind: ann.kind,
+          start: startW,
+          end: endW,
+          points: pointsW,
+          strokeWidth: annotationStrokeThickness,
+        });
+        persistAnnotationLayers(
+          upsertAnnotationLayer(
+            annotationLayers,
+            appendAnnotationStroke(existing, stroke),
+          ),
+        );
+        return;
+      }
+
       const lasso = lassoDragRef.current;
       if (lasso && lasso.pointerId === event.pointerId) {
         lassoDragRef.current = null;
@@ -1743,7 +2196,10 @@ export function BlockSkillGrid({
       }
     },
     [
+      annotationLayers,
+      annotationStrokeThickness,
       canEdit,
+      learnerMode,
       nodes,
       occupancy,
       onAddTargetChange,
@@ -1751,6 +2207,7 @@ export function BlockSkillGrid({
       onSelectNode,
       pan.x,
       pan.y,
+      persistAnnotationLayers,
       placements,
       selectedNodeId,
       spans,
@@ -2157,14 +2614,6 @@ export function BlockSkillGrid({
         return;
       }
 
-      // Learner: place a personal post-it when "Add note" is armed.
-      if (mountLearnerNotes && learnerNotePlaceArmed && !busy) {
-        event.preventDefault?.();
-        event.stopPropagation?.();
-        handleLearnerNoteCreateAtCell(cell);
-        return;
-      }
-
       if (!canEdit || busy) return;
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
       // Lasso modes own the gesture — never open add or select empties from click.
@@ -2195,9 +2644,6 @@ export function BlockSkillGrid({
       applyEmptyCellSelection,
       busy,
       canEdit,
-      handleLearnerNoteCreateAtCell,
-      learnerNotePlaceArmed,
-      mountLearnerNotes,
       occupancy,
       onSelectNode,
       selectedNodeId,
@@ -3176,72 +3622,233 @@ export function BlockSkillGrid({
       data-selected-block-count={selectedBlockIds.length}
       data-selected-block-ids={selectedBlockIds.join(",")}
       data-learner-mode={learnerMode ? "true" : "false"}
-      data-learner-notes={mountLearnerNotes ? "true" : "false"}
-      data-learner-note-place-armed={
-        mountLearnerNotes && learnerNotePlaceArmed ? "true" : "false"
-      }
+      data-learner-notes={mountMapNotes ? "true" : "false"}
+      data-map-notes={mountMapNotes ? "true" : "false"}
+      data-annotation-layers={String(annotationLayers.length)}
+      data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
       data-clone-armed={cloneArmed ? "true" : "false"}
       data-map-minimap="true"
     >
       {/* No full-map freeze on geometry saves — quiet indicator under minimap. */}
       <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
-        {/* Full-height icon rail — hidden in Learner mode (no authoring tools). */}
+        {/* Full-height icon rail — hidden in Learner mode (no authoring tools).
+            When an annotation layer is selected, strip becomes white-only draw tools. */}
         {!learnerMode ? (
         <div
           data-block-map-tool-strip
+          data-annotation-tool-strip={
+            annotationDrawingActive ? "true" : "false"
+          }
+          data-annotation-active-layer={activeAnnotationLayerId || undefined}
           className="flex h-full w-11 shrink-0 flex-col items-center border-r border-neutral-800/80 bg-neutral-950/95 py-2"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-col items-center gap-0.5">
-            {modeTools.map(renderToolButton)}
-            {/* Lasso shape submenu — one lasso tool, choose rect / circle / freehand */}
-            {activeTool === "lasso" ? (
+          {annotationDrawingActive ? (
+            <div
+              className="flex flex-col items-center gap-0.5"
+              data-annotation-toolbox
+              role="group"
+              aria-label="Annotation tools"
+            >
+              <p className="mb-1 px-0.5 text-center text-[8px] font-medium uppercase tracking-wide text-neutral-500">
+                Draw
+              </p>
+              {(
+                [
+                  { id: "circle" as const, label: "Circle", title: "Circle (white)" },
+                  { id: "square" as const, label: "Square", title: "Square (white)" },
+                  {
+                    id: "freehand" as const,
+                    label: "Free",
+                    title: "Freehand (white)",
+                  },
+                  {
+                    id: "eraser" as const,
+                    label: "Erase",
+                    title: "Eraser — remove strokes under the brush",
+                  },
+                ] as const
+              ).map((tool) => {
+                const active = annotationDrawTool === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    data-annotation-tool={tool.id}
+                    data-active={active ? "true" : "false"}
+                    title={tool.title}
+                    aria-label={tool.title}
+                    aria-pressed={active}
+                    onClick={() => setAnnotationDrawTool(tool.id)}
+                    className={`flex h-8 w-8 flex-col items-center justify-center rounded border text-white transition ${
+                      active
+                        ? "border-white/50 bg-white/15"
+                        : "border-transparent text-white/70 hover:border-neutral-600 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {tool.id === "circle" ? (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        aria-hidden
+                      >
+                        <circle cx="12" cy="12" r="7" />
+                      </svg>
+                    ) : tool.id === "square" ? (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        aria-hidden
+                      >
+                        <rect x="5" y="5" width="14" height="14" rx="1" />
+                      </svg>
+                    ) : tool.id === "freehand" ? (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        aria-hidden
+                      >
+                        <path d="M5 17c2-4 4-8 7-8s5 2 7 6" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        aria-hidden
+                      >
+                        <path d="M16.5 3.5l4 4-11 11H5.5v-4.1l11-10.9z" />
+                        <path d="M14 6l4 4" />
+                      </svg>
+                    )}
+                    <span className="sr-only">{tool.label}</span>
+                  </button>
+                );
+              })}
               <div
-                className="mt-1 flex flex-col items-center gap-0.5 border-t border-neutral-800 pt-1"
-                data-lasso-shape-submenu
+                className="my-1.5 h-px w-6 bg-neutral-700/80"
+                aria-hidden
+              />
+              <p className="mb-0.5 px-0.5 text-center text-[7px] font-medium uppercase tracking-wide text-neutral-500">
+                Width
+              </p>
+              <div
+                className="flex flex-col items-center gap-0.5"
+                data-annotation-thickness-group
                 role="group"
-                aria-label="Lasso shape"
+                aria-label="Stroke thickness"
               >
-                {LASSO_SHAPE_ORDER.map((shape) => {
-                  const active = lassoShape === shape;
+                {ANNOTATION_STROKE_THICKNESSES.map((w, idx) => {
+                  const active = annotationStrokeThickness === w;
+                  const label =
+                    idx === 0 ? "Thin" : idx === 1 ? "Medium" : "Thick";
+                  const dot = idx === 0 ? 4 : idx === 1 ? 7 : 10;
                   return (
                     <button
-                      key={shape}
+                      key={w}
                       type="button"
-                      data-lasso-shape-option={shape}
+                      data-annotation-thickness={w}
                       data-active={active ? "true" : "false"}
-                      title={lassoShapeTooltip(shape)}
-                      aria-label={lassoShapeTooltip(shape)}
+                      title={`${label} stroke`}
+                      aria-label={`${label} stroke`}
                       aria-pressed={active}
-                      onClick={() => setLassoShape(shape)}
-                      className={`flex h-7 w-7 items-center justify-center rounded border text-[10px] transition ${
+                      onClick={() => setAnnotationStrokeThickness(w)}
+                      className={`flex h-7 w-8 items-center justify-center rounded border transition ${
                         active
-                          ? "border-white/40 bg-white/10 text-white"
-                          : "border-transparent text-neutral-400 hover:border-neutral-700 hover:text-white"
+                          ? "border-white/50 bg-white/15"
+                          : "border-transparent hover:border-neutral-600 hover:bg-white/5"
                       }`}
                     >
-                      <LassoShapeIcon shape={shape} className="h-3.5 w-3.5" />
-                      <span className="sr-only">{lassoShapeLabel(shape)}</span>
+                      <span
+                        className="rounded-full bg-white"
+                        style={{ width: dot, height: dot }}
+                        aria-hidden
+                      />
                     </button>
                   );
                 })}
               </div>
-            ) : null}
-          </div>
-          {actionTools.length > 0 && (
+              <div className="my-1.5 h-px w-6 bg-neutral-700/80" aria-hidden />
+              <button
+                type="button"
+                data-annotation-exit
+                title="Exit annotation drawing (back to map tools)"
+                onClick={() => setActiveAnnotationLayerId(null)}
+                className="flex h-7 w-7 items-center justify-center rounded border border-transparent text-[10px] text-neutral-400 hover:border-neutral-600 hover:text-white"
+              >
+                ✕
+              </button>
+              <p className="mt-1 max-w-[2.5rem] text-center text-[7px] leading-tight text-neutral-600">
+                white only
+              </p>
+            </div>
+          ) : (
             <>
-              <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
-              <div className="flex min-h-0 flex-1 flex-col items-center gap-0.5 overflow-y-auto">
-                {actionTools.map(renderToolButton)}
-              </div>
-            </>
-          )}
-          {viewportTools.length > 0 && (
-            <>
-              <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
               <div className="flex flex-col items-center gap-0.5">
-                {viewportTools.map(renderToolButton)}
+                {modeTools.map(renderToolButton)}
+                {/* Lasso shape submenu — one lasso tool, choose rect / circle / freehand */}
+                {activeTool === "lasso" ? (
+                  <div
+                    className="mt-1 flex flex-col items-center gap-0.5 border-t border-neutral-800 pt-1"
+                    data-lasso-shape-submenu
+                    role="group"
+                    aria-label="Lasso shape"
+                  >
+                    {LASSO_SHAPE_ORDER.map((shape) => {
+                      const active = lassoShape === shape;
+                      return (
+                        <button
+                          key={shape}
+                          type="button"
+                          data-lasso-shape-option={shape}
+                          data-active={active ? "true" : "false"}
+                          title={lassoShapeTooltip(shape)}
+                          aria-label={lassoShapeTooltip(shape)}
+                          aria-pressed={active}
+                          onClick={() => setLassoShape(shape)}
+                          className={`flex h-7 w-7 items-center justify-center rounded border text-[10px] transition ${
+                            active
+                              ? "border-white/40 bg-white/10 text-white"
+                              : "border-transparent text-neutral-400 hover:border-neutral-700 hover:text-white"
+                          }`}
+                        >
+                          <LassoShapeIcon shape={shape} className="h-3.5 w-3.5" />
+                          <span className="sr-only">{lassoShapeLabel(shape)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
+              {actionTools.length > 0 && (
+                <>
+                  <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
+                  <div className="flex min-h-0 flex-1 flex-col items-center gap-0.5 overflow-y-auto">
+                    {actionTools.map(renderToolButton)}
+                  </div>
+                </>
+              )}
+              {viewportTools.length > 0 && (
+                <>
+                  <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
+                  <div className="flex flex-col items-center gap-0.5">
+                    {viewportTools.map(renderToolButton)}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -3252,14 +3859,17 @@ export function BlockSkillGrid({
           className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
             spaceHeld
               ? "cursor-grab active:cursor-grabbing"
-              : activeLassoShape
+              : annotationDrawingActive
                 ? "cursor-crosshair"
-                : activeTool === "select"
-                  ? "cursor-grab"
-                  : "cursor-default"
+                : activeLassoShape
+                  ? "cursor-crosshair"
+                  : activeTool === "select"
+                    ? "cursor-grab"
+                    : "cursor-default"
           }`}
           data-map-lasso-mode={activeLassoShape || "false"}
           data-map-lasso-shape={activeLassoShape || undefined}
+          data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
@@ -3305,43 +3915,98 @@ export function BlockSkillGrid({
             />
           </svg>
         ) : null}
-        {/* Learner-only: arm place-note, then click a map cell for a personal post-it. */}
-        {mountLearnerNotes ? (
+
+        {/* Full-map capture surface while annotation drawing is active (draw over blocks).
+            Sits under minimap/stack chrome (z-20) so those stay clickable. */}
+        {annotationDrawingActive ? (
           <div
-            data-learner-map-notes-toolbar
-            className="pointer-events-auto absolute left-2 top-2 z-20 flex flex-col gap-1"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              data-learner-note-add
-              data-learner-note-place-toggle
-              aria-pressed={learnerNotePlaceArmed}
-              title={
-                learnerNotePlaceArmed
-                  ? "Cancel placing note"
-                  : "Add a short note on the map"
-              }
-              onClick={() => setLearnerNotePlaceArmed((v) => !v)}
-              className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
-                learnerNotePlaceArmed
-                  ? "border-amber-400/50 bg-amber-400/20 text-amber-50"
-                  : "border-neutral-700/90 bg-neutral-950/90 text-neutral-200 hover:border-neutral-500 hover:text-white"
-              }`}
-            >
-              {learnerNotePlaceArmed ? "Cancel note" : "Add note"}
-            </button>
-            {learnerNotePlaceArmed ? (
-              <p
-                className="max-w-[9.5rem] rounded-md border border-amber-500/25 bg-amber-950/80 px-2 py-1 text-[10px] leading-snug text-amber-100/90"
-                data-learner-note-place-banner
-              >
-                Click any map cell to drop a post-it
-              </p>
-            ) : null}
-          </div>
+            data-annotation-draw-surface
+            className="absolute inset-0 z-[11] cursor-crosshair"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
         ) : null}
 
+        {/* Live annotation draw preview (viewport-local, white / eraser dashed) */}
+        {annotationDrawPreview ? (
+          <svg
+            data-annotation-draw-preview
+            data-annotation-preview-kind={annotationDrawPreview.kind}
+            className="pointer-events-none absolute inset-0 z-[13] h-full w-full overflow-visible"
+            aria-hidden
+          >
+            {annotationDrawPreview.kind === "circle" ? (
+              <circle
+                cx={
+                  (annotationDrawPreview.startX + annotationDrawPreview.curX) / 2
+                }
+                cy={
+                  (annotationDrawPreview.startY + annotationDrawPreview.curY) / 2
+                }
+                r={Math.max(
+                  1,
+                  Math.hypot(
+                    annotationDrawPreview.curX - annotationDrawPreview.startX,
+                    annotationDrawPreview.curY - annotationDrawPreview.startY,
+                  ) / 2,
+                )}
+                fill="none"
+                stroke={ANNOTATION_STROKE_COLOR}
+                strokeWidth={annotationDrawPreview.strokeWidth}
+              />
+            ) : annotationDrawPreview.kind === "square" ? (
+              <rect
+                x={Math.min(
+                  annotationDrawPreview.startX,
+                  annotationDrawPreview.curX,
+                )}
+                y={Math.min(
+                  annotationDrawPreview.startY,
+                  annotationDrawPreview.curY,
+                )}
+                width={Math.max(
+                  1,
+                  Math.abs(
+                    annotationDrawPreview.curX - annotationDrawPreview.startX,
+                  ),
+                )}
+                height={Math.max(
+                  1,
+                  Math.abs(
+                    annotationDrawPreview.curY - annotationDrawPreview.startY,
+                  ),
+                )}
+                fill="none"
+                stroke={ANNOTATION_STROKE_COLOR}
+                strokeWidth={annotationDrawPreview.strokeWidth}
+              />
+            ) : annotationDrawPreview.kind === "eraser" ? (
+              <path
+                d={annotationFreehandPathD(annotationDrawPreview.points)}
+                fill="none"
+                stroke="rgba(255,255,255,0.55)"
+                strokeWidth={Math.max(
+                  6,
+                  annotationDrawPreview.strokeWidth * 3,
+                )}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="4 4"
+              />
+            ) : (
+              <path
+                d={annotationFreehandPathD(annotationDrawPreview.points)}
+                fill="none"
+                stroke={ANNOTATION_STROKE_COLOR}
+                strokeWidth={annotationDrawPreview.strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+          </svg>
+        ) : null}
         {/* Rectangular minimap: cluster graph, top-right overlay (always shown) */}
         <div
           data-block-minimap
@@ -3429,6 +4094,231 @@ export function BlockSkillGrid({
           )}
         </div>
 
+        {/* Right stack under minimap: notes + annotation layers */}
+        {mountMapNotes || workspaceId ? (
+          <div
+            ref={minimapStackRef}
+            data-map-minimap-stack
+            data-learner-map-notes-toolbar={mountMapNotes ? "true" : undefined}
+            data-learner-notes-under-minimap={mountMapNotes ? "true" : undefined}
+            data-map-notes-mode={learnerMode ? "learner" : "creator"}
+            className="pointer-events-auto absolute right-2 z-20 flex flex-col gap-1"
+            style={{
+              top: 8 + MINIMAP_FRAME_HEIGHT + 8,
+              width: MINIMAP_FRAME_WIDTH,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {mountMapNotes ? (
+              <button
+                type="button"
+                data-learner-note-add
+                data-map-note-add
+                title={
+                  learnerMode
+                    ? "Add a personal note in the middle of the map"
+                    : "Add an author note in the middle of the map (visible to learners)"
+                }
+                onClick={() => handleMapNoteAddAtCenter()}
+                className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
+              >
+                Add note
+              </button>
+            ) : null}
+
+            {/* Annotation layers: creator add/select/delete; learner toggle under Add note */}
+            {workspaceId ? (
+              <div
+                data-annotation-layers-stack
+                data-annotation-layers-under-notes="true"
+                data-annotation-layer-count={annotationLayers.length}
+                className="flex flex-col gap-1"
+              >
+                {!learnerMode ? (
+                  annotationNameOpen ? (
+                    <div
+                      className="rounded-md border border-neutral-700/90 bg-neutral-950/95 p-1.5 shadow-lg"
+                      data-annotation-layer-name-form
+                    >
+                      <input
+                        type="text"
+                        data-annotation-layer-name-input
+                        value={annotationNameDraft}
+                        maxLength={48}
+                        placeholder="Layer name"
+                        autoFocus
+                        onChange={(e) => setAnnotationNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAnnotationLayerAdd();
+                          if (e.key === "Escape") {
+                            setAnnotationNameOpen(false);
+                            setAnnotationNameDraft("");
+                          }
+                        }}
+                        className="mb-1 w-full rounded border border-neutral-700 bg-black/40 px-1.5 py-1 text-[11px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          data-annotation-layer-add-confirm
+                          onClick={() => handleAnnotationLayerAdd()}
+                          className="flex-1 rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-white/15"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          data-annotation-layer-add-cancel
+                          onClick={() => {
+                            setAnnotationNameOpen(false);
+                            setAnnotationNameDraft("");
+                          }}
+                          className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      data-annotation-layer-add
+                      title="Add a freehand annotation layer"
+                      onClick={() => setAnnotationNameOpen(true)}
+                      className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
+                    >
+                      Add layer
+                    </button>
+                  )
+                ) : null}
+
+                {annotationLayers.map((layer) => {
+                  const selected =
+                    !learnerMode && activeAnnotationLayerId === layer.id;
+                  const canDelete = canDeleteAnnotationLayer({ learnerMode });
+                  return (
+                    <div
+                      key={layer.id}
+                      data-annotation-layer-row={layer.id}
+                      data-annotation-layer-visible={
+                        layer.visible ? "true" : "false"
+                      }
+                      className={`flex items-stretch gap-0.5 rounded-md border bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm ${
+                        selected
+                          ? "border-white/40"
+                          : "border-neutral-700/90"
+                      }`}
+                    >
+                      {!learnerMode ? (
+                        <button
+                          type="button"
+                          data-annotation-layer-select={layer.id}
+                          data-active={selected ? "true" : "false"}
+                          title={
+                            selected
+                              ? "Drawing on this layer (click to deselect)"
+                              : "Select layer to draw"
+                          }
+                          onClick={() => handleAnnotationLayerSelect(layer.id)}
+                          className={`min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[11px] font-medium transition ${
+                            selected
+                              ? "text-white"
+                              : "text-neutral-200 hover:text-white"
+                          }`}
+                        >
+                          {layer.name}
+                        </button>
+                      ) : (
+                        <span
+                          className="min-w-0 flex-1 truncate px-2 py-1.5 text-[11px] font-medium text-neutral-200"
+                          data-annotation-layer-label={layer.id}
+                        >
+                          {layer.name}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        data-annotation-layer-toggle={layer.id}
+                        data-annotation-visibility={
+                          layer.visible ? "visible" : "hidden"
+                        }
+                        title={layer.visible ? "Hide layer" : "Show layer"}
+                        aria-label={
+                          layer.visible ? "Hide layer" : "Show layer"
+                        }
+                        aria-pressed={layer.visible}
+                        onClick={() => handleAnnotationLayerToggle(layer.id)}
+                        className={`flex shrink-0 items-center justify-center px-1.5 ${
+                          layer.visible
+                            ? "text-white"
+                            : "text-neutral-500"
+                        }`}
+                      >
+                        {layer.visible ? (
+                          <svg
+                            data-annotation-eye="open"
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            aria-hidden
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"
+                            />
+                            <circle cx="12" cy="12" r="2.75" />
+                          </svg>
+                        ) : (
+                          <svg
+                            data-annotation-eye="closed"
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            aria-hidden
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3.5 3.5l17 17"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M10.6 10.7a2.75 2.75 0 003.7 3.7"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9.9 5.1A11 11 0 0112 4.9c5.5 0 9 5.9 9.5 7.1-.3.7-1.2 2.4-3 3.9M6.1 6.2C4.1 7.7 3 9.6 2.5 12c.4 1 3.5 6.5 9.5 6.5 1.1 0 2.1-.2 3-.5"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          data-annotation-layer-delete={layer.id}
+                          title="Delete annotation layer"
+                          aria-label={`Delete ${layer.name}`}
+                          onClick={() => handleAnnotationLayerDelete(layer.id)}
+                          className="shrink-0 px-1.5 text-[12px] text-neutral-500 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Quiet geometry save status (move/resize) — under minimap, map stays interactive */}
         {mapSaveJobs.length > 0 ? (
           <div
@@ -3436,7 +4326,15 @@ export function BlockSkillGrid({
             data-map-geometry-save-count={mapSaveJobs.length}
             className="pointer-events-none absolute right-2 z-20 flex w-[220px] flex-col gap-1"
             style={{
-              top: 8 + MINIMAP_FRAME_HEIGHT + 8,
+              top:
+                8 +
+                MINIMAP_FRAME_HEIGHT +
+                8 +
+                (minimapStackHeight > 0
+                  ? minimapStackHeight + 8
+                  : mountMapNotes
+                    ? 40
+                    : 0),
               width: MINIMAP_FRAME_WIDTH,
             }}
           >
@@ -3504,6 +4402,11 @@ export function BlockSkillGrid({
                 8 +
                 MINIMAP_FRAME_HEIGHT +
                 8 +
+                (minimapStackHeight > 0
+                  ? minimapStackHeight + 8
+                  : mountMapNotes
+                    ? 40
+                    : 0) +
                 (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0),
               width: MINIMAP_FRAME_WIDTH,
             }}
@@ -3681,9 +4584,7 @@ export function BlockSkillGrid({
                             ? "Click empty to Add · drag empty to pan · Shift multi for shape form · Space/middle pan"
                             : labels.emptyCell
                         : learnerMode
-                          ? learnerNotePlaceArmed
-                            ? "Click a cell to place a note"
-                            : "Drag empty to pan · Space/middle pan · click a block to practice"
+                          ? "Drag empty to pan · Space/middle pan · click a block to practice"
                           : undefined
                   }
                 >
@@ -3700,32 +4601,31 @@ export function BlockSkillGrid({
                       </span>
                     )
                   )}
-                  {mountLearnerNotes && learnerNotePlaceArmed && !isUnusable ? (
-                    <span
-                      className="text-sm leading-none text-amber-200/90"
-                      data-learner-note-place-hint
-                      aria-hidden
-                    >
-                      📌
-                    </span>
-                  ) : null}
                 </button>
               </div>
             );
           })}
 
-          {/* Learner post-it notes — same pan/zoom layer as blocks (map coords). */}
-          {mountLearnerNotes
-            ? learnerNotes.map((note) => {
+          {/* Map post-it notes — continuous plane layer (shares pan/zoom with blocks).
+              Creator notes always visible in learner mode; learners cannot delete them. */}
+          {mountMapNotes
+            ? mapNotes.map((note) => {
                 const layer = learnerNoteLayerStyle(note);
+                const permCtx = { learnerMode };
                 return (
                   <LearnerMapNotePostIt
                     key={note.id}
                     note={note}
                     style={layer}
+                    zoom={zoom}
+                    canDelete={canDeleteMapNote(note, permCtx)}
+                    canEdit={canEditMapNoteContent(note, permCtx)}
+                    canDragResize={canMutateMapNoteGeometry(note, permCtx)}
                     onToggleCollapsed={handleLearnerNoteToggle}
                     onSaveBody={handleLearnerNoteSaveBody}
                     onDelete={handleLearnerNoteDelete}
+                    onDragEnd={handleLearnerNoteDragEnd}
+                    onResizeEnd={handleLearnerNoteResizeEnd}
                   />
                 );
               })
@@ -3810,27 +4710,24 @@ export function BlockSkillGrid({
               lock_until_block_ids: n.lock_until_block_ids,
               next_block_ids: n.next_block_ids,
             }));
-            // Learner: lock_until OR incomplete inbound next (DAG leads-to).
-            // Creator: classic lock_until only.
+            // Both modes: lock_until + inbound next (DAG leads-to) for dependency chrome.
+            // Locked state: learner uses status-aware DAG gate; creator uses lock_until complete.
             const lockedByPrereq = learnerMode
               ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
               : isBlockLockedUntilCompleted(node, nodesById);
-            const inboundNextIncomplete = learnerMode
-              ? incompleteInboundNextPrerequisites(
-                  learnerNodeRef,
-                  learnerBlocksRef,
-                )
-              : [];
+            const inboundNextIncomplete = incompleteInboundNextPrerequisites(
+              learnerNodeRef,
+              learnerBlocksRef,
+            );
             const dependencyIds = [
               ...lockUntilIds,
               ...inboundNextIncomplete.map((b) => b.id),
             ].filter((id, i, arr) => arr.indexOf(id) === i);
-            const hasDependencies = learnerMode
-              ? learnerBlockHasDependencyChrome(
-                  learnerNodeRef,
-                  learnerBlocksRef,
-                )
-              : blockHasLockDependencies(node);
+            // Show lock icon whenever there are deps (creator + learner).
+            const hasDependencies = learnerBlockHasDependencyChrome(
+              learnerNodeRef,
+              learnerBlocksRef,
+            );
             const displayStatus = lockedByPrereq ? "locked" : node.status;
             // Prereq dashed preview only for sole map selection that is also the
             // detail focus — not while multi-selecting (avoids "extra selected").
@@ -3892,13 +4789,15 @@ export function BlockSkillGrid({
                   : undefined,
             } as const;
             const lockBadge =
-              hasDependencies || (learnerMode && lockedByPrereq) ? (
+              hasDependencies || lockedByPrereq ? (
                 <BlockDependencyLockBadge
                   dependencyCount={Math.max(
                     dependencyIds.length,
                     lockedByPrereq ? 1 : 0,
                   )}
                   currentlyLocked={lockedByPrereq}
+                  // Red filled lock only in learner when currently locked;
+                  // creator still gets the outline lock for any dependency.
                   learnerSpottable={learnerMode}
                 />
               ) : null;
@@ -4226,6 +5125,77 @@ export function BlockSkillGrid({
               </div>
             );
           })}
+
+          {/* Annotation strokes AFTER blocks so committed paint stays visible over tiles.
+              z-[20] > block zIndex 2/5/6; pointer-events-none so map still receives hits.
+              (Live preview is separate viewport-local layer at z-[13].) */}
+          <svg
+            data-annotation-strokes-layer
+            className="pointer-events-none absolute left-0 top-0 z-[20] overflow-visible"
+            style={{ width: 1, height: 1 }}
+            aria-hidden
+          >
+            {annotationLayers.map((layer) => {
+              if (!layer.visible) return null;
+              return (
+                <g
+                  key={layer.id}
+                  data-annotation-layer-strokes={layer.id}
+                  data-annotation-layer-name={layer.name}
+                >
+                  {layer.strokes.map((stroke) => {
+                    if (stroke.kind === "circle") {
+                      return (
+                        <circle
+                          key={stroke.id}
+                          data-annotation-stroke={stroke.id}
+                          data-annotation-stroke-kind="circle"
+                          cx={stroke.cx ?? 0}
+                          cy={stroke.cy ?? 0}
+                          r={stroke.r ?? 1}
+                          fill="none"
+                          stroke={ANNOTATION_STROKE_COLOR}
+                          strokeWidth={stroke.strokeWidth}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      );
+                    }
+                    if (stroke.kind === "square") {
+                      return (
+                        <rect
+                          key={stroke.id}
+                          data-annotation-stroke={stroke.id}
+                          data-annotation-stroke-kind="square"
+                          x={stroke.x ?? 0}
+                          y={stroke.y ?? 0}
+                          width={stroke.width ?? 1}
+                          height={stroke.height ?? 1}
+                          fill="none"
+                          stroke={ANNOTATION_STROKE_COLOR}
+                          strokeWidth={stroke.strokeWidth}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      );
+                    }
+                    return (
+                      <path
+                        key={stroke.id}
+                        data-annotation-stroke={stroke.id}
+                        data-annotation-stroke-kind="freehand"
+                        d={annotationFreehandPathD(stroke.points)}
+                        fill="none"
+                        stroke={ANNOTATION_STROKE_COLOR}
+                        strokeWidth={stroke.strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
         </div>
 
         {canEdit && (

@@ -154,7 +154,9 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     expect(isMetaLearningFluff(q1)).toBe(false);
     expect(ex0).toMatch(/Exercise:/i);
     expect(ex0).toMatch(/PPV|sensitivity|prevalence|Positive predictive|Bayes|diagnostic/i);
+    expect(ex0).toMatch(/\d/); // concrete numbers, not invent-your-own
     expect(ex0).not.toMatch(/out loud/i);
+    expect(ex0).not.toMatch(/state the problem you chose|non-trivial problem in|stay within this scope/i);
     expect(isMetaLearningFluff(ex0)).toBe(false);
 
     // Live TAP opening fallback uses the same dialogue builder
@@ -196,10 +198,33 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
       expect(isMetaLearningFluff(q), `q${i}=${q}`).toBe(false);
       expect(q).toMatch(/Modular arithmetic|Number theory/i);
       expect(q).not.toMatch(/out loud/i);
-      expect(ex).toMatch(/Exercise:|Modular arithmetic/i);
+      expect(ex).toMatch(/Exercise:|Modular arithmetic|mod /i);
       expect(ex).not.toMatch(/out loud/i);
+      expect(ex).not.toMatch(
+        /state the problem you chose|non-trivial problem in|stay within this scope/i,
+      );
       expect(isMetaLearningFluff(ex)).toBe(false);
     }
+  });
+
+  it("quadratic simulation-style fallback is a fixed equation problem", () => {
+    const ex = buildGroundedExerciseItem(
+      {
+        blockTitle: "Quadratic Formula Setup and Exact Solutions",
+        blockDescription:
+          "Identify a, b, and c in standard form, substitute carefully into the quadratic formula, and simplify radical answers. Extends factoring and completing-the-square work by handling equations that do not factor cleanly while linking to discriminant checks on root type.",
+        workspaceTitle: "HS Algebra",
+        workspaceGoal: "Solve quadratic equations exactly",
+      },
+      0,
+    );
+    expect(ex).toMatch(/Exercise:/i);
+    expect(ex).toMatch(/x²|x\^2|discriminant|quadratic formula/i);
+    expect(ex).toMatch(/\d/);
+    expect(ex).not.toMatch(/state the problem you chose/i);
+    expect(ex).not.toMatch(/solve a non-trivial problem in/i);
+    expect(ex).not.toMatch(/stay within this scope/i);
+    expect(isMetaLearningFluff(ex)).toBe(false);
   });
 });
 

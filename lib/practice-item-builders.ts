@@ -120,7 +120,8 @@ export function buildGroundedDialogueQuestion(
 
 /**
  * Pure solo exercise (Drill / TAP exercise / ILE Project style).
- * Reuses TAPBench exercise fallback quality path; index varies framing seed.
+ * Always returns a fixed, checkable problem — never "invent your own problem".
+ * Index varies the concrete instance (seeded numbers / alternate templates).
  */
 export function buildGroundedExerciseItem(
   ctx: PracticeItemContext,
@@ -139,50 +140,8 @@ export function buildGroundedExerciseItem(
     rootTopic: clean(ctx.rootTopic) || null,
   };
 
-  // Prefer shared TAPBench fallback when we have real substance.
-  if (substance && !looksLikeTopicOverview(substance)) {
-    if (i === 0) {
-      return buildTapbenchExerciseFallback(base);
-    }
-    if (i === 1) {
-      return ensureExercisePrefix(
-        [
-          `Apply “${subject}” to a concrete case.`,
-          substance ? `Context: ${clip(substance, 160)}.` : null,
-          goal ? `Success criterion: progress toward “${clip(goal, 80)}”.` : null,
-          `State setup, work the solution with intermediate steps, box a final answer or artifact check, and note one edge case.`,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      );
-    }
-    return ensureExercisePrefix(
-      [
-        `Design a mini-problem that requires “${subject}” and solve it fully.`,
-        substance ? `Stay inside: ${clip(substance, 140)}.` : null,
-        `List assumptions, show steps, box the conclusion, and state how you would verify it.`,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    );
-  }
-
-  // Thin context: still a doable domain drill, not "demonstrate understanding of…"
-  if (i === 0) {
-    return buildTapbenchExerciseFallback(base);
-  }
-  if (i === 1) {
-    return ensureExercisePrefix(
-      `Solve a non-trivial problem involving “${subject}”. State the problem in one sentence, list assumptions, work intermediate steps, box a final answer, and note one failure mode.${
-        goal ? ` Prefer a problem that relates to: ${clip(goal, 100)}.` : ""
-      }`,
-    );
-  }
-  return ensureExercisePrefix(
-    `Construct one worked example for “${subject}” with setup → steps → check. The example must require multi-step reasoning, not a definition list.${
-      goal ? ` Tie it to the goal: ${clip(goal, 90)}.` : ""
-    }`,
-  );
+  // Shared concrete-domain builder (seeded by index for variation).
+  return buildTapbenchExerciseFallback(base, i);
 }
 
 /** Convert practice context into assemblePromptWorkspaceContext input. */
@@ -227,6 +186,11 @@ export function buildSimulationSamplesSystemPrompt(): string {
     "",
     "SOLO EXERCISES (Drill) — follow these rules:",
     exerciseRules,
+    "",
+    "CRITICAL for exercises:",
+    "- Each exercise MUST be a fixed, fully-specified problem with concrete numbers/data/constraints inside the text.",
+    "- The learner must NOT invent, choose, or design their own problem — never say \"state the problem you chose\", \"solve a non-trivial problem in <topic>\", or \"stay within this scope\" + invent.",
+    "- Prefer equations, data tables, parameters, or explicit scenarios the learner solves step-by-step.",
     "",
     "OUTPUT: JSON only with:",
     '{ "topics": string[], "questions": string[3], "exercises": string[3], "probes": [{ "question": string, "kind": "question"|"exercise", "difficulty": "warmup"|"core"|"stretch", "contextSources": string[] }] }',
@@ -311,6 +275,12 @@ export function isMetaLearningFluff(text: string | null | undefined): boolean {
     /what does .+ mean to you\b/i.test(t) ||
     /how do you feel about\b/i.test(t) ||
     /reflect on your learning\b/i.test(t) ||
-    /what is your study strategy\b/i.test(t)
+    /what is your study strategy\b/i.test(t) ||
+    // Invent-your-own exercise templates (meta drill framing)
+    /state the problem you chose\b/i.test(t) ||
+    /solve a non-trivial problem in\b/i.test(t) ||
+    /solve a non-trivial problem involving\b/i.test(t) ||
+    /design a mini-problem that requires\b/i.test(t) ||
+    /stay within this scope:\b/i.test(t)
   );
 }

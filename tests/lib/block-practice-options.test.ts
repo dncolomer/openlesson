@@ -140,6 +140,19 @@ describe("structural: Edit drawer + launch + map icons", () => {
     expect(grid).toContain("data-block-practice-icons");
     expect(grid).toContain("data-practice-icon");
     expect(grid).toContain("practiceOptionsIconKeys");
+    // Top-left map decorator icons: monochrome white (not per-kind tints).
+    const practiceBadge = grid.slice(
+      grid.indexOf("function BlockPracticeOptionsBadge"),
+      grid.indexOf("function cellKey"),
+    );
+    for (const key of ["explore", "drill", "open", "timed"] as const) {
+      expect(practiceBadge).toMatch(
+        new RegExp(
+          `className="[^"]*text-white[^"]*"[\\s\\S]{0,60}data-practice-icon="${key}"`,
+        ),
+      );
+    }
+    expect(practiceBadge).not.toMatch(/text-(?:sky|violet|emerald|amber)-/);
 
     expect(learner).toContain("parseBlockPracticeOptions");
     expect(learner).toContain("practiceOptions=");

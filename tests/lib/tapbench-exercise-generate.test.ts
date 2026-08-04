@@ -72,7 +72,27 @@ describe("buildTapbenchExerciseFallback", () => {
     expect(text.toLowerCase()).not.toMatch(
       /complete this task:\s*integers, modular arithmetic/i,
     );
-    expect(text).toMatch(/solve|problem|steps|answer/i);
+    expect(text).toMatch(/solve|compute|find|prove|mod|steps|answer/i);
+  });
+
+  it("quadratic skill yields a fixed equation, not invent-your-own meta", () => {
+    const text = buildTapbenchExerciseFallback({
+      blockTitle: "Quadratic Formula Setup and Exact Solutions",
+      blockDescription:
+        "Identify a, b, and c in standard form, substitute carefully into the quadratic formula, and simplify radical answers. Extends factoring and completing-the-square work by handling equations that do not factor cleanly while linking to discriminant checks on root type.",
+      workspaceTitle: "HS Algebra",
+      workspaceGoal: "Solve quadratic equations exactly",
+    });
+    expect(text.startsWith("Exercise:")).toBe(true);
+    expect(text).toMatch(/x²|x\^2|discriminant|quadratic formula/i);
+    expect(text).toMatch(/\d/); // concrete coefficients
+    expect(text).not.toMatch(/state the problem you chose/i);
+    expect(text).not.toMatch(/solve a non-trivial problem in/i);
+    expect(text).not.toMatch(/stay within this scope/i);
+    expect(isLowQualityTapbenchExercise(text, {
+      blockTitle: "Quadratic Formula Setup and Exact Solutions",
+      blockDescription: "Identify a, b, and c",
+    })).toBe(false);
   });
 });
 

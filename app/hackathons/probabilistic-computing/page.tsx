@@ -161,7 +161,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <li className="text-zinc-700">/</li>
             <li>
               <Link
-                href="/all-you-can-learn?tab=hackathons"
+                href="/hackathons"
                 className="transition hover:text-white"
               >
                 Hackathons
@@ -219,7 +219,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <ArrowRight size={14} />
           </a>
           <Link
-            href="/all-you-can-learn?tab=hackathons"
+            href="/hackathons"
             className="inline-flex min-h-11 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
           >
             All hackathons

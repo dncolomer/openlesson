@@ -87,6 +87,38 @@ describe("workspace mode pure resolvers", () => {
       }),
     ).toBe("knowledge");
   });
+
+  it("AYCL practice-only (not owner) still activates Knowledge in learner mode", () => {
+    // Bug: selectSection used resolveActiveSection(isOwner=false) → always "workspace".
+    // Mode-aware resolver must keep knowledge for logged-in / token learner access.
+    expect(
+      resolveActiveSectionForMode({
+        mode: "learner",
+        requested: "knowledge",
+        isOwner: false,
+        isOrgAdmin: false,
+        isLoggedIn: true,
+      }),
+    ).toBe("knowledge");
+    expect(
+      availableSectionsForMode({
+        mode: "learner",
+        isOwner: false,
+        isLoggedIn: true,
+      }),
+    ).toContain("knowledge");
+
+    const view = read("components/WorkspaceView.tsx");
+    // Nav change must use mode-aware resolver (not owner-only gate alone).
+    expect(view).toContain("resolveActiveSectionForMode");
+    expect(view).toMatch(
+      /selectSection[\s\S]{0,400}resolveActiveSectionForMode/,
+    );
+    // AYCL token counts as signed-in for Learner Knowledge tab visibility
+    expect(view).toMatch(
+      /isLoggedIn:\s*Boolean\(currentUserId\)\s*\|\|\s*Boolean\(ayclToken\)/,
+    );
+  });
 });
 
 describe("learner Done + unlock", () => {

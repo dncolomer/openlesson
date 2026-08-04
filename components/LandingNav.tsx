@@ -11,6 +11,7 @@ const CTA_HREF = "/workspace/new";
 
 const COMMUNITY_LINKS = [
   { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
+  { href: "/hackathons", label: "Hackathons" },
   { href: "/map-of-knowledge", label: "Map of Knowledge" },
   { href: "/tapbench", label: "TAPBench" },
 ] as const;

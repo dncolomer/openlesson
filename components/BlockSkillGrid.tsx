@@ -240,6 +240,11 @@ interface BlockSkillGridProps {
    */
   learnerMode?: boolean;
   /**
+   * Public / marketing snapshot: pan+zoom only. No select, place, tools, notes, or practice.
+   * Implies canEdit=false for interaction purposes.
+   */
+  viewOnly?: boolean;
+  /**
    * Scope id for learner map notes persistence (user id / aycl token / guest).
    * Defaults to ayclToken or "local" when omitted.
    */
@@ -781,8 +786,9 @@ export function BlockSkillGrid({
   previewEmptyCells = null,
   expandJobs = null,
   onAbortExpandJob,
-  canEdit,
+  canEdit: canEditProp,
   learnerMode = false,
+  viewOnly = false,
   learnerScopeId = null,
   cloneArmed = false,
   onCloneArm,
@@ -806,6 +812,8 @@ export function BlockSkillGrid({
   workspaceNotes = null,
   labels,
 }: BlockSkillGridProps) {
+  /** View-only public maps: no authoring, select, notes, or annotation tools. */
+  const canEdit = canEditProp && !viewOnly;
   const unusableKeys = useMemo(
     () => unusableCellKeySet(unusableCells || []),
     [unusableCells],
@@ -815,8 +823,10 @@ export function BlockSkillGrid({
    * Map post-it notes (continuous plane):
    * - Creator notes: workspace-scoped, always visible in learner mode, not deletable by learners
    * - Learner notes: personal, learner mode only
+   * - Hidden on public view-only snapshots.
    */
-  const mountMapNotes = shouldMountMapNotes({ workspaceId, learnerMode });
+  const mountMapNotes =
+    !viewOnly && shouldMountMapNotes({ workspaceId, learnerMode });
   const resolvedLearnerScope =
     String(learnerScopeId || ayclToken || "local").trim() || "local";
   const [creatorNotes, setCreatorNotes] = useState<LearnerMapNote[]>([]);
@@ -1047,6 +1057,7 @@ export function BlockSkillGrid({
   );
 
   const annotationDrawingActive =
+    !viewOnly &&
     !learnerMode &&
     canDrawOnAnnotationLayer({ learnerMode }) &&
     Boolean(activeAnnotationLayerId);
@@ -2328,6 +2339,12 @@ export function BlockSkillGrid({
 
       event.stopPropagation();
 
+      // Public snapshot: pan/zoom only — no open/select.
+      if (viewOnly) {
+        event.preventDefault();
+        return;
+      }
+
       // Radius/density expand job membership — not selectable while generating.
       if (generationLockedBlockIdsRef.current.has(blockId)) {
         event.preventDefault();
@@ -2368,7 +2385,14 @@ export function BlockSkillGrid({
         onSelectNode(null);
       }
     },
-    [activeTool, applyBlockSelection, canEdit, manipulationMode, onSelectNode],
+    [
+      activeTool,
+      applyBlockSelection,
+      canEdit,
+      manipulationMode,
+      onSelectNode,
+      viewOnly,
+    ],
   );
 
   const handleBlockDoubleClick = useCallback(
@@ -2414,6 +2438,14 @@ export function BlockSkillGrid({
       }
 
       if (event.button !== 0) return;
+
+      // Public view-only: swallow block press so pan still works on empty space.
+      if (viewOnly) {
+        event.stopPropagation();
+        event.preventDefault();
+        suppressBlockClickRef.current = true;
+        return;
+      }
 
       // Generating expand-job blocks: ignore select (lasso may still bubble).
       if (generationLockedBlockIdsRef.current.has(blockId)) {
@@ -2559,6 +2591,7 @@ export function BlockSkillGrid({
       onEmptySelectionChange,
       onGridOp,
       onSelectNode,
+      viewOnly,
     ],
   );
 
@@ -3622,18 +3655,19 @@ export function BlockSkillGrid({
       data-selected-block-count={selectedBlockIds.length}
       data-selected-block-ids={selectedBlockIds.join(",")}
       data-learner-mode={learnerMode ? "true" : "false"}
+      data-map-view-only={viewOnly ? "true" : "false"}
       data-learner-notes={mountMapNotes ? "true" : "false"}
       data-map-notes={mountMapNotes ? "true" : "false"}
-      data-annotation-layers={String(annotationLayers.length)}
+      data-annotation-layers={String(viewOnly ? 0 : annotationLayers.length)}
       data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
       data-clone-armed={cloneArmed ? "true" : "false"}
       data-map-minimap="true"
     >
       {/* No full-map freeze on geometry saves — quiet indicator under minimap. */}
       <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
-        {/* Full-height icon rail — hidden in Learner mode (no authoring tools).
+        {/* Full-height icon rail — hidden in Learner / view-only modes.
             When an annotation layer is selected, strip becomes white-only draw tools. */}
-        {!learnerMode ? (
+        {!learnerMode && !viewOnly ? (
         <div
           data-block-map-tool-strip
           data-annotation-tool-strip={
@@ -4092,7 +4126,7 @@ export function BlockSkillGrid({
         </div>
 
         {/* Right stack under minimap: notes + annotation layers */}
-        {mountMapNotes || workspaceId ? (
+        {!viewOnly && (mountMapNotes || workspaceId) ? (
           <div
             ref={minimapStackRef}
             data-map-minimap-stack

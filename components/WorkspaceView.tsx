@@ -55,7 +55,6 @@ import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import {
   availableWorkspaceSections,
   canAccessPrivilegedWorkspaceSections,
-  resolveActiveSection,
   resolveWorkspaceSectionLayout,
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
@@ -1291,20 +1290,44 @@ export function WorkspaceView({
     }
   }, [plan?.notes]);
 
+  /**
+   * AYCL practice-only is not isOwner, but Learner mode still needs Knowledge
+   * (LWM/embeddings). Always resolve sections through the mode-aware helper —
+   * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
+   */
+  const sectionAuth = useCallback(
+    () => ({
+      isOwner,
+      isOrgAdmin,
+      isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+    }),
+    [ayclToken, currentUserId, isOrgAdmin, isOwner],
+  );
+
   useEffect(() => {
     setActiveSection((current) =>
-      resolveActiveSection(current, { isOwner, isOrgAdmin }),
+      resolveActiveSectionForMode({
+        mode: interactionMode,
+        requested: current,
+        ...sectionAuth(),
+      }),
     );
-  }, [isOwner, isOrgAdmin]);
+  }, [interactionMode, sectionAuth]);
 
   const selectSection = useCallback(
     (section: WorkspaceSectionKey) => {
-      setActiveSection(resolveActiveSection(section, { isOwner, isOrgAdmin }));
+      setActiveSection(
+        resolveActiveSectionForMode({
+          mode: interactionMode,
+          requested: section,
+          ...sectionAuth(),
+        }),
+      );
       if (section === "workspace") {
         setMobileColumn("workspace");
       }
     },
-    [isOwner, isOrgAdmin],
+    [interactionMode, sectionAuth],
   );
 
   const postMapGround = useCallback(
@@ -1727,7 +1750,8 @@ export function WorkspaceView({
     mode: interactionMode,
     isOwner,
     isOrgAdmin,
-    isLoggedIn: Boolean(currentUserId),
+    // AYCL token holders are "signed in" for Learner Knowledge without a cookie session.
+    isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
   });
   const sectionLayout = resolveWorkspaceSectionLayout(activeSection);
   // Mode-aware section list (Learner: workspace+knowledge; Creator: shipped registry).
@@ -1764,7 +1788,7 @@ export function WorkspaceView({
           requested: activeSection,
           isOwner,
           isOrgAdmin,
-          isLoggedIn: Boolean(currentUserId),
+          isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
         }),
       );
     }

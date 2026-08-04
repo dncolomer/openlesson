@@ -78,6 +78,38 @@ export function ayclUpgradeOfferDescription(): string {
 }
 
 /**
+ * Core purchase-value claim: one-time AYCL includes lifetime system updates
+ * and platform improvements (not only private-fork access).
+ * Shared by catalog listing + per-workspace landing for consistency.
+ */
+export function ayclLifetimeSystemUpdatesClaim(): string {
+  return "Includes lifetime system updates and platform improvements — your private copy keeps benefiting as the product evolves.";
+}
+
+/** Short line for CTA footnotes / card footers. */
+export function ayclLifetimeSystemUpdatesFootnote(): string {
+  return "One-time · Private fork · Lifetime system updates & platform improvements";
+}
+
+/** Hero / summary supporting line (listing + landing). */
+export function ayclLifetimeSystemUpdatesHeroLine(): string {
+  return "Pay once: keep lifetime access, and keep getting system updates and platform improvements as we ship them.";
+}
+
+/**
+ * Compact catalog header key points (listing only).
+ * Short bullets for a boxed treatment — not multi-paragraph prose.
+ */
+export function ayclCatalogKeyPoints(): readonly string[] {
+  return [
+    "Learn for curiosity — not a credential, cohort, or deadline",
+    "Dive deep anytime; come back months later",
+    "Living workspaces with map, practice, and depth built in",
+    "One-time pay · private fork · lifetime system updates & platform improvements",
+  ] as const;
+}
+
+/**
  * Capability bag for shell + API. Learner = fixed practice scope.
  * Full = author/grow. Legacy purchases without tier resolve as full.
  */

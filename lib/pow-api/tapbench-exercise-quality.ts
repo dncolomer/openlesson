@@ -402,26 +402,50 @@ export function buildConcreteDomainExercise(
     return titled;
   }
 
-  // --- Instructional skill description → invent a fixed instance, not "you invent" ---
-  // Use numbers + multi-part so the task is checkable even without domain match.
-  const n1 = 12 + (seed % 20);
-  const n2 = 3 + (seed % 7);
-  const n3 = 5 + (seed % 11);
-  const skillHint = desc
-    ? clipScope(desc, 140)
-    : goal
-      ? clipScope(goal, 100)
-      : `core ideas of “${title}”`;
+  // --- Skill / process / materials-rich non-STEM fallback ---
+  // Genuine domain-check scenarios — never fake A/B/C parameter shells or
+  // "Work this fixed problem… do not invent" scaffolding that dominated Scrum-like
+  // workspaces when no STEM matcher fired.
+  const aim = goal
+    ? clipScope(goal, 80)
+    : title !== "this topic"
+      ? clipScope(title, 80)
+      : "the stated learning outcome";
+  const topic = title !== "this topic" ? title : "this practice";
+  // Soft source cite from description only when it is not an inventory dump
+  const sourceBit =
+    desc &&
+    !/^attachments\s*:/i.test(desc) &&
+    !/^sources include\b/i.test(desc) &&
+    !/\[external\]/i.test(desc)
+      ? clipScope(desc, 100)
+      : "";
 
-  return [
-    `Work this fixed problem in “${title}” (do not invent a different problem).`,
-    `Context skill: ${skillHint}.`,
-    `Given parameters A = ${n1}, B = ${n2}, C = ${n3}:`,
-    `(a) State the formula, definition, or procedure from this topic that applies to these values (one sentence).`,
-    `(b) Carry out the full calculation or multi-step reasoning with intermediate steps.`,
-    `(c) Box a single final numeric result, closed form, or clearly labeled conclusion.`,
-    `(d) Give one edge case (different A/B/C or constraint) where the same procedure fails or needs a caveat.`,
-  ].join(" ");
+  const variants = [
+    [
+      `In “${topic}”, decide whether a delivery satisfies “${aim}”.`,
+      `(a) State the single governing definition, rule, or success criterion from this topic (one sentence).`,
+      `(b) Apply it to this fixed case: the team finished the main work but skipped the required verification / review step named by the practice standard.`,
+      `(c) Box a pass/fail judgment with one concrete reason.`,
+      `(d) Name one edge case where the same criterion is ambiguous.`,
+    ].join(" "),
+    [
+      `A practitioner claims mastery of “${topic}” while pursuing “${aim}”.`,
+      `(a) Name the correct procedure, role boundary, or artifact this topic requires.`,
+      `(b) Identify the concrete mistake in this fixed case: they treat a temporary status update as a completed outcome.`,
+      `(c) Box the first observable signal that proves the mistake.`,
+      `(d) State one corrective action that restores a valid outcome.`,
+    ].join(" "),
+    [
+      `Finish one worked check of “${topic}” for “${aim}”.`,
+      `(a) Name the primary artifact or decision this topic requires.`,
+      `(b) For this fixed case — three linked descriptions of the same practice disagree on one key term — resolve which definition controls and why${sourceBit ? ` (consider: ${sourceBit})` : ""}.`,
+      `(c) Box the controlling definition or decision in one short phrase.`,
+      `(d) Note one situation where a different definition would correctly win instead.`,
+    ].join(" "),
+  ] as const;
+
+  return variants[seed % variants.length]!;
 }
 
 /**

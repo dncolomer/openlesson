@@ -22,6 +22,7 @@ import {
   partitionSimulationProbes,
 } from "@/lib/block-simulation";
 import { deriveWorkspaceSimulationOverview } from "@/lib/workspace-simulation-overview";
+import { deriveSimulationSamples } from "@/lib/workspace-simulation-samples";
 import {
   buildTapOpeningQuestionFallback,
   buildTapScoreInstructions,
@@ -284,6 +285,109 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     expect(ex).not.toMatch(/solve a non-trivial problem in/i);
     expect(ex).not.toMatch(/stay within this scope/i);
     expect(isMetaLearningFluff(ex)).toBe(false);
+  });
+
+  it("materials-rich non-STEM (Scrum) seed/fallback has no attachment dump or A/B/C shell", () => {
+    const scrumCtx = {
+      workspaceTitle: "Scrum Methodology Fundamentals from the Official Guide",
+      rootTopic: "Scrum",
+      workspaceGoal: "Validate SCRUM related Skills and Knowledge",
+      blockTitle: "Scrum Methodology Fundamentals from the Official Guide",
+      blockDescription:
+        "Roles, events, and artifacts from the Scrum Guide for validating practitioner skill.",
+      files: [
+        { name: "[external] Scrum Guide (Official)" },
+        { name: "[external] Atlassian Agile Coach — Scrum" },
+        { name: "[external] Scrum Alliance — What is Scrum?" },
+      ],
+      externalLinks: [
+        {
+          title: "Scrum Guide (Official)",
+          url: "https://scrumguides.org/",
+          description: "The official Scrum Guide definition of roles, events, and artifacts.",
+        },
+        {
+          title: "Atlassian Agile Coach — Scrum",
+          url: "https://www.atlassian.com/agile/scrum",
+        },
+      ],
+    };
+
+    const forbidden = [
+      /attachments\s*:/i,
+      /\[external\]/i,
+      /Given parameters\s+A\s*=/i,
+      /Work this fixed problem in/i,
+      /do not invent a different problem/i,
+      /Context skill:/i,
+      /Using “.+” on this setup\s*—/i,
+      /Using attached materials\s*\(/i,
+    ];
+
+    const questions = [0, 1, 2].map((i) => buildGroundedDialogueQuestion(scrumCtx, i));
+    const exercises = [0, 1, 2].map((i) => buildGroundedExerciseItem(scrumCtx, i));
+
+    for (const q of questions) {
+      expect(q.length, q).toBeGreaterThan(40);
+      expect(isMetaLearningFluff(q), q).toBe(false);
+      for (const re of forbidden) {
+        expect(q, `q forbidden ${re}: ${q}`).not.toMatch(re);
+      }
+      // Domain-grounded: Scrum/goal substance, not empty scaffold
+      expect(q).toMatch(/Scrum|SCRUM|sprint|Increment|artifact|verification|outcome|practitioner/i);
+    }
+
+    for (const ex of exercises) {
+      expect(ex.length, ex).toBeGreaterThan(60);
+      expect(ex).toMatch(/Exercise:/i);
+      expect(isMetaLearningFluff(ex), ex).toBe(false);
+      for (const re of forbidden) {
+        expect(ex, `ex forbidden ${re}: ${ex}`).not.toMatch(re);
+      }
+      // Checkable multi-part domain judgment, not invent-your-own
+      expect(ex).toMatch(/\(\s*a\s*\)|\bpass\/fail\b|\bbox\b/i);
+      expect(ex).toMatch(/Scrum|SCRUM|practice|verification|outcome|definition|artifact/i);
+    }
+
+    // Simulation seed path shares the same builders
+    const seed = deriveSimulationSamples(
+      { kind: "block", blockId: "b-scrum" },
+      {
+        workspaceTitle: scrumCtx.workspaceTitle,
+        rootTopic: scrumCtx.rootTopic,
+        workspaceGoal: scrumCtx.workspaceGoal,
+        blocks: [
+          {
+            id: "b-scrum",
+            title: scrumCtx.blockTitle,
+            description: scrumCtx.blockDescription,
+          },
+        ],
+        externalResources: scrumCtx.externalLinks,
+        files: scrumCtx.files,
+      },
+    );
+    for (const q of seed.questions) {
+      for (const re of forbidden) {
+        expect(q, `seed q: ${q}`).not.toMatch(re);
+      }
+    }
+    for (const ex of seed.exercises) {
+      for (const re of forbidden) {
+        expect(ex, `seed ex: ${ex}`).not.toMatch(re);
+      }
+    }
+
+    writeEvidence(
+      "genuine-practice-scrum.txt",
+      [
+        "q0=" + questions[0],
+        "q1=" + questions[1],
+        "ex0=" + exercises[0].slice(0, 280),
+        "seed_q0=" + seed.questions[0],
+        "seed_ex0=" + (seed.exercises[0] || "").slice(0, 200),
+      ].join("\n"),
+    );
   });
 });
 

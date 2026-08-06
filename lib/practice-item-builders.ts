@@ -62,6 +62,24 @@ function clean(s: unknown): string {
   return typeof s === "string" ? s.replace(/\s+/g, " ").trim() : "";
 }
 
+/**
+ * Human-readable material label — strip inventory tags like `[external]` /
+ * `[file]` that make seed/fallback items read as attachment dumps.
+ */
+export function cleanPracticeMaterialLabel(raw: string | null | undefined): string {
+  let t = clean(raw);
+  if (!t) return "";
+  t = t
+    .replace(/^\[external\]\s*/i, "")
+    .replace(/^\[file\]\s*/i, "")
+    .replace(/^\[link\]\s*/i, "")
+    .replace(/^material\s+[“"]?/i, "")
+    .replace(/^source\s+[“"]?/i, "")
+    .replace(/^[“"]|[”"]$/g, "")
+    .trim();
+  return t;
+}
+
 /** Subject label preferred order: block → chapter → workspace title/topic. */
 export function practiceSubjectLabel(ctx: PracticeItemContext): string {
   return (
@@ -81,62 +99,89 @@ export function practiceMaterialsAreRich(ctx: PracticeItemContext): boolean {
   for (const f of ctx.files || []) {
     if (clean(f?.excerpt).length >= 8) return true;
     // Bare name still counts as a link/material attachment for grounding labels
-    if (clean(f?.name).length >= 3) return true;
+    if (cleanPracticeMaterialLabel(f?.name).length >= 3) return true;
   }
   for (const link of ctx.externalLinks || []) {
     if (clean(link?.description).length >= 8) return true;
-    if (clean(link?.title).length >= 2) return true;
+    if (cleanPracticeMaterialLabel(link?.title).length >= 2) return true;
     if (clean(link?.url).length >= 8) return true;
   }
   return false;
 }
 
 /**
- * Material snippets from files + external links (names, excerpts, titles, URLs).
- * Short attachment labels come first so they survive prompt clipping; excerpts follow.
+ * Clean source titles from files + external links (no `[external]` tags,
+ * no `attachments:` inventory dump). Short list for light grounding.
+ */
+export function practiceMaterialSourceLabels(
+  ctx: PracticeItemContext,
+  max = 4,
+): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const t = cleanPracticeMaterialLabel(raw);
+    if (!t || t.length < 2) return;
+    const k = t.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    labels.push(t);
+  };
+  for (const f of ctx.files || []) {
+    push(f?.name || "");
+  }
+  for (const link of ctx.externalLinks || []) {
+    if (clean(link?.title)) push(link!.title!);
+    else if (clean(link?.url)) push(clip(clean(link!.url!), 40));
+  }
+  return labels.slice(0, Math.max(1, max));
+}
+
+/**
+ * Material substance for grounding: prefer excerpts / link descriptions as
+ * domain prose. Never lead with `attachments: [external]…` inventory dumps
+ * (those made seed/TAP fallbacks feel like template scaffolds).
  */
 export function practiceMaterialSubstance(ctx: PracticeItemContext): string {
-  const labels: string[] = [];
   const bodies: string[] = [];
   for (const f of ctx.files || []) {
-    const name = clean(f?.name);
+    const name = cleanPracticeMaterialLabel(f?.name);
     const excerpt = clean(f?.excerpt);
-    if (name) labels.push(name);
     if (excerpt) {
       bodies.push(clip(`${name ? `${name}: ` : ""}${excerpt}`, 180));
-    } else if (name) {
-      bodies.push(`material “${name}”`);
     }
   }
   for (const link of ctx.externalLinks || []) {
-    const title = clean(link?.title);
+    const title = cleanPracticeMaterialLabel(link?.title);
     const desc = clean(link?.description);
     const url = clean(link?.url);
-    if (title) labels.push(title);
-    else if (url) labels.push(clip(url, 40));
     if (desc) {
-      bodies.push(clip(`${title || url || "link"}: ${desc}`, 160));
-    } else if (title && url) {
-      bodies.push(`source “${title}” (${clip(url, 60)})`);
-    } else if (title) {
-      bodies.push(`source “${title}”`);
-    } else if (url) {
-      bodies.push(`source ${clip(url, 80)}`);
+      bodies.push(clip(`${title || "source"}: ${desc}`, 160));
     }
+    // Skip bare title/url-only bodies — labels go via practiceMaterialSourceLabels
+    void url;
   }
-  // Dedupe labels while preserving order
-  const seen = new Set<string>();
-  const uniqueLabels: string[] = [];
-  for (const l of labels) {
-    const k = l.toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    uniqueLabels.push(l);
+  if (bodies.length > 0) {
+    return bodies.slice(0, 4).join(" · ");
   }
-  const head = uniqueLabels.length
-    ? `attachments: ${uniqueLabels.slice(0, 6).join(", ")}`
-    : "";
-  return [head, ...bodies].filter(Boolean).join(" · ");
+  // Labels only: soft “sources include …” — never `attachments:` dump
+  const labels = practiceMaterialSourceLabels(ctx, 5);
+  if (labels.length === 0) return "";
+  return `sources include ${labels.join("; ")}`;
+}
+
+/**
+ * True when substance looks like a computation / formula problem (STEM path).
+ * Used to keep intermediate-result dialogue shells only when they fit.
+ */
+export function practiceSubstanceLooksComputational(text: string): boolean {
+  const t = clean(text);
+  if (!t) return false;
+  return (
+    /\b(compute|calculate|solve|derivative|discriminant|matrix|eigen|modular|mod\s*\d|binomial|probability|sensitivity|specificity|prevalence|ppv|npv|quadratic|formula|equation|integral|limit|variance|expected value)\b/i.test(
+      t,
+    ) || /\d+\s*[%x×*]|\bx\^2\b|\bax\b/i.test(t)
+  );
 }
 
 /**
@@ -155,14 +200,20 @@ export function practiceDomainSubstance(ctx: PracticeItemContext): string {
   const planning = clean(ctx.planningPrompt);
   const notes = clean(ctx.notes);
 
-  // 1) Rich materials (excerpts / link bodies / attachment names) first
-  if (materials && practiceMaterialsAreRich(ctx)) return materials;
+  // 1) Rich materials with real body/excerpts first (not bare "sources include …" lists)
+  if (
+    materials &&
+    practiceMaterialsAreRich(ctx) &&
+    !/^sources include\b/i.test(materials)
+  ) {
+    return materials;
+  }
   // 2) Non-overview description / chapter (TAP opening parity — before localNotes)
   if (desc && !looksLikeTopicOverview(desc)) return desc;
   if (chapter && !looksLikeTopicOverview(chapter)) return chapter;
   // 3) Local notes (block-level author substance)
   if (localNotes.length >= 8) return localNotes;
-  // 4) Materials even if only filenames (still better than nothing)
+  // 4) Materials even if only source labels (after prose layers)
   if (materials) return materials;
   // 5) Workspace goal / notes / planning
   if (goal) return goal;
@@ -194,9 +245,10 @@ export function practiceAllSubstanceLayers(ctx: PracticeItemContext): string {
 
 /**
  * Pure dialogue question (Explore / conversational TAP style).
- * Index varies angle: work a concrete instance → catch a misuse → verify correctness.
+ * Index varies angle: checkable intermediate → catch a misuse → verify evidence.
  * Never meta-learning fluff, never syllabus restatement, never
- * "core mechanism… explain it precisely" wrappers around a blurb.
+ * "core mechanism… explain it precisely" wrappers, and never paste an
+ * `attachments: [external]…` inventory as the “setup”.
  */
 export function buildGroundedDialogueQuestion(
   ctx: PracticeItemContext,
@@ -208,34 +260,76 @@ export function buildGroundedDialogueQuestion(
   const goal = clean(ctx.workspaceGoal);
   const notes = clean(ctx.notes);
   const planning = clean(ctx.planningPrompt);
+  const desc = clean(ctx.blockDescription);
   const i = ((index % 3) + 3) % 3;
+  const sourceLabels = practiceMaterialSourceLabels(ctx, 3);
+  const sourceHint =
+    sourceLabels.length > 0
+      ? clip(sourceLabels.join("; "), 90)
+      : "";
 
-  // Materials when rich; otherwise substance (description before localNotes for TAP parity).
-  // Do NOT insert bare localNotes ahead of a workable description.
-  const workRaw =
-    materials && practiceMaterialsAreRich(ctx)
+  // Prefer real domain prose (description / notes / material bodies) over inventory.
+  // Do not put bare `sources include …` labels into the work setup string.
+  const proseCandidates = [
+    desc && !looksLikeTopicOverview(desc) ? desc : "",
+    clean(ctx.localNotes).length >= 8 ? clean(ctx.localNotes) : "",
+    materials &&
+    !/^sources include\b/i.test(materials) &&
+    !looksLikeTopicOverview(materials)
       ? materials
-      : substance && !looksLikeTopicOverview(substance)
-        ? substance
-        : materials || substance;
-  const work = workRaw ? clip(workRaw, 140) : "";
+      : "",
+    substance &&
+    !/^sources include\b/i.test(substance) &&
+    !looksLikeTopicOverview(substance)
+      ? substance
+      : "",
+  ].filter(Boolean);
+  const prose = proseCandidates[0] ? clip(proseCandidates[0], 140) : "";
+  const computational =
+    practiceSubstanceLooksComputational(prose) ||
+    practiceSubstanceLooksComputational(substance) ||
+    practiceSubstanceLooksComputational(subject);
 
-  if (work) {
+  // --- Computational / STEM: keep checkable intermediate-result framing ---
+  if (prose && computational) {
     if (i === 0) {
       return goal
-        ? `Using “${subject}” on this setup — ${work} — produce one concrete intermediate result that advances “${clip(goal, 70)}”. What is that result?`
-        : `Using “${subject}” on this setup — ${work} — pick concrete numbers or a named instance and give the first checkable intermediate result.`;
+        ? `On “${subject}” (${prose}), produce one concrete intermediate result that advances “${clip(goal, 70)}”. What is that result?`
+        : `On “${subject}” (${prose}), pick concrete numbers or a named instance and give the first checkable intermediate result.`;
     }
     if (i === 1) {
-      return `Someone applies “${subject}” to: ${work}. Name one concrete mistake that yields a wrong answer, and the first signal that would catch it.`;
+      return `Someone applies “${subject}” to this situation: ${prose}. Name one concrete mistake that yields a wrong answer, and the first signal that would catch it.`;
     }
     return goal
-      ? `Finish one worked instance of “${subject}” for “${clip(goal, 70)}” using: ${work}. What evidence shows the answer is correct?`
-      : `Finish one worked instance of “${subject}” using: ${work}. What would you check immediately to know you are correct?`;
+      ? `Finish one worked instance of “${subject}” for “${clip(goal, 70)}” given: ${prose}. What evidence shows the answer is correct?`
+      : `Finish one worked instance of “${subject}” given: ${prose}. What would you check immediately to know you are correct?`;
+  }
+
+  // --- Materials-rich / process / skill topics: genuine domain checks ---
+  // Ground lightly in source titles without dumping attachment inventory.
+  if (prose || practiceMaterialsAreRich(ctx) || goal) {
+    const aim = goal ? clip(goal, 70) : "";
+    if (i === 0) {
+      if (aim) {
+        return prose
+          ? `In “${subject}”, ${clip(prose, 100)} — what single checkable intermediate result proves progress toward “${aim}”? Name the result (definition applied, artifact criterion, or decision), not a study plan.`
+          : `In “${subject}”${sourceHint ? ` (drawing on ${sourceHint})` : ""}, what single checkable intermediate result proves progress toward “${aim}”? Name a definition applied, artifact criterion, or decision — not a study plan.`;
+      }
+      return prose
+        ? `In “${subject}” (${clip(prose, 100)}), give one concrete situational example and the first checkable intermediate result a practitioner must produce.`
+        : `In “${subject}”${sourceHint ? ` (drawing on ${sourceHint})` : ""}, give one concrete situational example and the first checkable intermediate result a practitioner must produce.`;
+    }
+    if (i === 1) {
+      return aim
+        ? `A practitioner claims to apply “${subject}” toward “${aim}” but treats a temporary status update as a completed outcome. What concrete mistake is that, and what first observable signal would catch it?`
+        : `A practitioner applies “${subject}” incorrectly${prose ? ` in this context: ${clip(prose, 90)}` : ""}. Name one concrete mistake that yields a wrong conclusion, and the first signal that would catch it.`;
+    }
+    return aim
+      ? `Judge this fixed case for “${subject}”: the work was delivered without the verification step required by the practice standard. Does it satisfy “${aim}”? What single piece of evidence decides yes or no?`
+      : `Finish one worked check of “${subject}”${prose ? ` using: ${clip(prose, 90)}` : sourceHint ? ` grounded in ${sourceHint}` : ""}. What evidence shows the answer is correct?`;
   }
 
   // Thin / guest-like context: still a checkable domain act, never meta fluff.
-  // Prefer goal/notes over pure title-only icebreakers when available.
   if (i === 0) {
     if (goal) {
       return `Give one concrete numerical or situational example of “${subject}” that matters for “${clip(goal, 80)}”, and state the key intermediate result.`;
@@ -263,6 +357,7 @@ export function buildGroundedDialogueQuestion(
  * Pure solo exercise (Drill / TAP exercise / ILE Project style).
  * Always returns a fixed, checkable problem — never "invent your own problem".
  * Index varies the concrete instance (seeded numbers / alternate templates).
+ * Does not prefix raw `attachments: [external]…` inventory onto the exercise.
  */
 export function buildGroundedExerciseItem(
   ctx: PracticeItemContext,
@@ -273,15 +368,24 @@ export function buildGroundedExerciseItem(
   const substance = practiceDomainSubstance(ctx);
   const goal = clean(ctx.workspaceGoal);
   const localNotes = clean(ctx.localNotes);
+  const desc = clean(ctx.blockDescription);
   const i = ((index % 3) + 3) % 3;
+  const sourceLabels = practiceMaterialSourceLabels(ctx, 4);
 
-  // Materials first when present; otherwise substance (description-first TAP order).
+  // Domain blurb: prose first. Source titles only as a short soft cite — never
+  // the old `attachments: …` dump that made exercises look like scaffolds.
+  const proseParts = [
+    desc && !looksLikeTopicOverview(desc) ? desc : "",
+    localNotes.length >= 8 ? localNotes : "",
+    materials && !/^sources include\b/i.test(materials) ? materials : "",
+    substance && !/^sources include\b/i.test(substance) ? substance : "",
+  ].filter(Boolean);
+  const softSources =
+    sourceLabels.length > 0
+      ? `Related sources: ${sourceLabels.join("; ")}`
+      : "";
   const domainBlurb =
-    (
-      materials && practiceMaterialsAreRich(ctx)
-        ? [materials, substance, clean(ctx.blockDescription), localNotes]
-        : [substance, clean(ctx.blockDescription), localNotes, materials]
-    )
+    [...proseParts, softSources]
       .filter(Boolean)
       .filter((v, idx, arr) => arr.indexOf(v) === idx)
       .join(" — ") || null;
@@ -295,17 +399,8 @@ export function buildGroundedExerciseItem(
   };
 
   // Shared concrete-domain builder (seeded by index for variation).
-  // When materials exist, prefix so the exercise text always cites attachments.
-  const core = buildTapbenchExerciseFallback(base, i);
-  if (materials && practiceMaterialsAreRich(ctx)) {
-    const cite = clip(materials, 100);
-    // Avoid double-prefix if the concrete builder already embedded the material text
-    if (core.toLowerCase().includes(cite.slice(0, 24).toLowerCase())) {
-      return core;
-    }
-    return `Using attached materials (${cite}): ${core}`;
-  }
-  return core;
+  // STEM domains → real problems; skill/process → scenario checks (no A/B/C).
+  return buildTapbenchExerciseFallback(base, i);
 }
 
 /** Convert practice context into assemblePromptWorkspaceContext input. */

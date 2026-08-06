@@ -21,6 +21,7 @@ import {
   stripOutLoudStageDirections,
   type BlockLocalContextInput,
   type PromptBlockInventoryItem,
+  type PromptExternalResourceItem,
   type PromptWorkspaceContext,
   type PromptWorkspaceContextInput,
   type WorkspaceFileContextItem,
@@ -108,6 +109,8 @@ export type BuildExercisePromptInput = {
   rootTopic?: string | null;
   chapterDescription?: string | null;
   files?: WorkspaceFileContextItem[] | null;
+  /** External links — JIT URL bias when framing exercises. */
+  externalResources?: PromptExternalResourceItem[] | null;
   /** Map inventory (roles/kinds + layout). Feeds TAP/ILE/TAPBench assembly. */
   blocks?: PromptBlockInventoryItem[] | null;
   focusedBlockId?: string | null;
@@ -137,6 +140,7 @@ export function resolveExercisePromptContext(
     blockDescription: input.blockDescription ?? base.blockDescription,
     chapterDescription: input.chapterDescription ?? base.chapterDescription,
     files: input.files ?? base.files,
+    externalResources: input.externalResources ?? base.externalResources,
     blocks: input.blocks ?? base.blocks,
     focusedBlockId: input.focusedBlockId ?? base.focusedBlockId,
     blockLocalContext: input.blockLocalContext ?? base.blockLocalContext,

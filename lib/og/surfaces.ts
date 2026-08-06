@@ -1,6 +1,10 @@
 import { aestheticImageForId, FALLBACK_AESTHETIC_IMAGES } from "@/lib/aesthetics";
 import { resolveOgAestheticPath } from "@/lib/og/aesthetic";
 import { openGraphImagePathForRoute, openGraphImagesForRoutePath } from "@/lib/og/paths";
+import {
+  UNSYS_STANDARD_SHARE,
+  standardShareImages,
+} from "@/lib/og/standard";
 
 export { openGraphImagePathForRoute, openGraphImagesForRoutePath };
 
@@ -23,97 +27,44 @@ export type OgSurface = {
   aestheticSeed?: string;
 };
 
-const BRAND = "Uncertain Systems";
+/**
+ * Build one registry row: every public surface uses the same unsys standard
+ * (LP title/text + aesthetics image). Path is kept only for inventory/route mapping.
+ */
+function standardSurface(id: string, path: string): OgSurface {
+  return {
+    id,
+    path,
+    title: UNSYS_STANDARD_SHARE.title,
+    description: UNSYS_STANDARD_SHARE.description,
+    eyebrow: UNSYS_STANDARD_SHARE.eyebrow,
+    brand: UNSYS_STANDARD_SHARE.brand,
+    footerLabel: UNSYS_STANDARD_SHARE.footerLabel,
+    aestheticSeed: "home",
+    aestheticImage: UNSYS_STANDARD_SHARE.aestheticImage,
+  };
+}
 
 /**
  * Declarative registry of public share surfaces.
- * Add a row here, then a thin `opengraph-image.tsx` that calls `createStaticOgImageHandler(id)`.
+ * All surfaces share one unsys standard card (LP-derived title/description + aesthetics).
+ * Thin `opengraph-image.tsx` handlers call `createStaticOgImageHandler` / `composeStandardOgImage`.
  */
 export const OG_SURFACES: Record<string, OgSurface> = {
-  home: {
-    id: "home",
-    path: "/",
-    title: "Learning efficiency for humans & agents",
-    description:
-      "Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud Protocol, ILE, and ALE on Workspaces.",
-    eyebrow: "Learning efficiency",
-    brand: BRAND,
-    footerLabel: "LEARNING EFFICIENCY • HUMANS & AGENTS",
-    aestheticSeed: "home",
-    aestheticImage: "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  },
-  pricing: {
-    id: "pricing",
-    path: "/pricing",
-    title: "Pricing — Proof-of-Work volume",
-    description:
-      "Meter proof-of-work artifacts across TAP, ILE, and the API. Plans scale with measurement and learning world model effort.",
-    eyebrow: "Pricing",
-    brand: BRAND,
-    footerLabel: "Plans",
-    aestheticSeed: "/pricing",
-  },
-  vision: {
-    id: "vision",
-    path: "/vision",
-    title: "Self-driving technology for learning",
-    description:
-      "Non-invasive systems that raise attention and understanding without asking humans to burn proportionally more energy.",
-    eyebrow: "Vision",
-    brand: BRAND,
-    footerLabel: "Company",
-    aestheticSeed: "/vision",
-    aestheticImage: "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-  },
-  science: {
-    id: "science",
-    path: "/science",
-    title: "A holistic model of knowledge",
-    description:
-      "Knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
-    eyebrow: "Science",
-    brand: BRAND,
-    footerLabel: "Research",
-    aestheticSeed: "/science",
-    aestheticImage: "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  },
-  "docs-proof-of-work-api": {
-    id: "docs-proof-of-work-api",
-    path: "/docs/proof-of-work-api",
-    title: "Proof-of-Work API specification",
-    description:
-      "Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol links, route ILE practice, and read learning efficiency results.",
-    eyebrow: "Docs",
-    brand: BRAND,
-    footerLabel: "API reference",
-    aestheticSeed: "/docs/proof-of-work-api",
-  },
-  /** Entity chrome — title/description filled at request time. */
-  insight: {
-    id: "insight",
-    path: "/insights/[id]",
-    title: "Insight",
-    description: "A bookmark from think-aloud learning on Uncertain Systems.",
-    eyebrow: "Insight",
-    brand: BRAND,
-    footerLabel: "Think-aloud bookmark",
-    aestheticSeed: "insight",
-  },
-  "public-workspace": {
-    id: "public-workspace",
-    path: "/p/[id]/[slug]",
-    title: "Workspace",
-    description: "A public workspace on Uncertain Systems.",
-    eyebrow: "Public workspace",
-    brand: BRAND,
-    footerLabel: "Public plan",
-    aestheticSeed: "public-workspace",
-  },
+  home: standardSurface("home", "/"),
+  pricing: standardSurface("pricing", "/pricing"),
+  vision: standardSurface("vision", "/vision"),
+  science: standardSurface("science", "/science"),
+  "docs-proof-of-work-api": standardSurface(
+    "docs-proof-of-work-api",
+    "/docs/proof-of-work-api",
+  ),
+  insight: standardSurface("insight", "/insights/[id]"),
+  "public-workspace": standardSurface("public-workspace", "/p/[id]/[slug]"),
 };
 
 /**
- * Surfaces that must ship non-empty title text and aesthetics-backed OG cards
- * (acceptance criterion 4).
+ * Surfaces that must ship the unsys standard title text and aesthetics-backed OG cards.
  */
 export const REQUIRED_SHARE_SURFACE_IDS = [
   "home",
@@ -157,11 +108,10 @@ export function aestheticPathForSeed(seed: string): string {
   return aestheticImageForId(seed, FALLBACK_AESTHETIC_IMAGES);
 }
 
-export function openGraphImagesForSurface(surfaceId: string) {
-  const surface = getOgSurface(surfaceId);
-  // Dynamic entity paths are handled by their own generateMetadata; static surfaces only.
-  if (surface.path.includes("[")) {
-    return [{ url: "/opengraph-image", width: 1200, height: 630, alt: surface.title }];
-  }
-  return openGraphImagesForRoutePath(surface.path, surface.title);
+/**
+ * Share image descriptors for metadata. Always the unsys standard root card
+ * (not per-route `/pricing/opengraph-image` etc.).
+ */
+export function openGraphImagesForSurface(_surfaceId: string) {
+  return standardShareImages();
 }

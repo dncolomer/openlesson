@@ -16,6 +16,7 @@ import {
   type SimulationSampleScope,
   type SimulationSampleWorkspaceContext,
 } from "@/lib/workspace-simulation-samples";
+import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
 import {
   normalizeBlockLocalContext,
   parseBlockLocalContext,
@@ -40,6 +41,8 @@ type SamplesResponse = {
  *
  * Uses the same practice-item builders (TAP opening + domain exercise rules)
  * as live Explore/Drill and the per-block Simulation regenerate path.
+ * Loads workspace goal/notes, files, external links, map inventory, and
+ * block local_context (not title/description alone).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -80,29 +83,23 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const { supabase } = auth;
+    const focusedForLoad =
+      scope.kind === "block" ? scope.blockId : null;
 
-    const { data: workspace } = await supabase
-      .from("workspaces")
-      .select("title, root_topic, notes, workspace_goal, description")
-      .eq("id", workspaceId)
-      .single();
+    const loaded = await loadWorkspacePromptContext(supabase, workspaceId, {
+      focusedBlockId: focusedForLoad,
+      fileLimit: 16,
+    });
 
-    if (!workspace) {
+    if (!loaded) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    const { data: siblingBlocks } = await supabase
-      .from("blocks")
-      .select(
-        "id, title, description, planning_prompt, local_context, position_x, position_y, span_w, span_h, is_start, next_block_ids, lock_until_block_ids",
-      )
-      .eq("workspace_id", workspaceId)
-      .limit(24);
-
     if (scope.kind === "block") {
-      const found = (siblingBlocks || []).some((b) => b.id === scope.blockId);
+      const found =
+        loaded.blocks.some((b) => b.id === scope.blockId) ||
+        loaded.focusedBlockId === scope.blockId;
       if (!found) {
-        // Confirm the block exists even if outside the inventory limit
         const { data: one } = await supabase
           .from("blocks")
           .select("id")
@@ -115,28 +112,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const blocks: SimulationSampleBlockRef[] = (siblingBlocks || []).map((b) => {
+    const blocks: SimulationSampleBlockRef[] = loaded.blocks.map((b) => {
       const local = normalizeBlockLocalContext(
-        parseBlockLocalContext((b as { local_context?: unknown }).local_context),
+        parseBlockLocalContext(b.local_context) || b.local_context || null,
       );
       return {
-        id: b.id,
+        id: String(b.id || ""),
         title: String(b.title || "Block"),
-        description: (b.description as string | null) ?? null,
-        planning_prompt: (b.planning_prompt as string | null) ?? null,
-        local_context: { notes: local.notes || null },
-        is_start: b.is_start as boolean | null,
-        position_x: b.position_x as number | null,
-        position_y: b.position_y as number | null,
-        span_w: b.span_w as number | null,
-        span_h: b.span_h as number | null,
-        next_block_ids: (b.next_block_ids as string[] | null) ?? null,
-        lock_until_block_ids: (b.lock_until_block_ids as string[] | null) ?? null,
+        description: b.description ?? null,
+        planning_prompt: null,
+        local_context: {
+          notes: local.notes,
+          local_files: local.localFiles,
+          global_file_refs: local.globalFileRefs,
+          external_resource_ids: local.externalResourceIds,
+        },
+        is_start: b.is_start ?? null,
+        position_x: b.position_x ?? null,
+        position_y: b.position_y ?? null,
+        span_w: b.span_w ?? null,
+        span_h: b.span_h ?? null,
+        next_block_ids: b.next_block_ids ?? null,
+        lock_until_block_ids: b.lock_until_block_ids ?? null,
       };
     });
 
-    // If block scope and block was outside first-24 inventory, load it in.
-    if (scope.kind === "block" && !blocks.some((b) => b.id === scope.blockId)) {
+    // planning_prompt + freshest local_context for focused block
+    if (scope.kind === "block") {
       const { data: focused } = await supabase
         .from("blocks")
         .select(
@@ -144,19 +146,26 @@ export async function POST(req: NextRequest) {
         )
         .eq("id", scope.blockId)
         .eq("workspace_id", workspaceId)
-        .single();
+        .maybeSingle();
       if (focused) {
         const local = normalizeBlockLocalContext(
           parseBlockLocalContext(
             (focused as { local_context?: unknown }).local_context,
           ),
         );
-        blocks.unshift({
+        const row: SimulationSampleBlockRef = {
           id: focused.id,
           title: String(focused.title || "Block"),
           description: (focused.description as string | null) ?? null,
-          planning_prompt: (focused.planning_prompt as string | null) ?? null,
-          local_context: { notes: local.notes || null },
+          planning_prompt:
+            (focused as { planning_prompt?: string | null }).planning_prompt ??
+            null,
+          local_context: {
+            notes: local.notes,
+            local_files: local.localFiles,
+            global_file_refs: local.globalFileRefs,
+            external_resource_ids: local.externalResourceIds,
+          },
           is_start: focused.is_start as boolean | null,
           position_x: focused.position_x as number | null,
           position_y: focused.position_y as number | null,
@@ -165,22 +174,27 @@ export async function POST(req: NextRequest) {
           next_block_ids: (focused.next_block_ids as string[] | null) ?? null,
           lock_until_block_ids:
             (focused.lock_until_block_ids as string[] | null) ?? null,
-        });
+        };
+        const idx = blocks.findIndex((b) => b.id === focused.id);
+        if (idx >= 0) blocks[idx] = row;
+        else blocks.unshift(row);
       }
     }
 
     const workspaceCtx: SimulationSampleWorkspaceContext = {
-      workspaceTitle: workspace.title || workspace.root_topic || "Workspace",
-      rootTopic: workspace.root_topic,
+      workspaceTitle: loaded.workspaceTitle || loaded.rootTopic || "Workspace",
+      rootTopic: loaded.rootTopic,
       workspaceGoal:
-        workspace.workspace_goal ||
-        workspace.description ||
-        workspace.root_topic ||
+        loaded.workspaceGoal ||
+        loaded.workspaceDescription ||
+        loaded.rootTopic ||
         "",
-      workspaceDescription: workspace.description,
-      notes: workspace.notes,
+      workspaceDescription: loaded.workspaceDescription,
+      notes: loaded.notes,
       locale,
       blocks,
+      files: loaded.files,
+      externalResources: loaded.externalResources,
     };
 
     const { systemPrompt, userPrompt, focusedBlockId } =
@@ -197,7 +211,8 @@ export async function POST(req: NextRequest) {
       },
     );
 
-    let modelPayload: SamplesResponse | null = ai.success && ai.data ? ai.data : null;
+    let modelPayload: SamplesResponse | null =
+      ai.success && ai.data ? ai.data : null;
 
     // Recover from raw model text when structured parse failed (fences / truncation).
     if (!modelPayload && ai.rawContent) {
@@ -251,7 +266,9 @@ export async function POST(req: NextRequest) {
       questions: normalized.questions,
       exercises: normalized.exercises,
       probes: normalized.probes,
-      ...(modelPayload ? {} : { fallback: true, fallbackReason: ai.error || "parse_failed" }),
+      ...(modelPayload
+        ? {}
+        : { fallback: true, fallbackReason: ai.error || "parse_failed" }),
     });
   } catch (error) {
     console.error("simulation-samples error:", error);

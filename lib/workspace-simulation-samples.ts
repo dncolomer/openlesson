@@ -20,9 +20,16 @@ import {
   buildSimulationSamplesSystemPrompt,
   buildSimulationSamplesUserPrompt,
   isMetaLearningFluff,
+  type PracticeExternalLink,
   type PracticeItemContext,
 } from "@/lib/practice-item-builders";
-import type { PromptBlockInventoryItem } from "@/lib/prompt-workspace-context";
+import {
+  normalizeBlockLocalContext,
+  type BlockLocalContextInput,
+  type PromptBlockInventoryItem,
+  type PromptExternalResourceItem,
+  type WorkspaceFileContextItem,
+} from "@/lib/prompt-workspace-context";
 
 export type SimulationSampleScopeKind = "block" | "workspace";
 
@@ -35,7 +42,8 @@ export type SimulationSampleBlockRef = {
   title?: string | null;
   description?: string | null;
   planning_prompt?: string | null;
-  local_context?: { notes?: string | null } | null;
+  /** Full local_context (notes, local files, global refs, external resource ids). */
+  local_context?: BlockLocalContextInput | null;
   is_start?: boolean | null;
   position_x?: number | null;
   position_y?: number | null;
@@ -53,6 +61,10 @@ export type SimulationSampleWorkspaceContext = {
   notes?: string | null;
   locale?: string | null;
   blocks?: readonly SimulationSampleBlockRef[] | null;
+  /** Workspace-global files (names + optional excerpts). */
+  files?: readonly WorkspaceFileContextItem[] | null;
+  /** Workspace external resources / links. */
+  externalResources?: readonly PromptExternalResourceItem[] | null;
 };
 
 export type SimulationSampleBundle = {
@@ -134,16 +146,89 @@ function inventoryFromBlocks(
     span_h: b.span_h ?? null,
     next_block_ids: b.next_block_ids ?? null,
     lock_until_block_ids: b.lock_until_block_ids ?? null,
-    local_context: b.local_context
-      ? { notes: b.local_context.notes ?? null }
-      : null,
+    local_context: b.local_context ?? null,
+  }));
+}
+
+/**
+ * Merge workspace files + focused-block local files/global refs into practice files.
+ */
+export function collectSimulationSampleFiles(
+  workspace: SimulationSampleWorkspaceContext,
+  focusedBlockId?: string | null,
+): Array<{ name: string; excerpt?: string | null }> {
+  const out: Array<{ name: string; excerpt?: string | null }> = [];
+  const seen = new Set<string>();
+  const push = (name: string, excerpt?: string | null) => {
+    const n = clean(name);
+    if (!n) return;
+    const k = n.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push({ name: n, excerpt: excerpt ?? null });
+  };
+  for (const f of workspace.files || []) {
+    push(String(f?.name || ""), f?.excerpt ?? null);
+  }
+  if (focusedBlockId) {
+    const block = (workspace.blocks || []).find((b) => b.id === focusedBlockId);
+    const local = normalizeBlockLocalContext(block?.local_context ?? null);
+    for (const f of local.localFiles) {
+      push(f.name, f.excerpt ?? null);
+    }
+    for (const ref of local.globalFileRefs) {
+      push(ref, null);
+    }
+  }
+  return out;
+}
+
+/**
+ * Resolve external links for simulation: all workspace resources, preferring
+ * those referenced by the focused block when external_resource_ids are set.
+ */
+export function collectSimulationSampleExternalLinks(
+  workspace: SimulationSampleWorkspaceContext,
+  focusedBlockId?: string | null,
+): PracticeExternalLink[] {
+  const all = [...(workspace.externalResources || [])];
+  const byId = new Map(
+    all
+      .filter((r) => r?.id)
+      .map((r) => [String(r.id), r] as const),
+  );
+  let preferredIds: string[] = [];
+  if (focusedBlockId) {
+    const block = (workspace.blocks || []).find((b) => b.id === focusedBlockId);
+    const local = normalizeBlockLocalContext(block?.local_context ?? null);
+    preferredIds = local.externalResourceIds;
+  }
+  const ordered: PromptExternalResourceItem[] = [];
+  const seen = new Set<string>();
+  for (const id of preferredIds) {
+    const hit = byId.get(id);
+    if (hit && !seen.has(id)) {
+      seen.add(id);
+      ordered.push(hit);
+    }
+  }
+  for (const r of all) {
+    const key = String(r.id || r.url || r.title || "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    ordered.push(r);
+  }
+  return ordered.map((r) => ({
+    title: r.title ?? null,
+    url: r.url ?? null,
+    description: r.description ?? null,
   }));
 }
 
 /**
  * Build PracticeItemContext for the selected scope.
- * Block: focused block identity + substance + workspace fields.
- * Workspace: workspace goal/title/notes as subject; no single block focus.
+ * Block: focused block identity + substance + workspace fields + files/links.
+ * Workspace: workspace goal/title/notes + files/links + map inventory via user prompt.
  */
 export function buildSimulationSamplePracticeContext(
   scope: SimulationSampleScope,
@@ -162,7 +247,13 @@ export function buildSimulationSamplePracticeContext(
     const blockTitle = clean(block?.title) || "Untitled block";
     const blockDescription = clean(block?.description);
     const planning = clean(block?.planning_prompt);
-    const localNotes = clean(block?.local_context?.notes);
+    const local = normalizeBlockLocalContext(block?.local_context ?? null);
+    const localNotes = clean(local.notes);
+    const files = collectSimulationSampleFiles(workspace, scope.blockId);
+    const externalLinks = collectSimulationSampleExternalLinks(
+      workspace,
+      scope.blockId,
+    );
     return {
       workspaceTitle: title,
       rootTopic: workspace.rootTopic,
@@ -173,10 +264,14 @@ export function buildSimulationSamplePracticeContext(
       blockDescription: blockDescription || null,
       planningPrompt: planning || null,
       localNotes: localNotes || null,
+      files,
+      externalLinks,
     };
   }
 
   // Workspace-wide: subject is the workspace itself; inventory lives in user prompt.
+  const files = collectSimulationSampleFiles(workspace, null);
+  const externalLinks = collectSimulationSampleExternalLinks(workspace, null);
   return {
     workspaceTitle: title,
     rootTopic: workspace.rootTopic,
@@ -191,6 +286,8 @@ export function buildSimulationSamplePracticeContext(
       null,
     planningPrompt: null,
     localNotes: clean(workspace.notes) || null,
+    files,
+    externalLinks,
   };
 }
 
@@ -266,6 +363,8 @@ export function deriveSimulationSamples(
     planningPrompt: practiceContext.planningPrompt,
     localNotes: practiceContext.localNotes,
     notes: practiceContext.notes,
+    files: practiceContext.files,
+    externalLinks: practiceContext.externalLinks,
   });
 
   const { questions: qProbes, exercises: eProbes } =
@@ -384,6 +483,8 @@ export function normalizeSimulationSampleResponse(
     planningPrompt: seed.practiceContext.planningPrompt,
     localNotes: seed.practiceContext.localNotes,
     notes: seed.practiceContext.notes,
+    files: seed.practiceContext.files,
+    externalLinks: seed.practiceContext.externalLinks,
   });
   const { questions: qProbes, exercises: eProbes } =
     partitionSimulationProbes(probes);

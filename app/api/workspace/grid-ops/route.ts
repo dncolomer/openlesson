@@ -20,6 +20,7 @@ import {
   translateBlocksPreservingShape,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
+import { validateRelocatePlacements } from "@/lib/cluster-blocks";
 import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
 import {
   composeGenerateShapeBlockSystemMessage,
@@ -57,12 +58,18 @@ import {
   normalizeBlockPracticeOptions,
   serializeBlockPracticeOptions,
 } from "@/lib/block-practice-options";
+import {
+  normalizeBlockCreatorEffects,
+  serializeBlockCreatorEffects,
+  validateBlockCreatorEffects,
+} from "@/lib/block-creator-effects";
 
 type GridOp =
   | "generate_shape"
   | "merge"
   | "split"
   | "move"
+  | "relocate"
   | "resize"
   | "update_block"
   | "delete_block"
@@ -167,6 +174,7 @@ export async function POST(req: NextRequest) {
       contextSourceKeys,
       dagDraft,
       dagId,
+      placements: placementsBody,
     } = body as {
       workspaceId?: string;
       op?: GridOp;
@@ -175,6 +183,12 @@ export async function POST(req: NextRequest) {
       blockIds?: string[];
       dRow?: number;
       dCol?: number;
+      /** Absolute anchors for relocate (cluster / multi set positions). */
+      placements?: Array<{
+        id?: string;
+        position_x?: number;
+        position_y?: number;
+      }>;
       title?: string;
       description?: string;
       blockId?: string;
@@ -185,6 +199,9 @@ export async function POST(req: NextRequest) {
       /** Author practice launch limits (update_block). */
       practice_options?: unknown;
       practiceOptions?: unknown;
+      /** Combinable creator effects (update_block). */
+      creator_effects?: unknown;
+      creatorEffects?: unknown;
       model?: string;
       locale?: string;
       weightedNeighbors?: WeightedGridNeighbor[];
@@ -407,20 +424,70 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Combinable creator effects when provided.
+      const effectsRaw =
+        (body as { creator_effects?: unknown; creatorEffects?: unknown })
+          .creator_effects ??
+        (body as { creatorEffects?: unknown }).creatorEffects;
+      if (effectsRaw !== undefined) {
+        const validated = validateBlockCreatorEffects({
+          blockId,
+          effects: normalizeBlockCreatorEffects(effectsRaw, {
+            selfBlockId: blockId,
+          }),
+          blocks: nodes.map((n) => ({
+            id: String(n.id),
+            lock_until_block_ids: (
+              n as { lock_until_block_ids?: string[] | null }
+            ).lock_until_block_ids,
+            next_block_ids: n.next_block_ids,
+            position_x: (n as { position_x?: number | null }).position_x,
+            position_y: (n as { position_y?: number | null }).position_y,
+          })),
+        });
+        if (!validated.ok) {
+          return NextResponse.json({ error: validated.error }, { status: 400 });
+        }
+        updateFields.creator_effects = serializeBlockCreatorEffects(
+          validated.effects,
+          { selfBlockId: blockId },
+        );
+      }
+
       let { error: updateError } = await supabase
         .from("blocks")
         .update(updateFields)
         .eq("id", blockId);
 
-      // Graceful if practice_options column not migrated yet.
+      // Graceful if practice_options / creator_effects columns not migrated yet.
       if (
         updateError &&
-        /practice_options|schema cache/i.test(updateError.message || "")
+        /practice_options|creator_effects|schema cache/i.test(
+          updateError.message || "",
+        )
       ) {
-        const { practice_options: _po, ...withoutPractice } = updateFields;
+        const {
+          practice_options: _po,
+          creator_effects: _ce,
+          ...withoutOptional
+        } = updateFields;
+        // Retry without missing columns one at a time.
+        let retryFields = { ...updateFields };
+        if (/creator_effects/i.test(updateError.message || "")) {
+          const { creator_effects: __ce, ...rest } = retryFields;
+          retryFields = rest;
+        }
+        if (/practice_options/i.test(updateError.message || "")) {
+          const { practice_options: __po, ...rest } = retryFields;
+          retryFields = rest;
+        }
+        // If message is generic schema cache, drop both optional fields.
+        if (/schema cache/i.test(updateError.message || "")) {
+          retryFields = withoutOptional;
+        }
         const retry = await supabase
           .from("blocks")
-          .update(withoutPractice)
+          .update(retryFields)
           .eq("id", blockId);
         updateError = retry.error;
       }
@@ -827,6 +894,92 @@ export async function POST(req: NextRequest) {
         planModified: true,
         updatedNodes: updatedNodes || [],
         explanation: `Moved ${next.length} block(s).`,
+      });
+    }
+
+    if (op === "relocate") {
+      // Absolute per-block anchors (cluster blocks, etc.). Content/shape unchanged.
+      const raw = Array.isArray(placementsBody) ? placementsBody : [];
+      if (raw.length === 0) {
+        return NextResponse.json(
+          { error: "placements required for relocate" },
+          { status: 400 },
+        );
+      }
+      const byPlaced = new Map(placed.map((p) => [p.id, p]));
+      const next: PlacedBlockRef[] = [];
+      for (const item of raw) {
+        const id = String(item?.id || "").trim();
+        if (!id) {
+          return NextResponse.json(
+            { error: "Each placement needs id" },
+            { status: 400 },
+          );
+        }
+        const src = byPlaced.get(id);
+        if (!src) {
+          return NextResponse.json(
+            { error: `Block not found or unplaced: ${id}` },
+            { status: 400 },
+          );
+        }
+        const px = Number(item.position_x);
+        const py = Number(item.position_y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) {
+          return NextResponse.json(
+            { error: `Invalid position for ${id}` },
+            { status: 400 },
+          );
+        }
+        next.push({
+          id,
+          position_x: Math.trunc(px),
+          position_y: Math.trunc(py),
+          span_w: src.span_w,
+          span_h: src.span_h,
+          ...(src.shape_cells ? { shape_cells: src.shape_cells } : {}),
+        });
+      }
+
+      const { unusableCells: relocateUnusable } = await loadWorkspaceContext(
+        supabase,
+        workspaceId,
+      );
+      const collision = validateRelocatePlacements(
+        next,
+        placed,
+        relocateUnusable,
+      );
+      if (collision) {
+        return NextResponse.json(
+          { error: collision, code: "relocate_collision" },
+          { status: 409 },
+        );
+      }
+
+      for (const block of next) {
+        await supabase
+          .from("blocks")
+          .update({
+            position_x: block.position_x,
+            position_y: block.position_y,
+            // Preserve span/shape — relocate is position-only.
+            span_w: block.span_w ?? 1,
+            span_h: block.span_h ?? 1,
+          })
+          .eq("id", block.id);
+      }
+
+      const { data: updatedNodes } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+
+      return NextResponse.json({
+        planModified: true,
+        updatedNodes: updatedNodes || [],
+        explanation: `Relocated ${next.length} block(s).`,
       });
     }
 

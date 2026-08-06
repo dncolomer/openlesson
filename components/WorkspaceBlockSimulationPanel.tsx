@@ -32,7 +32,7 @@ function ContextInfluenceChips({
         <span
           key={s}
           data-context-source-chip
-          title={`Influenced by: ${s}`}
+          title={s}
           className="max-w-[9rem] truncate rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[9px] leading-tight text-neutral-500"
         >
           {s}

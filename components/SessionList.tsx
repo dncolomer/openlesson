@@ -35,6 +35,8 @@ interface Block {
   } | null;
   /** Author practice launch limits (parsed by parseBlockPracticeOptions). */
   practice_options?: unknown;
+  /** Combinable Dynamic / Generator effects. */
+  creator_effects?: unknown;
 }
 
 interface SessionListProps {
@@ -101,6 +103,17 @@ interface SessionListProps {
   workspaceNotes?: string | null;
   /** Add-block Range/Density preview highlight (map only). */
   previewEmptyCells?: Array<{ row: number; col: number }> | null;
+  /** Generator empty-cell targets to spark-highlight on the map. */
+  generatorTargetPreviewCells?: ReadonlyArray<{ row: number; col: number }> | null;
+  /** Generator pick mode: empty clicks toggle targets. */
+  generatorPickActive?: boolean;
+  onGeneratorEmptyToggle?: (cell: { row: number; col: number }) => void;
+  /** Dynamic pick mode: filled block clicks toggle unlock-after deps. */
+  dynamicPickActive?: boolean;
+  onDynamicBlockToggle?: (blockId: string) => void;
+  dynamicUnlockPreviewIds?: readonly string[] | null;
+  /** Learner dynamic blocks already generated this session. */
+  dynamicContentGeneratedIds?: ReadonlySet<string> | readonly string[] | null;
   /** Background multi-create jobs — progress/stop under minimap. */
   expandJobs?: Array<{
     id: string;
@@ -113,6 +126,12 @@ interface SessionListProps {
     error?: string;
   }> | null;
   onAbortExpandJob?: (jobId: string) => void;
+  /** Cluster-blocks progress under minimap. */
+  clusterMapJob?: {
+    active: boolean;
+    progress: number;
+    label: string;
+  } | null;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -185,8 +204,16 @@ export function SessionList({
   onMapGround,
   workspaceNotes = null,
   previewEmptyCells = null,
+  generatorTargetPreviewCells = null,
+  generatorPickActive = false,
+  onGeneratorEmptyToggle,
+  dynamicPickActive = false,
+  onDynamicBlockToggle,
+  dynamicUnlockPreviewIds = null,
+  dynamicContentGeneratedIds = null,
   expandJobs = null,
   onAbortExpandJob,
+  clusterMapJob = null,
 }: SessionListProps) {
   const router = useRouter();
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
@@ -501,8 +528,16 @@ export function SessionList({
             onMapGround={onMapGround}
             workspaceNotes={workspaceNotes}
             previewEmptyCells={previewEmptyCells}
+            generatorTargetPreviewCells={generatorTargetPreviewCells}
+            generatorPickActive={generatorPickActive}
+            onGeneratorEmptyToggle={onGeneratorEmptyToggle}
+            dynamicPickActive={dynamicPickActive}
+            onDynamicBlockToggle={onDynamicBlockToggle}
+            dynamicUnlockPreviewIds={dynamicUnlockPreviewIds}
+            dynamicContentGeneratedIds={dynamicContentGeneratedIds}
             expandJobs={expandJobs}
             onAbortExpandJob={onAbortExpandJob}
+            clusterMapJob={clusterMapJob}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

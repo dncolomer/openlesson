@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { WorkspaceView } from "@/components/WorkspaceView";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 interface PageProps {
   params: Promise<{
@@ -53,8 +54,8 @@ async function getPlan(workspaceId: string) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id, slug } = await params;
-  
+  const { id } = await params;
+
   const result = await getPlan(id);
   
   if (!result) {
@@ -66,31 +67,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { plan } = result;
   const title = plan.title || plan.root_topic;
   const description = plan.description || `A workspace on Uncertain Systems`;
-  // Composed OG (aesthetics + dynamic title) — never raw cover-only assets.
-  const ogImage = `/p/${id}/${slug}/opengraph-image`;
+  // Page SEO stays workspace-specific; social share is the unsys standard.
+  const social = standardShareSocialMetadata();
 
   return {
     title: `${title} - Uncertain Systems`,
     description,
-    openGraph: {
-      title: `${title} - Uncertain Systems`,
-      description,
-      type: "website",
-      images: [
-        {
-          url: ogImage,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${title} - Uncertain Systems`,
-      description,
-      images: [ogImage],
-    },
+    openGraph: social.openGraph,
+    twitter: social.twitter,
   };
 }
 

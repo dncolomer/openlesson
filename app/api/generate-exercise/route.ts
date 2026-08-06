@@ -219,6 +219,8 @@ export async function POST(req: NextRequest) {
               ? body.seed
               : null,
       files: bodyFiles.length > 0 ? bodyFiles : hydrated?.files ?? [],
+      // JIT URL bias: hydrate from loadWorkspacePromptContext (external resources).
+      externalResources: hydrated?.externalResources ?? null,
       blocks: bodyBlocks ?? hydrated?.blocks ?? null,
       focusedBlockId: focusedBlockIdBody ?? hydrated?.focusedBlockId ?? null,
       blockLocalContext:

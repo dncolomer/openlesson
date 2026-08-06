@@ -21,6 +21,17 @@ import {
   resolveSurfaceAestheticPath,
 } from "@/lib/og/surfaces";
 import {
+  UNSYS_STANDARD_SHARE,
+  UNSYS_STANDARD_SHARE_AESTHETIC,
+  UNSYS_STANDARD_SHARE_DESCRIPTION,
+  UNSYS_STANDARD_SHARE_IMAGE_PATH,
+  UNSYS_STANDARD_SHARE_TITLE,
+  standardOpenGraph,
+  standardShareImages,
+  standardShareSocialMetadata,
+  standardTwitter,
+} from "@/lib/og/standard";
+import {
   OG_DESCRIPTION_MAX,
   OG_TITLE_MAX,
   shortTitleFromMeta,
@@ -144,12 +155,72 @@ describe("OG aesthetic resolution", () => {
   });
 });
 
+describe("Unsys standard share (LP-derived)", () => {
+  it("exports LP hero title, description, aesthetics image, and root image path", () => {
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(
+      "Beyond benchmarks for AI. Beyond tests for humans.",
+    );
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toContain(
+      "verification, optimization, and augmentation",
+    );
+    expect(UNSYS_STANDARD_SHARE_AESTHETIC.startsWith("/aesthetics/")).toBe(true);
+    expect(UNSYS_STANDARD_SHARE_IMAGE_PATH).toBe("/opengraph-image");
+    expect(UNSYS_STANDARD_SHARE.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
+    expect(UNSYS_STANDARD_SHARE.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(UNSYS_STANDARD_SHARE.aestheticImage).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
+
+    // Aesthetic file exists on disk
+    const onDisk = path.join(
+      REPO_ROOT,
+      "public",
+      ...UNSYS_STANDARD_SHARE_AESTHETIC.slice(1).split("/"),
+    );
+    expect(fs.existsSync(onDisk)).toBe(true);
+
+    // LP page still carries the same hero wording (source of truth for copy)
+    const lp = fs.readFileSync(path.join(REPO_ROOT, "app/page.tsx"), "utf8");
+    expect(lp).toContain("Beyond benchmarks for AI.");
+    expect(lp).toContain("Beyond tests for humans.");
+    expect(lp).toContain("verification");
+    expect(lp).toContain("optimization");
+    expect(lp).toContain("augmentation");
+    expect(lp).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
+  });
+
+  it("standardShareSocialMetadata always points at root opengraph-image with LP copy", () => {
+    const social = standardShareSocialMetadata({ url: "https://uncertain.systems/pricing" });
+    expect(social.openGraph?.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
+    expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(social.twitter?.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
+    expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    const images = standardShareImages();
+    expect(Array.isArray(images)).toBe(true);
+    expect(images).toEqual([
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: expect.stringContaining("Beyond benchmarks for AI"),
+      },
+    ]);
+    expect(standardOpenGraph().images).toEqual(images);
+    expect(standardTwitter().images).toEqual(["/opengraph-image"]);
+  });
+
+  it("loadAestheticDataUrl loads the standard share aesthetic", async () => {
+    const dataUrl = await loadAestheticDataUrl(UNSYS_STANDARD_SHARE_AESTHETIC);
+    expect(dataUrl.startsWith("data:image/")).toBe(true);
+    expect(dataUrl.length).toBeGreaterThan(100);
+  });
+});
+
 describe("OG surface registry", () => {
-  it("includes every required share surface with non-empty title text", () => {
+  it("includes every required share surface with the unsys standard title/description", () => {
     for (const id of REQUIRED_SHARE_SURFACE_IDS) {
       const surface = getOgSurface(id);
-      expect(surface.title.trim().length, id).toBeGreaterThan(0);
-      expect(surface.description.trim().length, id).toBeGreaterThan(0);
+      expect(surface.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
+      expect(surface.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+      expect(surface.aestheticImage).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
       expect(surface.path.trim().length, id).toBeGreaterThan(0);
     }
   });
@@ -157,21 +228,22 @@ describe("OG surface registry", () => {
   it("resolves aesthetics paths under /aesthetics/ for all required surfaces", () => {
     for (const surface of listRequiredShareSurfaces()) {
       const aesthetic = resolveSurfaceAestheticPath(surface);
+      expect(aesthetic).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
       expect(aesthetic.startsWith("/aesthetics/"), surface.id).toBe(true);
       const onDisk = path.join(REPO_ROOT, "public", ...aesthetic.slice(1).split("/"));
       expect(fs.existsSync(onDisk), `${surface.id} -> ${aesthetic}`).toBe(true);
     }
   });
 
-  it("picks stable aesthetics per surface id", () => {
-    const a = resolveSurfaceAestheticPath(getOgSurface("pricing"));
-    const b = resolveSurfaceAestheticPath(getOgSurface("pricing"));
-    expect(a).toBe(b);
+  it("uses one shared aesthetic for every surface", () => {
+    const paths = listRequiredShareSurfaces().map((s) => resolveSurfaceAestheticPath(s));
+    expect(new Set(paths).size).toBe(1);
+    expect(paths[0]).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
   });
 });
 
 describe("OG metadata image URLs", () => {
-  it("maps routes to opengraph-image paths", () => {
+  it("maps routes to opengraph-image paths (route inventory helper)", () => {
     expect(openGraphImagePathForRoute("/")).toBe("/opengraph-image");
     expect(openGraphImagePathForRoute("/pricing")).toBe("/pricing/opengraph-image");
     expect(openGraphImagePathForRoute("/science")).toBe("/science/opengraph-image");
@@ -199,14 +271,14 @@ describe("OG entrypoint wiring (static audit)", () => {
     "app/vision/opengraph-image.tsx",
     "app/science/opengraph-image.tsx",
     "app/docs/proof-of-work-api/opengraph-image.tsx",
+    "app/all-you-can-learn/[workspaceId]/opengraph-image.tsx",
   ];
 
-  it("ships opengraph-image entrypoints that use the shared compositor", () => {
+  it("ships opengraph-image entrypoints that use the shared compositor / standard", () => {
     for (const rel of expectedEntrypoints) {
       const full = path.join(REPO_ROOT, rel);
       expect(fs.existsSync(full), rel).toBe(true);
       const source = fs.readFileSync(full, "utf8");
-      // twitter re-exports are allowed without compositor import
       if (rel.endsWith("twitter-image.tsx")) {
         expect(source.includes("opengraph-image")).toBe(true);
         continue;
@@ -214,11 +286,17 @@ describe("OG entrypoint wiring (static audit)", () => {
       const usesShared =
         source.includes("@/lib/og/") ||
         source.includes('from "./opengraph-image"') ||
-        source.includes("composeOgImage");
+        source.includes("composeOgImage") ||
+        source.includes("composeStandardOgImage") ||
+        source.includes("createStaticOgImageHandler");
       expect(usesShared, rel).toBe(true);
       // No primary gradient-only ImageResponse trees left in entrypoints
       expect(source.includes("radial-gradient(circle at"), rel).toBe(false);
       expect(source.includes("linear-gradient(135deg, #0f172a"), rel).toBe(false);
+      // No per-entity title/description overrides in image handlers
+      expect(source.includes("insight?.title"), rel).toBe(false);
+      expect(source.includes("planData?.title"), rel).toBe(false);
+      expect(source.includes("assembleAyclLandingSummary"), rel).toBe(false);
     }
   });
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { useI18n } from "@/lib/i18n";
 import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
@@ -15,6 +14,11 @@ import {
   type WorkspaceExpandBlockSubmitOpts,
 } from "@/components/WorkspaceExpandBlockPane";
 import {
+  WorkspaceBlockDynamicEffectPanel,
+  WorkspaceBlockGeneratorEffectPanel,
+  type WorkspaceBlockEffectsSaveInput,
+} from "@/components/WorkspaceBlockEffectsPanels";
+import {
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
 } from "@/lib/workspace-right-pane";
@@ -26,18 +30,18 @@ import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import type { BlockPracticeOptions } from "@/lib/block-practice-options";
+import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
- * Block-detail right column: peer top-level drawers —
- * 1 Details (expanded), 2 Simulation, 3 Split (multi-cell only),
- * 4 Expand block (owners), 5 Edit (owners), 6 Local context.
+ * Block-detail right column (creator mode): peer top-level drawers —
+ * Simulation, Split (multi-cell), Expand, Edit, Dynamic / Generator
+ * effects, Local context.
+ * Title/description live in Edit (not a separate Details/Sessions drawer).
  * Clone is a left map-strip tool (not a drawer).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
  */
 export function WorkspaceBlockDetailPane({
-  title,
-  children,
   localContextPanel,
   blockId,
   blockTitle,
@@ -47,6 +51,7 @@ export function WorkspaceBlockDetailPane({
   blockStatus,
   isStart,
   practiceOptions = null,
+  creatorEffects = null,
   lockUntilTitles,
   spanW,
   spanH,
@@ -60,19 +65,23 @@ export function WorkspaceBlockDetailPane({
   editBusy = false,
   onUpdateBlock,
   onDeleteBlock,
+  onSaveCreatorEffects,
   onSplitBlock,
   expandNodes,
   unusableCells = null,
   onExpandBlock,
   onExpandPreviewChange,
+  onGeneratorTargetPreviewChange,
+  onGeneratorPickModeChange,
+  onRegisterGeneratorEmptyToggle,
+  onDynamicUnlockPreviewChange,
+  onDynamicPickModeChange,
+  onRegisterDynamicBlockToggle,
   workspaceGoal,
   workspaceTitle,
   rootTopic,
   workspaceNotes,
 }: {
-  title?: string;
-  /** Block launch / detail body (e.g. SessionItem). */
-  children: ReactNode;
   localContextPanel: ReactNode;
   blockId: string;
   blockTitle: string;
@@ -82,6 +91,8 @@ export function WorkspaceBlockDetailPane({
   blockStatus?: string | null;
   isStart?: boolean | null;
   practiceOptions?: BlockPracticeOptions | null;
+  /** Combinable Dynamic / Generator effects. */
+  creatorEffects?: BlockCreatorEffects | null;
   lockUntilTitles?: string[];
   spanW?: number | null;
   spanH?: number | null;
@@ -107,6 +118,9 @@ export function WorkspaceBlockDetailPane({
     practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
   onDeleteBlock?: (blockId: string) => Promise<void> | void;
+  onSaveCreatorEffects?: (
+    input: WorkspaceBlockEffectsSaveInput,
+  ) => Promise<void> | void;
   onSplitBlock?: (input: {
     blockId: string;
     prompt?: string;
@@ -121,10 +135,24 @@ export function WorkspaceBlockDetailPane({
   onExpandPreviewChange?: (
     cells: Array<{ row: number; col: number }> | null,
   ) => void;
+  /** Creator generator drawer → map spark preview of empty target cells. */
+  onGeneratorTargetPreviewChange?: (
+    cells: Array<{ row: number; col: number }> | null,
+  ) => void;
+  /** Generator map pick mode (empty-cell click toggles targets). */
+  onGeneratorPickModeChange?: (active: boolean) => void;
+  onRegisterGeneratorEmptyToggle?: (
+    toggle: ((cell: { row: number; col: number }) => void) | null,
+  ) => void;
+  /** Dynamic unlock-after map pick (filled blocks). */
+  onDynamicUnlockPreviewChange?: (blockIds: string[] | null) => void;
+  onDynamicPickModeChange?: (active: boolean) => void;
+  onRegisterDynamicBlockToggle?: (
+    toggle: ((blockId: string) => void) | null,
+  ) => void;
   /** @deprecated Selection-driven dismiss; no drawer X. */
   onClose?: () => void;
 }) {
-  const { t } = useI18n();
   const localNorm = normalizeBlockLocalContext(localContext);
   const hasLocalMaterials = localNorm.hasLocalMaterials;
   const splitCandidate: SplitCandidateBlock & {
@@ -180,16 +208,6 @@ export function WorkspaceBlockDetailPane({
       data-block-has-local-context={hasLocalMaterials ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="detail"
-        title={title || t("sessionList.sessions")}
-        defaultExpanded
-        bodyClassName="space-y-3"
-      >
-        {children}
-      </WorkspaceRightPaneDrawer>
-
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="simulation"
@@ -289,6 +307,53 @@ export function WorkspaceBlockDetailPane({
             />
           </div>
         </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      {/* Combinable creator effects — not separate block types. */}
+      {canEdit || creatorEffects ? (
+        <>
+          <WorkspaceRightPaneDrawer
+            variant="section"
+            drawerId="effect_dynamic"
+            title="Dynamic"
+            defaultExpanded={false}
+            bodyClassName="space-y-3"
+            surfaceDataAttr="data-block-effect-drawer-dynamic"
+          >
+            <WorkspaceBlockDynamicEffectPanel
+              blockId={blockId}
+              effects={creatorEffects}
+              nodes={expandNodes || []}
+              canEdit={canEdit && Boolean(onSaveCreatorEffects)}
+              busy={editBusy}
+              onSave={onSaveCreatorEffects}
+              onUnlockPreviewChange={onDynamicUnlockPreviewChange}
+              onPickModeChange={onDynamicPickModeChange}
+              onRegisterBlockToggle={onRegisterDynamicBlockToggle}
+            />
+          </WorkspaceRightPaneDrawer>
+
+          <WorkspaceRightPaneDrawer
+            variant="section"
+            drawerId="effect_generator"
+            title="Generator"
+            defaultExpanded={false}
+            bodyClassName="space-y-3"
+            surfaceDataAttr="data-block-effect-drawer-generator"
+          >
+            <WorkspaceBlockGeneratorEffectPanel
+              blockId={blockId}
+              effects={creatorEffects}
+              nodes={expandNodes || []}
+              canEdit={canEdit && Boolean(onSaveCreatorEffects)}
+              busy={editBusy}
+              onSave={onSaveCreatorEffects}
+              onTargetPreviewChange={onGeneratorTargetPreviewChange}
+              onPickModeChange={onGeneratorPickModeChange}
+              onRegisterEmptyToggle={onRegisterGeneratorEmptyToggle}
+            />
+          </WorkspaceRightPaneDrawer>
+        </>
       ) : null}
 
       <WorkspaceRightPaneDrawer

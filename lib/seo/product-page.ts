@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { openGraphImagesForRoutePath } from "@/lib/og/paths";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 export const DEMO_BOOKING_URL = "https://cal.com/daniel-colomer-lvwg8w/openlesson-demo";
 
@@ -32,26 +32,13 @@ const BASE_URL = "https://uncertain.systems";
 
 export function productPageMetadata(page: SeoProductPageConfig): Metadata {
   const url = `${BASE_URL}${page.path}`;
-  const images = openGraphImagesForRoutePath(page.path, page.metaTitle);
+  const social = standardShareSocialMetadata({ url });
   return {
     title: page.metaTitle,
     description: page.metaDescription,
     keywords: page.keywords,
-    openGraph: {
-      title: page.metaTitle,
-      description: page.metaDescription,
-      url,
-      siteName: "Uncertain Systems",
-      type: "website",
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: page.metaTitle,
-      description: page.metaDescription,
-      creator: "@uncertainsys",
-      images: images.map((image) => image.url),
-    },
+    openGraph: social.openGraph,
+    twitter: social.twitter,
     alternates: { canonical: url },
   };
 }

@@ -5,11 +5,12 @@ import { LandingNav } from "@/components/LandingNav";
 import { AyclLandingClient } from "@/components/AyclLandingClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  ayclLandingOgImagePath,
+  AYCL_LANDING_WORKSPACE_SELECT,
   ayclLandingPath,
   assembleAyclLandingSummary,
 } from "@/lib/aycl-landing";
 import { aestheticImageForId } from "@/lib/aesthetics";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn-landing", [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -27,9 +28,7 @@ async function loadLanding(workspaceId: string) {
   const supabase = createAdminClient();
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select(
-      "id, title, root_topic, description, workspace_goal, notes, cover_image_url, is_all_you_can_learn",
-    )
+    .select(AYCL_LANDING_WORKSPACE_SELECT)
     .eq("id", id)
     .eq("is_all_you_can_learn", true)
     .maybeSingle();
@@ -61,35 +60,21 @@ export async function generateMetadata({
     };
   }
   const path = ayclLandingPath(landing.workspaceId);
-  const ogPath = ayclLandingOgImagePath(landing.workspaceId);
   const description =
     landing.summary.slice(0, 160) ||
     `Lifetime access to ${landing.title} on Uncertain Systems.`;
+  // Page SEO stays listing-specific; social share is the unsys standard.
+  const social = standardShareSocialMetadata({
+    url: `https://uncertain.systems${path}`,
+  });
   return {
     title: `${landing.title} · All-You-Can-Learn`,
     description,
     alternates: {
       canonical: `https://uncertain.systems${path}`,
     },
-    openGraph: {
-      title: `${landing.title} · All-You-Can-Learn | Uncertain Systems`,
-      description,
-      url: `https://uncertain.systems${path}`,
-      images: [
-        {
-          url: ogPath,
-          width: 1200,
-          height: 630,
-          alt: landing.title,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${landing.title} · All-You-Can-Learn`,
-      description,
-      images: [ogPath],
-    },
+    openGraph: social.openGraph,
+    twitter: social.twitter,
   };
 }
 

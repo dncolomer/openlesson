@@ -10,8 +10,9 @@ import {
 
 /**
  * Local block knowledge inspection + optional authoring.
- * Shown when a block is selected on the map (builder and consumer).
- * Saved local_context (from create-with-attach or later edits) is always
+ * Shown when an existing block is selected on the map (builder and consumer).
+ * Empty-cell Add drawer only shows “Create a base block first”; attach/save
+ * happens here after the block exists. Saved local_context is always
  * surfaced as already-attached materials when present.
  */
 export function WorkspaceBlockLocalContextPanel({
@@ -118,6 +119,15 @@ export function WorkspaceBlockLocalContextPanel({
 
   const draftNormalized = normalizeBlockLocalContext(draft);
   const hasAttached = draftNormalized.hasLocalMaterials;
+  const savedNormalized = normalizeBlockLocalContext(localContext);
+  const dirty =
+    (draftNormalized.notes || "") !== (savedNormalized.notes || "") ||
+    JSON.stringify(draftNormalized.globalFileRefs) !==
+      JSON.stringify(savedNormalized.globalFileRefs) ||
+    JSON.stringify(draftNormalized.localFiles) !==
+      JSON.stringify(savedNormalized.localFiles) ||
+    JSON.stringify(draftNormalized.externalResourceIds) !==
+      JSON.stringify(savedNormalized.externalResourceIds);
 
   const assembled = assembleFocusedBlockPromptContext({
     workspaceTitle,
@@ -135,7 +145,7 @@ export function WorkspaceBlockLocalContextPanel({
   });
 
   const save = async () => {
-    if (!canEdit || !onSaveLocalContext) return;
+    if (!canEdit || !onSaveLocalContext || !dirty) return;
     setSaving(true);
     try {
       await onSaveLocalContext(blockId, draft);
@@ -431,14 +441,26 @@ export function WorkspaceBlockLocalContextPanel({
             ) : null}
           </div>
 
+          <p className="text-[11px] leading-relaxed text-neutral-500">
+            Explicitly links notes, file refs, and external sources to{" "}
+            <span className="font-medium text-neutral-300">
+              {blockTitle?.trim() || "this block"}
+            </span>{" "}
+            only — not the whole workspace. Changes are not applied until you
+            save.
+          </p>
           <button
             type="button"
             data-block-local-save
-            disabled={saving || busy}
+            disabled={saving || busy || !dirty || !onSaveLocalContext}
             onClick={() => void save()}
-            className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? "Saving…" : "Save local context"}
+            {saving
+              ? "Saving…"
+              : dirty
+                ? "Save context to this block"
+                : "Saved to this block"}
           </button>
         </div>
       ) : (

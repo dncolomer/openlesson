@@ -1,10 +1,7 @@
 import { ImageResponse } from "next/og";
 import { loadAestheticDataUrl, resolveOgAestheticPath } from "@/lib/og/aesthetic";
-import {
-  getOgSurface,
-  resolveSurfaceAestheticPath,
-  type OgSurface,
-} from "@/lib/og/surfaces";
+import { UNSYS_STANDARD_SHARE } from "@/lib/og/standard";
+import { getOgSurface, type OgSurface } from "@/lib/og/surfaces";
 import { truncateOgDescription, truncateOgTitle } from "@/lib/og/text";
 
 export const OG_SIZE = { width: 1200, height: 630 } as const;
@@ -228,30 +225,39 @@ export async function composeOgImage(input: ComposeOgImageInput): Promise<ImageR
   );
 }
 
+/**
+ * The one unsys standard share card (LP title/text + aesthetics).
+ * Prefer this for all public opengraph-image entrypoints.
+ */
+export async function composeStandardOgImage(): Promise<ImageResponse> {
+  return composeOgImage({
+    title: UNSYS_STANDARD_SHARE.title,
+    description: UNSYS_STANDARD_SHARE.description,
+    eyebrow: UNSYS_STANDARD_SHARE.eyebrow,
+    brand: UNSYS_STANDARD_SHARE.brand,
+    footerLabel: UNSYS_STANDARD_SHARE.footerLabel,
+    aestheticPath: UNSYS_STANDARD_SHARE.aestheticImage,
+    aestheticSeed: "home",
+    siteLabel: UNSYS_STANDARD_SHARE.siteLabel,
+  });
+}
+
 export async function composeOgImageFromSurface(
   surface: OgSurface,
-  overrides: Partial<ComposeOgImageInput> = {},
+  _overrides: Partial<ComposeOgImageInput> = {},
 ): Promise<ImageResponse> {
-  const aestheticPath =
-    overrides.aestheticPath !== undefined
-      ? overrides.aestheticPath
-      : resolveSurfaceAestheticPath(surface);
-
-  return composeOgImage({
-    title: overrides.title ?? surface.title,
-    description: overrides.description ?? surface.description,
-    eyebrow: overrides.eyebrow ?? surface.eyebrow,
-    brand: overrides.brand ?? surface.brand,
-    footerLabel: overrides.footerLabel ?? surface.footerLabel,
-    aestheticPath,
-    aestheticSeed: overrides.aestheticSeed ?? surface.aestheticSeed ?? surface.id,
-    siteLabel: overrides.siteLabel,
-  });
+  // Surfaces are registered for inventory only; share cards always use the unsys standard.
+  void surface;
+  void _overrides;
+  return composeStandardOgImage();
 }
 
 export async function composeOgImageForSurfaceId(
   surfaceId: string,
   overrides: Partial<ComposeOgImageInput> = {},
 ): Promise<ImageResponse> {
-  return composeOgImageFromSurface(getOgSurface(surfaceId), overrides);
+  // Keep surface lookup so unknown ids still throw; card content is always standard.
+  getOgSurface(surfaceId);
+  void overrides;
+  return composeStandardOgImage();
 }

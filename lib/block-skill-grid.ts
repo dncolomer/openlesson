@@ -32,6 +32,11 @@ export interface SkillGridNode {
   } | null;
   /** Author practice launch limits (Explore/Drill × open/timed). */
   practice_options?: unknown;
+  /**
+   * Combinable creator effects (Dynamic / Generator).
+   * Raw JSON or parsed BlockCreatorEffects.
+   */
+  creator_effects?: unknown;
 }
 
 /**

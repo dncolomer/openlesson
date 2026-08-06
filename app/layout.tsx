@@ -3,7 +3,12 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BRAND_LOGO_PATH } from "../lib/brand";
 import { I18nProvider } from "../lib/i18n";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 import "./globals.css";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -36,31 +41,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://uncertain.systems",
   },
-  openGraph: {
-    title: "Uncertain Systems — Learning Efficiency for Humans & Agents",
-    description:
-      "Measure what learners actually absorb — not just completion. Four products on Workspaces.",
-    url: "https://uncertain.systems",
-    siteName: "Uncertain Systems",
-    type: "website",
-    locale: "en_US",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Uncertain Systems — Learning Efficiency for Humans & Agents",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Uncertain Systems — Learning Efficiency Platform",
-    description:
-      "Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
-    creator: "@uncertainsys",
-    images: ["/opengraph-image"],
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
   robots: {
     index: true,
     follow: true,

@@ -29,13 +29,17 @@ import {
   learnerNoteLiveBoxFromPointerMove,
   learnerNotePointerAllowsDragStart,
   learnerNoteScreenPosition,
+  defaultMapNotesPlaneVisible,
   listVisibleMapNotes,
   loadCreatorMapNotes,
   loadLearnerMapNotes,
+  mapNotesForPlaneRender,
   parseLearnerMapNotes,
   saveLearnerMapNotes,
   shouldMountMapNotes,
+  shouldRenderMapNotesOnPlane,
   toggleLearnerMapNoteCollapsed,
+  toggleMapNotesPlaneVisible,
   updateLearnerMapNote,
   upsertLearnerMapNote,
   viewportCenterToWorldPlane,
@@ -47,7 +51,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.LEARNER_NOTES_PLANE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-51f1681edf19/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-59c66ba00923/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -616,6 +620,25 @@ describe("store + UI structural", () => {
     expect(lib).toContain("canDeleteMapNote");
     expect(lib).toContain("creatorMapNotesStorageKey");
     expect(lib).toContain("listVisibleMapNotes");
+    expect(lib).toContain("mapNotesForPlaneRender");
+    expect(lib).toContain("toggleMapNotesPlaneVisible");
+
+    // Notes plane hide/show eye (creator + learner) — independent of annotation layers
+    expect(grid).toContain("data-map-notes-visibility-toggle");
+    expect(grid).toContain("data-learner-notes-visibility-toggle");
+    expect(grid).toContain("data-map-notes-visibility-row");
+    expect(grid).toContain("data-map-notes-plane-visible");
+    expect(grid).toContain('data-map-notes-eye="open"');
+    expect(grid).toContain('data-map-notes-eye="closed"');
+    expect(grid).toContain("mapNotesOnPlane");
+    expect(grid).toContain("mapNotesForPlaneRender");
+    expect(grid).toContain("toggleMapNotesPlaneVisible");
+    expect(grid).toContain("defaultMapNotesPlaneVisible");
+    // Toggle present under minimap stack for both modes (not gated on learnerMode alone)
+    expect(grid).toContain('data-map-notes-mode={learnerMode ? "learner" : "creator"}');
+    // Annotation layer eyes remain separate
+    expect(grid).toContain("data-annotation-layer-toggle");
+    expect(grid).toContain('data-annotation-eye="open"');
 
     writeEvidence(
       "learner-notes-plane-ui.log",
@@ -627,6 +650,7 @@ describe("store + UI structural", () => {
         "drag_handle_not_button=true",
         "commit_from_drag_ref=true",
         "creator_and_learner_add=true",
+        "notes_plane_visibility_toggle=true",
         "persist_xywh=" +
           JSON.stringify({
             x: reloaded[0].x,
@@ -638,6 +662,131 @@ describe("store + UI structural", () => {
           shouldMountMapNotes({ workspaceId: "ws", learnerMode: true }),
         "mount_creator=" +
           shouldMountMapNotes({ workspaceId: "ws", learnerMode: false }),
+      ].join("\n"),
+    );
+  });
+});
+
+describe("map notes plane hide/show (eye toggle)", () => {
+  it("defaults visible; hide gates render list without clearing note collections", () => {
+    expect(defaultMapNotesPlaneVisible()).toBe(true);
+    expect(shouldRenderMapNotesOnPlane(true)).toBe(true);
+    expect(shouldRenderMapNotesOnPlane(false)).toBe(false);
+
+    const notes = [
+      createLearnerMapNote({
+        id: "a",
+        x: 10,
+        y: 20,
+        body: "keep me",
+        source: "creator",
+      }),
+      createLearnerMapNote({
+        id: "b",
+        x: 30,
+        y: 40,
+        body: "also keep",
+        source: "learner",
+      }),
+    ];
+
+    // Default shown → all notes for plane
+    const shown = mapNotesForPlaneRender(notes, defaultMapNotesPlaneVisible());
+    expect(shown).toHaveLength(2);
+    expect(shown.map((n) => n.id).sort()).toEqual([notes[0].id, notes[1].id].sort());
+
+    // Toggle off → empty render list
+    const afterHide = toggleMapNotesPlaneVisible(true);
+    expect(afterHide).toBe(false);
+    const hidden = mapNotesForPlaneRender(notes, afterHide);
+    expect(hidden).toHaveLength(0);
+    // Source collection intact (hide does not mutate)
+    expect(notes).toHaveLength(2);
+    expect(notes[0].body).toBe("keep me");
+
+    // Toggle on again
+    const afterShow = toggleMapNotesPlaneVisible(afterHide);
+    expect(afterShow).toBe(true);
+    expect(mapNotesForPlaneRender(notes, afterShow)).toHaveLength(2);
+
+    // Storage keys still addressable after hide cycle (no wipe)
+    const storage: LearnerNotesStorage = (() => {
+      const m = new Map<string, string>();
+      return {
+        getItem: (k) => m.get(k) ?? null,
+        setItem: (k, v) => {
+          m.set(k, v);
+        },
+        removeItem: (k) => {
+          m.delete(k);
+        },
+      };
+    })();
+    saveLearnerMapNotes({
+      workspaceId: "ws-hide",
+      learnerScopeId: "u1",
+      notes: [notes[1]],
+      storage,
+    });
+    const reloaded = loadLearnerMapNotes({
+      workspaceId: "ws-hide",
+      learnerScopeId: "u1",
+      storage,
+    });
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0].id).toBe(notes[1].id);
+    // Hide flag does not touch storage
+    expect(mapNotesForPlaneRender(reloaded, false)).toHaveLength(0);
+    expect(
+      loadLearnerMapNotes({
+        workspaceId: "ws-hide",
+        learnerScopeId: "u1",
+        storage,
+      }),
+    ).toHaveLength(1);
+
+    writeEvidence(
+      "map-notes-hide-toggle-tests.log",
+      [
+        "default_visible=" + defaultMapNotesPlaneVisible(),
+        "hide_render_count=" + mapNotesForPlaneRender(notes, false).length,
+        "show_render_count=" + mapNotesForPlaneRender(notes, true).length,
+        "source_intact=" + notes.length,
+        "storage_after_hide=" + reloaded.length,
+        "toggle_off=" + toggleMapNotesPlaneVisible(true),
+        "toggle_on=" + toggleMapNotesPlaneVisible(false),
+      ].join("\n"),
+    );
+  });
+
+  it("UI wires notes visibility toggle for creator and learner paths", () => {
+    const grid = readFileSync(join(ROOT, "components/BlockSkillGrid.tsx"), "utf8");
+    // Under minimap notes toolbar — not learner-only
+    expect(grid).toContain("data-learner-map-notes-toolbar");
+    expect(grid).toContain("data-map-notes-visibility-toggle");
+    expect(grid).toContain("data-learner-notes-visibility-toggle");
+    expect(grid).toMatch(
+      /data-map-notes-mode=\{learnerMode \? "learner" : "creator"\}/,
+    );
+    // Render path gated on mapNotesOnPlane (not raw mapNotes alone)
+    expect(grid).toContain("mapNotesOnPlane.map");
+    expect(grid).toContain("mapNotesForPlaneRender(mapNotes, mapNotesPlaneVisible)");
+    // Annotation layer toggles still present (independent)
+    expect(grid).toContain("data-annotation-layer-toggle");
+    expect(grid).toContain("handleAnnotationLayerToggle");
+    expect(grid).toContain("data-annotation-layers-under-notes");
+
+    writeEvidence(
+      "map-notes-hide-toggle-ui.log",
+      [
+        "toggle_attr=data-map-notes-visibility-toggle",
+        "row_attr=data-map-notes-visibility-row",
+        "plane_attr=data-map-notes-plane-visible",
+        "modes=creator+learner (same stack)",
+        "render_gate=mapNotesOnPlane",
+        "annotation_layer_toggle_independent=true",
+        "has_annotation_eye=" + grid.includes('data-annotation-eye="open"'),
+        "has_notes_eye=" + grid.includes('data-map-notes-eye="open"'),
       ].join("\n"),
     );
   });

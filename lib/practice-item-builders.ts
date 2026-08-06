@@ -26,6 +26,12 @@ import {
   buildTapPracticeOpeningQuestionTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
 
+export type PracticeExternalLink = {
+  title?: string | null;
+  url?: string | null;
+  description?: string | null;
+};
+
 export type PracticeItemContext = {
   workspaceTitle?: string | null;
   rootTopic?: string | null;
@@ -37,7 +43,13 @@ export type PracticeItemContext = {
   chapterDescription?: string | null;
   planningPrompt?: string | null;
   localNotes?: string | null;
+  /** Workspace + block-local files (names and optional excerpts). */
   files?: Array<{ name: string; excerpt?: string | null }> | null;
+  /**
+   * External resource / link attachments (title, URL, description).
+   * Used when block or workspace materials include linked sources.
+   */
+  externalLinks?: PracticeExternalLink[] | null;
 };
 
 function clip(s: string, max: number): string {
@@ -61,18 +73,123 @@ export function practiceSubjectLabel(ctx: PracticeItemContext): string {
   );
 }
 
-/** Best domain substance string for grounding (goal + description + notes). */
+/**
+ * True when attached files/links carry concrete body (excerpt or link description),
+ * not only bare filenames. Used to prefer materials over map-card descriptions.
+ */
+export function practiceMaterialsAreRich(ctx: PracticeItemContext): boolean {
+  for (const f of ctx.files || []) {
+    if (clean(f?.excerpt).length >= 8) return true;
+    // Bare name still counts as a link/material attachment for grounding labels
+    if (clean(f?.name).length >= 3) return true;
+  }
+  for (const link of ctx.externalLinks || []) {
+    if (clean(link?.description).length >= 8) return true;
+    if (clean(link?.title).length >= 2) return true;
+    if (clean(link?.url).length >= 8) return true;
+  }
+  return false;
+}
+
+/**
+ * Material snippets from files + external links (names, excerpts, titles, URLs).
+ * Short attachment labels come first so they survive prompt clipping; excerpts follow.
+ */
+export function practiceMaterialSubstance(ctx: PracticeItemContext): string {
+  const labels: string[] = [];
+  const bodies: string[] = [];
+  for (const f of ctx.files || []) {
+    const name = clean(f?.name);
+    const excerpt = clean(f?.excerpt);
+    if (name) labels.push(name);
+    if (excerpt) {
+      bodies.push(clip(`${name ? `${name}: ` : ""}${excerpt}`, 180));
+    } else if (name) {
+      bodies.push(`material “${name}”`);
+    }
+  }
+  for (const link of ctx.externalLinks || []) {
+    const title = clean(link?.title);
+    const desc = clean(link?.description);
+    const url = clean(link?.url);
+    if (title) labels.push(title);
+    else if (url) labels.push(clip(url, 40));
+    if (desc) {
+      bodies.push(clip(`${title || url || "link"}: ${desc}`, 160));
+    } else if (title && url) {
+      bodies.push(`source “${title}” (${clip(url, 60)})`);
+    } else if (title) {
+      bodies.push(`source “${title}”`);
+    } else if (url) {
+      bodies.push(`source ${clip(url, 80)}`);
+    }
+  }
+  // Dedupe labels while preserving order
+  const seen = new Set<string>();
+  const uniqueLabels: string[] = [];
+  for (const l of labels) {
+    const k = l.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    uniqueLabels.push(l);
+  }
+  const head = uniqueLabels.length
+    ? `attachments: ${uniqueLabels.slice(0, 6).join(", ")}`
+    : "";
+  return [head, ...bodies].filter(Boolean).join(" · ");
+}
+
+/**
+ * Best domain substance string for grounding.
+ * - Attached materials/links win when present (simulation quality).
+ * - Otherwise preserve TAP opening order: description → local notes → goal
+ *   so Simulation matches live `buildTapOpeningQuestionFallback` when no files/links.
+ */
 export function practiceDomainSubstance(ctx: PracticeItemContext): string {
-  const parts = [
+  const materials = practiceMaterialSubstance(ctx);
+  const localNotes = clean(ctx.localNotes);
+  const desc = clean(ctx.blockDescription);
+  const chapter = clean(ctx.chapterDescription);
+  const goal = clean(ctx.workspaceGoal);
+  const wsDesc = clean(ctx.workspaceDescription);
+  const planning = clean(ctx.planningPrompt);
+  const notes = clean(ctx.notes);
+
+  // 1) Rich materials (excerpts / link bodies / attachment names) first
+  if (materials && practiceMaterialsAreRich(ctx)) return materials;
+  // 2) Non-overview description / chapter (TAP opening parity — before localNotes)
+  if (desc && !looksLikeTopicOverview(desc)) return desc;
+  if (chapter && !looksLikeTopicOverview(chapter)) return chapter;
+  // 3) Local notes (block-level author substance)
+  if (localNotes.length >= 8) return localNotes;
+  // 4) Materials even if only filenames (still better than nothing)
+  if (materials) return materials;
+  // 5) Workspace goal / notes / planning
+  if (goal) return goal;
+  if (notes) return notes;
+  if (planning) return planning;
+  if (wsDesc) return wsDesc;
+  if (desc) return desc;
+  if (chapter) return chapter;
+  return "";
+}
+
+/** All non-empty substance layers joined (for tests / rich fixtures). */
+export function practiceAllSubstanceLayers(ctx: PracticeItemContext): string {
+  const materials = practiceMaterialSubstance(ctx);
+  return [
     clean(ctx.blockDescription),
-    clean(ctx.chapterDescription),
     clean(ctx.localNotes),
+    materials,
     clean(ctx.workspaceGoal),
     clean(ctx.workspaceDescription),
     clean(ctx.planningPrompt),
     clean(ctx.notes),
-  ].filter(Boolean);
-  return parts[0] || "";
+    clean(ctx.workspaceTitle),
+    clean(ctx.rootTopic),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /**
@@ -87,15 +204,21 @@ export function buildGroundedDialogueQuestion(
 ): string {
   const subject = practiceSubjectLabel(ctx);
   const substance = practiceDomainSubstance(ctx);
+  const materials = practiceMaterialSubstance(ctx);
   const goal = clean(ctx.workspaceGoal);
+  const notes = clean(ctx.notes);
   const planning = clean(ctx.planningPrompt);
   const i = ((index % 3) + 3) % 3;
 
-  // Workable domain substance (not a topic-catalog blurb).
-  const work =
-    substance && !looksLikeTopicOverview(substance)
-      ? clip(substance, 110)
-      : "";
+  // Materials when rich; otherwise substance (description before localNotes for TAP parity).
+  // Do NOT insert bare localNotes ahead of a workable description.
+  const workRaw =
+    materials && practiceMaterialsAreRich(ctx)
+      ? materials
+      : substance && !looksLikeTopicOverview(substance)
+        ? substance
+        : materials || substance;
+  const work = workRaw ? clip(workRaw, 140) : "";
 
   if (work) {
     if (i === 0) {
@@ -112,19 +235,28 @@ export function buildGroundedDialogueQuestion(
   }
 
   // Thin / guest-like context: still a checkable domain act, never meta fluff.
+  // Prefer goal/notes over pure title-only icebreakers when available.
   if (i === 0) {
-    return goal
-      ? `Give one concrete numerical or situational example of “${subject}” that matters for “${clip(goal, 80)}”, and state the key intermediate result.`
-      : `Give one concrete example of “${subject}” with specific numbers or a named situation — what is the key intermediate result?`;
+    if (goal) {
+      return `Give one concrete numerical or situational example of “${subject}” that matters for “${clip(goal, 80)}”, and state the key intermediate result.`;
+    }
+    if (notes) {
+      return `From the workspace notes (“${clip(notes, 80)}”), give one concrete instance of “${subject}” and the first checkable intermediate result.`;
+    }
+    return `Give one concrete example of “${subject}” with specific numbers or a named situation — what is the key intermediate result?`;
   }
   if (i === 1) {
     return planning
       ? `When ${clip(planning, 90)}, apply “${subject}” once. What goes wrong first if a key assumption is inverted?`
-      : `What breaks if you apply “${subject}” with the wrong assumption? Name the failure and the first check that would catch it.`;
+      : goal
+        ? `While advancing “${clip(goal, 70)}”, what breaks if you apply “${subject}” with the wrong assumption? Name the failure and the first catch signal.`
+        : `What breaks if you apply “${subject}” with the wrong assumption? Name the failure and the first check that would catch it.`;
   }
   return goal
     ? `Name one calculation or decision in “${subject}” that moves you toward “${clip(goal, 80)}”, and the evidence that shows you got it right.`
-    : `Where would you use “${subject}” on a real problem today, and what is the first checkable output you would produce?`;
+    : notes
+      ? `Using workspace notes (“${clip(notes, 70)}”), where would you use “${subject}” and what is the first checkable output?`
+      : `Where would you use “${subject}” on a real problem today, and what is the first checkable output you would produce?`;
 }
 
 /**
@@ -137,20 +269,43 @@ export function buildGroundedExerciseItem(
   index = 0,
 ): string {
   const subject = practiceSubjectLabel(ctx);
+  const materials = practiceMaterialSubstance(ctx);
   const substance = practiceDomainSubstance(ctx);
   const goal = clean(ctx.workspaceGoal);
+  const localNotes = clean(ctx.localNotes);
   const i = ((index % 3) + 3) % 3;
+
+  // Materials first when present; otherwise substance (description-first TAP order).
+  const domainBlurb =
+    (
+      materials && practiceMaterialsAreRich(ctx)
+        ? [materials, substance, clean(ctx.blockDescription), localNotes]
+        : [substance, clean(ctx.blockDescription), localNotes, materials]
+    )
+      .filter(Boolean)
+      .filter((v, idx, arr) => arr.indexOf(v) === idx)
+      .join(" — ") || null;
 
   const base: TapbenchExerciseContext = {
     blockTitle: clean(ctx.blockTitle) || subject,
-    blockDescription: substance || clean(ctx.blockDescription) || null,
+    blockDescription: domainBlurb,
     workspaceTitle: clean(ctx.workspaceTitle) || clean(ctx.rootTopic) || null,
-    workspaceGoal: goal || null,
+    workspaceGoal: goal || clean(ctx.notes) || null,
     rootTopic: clean(ctx.rootTopic) || null,
   };
 
   // Shared concrete-domain builder (seeded by index for variation).
-  return buildTapbenchExerciseFallback(base, i);
+  // When materials exist, prefix so the exercise text always cites attachments.
+  const core = buildTapbenchExerciseFallback(base, i);
+  if (materials && practiceMaterialsAreRich(ctx)) {
+    const cite = clip(materials, 100);
+    // Avoid double-prefix if the concrete builder already embedded the material text
+    if (core.toLowerCase().includes(cite.slice(0, 24).toLowerCase())) {
+      return core;
+    }
+    return `Using attached materials (${cite}): ${core}`;
+  }
+  return core;
 }
 
 /** Convert practice context into assemblePromptWorkspaceContext input. */
@@ -158,7 +313,7 @@ export function practiceContextToPromptInput(
   ctx: PracticeItemContext,
   extra?: Partial<PromptWorkspaceContextInput>,
 ): PromptWorkspaceContextInput {
-  return {
+  const base: PromptWorkspaceContextInput = {
     workspaceTitle: ctx.workspaceTitle,
     rootTopic: ctx.rootTopic,
     workspaceGoal: ctx.workspaceGoal,
@@ -168,10 +323,21 @@ export function practiceContextToPromptInput(
     blockDescription: ctx.blockDescription,
     chapterDescription: ctx.chapterDescription,
     files: ctx.files,
+    externalResources: ctx.externalLinks,
     blockLocalContext: ctx.localNotes
       ? { notes: ctx.localNotes }
-      : extra?.blockLocalContext,
+      : undefined,
+  };
+  if (!extra) return base;
+  return {
+    ...base,
     ...extra,
+    // Prefer richer merge: extra wins when set; keep files/links from ctx if extra omits
+    files: extra.files ?? ctx.files,
+    externalResources: extra.externalResources ?? ctx.externalLinks,
+    blockLocalContext:
+      extra.blockLocalContext ??
+      (ctx.localNotes ? { notes: ctx.localNotes } : undefined),
   };
 }
 
@@ -224,6 +390,7 @@ export function buildSimulationSamplesUserPrompt(
     focusedBlockId?: string | null;
     unusableCells?: PromptWorkspaceContextInput["unusableCells"];
     locale?: string | null;
+    blockLocalContext?: PromptWorkspaceContextInput["blockLocalContext"];
     /**
      * "block" (default when focusedBlockId set) or "workspace" for entire-map
      * samples with no single focused block.
@@ -235,15 +402,24 @@ export function buildSimulationSamplesUserPrompt(
     ctx.sampleScope === "workspace" ||
     (!ctx.focusedBlockId && ctx.sampleScope !== "block");
 
+  // Prefer full local_context when inventory carries it for the focused block.
+  let blockLocalContext = ctx.blockLocalContext;
+  if (!blockLocalContext && !isWorkspaceScope && ctx.focusedBlockId) {
+    const focused = (ctx.blocks || []).find((b) => b.id === ctx.focusedBlockId);
+    if (focused?.local_context) blockLocalContext = focused.local_context;
+  }
+  if (!blockLocalContext && !isWorkspaceScope && ctx.localNotes) {
+    blockLocalContext = { notes: ctx.localNotes };
+  }
+
   const assembled = assemblePromptWorkspaceContext(
     practiceContextToPromptInput(ctx, {
       blocks: ctx.blocks,
       focusedBlockId: isWorkspaceScope ? null : ctx.focusedBlockId,
       unusableCells: ctx.unusableCells,
-      blockLocalContext:
-        !isWorkspaceScope && ctx.localNotes
-          ? { notes: ctx.localNotes }
-          : undefined,
+      blockLocalContext: isWorkspaceScope ? undefined : blockLocalContext,
+      files: ctx.files,
+      externalResources: ctx.externalLinks,
     }),
   );
   const languageNote =

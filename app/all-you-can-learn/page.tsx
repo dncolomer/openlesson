@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
@@ -9,15 +9,16 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { ayclLandingPath } from "@/lib/aycl-landing";
 import {
-  AYCL_FULL_PRICE_LABEL,
-  AYCL_LEARNER_PRICE_LABEL,
   AYCL_TOKEN_STORAGE_KEY,
   ayclCatalogKeyPoints,
   ayclLifetimeSystemUpdatesFootnote,
-  ayclOfferDescription,
-  ayclOfferLabel,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
+import {
+  collectAyclCatalogCategories,
+  filterAyclCatalogCards,
+  type AyclCatalogCardDto,
+} from "@/lib/aycl-marketplace";
 
 const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn", [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
@@ -26,31 +27,13 @@ const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn", [
   "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg",
 ]);
 
-interface CatalogOffer {
-  tier: AyclAccessTier;
-  label: string;
-  description: string;
-  priceLabel: string;
-}
-
-interface CatalogWorkspace {
-  id: string;
-  title: string;
-  description?: string | null;
-  cover_image_url?: string | null;
-  /** @deprecated prefer offers.full.priceLabel */
-  priceLabel: string;
-  offers?: {
-    learner: CatalogOffer;
-    full: CatalogOffer;
-  };
-}
-
 export default function AllYouCanLearnPage() {
-  const [workspaces, setWorkspaces] = useState<CatalogWorkspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<AyclCatalogCardDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/aycl/workspaces")
@@ -61,6 +44,20 @@ export default function AllYouCanLearnPage() {
       .catch(() => setError("Failed to load workspaces"))
       .finally(() => setLoading(false));
   }, []);
+
+  const categories = useMemo(
+    () => collectAyclCatalogCategories(workspaces),
+    [workspaces],
+  );
+
+  const filtered = useMemo(
+    () =>
+      filterAyclCatalogCards(workspaces, {
+        category: categoryFilter,
+        query: searchQuery,
+      }),
+    [workspaces, categoryFilter, searchQuery],
+  );
 
   const startCheckout = async (
     workspaceId: string,
@@ -107,12 +104,11 @@ export default function AllYouCanLearnPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <header
           className="relative mb-6 overflow-hidden rounded-2xl border border-zinc-700/60 bg-zinc-950/70 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
           data-aycl-catalog-hero
         >
-          {/* Soft ambient accents */}
           <div
             className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl"
             aria-hidden
@@ -132,7 +128,7 @@ export default function AllYouCanLearnPage() {
                 className="h-1.5 w-1.5 rounded-full bg-amber-300/90 shadow-[0_0_8px_rgba(252,211,77,0.7)]"
                 aria-hidden
               />
-              Recreational learning · Lifetime access
+              Marketplace · Recreational learning · Lifetime access
             </p>
             <h1 className="bg-gradient-to-b from-white via-white to-zinc-400 bg-clip-text text-3xl font-medium tracking-[-1.6px] text-transparent sm:text-5xl">
               All-You-Can-Learn
@@ -176,6 +172,75 @@ export default function AllYouCanLearnPage() {
           </div>
         </header>
 
+        {/* Marketplace search + category filters */}
+        {!loading && workspaces.length > 0 ? (
+          <div
+            className="mb-6 space-y-3 rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-4 backdrop-blur-sm"
+            data-aycl-marketplace-filters
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="relative min-w-0 flex-1">
+                <span className="sr-only">Search courses</span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search title, author, category…"
+                  data-aycl-marketplace-search
+                  className="w-full rounded-lg border border-zinc-700/80 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+                />
+              </label>
+              <p
+                className="shrink-0 font-mono text-[11px] uppercase tracking-[1.5px] text-zinc-500"
+                data-aycl-marketplace-result-count
+              >
+                {filtered.length} of {workspaces.length}
+              </p>
+            </div>
+            <div
+              className="flex flex-wrap gap-2"
+              data-aycl-marketplace-category-chips
+              role="group"
+              aria-label="Filter by category"
+            >
+              <button
+                type="button"
+                onClick={() => setCategoryFilter("all")}
+                data-aycl-category-chip="all"
+                data-aycl-category-chip-active={
+                  categoryFilter === "all" ? "true" : "false"
+                }
+                className={`rounded-full border px-3 py-1 text-xs transition ${
+                  categoryFilter === "all"
+                    ? "border-amber-500/40 bg-amber-500/15 text-amber-100"
+                    : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => {
+                const active = categoryFilter.toLowerCase() === cat.toLowerCase();
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoryFilter(cat)}
+                    data-aycl-category-chip={cat}
+                    data-aycl-category-chip-active={active ? "true" : "false"}
+                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                      active
+                        ? "border-amber-500/40 bg-amber-500/15 text-amber-100"
+                        : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {error ? (
           <p className="mb-4 text-center text-sm text-red-400">{error}</p>
         ) : null}
@@ -188,47 +253,69 @@ export default function AllYouCanLearnPage() {
           <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm">
             <p className="text-zinc-400">No learning environments are available yet.</p>
           </div>
+        ) : filtered.length === 0 ? (
+          <div
+            className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm"
+            data-aycl-marketplace-empty-filter
+          >
+            <p className="text-zinc-400">No courses match this filter.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryFilter("all");
+                setSearchQuery("");
+              }}
+              className="mt-3 text-sm text-zinc-300 underline decoration-zinc-600 underline-offset-2 hover:text-white"
+            >
+              Clear filters
+            </button>
+          </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2">
-            {workspaces.map((workspace) => {
-              const learnerOffer = workspace.offers?.learner ?? {
-                tier: "learner" as const,
-                label: ayclOfferLabel("learner"),
-                description: ayclOfferDescription("learner"),
-                priceLabel: AYCL_LEARNER_PRICE_LABEL,
-              };
-              const fullOffer = workspace.offers?.full ?? {
-                tier: "full" as const,
-                label: ayclOfferLabel("full"),
-                description: ayclOfferDescription("full"),
-                priceLabel: workspace.priceLabel || AYCL_FULL_PRICE_LABEL,
-              };
+          <div
+            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            data-aycl-marketplace-grid
+          >
+            {filtered.map((workspace) => {
+              const learnerOffer = workspace.offers.learner;
+              const fullOffer = workspace.offers.full;
               const learnerBusy = checkoutKey === `${workspace.id}:learner`;
               const fullBusy = checkoutKey === `${workspace.id}:full`;
               const anyBusy = learnerBusy || fullBusy;
               const landingHref = ayclLandingPath(workspace.id);
+              const blurb = workspace.summary || workspace.description;
               return (
                 <article
                   key={workspace.id}
-                  className="group overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
                   data-aycl-catalog-card
+                  data-aycl-card-category={workspace.category || ""}
                 >
                   <Link href={landingHref} data-aycl-catalog-landing-link>
                     <WorkspaceCardHero
                       workspaceId={workspace.id}
                       coverImageUrl={workspace.cover_image_url}
                       fallback="aesthetic"
-                      heightClassName="h-44 sm:h-48"
+                      heightClassName="h-40 sm:h-44"
                       badges={
-                        <span className="border border-amber-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90 backdrop-blur-sm">
-                          Lifetime access
-                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {workspace.category ? (
+                            <span
+                              className="border border-cyan-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90 backdrop-blur-sm"
+                              data-aycl-card-category-badge
+                            >
+                              {workspace.category}
+                            </span>
+                          ) : null}
+                          <span className="border border-amber-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90 backdrop-blur-sm">
+                            Lifetime
+                          </span>
+                        </div>
                       }
                     />
                   </Link>
-                  <div className="space-y-4 p-5">
-                    <div>
-                      <h2 className="text-xl font-medium leading-tight text-white">
+                  <div className="flex flex-1 flex-col space-y-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg font-medium leading-tight text-white">
                         <Link
                           href={landingHref}
                           className="hover:underline"
@@ -237,11 +324,63 @@ export default function AllYouCanLearnPage() {
                           {workspace.title}
                         </Link>
                       </h2>
-                      {workspace.description ? (
-                        <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                          {workspace.description}
+                      {blurb ? (
+                        <p
+                          className="mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-500"
+                          data-aycl-card-summary
+                        >
+                          {blurb}
                         </p>
                       ) : null}
+
+                      {(workspace.authorName || workspace.authorAvatarUrl) && (
+                        <div
+                          className="mt-3 flex items-center gap-2"
+                          data-aycl-card-author
+                        >
+                          {workspace.authorAvatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={workspace.authorAvatarUrl}
+                              alt=""
+                              className="h-7 w-7 rounded-full border border-zinc-700 object-cover"
+                              data-aycl-card-author-avatar
+                            />
+                          ) : (
+                            <span
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-[10px] font-medium text-zinc-400"
+                              aria-hidden
+                            >
+                              {(workspace.authorName || "?").slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                          <span
+                            className="truncate text-xs text-zinc-400"
+                            data-aycl-card-author-name
+                          >
+                            {workspace.authorName || "Author"}
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        className="mt-3 flex flex-wrap items-center gap-2"
+                        data-aycl-card-price-chips
+                      >
+                        <span
+                          className="rounded-md border border-zinc-700 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-300"
+                          data-aycl-card-price-learner
+                        >
+                          Practice {learnerOffer.priceLabel}
+                        </span>
+                        <span
+                          className="rounded-md border border-zinc-600 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-white"
+                          data-aycl-card-price-full
+                        >
+                          Full {fullOffer.priceLabel}
+                        </span>
+                      </div>
+
                       <Link
                         href={landingHref}
                         className="mt-2 inline-block text-xs font-medium text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
@@ -250,71 +389,36 @@ export default function AllYouCanLearnPage() {
                       </Link>
                     </div>
 
-                    <div className="grid gap-3" data-aycl-dual-offers>
-                      <div
-                        className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3"
-                        data-aycl-offer="learner"
+                    <div className="grid gap-2" data-aycl-dual-offers>
+                      <button
+                        type="button"
+                        data-aycl-checkout-learner
+                        onClick={() => startCheckout(workspace.id, "learner")}
+                        disabled={anyBusy}
+                        className="w-full rounded-sm border border-zinc-600 bg-transparent px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-white">
-                              {learnerOffer.label}
-                            </p>
-                            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                              {learnerOffer.description}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-lg font-semibold text-white">
-                            {learnerOffer.priceLabel}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          data-aycl-checkout-learner
-                          onClick={() => startCheckout(workspace.id, "learner")}
-                          disabled={anyBusy}
-                          className="mt-3 w-full rounded-sm border border-zinc-600 bg-transparent px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
-                        >
-                          {learnerBusy ? "Redirecting…" : "Get practice access"}
-                        </button>
-                      </div>
-
-                      <div
-                        className="rounded-lg border border-zinc-700 bg-zinc-900/80 p-3"
-                        data-aycl-offer="full"
+                        {learnerBusy
+                          ? "Redirecting…"
+                          : `Practice · ${learnerOffer.priceLabel}`}
+                      </button>
+                      <button
+                        type="button"
+                        data-aycl-checkout-full
+                        onClick={() => startCheckout(workspace.id, "full")}
+                        disabled={anyBusy}
+                        className="w-full rounded-sm bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-white">
-                              {fullOffer.label}
-                            </p>
-                            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                              {fullOffer.description}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-lg font-semibold text-white">
-                            {fullOffer.priceLabel}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          data-aycl-checkout-full
-                          onClick={() => startCheckout(workspace.id, "full")}
-                          disabled={anyBusy}
-                          className="mt-3 w-full rounded-sm bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
-                        >
-                          {fullBusy ? "Redirecting…" : "Get full access"}
-                        </button>
-                      </div>
+                        {fullBusy
+                          ? "Redirecting…"
+                          : `Full access · ${fullOffer.priceLabel}`}
+                      </button>
                     </div>
 
                     <p
-                      className="text-[11px] text-zinc-600"
+                      className="text-[10px] leading-relaxed text-zinc-600"
                       data-aycl-lifetime-updates-footnote
                     >
                       {ayclLifetimeSystemUpdatesFootnote()}
-                      {" · "}
-                      Upgrade anytime from practice
                     </p>
                   </div>
                 </article>

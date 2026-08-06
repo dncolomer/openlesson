@@ -331,17 +331,25 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).not.toContain("addDescriptionBtn");
   });
 
-  it("moves public / Paid(AYCL) access controls into Settings; group mode removed", () => {
+  it("moves public into Settings Access; AYCL marketplace is own settings sub-tab; group mode removed", () => {
     expect(viewSource).toContain("plan={plan}");
     expect(viewSource).toContain("onPlanUpdate={setPlan}");
     expect(integrationSource).toContain("WorkspaceAccessSettings");
+    expect(integrationSource).toContain("WorkspaceAyclMarketplaceSettings");
+    expect(integrationSource).toContain('data-settings-tab-panel="aycl"');
     expect(accessSource).toContain("data-workspace-access-settings");
     expect(accessSource).toContain("makePublic");
     expect(accessSource).not.toContain("makeGroupPlan");
     expect(accessSource).not.toContain("is_group");
     expect(accessSource).not.toContain("/group");
-    expect(accessSource).toContain("Enable Paid (AYCL)");
-    expect(accessSource).toContain("/api/me/status");
+    // AYCL listing moved off Access into dedicated marketplace settings surface
+    expect(accessSource).not.toContain("Enable Paid (AYCL)");
+    const ayclSettings = fs.readFileSync(
+      path.join(REPO_ROOT, "components/WorkspaceAyclMarketplaceSettings.tsx"),
+      "utf8",
+    );
+    expect(ayclSettings).toContain("Enable Paid (AYCL)");
+    expect(ayclSettings).toContain("/api/me/status");
     // Removed from identity overflow menu
     expect(identitySource).not.toContain("togglePublic");
     expect(identitySource).not.toContain("toggleGroup");

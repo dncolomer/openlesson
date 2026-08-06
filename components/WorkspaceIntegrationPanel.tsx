@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { slugifyIntegrationName } from "@/lib/pow-api/integration-skill";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
+import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
 import { WorkspaceGuestLinksPanel } from "@/components/WorkspaceGuestLinksPanel";
@@ -18,6 +19,7 @@ import type { Workspace } from "@/components/WorkspaceView";
 
 type SettingsSubview =
   | "general"
+  | "aycl"
   | "regions"
   | "knowledge-portal"
   | "guest-links"
@@ -26,6 +28,7 @@ type SettingsSubview =
 
 const SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "general",
+  "aycl",
   "regions",
   "knowledge-portal",
   "guest-links",
@@ -89,6 +92,7 @@ export function WorkspaceIntegrationPanel({
     () =>
       [
         { id: "general" as const, label: "General" },
+        { id: "aycl" as const, label: "AYCL" },
         { id: "regions" as const, label: "Knowledge Regions" },
         {
           id: "knowledge-portal" as const,
@@ -200,6 +204,23 @@ export function WorkspaceIntegrationPanel({
                 Workspace identity and access settings are unavailable in this context.
               </p>
             ) : null}
+          </div>
+        ) : null}
+
+        {activeSubview === "aycl" ? (
+          <div className="space-y-4" data-settings-tab-panel="aycl">
+            {plan && onPlanUpdate ? (
+              <WorkspaceAyclMarketplaceSettings
+                plan={plan}
+                workspaceId={workspaceId}
+                isOwner={isOwner}
+                onPlanUpdate={onPlanUpdate}
+              />
+            ) : (
+              <p className="text-xs text-neutral-500">
+                AYCL marketplace settings are unavailable in this context.
+              </p>
+            )}
           </div>
         ) : null}
 

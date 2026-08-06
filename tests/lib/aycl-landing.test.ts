@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  AYCL_LANDING_WORKSPACE_SELECT,
   ayclLandingCheckoutBody,
   ayclLandingOgImagePath,
   ayclLandingPath,
@@ -99,12 +100,15 @@ describe("aycl landing model", () => {
     expect(landing.offers.learner.tier).toBe("learner");
     expect(landing.offers.full.tier).toBe("full");
     expect(landing.offers.learner.priceLabel).toMatch(/\$/);
+    expect(landing.offers.learner.priceCents).toBeGreaterThan(0);
+    expect(landing.offers.full.priceCents).toBeGreaterThan(0);
+    expect(landing.category).toBe(null);
+    expect(landing.authorName).toBe(null);
     expect(landing.paths.landingPath).toBe("/all-you-can-learn/ws-aycl-1");
-    expect(landing.paths.ogImagePath).toBe(
-      "/all-you-can-learn/ws-aycl-1/opengraph-image",
-    );
+    // Share image is the unsys standard root card (not a per-workspace path).
+    expect(landing.paths.ogImagePath).toBe("/opengraph-image");
     expect(ayclLandingPath("ws-aycl-1")).toBe("/all-you-can-learn/ws-aycl-1");
-    expect(ayclLandingOgImagePath("ws-aycl-1")).toContain("opengraph-image");
+    expect(ayclLandingOgImagePath("ws-aycl-1")).toBe("/opengraph-image");
 
     const body = ayclLandingCheckoutBody("ws-aycl-1", "learner");
     expect(body).toEqual({
@@ -128,6 +132,49 @@ describe("aycl landing model", () => {
         "checkout=" + JSON.stringify(body),
       ].join("\n"),
     );
+  });
+
+  it("listing fields win on landing summary, author, category, and prices", () => {
+    const landing = assembleAyclLandingSummary({
+      workspace: {
+        ...fixtureWorkspace,
+        description: "Generic workspace description",
+        aycl_summary: "Marketplace-tuned summary for buyers",
+        aycl_category: "Science",
+        aycl_author_name: "Dr. Bayes",
+        aycl_author_avatar_url: "https://example.com/bayes.png",
+        aycl_learner_price_cents: 499,
+        aycl_full_price_cents: 1499,
+      },
+      blocks: fixtureBlocks,
+    });
+    expect(landing.summary).toBe("Marketplace-tuned summary for buyers");
+    expect(landing.category).toBe("Science");
+    expect(landing.authorName).toBe("Dr. Bayes");
+    expect(landing.authorAvatarUrl).toBe("https://example.com/bayes.png");
+    expect(landing.offers.learner.priceCents).toBe(499);
+    expect(landing.offers.learner.priceLabel).toBe("$4.99");
+    expect(landing.offers.full.priceCents).toBe(1499);
+    expect(landing.offers.full.priceLabel).toBe("$14.99");
+  });
+
+  it("shared workspace select includes all marketplace listing columns", () => {
+    for (const col of [
+      "aycl_category",
+      "aycl_summary",
+      "aycl_author_name",
+      "aycl_author_avatar_url",
+      "aycl_learner_price_cents",
+      "aycl_full_price_cents",
+    ]) {
+      expect(AYCL_LANDING_WORKSPACE_SELECT).toContain(col);
+    }
+    const page = read("app/all-you-can-learn/[workspaceId]/page.tsx");
+    const og = read("app/all-you-can-learn/[workspaceId]/opengraph-image.tsx");
+    expect(page).toContain("AYCL_LANDING_WORKSPACE_SELECT");
+    // OG image is unsys standard — no per-workspace workspace select.
+    expect(og).toContain("composeStandardOgImage");
+    expect(og).not.toContain("AYCL_LANDING_WORKSPACE_SELECT");
   });
 });
 
@@ -216,7 +263,7 @@ describe("aycl landing + hackathons structural", () => {
     // Landing surface
     expect(landingPage).toContain("AyclLandingClient");
     expect(landingPage).toContain("generateMetadata");
-    expect(landingPage).toContain("ayclLandingOgImagePath");
+    expect(landingPage).toContain("standardShareSocialMetadata");
     expect(landingPage).toContain("openGraph");
     expect(landingClient).toContain("data-aycl-landing");
     expect(landingClient).toContain("data-aycl-landing-summary");
@@ -236,10 +283,10 @@ describe("aycl landing + hackathons structural", () => {
     expect(lib).toContain("viewOnly: true");
     expect(lib).toContain("canEdit: false");
 
-    // OG dedicated route
-    expect(og).toContain("composeOgImageFromSurface");
-    expect(og).toContain("assembleAyclLandingSummary");
-    expect(og).toContain("All-You-Can-Learn");
+    // OG dedicated route emits unsys standard (not per-workspace copy)
+    expect(og).toContain("composeStandardOgImage");
+    expect(og).not.toContain("assembleAyclLandingSummary");
+    expect(og).not.toContain("All-You-Can-Learn");
 
     // APIs
     expect(apiLanding).toContain("is_all_you_can_learn");

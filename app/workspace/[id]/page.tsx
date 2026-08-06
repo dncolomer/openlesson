@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { WorkspaceView } from "@/components/WorkspaceView";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,31 +37,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = plan.title || plan.root_topic || "Workspace";
   const description = plan.description || "A workspace on Uncertain Systems";
-  // Private workspace UI has no dedicated OG route; use composed root card (not raw aesthetics).
-  const images = [
-    {
-      url: "/opengraph-image",
-      width: 1200,
-      height: 630,
-      alt: title,
-    },
-  ];
+  // Page SEO stays workspace-specific; social share is the unsys standard.
+  const social = standardShareSocialMetadata();
 
   return {
     title: `${title} - Uncertain Systems`,
     description,
-    openGraph: {
-      title: `${title} - Uncertain Systems`,
-      description,
-      type: "website",
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${title} - Uncertain Systems`,
-      description,
-      images: images.map((i) => i.url),
-    },
+    openGraph: social.openGraph,
+    twitter: social.twitter,
   };
 }
 

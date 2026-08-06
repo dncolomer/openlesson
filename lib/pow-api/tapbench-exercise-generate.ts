@@ -18,6 +18,7 @@ import {
   assemblePromptWorkspaceContext,
   type BlockLocalContextInput,
   type PromptBlockInventoryItem,
+  type PromptExternalResourceItem,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
 import {
@@ -44,6 +45,11 @@ export interface GenerateDomainExerciseInput extends TapbenchExerciseContext {
   workspaceDescription?: string | null;
   notes?: string | null;
   files?: WorkspaceFileContextItem[] | null;
+  /**
+   * Workspace external links — feeds JIT URL-bias in assemblePromptWorkspaceContext
+   * so exercise authoring consults attached resources.
+   */
+  externalResources?: PromptExternalResourceItem[] | null;
   /** ILE chapter plan text (Project Mode). */
   chapterDescription?: string | null;
   /** Map inventory + layout for shared assembler (TAP/ILE/TAPBench). */
@@ -85,6 +91,7 @@ export function buildDomainExerciseAuthorUserPrompt(
     blockDescription: input.blockDescription,
     chapterDescription: input.chapterDescription,
     files: input.files,
+    externalResources: input.externalResources,
     blocks: input.blocks,
     focusedBlockId: input.focusedBlockId,
     blockLocalContext: input.blockLocalContext,

@@ -6,7 +6,9 @@ import {
   deriveSimulationSamples,
   type SimulationSampleScope,
   type SimulationSampleScopeKind,
+  type SimulationSampleWorkspaceContext,
 } from "@/lib/workspace-simulation-samples";
+import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 /**
@@ -71,8 +73,8 @@ export function WorkspaceSimulationPanel({
     activeScope != null &&
     (activeScope.kind === "workspace" || Boolean(activeScope.blockId));
 
-  const workspaceCtx = useMemo(
-    () => ({
+  const workspaceCtx = useMemo((): SimulationSampleWorkspaceContext => {
+    return {
       workspaceTitle: title,
       rootTopic: rootTopic ?? workspaceTitle,
       workspaceGoal,
@@ -84,23 +86,22 @@ export function WorkspaceSimulationPanel({
         title: b.title,
         description: b.description,
         planning_prompt: b.planning_prompt,
-        local_context: b.local_context,
+        local_context: parseBlockLocalContext(b.local_context) ?? null,
         is_start: b.is_start,
         next_block_ids: b.next_block_ids,
         lock_until_block_ids: b.lock_until_block_ids,
       })),
-    }),
-    [
-      blocks,
-      locale,
-      rootTopic,
-      title,
-      workspaceDescription,
-      workspaceGoal,
-      workspaceNotes,
-      workspaceTitle,
-    ],
-  );
+    };
+  }, [
+    blocks,
+    locale,
+    rootTopic,
+    title,
+    workspaceDescription,
+    workspaceGoal,
+    workspaceNotes,
+    workspaceTitle,
+  ]);
 
   /** Offline seed preview (same pure builders as live Explore/Drill fallbacks). */
   const seedPreview = useMemo(() => {

@@ -5,6 +5,10 @@
 
 import type { BlockLocalContextInput } from "@/lib/prompt-workspace-context";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
+import {
+  absorbExternalResourcesIntoLocalContext,
+  type ExternalLinkAbsorbInput,
+} from "@/lib/workspace-external-resources";
 
 export type ShapeContextSourceKind = "file" | "external" | "notes";
 
@@ -148,6 +152,7 @@ export function shapeSelectionToLocalContext(
   const global_file_refs: string[] = [];
   const local_files: Array<{ name: string; excerpt?: string | null }> = [];
   const external_resource_ids: string[] = [];
+  const externalLinks: ExternalLinkAbsorbInput[] = [];
   const seenFiles = new Set<string>();
   const seenExt = new Set<string>();
 
@@ -172,27 +177,63 @@ export function shapeSelectionToLocalContext(
         external_resource_ids.push(id);
       }
       const name = clean(opt.label) || `External ${id}`;
+      const url = clean(opt.url) || null;
+      // Pull URL from excerpt "URL: …" when option.url is missing (orphan keys).
+      let resolvedUrl = url;
+      if (!resolvedUrl && opt.excerpt) {
+        const m = String(opt.excerpt).match(/URL:\s*(\S+)/i);
+        if (m?.[1]) resolvedUrl = m[1].trim();
+      }
+      const descFromExcerpt =
+        opt.excerpt && !String(opt.excerpt).startsWith("URL:")
+          ? String(opt.excerpt).replace(/^URL:\s*\S+\s*/i, "").trim()
+          : opt.excerpt && String(opt.excerpt).includes("\n")
+            ? String(opt.excerpt).split("\n").slice(1).join("\n").trim()
+            : null;
+      externalLinks.push({
+        id: id || null,
+        title: name,
+        url: resolvedUrl,
+        description: descFromExcerpt || null,
+      });
       local_files.push({
         name: `[external] ${name}`,
-        excerpt: opt.excerpt || (opt.url ? `URL: ${opt.url}` : null),
+        excerpt:
+          opt.excerpt ||
+          (resolvedUrl ? `URL: ${resolvedUrl}` : null),
       });
     }
   }
 
+  // Locally absorb each external link into durable notes (title + URL + summary),
+  // not only opaque resource ids.
+  const absorbed = absorbExternalResourcesIntoLocalContext(
+    {
+      notes,
+      local_files,
+      global_file_refs,
+      external_resource_ids,
+    },
+    externalLinks,
+  );
+
   const raw: BlockLocalContextInput = {
-    notes,
-    global_file_refs: global_file_refs.length ? global_file_refs : null,
-    local_files: local_files.length ? local_files : null,
-    external_resource_ids: external_resource_ids.length ? external_resource_ids : null,
+    notes: absorbed.notes,
+    global_file_refs: absorbed.global_file_refs,
+    local_files: absorbed.local_files,
+    external_resource_ids: absorbed.external_resource_ids,
   };
   const norm = normalizeBlockLocalContext(raw);
   // normalize may drop external_resource_ids — preserve if present
-  if (!norm.hasLocalMaterials && !external_resource_ids.length) return null;
+  const extIds = absorbed.external_resource_ids || [];
+  if (!norm.hasLocalMaterials && !extIds.length) return null;
   return {
-    notes: norm.notes,
+    notes: norm.notes || absorbed.notes,
     global_file_refs: norm.globalFileRefs.length ? norm.globalFileRefs : null,
-    local_files: norm.localFiles.length ? norm.localFiles : null,
-    external_resource_ids: external_resource_ids.length ? external_resource_ids : null,
+    local_files: norm.localFiles.length
+      ? norm.localFiles
+      : absorbed.local_files,
+    external_resource_ids: extIds.length ? extIds : null,
   };
 }
 

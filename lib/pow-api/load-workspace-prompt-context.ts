@@ -10,6 +10,7 @@ import {
   parseBlockLocalContext,
   type BlockLocalContextInput,
   type PromptBlockInventoryItem,
+  type PromptExternalResourceItem,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
 
@@ -21,6 +22,8 @@ export type LoadedWorkspacePromptContext = {
   workspaceDescription: string | null;
   notes: string | null;
   files: WorkspaceFileContextItem[];
+  /** Workspace external links (title/url/description). */
+  externalResources: PromptExternalResourceItem[];
   blocks: PromptBlockInventoryItem[];
   unusableCells: Array<{ row: number; col: number }>;
   focusedBlockId: string | null;
@@ -104,6 +107,38 @@ export async function loadWorkspacePromptContext(
     files = [];
   }
 
+  let externalResources: PromptExternalResourceItem[] = [];
+  try {
+    const { data: extRows, error: extError } = await supabase
+      .from("workspace_external_resources")
+      .select("id, title, url, description")
+      .eq("workspace_id", id)
+      .order("sort_order", { ascending: true })
+      .limit(24);
+    if (extError) {
+      const msg = extError.message || "";
+      if (!/schema cache|does not exist|workspace_external_resources/i.test(msg)) {
+        console.error("[load-workspace-prompt-context] external resources:", extError);
+      }
+    } else {
+      externalResources = (extRows || []).map(
+        (r: {
+          id?: string;
+          title?: string | null;
+          url?: string | null;
+          description?: string | null;
+        }) => ({
+          id: r.id ?? null,
+          title: r.title ?? null,
+          url: r.url ?? null,
+          description: r.description ?? null,
+        }),
+      );
+    }
+  } catch {
+    externalResources = [];
+  }
+
   const focused =
     (focusedBlockId && blocks.find((b) => b.id === focusedBlockId)) || null;
 
@@ -116,6 +151,7 @@ export async function loadWorkspacePromptContext(
       (workspace as { description?: string | null }).description ?? null,
     notes: (workspace as { notes?: string | null }).notes ?? null,
     files,
+    externalResources,
     blocks,
     unusableCells: normalizeUnusableCells(
       (workspace as { unusable_cells?: unknown }).unusable_cells,

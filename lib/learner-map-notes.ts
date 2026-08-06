@@ -722,6 +722,36 @@ export function listVisibleMapNotes(input: {
   return merged;
 }
 
+/**
+ * UI default: map post-its are drawn when notes mount (creator + learner).
+ * Session-only preference — independent of annotation layer visibility.
+ */
+export function defaultMapNotesPlaneVisible(): boolean {
+  return true;
+}
+
+/** Whether post-its should paint on the continuous plane. */
+export function shouldRenderMapNotesOnPlane(planeVisible: unknown): boolean {
+  return planeVisible === true || planeVisible === "true" || planeVisible === 1;
+}
+
+/**
+ * Gate the post-it render list without mutating storage collections.
+ * When plane is hidden, returns [] so notes stay in memory/localStorage intact.
+ */
+export function mapNotesForPlaneRender(
+  notes: readonly LearnerMapNote[] | null | undefined,
+  planeVisible: unknown,
+): LearnerMapNote[] {
+  if (!shouldRenderMapNotesOnPlane(planeVisible)) return [];
+  return Array.isArray(notes) ? [...notes] : [];
+}
+
+/** Flip hide/show for the notes plane eye toggle. */
+export function toggleMapNotesPlaneVisible(planeVisible: unknown): boolean {
+  return !shouldRenderMapNotesOnPlane(planeVisible);
+}
+
 export function learnerMapNotesStoreOps(input: {
   workspaceId: string;
   learnerScopeId: string;

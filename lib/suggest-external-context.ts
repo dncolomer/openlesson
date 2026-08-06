@@ -3,7 +3,10 @@
  * local-context external resources for Add / geometry create.
  */
 
-import { isValidHttpUrl } from "@/lib/workspace-external-resources";
+import {
+  formatAbsorbedExternalNoteBlock,
+  isValidHttpUrl,
+} from "@/lib/workspace-external-resources";
 import {
   shapeContextSourceKey,
   type ShapeContextSourceOption,
@@ -121,18 +124,28 @@ export function externalSuggestionToContextOption(
   const desc = [suggestion.description, suggestion.rationale]
     .filter(Boolean)
     .join(" — ");
+  // Prefer full absorbed note block (title + URL + summary) for local materials.
+  const absorbed = formatAbsorbedExternalNoteBlock({
+    title: suggestion.title,
+    url: suggestion.url,
+    description: desc || null,
+    id: id || null,
+  });
   return {
     key: shapeContextSourceKey("external", id || suggestion.key),
     kind: "external",
     id: id || suggestion.key,
     label: suggestion.title,
     url: suggestion.url,
-    excerpt: [
-      suggestion.url ? `URL: ${suggestion.url}` : null,
-      desc || null,
-    ]
-      .filter(Boolean)
-      .join("\n") || null,
+    excerpt:
+      absorbed ||
+      [
+        suggestion.url ? `URL: ${suggestion.url}` : null,
+        desc || null,
+      ]
+        .filter(Boolean)
+        .join("\n") ||
+      null,
   };
 }
 
@@ -148,6 +161,11 @@ export function acceptExternalContextSuggestion(
   const description =
     [suggestion.description, suggestion.rationale].filter(Boolean).join("\n") ||
     null;
+  const absorbed = formatAbsorbedExternalNoteBlock({
+    title,
+    url: suggestion.url,
+    description,
+  });
   return {
     createInput: {
       title: clip(title, TITLE_MAX),
@@ -162,9 +180,11 @@ export function acceptExternalContextSuggestion(
       id: suggestion.key,
       label: clip(title, TITLE_MAX),
       url: suggestion.url,
-      excerpt: description
-        ? `URL: ${suggestion.url}\n${description}`
-        : `URL: ${suggestion.url}`,
+      excerpt:
+        absorbed ||
+        (description
+          ? `URL: ${suggestion.url}\n${description}`
+          : `URL: ${suggestion.url}`),
     },
   };
 }

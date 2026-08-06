@@ -5,6 +5,11 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { AYCL_HACKATHONS } from "@/lib/aycl-landing";
 import { aestheticImageForId } from "@/lib/aesthetics";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems/hackathons",
+});
 
 export const metadata: Metadata = {
   title: "Hackathons · Projects & Community",
@@ -13,27 +18,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://uncertain.systems/hackathons",
   },
-  openGraph: {
-    title: "Hackathons · Projects & Community | Uncertain Systems",
-    description:
-      "Events on frontier knowledge — probabilistic computing, learning systems, and more.",
-    url: "https://uncertain.systems/hackathons",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Hackathons",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Hackathons · Uncertain Systems",
-    description:
-      "Past and upcoming hackathons in the Projects & Community hub.",
-    images: ["/opengraph-image"],
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
 };
 
 const BACKGROUND_IMAGE = aestheticImageForId("hackathons", [

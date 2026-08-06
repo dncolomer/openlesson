@@ -8,6 +8,8 @@
  * File bodies are size-capped so large workspaces do not blow prompt budgets.
  */
 
+import { buildExternalUrlJitBiasSnippet } from "@/lib/workspace-external-resources";
+
 export const PROMPT_FILE_EXCERPT_MAX_CHARS = 2_400;
 export const PROMPT_FILE_EXCERPT_MAX_FILES = 6;
 export const PROMPT_NOTES_MAX_CHARS = 1_800;
@@ -66,6 +68,14 @@ export interface BlockLocalContextInput {
   external_resource_ids?: string[] | null;
 }
 
+/** External resource / link row for prompt grounding (title/url/description). */
+export type PromptExternalResourceItem = {
+  id?: string | null;
+  title?: string | null;
+  url?: string | null;
+  description?: string | null;
+};
+
 export interface PromptWorkspaceContextInput {
   workspaceTitle?: string | null;
   rootTopic?: string | null;
@@ -78,6 +88,11 @@ export interface PromptWorkspaceContextInput {
   /** ILE chapter plan text / longer-horizon brief. */
   chapterDescription?: string | null;
   files?: WorkspaceFileContextItem[] | null;
+  /**
+   * Workspace (and block-referenced) external links — titles/URLs/descriptions.
+   * Included in the context block so simulation/practice is not title-only.
+   */
+  externalResources?: PromptExternalResourceItem[] | null;
   /** Full map inventory (kinds/roles + layout). When set, topology is assembled. */
   blocks?: PromptBlockInventoryItem[] | null;
   /** Focused block id — used to attach local context and mark inventory focus. */
@@ -498,6 +513,28 @@ export function assemblePromptWorkspaceContext(
   }
   const hasLocalContext = localSection.hasLocal;
 
+  const externalResourceLines: string[] = [];
+  for (const er of input.externalResources || []) {
+    const title =
+      typeof er?.title === "string" ? er.title.replace(/\s+/g, " ").trim() : "";
+    const url =
+      typeof er?.url === "string" ? er.url.replace(/\s+/g, " ").trim() : "";
+    const desc =
+      typeof er?.description === "string"
+        ? er.description.replace(/\s+/g, " ").trim()
+        : "";
+    if (!title && !url && !desc) continue;
+    const head = title || url || "source";
+    const tail = [
+      title && url ? `<${clip(url, 80)}>` : !title && url ? clip(url, 80) : "",
+      desc ? clip(desc, 140) : "",
+    ]
+      .filter(Boolean)
+      .join(" — ");
+    externalResourceLines.push(`- ${head}${tail ? ` ${tail}` : ""}`);
+    if (externalResourceLines.length >= 12) break;
+  }
+
   const substanceParts = [
     chapterDescription,
     blockDescription,
@@ -506,6 +543,7 @@ export function assemblePromptWorkspaceContext(
     notes,
     localSection.notes,
     ...fileExcerpts.map((f) => f.excerpt),
+    ...externalResourceLines,
     extra,
     // Topology/inventory with descriptions count as light substance
     ...blockInventoryLines.filter((l) => l.includes(" — ")),
@@ -541,6 +579,24 @@ export function assemblePromptWorkspaceContext(
     for (const f of fileExcerpts) {
       lines.push(`### ${f.name}\n${f.excerpt}`);
     }
+  }
+
+  if (externalResourceLines.length > 0) {
+    lines.push("External links / sources:");
+    lines.push(...externalResourceLines);
+  }
+
+  // JIT bias: instruct the model to consult provided URLs when substance is needed.
+  const jitBias = buildExternalUrlJitBiasSnippet(
+    (input.externalResources || []).map((er) => ({
+      title: er?.title,
+      url: er?.url,
+      description: er?.description,
+      id: er?.id,
+    })),
+  );
+  if (jitBias) {
+    lines.push(jitBias);
   }
 
   if (blockInventoryLines.length > 0) {

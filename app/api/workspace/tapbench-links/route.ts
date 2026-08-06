@@ -118,6 +118,8 @@ export async function POST(req: NextRequest) {
       blockDescription,
       exerciseText: explicitExercise,
       files: promptCtx.files,
+      // JIT URL bias: external links from loadWorkspacePromptContext
+      externalResources: promptCtx.externalResources,
       blocks: promptCtx.blocks,
       focusedBlockId: promptCtx.focusedBlockId,
       blockLocalContext: promptCtx.blockLocalContext,

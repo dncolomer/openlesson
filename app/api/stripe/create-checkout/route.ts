@@ -9,7 +9,6 @@ import {
   TRIAL_PRICE_CENTS,
 } from "@/lib/plans";
 import {
-  ayclPriceCentsForTier,
   ayclPurchaseEligibleForUpgrade,
   createPendingAyclPurchase,
   getAyclPurchaseByToken,
@@ -21,9 +20,13 @@ import {
   ayclOfferLabel,
   ayclUpgradeOfferDescription,
   ayclUpgradeOfferLabel,
-  AYCL_UPGRADE_PRICE_CENTS,
   isAyclAccessTier,
 } from "@/lib/aycl-shared";
+import {
+  resolveAyclCheckoutCents,
+  resolveAyclUpgradeCents,
+  type AyclListingPriceFields,
+} from "@/lib/aycl-marketplace";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppOrigin } from "@/lib/app-url";
 import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
@@ -159,17 +162,24 @@ export async function POST(request: NextRequest) {
         }
         const { data: catalogWorkspace } = await admin
           .from("workspaces")
-          .select("id, title, root_topic")
+          .select(
+            "id, title, root_topic, aycl_learner_price_cents, aycl_full_price_cents",
+          )
           .eq("id", purchase.source_workspace_id)
           .single();
         const workspaceTitle =
           catalogWorkspace?.title ||
           catalogWorkspace?.root_topic ||
           "Learning Workspace";
+        const listingPrices: AyclListingPriceFields = {
+          aycl_learner_price_cents: catalogWorkspace?.aycl_learner_price_cents ?? null,
+          aycl_full_price_cents: catalogWorkspace?.aycl_full_price_cents ?? null,
+        };
+        const upgradeCents = resolveAyclUpgradeCents(listingPrices);
         lineItem = {
           price_data: {
             currency: "usd",
-            unit_amount: AYCL_UPGRADE_PRICE_CENTS,
+            unit_amount: upgradeCents,
             product_data: {
               name: `Unlock creation: ${workspaceTitle}`,
               description: ayclUpgradeOfferDescription(),
@@ -185,7 +195,9 @@ export async function POST(request: NextRequest) {
       } else {
         const { data: catalogWorkspace } = await admin
           .from("workspaces")
-          .select("id, title, root_topic, is_all_you_can_learn")
+          .select(
+            "id, title, root_topic, is_all_you_can_learn, aycl_learner_price_cents, aycl_full_price_cents",
+          )
           .eq("id", workspaceId)
           .single();
 
@@ -201,10 +213,15 @@ export async function POST(request: NextRequest) {
           : normalizeAyclAccessTier(rawTier || "full");
         const workspaceTitle =
           catalogWorkspace.title || catalogWorkspace.root_topic || "Learning Workspace";
+        const listingPrices: AyclListingPriceFields = {
+          aycl_learner_price_cents: catalogWorkspace.aycl_learner_price_cents ?? null,
+          aycl_full_price_cents: catalogWorkspace.aycl_full_price_cents ?? null,
+        };
+        const unitAmount = resolveAyclCheckoutCents(tier, listingPrices);
         lineItem = {
           price_data: {
             currency: "usd",
-            unit_amount: ayclPriceCentsForTier(tier),
+            unit_amount: unitAmount,
             product_data: {
               name: `${ayclOfferLabel(tier)}: ${workspaceTitle}`,
               description: ayclOfferDescription(tier),

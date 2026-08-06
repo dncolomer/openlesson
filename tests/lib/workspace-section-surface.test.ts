@@ -131,10 +131,9 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(view).toContain("<WorkspacePerformancePanel");
     expect(view).toContain("<WorkspaceIntegrationPanel");
 
-    expect(aycl).toContain("WorkspaceSectionSurface");
-    expect(aycl).toContain('kind="knowledge"');
-    expect(aycl).toContain('kind="settings"');
-    expect(aycl).toContain("imageSrc={workspaceImage}");
+    // AYCL shell is a thin WorkspaceView wrapper (surfaces live inside WorkspaceView).
+    expect(aycl).toContain("WorkspaceView");
+    expect(aycl).toContain("ayclToken={accessToken}");
   });
 
   it("section surface renders aesthetic image + overlays without identity name bar", () => {
@@ -196,6 +195,7 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(guestIdx).toBeGreaterThan(portalIdx);
     expect(dataStudioIdx).toBeGreaterThan(guestIdx);
     expect(integration).toContain('data-settings-tab-panel="general"');
+    expect(integration).toContain('data-settings-tab-panel="aycl"');
     expect(integration).toContain('data-settings-tab-panel="regions"');
     expect(integration).toContain('data-settings-tab-panel="knowledge-portal"');
     expect(integration).toContain('data-settings-tab-panel="guest-links"');

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assembleAyclLandingSummary } from "@/lib/aycl-landing";
+import {
+  AYCL_LANDING_WORKSPACE_SELECT,
+  assembleAyclLandingSummary,
+} from "@/lib/aycl-landing";
 
 export const runtime = "nodejs";
 
@@ -22,9 +25,7 @@ export async function GET(
     const supabase = createAdminClient();
     const { data: workspace, error } = await supabase
       .from("workspaces")
-      .select(
-        "id, title, root_topic, description, workspace_goal, notes, cover_image_url, is_all_you_can_learn, created_at",
-      )
+      .select(`${AYCL_LANDING_WORKSPACE_SELECT}, created_at`)
       .eq("id", workspaceId)
       .eq("is_all_you_can_learn", true)
       .maybeSingle();

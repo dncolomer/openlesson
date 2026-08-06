@@ -4,24 +4,19 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems/vision",
+});
 
 export const metadata: Metadata = {
   title: "Vision",
   description:
     "Uncertain Systems is building self-driving technology for learning — non-invasive systems that raise attention and understanding without asking humans to burn proportionally more energy.",
   alternates: { canonical: "https://uncertain.systems/vision" },
-  openGraph: {
-    title: "Vision | Uncertain Systems",
-    description:
-      "Self-driving technology for learning — non-invasive systems that raise attention and understanding.",
-    url: "https://uncertain.systems/vision",
-    images: [{ url: "/vision/opengraph-image", width: 1200, height: 630, alt: "Vision" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Vision | Uncertain Systems",
-    images: ["/vision/opengraph-image"],
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
 };
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";

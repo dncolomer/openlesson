@@ -165,36 +165,50 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     );
   });
 
-  it("single-empty Add pane mounts context picker and submit sends contextSourceKeys; API persists local_context", () => {
+  it("single-empty Add pane attaches context inside Add drawer; edit on existing blocks", () => {
     const pane = read("components/WorkspaceAddBlockPane.tsx");
     expect(pane).toContain("data-workspace-add-block-pane");
+    expect(pane).toContain('drawerId="add"');
+    // Attach picker lives inside Add drawer (same style as generate-in-shape)
     expect(pane).toContain("data-shape-context-picker");
     expect(pane).toContain("data-add-block-context-picker");
     expect(pane).toContain("data-shape-context-list");
     expect(pane).toContain("toggleShapeContextSelection");
     expect(pane).toContain("buildShapeContextSourceOptions");
     expect(pane).toContain("contextSourceKeys");
-    // Local context is a top-level drawer section, collapsed by default
-    expect(pane).toContain('title="Local context"');
-    expect(pane).toContain("defaultExpanded={false}");
-    // Submit passes selected keys (not prompt-only)
     expect(pane).toMatch(/onSubmit\([\s\S]*contextSourceKeys/);
+    expect(pane).toContain("WorkspaceSuggestExternalContext");
+    // Still a single drawer on empty cell — no separate Local / Dynamic / Generator
+    expect(pane).not.toContain('drawerId="local"');
+    expect(pane).not.toContain('drawerId="effect_dynamic"');
+    expect(pane).not.toContain('drawerId="effect_generator"');
 
+    // After create: select block → Local context panel with explicit Save for edits
+    const local = read("components/WorkspaceBlockLocalContextPanel.tsx");
+    expect(local).toContain("data-block-local-save");
+    expect(local).toContain("Save context to this block");
+    expect(local).toContain("onSaveLocalContext");
+
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    expect(detail).toContain('drawerId="local"');
+    expect(detail).toContain('drawerId="effect_dynamic"');
+    expect(detail).toContain('drawerId="effect_generator"');
+
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).toContain("WorkspaceAddBlockPane");
+    expect(view).toContain("contextSourceKeys");
+    expect(view).toContain("workspaceNotes=");
+    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).toContain("handleSaveLocalContext");
+    expect(view).toContain("set_local_context");
+
+    // API maps selection → generation snippet + persisted local_context
     const slot = read("app/api/workspace/add-block-at-slot/route.ts");
     expect(slot).toContain("contextSourceKeys");
     expect(slot).toContain("shapeSelectionToLocalContext");
     expect(slot).toContain("shapeSelectionToGenerationSnippet");
     expect(slot).toContain("local_context");
     expect(slot).toContain("composeShapeGenerationContext");
-
-    const view = read("components/WorkspaceView.tsx");
-    expect(view).toContain("contextSourceKeys");
-    expect(view).toContain("WorkspaceAddBlockPane");
-    expect(view).toContain("workspaceNotes=");
-
-    const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("contextSourceKeys");
-    expect(aycl).toContain("WorkspaceAddBlockPane");
 
     // Shared pure path still maps selection → local_context
     const opts = buildShapeContextSourceOptions(catalog);
@@ -208,8 +222,9 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
         "panePicker=" + pane.includes("data-add-block-context-picker"),
         "paneShapePicker=" + pane.includes("data-shape-context-picker"),
         "paneSubmitKeys=" + /contextSourceKeys/.test(pane),
+        "paneNoLocalDrawer=" + !pane.includes('drawerId="local"'),
+        "localSaveBtn=" + local.includes("data-block-local-save"),
         "slotLocalContext=" + slot.includes("shapeSelectionToLocalContext"),
-        "slotInsertLocal=" + slot.includes("local_context"),
         "viewKeys=" + view.includes("contextSourceKeys"),
         "mappedFiles=" + (mapped?.global_file_refs || []).join(","),
       ].join("\n"),

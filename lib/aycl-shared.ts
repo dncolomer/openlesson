@@ -58,6 +58,18 @@ export function ayclPriceLabelForTier(tier: AyclAccessTier): string {
   return tier === "learner" ? AYCL_LEARNER_PRICE_LABEL : AYCL_FULL_PRICE_LABEL;
 }
 
+/**
+ * Format USD cents for shopper-facing labels. Prefer listing-aware
+ * `resolveAyclCheckoutCents` + format from aycl-marketplace for catalog/checkout.
+ */
+export function formatAyclPriceCentsLabel(cents: number): string {
+  const n = Number.isFinite(cents) ? Math.round(cents) : 0;
+  const dollars = n / 100;
+  return dollars % 1 === 0
+    ? `$${dollars.toFixed(0)}`
+    : `$${dollars.toFixed(2)}`;
+}
+
 /** Short offer labels — never "rent" / "buy" movie metaphors. */
 export function ayclOfferLabel(tier: AyclAccessTier): string {
   return tier === "learner" ? "Practice access" : "Full access";

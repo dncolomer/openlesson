@@ -32,6 +32,11 @@ import {
   parseBlockPracticeOptions,
   type BlockPracticeOptions,
 } from "@/lib/block-practice-options";
+import {
+  isDynamicEffectEnabled,
+  parseBlockCreatorEffects,
+  type BlockCreatorEffects,
+} from "@/lib/block-creator-effects";
 
 export type LearnerBlockRef = {
   id: string;
@@ -41,6 +46,7 @@ export type LearnerBlockRef = {
   is_start?: boolean | null;
   planning_prompt?: string | null;
   practice_options?: BlockPracticeOptions | unknown | null;
+  creator_effects?: BlockCreatorEffects | unknown | null;
   lock_until_block_ids?: string[] | null;
   next_block_ids?: string[] | null;
   position_x?: number | null;
@@ -52,6 +58,10 @@ export type LearnerBlockRef = {
  * 1) Practice — Explore/Drill launch (timebox + customize session)
  * 2) Progress — PoW for this block + logged-in user, recommendation, Mark as Done
  * Not mounted in Creator mode.
+ *
+ * Creator effects (combinable):
+ * - Dynamic: “?” until generated; unlock-after deps
+ * - Generator: map spark-highlights empty targets
  */
 export function WorkspaceLearnerBlockPane({
   block,
@@ -62,10 +72,15 @@ export function WorkspaceLearnerBlockPane({
   onSavePlanningPrompt,
   onFetchPowSummary,
   onMarkDone,
+  onDynamicGenerated: _onDynamicGenerated,
 }: {
   block: LearnerBlockRef;
   blocks: readonly LearnerBlockRef[];
   workspaceId: string;
+  ayclToken?: string;
+  locale?: string;
+  /** Stable learner key for sessionStorage (user id / aycl / guest). */
+  learnerUserKey?: string | null;
   locked?: boolean;
   onLaunchIntent?: (
     target: ProductLaunchTarget,
@@ -79,7 +94,19 @@ export function WorkspaceLearnerBlockPane({
     status: string;
     onPhase?: (phase: LearnerDoneProgressPhase) => void;
   }) => Promise<{ unlockedIds?: string[] } | void>;
+  /** Host refresh after effect generation mutates blocks. */
+  onBlocksUpdated?: (nodes: unknown[]) => void;
+  onDynamicGenerated?: (blockId: string) => void;
 }) {
+  const effects = useMemo(
+    () =>
+      parseBlockCreatorEffects(block.creator_effects, {
+        selfBlockId: block.id,
+      }),
+    [block.creator_effects, block.id],
+  );
+  const isDynamic = isDynamicEffectEnabled(effects);
+
   const dag: LearnerDagView = useMemo(
     () =>
       buildLearnerDagView({
@@ -98,6 +125,24 @@ export function WorkspaceLearnerBlockPane({
     () => learnerLocalDagDrawerRelevant(block.id, blocks),
     [block.id, blocks],
   );
+
+  /** Dynamic unlock-after deps (not DAG edges). */
+  const dynamicUnlockDeps = useMemo(() => {
+    if (!isDynamic) return [];
+    const byId = new Map(blocks.map((b) => [String(b.id), b] as const));
+    return effects.dynamic.unlockAfterBlockIds.map((id) => {
+      const b = byId.get(id);
+      const st = String(b?.status || "").toLowerCase();
+      return {
+        id,
+        title: String(b?.title || id).trim() || id,
+        completed: st === "completed" || st === "done",
+      };
+    });
+  }, [blocks, effects.dynamic.unlockAfterBlockIds, isDynamic]);
+
+  const showDynamicUnlockDrawer =
+    isDynamic && dynamicUnlockDeps.length > 0;
 
   const localDagCanvasBlocks = useMemo(
     () =>
@@ -233,7 +278,10 @@ export function WorkspaceLearnerBlockPane({
     }
   };
 
-  const title = String(block.title || "").trim() || "Block";
+  // Note: map uses "?" for pending dynamic; pane keeps a readable label.
+  const displayTitle = isDynamic
+    ? String(block.title || "").trim() || "Dynamic block"
+    : String(block.title || "").trim() || "Block";
   const reco = progress.recommendation;
   const busy =
     progress.phase === "checking_pow" ||
@@ -281,12 +329,20 @@ export function WorkspaceLearnerBlockPane({
   const byType = (powSummary?.byType || []).filter((t) => t.count > 0);
   const recent = powSummary?.recent || [];
 
+  const defaultOpenId =
+    (locked && showDynamicUnlockDrawer) || (locked && showLocalDagDrawer)
+      ? showDynamicUnlockDrawer
+        ? "dynamic_unlock"
+        : "dependencies"
+      : "practice";
+
   return (
     <WorkspaceRightPaneDrawerGroup
-      defaultOpenId={locked && showLocalDagDrawer ? "dependencies" : "practice"}
+      defaultOpenId={defaultOpenId}
       data-workspace-right-pane="learner_practice"
       data-learner-block-pane
       data-learner-block-id={block.id}
+      data-learner-effect-dynamic={isDynamic ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
       {/* Practice — launch only */}
@@ -294,7 +350,9 @@ export function WorkspaceLearnerBlockPane({
         variant="section"
         drawerId="practice"
         title="Practice"
-        defaultExpanded={!locked || !showLocalDagDrawer}
+        defaultExpanded={
+          !(locked && (showDynamicUnlockDrawer || showLocalDagDrawer))
+        }
         bodyClassName="space-y-3"
       >
         <div data-learner-practice-body className="space-y-3">
@@ -303,15 +361,26 @@ export function WorkspaceLearnerBlockPane({
               className="rounded-md border border-rose-500/35 bg-rose-950/30 px-2.5 py-2 text-[11px] text-rose-100/90"
               data-learner-block-locked
             >
-              Locked until prerequisites are done. See Dependencies for the
-              local path graph.
+              {showDynamicUnlockDrawer
+                ? "Locked until every Dynamic unlock block is Done."
+                : "Locked until prerequisites are done. See Dependencies for the local path graph."}
+            </p>
+          ) : null}
+
+          {isDynamic ? (
+            <p
+              className="rounded-md border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] text-neutral-200"
+              data-learner-dynamic-hint
+            >
+              Dynamic block — unlocks when selected blocks are Done, then
+              content is generated from what you have learned so far.
             </p>
           ) : null}
 
           <div data-learner-explore-drill data-learner-launch-card>
             <BlockDetailCard
               layout="horizontal"
-              title={title}
+              title={displayTitle}
               description={block.description || undefined}
               progressRing={progressRing}
               isStart={Boolean(block.is_start)}
@@ -329,13 +398,48 @@ export function WorkspaceLearnerBlockPane({
         </div>
       </WorkspaceRightPaneDrawer>
 
+      {/* Dynamic unlock-after deps (not DAG edges) */}
+      {showDynamicUnlockDrawer ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="dynamic_unlock"
+          title="Unlock after"
+          defaultExpanded={locked}
+          bodyClassName="space-y-3"
+          surfaceDataAttr="data-learner-dynamic-unlock-drawer"
+        >
+          <div data-learner-dynamic-unlock className="space-y-2">
+            <p className="text-[11px] leading-relaxed text-neutral-400">
+              Complete every block below to unlock this Dynamic topic. These
+              are not path-graph (DAG) edges.
+            </p>
+            <ul className="space-y-1" data-learner-dynamic-unlock-deps>
+              {dynamicUnlockDeps.map((p) => (
+                <li
+                  key={p.id}
+                  data-learner-dynamic-unlock-dep={p.id}
+                  className="flex items-center justify-between gap-2 text-[11px] text-neutral-300"
+                >
+                  <span className="truncate">{p.title}</span>
+                  {p.completed ? (
+                    <span className="shrink-0 text-emerald-400/90">Done</span>
+                  ) : (
+                    <span className="shrink-0 text-rose-300/90">Required</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
       {/* Dependencies — local DAG mini canvas (Learner-only; not editable) */}
       {showLocalDagDrawer ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId="dependencies"
           title="Dependencies"
-          defaultExpanded={locked}
+          defaultExpanded={locked && !showDynamicUnlockDrawer}
           bodyClassName="space-y-3"
           surfaceDataAttr="data-learner-dag-drawer"
         >
@@ -396,7 +500,7 @@ export function WorkspaceLearnerBlockPane({
         >
           <p className="text-[11px] leading-relaxed text-neutral-400">
             Your proof of work for{" "}
-            <span className="text-neutral-200">{title}</span>
+            <span className="text-neutral-200">{displayTitle}</span>
             {isCompleted ? (
               <span className="ml-1.5 text-[10px] uppercase tracking-wide text-emerald-400/90">
                 · done

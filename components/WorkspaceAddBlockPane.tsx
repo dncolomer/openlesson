@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSkillGridLayout,
-  formatGridCoordinate,
   getWeightedNeighborhood,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
@@ -17,15 +16,15 @@ import {
   snapshotAddExpandSlots,
 } from "@/lib/add-block-range-density";
 import {
-  buildShapeContextSourceOptions,
-  toggleShapeContextSelection,
-  type ShapeContextSourceOption,
-} from "@/lib/shape-context-select";
-import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
 } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
+import {
+  buildShapeContextSourceOptions,
+  toggleShapeContextSelection,
+  type ShapeContextSourceOption,
+} from "@/lib/shape-context-select";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -35,9 +34,11 @@ const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
  * Options for multi-slot expand create.
  * Host enqueues a background job (progress under minimap); this pane only
  * snapshots slots at submit — it does not own progress/stop.
+ *
+ * Attach-context keys feed generation + persist as block local_context (same
+ * model as generate-in-shape). Dynamic / Generator remain post-create only.
  */
 export type WorkspaceAddBlockSubmitOpts = {
-  contextSourceKeys?: string[];
   /**
    * Additional placeable cells for individual 1×1 creates (not shape merge).
    * Snapshot taken at submit — host must not re-sample mid-run.
@@ -47,10 +48,18 @@ export type WorkspaceAddBlockSubmitOpts = {
   frozenSlots?: WorkspaceAddTargetCell[];
   /** Author flag: treat created block(s) as potential starter(s). */
   isStart?: boolean;
+  /**
+   * Context source keys attached at create (notes / file:… / external:…).
+   * API maps these into generation prompt + saved local_context.
+   */
+  contextSourceKeys?: string[];
 };
 
 /**
  * Right-column Add block form for a single empty placeable cell.
+ * One drawer only: prompt, attach context (generation + save), expand, starter.
+ * Post-create Local context / Dynamic / Generator live on the block detail pane.
+ *
  * Range/Density expand a circle of placeable empties for multi 1×1 create
  * (cold-start) — not generate-in-shape.
  */
@@ -100,13 +109,15 @@ export function WorkspaceAddBlockPane({
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>([]);
-  const [contextSelected, setContextSelected] = useState<string[]>([]);
-  const [contextLoading, setContextLoading] = useState(false);
   const [range, setRange] = useState(0);
   const [density, setDensity] = useState(ADD_DENSITY_MAX);
   const [sampleSeed, setSampleSeed] = useState(1);
   const [isStarter, setIsStarter] = useState(false);
+  const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>(
+    [],
+  );
+  const [contextSelected, setContextSelected] = useState<string[]>([]);
+  const [contextLoading, setContextLoading] = useState(false);
 
   // Reset draft when the target cell changes.
   useEffect(() => {
@@ -114,14 +125,14 @@ export function WorkspaceAddBlockPane({
     setSuggestions([]);
     setSuggestError(null);
     setAddError(null);
-    setContextSelected([]);
     setRange(0);
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
     setIsStarter(false);
+    setContextSelected([]);
   }, [cell.row, cell.col]);
 
-  // Load Context inventory for local-context attach (same catalog as generate-in-shape).
+  // Load workspace Context inventory for attach picker (same as generate-in-shape).
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
@@ -131,7 +142,9 @@ export function WorkspaceAddBlockPane({
         const qs = new URLSearchParams({ workspaceId });
         if (ayclToken) qs.set("ayclToken", ayclToken);
         const [filesRes, extRes] = await Promise.all([
-          fetch(`/api/workspace/files?workspaceId=${encodeURIComponent(workspaceId)}`),
+          fetch(
+            `/api/workspace/files?workspaceId=${encodeURIComponent(workspaceId)}`,
+          ),
           fetch(`/api/workspace/external-resources?${qs}`),
         ]);
         const filesData = (await filesRes.json().catch(() => ({}))) as {
@@ -306,19 +319,20 @@ export function WorkspaceAddBlockPane({
           : undefined;
       // Host enqueues async job and returns quickly — map stays interactive.
       await onSubmit(prompt.trim(), cell, {
-        contextSourceKeys:
-          contextSelected.length > 0 ? [...contextSelected] : undefined,
         expandCells,
         frozenSlots: slots,
         isStart: isStarter,
+        ...(contextSelected.length > 0
+          ? { contextSourceKeys: [...contextSelected] }
+          : {}),
       });
       setPrompt("");
       setSuggestions([]);
-      setContextSelected([]);
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
       setIsStarter(false);
+      setContextSelected([]);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to add item");
     } finally {
@@ -335,7 +349,7 @@ export function WorkspaceAddBlockPane({
       data-add-target-row={String(cell.row)}
       data-add-target-col={String(cell.col)}
     >
-      {/* Primary form drawer — top-anchored, full width */}
+      {/* Only drawer on empty cells — effects/local context on created blocks. */}
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="add"
@@ -343,31 +357,6 @@ export function WorkspaceAddBlockPane({
         defaultExpanded
         bodyClassName="space-y-3"
       >
-        {weightedNeighbors.length > 0 && (
-          <div data-add-block-neighbors>
-            <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-              Influenced by
-            </p>
-            <div className="grid grid-cols-1 gap-1.5">
-              {weightedNeighbors.slice(0, 3).map((entry) => (
-                <div
-                  key={entry.id}
-                  title={entry.title}
-                  className="rounded-lg border border-neutral-700/80 bg-neutral-900/70 px-2 py-1.5"
-                >
-                  <span className="font-mono text-[9px] text-neutral-500">
-                    {formatGridCoordinate(entry.row, entry.col)}
-                    <span className="text-neutral-600"> · d{entry.distance}</span>
-                  </span>
-                  <p className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-snug text-neutral-200">
-                    {entry.title}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -415,6 +404,88 @@ export function WorkspaceAddBlockPane({
           rows={4}
           autoFocus
         />
+
+        {/* Attach context → generation prompt + saved local_context (like generate-in-shape). */}
+        <div
+          className="space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5"
+          data-shape-context-picker
+          data-add-block-context-picker
+        >
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Attach local context
+          </p>
+          <p className="text-[10px] leading-relaxed text-neutral-600">
+            Selected files, external links, and notes feed block generation and
+            are saved as this block&apos;s local context (editable later on the
+            block).
+          </p>
+          <WorkspaceSuggestExternalContext
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            topic={prompt}
+            disabled={busy || submitting}
+            selectedKeys={contextSelected}
+            options={contextOptions}
+            onChange={({ options, selectedKeys }) => {
+              setContextOptions(options);
+              setContextSelected(selectedKeys);
+            }}
+          />
+          {contextLoading ? (
+            <p className="text-[11px] text-neutral-600" data-shape-context-loading>
+              Loading sources…
+            </p>
+          ) : contextOptions.length === 0 ? (
+            <p className="text-[11px] text-neutral-600">
+              No Context sources yet — add files or links under the Context tab,
+              or suggest from the web above.
+            </p>
+          ) : (
+            <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
+              {contextOptions.map((opt) => {
+                const checked = contextSelected.includes(opt.key);
+                return (
+                  <li key={opt.key}>
+                    <label
+                      className={`flex cursor-pointer items-start gap-2 rounded-md border px-2 py-1.5 text-[11px] transition ${
+                        checked
+                          ? "border-white/30 bg-white/10 text-neutral-100"
+                          : "border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:border-neutral-600"
+                      }`}
+                      data-shape-context-option={opt.key}
+                      data-shape-context-kind={opt.kind}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={checked}
+                        onChange={() =>
+                          setContextSelected((prev) =>
+                            toggleShapeContextSelection(prev, opt.key),
+                          )
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">
+                          {opt.label}
+                        </span>
+                        <span className="block text-[10px] uppercase tracking-wide text-neutral-600">
+                          {opt.kind}
+                          {opt.url ? ` · link` : ""}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {contextSelected.length > 0 ? (
+            <p className="text-[10px] text-neutral-500" data-shape-context-selected-count>
+              {contextSelected.length} selected
+            </p>
+          ) : null}
+        </div>
 
         {/* Cold-start multi 1×1: Range = circle radius; Density = how many cells */}
         <div
@@ -538,88 +609,6 @@ export function WorkspaceAddBlockPane({
           </button>
         </div>
       </WorkspaceRightPaneDrawer>
-
-      {/* Local context — sibling top-level drawer; accordion with Add */}
-      <WorkspaceRightPaneDrawer
-        variant="section"
-        drawerId="local"
-        title="Local context"
-        defaultExpanded={false}
-        surfaceDataAttr="data-add-block-context-picker"
-        bodyClassName="space-y-2"
-      >
-        <div data-shape-context-picker className="space-y-2">
-          <p className="text-[10px] leading-relaxed text-neutral-600">
-            Selected files, external links, and notes become local context on the new block and
-            feed generation.
-          </p>
-          <WorkspaceSuggestExternalContext
-            workspaceId={workspaceId}
-            ayclToken={ayclToken}
-            topic={prompt}
-            disabled={busy || submitting}
-            selectedKeys={contextSelected}
-            options={contextOptions}
-            onChange={({ options, selectedKeys }) => {
-              setContextOptions(options);
-              setContextSelected(selectedKeys);
-            }}
-          />
-          {contextLoading ? (
-            <p className="text-[11px] text-neutral-600" data-shape-context-loading>
-              Loading sources…
-            </p>
-          ) : contextOptions.length === 0 ? (
-            <p className="text-[11px] text-neutral-600">
-              No Context sources yet — add files or links under the Context tab, or suggest
-              from the web above.
-            </p>
-          ) : (
-            <ul className="max-h-48 space-y-1 overflow-y-auto" data-shape-context-list>
-              {contextOptions.map((opt) => {
-                const checked = contextSelected.includes(opt.key);
-                return (
-                  <li key={opt.key}>
-                    <label
-                      className={`flex cursor-pointer items-start gap-2 rounded-md border px-2 py-1.5 text-[11px] transition ${
-                        checked
-                          ? "border-white/30 bg-white/10 text-neutral-100"
-                          : "border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:border-neutral-600"
-                      }`}
-                      data-shape-context-option={opt.key}
-                      data-shape-context-kind={opt.kind}
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={checked}
-                        onChange={() =>
-                          setContextSelected((prev) =>
-                            toggleShapeContextSelection(prev, opt.key),
-                          )
-                        }
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{opt.label}</span>
-                        <span className="block text-[10px] uppercase tracking-wide text-neutral-600">
-                          {opt.kind}
-                          {opt.url ? ` · link` : ""}
-                        </span>
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {contextSelected.length > 0 ? (
-            <p className="text-[10px] text-neutral-500" data-shape-context-selected-count>
-              {contextSelected.length} selected
-            </p>
-          ) : null}
-        </div>
-      </WorkspaceRightPaneDrawer>
     </WorkspaceRightPaneDrawerGroup>
   );
 }
-

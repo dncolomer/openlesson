@@ -84,6 +84,17 @@ export type BlockSimulationInput = BlockExampleTopicsInput & {
   localFileNames?: string[] | null;
   /** Optional external source labels (for influence chips). */
   externalLabels?: string[] | null;
+  /**
+   * Full file rows (name + excerpt) for pure practice grounding — not chips only.
+   * When set, deriveBlockSimulation seeds Explore/Drill builders with materials.
+   */
+  files?: Array<{ name: string; excerpt?: string | null }> | null;
+  /** External link rows for pure practice grounding. */
+  externalLinks?: Array<{
+    title?: string | null;
+    url?: string | null;
+    description?: string | null;
+  }> | null;
   /** Workspace-level grounding (same fields live Explore/Drill use). */
   workspaceGoal?: string | null;
   workspaceTitle?: string | null;
@@ -152,9 +163,17 @@ export function collectBlockContextInfluenceLabels(
   if (clean(input.description).length >= 8) push("Description");
   if (clean(input.planningPrompt).length >= 4) push("Planning prompt");
   if (clean(input.localNotes).length >= 4) push("Local notes");
+  for (const f of input.files || []) {
+    const n = clean(f?.name);
+    if (n) push(clip(n, 28));
+  }
   for (const name of input.localFileNames || []) {
     const n = clean(name);
     if (n) push(clip(n, 28));
+  }
+  for (const link of input.externalLinks || []) {
+    const n = clean(link?.title) || clean(link?.url);
+    if (n) push(clip(`Ext: ${n}`, 32));
   }
   for (const ext of input.externalLabels || []) {
     const n = clean(ext);
@@ -349,6 +368,8 @@ export function enforceSimulationProbeQuota(
     planningPrompt?: string | null;
     localNotes?: string | null;
     notes?: string | null;
+    files?: PracticeItemContext["files"];
+    externalLinks?: PracticeItemContext["externalLinks"];
   },
 ): SimulationProbe[] {
   const title = clean(input.title) || "This block";
@@ -363,6 +384,8 @@ export function enforceSimulationProbeQuota(
     planningPrompt: input.planningPrompt,
     localNotes: input.localNotes,
     notes: input.notes,
+    files: input.files,
+    externalLinks: input.externalLinks,
   };
   const { questions: qIn, exercises: eIn } = partitionSimulationProbes(probes);
 
@@ -459,6 +482,22 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
 
   const availableInfluence = collectBlockContextInfluenceLabels(input);
 
+  // Prefer explicit files/links; fall back to chip-only name lists as bare materials.
+  const files: PracticeItemContext["files"] =
+    input.files && input.files.length > 0
+      ? input.files
+      : (input.localFileNames || [])
+          .map((n) => clean(n))
+          .filter(Boolean)
+          .map((name) => ({ name, excerpt: null as string | null }));
+  const externalLinks: PracticeItemContext["externalLinks"] =
+    input.externalLinks && input.externalLinks.length > 0
+      ? input.externalLinks
+      : (input.externalLabels || [])
+          .map((n) => clean(n))
+          .filter(Boolean)
+          .map((label) => ({ title: label, url: null, description: null }));
+
   const ground: PracticeItemContext = {
     blockTitle: title,
     blockDescription: description,
@@ -468,6 +507,8 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     planningPrompt: planning,
     localNotes: notes,
     notes: input.notes,
+    files,
+    externalLinks,
   };
 
   const goal = clean(input.workspaceGoal);
@@ -533,6 +574,8 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
     planningPrompt: planning,
     localNotes: notes,
     notes: input.notes,
+    files,
+    externalLinks,
   });
 
   const hasDescription = description.length >= 12;
@@ -772,6 +815,22 @@ export function normalizeSimulationPayload(
         ? samples.topics
         : base.topics;
 
+  // Rebuild material rows for quota pad/sanitize (same as deriveBlockSimulation).
+  const fallbackFiles: PracticeItemContext["files"] =
+    fallback?.files && fallback.files.length > 0
+      ? fallback.files
+      : (fallback?.localFileNames || [])
+          .map((n) => clean(n))
+          .filter(Boolean)
+          .map((name) => ({ name, excerpt: null as string | null }));
+  const fallbackLinks: PracticeItemContext["externalLinks"] =
+    fallback?.externalLinks && fallback.externalLinks.length > 0
+      ? fallback.externalLinks
+      : (fallback?.externalLabels || [])
+          .map((n) => clean(n))
+          .filter(Boolean)
+          .map((label) => ({ title: label, url: null, description: null }));
+
   const enforced = enforceSimulationProbeQuota(
     probes.length ? probes : base.probes,
     {
@@ -784,6 +843,8 @@ export function normalizeSimulationPayload(
       planningPrompt: fallback?.planningPrompt,
       localNotes: fallback?.localNotes,
       notes: fallback?.notes,
+      files: fallbackFiles,
+      externalLinks: fallbackLinks,
     },
   );
 

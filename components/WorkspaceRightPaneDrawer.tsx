@@ -235,20 +235,21 @@ export function WorkspaceRightPaneDrawer({
   );
 }
 
-/** Resolve initial open id for a detail stack (pure helper re-export path for hosts). */
+/** Resolve initial open id for creator block-detail stack (no Sessions/detail drawer). */
 export function resolveDetailDrawerDefaultOpenId(input: {
   hasLocalMaterials: boolean;
   showSplit?: boolean;
   canEdit?: boolean;
 }): string {
   const candidates = [
-    { id: "detail", defaultExpanded: true },
+    // Edit is primary for owners (title/description live there).
+    ...(input.canEdit ? [{ id: "edit", defaultExpanded: true }] : []),
+    { id: "local", defaultExpanded: input.hasLocalMaterials && !input.canEdit },
     { id: "simulation", defaultExpanded: false },
     ...(input.showSplit ? [{ id: "split", defaultExpanded: false }] : []),
-    ...(input.canEdit ? [{ id: "edit", defaultExpanded: false }] : []),
-    { id: "local", defaultExpanded: input.hasLocalMaterials },
   ];
-  // If local materials exist and detail is also default, prefer detail first
-  // (first defaultExpanded wins) — detail stays primary on open.
-  return initialAccordionOpenDrawerId(candidates) || "detail";
+  return (
+    initialAccordionOpenDrawerId(candidates) ||
+    (input.canEdit ? "edit" : input.hasLocalMaterials ? "local" : "simulation")
+  );
 }

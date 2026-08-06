@@ -159,15 +159,27 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(local).toContain("assembleFocusedBlockPromptContext");
     expect(local).toContain("data-block-local-authoring");
     expect(local).toContain("data-block-local-readonly");
-    // Saved create-time local_context is visible as already attached on select.
+    // Explicit Save links draft materials to the selected existing block.
+    expect(local).toContain("data-block-local-save");
+    expect(local).toContain("Save context to this block");
+    expect(local).toContain("onSaveLocalContext");
+    // Saved local_context is visible as already attached on select.
     expect(local).toContain("data-block-local-attached");
     expect(local).toContain("Already attached");
     expect(local).toContain("external_resource_ids");
     // Draft must reset when switching blocks (no stale Save onto wrong block).
     expect(local).toMatch(/useEffect\([\s\S]*blockId[\s\S]*localContext/);
     expect(view).toContain("key={detailBlock.id}");
+    expect(view).toContain("handleSaveLocalContext");
     // After create, local_context is parsed into node state (not dropped).
     expect(view).toContain("parseBlockLocalContext(n.local_context)");
+
+    // Empty-cell Add pane: attach context inside Add; edit drawer on existing blocks.
+    const add = read("components/WorkspaceAddBlockPane.tsx");
+    expect(add).toContain('drawerId="add"');
+    expect(add).toContain("data-add-block-context-picker");
+    expect(add).toContain("data-shape-context-picker");
+    expect(add).not.toContain('drawerId="local"');
 
     // Map tiles show a document icon when local context is attached.
     const mapGrid = read("components/BlockSkillGrid.tsx");

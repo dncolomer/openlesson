@@ -15,6 +15,11 @@ import {
   blockParticipatesInDag,
   buildLearnerDagView,
 } from "@/lib/workspace-mode";
+import {
+  isDynamicEffectEnabled,
+  isDynamicEffectLocked,
+  parseBlockCreatorEffects,
+} from "@/lib/block-creator-effects";
 
 export type LearnerLocalDagBlock = {
   id: string;
@@ -24,6 +29,8 @@ export type LearnerLocalDagBlock = {
   next_block_ids?: readonly string[] | null;
   position_x?: number | null;
   position_y?: number | null;
+  /** Dynamic unlock deps live here (not DAG edges). */
+  creator_effects?: unknown;
 };
 
 function cleanId(id: unknown): string {
@@ -79,7 +86,8 @@ export function incompleteInboundNextPrerequisites(
 
 /**
  * Learner map "Locked": incomplete lock_until OR incomplete inbound next
- * (A leads-to B and A not done ⇒ B locked). Complete prereqs ⇒ not Locked.
+ * (A leads-to B and A not done ⇒ B locked) OR Dynamic unlock-after deps
+ * (stored on creator_effects, not DAG). Complete prereqs ⇒ not Locked.
  */
 export function isLearnerMapBlockLocked(
   block: LearnerLocalDagBlock,
@@ -91,7 +99,17 @@ export function isLearnerMapBlockLocked(
   const self = asMapRef(block);
   if (!self.id) return false;
   if (isBlockLockedUntilCompleted(self, byId)) return true;
-  return incompleteInboundNextPrerequisites(block, blocks).length > 0;
+  if (incompleteInboundNextPrerequisites(block, blocks).length > 0) return true;
+  if (
+    isDynamicEffectLocked({
+      effects: block.creator_effects,
+      selfBlockId: self.id,
+      blocks,
+    })
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /** True when block has any dependency signal for the red lock badge. */
@@ -108,6 +126,15 @@ export function learnerBlockHasDependencyChrome(
     const bid = cleanId(b.id);
     if (!bid || bid === id) continue;
     if ((b.next_block_ids || []).map(cleanId).includes(id)) return true;
+  }
+  const dyn = parseBlockCreatorEffects(block.creator_effects, {
+    selfBlockId: id,
+  });
+  if (
+    isDynamicEffectEnabled(dyn) &&
+    dyn.dynamic.unlockAfterBlockIds.length > 0
+  ) {
+    return true;
   }
   return false;
 }

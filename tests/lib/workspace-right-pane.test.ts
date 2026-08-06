@@ -450,19 +450,19 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain("resolveDetailDrawerDefaultOpenId");
     expect(drawer).toContain("nextAccordionOpenDrawerId");
     expect(drawer).toContain("data-drawer-accordion");
-    // Peer top-level drawers
-    expect(pane).toContain('drawerId="detail"');
+    // Peer top-level drawers — no Sessions/detail drawer (Edit owns title/body)
+    expect(pane).not.toContain('drawerId="detail"');
     expect(pane).toContain('drawerId="local"');
     expect(pane).toContain('drawerId="simulation"');
+    expect(pane).toContain('drawerId="edit"');
     expect(pane).toContain('title="Local context"');
     expect(pane).toContain('title="Block Simulation"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
-    // Order: detail → simulation (pos 2) → edit → local
+    // Order: simulation → … → edit → … → local
     expect(pane).toMatch(
-      /drawerId="detail"[\s\S]*?drawerId="simulation"[\s\S]*?drawerId="local"/,
+      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"/,
     );
-    // Detail expanded; Simulation collapsed; local opens when materials exist
-    expect(pane).toMatch(/drawerId="detail"[\s\S]*?defaultExpanded/);
+    // Simulation collapsed; local opens when materials exist
     expect(pane).toMatch(
       /drawerId="local"[\s\S]*?defaultExpanded=\{hasLocalMaterials\}/,
     );
@@ -484,6 +484,7 @@ describe("structural: right pane not map modal", () => {
       "block-detail-top-level-drawers.log",
       [
         "detailDrawer=" + pane.includes('drawerId="detail"'),
+        "editDrawer=" + pane.includes('drawerId="edit"'),
         "localDrawer=" + pane.includes('drawerId="local"'),
         "simulationDrawer=" + pane.includes('drawerId="simulation"'),
         "simulationCollapsedDefault=" +
@@ -558,9 +559,12 @@ describe("structural: right pane not map modal", () => {
     const add = read("components/WorkspaceAddBlockPane.tsx");
     expect(add).toContain("data-workspace-add-block-pane");
     expect(add).toContain("data-add-block-submit");
-    expect(add).toContain('title="Local context"');
+    // Empty cell: only the Add drawer (attach context is inside it)
+    expect(add).toContain('drawerId="add"');
     expect(add).toContain("data-add-block-context-picker");
-    expect(add).toContain("defaultExpanded={false}");
+    expect(add).not.toContain('drawerId="local"');
+    expect(add).not.toContain('drawerId="effect_dynamic"');
+    expect(add).not.toContain('drawerId="effect_generator"');
     expect(add).toContain('variant="section"');
     expect(add).not.toContain("data-add-block-close");
 

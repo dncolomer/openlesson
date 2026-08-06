@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
+import {
+  formatAyclPriceCents,
+  resolveAyclUpgradeCents,
+} from "@/lib/aycl-marketplace";
 
 export const runtime = "nodejs";
 
@@ -31,11 +35,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: blocksError.message }, { status: 500 });
   }
 
+  // Upgrade price comes from catalog source listing (not the private fork).
+  let upgradePriceCents = resolveAyclUpgradeCents(null);
+  if (ctx.purchase.source_workspace_id) {
+    const { data: catalog } = await ctx.supabase
+      .from("workspaces")
+      .select("aycl_learner_price_cents, aycl_full_price_cents")
+      .eq("id", ctx.purchase.source_workspace_id)
+      .maybeSingle();
+    if (catalog) {
+      upgradePriceCents = resolveAyclUpgradeCents({
+        aycl_learner_price_cents: catalog.aycl_learner_price_cents,
+        aycl_full_price_cents: catalog.aycl_full_price_cents,
+      });
+    }
+  }
+
   return NextResponse.json({
     workspace,
     blocks: blocks || [],
     purchaseId: ctx.purchase.id,
     accessTier: ctx.accessTier,
     capabilities: ctx.capabilities,
+    upgradePriceCents,
+    upgradePriceLabel: formatAyclPriceCents(upgradePriceCents),
   });
 }

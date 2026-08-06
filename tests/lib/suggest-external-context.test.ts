@@ -145,8 +145,12 @@ describe("structural: suggest external context UI + API", () => {
     expect(widget).toContain("/api/workspace/external-resources");
     expect(widget).toContain("Suggest from web (xAI)");
 
+    // Add pane: attach context inside Add drawer (no separate Local drawer)
     expect(add).toContain("WorkspaceSuggestExternalContext");
     expect(add).toContain("data-shape-context-picker");
+    expect(add).toContain("data-add-block-context-picker");
+    expect(add).not.toContain('drawerId="local"');
+    // Generate-in-shape still mounts the picker + suggest widget
     expect(shape).toContain("WorkspaceSuggestExternalContext");
     expect(shape).toContain("data-shape-context-picker");
 
@@ -163,6 +167,7 @@ describe("structural: suggest external context UI + API", () => {
     writeEvidence(
       "suggest-external-ui.log",
       [
+        "addHasPicker=" + add.includes("data-add-block-context-picker"),
         "addHasWidget=" + add.includes("WorkspaceSuggestExternalContext"),
         "shapeHasWidget=" + shape.includes("WorkspaceSuggestExternalContext"),
         "buttonHook=" + widget.includes("data-suggest-external-context-button"),

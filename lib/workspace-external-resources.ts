@@ -223,6 +223,198 @@ export function normalizeExternalResourceList(
     });
 }
 
+// ── Local absorb + JIT URL bias (pure) ──────────────────────────────────
+
+/** Marker prefix for absorbed external sources in local_context.notes. */
+export const EXTERNAL_ABSORB_MARKER = "### External source";
+
+/** Minimal link row for absorb / prompt bias (no DB required). */
+export type ExternalLinkAbsorbInput = {
+  title?: string | null;
+  url?: string | null;
+  description?: string | null;
+  id?: string | null;
+};
+
+function cleanAbsorbText(s: unknown): string {
+  return typeof s === "string" ? s.replace(/\s+/g, " ").trim() : "";
+}
+
+/**
+ * Format one external link as durable local-notes text (title + URL + summary).
+ * Returns null when URL is missing/invalid.
+ */
+export function formatAbsorbedExternalNoteBlock(
+  input: ExternalLinkAbsorbInput,
+): string | null {
+  const urlRaw = cleanAbsorbText(input.url);
+  if (!urlRaw || !isValidHttpUrl(urlRaw)) return null;
+  let url = urlRaw;
+  try {
+    url = new URL(urlRaw).toString();
+  } catch {
+    /* keep raw */
+  }
+  let title = cleanAbsorbText(input.title);
+  if (!title) {
+    try {
+      title = new URL(url).hostname || url;
+    } catch {
+      title = url;
+    }
+  }
+  title = title.slice(0, TITLE_MAX);
+  const desc = cleanAbsorbText(input.description).slice(0, DESC_MAX);
+  const lines = [
+    `${EXTERNAL_ABSORB_MARKER}: ${title}`,
+    `URL: ${url}`,
+  ];
+  if (desc) lines.push(`Summary: ${desc}`);
+  lines.push(
+    "Absorbed locally as block context — consult this URL for domain substance when needed.",
+  );
+  return lines.join("\n");
+}
+
+/** True when notes already contain this URL (case-insensitive). */
+export function localNotesContainExternalUrl(
+  notes: string | null | undefined,
+  url: string,
+): boolean {
+  const n = cleanAbsorbText(notes).toLowerCase();
+  const u = cleanAbsorbText(url).toLowerCase();
+  if (!n || !u) return false;
+  if (n.includes(u)) return true;
+  // Also match without trailing slash
+  const stripped = u.replace(/\/$/, "");
+  return stripped.length > 8 && n.includes(stripped);
+}
+
+/**
+ * Append absorbed note blocks for each resource not already present by URL.
+ * Preserves existing notes structure (newlines); does not rewrite unrelated text.
+ */
+export function mergeAbsorbedExternalNotes(
+  existingNotes: string | null | undefined,
+  resources: readonly ExternalLinkAbsorbInput[],
+): string | null {
+  // Preserve paragraph structure in existing notes (do not collapse whitespace).
+  let notes =
+    typeof existingNotes === "string" ? existingNotes.replace(/\s+$/g, "").replace(/^\s+/g, "") : "";
+  for (const r of resources || []) {
+    const block = formatAbsorbedExternalNoteBlock(r);
+    if (!block) continue;
+    const url = cleanAbsorbText(r.url);
+    if (url && localNotesContainExternalUrl(notes, url)) continue;
+    notes = notes ? `${notes}\n\n${block}` : block;
+  }
+  return notes || null;
+}
+
+/**
+ * Local-files stub for an external link (used alongside external_resource_ids).
+ */
+export function formatAbsorbedExternalLocalFile(input: ExternalLinkAbsorbInput): {
+  name: string;
+  excerpt: string;
+} | null {
+  const block = formatAbsorbedExternalNoteBlock(input);
+  if (!block) return null;
+  const title = cleanAbsorbText(input.title) || cleanAbsorbText(input.url) || "link";
+  return {
+    name: `[external] ${title.slice(0, 80)}`,
+    excerpt: block,
+  };
+}
+
+/**
+ * Build a prompt snippet that lists URLs and instructs the model to consult
+ * them just-in-time for domain substance (no live fetch required).
+ */
+export function buildExternalUrlJitBiasSnippet(
+  resources: readonly ExternalLinkAbsorbInput[],
+): string | null {
+  const lines: string[] = [];
+  const seen = new Set<string>();
+  for (const r of resources || []) {
+    const url = cleanAbsorbText(r.url);
+    if (!url || !isValidHttpUrl(url)) continue;
+    const key = url.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const title = cleanAbsorbText(r.title) || url;
+    const desc = cleanAbsorbText(r.description);
+    lines.push(
+      desc
+        ? `- ${title} — ${url} (${desc.slice(0, 160)})`
+        : `- ${title} — ${url}`,
+    );
+    if (lines.length >= 12) break;
+  }
+  if (!lines.length) return null;
+  return [
+    "## External URL resources — consult just-in-time",
+    "When you need domain substance, examples, definitions, or facts for this workspace/block, **look into / consult these provided URLs** (prefer them over inventing details). Use titles and summaries as hints; treat the linked pages as authoritative context for generation.",
+    ...lines,
+  ].join("\n");
+}
+
+/**
+ * Absorb external resources into a block local_context:
+ * - structured notes (title + URL + summary)
+ * - [external] local_files stubs with the same text
+ * - external_resource_ids when ids are provided
+ * Does not touch block title/description (caller preserves those).
+ */
+export function absorbExternalResourcesIntoLocalContext(
+  existing: {
+    notes?: string | null;
+    local_files?: Array<{ name: string; excerpt?: string | null }> | null;
+    global_file_refs?: string[] | null;
+    external_resource_ids?: string[] | null;
+  } | null | undefined,
+  resources: readonly ExternalLinkAbsorbInput[],
+): {
+  notes: string | null;
+  local_files: Array<{ name: string; excerpt?: string | null }> | null;
+  global_file_refs: string[] | null;
+  external_resource_ids: string[] | null;
+} {
+  const notes = mergeAbsorbedExternalNotes(existing?.notes, resources);
+  const files = [...(existing?.local_files || [])];
+  const seenNames = new Set(files.map((f) => f.name.toLowerCase()));
+  for (const r of resources || []) {
+    const stub = formatAbsorbedExternalLocalFile(r);
+    if (!stub) continue;
+    const key = stub.name.toLowerCase();
+    if (seenNames.has(key)) {
+      // Refresh excerpt if URL was already attached with thinner text
+      const idx = files.findIndex((f) => f.name.toLowerCase() === key);
+      if (idx >= 0 && (!files[idx].excerpt || files[idx].excerpt!.length < stub.excerpt.length)) {
+        files[idx] = stub;
+      }
+      continue;
+    }
+    seenNames.add(key);
+    files.push(stub);
+  }
+  const ids = [...(existing?.external_resource_ids || [])];
+  const seenIds = new Set(ids);
+  for (const r of resources || []) {
+    const id = cleanAbsorbText(r.id);
+    if (!id || seenIds.has(id)) continue;
+    seenIds.add(id);
+    ids.push(id);
+  }
+  const refs = [...(existing?.global_file_refs || [])].filter(Boolean);
+  return {
+    notes,
+    local_files: files.length ? files : null,
+    global_file_refs: refs.length ? refs : null,
+    external_resource_ids: ids.length ? ids : null,
+  };
+}
+
 /**
  * Apply a partial update onto an existing resource (pure).
  * Invalid URL returns null.

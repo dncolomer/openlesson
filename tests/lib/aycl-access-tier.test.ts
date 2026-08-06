@@ -127,15 +127,21 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(sql).toContain("upgraded_from_purchase_id");
   });
 
-  it("catalog API exposes dual offers", () => {
+  it("catalog API exposes dual offers via marketplace card assembler", () => {
     const src = fs.readFileSync(
       path.join(REPO_ROOT, "app/api/aycl/workspaces/route.ts"),
       "utf8",
     );
-    expect(src).toContain("offers");
-    expect(src).toContain('tier: "learner"');
-    expect(src).toContain('tier: "full"');
-    expect(src).toContain("ayclOfferLabel");
+    expect(src).toContain("assembleAyclCatalogCard");
+    expect(src).toContain("aycl_category");
+    // Dual offers live in pure assembler (priceCents + labels).
+    const marketplace = fs.readFileSync(
+      path.join(REPO_ROOT, "lib/aycl-marketplace.ts"),
+      "utf8",
+    );
+    expect(marketplace).toContain("offers");
+    expect(marketplace).toContain('"learner"');
+    expect(marketplace).toContain('"full"');
   });
 
   it("catalog page has dual CTAs without rent/buy wording", () => {
@@ -147,13 +153,13 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain('data-aycl-dual-offers');
     expect(src).toContain('data-aycl-checkout-learner');
     expect(src).toContain('data-aycl-checkout-full');
-    expect(src).toContain("Get practice access");
-    expect(src).toContain("Get full access");
+    expect(src).toMatch(/Practice/);
+    expect(src).toMatch(/Full access/);
     expect(src.toLowerCase()).not.toMatch(/\brent\b/);
     expect(src.toLowerCase()).not.toMatch(/\bbuy a movie\b/);
   });
 
-  it("checkout accepts tier + upgrade-by-token", () => {
+  it("checkout accepts tier + upgrade-by-token with resolved listing prices", () => {
     const src = fs.readFileSync(
       path.join(REPO_ROOT, "app/api/stripe/create-checkout/route.ts"),
       "utf8",
@@ -163,7 +169,8 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain("aycl_upgrade");
     expect(src).toContain("upgrade_from_purchase_id");
     expect(src).toContain("ayclPurchaseEligibleForUpgrade");
-    expect(src).toContain("AYCL_UPGRADE_PRICE_CENTS");
+    expect(src).toContain("resolveAyclCheckoutCents");
+    expect(src).toContain("resolveAyclUpgradeCents");
   });
 
   it("fulfill promotes upgrade without new fork and rebinds checkout session", () => {

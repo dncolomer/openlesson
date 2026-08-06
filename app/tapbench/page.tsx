@@ -2,24 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems/tapbench",
+});
 
 export const metadata: Metadata = {
   title: "TAPBench",
   description:
     "An agentic Think Aloud Protocol benchmark: measure how genuine agent thinking traces are, and chart how agents know things on a Map of Knowledge.",
   alternates: { canonical: "https://uncertain.systems/tapbench" },
-  openGraph: {
-    title: "TAPBench | Uncertain Systems",
-    description:
-      "Run Think Aloud Protocol benchmarks against agents. Long term: an agentic Map of Knowledge.",
-    url: "https://uncertain.systems/tapbench",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "TAPBench | Uncertain Systems",
-    description:
-      "Run Think Aloud Protocol benchmarks against agents. Long term: an agentic Map of Knowledge.",
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
 };
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg";

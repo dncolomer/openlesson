@@ -18,8 +18,11 @@ describe("GET /api/me/status (admin gate rehome)", () => {
     expect(src).toContain("isAdmin");
   });
 
-  it("WorkspaceAccessSettings fetches me/status not demo/status", () => {
-    const src = readFileSync(join(ROOT, "components/WorkspaceAccessSettings.tsx"), "utf8");
+  it("WorkspaceAyclMarketplaceSettings fetches me/status not demo/status", () => {
+    const src = readFileSync(
+      join(ROOT, "components/WorkspaceAyclMarketplaceSettings.tsx"),
+      "utf8",
+    );
     expect(src).toContain('fetch("/api/me/status")');
     expect(src).not.toContain("/api/demo/status");
     expect(src).toContain("setIsAdmin");

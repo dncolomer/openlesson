@@ -8,7 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { useI18n } from "../lib/i18n";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { getOrderedSessions, SessionList } from "@/components/SessionList";
-import { SessionItem } from "@/components/SessionItem";
+
 import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
@@ -110,6 +110,16 @@ import {
   type BlockPracticeOptions,
 } from "@/lib/block-practice-options";
 import {
+  dynamicBlocksUnlockedAfterDone,
+  dynamicGeneratedStorageKey,
+  generatorTargetCellsAfterDone,
+  generatorTargetHighlightCells,
+  parseBlockCreatorEffects,
+  serializeBlockCreatorEffects,
+  type BlockCreatorEffects,
+  type GeneratorTargetCell,
+} from "@/lib/block-creator-effects";
+import {
   normalizeWorkspaceDags,
   type WorkspaceDagRecord,
 } from "@/lib/workspace-dags";
@@ -118,6 +128,7 @@ import {
   ayclUpgradeOfferLabel,
   AYCL_TOKEN_STORAGE_KEY,
   AYCL_UPGRADE_PRICE_LABEL,
+  formatAyclPriceCentsLabel,
   resolveAyclCapabilities,
   type AyclCapabilities,
 } from "@/lib/aycl-shared";
@@ -140,6 +151,8 @@ export interface Block {
   local_context?: BlockLocalContextInput | null;
   /** Author limits on Explore/Drill × open/timed launches (raw JSON or parsed). */
   practice_options?: unknown;
+  /** Combinable Dynamic / Generator effects. */
+  creator_effects?: unknown;
 }
 
 export interface Workspace {
@@ -162,6 +175,13 @@ export interface Workspace {
   workspace_goal?: string | null;
   cover_image_url?: string;
   is_all_you_can_learn?: boolean;
+  /** AYCL marketplace listing fields (catalog workspace only). */
+  aycl_category?: string | null;
+  aycl_summary?: string | null;
+  aycl_author_name?: string | null;
+  aycl_author_avatar_url?: string | null;
+  aycl_learner_price_cents?: number | null;
+  aycl_full_price_cents?: number | null;
   unusable_cells?: UnusableCell[] | null;
   /** Created multi-block DAGs (Creator DAGs tab). */
   workspace_dags?: WorkspaceDagRecord[] | null;
@@ -231,6 +251,60 @@ export function WorkspaceView({
   
   const [plan, setPlan] = useState<Workspace | null>(initialPlan || null);
   const [nodes, setNodes] = useState<Block[]>(initialNodes || []);
+  /** Creator generator drawer / learner select → empty cells to spark. */
+  const [generatorTargetPreviewCells, setGeneratorTargetPreviewCells] =
+    useState<GeneratorTargetCell[] | null>(null);
+  /** When true, empty map clicks toggle generator targets (not Add pane). */
+  const [generatorPickActive, setGeneratorPickActive] = useState(false);
+  const generatorPickActiveRef = useRef(false);
+  const generatorEmptyToggleRef = useRef<
+    ((cell: { row: number; col: number }) => void) | null
+  >(null);
+  /** Dynamic unlock-after pick: click filled blocks on the map. */
+  const [dynamicPickActive, setDynamicPickActive] = useState(false);
+  const dynamicPickActiveRef = useRef(false);
+  const [dynamicUnlockPreviewIds, setDynamicUnlockPreviewIds] = useState<
+    string[] | null
+  >(null);
+  const dynamicBlockToggleRef = useRef<((blockId: string) => void) | null>(
+    null,
+  );
+  const setGeneratorPickActiveSafe = useCallback((active: boolean) => {
+    generatorPickActiveRef.current = active;
+    setGeneratorPickActive(active);
+  }, []);
+  const setDynamicPickActiveSafe = useCallback((active: boolean) => {
+    dynamicPickActiveRef.current = active;
+    setDynamicPickActive(active);
+  }, []);
+  const registerDynamicBlockToggle = useCallback(
+    (fn: ((blockId: string) => void) | null) => {
+      dynamicBlockToggleRef.current = fn;
+    },
+    [],
+  );
+  const registerGeneratorEmptyToggle = useCallback(
+    (fn: ((cell: { row: number; col: number }) => void) | null) => {
+      generatorEmptyToggleRef.current = fn;
+    },
+    [],
+  );
+  /** Stable: always wired; ignores clicks when pick mode is off (ref-checked). */
+  const handleGeneratorEmptyToggle = useCallback(
+    (cell: { row: number; col: number }) => {
+      if (!generatorPickActiveRef.current) return;
+      generatorEmptyToggleRef.current?.(cell);
+    },
+    [],
+  );
+  const handleDynamicBlockToggle = useCallback((blockId: string) => {
+    if (!dynamicPickActiveRef.current) return;
+    dynamicBlockToggleRef.current?.(blockId);
+  }, []);
+  /** Learner dynamic blocks that have been generated this session. */
+  const [dynamicGeneratedIds, setDynamicGeneratedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [loading, setLoading] = useState(!initialPlan);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -269,6 +343,12 @@ export function WorkspaceView({
   >(null);
   /** Background multi-create jobs (progress under minimap; map stays interactive). */
   const [expandJobs, setExpandJobs] = useState<AddExpandJob[]>([]);
+  /** Cluster-blocks progress under minimap (compute + save). */
+  const [clusterMapJob, setClusterMapJob] = useState<{
+    active: boolean;
+    progress: number;
+    label: string;
+  } | null>(null);
   const expandAbortRef = useRef(new Map<string, boolean>());
   const expandJobSeqRef = useRef(0);
   /** Creator clone-paste arm (source filled block → empty target). */
@@ -292,6 +372,10 @@ export function WorkspaceView({
         : null,
   );
   const [ayclUpgradeBusy, setAyclUpgradeBusy] = useState(false);
+  /** Catalog listing upgrade delta label (null → global default). */
+  const [ayclUpgradePriceLabel, setAyclUpgradePriceLabel] = useState<string>(
+    AYCL_UPGRADE_PRICE_LABEL,
+  );
 
   const supabase = createClient();
 
@@ -450,6 +534,21 @@ export function WorkspaceView({
 
   const handleEmptySelectionChange = useCallback(
     (cells: Array<{ row: number; col: number }> | null) => {
+      // Generator pick: toggle empty cells into generator targets (no Add pane).
+      // Use ref so the first click after enabling is not lost to a stale render.
+      if (generatorPickActiveRef.current && generatorEmptyToggleRef.current) {
+        const placeable = (cells || []).filter((c) => {
+          const k = `${c.row}:${c.col}`;
+          return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
+        });
+        // Only act on a sole newly clicked empty cell.
+        if (placeable.length === 1) {
+          generatorEmptyToggleRef.current(placeable[0]!);
+        }
+        // Keep current block/add surface; do not open multi-create.
+        return;
+      }
+
       // Clone paste: intercept single empty click while armed (no Add pane).
       if (shouldInterceptEmptyClickForClone(cloneArm)) {
         const placeable = (cells || []).filter((c) => {
@@ -663,6 +762,14 @@ export function WorkspaceView({
     } else if (data.accessTier) {
       setAyclCapabilities(resolveAyclCapabilities(data.accessTier));
     }
+    if (typeof data.upgradePriceLabel === "string" && data.upgradePriceLabel) {
+      setAyclUpgradePriceLabel(data.upgradePriceLabel);
+    } else if (
+      typeof data.upgradePriceCents === "number" &&
+      Number.isFinite(data.upgradePriceCents)
+    ) {
+      setAyclUpgradePriceLabel(formatAyclPriceCentsLabel(data.upgradePriceCents));
+    }
   }, [ayclToken]);
 
   const handleCombineBlocks = useCallback(
@@ -829,11 +936,11 @@ export function WorkspaceView({
                   weightedNeighbors,
                   model,
                   locale,
+                  // Author starter flag (default false; API also starts empty maps).
+                  is_start: Boolean(opts?.isStart),
                   ...(opts?.contextSourceKeys?.length
                     ? { contextSourceKeys: opts.contextSourceKeys }
                     : {}),
-                  // Author starter flag (default false; API also starts empty maps).
-                  is_start: Boolean(opts?.isStart),
                   ...(ayclToken ? { ayclToken } : {}),
                 }),
               });
@@ -847,9 +954,20 @@ export function WorkspaceView({
               const data = await response.json();
               if (data.updatedNodes?.length > 0) {
                 const nextNodes = data.updatedNodes.map(
-                  (n: Block & { local_context?: unknown }) => ({
+                  (n: Block & {
+                    local_context?: unknown;
+                    practice_options?: unknown;
+                    creator_effects?: unknown;
+                  }) => ({
                     ...n,
                     local_context: parseBlockLocalContext(n.local_context),
+                    practice_options: parseBlockPracticeOptions(
+                      n.practice_options,
+                    ),
+                    creator_effects: parseBlockCreatorEffects(
+                      n.creator_effects,
+                      { selfBlockId: n.id },
+                    ),
                   }),
                 );
                 nodesRef.current = nextNodes;
@@ -1460,10 +1578,17 @@ export function WorkspaceView({
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
             data.updatedNodes.map(
-              (n: Block & { local_context?: unknown; practice_options?: unknown }) => ({
+              (n: Block & {
+                local_context?: unknown;
+                practice_options?: unknown;
+                creator_effects?: unknown;
+              }) => ({
                 ...n,
                 local_context: parseBlockLocalContext(n.local_context),
                 practice_options: parseBlockPracticeOptions(n.practice_options),
+                creator_effects: parseBlockCreatorEffects(n.creator_effects, {
+                  selfBlockId: n.id,
+                }),
               }),
             ),
           );
@@ -1474,7 +1599,135 @@ export function WorkspaceView({
         setIsAddingBlock(false);
       }
     },
-    [isOwner, refreshNodes, router, workspaceId],
+    [ayclToken, isOwner, refreshNodes, router, workspaceId],
+  );
+
+  /** Persist combinable Dynamic / Generator effects. */
+  const handleSaveCreatorEffects = useCallback(
+    async (input: { blockId: string; effects: BlockCreatorEffects }) => {
+      if (!workspaceId || !isOwner) return;
+      const block = nodes.find((n) => n.id === input.blockId);
+      if (!block) throw new Error("Block not found");
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
+            op: "update_block",
+            blockId: input.blockId,
+            title: block.title,
+            description: block.description || "",
+            creator_effects: serializeBlockCreatorEffects(input.effects, {
+              selfBlockId: input.blockId,
+            }),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to save block effects");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map(
+              (n: Block & {
+                local_context?: unknown;
+                practice_options?: unknown;
+                creator_effects?: unknown;
+              }) => ({
+                ...n,
+                local_context: parseBlockLocalContext(n.local_context),
+                practice_options: parseBlockPracticeOptions(n.practice_options),
+                creator_effects: parseBlockCreatorEffects(n.creator_effects, {
+                  selfBlockId: n.id,
+                }),
+              }),
+            ),
+          );
+        }
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [ayclToken, isOwner, nodes, refreshNodes, router, workspaceId],
+  );
+
+  const mapNodesWithEffects = useCallback(
+    (
+      raw: Array<
+        Block & {
+          local_context?: unknown;
+          practice_options?: unknown;
+          creator_effects?: unknown;
+        }
+      >,
+    ) =>
+      raw.map((n) => ({
+        ...n,
+        local_context: parseBlockLocalContext(n.local_context),
+        practice_options: parseBlockPracticeOptions(n.practice_options),
+        creator_effects: parseBlockCreatorEffects(n.creator_effects, {
+          selfBlockId: n.id,
+        }),
+      })),
+    [],
+  );
+
+  /** Run effect generation (dynamic unlock / generator empty-cell spawn). */
+  const runBlockEffectGenerate = useCallback(
+    async (input: {
+      mode: "dynamic" | "generator_cell";
+      blockId?: string;
+      generatorBlockId?: string;
+      row?: number;
+      col?: number;
+    }) => {
+      if (!workspaceId) return;
+      const res = await fetch("/api/workspace/block-effect-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          ...(ayclToken ? { ayclToken } : {}),
+          mode: input.mode,
+          blockId: input.blockId,
+          generatorBlockId: input.generatorBlockId,
+          row: input.row,
+          col: input.col,
+          locale,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.warn("[effect-generate]", data.error || res.status);
+        return;
+      }
+      if (Array.isArray(data.updatedNodes)) {
+        setNodes(mapNodesWithEffects(data.updatedNodes));
+      }
+      if (input.mode === "dynamic" && input.blockId) {
+        setDynamicGeneratedIds((prev) => {
+          const next = new Set(prev);
+          next.add(input.blockId!);
+          return next;
+        });
+        try {
+          const key = dynamicGeneratedStorageKey({
+            workspaceId,
+            blockId: input.blockId,
+            userKey: currentUserId || ayclToken || "local",
+          });
+          window.sessionStorage.setItem(key, "1");
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [ayclToken, currentUserId, locale, mapNodesWithEffects, workspaceId],
   );
 
   /** Delete block from the Edit drawer; clears selection after. */
@@ -1556,6 +1809,85 @@ export function WorkspaceView({
       }
     },
     [isOwner, refreshNodes, router, workspaceId],
+  );
+
+  /** Multi-select Cluster blocks → absolute relocate (positions only). */
+  const handleClusterBlocks = useCallback(
+    async (input: {
+      blockIds: string[];
+      placements: Array<{
+        id: string;
+        position_x: number;
+        position_y: number;
+      }>;
+      clusterCount: number;
+      separation?: number;
+      prompt?: string;
+    }) => {
+      if (!workspaceId) {
+        throw new Error("Workspace required to cluster blocks");
+      }
+      if (!isOwner) {
+        throw new Error("Only the workspace owner can cluster blocks");
+      }
+      if (!input.placements?.length) {
+        throw new Error("No placements to apply");
+      }
+      setIsAddingBlock(true);
+      setClusterMapJob({
+        active: true,
+        progress: 0.7,
+        label: "Saving cluster positions…",
+      });
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            ...(ayclToken ? { ayclToken } : {}),
+            op: "relocate",
+            placements: input.placements,
+            blockIds: input.blockIds,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to cluster blocks");
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            data.updatedNodes.map((n: Block & { local_context?: unknown }) => ({
+              ...n,
+              local_context: parseBlockLocalContext(n.local_context),
+            })),
+          );
+        }
+        setClusterMapJob({
+          active: true,
+          progress: 1,
+          label: "Clusters updated",
+        });
+        refreshNodes();
+        router.refresh();
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [ayclToken, isOwner, refreshNodes, router, workspaceId],
+  );
+
+  const handleClusterProgress = useCallback(
+    (
+      job: {
+        active: boolean;
+        progress: number;
+        label: string;
+      } | null,
+    ) => {
+      setClusterMapJob(job);
+    },
+    [],
   );
 
   /** Multi-select DAG Apply / tab edit → next_block_ids + register created DAG. */
@@ -1688,6 +2020,35 @@ export function WorkspaceView({
   };
 
   // Must stay above loading/error early returns (Rules of Hooks).
+  // Hydrate dynamic-generated flags from sessionStorage for map "?" labels.
+  // Must stay above loading/error early returns (Rules of Hooks).
+  useEffect(() => {
+    if (!workspaceId || interactionMode !== "learner") return;
+    const userKey = currentUserId || ayclToken || "local";
+    const next = new Set<string>();
+    for (const n of nodes) {
+      try {
+        const key = dynamicGeneratedStorageKey({
+          workspaceId,
+          blockId: n.id,
+          userKey,
+        });
+        if (window.sessionStorage.getItem(key) === "1") {
+          next.add(n.id);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    setDynamicGeneratedIds(next);
+  }, [
+    workspaceId,
+    interactionMode,
+    currentUserId,
+    ayclToken,
+    nodes.length,
+  ]);
+
   const startAyclUpgradeCheckout = useCallback(async () => {
     if (!ayclToken || ayclUpgradeBusy) return;
     setAyclUpgradeBusy(true);
@@ -1781,6 +2142,12 @@ export function WorkspaceView({
     setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
     setEmptySurface(clearWorkspaceAddTarget());
     setAddExpandPreviewCells(null);
+    setGeneratorTargetPreviewCells(null);
+    setGeneratorPickActiveSafe(false);
+    generatorEmptyToggleRef.current = null;
+    setDynamicPickActiveSafe(false);
+    setDynamicUnlockPreviewIds(null);
+    dynamicBlockToggleRef.current = null;
     if (next === "learner") {
       setActiveSection(
         resolveActiveSectionForMode({
@@ -1911,8 +2278,8 @@ export function WorkspaceView({
         >
           <p className="text-[11px] text-amber-100/90">
             {ayclUpgradeOfferDescription()}{" "}
-            <span className="font-medium text-white">
-              {AYCL_UPGRADE_PRICE_LABEL}
+            <span className="font-medium text-white" data-aycl-upgrade-price>
+              {ayclUpgradePriceLabel}
             </span>{" "}
             one-time.
           </p>
@@ -2253,7 +2620,42 @@ export function WorkspaceView({
             }
             workspaceNotes={notesContent || plan.notes}
             previewEmptyCells={isLearnerMode ? null : addExpandPreviewCells}
+            generatorTargetPreviewCells={
+              // Draft while editing Generator drawer; else saved targets on selected block.
+              generatorTargetPreviewCells ??
+              (detailBlock
+                ? generatorTargetHighlightCells(
+                    parseBlockCreatorEffects(detailBlock.creator_effects, {
+                      selfBlockId: detailBlock.id,
+                    }),
+                  )
+                : null)
+            }
+            generatorPickActive={!isLearnerMode && generatorPickActive}
+            onGeneratorEmptyToggle={
+              !isLearnerMode ? handleGeneratorEmptyToggle : undefined
+            }
+            dynamicPickActive={!isLearnerMode && dynamicPickActive}
+            onDynamicBlockToggle={
+              !isLearnerMode ? handleDynamicBlockToggle : undefined
+            }
+            dynamicUnlockPreviewIds={
+              dynamicUnlockPreviewIds ??
+              (detailBlock
+                ? (() => {
+                    const e = parseBlockCreatorEffects(
+                      detailBlock.creator_effects,
+                      { selfBlockId: detailBlock.id },
+                    );
+                    return e.dynamic.enabled
+                      ? e.dynamic.unlockAfterBlockIds
+                      : null;
+                  })()
+                : null)
+            }
+            dynamicContentGeneratedIds={dynamicGeneratedIds}
             expandJobs={isLearnerMode ? [] : expandJobs}
+            clusterMapJob={isLearnerMode ? null : clusterMapJob}
             onAbortExpandJob={handleAbortExpandJob}
           />
         </aside>
@@ -2282,6 +2684,9 @@ export function WorkspaceView({
                 block={detailBlock}
                 blocks={nodes}
                 workspaceId={workspaceId}
+                ayclToken={ayclToken}
+                locale={locale}
+                learnerUserKey={currentUserId || ayclToken || "local"}
                 locked={
                   isLearnerMode
                     ? isLearnerMapBlockLocked(detailBlock, nodes)
@@ -2292,6 +2697,28 @@ export function WorkspaceView({
                         ),
                       )
                 }
+                onBlocksUpdated={(raw) => {
+                  if (Array.isArray(raw)) {
+                    setNodes(
+                      mapNodesWithEffects(
+                        raw as Array<
+                          Block & {
+                            local_context?: unknown;
+                            practice_options?: unknown;
+                            creator_effects?: unknown;
+                          }
+                        >,
+                      ),
+                    );
+                  }
+                }}
+                onDynamicGenerated={(blockId) => {
+                  setDynamicGeneratedIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(blockId);
+                    return next;
+                  });
+                }}
                 onSavePlanningPrompt={async (prompt) => {
                   await supabase
                     .from("blocks")
@@ -2473,8 +2900,47 @@ export function WorkspaceView({
                     }
                   }
 
-                  // 3) Unlock dependents (lock_until rules)
+                  // 3) Unlock dependents (lock_until rules) + effect generation
                   report("applying_unlocks");
+
+                  // Generator: create new blocks on empty target cells.
+                  const genCells = generatorTargetCellsAfterDone({
+                    completedBlockId: blockId,
+                    blocks: nodes.map((n) => ({
+                      id: n.id,
+                      creator_effects: n.creator_effects,
+                      position_x: n.position_x,
+                      position_y: n.position_y,
+                    })),
+                    unusableKeys: unusableCells.map(
+                      (c) => `${c.row}:${c.col}`,
+                    ),
+                  });
+                  for (const cell of genCells) {
+                    void runBlockEffectGenerate({
+                      mode: "generator_cell",
+                      generatorBlockId: blockId,
+                      row: cell.row,
+                      col: cell.col,
+                    });
+                  }
+
+                  // Dynamic: generate blocks whose unlock-after deps just completed.
+                  const dynamicIds = dynamicBlocksUnlockedAfterDone({
+                    completedBlockId: blockId,
+                    blocks: nodes.map((n) => ({
+                      id: n.id,
+                      status: n.status,
+                      creator_effects: n.creator_effects,
+                    })),
+                  });
+                  for (const dynId of dynamicIds) {
+                    void runBlockEffectGenerate({
+                      mode: "dynamic",
+                      blockId: dynId,
+                    });
+                  }
+
                   refreshNodes();
                   router.refresh();
                   return { unlockedIds };
@@ -2492,6 +2958,8 @@ export function WorkspaceView({
                 onCombine={handleCombineBlocks}
                 onGenerateBridge={handleGenerateBridge}
                 onApplyDag={handleApplyDag}
+                onClusterBlocks={handleClusterBlocks}
+                onClusterProgress={handleClusterProgress}
                 onDeleteBlocks={handleDeleteBlocks}
                 onBridgePreviewChange={setAddExpandPreviewCells}
                 onCancel={handleCloseCombine}
@@ -2506,7 +2974,6 @@ export function WorkspaceView({
               detailIndex >= 0 ? (
               <WorkspaceBlockDetailPane
                 key={detailBlock.id}
-                title={detailBlock.title}
                 blockId={detailBlock.id}
                 blockTitle={detailBlock.title}
                 blockDescription={detailBlock.description}
@@ -2516,6 +2983,10 @@ export function WorkspaceView({
                 isStart={detailBlock.is_start}
                 practiceOptions={parseBlockPracticeOptions(
                   detailBlock.practice_options,
+                )}
+                creatorEffects={parseBlockCreatorEffects(
+                  detailBlock.creator_effects,
+                  { selfBlockId: detailBlock.id },
                 )}
                 lockUntilTitles={detailLockTitles}
                 spanW={detailBlock.span_w}
@@ -2534,13 +3005,22 @@ export function WorkspaceView({
                 workspaceNotes={notesContent || plan.notes}
                 onUpdateBlock={handleUpdateBlock}
                 onDeleteBlock={handleDeleteBlock}
+                onSaveCreatorEffects={
+                  isOwner ? handleSaveCreatorEffects : undefined
+                }
                 onSplitBlock={isOwner ? handleSplitBlock : undefined}
-                expandNodes={isOwner ? nodes : undefined}
+                expandNodes={nodes}
                 unusableCells={unusableCells}
                 onExpandBlock={
                   isOwner ? handleExpandFromSourceBlock : undefined
                 }
                 onExpandPreviewChange={setAddExpandPreviewCells}
+                onGeneratorTargetPreviewChange={setGeneratorTargetPreviewCells}
+                onGeneratorPickModeChange={setGeneratorPickActiveSafe}
+                onRegisterGeneratorEmptyToggle={registerGeneratorEmptyToggle}
+                onDynamicUnlockPreviewChange={setDynamicUnlockPreviewIds}
+                onDynamicPickModeChange={setDynamicPickActiveSafe}
+                onRegisterDynamicBlockToggle={registerDynamicBlockToggle}
                 localContextPanel={
                   <WorkspaceBlockLocalContextPanel
                     key={detailBlock.id}
@@ -2556,39 +3036,20 @@ export function WorkspaceView({
                     busy={mapGroundBusy}
                   />
                 }
-              >
-                <SessionItem
-                  node={detailBlock}
-                  index={detailIndex}
-                  onSelect={() => {}}
-                  onDelete={() => {}}
-                  onFork={() => {}}
-                  isExpanded
-                  isOwner={isOwner}
-                  isLoggedIn={!!currentUserId}
-                  supabase={supabase}
-                  planTopic={plan.root_topic}
-                  workspaceId={workspaceId}
-                  variant="detail"
-                  detailLayout="inline"
-                  // Explore/Drill is Learner-only (WorkspaceLearnerBlockPane).
-                  hidePracticeLaunch
-                />
-              </WorkspaceBlockDetailPane>
+              />
             ) : showCreatorDrawers && rightPane === "add_block" && addTargetCell ? (
               <WorkspaceAddBlockPane
                 key={`add-${addTargetCell.row}-${addTargetCell.col}`}
                 cell={addTargetCell}
                 nodes={nodes}
                 workspaceId={workspaceId}
+                ayclToken={ayclToken}
                 locale={locale}
                 busy={false}
                 workspaceNotes={notesContent || plan.notes}
                 unusableCells={unusableCells}
                 onSubmit={handleSubmitAddBlock}
-                onCancel={() => {
-                  handleCloseEmptyCreate();
-                }}
+                onCancel={handleCloseEmptyCreate}
                 onExpandPreviewChange={setAddExpandPreviewCells}
                 labels={{
                   addTitle: t("sessionList.gridAddTitle"),

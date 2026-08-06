@@ -3,24 +3,19 @@ import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { MapOfKnowledgeClient } from "@/components/MapOfKnowledgeClient";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems/map-of-knowledge",
+});
 
 export const metadata: Metadata = {
   title: "The Map of Knowledge",
   description:
     "Explore the public embedding space of Uncertain Systems — 2D and 3D knowledge configurations, regions, learner locations, and aggregated proof of work across every public workspace.",
   alternates: { canonical: "https://uncertain.systems/map-of-knowledge" },
-  openGraph: {
-    title: "The Map of Knowledge | Uncertain Systems",
-    description:
-      "Interactive map of public knowledge configuration space — regions, user locations, and proof-of-work aggregates.",
-    url: "https://uncertain.systems/map-of-knowledge",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "The Map of Knowledge | Uncertain Systems",
-    description:
-      "Interactive map of public knowledge configuration space — regions, user locations, and proof-of-work aggregates.",
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
 };
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg";

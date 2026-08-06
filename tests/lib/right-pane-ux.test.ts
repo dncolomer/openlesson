@@ -123,7 +123,8 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).toContain("data-block-detail-drawers");
     expect(detail).toContain('drawerId="local"');
     expect(detail).toContain('drawerId="simulation"');
-    expect(detail).toContain('drawerId="detail"');
+    // Creator Details/Sessions drawer removed — Edit owns title/description.
+    expect(detail).not.toContain('drawerId="detail"');
     expect(detail).toContain('title="Local context"');
     expect(detail).toContain('title="Block Simulation"');
     // Local drawer expands when materials already attached; simulation stays collapsed.

@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     const { data: siblingBlocks } = await supabase
       .from("blocks")
       .select(
-        "id, title, description, position_x, position_y, span_w, span_h, is_start, next_block_ids, lock_until_block_ids",
+        "id, title, description, position_x, position_y, span_w, span_h, is_start, next_block_ids, lock_until_block_ids, local_context",
       )
       .eq("workspace_id", workspaceId)
       .limit(24);
@@ -136,7 +136,88 @@ export async function POST(req: NextRequest) {
       span_h: b.span_h as number | null,
       next_block_ids: (b.next_block_ids as string[] | null) ?? null,
       lock_until_block_ids: (b.lock_until_block_ids as string[] | null) ?? null,
+      local_context: parseBlockLocalContext(
+        (b as { local_context?: unknown }).local_context,
+      ),
     }));
+
+    // Workspace-global files (names) + block-local materials
+    let workspaceFiles: Array<{ name: string; excerpt?: string | null }> = [];
+    try {
+      const { data: fileRows } = await supabase
+        .from("workspace_files")
+        .select("file_name")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .limit(16);
+      workspaceFiles = (fileRows || [])
+        .map((f: { file_name?: string | null }) => ({
+          name: typeof f.file_name === "string" ? f.file_name.trim() : "",
+          excerpt: null as string | null,
+        }))
+        .filter((f) => f.name);
+    } catch {
+      workspaceFiles = [];
+    }
+
+    // External links — prefer those referenced on the block, include rest for grounding
+    let externalLinks: Array<{
+      title?: string | null;
+      url?: string | null;
+      description?: string | null;
+    }> = [];
+    try {
+      const { data: extRows, error: extError } = await supabase
+        .from("workspace_external_resources")
+        .select("id, title, url, description")
+        .eq("workspace_id", workspaceId)
+        .order("sort_order", { ascending: true })
+        .limit(24);
+      if (!extError && extRows) {
+        const byId = new Map(
+          extRows.map((r: { id: string }) => [r.id, r] as const),
+        );
+        const preferred: typeof externalLinks = [];
+        const rest: typeof externalLinks = [];
+        const seen = new Set<string>();
+        for (const id of local.externalResourceIds) {
+          const hit = byId.get(id) as
+            | {
+                id: string;
+                title?: string | null;
+                url?: string | null;
+                description?: string | null;
+              }
+            | undefined;
+          if (hit && !seen.has(hit.id)) {
+            seen.add(hit.id);
+            preferred.push({
+              title: hit.title ?? null,
+              url: hit.url ?? null,
+              description: hit.description ?? null,
+            });
+          }
+        }
+        for (const r of extRows) {
+          const row = r as {
+            id: string;
+            title?: string | null;
+            url?: string | null;
+            description?: string | null;
+          };
+          if (seen.has(row.id)) continue;
+          seen.add(row.id);
+          rest.push({
+            title: row.title ?? null,
+            url: row.url ?? null,
+            description: row.description ?? null,
+          });
+        }
+        externalLinks = [...preferred, ...rest];
+      }
+    } catch {
+      externalLinks = [];
+    }
 
     const files = [
       ...local.localFiles.map((f) => ({
@@ -144,6 +225,7 @@ export async function POST(req: NextRequest) {
         excerpt: f.excerpt ?? null,
       })),
       ...local.globalFileRefs.map((name) => ({ name, excerpt: null as string | null })),
+      ...workspaceFiles,
     ];
 
     const system = buildSimulationSamplesSystemPrompt();
@@ -159,8 +241,15 @@ export async function POST(req: NextRequest) {
       planningPrompt,
       localNotes: local.notes,
       files,
+      externalLinks,
       blocks: inventory,
       focusedBlockId: blockId,
+      blockLocalContext: {
+        notes: local.notes,
+        local_files: local.localFiles,
+        global_file_refs: local.globalFileRefs,
+        external_resource_ids: local.externalResourceIds,
+      },
       locale,
     });
 
@@ -188,6 +277,14 @@ export async function POST(req: NextRequest) {
       localNotes: local.notes,
       hasLocalContext: local.hasLocalMaterials,
       hasPlanningPrompt: Boolean(planningPrompt.trim()),
+      // Full material rows (excerpts + link bodies) for pure pad/sanitize path —
+      // not chip labels only.
+      files,
+      externalLinks,
+      localFileNames: files.map((f) => f.name).filter(Boolean),
+      externalLabels: externalLinks
+        .map((l) => l.title || l.url || "")
+        .filter(Boolean),
       workspaceGoal:
         workspace?.workspace_goal || workspace?.description || workspace?.root_topic || null,
       workspaceTitle: workspace?.title || workspace?.root_topic || null,

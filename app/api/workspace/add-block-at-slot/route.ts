@@ -18,6 +18,12 @@ import {
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
 import {
+  normalizeBlockCreatorEffects,
+  serializeBlockCreatorEffects,
+  validateBlockCreatorEffects,
+  hasAnyCreatorEffect,
+} from "@/lib/block-creator-effects";
+import {
   composeAddBlockAtSlotSystemMessage,
   composeJourneyGraphPromptSnippet,
 } from "@/lib/workspace-authoring-prompt-context";
@@ -41,6 +47,9 @@ export async function POST(req: NextRequest) {
       contextSourceKeys,
       is_start: isStartBody,
       isStart: isStartCamel,
+      /** Combinable creator effects from blank-cell Add drawers. */
+      creator_effects: creatorEffectsSnake,
+      creatorEffects: creatorEffectsCamel,
       /** "bridge" → knowledge-bridge system framing (suggestion 7). */
       intent,
     } = body;
@@ -240,6 +249,37 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
         : typeof isStartCamel === "boolean"
           ? isStartCamel
           : undefined;
+
+    // Creator effects drafted on blank-cell Add (Dynamic / Generator).
+    const effectsRaw = creatorEffectsSnake ?? creatorEffectsCamel;
+    let creatorEffectsWire: Record<string, unknown> | null = null;
+    if (effectsRaw !== undefined && effectsRaw !== null) {
+      const validated = validateBlockCreatorEffects({
+        // New block has no id yet — use placeholder; strip self from generator targets.
+        blockId: "__new_block__",
+        effects: normalizeBlockCreatorEffects(effectsRaw, {
+          selfBlockId: "__new_block__",
+        }),
+        blocks: nodes.map((n) => ({
+          id: String(n.id),
+          lock_until_block_ids: (
+            n as { lock_until_block_ids?: string[] | null }
+          ).lock_until_block_ids,
+          next_block_ids: n.next_block_ids,
+        })),
+        // Dynamic may be flagged before path edges exist.
+        allowDynamicWithoutDag: true,
+      });
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
+      }
+      if (hasAnyCreatorEffect(validated.effects)) {
+        creatorEffectsWire = serializeBlockCreatorEffects(validated.effects, {
+          selfBlockId: "__new_block__",
+        });
+      }
+    }
+
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
       title: aiResponse.data.title.trim(),
@@ -253,6 +293,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       position_x: col,
       position_y: row,
       ...(local_context ? { local_context } : {}),
+      ...(creatorEffectsWire ? { creator_effects: creatorEffectsWire } : {}),
     };
 
     let { data: newNode, error: insertError } = await supabase
@@ -261,13 +302,29 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       .select()
       .single();
 
-    // Graceful fallback if local_context column not migrated yet
+    // Graceful fallback if optional columns not migrated yet
     if (
       insertError &&
-      /local_context|schema cache/i.test(insertError.message || "")
+      /local_context|creator_effects|schema cache/i.test(insertError.message || "")
     ) {
-      const { local_context: _lc, ...withoutLocal } = insertPayload;
-      const retry = await supabase.from("blocks").insert(withoutLocal).select().single();
+      let retryPayload = { ...insertPayload };
+      if (/creator_effects/i.test(insertError.message || "")) {
+        const { creator_effects: _ce, ...rest } = retryPayload;
+        retryPayload = rest;
+      }
+      if (/local_context/i.test(insertError.message || "")) {
+        const { local_context: _lc, ...rest } = retryPayload;
+        retryPayload = rest;
+      }
+      if (/schema cache/i.test(insertError.message || "")) {
+        const {
+          local_context: _lc,
+          creator_effects: _ce,
+          ...rest
+        } = insertPayload;
+        retryPayload = rest;
+      }
+      const retry = await supabase.from("blocks").insert(retryPayload).select().single();
       newNode = retry.data;
       insertError = retry.error;
     }

@@ -39,15 +39,19 @@ import {
   canEditMapNoteContent,
   canMutateMapNoteGeometry,
   createLearnerMapNoteAtViewportCenter,
+  defaultMapNotesPlaneVisible,
   deleteLearnerMapNote,
   learnerNoteLayerStyle,
   loadCreatorMapNotes,
   loadLearnerMapNotes,
   mapNoteSourceOf,
+  mapNotesForPlaneRender,
   saveCreatorMapNotes,
   saveLearnerMapNotes,
   shouldMountMapNotes,
+  shouldRenderMapNotesOnPlane,
   toggleLearnerMapNoteCollapsed,
+  toggleMapNotesPlaneVisible,
   updateLearnerMapNote,
   upsertLearnerMapNote,
   type LearnerMapNote,
@@ -81,6 +85,15 @@ import {
   parseBlockPracticeOptions,
   practiceOptionsIconKeys,
 } from "@/lib/block-practice-options";
+import {
+  creatorEffectIconKeys,
+  generatorCellKey,
+  generatorTargetHighlightCells,
+  isGeneratorEffectBusy,
+  learnerDynamicMapLabel,
+  parseBlockCreatorEffects,
+  type BlockCreatorEffectKey,
+} from "@/lib/block-creator-effects";
 import {
   areBlocksContiguous,
   buildOccupancyFromPlaced,
@@ -223,12 +236,46 @@ interface BlockSkillGridProps {
    */
   previewEmptyCells?: Array<{ row: number; col: number }> | null;
   /**
+   * Generator empty-cell targets to spark-highlight on the map
+   * (creator drawer pick or learner select on a generator block).
+   */
+  generatorTargetPreviewCells?: ReadonlyArray<{ row: number; col: number }> | null;
+  /**
+   * When true, empty-cell clicks toggle generator targets without opening Add
+   * or clearing the focused block (generator drawer stays open).
+   */
+  generatorPickActive?: boolean;
+  /** Called when an empty cell is clicked while generatorPickActive. */
+  onGeneratorEmptyToggle?: (cell: { row: number; col: number }) => void;
+  /**
+   * When true, filled-block clicks toggle Dynamic unlock-after deps without
+   * changing the focused block selection.
+   */
+  dynamicPickActive?: boolean;
+  onDynamicBlockToggle?: (blockId: string) => void;
+  /** Block ids to highlight as Dynamic unlock-after deps (draft or saved). */
+  dynamicUnlockPreviewIds?: readonly string[] | null;
+  /**
+   * Learner-resolved dynamic generation flags (blockId → generated).
+   * When missing, dynamic blocks show "?" map label.
+   */
+  dynamicContentGeneratedIds?: ReadonlySet<string> | readonly string[] | null;
+  /**
    * Background multi-create jobs (range/density). Progress + stop render under the minimap.
    * Host owns the loop — map stays interactive while jobs run.
    */
   expandJobs?: readonly AddExpandJob[] | null;
   /** Abort one background expand job (stop remaining slots after current). */
   onAbortExpandJob?: (jobId: string) => void;
+  /**
+   * Cluster-blocks progress under the minimap (compute + save).
+   * progress is 0..1; host clears when null.
+   */
+  clusterMapJob?: {
+    active: boolean;
+    progress: number;
+    label: string;
+  } | null;
   /**
    * @deprecated Prefer onEmptySelectionChange — still maps single cell for older hosts.
    */
@@ -679,6 +726,77 @@ function BlockStarterFlagBadge() {
 }
 
 /**
+ * Combinable creator-effect icons (Dynamic ?, Generator spark).
+ * Shown in creator + learner; learner also uses them for behavior cues.
+ */
+function BlockCreatorEffectsBadge({
+  keys,
+  /** Learner dynamic shows "?" as primary map label elsewhere; icon still marks effect. */
+  learnerMode = false,
+}: {
+  keys: BlockCreatorEffectKey[];
+  learnerMode?: boolean;
+}) {
+  if (keys.length === 0) return null;
+  const title = keys
+    .map((k) => (k === "dynamic" ? "Dynamic" : "Generator"))
+    .join(" · ");
+  return (
+    <span
+      className="absolute bottom-1 left-1/2 z-[1] flex -translate-x-1/2 max-w-[calc(100%-8px)] flex-wrap items-center justify-center gap-0.5 rounded bg-black/50 px-0.5 py-px"
+      data-block-creator-effect-icons
+      data-creator-effect-icon-keys={keys.join(",")}
+      data-learner-mode={learnerMode ? "true" : undefined}
+      title={title}
+      aria-label={`Effects: ${title}`}
+    >
+      {keys.includes("dynamic") ? (
+        <span
+          className="inline-flex h-3 min-w-[0.75rem] items-center justify-center text-[10px] font-bold leading-none text-white/90"
+          data-creator-effect-icon="dynamic"
+          aria-hidden
+        >
+          ?
+        </span>
+      ) : null}
+      {keys.includes("generator") ? (
+        <svg
+          className="h-2.5 w-2.5 text-white/90"
+          data-creator-effect-icon="generator"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden
+        >
+          {/* Spark */}
+          <path d="M12 2.5l1.2 5.1 3.6-3.9-1.1 5.4 5.3-.4-4.2 3.3 4.2 3.3-5.3-.4 1.1 5.4-3.6-3.9L12 21.5l-1.2-5.1-3.6 3.9 1.1-5.4-5.3.4 4.2-3.3-4.2-3.3 5.3.4-1.1-5.4 3.6 3.9L12 2.5z" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+/** Spark badge on generator target blocks (learner select / creator preview). */
+function BlockGeneratorTargetSparkBadge() {
+  return (
+    <span
+      className="absolute right-1 top-1 z-[2] inline-flex items-center justify-center rounded bg-white/20 p-0.5 text-white shadow ring-1 ring-white/40"
+      data-block-generator-target-spark
+      title="Will be generated"
+      aria-label="Generator target"
+    >
+      <svg
+        className="h-3 w-3"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden
+      >
+        <path d="M12 2.5l1.2 5.1 3.6-3.9-1.1 5.4 5.3-.4-4.2 3.3 4.2 3.3-5.3-.4 1.1 5.4-3.6-3.9L12 21.5l-1.2-5.1-3.6 3.9 1.1-5.4-5.3.4 4.2-3.3-4.2-3.3 5.3.4-1.1-5.4 3.6 3.9L12 2.5z" />
+      </svg>
+    </span>
+  );
+}
+
+/**
  * Micro icons for author practice limits (Explore/Drill × open/timed).
  * Always shown so enabled combos are visible on the map.
  */
@@ -784,8 +902,16 @@ export function BlockSkillGrid({
   onEmptySelectionChange,
   onAddTargetChange,
   previewEmptyCells = null,
+  generatorTargetPreviewCells = null,
+  generatorPickActive = false,
+  onGeneratorEmptyToggle,
+  dynamicPickActive = false,
+  onDynamicBlockToggle,
+  dynamicUnlockPreviewIds = null,
+  dynamicContentGeneratedIds = null,
   expandJobs = null,
   onAbortExpandJob,
+  clusterMapJob = null,
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
@@ -831,6 +957,10 @@ export function BlockSkillGrid({
     String(learnerScopeId || ayclToken || "local").trim() || "local";
   const [creatorNotes, setCreatorNotes] = useState<LearnerMapNote[]>([]);
   const [learnerNotes, setLearnerNotes] = useState<LearnerMapNote[]>([]);
+  /** Session UI: hide all post-its without clearing storage (like annotation layer eyes). */
+  const [mapNotesPlaneVisible, setMapNotesPlaneVisible] = useState(
+    defaultMapNotesPlaneVisible,
+  );
 
   useEffect(() => {
     if (!mountMapNotes || !workspaceId) {
@@ -863,6 +993,12 @@ export function BlockSkillGrid({
     }
     return merged;
   }, [mountMapNotes, learnerMode, creatorNotes, learnerNotes]);
+
+  /** Notes drawn on the plane (empty when eye-hidden; collections stay intact). */
+  const mapNotesOnPlane = useMemo(
+    () => mapNotesForPlaneRender(mapNotes, mapNotesPlaneVisible),
+    [mapNotes, mapNotesPlaneVisible],
+  );
 
   const persistCreatorNotes = useCallback(
     (next: LearnerMapNote[]) => {
@@ -1427,6 +1563,48 @@ export function BlockSkillGrid({
       ),
     );
   }, [learnerMode, selectedNodeId, selectedBlockIds, displayNodes]);
+
+  /** Generator spark on empty cells: host preview, or learner select on a generator. */
+  const generatorSparkEmptyKeys = useMemo(() => {
+    if (generatorTargetPreviewCells && generatorTargetPreviewCells.length > 0) {
+      return new Set(
+        generatorTargetPreviewCells.map((c) =>
+          generatorCellKey({ row: c.row, col: c.col }),
+        ),
+      );
+    }
+    const focus = selectedNodeId || selectedBlockIds[0] || null;
+    if (!focus) return new Set<string>();
+    const node = displayNodes.find((n) => n.id === focus);
+    if (!node) return new Set<string>();
+    const effects = parseBlockCreatorEffects(node.creator_effects, {
+      selfBlockId: focus,
+    });
+    return new Set(
+      generatorTargetHighlightCells(effects).map((c) => generatorCellKey(c)),
+    );
+  }, [
+    generatorTargetPreviewCells,
+    selectedNodeId,
+    selectedBlockIds,
+    displayNodes,
+  ]);
+
+  const dynamicGeneratedSet = useMemo(() => {
+    if (dynamicContentGeneratedIds instanceof Set) {
+      return dynamicContentGeneratedIds as Set<string>;
+    }
+    if (Array.isArray(dynamicContentGeneratedIds)) {
+      return new Set(dynamicContentGeneratedIds.map(String).filter(Boolean));
+    }
+    return new Set<string>();
+  }, [dynamicContentGeneratedIds]);
+
+  const dynamicUnlockHighlightIds = useMemo(() => {
+    return new Set(
+      (dynamicUnlockPreviewIds || []).map(String).filter(Boolean),
+    );
+  }, [dynamicUnlockPreviewIds]);
   const { occupancy, placements, spans, startCell } = useMemo(
     () => buildSkillGridLayout(displayNodes),
     [displayNodes],
@@ -2351,6 +2529,16 @@ export function BlockSkillGrid({
         return;
       }
 
+      // Dynamic pick: toggle unlock-after deps without changing focus.
+      if (dynamicPickActive && onDynamicBlockToggle) {
+        event.preventDefault();
+        // Never toggle the focused dynamic block itself.
+        if (blockId !== selectedNodeId) {
+          onDynamicBlockToggle(blockId);
+        }
+        return;
+      }
+
       if (!canEdit) {
         // Learner / read-only: sole-select for map highlight + open detail.
         // Map chrome keys off selectedBlockIds (not only selectedNodeId prop).
@@ -2389,8 +2577,11 @@ export function BlockSkillGrid({
       activeTool,
       applyBlockSelection,
       canEdit,
+      dynamicPickActive,
       manipulationMode,
+      onDynamicBlockToggle,
       onSelectNode,
+      selectedNodeId,
       viewOnly,
     ],
   );
@@ -2467,6 +2658,17 @@ export function BlockSkillGrid({
           return;
         }
         setPrereqEdit((prev) => toggleStagedPrereq(prev, blockId));
+        suppressBlockClickRef.current = true;
+        return;
+      }
+
+      // ── Dynamic pick: toggle unlock-after deps without changing focus ──
+      if (canEdit && dynamicPickActive && onDynamicBlockToggle) {
+        event.stopPropagation();
+        event.preventDefault();
+        if (blockId !== selectedNodeId) {
+          onDynamicBlockToggle(blockId);
+        }
         suppressBlockClickRef.current = true;
         return;
       }
@@ -2585,12 +2787,15 @@ export function BlockSkillGrid({
     [
       beginViewportPan,
       canEdit,
+      dynamicPickActive,
       emitFilledBlockSelection,
       manipulationMode,
       onAddTargetChange,
+      onDynamicBlockToggle,
       onEmptySelectionChange,
       onGridOp,
       onSelectNode,
+      selectedNodeId,
       viewOnly,
     ],
   );
@@ -2653,6 +2858,15 @@ export function BlockSkillGrid({
       if (isLassoModeTool(activeToolRef.current)) return;
 
       const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
+
+      // Generator pick: toggle empty (placeable) cells only; keep block focus.
+      if (generatorPickActive && onGeneratorEmptyToggle && !isUnusable) {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        onGeneratorEmptyToggle({ row: cell.row, col: cell.col });
+        return;
+      }
+
       const multiModifier = event.metaKey || event.ctrlKey || event.shiftKey;
       const tool = activeToolRef.current;
       const selectsEmpty =
@@ -2677,7 +2891,9 @@ export function BlockSkillGrid({
       applyEmptyCellSelection,
       busy,
       canEdit,
+      generatorPickActive,
       occupancy,
+      onGeneratorEmptyToggle,
       onSelectNode,
       selectedNodeId,
       unusableKeys,
@@ -3658,6 +3874,11 @@ export function BlockSkillGrid({
       data-map-view-only={viewOnly ? "true" : "false"}
       data-learner-notes={mountMapNotes ? "true" : "false"}
       data-map-notes={mountMapNotes ? "true" : "false"}
+      data-map-notes-plane-visible={
+        mountMapNotes && shouldRenderMapNotesOnPlane(mapNotesPlaneVisible)
+          ? "true"
+          : "false"
+      }
       data-annotation-layers={String(viewOnly ? 0 : annotationLayers.length)}
       data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
       data-clone-armed={cloneArmed ? "true" : "false"}
@@ -4141,20 +4362,98 @@ export function BlockSkillGrid({
             onPointerDown={(e) => e.stopPropagation()}
           >
             {mountMapNotes ? (
-              <button
-                type="button"
-                data-learner-note-add
-                data-map-note-add
-                title={
-                  learnerMode
-                    ? "Add a personal note in the middle of the map"
-                    : "Add an author note in the middle of the map (visible to learners)"
+              <div
+                className="flex items-stretch gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+                data-map-notes-visibility-row
+                data-map-notes-visibility={
+                  mapNotesPlaneVisible ? "visible" : "hidden"
                 }
-                onClick={() => handleMapNoteAddAtCenter()}
-                className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
               >
-                Add note
-              </button>
+                <button
+                  type="button"
+                  data-learner-note-add
+                  data-map-note-add
+                  title={
+                    learnerMode
+                      ? "Add a personal note in the middle of the map"
+                      : "Add an author note in the middle of the map (visible to learners)"
+                  }
+                  onClick={() => handleMapNoteAddAtCenter()}
+                  className="min-w-0 flex-1 px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200 transition hover:text-white"
+                >
+                  Add note
+                </button>
+                <button
+                  type="button"
+                  data-map-notes-visibility-toggle
+                  data-learner-notes-visibility-toggle
+                  data-map-notes-visibility={
+                    mapNotesPlaneVisible ? "visible" : "hidden"
+                  }
+                  title={
+                    mapNotesPlaneVisible
+                      ? "Hide all notes on the map"
+                      : "Show notes on the map"
+                  }
+                  aria-label={
+                    mapNotesPlaneVisible ? "Hide notes" : "Show notes"
+                  }
+                  aria-pressed={mapNotesPlaneVisible}
+                  onClick={() =>
+                    setMapNotesPlaneVisible((prev) =>
+                      toggleMapNotesPlaneVisible(prev),
+                    )
+                  }
+                  className={`flex shrink-0 items-center justify-center px-1.5 ${
+                    mapNotesPlaneVisible ? "text-white" : "text-neutral-500"
+                  }`}
+                >
+                  {mapNotesPlaneVisible ? (
+                    <svg
+                      data-map-notes-eye="open"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.8}
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"
+                      />
+                      <circle cx="12" cy="12" r="2.75" />
+                    </svg>
+                  ) : (
+                    <svg
+                      data-map-notes-eye="closed"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.8}
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.5 3.5l17 17"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.6 10.7a2.75 2.75 0 003.7 3.7"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.9 5.1A11 11 0 0112 4.9c5.5 0 9 5.9 9.5 7.1-.3.7-1.2 2.4-3 3.9M6.1 6.2C4.1 7.7 3 9.6 2.5 12c.4 1 3.5 6.5 9.5 6.5 1.1 0 2.1-.2 3-.5"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             ) : null}
 
             {/* Annotation layers: creator add/select/delete; learner toggle under Add note */}
@@ -4422,6 +4721,64 @@ export function BlockSkillGrid({
           </div>
         ) : null}
 
+        {/* Cluster blocks progress — under minimap while computing/saving */}
+        {clusterMapJob?.active ? (
+          <div
+            data-map-cluster-job
+            data-map-cluster-job-active="true"
+            className="pointer-events-none absolute right-2 z-20 flex w-[220px] flex-col gap-1"
+            style={{
+              top:
+                8 +
+                MINIMAP_FRAME_HEIGHT +
+                8 +
+                (minimapStackHeight > 0
+                  ? minimapStackHeight + 8
+                  : mountMapNotes
+                    ? 40
+                    : 0) +
+                (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0),
+              width: MINIMAP_FRAME_WIDTH,
+            }}
+          >
+            <div
+              className="rounded-md border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              data-map-cluster-progress
+            >
+              <div className="mb-1 flex items-start justify-between gap-1.5">
+                <p
+                  className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-100"
+                  data-map-cluster-progress-label
+                >
+                  {clusterMapJob.label || "Clustering…"}
+                </p>
+                <span className="shrink-0 font-mono text-[10px] text-neutral-300">
+                  {Math.round(Math.max(0, Math.min(1, clusterMapJob.progress)) * 100)}%
+                </span>
+              </div>
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800"
+                role="progressbar"
+                aria-valuenow={Math.round(
+                  Math.max(0, Math.min(1, clusterMapJob.progress)) * 100,
+                )}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={clusterMapJob.label || "Clustering"}
+                data-map-cluster-progress-bar
+              >
+                <div
+                  className="h-full rounded-full bg-white transition-[width] duration-300 ease-out"
+                  data-map-cluster-progress-fill
+                  style={{
+                    width: `${Math.round(Math.max(0, Math.min(1, clusterMapJob.progress)) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Background range/density multi-create jobs — under minimap; map stays interactive */}
         {Array.isArray(expandJobs) && expandJobs.length > 0 ? (
           <div
@@ -4438,7 +4795,8 @@ export function BlockSkillGrid({
                   : mountMapNotes
                     ? 40
                     : 0) +
-                (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0),
+                (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0) +
+                (clusterMapJob?.active ? 56 : 0),
               width: MINIMAP_FRAME_WIDTH,
             }}
             onPointerDown={(e) => e.stopPropagation()}
@@ -4544,15 +4902,20 @@ export function BlockSkillGrid({
                 (c) => c.row === cell.row && c.col === cell.col,
               ),
             );
+            const isGeneratorSparkEmpty = generatorSparkEmptyKeys.has(cellKeyStr);
             // Running-job slots pulse; host range/bridge previews are static white.
             const previewEmpty = generationPending || hostPreviewEmpty;
-            const emptyHighlight = selectedEmpty || previewEmpty;
+            const emptyHighlight =
+              selectedEmpty || previewEmpty || isGeneratorSparkEmpty;
             const isUnusable = unusableKeys.has(cellKeyStr);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
                 data-skill-cell
                 data-map-cell-kind={isUnusable ? "unusable" : "open"}
+                data-generator-target-empty={
+                  isGeneratorSparkEmpty ? "true" : undefined
+                }
                 className="absolute"
                 style={{
                   left: cell.col * SKILL_GRID_PITCH,
@@ -4569,6 +4932,9 @@ export function BlockSkillGrid({
                   data-map-cell-unusable={isUnusable ? "true" : "false"}
                   data-map-cell-selected={emptyHighlight ? "true" : "false"}
                   data-empty-preview={previewEmpty && !selectedEmpty ? "true" : "false"}
+                  data-generator-spark-empty={
+                    isGeneratorSparkEmpty ? "true" : undefined
+                  }
                   data-generation-pending={generationPending ? "true" : "false"}
                   data-empty-pan-enabled={
                     !busy && !generationPending ? "true" : "false"
@@ -4582,13 +4948,15 @@ export function BlockSkillGrid({
                   onPointerMove={handleEmptyCellPointerMove}
                   onPointerUp={handleEmptyCellPointerUp}
                   onPointerCancel={handleEmptyCellPointerUp}
-                  className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
+                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
                     isUnusable
                       ? generationPending
                         ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50 animate-pulse`
                         : emptyHighlight
                           ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50`
                           : MAP_CELL_UNUSABLE_CLASS
+                      : isGeneratorSparkEmpty
+                        ? MAP_CELL_EMPTY_SELECTED_CLASS
                       : generationPending
                         ? MAP_CELL_GENERATION_PENDING_CLASS
                         : emptyHighlight
@@ -4602,6 +4970,10 @@ export function BlockSkillGrid({
                   title={
                     generationPending
                       ? "Generating block here…"
+                      : isGeneratorSparkEmpty
+                        ? generatorPickActive
+                          ? "Generator target — click to remove"
+                          : "Will be generated when the generator block completes"
                       : isUnusable
                       ? canEdit
                         ? activeLassoShape
@@ -4609,7 +4981,9 @@ export function BlockSkillGrid({
                           : "Unusable ground — click to select, then Unusable tool to clear"
                         : "Unusable ground — shapes paths"
                       : canEdit
-                        ? activeLassoShape
+                        ? generatorPickActive
+                          ? "Click to select as generator target"
+                          : activeLassoShape
                           ? "Drag to lasso-select blocks or empty cells"
                           : activeTool === "select" || activeTool === "move"
                             ? "Click empty to Add · drag empty to pan · Shift multi for shape form · Space/middle pan"
@@ -4619,11 +4993,13 @@ export function BlockSkillGrid({
                           : undefined
                   }
                 >
+                  {isGeneratorSparkEmpty ? <BlockGeneratorTargetSparkBadge /> : null}
                   {isUnusable ? (
                     <span className="text-[9px] uppercase tracking-wide text-neutral-600">∅</span>
                   ) : (
                     canEdit &&
-                    !learnerMode && (
+                    !learnerMode &&
+                    !isGeneratorSparkEmpty && (
                       <span
                         className="text-xl leading-none text-neutral-600"
                         data-empty-cell-plus
@@ -4638,9 +5014,9 @@ export function BlockSkillGrid({
           })}
 
           {/* Map post-it notes — continuous plane layer (shares pan/zoom with blocks).
-              Creator notes always visible in learner mode; learners cannot delete them. */}
+              Creator notes always in collection for learners; plane eye can hide all post-its. */}
           {mountMapNotes
-            ? mapNotes.map((note) => {
+            ? mapNotesOnPlane.map((note) => {
                 const layer = learnerNoteLayerStyle(note);
                 const permCtx = { learnerMode };
                 return (
@@ -4733,6 +5109,9 @@ export function BlockSkillGrid({
               status: node.status,
               lock_until_block_ids: node.lock_until_block_ids,
               next_block_ids: node.next_block_ids,
+              creator_effects: (
+                node as { creator_effects?: unknown }
+              ).creator_effects,
             };
             const learnerBlocksRef = displayNodes.map((n) => ({
               id: n.id,
@@ -4740,9 +5119,12 @@ export function BlockSkillGrid({
               status: n.status,
               lock_until_block_ids: n.lock_until_block_ids,
               next_block_ids: n.next_block_ids,
+              creator_effects: (
+                n as { creator_effects?: unknown }
+              ).creator_effects,
             }));
-            // Both modes: lock_until + inbound next (DAG leads-to) for dependency chrome.
-            // Locked state: learner uses status-aware DAG gate; creator uses lock_until complete.
+            // Both modes: lock_until + inbound next (DAG leads-to) + Dynamic unlock-after.
+            // Locked state: learner uses status-aware gate; creator uses lock_until complete.
             const lockedByPrereq = learnerMode
               ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
               : isBlockLockedUntilCompleted(node, nodesById);
@@ -4793,6 +5175,14 @@ export function BlockSkillGrid({
             });
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
+            const nodeEffects = parseBlockCreatorEffects(
+              (node as { creator_effects?: unknown }).creator_effects,
+              { selfBlockId: node.id },
+            );
+            const generatorBusy = isGeneratorEffectBusy(nodeEffects);
+            const isDynamicUnlockHighlight = dynamicUnlockHighlightIds.has(
+              node.id,
+            );
             const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition ${
               generationLocked
                 ? "pointer-events-none cursor-not-allowed opacity-60"
@@ -4804,6 +5194,14 @@ export function BlockSkillGrid({
                       : ""
                   }`
             } ${baseChrome} ${
+              generatorBusy
+                ? "ring-2 ring-white/55 shadow-[0_0_12px_rgba(255,255,255,0.14)]"
+                : ""
+            } ${
+              isDynamicUnlockHighlight
+                ? "ring-2 ring-white/55 shadow-[0_0_12px_rgba(255,255,255,0.14)]"
+                : ""
+            } ${
               !generationLocked && isAppearingTarget
                 ? appeared
                   ? "opacity-100 scale-100 shadow-[0_0_14px_rgba(255,255,255,0.12)]"
@@ -4856,7 +5254,31 @@ export function BlockSkillGrid({
               practiceKeys.length > 0 ? (
                 <BlockPracticeOptionsBadge keys={practiceKeys} />
               ) : null;
-
+            const effectKeys = creatorEffectIconKeys(nodeEffects);
+            const effectBadge =
+              effectKeys.length > 0 ? (
+                <BlockCreatorEffectsBadge
+                  keys={effectKeys}
+                  learnerMode={learnerMode}
+                />
+              ) : null;
+            // Generator targets are empty cells (not filled blocks).
+            const generatorSparkBadge = null;
+            const generatorBusyLabel = generatorBusy ? (
+              <span
+                className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/80"
+                data-generator-busy-label
+              >
+                Busy
+              </span>
+            ) : null;
+            // Dynamic “?” once configured (creator + learner) until generated.
+            const mapTitle = learnerDynamicMapLabel({
+              effects: nodeEffects,
+              title: node.title,
+              description: node.description,
+              contentGenerated: dynamicGeneratedSet.has(node.id),
+            });
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
@@ -4924,6 +5346,10 @@ export function BlockSkillGrid({
                           data-block-has-local-context={hasLocalContext ? "true" : "false"}
                           data-block-is-start={isStarter ? "true" : "false"}
                           data-block-generation-locked={generationLocked ? "true" : "false"}
+                          data-generator-busy={generatorBusy ? "true" : "false"}
+                          data-dynamic-unlock-highlight={
+                            isDynamicUnlockHighlight ? "true" : undefined
+                          }
                           data-learner-dep-highlight={
                             isLearnerDepHighlight ? "true" : undefined
                           }
@@ -5020,10 +5446,13 @@ export function BlockSkillGrid({
                               <MapCellStatusGlyph
                                 status={node.status}
                                 showProgress={showProgress}
-                                title={node.title}
+                                title={mapTitle}
                               />
                               {learnerLockedLabel}
+                              {generatorBusyLabel}
                               {practiceBadge}
+                              {effectBadge}
+                              {generatorSparkBadge}
                               {localContextBadge}
                               {starterBadge}
                               {lockBadge}
@@ -5089,6 +5518,10 @@ export function BlockSkillGrid({
                   data-block-has-local-context={hasLocalContext ? "true" : "false"}
                   data-block-is-start={isStarter ? "true" : "false"}
                   data-block-generation-locked={generationLocked ? "true" : "false"}
+                  data-generator-busy={generatorBusy ? "true" : "false"}
+                  data-dynamic-unlock-highlight={
+                    isDynamicUnlockHighlight ? "true" : undefined
+                  }
                   data-learner-dep-highlight={
                     isLearnerDepHighlight ? "true" : undefined
                   }
@@ -5144,10 +5577,13 @@ export function BlockSkillGrid({
                   <MapCellStatusGlyph
                     status={node.status}
                     showProgress={showProgress}
-                    title={node.title}
+                    title={mapTitle}
                   />
                   {learnerLockedLabel}
+                  {generatorBusyLabel}
                   {practiceBadge}
+                  {effectBadge}
+                  {generatorSparkBadge}
                   {localContextBadge}
                   {starterBadge}
                   {lockBadge}

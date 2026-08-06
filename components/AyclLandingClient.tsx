@@ -100,6 +100,7 @@ export function AyclLandingClient({
         <div>
           <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             All-You-Can-Learn · Lifetime access
+            {landing.category ? ` · ${landing.category}` : ""}
           </p>
           <h1 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
             {landing.title}
@@ -108,6 +109,48 @@ export function AyclLandingClient({
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[1.5px] text-zinc-600">
               {landing.rootTopic}
             </p>
+          ) : null}
+          {(landing.authorName || landing.authorAvatarUrl) && (
+            <div
+              className="mt-4 flex items-center gap-3"
+              data-aycl-landing-author
+            >
+              {landing.authorAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={landing.authorAvatarUrl}
+                  alt=""
+                  className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
+                  data-aycl-landing-author-avatar
+                />
+              ) : (
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-sm font-medium text-zinc-400"
+                  aria-hidden
+                >
+                  {(landing.authorName || "?").slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <div>
+                <p className="text-[11px] uppercase tracking-[1.2px] text-zinc-600">
+                  Author
+                </p>
+                <p
+                  className="text-sm text-zinc-200"
+                  data-aycl-landing-author-name
+                >
+                  {landing.authorName || "Instructor"}
+                </p>
+              </div>
+            </div>
+          )}
+          {landing.category ? (
+            <span
+              className="mt-3 inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90"
+              data-aycl-landing-category
+            >
+              {landing.category}
+            </span>
           ) : null}
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-300">
             {landing.summary}

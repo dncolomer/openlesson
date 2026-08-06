@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { openGraphImagesForRoutePath } from "@/lib/og/paths";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 export type SeoSection = {
   title: string;
@@ -150,30 +150,13 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
 
 export function platformMetadata(page: SeoPlatformPageConfig): Metadata {
   const url = `${BASE_URL}${page.path}`;
-  // Platform page path may not ship a dedicated OG file; prefer route OG when present, else home.
-  const images = openGraphImagesForRoutePath(
-    page.path === "/platform" ? "/" : page.path,
-    page.metaTitle,
-  );
+  const social = standardShareSocialMetadata({ url });
   return {
     title: page.metaTitle,
     description: page.metaDescription,
     keywords: page.keywords,
-    openGraph: {
-      title: page.metaTitle,
-      description: page.metaDescription,
-      url,
-      siteName: "Uncertain Systems",
-      type: "website",
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: page.metaTitle,
-      description: page.metaDescription,
-      creator: "@uncertainsys",
-      images: images.map((image) => image.url),
-    },
+    openGraph: social.openGraph,
+    twitter: social.twitter,
     alternates: {
       canonical: url,
     },

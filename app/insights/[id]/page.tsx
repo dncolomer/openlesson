@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InsightDetailClient } from "@/components/InsightDetailClient";
-import { getPublicInsightForMeta, insightPublicSlug } from "@/lib/insights-server";
+import { getPublicInsightForMeta } from "@/lib/insights-server";
+import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,27 +15,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "Insight" };
   }
 
-  const title = insight.title;
-  const description = insight.summary;
-  const slug = insightPublicSlug(insight);
-  const ogImage = `/insights/${slug}/opengraph-image`;
-  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
-
+  // Page SEO title/description stay entity-specific; social share is unsys standard.
+  const social = standardShareSocialMetadata();
   return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: "article",
-      images,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: images.map((image) => image.url),
-    },
+    title: insight.title,
+    description: insight.summary,
+    openGraph: social.openGraph,
+    twitter: social.twitter,
   };
 }
 

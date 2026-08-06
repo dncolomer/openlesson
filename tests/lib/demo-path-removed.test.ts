@@ -43,9 +43,11 @@ describe("product /demo hub removed", () => {
     expect(surfaces).not.toMatch(/["']demo["']\s*,/);
   });
 
-  it("workspace access admin gate uses non-demo /api/me/status", () => {
+  it("workspace AYCL marketplace admin gate uses non-demo /api/me/status", () => {
+    const aycl = read("components/WorkspaceAyclMarketplaceSettings.tsx");
+    expect(aycl).toContain("/api/me/status");
+    expect(aycl).not.toContain("/api/demo/status");
     const access = read("components/WorkspaceAccessSettings.tsx");
-    expect(access).toContain("/api/me/status");
     expect(access).not.toContain("/api/demo/status");
     expect(existsSync(join(ROOT, "app/api/me/status/route.ts"))).toBe(true);
     const me = read("app/api/me/status/route.ts");

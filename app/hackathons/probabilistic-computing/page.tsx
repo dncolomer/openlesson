@@ -5,6 +5,12 @@ import { ArrowRight, ExternalLink, MapPin, Trophy, Users } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 
+import { standardShareSocialMetadata } from "@/lib/og/standard";
+
+const standardSocial = standardShareSocialMetadata({
+  url: "https://uncertain.systems/hackathons/probabilistic-computing",
+});
+
 export const metadata: Metadata = {
   title: "Probabilistic Computing Hackathon · ETH Zurich",
   description:
@@ -12,20 +18,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://uncertain.systems/hackathons/probabilistic-computing",
   },
-  openGraph: {
-    title: "Probabilistic Computing Hackathon · ETH Zurich | Uncertain Systems",
-    description:
-      "Past event: build with probabilistic and thermodynamic computing — EBMs, THRML, Extropic, and Uncertain Systems.",
-    url: "https://uncertain.systems/hackathons/probabilistic-computing",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Probabilistic Computing Hackathon" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Probabilistic Computing Hackathon · ETH Zurich",
-    description:
-      "Past event on probabilistic and thermodynamic computing at ETH Zurich.",
-    images: ["/opengraph-image"],
-  },
+  openGraph: standardSocial.openGraph,
+  twitter: standardSocial.twitter,
 };
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";

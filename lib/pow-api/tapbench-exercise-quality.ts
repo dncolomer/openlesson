@@ -195,9 +195,59 @@ function clipScope(s: string, max: number): string {
   return `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
+/** Parse decimal rate from free text (supports 0.9, 90%, 90 percent). */
+function parseRateToken(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const t = raw.trim();
+  if (!t) return null;
+  const n = Number(t.replace(/%/g, ""));
+  if (!Number.isFinite(n)) return null;
+  if (t.includes("%") || n > 1) return Math.min(1, Math.max(0, n / 100));
+  return Math.min(1, Math.max(0, n));
+}
+
+/**
+ * Pull diagnostic-test parameters from attached material / description text
+ * so pure exercises reuse lab-panel numbers instead of only canned defaults.
+ */
+export function extractDiagnosticRatesFromText(text: string): {
+  sens: number | null;
+  spec: number | null;
+  prev: number | null;
+  population: number | null;
+  diseased: number | null;
+} {
+  const s = String(text || "");
+  const sensM =
+    s.match(/sensitivity\s*(?:is\s*|=\s*)?(\d+(?:\.\d+)?)\s*%?/i) ||
+    s.match(/(\d+(?:\.\d+)?)\s*%?\s*sensitivity/i);
+  const specM =
+    s.match(/specificity\s*(?:is\s*|=\s*)?(\d+(?:\.\d+)?)\s*%?/i) ||
+    s.match(/(\d+(?:\.\d+)?)\s*%?\s*specificity/i);
+  const prevM =
+    s.match(/prevalence\s*(?:is\s*|=\s*|of\s*)?(\d+(?:\.\d+)?)\s*%?/i) ||
+    s.match(/(\d+(?:\.\d+)?)\s*%\s*prevalence/i) ||
+    s.match(/has\s+(\d+(?:\.\d+)?)\s*%\s*prevalence/i);
+  const popM =
+    s.match(/\bN\s*=\s*(\d{2,7})\b/i) ||
+    s.match(/\b(\d{3,7})\s+patients?\b/i);
+  const disM =
+    s.match(/diseased\s*=\s*(\d+)/i) ||
+    s.match(/\b(\d+)\s+diseased\b/i);
+  return {
+    sens: parseRateToken(sensM?.[1]),
+    spec: parseRateToken(specM?.[1]),
+    prev: parseRateToken(prevM?.[1]),
+    population: popM?.[1] ? Number(popM[1]) : null,
+    diseased: disM?.[1] ? Number(disM[1]) : null,
+  };
+}
+
 /**
  * Build a fixed, checkable domain problem from block title/description.
  * Never asks the learner to invent their own problem.
+ * When description carries attached material text (file excerpts, link labels,
+ * lab numbers), prefer those concrete values over canned templates.
  */
 export function buildConcreteDomainExercise(
   input: TapbenchExerciseContext,
@@ -240,15 +290,34 @@ export function buildConcreteDomainExercise(
       blob,
     )
   ) {
+    const extracted = extractDiagnosticRatesFromText(`${desc} ${goal}`);
     const sets = [
       { sens: 0.95, spec: 0.9, prev: 0.02 },
       { sens: 0.99, spec: 0.95, prev: 0.001 },
       { sens: 0.9, spec: 0.85, prev: 0.05 },
       { sens: 0.98, spec: 0.92, prev: 0.01 },
     ];
-    const { sens, spec, prev } = pick(sets);
+    const fallback = pick(sets);
+    const sens = extracted.sens ?? fallback.sens;
+    const spec = extracted.spec ?? fallback.spec;
+    let prev = extracted.prev ?? fallback.prev;
+    if (
+      extracted.prev == null &&
+      extracted.population != null &&
+      extracted.diseased != null &&
+      extracted.population > 0
+    ) {
+      prev = extracted.diseased / extracted.population;
+    }
+    const materialHint = /lab-panel|cdc|worksheet|material|source “|:\s/i.test(desc)
+      ? ` Use the numbers from the attached materials (${clipScope(desc, 90)}).`
+      : "";
+    const popLine =
+      extracted.population != null
+        ? ` Consider a population of N=${extracted.population}${extracted.diseased != null ? ` with ${extracted.diseased} diseased` : ""}.`
+        : "";
     return [
-      `A diagnostic test has sensitivity ${sens}, specificity ${spec}, and the disease prevalence is ${prev}.`,
+      `A diagnostic test has sensitivity ${sens}, specificity ${spec}, and the disease prevalence is ${prev}.${materialHint}${popLine}`,
       `(a) Write Bayes’ rule for P(disease | positive).`,
       `(b) Compute the positive predictive value (PPV) as a decimal to 4 places — show the contingency-table or formula steps.`,
       `(c) Box the PPV.`,

@@ -141,6 +141,8 @@ export function practiceMaterialSourceLabels(
  * Material substance for grounding: prefer excerpts / link descriptions as
  * domain prose. Never lead with `attachments: [external]…` inventory dumps
  * (those made seed/TAP fallbacks feel like template scaffolds).
+ * When bodies exist, still surface clean source names early so clip() keeps
+ * file/link tokens (lab-panel, CDC) in dialogue work strings.
  */
 export function practiceMaterialSubstance(ctx: PracticeItemContext): string {
   const bodies: string[] = [];
@@ -161,11 +163,13 @@ export function practiceMaterialSubstance(ctx: PracticeItemContext): string {
     // Skip bare title/url-only bodies — labels go via practiceMaterialSourceLabels
     void url;
   }
+  const labels = practiceMaterialSourceLabels(ctx, 5);
   if (bodies.length > 0) {
-    return bodies.slice(0, 4).join(" · ");
+    // Put short clean names first (no attachments: prefix), then excerpt bodies.
+    const head = labels.length > 0 ? labels.slice(0, 4).join("; ") : "";
+    return [head, ...bodies.slice(0, 4)].filter(Boolean).join(" · ");
   }
   // Labels only: soft “sources include …” — never `attachments:` dump
-  const labels = practiceMaterialSourceLabels(ctx, 5);
   if (labels.length === 0) return "";
   return `sources include ${labels.join("; ")}`;
 }
@@ -268,25 +272,33 @@ export function buildGroundedDialogueQuestion(
       ? clip(sourceLabels.join("; "), 90)
       : "";
 
-  // Prefer real domain prose (description / notes / material bodies) over inventory.
-  // Do not put bare `sources include …` labels into the work setup string.
+  // Prefer real domain prose over inventory dumps. Materials with file excerpts /
+  // link bodies outrank shallow map-card descriptions so lab numbers, CDC, and
+  // file names still ground STEM seed dialogue (see simulation-context-grounding).
+  // Do NOT run looksLikeTopicOverview on material bodies — comma-separated rates
+  // ("prevalence 2%, sensitivity 90%") are false-positive "overviews".
+  // Bare `sources include …` label lists are never used as the work setup.
+  const materialBody =
+    materials && !/^sources include\b/i.test(materials) ? materials : "";
+  // Order: material excerpts first (STEM lab grounding) → non-overview
+  // description (TAP opening parity) → other substance → local notes.
+  // Never rank localNotes ahead of a workable description.
   const proseCandidates = [
+    materialBody,
     desc && !looksLikeTopicOverview(desc) ? desc : "",
-    clean(ctx.localNotes).length >= 8 ? clean(ctx.localNotes) : "",
-    materials &&
-    !/^sources include\b/i.test(materials) &&
-    !looksLikeTopicOverview(materials)
-      ? materials
-      : "",
     substance &&
+    substance !== materialBody &&
+    substance !== desc &&
     !/^sources include\b/i.test(substance) &&
     !looksLikeTopicOverview(substance)
       ? substance
       : "",
+    clean(ctx.localNotes).length >= 8 ? clean(ctx.localNotes) : "",
   ].filter(Boolean);
-  const prose = proseCandidates[0] ? clip(proseCandidates[0], 140) : "";
+  const prose = proseCandidates[0] ? clip(proseCandidates[0], 180) : "";
   const computational =
     practiceSubstanceLooksComputational(prose) ||
+    practiceSubstanceLooksComputational(materialBody) ||
     practiceSubstanceLooksComputational(substance) ||
     practiceSubstanceLooksComputational(subject);
 

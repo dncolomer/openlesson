@@ -7,17 +7,23 @@ import { join } from "node:path";
 import {
   buildShapeContextSourceOptions,
   composeShapeGenerationContext,
+  enrichSelectedOptionsWithFetchedLinkBodies,
+  enrichShapeOptionsWithLinkBodies,
   shapeSelectionToGenerationSnippet,
   shapeSelectionToLocalContext,
   toggleShapeContextSelection,
 } from "@/lib/shape-context-select";
+import {
+  htmlToPlainText,
+  normalizeLinkBodyText,
+} from "@/lib/workspace-external-resources";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.SHAPE_CONTEXT_SCRATCH ||
-  process.env.SINGLE_EMPTY_ADD_CONTEXT_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-d44762646fb6/implementer";
+  process.env.GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b413fa687e2d/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -133,6 +139,89 @@ describe("shapeSelectionToGenerationSnippet + compose", () => {
   });
 });
 
+describe("link body enrichment for generation (pure)", () => {
+  it("htmlToPlainText + normalizeLinkBodyText extract substance from HTML", () => {
+    const html = `
+      <html><head><style>.x{color:red}</style><script>evil()</script></head>
+      <body><main><h1>Bayes theorem</h1><p>Posterior odds equal prior odds times likelihood ratio.</p></main></body>
+    `;
+    const plain = htmlToPlainText(html);
+    expect(plain).toMatch(/Bayes theorem/i);
+    expect(plain).toMatch(/Posterior odds/i);
+    expect(plain).not.toMatch(/evil|color:red/i);
+    const norm = normalizeLinkBodyText(html);
+    expect(norm).toMatch(/Posterior odds/i);
+  });
+
+  it("enrichShapeOptionsWithLinkBodies puts Content body into generation snippet + local_context", () => {
+    const opts = buildShapeContextSourceOptions(catalog);
+    const url = "https://en.wikipedia.org/wiki/Bayes%27_theorem";
+    const body =
+      "The posterior probability of a hypothesis is proportional to the prior times the likelihood. " +
+      "This is the quantitative backbone of Bayesian updating in clinical diagnosis and A/B tests.";
+    const enriched = enrichShapeOptionsWithLinkBodies(
+      opts,
+      ["external:e1", "notes", "file:bayes.pdf"],
+      { [url]: body },
+    );
+    const snippet = shapeSelectionToGenerationSnippet(
+      ["external:e1", "notes", "file:bayes.pdf"],
+      enriched,
+    );
+    expect(snippet).toMatch(/Content:|posterior probability|Bayesian updating/i);
+    expect(snippet).toMatch(/Study Bayesian inference/i);
+    expect(snippet).toMatch(/bayes\.pdf/i);
+
+    const local = shapeSelectionToLocalContext(
+      ["external:e1", "notes", "file:bayes.pdf"],
+      enriched,
+    );
+    expect(local).toBeTruthy();
+    expect(local!.notes).toMatch(/posterior probability|Bayesian updating|Content:/i);
+    expect(local!.external_resource_ids).toContain("e1");
+    expect(local!.global_file_refs).toContain("bayes.pdf");
+
+    writeEvidence(
+      "attach-context-generation.log",
+      [
+        "=== snippet ===",
+        snippet,
+        "",
+        "=== local notes ===",
+        local!.notes || "",
+        "",
+        "=== local_files ===",
+        JSON.stringify(local!.local_files, null, 2),
+      ].join("\n"),
+    );
+  });
+
+  it("enrichSelectedOptionsWithFetchedLinkBodies uses injectable fetchBody", async () => {
+    const opts = buildShapeContextSourceOptions(catalog);
+    const url = "https://en.wikipedia.org/wiki/Bayes%27_theorem";
+    const { options, fetchedCount } = await enrichSelectedOptionsWithFetchedLinkBodies({
+      selectedKeys: ["external:e1"],
+      options: opts,
+      fetchBody: async (u) => {
+        expect(u).toBe(url);
+        return `<html><body><article><p>Likelihood ratios turn priors into posteriors for real.</p></article></body></html>`;
+      },
+    });
+    expect(fetchedCount).toBe(1);
+    const snippet = shapeSelectionToGenerationSnippet(["external:e1"], options);
+    expect(snippet).toMatch(/Likelihood ratios|posteriors/i);
+    // Failed fetch degrades without throwing
+    const empty = await enrichSelectedOptionsWithFetchedLinkBodies({
+      selectedKeys: ["external:e1"],
+      options: opts,
+      fetchBody: async () => null,
+    });
+    expect(empty.fetchedCount).toBe(0);
+    const thin = shapeSelectionToGenerationSnippet(["external:e1"], empty.options);
+    expect(thin).toMatch(/Wikipedia|Overview/i);
+  });
+});
+
 describe("structural: dialog + grid-ops wire selection → local_context + prompt", () => {
   it("BlockSkillGrid picker and generate_shape payload; grid-ops persists local_context", () => {
     const grid = read("components/BlockSkillGrid.tsx");
@@ -149,6 +238,8 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     expect(ops).toContain("selectedMaterialsSnippet");
     expect(ops).toContain("local_context");
     expect(ops).toContain("composeShapeGenerationContext");
+    expect(ops).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
+    expect(ops).toContain("fetchLinkBodyText");
 
     const prompt = read("lib/block-footprint-prompt.ts");
     expect(prompt).toContain("selectedMaterialsSnippet");
@@ -160,6 +251,7 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
         "payloadKeys=" + grid.includes("contextSourceKeys"),
         "opsLocalContext=" + ops.includes("local_context"),
         "opsSnippet=" + ops.includes("shapeSelectionToGenerationSnippet"),
+        "opsLinkBody=" + ops.includes("enrichSelectedOptionsWithFetchedLinkBodies"),
         "promptField=" + prompt.includes("selectedMaterialsSnippet"),
       ].join("\n"),
     );
@@ -202,13 +294,15 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     expect(view).toContain("handleSaveLocalContext");
     expect(view).toContain("set_local_context");
 
-    // API maps selection → generation snippet + persisted local_context
+    // API maps selection → generation snippet + persisted local_context + link bodies
     const slot = read("app/api/workspace/add-block-at-slot/route.ts");
     expect(slot).toContain("contextSourceKeys");
     expect(slot).toContain("shapeSelectionToLocalContext");
     expect(slot).toContain("shapeSelectionToGenerationSnippet");
     expect(slot).toContain("local_context");
     expect(slot).toContain("composeShapeGenerationContext");
+    expect(slot).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
+    expect(slot).toContain("fetchLinkBodyText");
 
     // Shared pure path still maps selection → local_context
     const opts = buildShapeContextSourceOptions(catalog);
@@ -225,8 +319,26 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
         "paneNoLocalDrawer=" + !pane.includes('drawerId="local"'),
         "localSaveBtn=" + local.includes("data-block-local-save"),
         "slotLocalContext=" + slot.includes("shapeSelectionToLocalContext"),
+        "slotLinkBody=" + slot.includes("enrichSelectedOptionsWithFetchedLinkBodies"),
         "viewKeys=" + view.includes("contextSourceKeys"),
         "mappedFiles=" + (mapped?.global_file_refs || []).join(","),
+      ].join("\n"),
+    );
+
+    writeEvidence(
+      "create-paths-wire.log",
+      [
+        "addPaneKeys=" + pane.includes("contextSourceKeys"),
+        "viewKeys=" + view.includes("contextSourceKeys"),
+        "slotSnippet=" + slot.includes("shapeSelectionToGenerationSnippet"),
+        "slotLocal=" + slot.includes("shapeSelectionToLocalContext"),
+        "slotFetchBody=" + slot.includes("fetchLinkBodyText"),
+        "gridOpsFetchBody=" +
+          read("app/api/workspace/grid-ops/route.ts").includes("fetchLinkBodyText"),
+        "gridOpsEnrich=" +
+          read("app/api/workspace/grid-ops/route.ts").includes(
+            "enrichSelectedOptionsWithFetchedLinkBodies",
+          ),
       ].join("\n"),
     );
   });

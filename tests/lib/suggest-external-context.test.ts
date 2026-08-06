@@ -16,7 +16,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.SUGGEST_EXTERNAL_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-eb20debe1998/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b413fa687e2d/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -143,7 +143,9 @@ describe("structural: suggest external context UI + API", () => {
     expect(widget).toContain("data-suggest-external-context-accept");
     expect(widget).toContain("/api/workspace/suggest-external-context");
     expect(widget).toContain("/api/workspace/external-resources");
-    expect(widget).toContain("Suggest from web (xAI)");
+    expect(widget).toContain("Suggest from web");
+    expect(widget).not.toContain("Suggest from web (xAI)");
+    expect(widget).not.toMatch(/Suggest from web\s*\(xAI\)/i);
 
     // Add pane: attach context inside Add drawer (no separate Local drawer)
     expect(add).toContain("WorkspaceSuggestExternalContext");
@@ -165,6 +167,15 @@ describe("structural: suggest external context UI + API", () => {
     expect(pure).toContain("export function mergeAcceptedExternalIntoSelection");
 
     writeEvidence(
+      "suggest-label.log",
+      [
+        "labelSuggestFromWeb=" + widget.includes("Suggest from web"),
+        "noXaiBrand=" + !widget.includes("Suggest from web (xAI)"),
+        "buttonHook=" + widget.includes("data-suggest-external-context-button"),
+      ].join("\n"),
+    );
+
+    writeEvidence(
       "suggest-external-ui.log",
       [
         "addHasPicker=" + add.includes("data-add-block-context-picker"),
@@ -172,6 +183,9 @@ describe("structural: suggest external context UI + API", () => {
         "shapeHasWidget=" + shape.includes("WorkspaceSuggestExternalContext"),
         "buttonHook=" + widget.includes("data-suggest-external-context-button"),
         "acceptHook=" + widget.includes("data-suggest-external-context-accept"),
+        "labelOk=" +
+          (widget.includes("Suggest from web") &&
+            !widget.includes("Suggest from web (xAI)")),
         "callsSuggestApi=" +
           widget.includes("/api/workspace/suggest-external-context"),
         "callsExternalCreate=" +

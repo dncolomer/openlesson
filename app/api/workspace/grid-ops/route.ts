@@ -35,9 +35,11 @@ import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-ru
 import {
   buildShapeContextSourceOptions,
   composeShapeGenerationContext,
+  enrichSelectedOptionsWithFetchedLinkBodies,
   shapeSelectionToGenerationSnippet,
   shapeSelectionToLocalContext,
 } from "@/lib/shape-context-select";
+import { fetchLinkBodyText } from "@/lib/fetch-link-body";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { resolveCreateBlockIsStart } from "@/lib/block-starter-flag";
 import {
@@ -1359,7 +1361,7 @@ export async function POST(req: NextRequest) {
       const selectedKeys = Array.isArray(contextSourceKeys)
         ? contextSourceKeys.map((k) => String(k || "").trim()).filter(Boolean)
         : [];
-      const shapeOptions = buildShapeContextSourceOptions({
+      const baseShapeOptions = buildShapeContextSourceOptions({
         notes: plan?.notes ?? "",
         files: fileRows.map((f) => ({
           id: f.id,
@@ -1367,6 +1369,14 @@ export async function POST(req: NextRequest) {
         })),
         externalResources,
       });
+      // Fetch page bodies for selected external/internet links so generation
+      // uses linked content (not only title/URL/description).
+      const { options: shapeOptions } =
+        await enrichSelectedOptionsWithFetchedLinkBodies({
+          selectedKeys,
+          options: baseShapeOptions,
+          fetchBody: (url) => fetchLinkBodyText(url),
+        });
       const selectedSnippet = shapeSelectionToGenerationSnippet(selectedKeys, shapeOptions);
       const localContext = shapeSelectionToLocalContext(selectedKeys, shapeOptions);
       const normalizedLocal = localContext

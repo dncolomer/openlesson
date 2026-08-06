@@ -25,7 +25,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.EXTERNAL_ABSORB_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-39cea3f66b3f/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b413fa687e2d/implementer";
 
 function writeEvidence(name: string, body: string) {
   try {
@@ -60,6 +60,19 @@ describe("absorb external links into local notes (pure)", () => {
     expect(formatAbsorbedExternalNoteBlock({ title: "x", url: "not-a-url" })).toBe(
       null,
     );
+  });
+
+  it("includes fetched link body Content when body is provided", () => {
+    const body =
+      "Positive predictive value depends on prevalence. At low base rates most positives are false positives.";
+    const block = formatAbsorbedExternalNoteBlock({
+      ...fixtureLink,
+      body,
+    });
+    expect(block).toBeTruthy();
+    expect(block!).toMatch(/Content:/i);
+    expect(block!).toMatch(/Positive predictive value|prevalence/i);
+    expect(block!).not.toMatch(/consult this URL for domain substance/i);
   });
 
   it("mergeAbsorbedExternalNotes appends without duplicating URLs", () => {
@@ -196,6 +209,19 @@ describe("structural wiring: attach + prompt assembly", () => {
     const src = read("lib/shape-context-select.ts");
     expect(src).toContain("absorbExternalResourcesIntoLocalContext");
     expect(src).toContain("externalLinks");
+    expect(src).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
+    expect(src).toContain("enrichShapeOptionsWithLinkBodies");
+  });
+
+  it("create APIs fetch link bodies for selected externals", () => {
+    const slot = read("app/api/workspace/add-block-at-slot/route.ts");
+    const ops = read("app/api/workspace/grid-ops/route.ts");
+    const fetchLib = read("lib/fetch-link-body.ts");
+    expect(fetchLib).toContain("export async function fetchLinkBodyText");
+    expect(slot).toContain("fetchLinkBodyText");
+    expect(slot).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
+    expect(ops).toContain("fetchLinkBodyText");
+    expect(ops).toContain("enrichSelectedOptionsWithFetchedLinkBodies");
   });
 
   it("prompt-workspace-context injects buildExternalUrlJitBiasSnippet", () => {

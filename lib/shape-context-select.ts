@@ -7,6 +7,8 @@ import type { BlockLocalContextInput } from "@/lib/prompt-workspace-context";
 import { normalizeBlockLocalContext } from "@/lib/prompt-workspace-context";
 import {
   absorbExternalResourcesIntoLocalContext,
+  mergeLinkBodyIntoExcerpt,
+  normalizeLinkBodyText,
   type ExternalLinkAbsorbInput,
 } from "@/lib/workspace-external-resources";
 
@@ -184,17 +186,23 @@ export function shapeSelectionToLocalContext(
         const m = String(opt.excerpt).match(/URL:\s*(\S+)/i);
         if (m?.[1]) resolvedUrl = m[1].trim();
       }
-      const descFromExcerpt =
-        opt.excerpt && !String(opt.excerpt).startsWith("URL:")
-          ? String(opt.excerpt).replace(/^URL:\s*\S+\s*/i, "").trim()
-          : opt.excerpt && String(opt.excerpt).includes("\n")
-            ? String(opt.excerpt).split("\n").slice(1).join("\n").trim()
-            : null;
+      // Prefer Content: body from enriched excerpts for durable absorb.
+      const bodyFromExcerpt = extractContentFromExcerpt(opt.excerpt);
+      // Summary lines only — strip URL: and Content: so body is not duplicated.
+      let descFromExcerpt: string | null = null;
+      if (opt.excerpt) {
+        const withoutUrl = String(opt.excerpt)
+          .replace(/^URL:\s*\S+\s*/im, "")
+          .replace(/Content:\s*[\s\S]*/i, "")
+          .trim();
+        descFromExcerpt = withoutUrl || null;
+      }
       externalLinks.push({
         id: id || null,
         title: name,
         url: resolvedUrl,
         description: descFromExcerpt || null,
+        body: bodyFromExcerpt || null,
       });
       local_files.push({
         name: `[external] ${name}`,
@@ -234,6 +242,146 @@ export function shapeSelectionToLocalContext(
       ? norm.localFiles
       : absorbed.local_files,
     external_resource_ids: extIds.length ? extIds : null,
+  };
+}
+
+/** Pull `Content:` section from an enriched option excerpt. */
+export function extractContentFromExcerpt(
+  excerpt: string | null | undefined,
+): string | null {
+  if (!excerpt) return null;
+  const m = String(excerpt).match(/Content:\s*([\s\S]+)/i);
+  if (!m?.[1]) return null;
+  const body = normalizeLinkBodyText(m[1]);
+  return body || null;
+}
+
+/**
+ * Selected external options that have a fetchable URL (for link-body enrichment).
+ */
+export function selectedExternalLinkTargets(
+  selectedKeys: readonly string[],
+  options: readonly ShapeContextSourceOption[],
+): Array<{ key: string; id: string; url: string; label: string }> {
+  if (!selectedKeys.length) return [];
+  const byKey = new Map(options.map((o) => [o.key, o]));
+  const out: Array<{ key: string; id: string; url: string; label: string }> = [];
+  const seen = new Set<string>();
+  for (const key of selectedKeys) {
+    const opt = byKey.get(key) || resolveOrphanKey(key);
+    if (!opt || opt.kind !== "external") continue;
+    let url = clean(opt.url);
+    if (!url && opt.excerpt) {
+      const m = String(opt.excerpt).match(/URL:\s*(\S+)/i);
+      if (m?.[1]) url = m[1].trim();
+    }
+    if (!url) continue;
+    const k = url.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({
+      key: opt.key,
+      id: clean(opt.id) || opt.key,
+      url,
+      label: clean(opt.label) || url,
+    });
+  }
+  return out;
+}
+
+/**
+ * Pure: merge fetched link bodies into selected external options' excerpts
+ * so generation snippet + local_context absorb include page substance.
+ *
+ * `bodiesByUrl` maps URL (case-insensitive) → raw or plain body text.
+ */
+export function enrichShapeOptionsWithLinkBodies(
+  options: readonly ShapeContextSourceOption[],
+  selectedKeys: readonly string[],
+  bodiesByUrl: Readonly<Record<string, string | null | undefined>>,
+): ShapeContextSourceOption[] {
+  if (!options.length || !selectedKeys.length) return [...options];
+  const selected = new Set(selectedKeys.map((k) => clean(k)).filter(Boolean));
+  const bodyMap = new Map<string, string>();
+  for (const [u, body] of Object.entries(bodiesByUrl || {})) {
+    const key = clean(u).toLowerCase();
+    const text = normalizeLinkBodyText(body);
+    if (key && text) bodyMap.set(key, text);
+  }
+  if (!bodyMap.size) return options.map((o) => ({ ...o }));
+
+  return options.map((opt) => {
+    if (opt.kind !== "external" || !selected.has(opt.key)) return { ...opt };
+    let url = clean(opt.url);
+    if (!url && opt.excerpt) {
+      const m = String(opt.excerpt).match(/URL:\s*(\S+)/i);
+      if (m?.[1]) url = m[1].trim();
+    }
+    if (!url) return { ...opt };
+    const body = bodyMap.get(url.toLowerCase());
+    if (!body) return { ...opt };
+    return {
+      ...opt,
+      excerpt: mergeLinkBodyIntoExcerpt(opt.excerpt, body, url),
+    };
+  });
+}
+
+/**
+ * Async enrichment used by create APIs: fetch bodies for selected externals,
+ * then return options ready for snippet + local_context mapping.
+ * `fetchBody` is injectable for unit tests; failures → null (degrade gracefully).
+ */
+export async function enrichSelectedOptionsWithFetchedLinkBodies(input: {
+  selectedKeys: readonly string[];
+  options: readonly ShapeContextSourceOption[];
+  fetchBody: (url: string) => Promise<string | null | undefined>;
+  /** Cap parallel fetches (default 4). */
+  concurrency?: number;
+}): Promise<{
+  options: ShapeContextSourceOption[];
+  fetchedCount: number;
+  targets: Array<{ key: string; url: string }>;
+}> {
+  const targets = selectedExternalLinkTargets(input.selectedKeys, input.options);
+  if (!targets.length) {
+    return {
+      options: input.options.map((o) => ({ ...o })),
+      fetchedCount: 0,
+      targets: [],
+    };
+  }
+  const concurrency = Math.max(1, Math.min(input.concurrency ?? 4, 8));
+  const bodiesByUrl: Record<string, string | null> = {};
+  let fetchedCount = 0;
+  let i = 0;
+  while (i < targets.length) {
+    const batch = targets.slice(i, i + concurrency);
+    i += concurrency;
+    const results = await Promise.all(
+      batch.map(async (t) => {
+        try {
+          const raw = await input.fetchBody(t.url);
+          const text = normalizeLinkBodyText(raw);
+          return { url: t.url, text: text || null };
+        } catch {
+          return { url: t.url, text: null as string | null };
+        }
+      }),
+    );
+    for (const r of results) {
+      bodiesByUrl[r.url] = r.text;
+      if (r.text) fetchedCount += 1;
+    }
+  }
+  return {
+    options: enrichShapeOptionsWithLinkBodies(
+      input.options,
+      input.selectedKeys,
+      bodiesByUrl,
+    ),
+    fetchedCount,
+    targets: targets.map((t) => ({ key: t.key, url: t.url })),
   };
 }
 

@@ -234,7 +234,100 @@ export type ExternalLinkAbsorbInput = {
   url?: string | null;
   description?: string | null;
   id?: string | null;
+  /**
+   * Fetched page/body substance from the linked URL (when available).
+   * Preferred over description for generation + durable absorb excerpts.
+   */
+  body?: string | null;
 };
+
+/** Max chars of fetched link body kept for generation / absorb. */
+export const LINK_BODY_MAX_CHARS = 4_000;
+
+/**
+ * Strip tags / scripts from HTML-ish input → plain text for generation.
+ * Pure (no DOM); best-effort for server-fetched pages.
+ */
+export function htmlToPlainText(html: string): string {
+  let s = String(html || "");
+  // Drop script/style/noscript blocks entirely
+  s = s.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ");
+  s = s.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ");
+  s = s.replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ");
+  // Prefer main / article content when present
+  const main =
+    s.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ||
+    s.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ||
+    s;
+  s = main
+    .replace(/<\/(p|div|h[1-6]|li|tr|br|section|header|footer)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  // Decode a few common entities
+  s = s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = Number(n);
+      return Number.isFinite(code) && code > 0 && code < 0x110000
+        ? String.fromCodePoint(code)
+        : " ";
+    });
+  return s
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+/**
+ * Normalize raw fetched page text (HTML or plain) into clipped plain body.
+ * Empty / junk → empty string.
+ */
+export function normalizeLinkBodyText(
+  raw: string | null | undefined,
+  maxChars: number = LINK_BODY_MAX_CHARS,
+): string {
+  const input = typeof raw === "string" ? raw : "";
+  if (!input.trim()) return "";
+  const looksHtml = /<\/?[a-z][\s\S]*>/i.test(input);
+  const plain = looksHtml ? htmlToPlainText(input) : input.replace(/\s+/g, " ").trim();
+  if (!plain) return "";
+  // Drop ultra-thin results (login walls, empty shells)
+  if (plain.length < 40) return plain.length >= 20 ? plain : "";
+  if (plain.length <= maxChars) return plain;
+  return `${plain.slice(0, maxChars - 1).trimEnd()}…`;
+}
+
+/**
+ * Merge fetched body into an existing option excerpt (URL + summary + body).
+ */
+export function mergeLinkBodyIntoExcerpt(
+  existing: string | null | undefined,
+  body: string | null | undefined,
+  url?: string | null,
+): string {
+  const bodyText = normalizeLinkBodyText(body);
+  const base = cleanAbsorbText(existing);
+  const urlLine =
+    url && isValidHttpUrl(url) ? `URL: ${url}` : base.match(/^URL:\s*\S+/i)?.[0] || null;
+  const parts: string[] = [];
+  if (urlLine) parts.push(urlLine);
+  // Keep non-URL lines from existing as summary (not duplicate body)
+  if (base) {
+    const rest = base
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !/^URL:\s*/i.test(l) && !/^Content:\s*/i.test(l));
+    if (rest.length) parts.push(rest.join("\n"));
+  }
+  if (bodyText) parts.push(`Content:\n${bodyText}`);
+  return parts.join("\n").trim();
+}
 
 function cleanAbsorbText(s: unknown): string {
   return typeof s === "string" ? s.replace(/\s+/g, " ").trim() : "";
@@ -265,14 +358,19 @@ export function formatAbsorbedExternalNoteBlock(
   }
   title = title.slice(0, TITLE_MAX);
   const desc = cleanAbsorbText(input.description).slice(0, DESC_MAX);
+  const body = normalizeLinkBodyText(input.body, LINK_BODY_MAX_CHARS);
   const lines = [
     `${EXTERNAL_ABSORB_MARKER}: ${title}`,
     `URL: ${url}`,
   ];
   if (desc) lines.push(`Summary: ${desc}`);
-  lines.push(
-    "Absorbed locally as block context — consult this URL for domain substance when needed.",
-  );
+  if (body) {
+    lines.push(`Content:\n${body}`);
+  } else {
+    lines.push(
+      "Absorbed locally as block context — consult this URL for domain substance when needed.",
+    );
+  }
   return lines.join("\n");
 }
 
@@ -344,17 +442,21 @@ export function buildExternalUrlJitBiasSnippet(
     seen.add(key);
     const title = cleanAbsorbText(r.title) || url;
     const desc = cleanAbsorbText(r.description);
+    const body = normalizeLinkBodyText(r.body, 800);
     lines.push(
       desc
         ? `- ${title} — ${url} (${desc.slice(0, 160)})`
         : `- ${title} — ${url}`,
     );
-    if (lines.length >= 12) break;
+    if (body) {
+      lines.push(`  Body excerpt: ${body.slice(0, 500)}${body.length > 500 ? "…" : ""}`);
+    }
+    if (lines.length >= 24) break;
   }
   if (!lines.length) return null;
   return [
     "## External URL resources — consult just-in-time",
-    "When you need domain substance, examples, definitions, or facts for this workspace/block, **look into / consult these provided URLs** (prefer them over inventing details). Use titles and summaries as hints; treat the linked pages as authoritative context for generation.",
+    "When you need domain substance, examples, definitions, or facts for this workspace/block, **use the fetched body excerpts below when present**, otherwise look into / consult these provided URLs (prefer them over inventing details). Use titles and summaries as hints; treat the linked pages as authoritative context for generation.",
     ...lines,
   ].join("\n");
 }

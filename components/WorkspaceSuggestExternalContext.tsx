@@ -171,16 +171,16 @@ export function WorkspaceSuggestExternalContext({
           title={
             !topic.trim()
               ? "Enter a block prompt first"
-              : "Suggest external sources with xAI"
+              : "Suggest external sources for this topic"
           }
           className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? "Suggesting…" : "Suggest from web (xAI)"}
+          {busy ? "Suggesting…" : "Suggest from web"}
         </button>
       </div>
       <p className="text-[10px] leading-snug text-neutral-600">
-        xAI proposes reputable links for this topic. Attach ones you want as
-        local context before create.
+        Proposes reputable links for this topic. Attach ones you want as local
+        context before create.
       </p>
       {error ? (
         <p className="text-[11px] text-red-400/90" data-suggest-external-context-error>

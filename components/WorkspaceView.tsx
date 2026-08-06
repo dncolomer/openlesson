@@ -83,6 +83,7 @@ import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
+  nextMapSelectionClearNonce,
   nextWorkspaceBlockSelection,
   resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
@@ -337,6 +338,11 @@ export function WorkspaceView({
   const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
   /** Multi-selected filled blocks (2+) → combine surface. */
   const [selectedFilledBlockIds, setSelectedFilledBlockIds] = useState<string[]>([]);
+  /**
+   * Bumped after ops that must leave no residual map selection (cluster).
+   * BlockSkillGrid clears local multi-block + empty-cell state when this changes.
+   */
+  const [mapSelectionClearNonce, setMapSelectionClearNonce] = useState(0);
   /** Add-block Range/Density expand preview (highlight only). */
   const [addExpandPreviewCells, setAddExpandPreviewCells] = useState<
     Array<{ row: number; col: number }> | null
@@ -1873,6 +1879,12 @@ export function WorkspaceView({
             })),
           );
         }
+        // Drop residual multi-select / empty / detail chrome after cluster.
+        // Parent-only clear is insufficient: grid owns local multi + empty ids.
+        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        setExpandedBlockId(clearWorkspaceBlockSelection());
+        setEmptySurface(clearWorkspaceAddTarget());
+        setMapSelectionClearNonce((n) => nextMapSelectionClearNonce(n));
         setClusterMapJob({
           active: true,
           progress: 1,
@@ -2624,6 +2636,7 @@ export function WorkspaceView({
             onSelectedBlockIdsChange={
               isLearnerMode ? undefined : handleSelectedBlockIdsChange
             }
+            mapSelectionClearNonce={mapSelectionClearNonce}
             unusableCells={unusableCells}
             onMapGround={
               isOwner && !isLearnerMode ? handleMapGround : undefined

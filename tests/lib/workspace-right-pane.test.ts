@@ -10,6 +10,7 @@ import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
+  nextMapSelectionClearNonce,
   nextRightPaneDrawerExpanded,
   nextAccordionOpenDrawerId,
   initialAccordionOpenDrawerId,
@@ -95,6 +96,11 @@ describe("resolveWorkspaceRightPane", () => {
     });
     expect(resolveFilledBlockSelectionSurface([])).toBeNull();
     expect(clearWorkspaceFilledBlockSelection()).toEqual([]);
+    // Nonce bump drives BlockSkillGrid local clear after cluster (and similar).
+    expect(nextMapSelectionClearNonce(0)).toBe(1);
+    expect(nextMapSelectionClearNonce(1)).toBe(2);
+    expect(nextMapSelectionClearNonce(-3)).toBe(1);
+    expect(nextMapSelectionClearNonce(Number.NaN)).toBe(1);
 
     expect(resolveWorkspaceRightPane(null, null, ["b1", "b2"])).toBe(
       "combine_blocks",

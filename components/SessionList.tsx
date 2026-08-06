@@ -132,6 +132,11 @@ interface SessionListProps {
     progress: number;
     label: string;
   } | null;
+  /**
+   * When this nonce increases, the map clears local multi-block + empty-cell
+   * selection (parent-driven post-op clear, e.g. after cluster).
+   */
+  mapSelectionClearNonce?: number;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -212,6 +217,7 @@ export function SessionList({
   dynamicUnlockPreviewIds = null,
   dynamicContentGeneratedIds = null,
   expandJobs = null,
+  mapSelectionClearNonce = 0,
   onAbortExpandJob,
   clusterMapJob = null,
 }: SessionListProps) {
@@ -538,6 +544,7 @@ export function SessionList({
             expandJobs={expandJobs}
             onAbortExpandJob={onAbortExpandJob}
             clusterMapJob={clusterMapJob}
+            mapSelectionClearNonce={mapSelectionClearNonce}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

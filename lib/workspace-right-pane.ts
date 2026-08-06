@@ -214,6 +214,16 @@ export function clearWorkspaceFilledBlockSelection(): string[] {
 }
 
 /**
+ * Bump the map selection-clear nonce so BlockSkillGrid drops local multi-block
+ * and empty-cell selection (parent-only clear cannot reach grid-owned state).
+ * Used after ops that must leave no residual map selection (e.g. cluster).
+ */
+export function nextMapSelectionClearNonce(prev: number): number {
+  const n = Number.isFinite(prev) ? Math.floor(prev) : 0;
+  return Math.max(0, n) + 1;
+}
+
+/**
  * Footprint fields needed to decide Split eligibility (merged / multi-cell block).
  */
 export type SplitCandidateBlock = {

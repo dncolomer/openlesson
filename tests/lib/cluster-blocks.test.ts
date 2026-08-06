@@ -441,6 +441,43 @@ describe("Cluster blocks structural wiring", () => {
     expect(view).toContain("placements: input.placements");
   });
 
+  it("cluster success clears filled multi-select, empty surface, and grid-local selection", () => {
+    const view = fs.readFileSync(
+      path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
+      "utf8",
+    );
+    const grid = fs.readFileSync(
+      path.join(REPO_ROOT, "components/BlockSkillGrid.tsx"),
+      "utf8",
+    );
+    const sessionList = fs.readFileSync(
+      path.join(REPO_ROOT, "components/SessionList.tsx"),
+      "utf8",
+    );
+    // Isolate the relocate success handler body after handleClusterBlocks.
+    const start = view.indexOf("handleClusterBlocks");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const handler = view.slice(start, start + 2800);
+    expect(handler).toContain('op: "relocate"');
+    // Parent selection stores cleared only after successful relocate (not only on cancel).
+    expect(handler).toContain(
+      "setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection())",
+    );
+    expect(handler).toContain(
+      "setExpandedBlockId(clearWorkspaceBlockSelection())",
+    );
+    expect(handler).toContain("setEmptySurface(clearWorkspaceAddTarget())");
+    expect(handler).toContain("nextMapSelectionClearNonce");
+    expect(handler).toContain("setMapSelectionClearNonce");
+    // Grid-local multi + empty clear is host-driven via nonce (parent cannot set grid state).
+    expect(view).toContain("mapSelectionClearNonce={mapSelectionClearNonce}");
+    expect(sessionList).toContain("mapSelectionClearNonce");
+    expect(grid).toContain("mapSelectionClearNonce");
+    expect(grid).toMatch(
+      /mapSelectionClearNonce[\s\S]*?setSelectedBlockIds\(\[\]\)[\s\S]*?setSelectedEmptyCells\(\[\]\)|mapSelectionClearNonce[\s\S]*?setSelectedEmptyCells\(\[\]\)[\s\S]*?setSelectedBlockIds\(\[\]\)/,
+    );
+  });
+
   it("BlockSkillGrid shows cluster progress bar under minimap", () => {
     const grid = fs.readFileSync(
       path.join(REPO_ROOT, "components/BlockSkillGrid.tsx"),

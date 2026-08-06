@@ -277,6 +277,11 @@ interface BlockSkillGridProps {
     label: string;
   } | null;
   /**
+   * When this nonce increases (host-driven), clear local multi-block and
+   * empty-cell selection so residual chrome cannot remain after ops like cluster.
+   */
+  mapSelectionClearNonce?: number;
+  /**
    * @deprecated Prefer onEmptySelectionChange — still maps single cell for older hosts.
    */
   onAddTargetChange?: (cell: GridCell | null) => void;
@@ -912,6 +917,7 @@ export function BlockSkillGrid({
   expandJobs = null,
   onAbortExpandJob,
   clusterMapJob = null,
+  mapSelectionClearNonce = 0,
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
@@ -1489,6 +1495,30 @@ export function BlockSkillGrid({
     blockDragRef.current = null;
     stretchDragRef.current = null;
   }, [learnerMode]);
+
+  // Host-driven full selection clear (e.g. post-cluster). Skip nonce 0 (initial).
+  const mapSelectionClearNonceRef = useRef(mapSelectionClearNonce);
+  useEffect(() => {
+    if (mapSelectionClearNonce === mapSelectionClearNonceRef.current) return;
+    mapSelectionClearNonceRef.current = mapSelectionClearNonce;
+    if (!mapSelectionClearNonce) return;
+    selectedEmptyCellsRef.current = [];
+    selectedBlockIdsRef.current = [];
+    setSelectedEmptyCells([]);
+    setSelectedBlockIds([]);
+    setShapePromptOpen(false);
+    setMergePromptOpen(false);
+    setPrompt("");
+    setLocalPendingCell(null);
+    onEmptySelectionChange?.(null);
+    onAddTargetChange?.(null);
+    onSelectedBlockIdsChange?.(null);
+  }, [
+    mapSelectionClearNonce,
+    onAddTargetChange,
+    onEmptySelectionChange,
+    onSelectedBlockIdsChange,
+  ]);
 
   // Drop optimistic rows once parent nodes catch up from the server.
   useEffect(() => {

@@ -197,7 +197,7 @@ export function selectionIsFreeformLectureShape(cells: GridCell[]): {
 
 /** Cells occupied by a selection (only the selected cells — not the full bbox). */
 export function canPlaceAbsoluteCells(
-  cells: GridCell[],
+  cells: readonly GridCell[],
   occupancy: Map<string, string>,
   ignoreIds: Iterable<string> = [],
 ): boolean {
@@ -263,7 +263,7 @@ export function freeformShapeKeySet(cells: GridCell[]): Set<string> {
   return new Set(cellsFromSelection(cells).map((c) => getCellKey(c.row, c.col)));
 }
 
-export function cellsFromSelection(cells: GridCell[]): GridCell[] {
+export function cellsFromSelection(cells: readonly GridCell[]): GridCell[] {
   const seen = new Set<string>();
   const unique: GridCell[] = [];
   for (const cell of cells) {

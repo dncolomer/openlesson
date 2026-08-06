@@ -11,6 +11,7 @@ import {
   parseBlockLocalContext,
   type BlockLocalContextInput,
 } from "@/lib/prompt-workspace-context";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type MapGroundOp =
   | "set_lock_until"
@@ -133,7 +134,10 @@ export async function POST(req: NextRequest) {
       if (!allowed.has(status)) {
         return NextResponse.json({ error: "invalid status" }, { status: 400 });
       }
-      const { error } = await supabase
+      // Learners (incl. non-owners with access) must be able to force Mark Done.
+      // Auth already verified via guardWorkspaceRoute; write with admin client.
+      const writeDb = createAdminClient();
+      const { error } = await writeDb
         .from("blocks")
         .update({ status })
         .eq("id", blockId)
@@ -141,7 +145,7 @@ export async function POST(req: NextRequest) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      const { data: blocks } = await supabase
+      const { data: blocks } = await writeDb
         .from("blocks")
         .select("*")
         .eq("workspace_id", workspaceId);

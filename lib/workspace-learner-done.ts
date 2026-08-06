@@ -194,7 +194,7 @@ export function recommendLearnerDone(
     return {
       recommendation: "not_ok",
       rationale:
-        "No existing proof-of-work found for this workspace yet. You can still mark Done when ready.",
+        "No proof-of-work found for this block yet. You can still use Mark Done anyway — Generator and unlocks still run.",
     };
   }
   if (score != null && score < 40) {

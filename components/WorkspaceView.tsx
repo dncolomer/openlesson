@@ -1677,7 +1677,10 @@ export function WorkspaceView({
     [],
   );
 
-  /** Run effect generation (dynamic unlock / generator empty-cell spawn). */
+  /**
+   * Run effect generation (dynamic unlock / generator empty-cell spawn).
+   * Returns ok + error so Mark Done can await Generator and surface failures.
+   */
   const runBlockEffectGenerate = useCallback(
     async (input: {
       mode: "dynamic" | "generator_cell";
@@ -1685,8 +1688,10 @@ export function WorkspaceView({
       generatorBlockId?: string;
       row?: number;
       col?: number;
-    }) => {
-      if (!workspaceId) return;
+    }): Promise<{ ok: boolean; error?: string }> => {
+      if (!workspaceId) {
+        return { ok: false, error: "Missing workspace" };
+      }
       const res = await fetch("/api/workspace/block-effect-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1703,8 +1708,12 @@ export function WorkspaceView({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        console.warn("[effect-generate]", data.error || res.status);
-        return;
+        const err =
+          typeof data.error === "string" && data.error.trim()
+            ? data.error.trim()
+            : `Effect generate failed (${res.status})`;
+        console.warn("[effect-generate]", err);
+        return { ok: false, error: err };
       }
       if (Array.isArray(data.updatedNodes)) {
         setNodes(mapNodesWithEffects(data.updatedNodes));
@@ -1726,6 +1735,7 @@ export function WorkspaceView({
           /* ignore */
         }
       }
+      return { ok: true };
     },
     [ayclToken, currentUserId, locale, mapNodesWithEffects, workspaceId],
   );
@@ -2829,7 +2839,8 @@ export function WorkspaceView({
                     onPhase?.(phase);
                   };
 
-                  // 1) Persist status via map-ground (await success)
+                  // 1) Persist status via map-ground (await success) — always allowed
+                  // regardless of PoW recommendation (force Mark Done).
                   report("marking_done");
                   const groundRes = await fetch("/api/workspace/map-ground", {
                     method: "POST",
@@ -2854,19 +2865,26 @@ export function WorkspaceView({
                     title: n.title,
                     status: n.status,
                     lock_until_block_ids: n.lock_until_block_ids,
+                    creator_effects: n.creator_effects,
+                    position_x: n.position_x,
+                    position_y: n.position_y,
                   }));
                   const { unlockedIds } = blocksUnlockedAfterDone({
                     completedBlockId: blockId,
                     blocks: before as MapGroundBlockRef[],
                   });
 
+                  // Prefer server nodes (with status) but keep client-parsed effects.
                   if (Array.isArray(groundData.updatedNodes)) {
                     setNodes(
-                      groundData.updatedNodes.map(
-                        (n: Block & { local_context?: unknown }) => ({
-                          ...n,
-                          local_context: parseBlockLocalContext(n.local_context),
-                        }),
+                      mapNodesWithEffects(
+                        groundData.updatedNodes as Array<
+                          Block & {
+                            local_context?: unknown;
+                            practice_options?: unknown;
+                            creator_effects?: unknown;
+                          }
+                        >,
                       ),
                     );
                   } else {
@@ -2877,73 +2895,97 @@ export function WorkspaceView({
                     );
                   }
 
-                  // 2) Await LWM snapshot update (real host path)
-                  report("snapshot_lwm");
-                  const snapRes = await fetch(
-                    `/api/workspaces/${workspaceId}/snapshot-all`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ workspaceId }),
-                    },
+                  // Blocks for effect resolution: mark completed in the snapshot
+                  // we use (do not wait for React state).
+                  const blocksForEffects = before.map((n) =>
+                    n.id === blockId ? { ...n, status: "completed" } : n,
                   );
-                  // Snapshot may stream NDJSON — treat non-2xx as soft failure after status is saved
-                  if (!snapRes.ok && snapRes.status !== 0) {
-                    // Still apply unlocks locally; surface soft error only if completely failed
-                    const errText = await snapRes.text().catch(() => "");
-                    if (snapRes.status >= 500) {
-                      console.warn(
-                        "[learner-done] snapshot-all failed",
-                        snapRes.status,
-                        errText.slice(0, 200),
-                      );
-                    }
-                  }
 
-                  // 3) Unlock dependents (lock_until rules) + effect generation
+                  // 2) Generator / Dynamic effects immediately after status save.
+                  // Do NOT wait on LWM snapshot first — that can hang for minutes
+                  // and previously blocked generator spawn entirely.
                   report("applying_unlocks");
+                  const effectErrors: string[] = [];
 
-                  // Generator: create new blocks on empty target cells.
                   const genCells = generatorTargetCellsAfterDone({
                     completedBlockId: blockId,
-                    blocks: nodes.map((n) => ({
-                      id: n.id,
-                      creator_effects: n.creator_effects,
-                      position_x: n.position_x,
-                      position_y: n.position_y,
-                    })),
+                    blocks: blocksForEffects,
                     unusableKeys: unusableCells.map(
                       (c) => `${c.row}:${c.col}`,
                     ),
                   });
                   for (const cell of genCells) {
-                    void runBlockEffectGenerate({
+                    const result = await runBlockEffectGenerate({
                       mode: "generator_cell",
                       generatorBlockId: blockId,
                       row: cell.row,
                       col: cell.col,
                     });
+                    if (!result.ok) {
+                      effectErrors.push(
+                        result.error ||
+                          `Generator failed at (${cell.row},${cell.col})`,
+                      );
+                    }
                   }
 
-                  // Dynamic: generate blocks whose unlock-after deps just completed.
                   const dynamicIds = dynamicBlocksUnlockedAfterDone({
                     completedBlockId: blockId,
-                    blocks: nodes.map((n) => ({
-                      id: n.id,
-                      status: n.status,
-                      creator_effects: n.creator_effects,
-                    })),
+                    blocks: blocksForEffects,
                   });
                   for (const dynId of dynamicIds) {
-                    void runBlockEffectGenerate({
+                    const result = await runBlockEffectGenerate({
                       mode: "dynamic",
                       blockId: dynId,
                     });
+                    if (!result.ok) {
+                      effectErrors.push(
+                        result.error || `Dynamic generate failed for ${dynId}`,
+                      );
+                    }
+                  }
+
+                  // 3) Soft LWM snapshot (non-blocking after soft timeout)
+                  report("snapshot_lwm");
+                  try {
+                    const snapAbort = new AbortController();
+                    const snapTimer = window.setTimeout(
+                      () => snapAbort.abort(),
+                      12_000,
+                    );
+                    const snapRes = await fetch(
+                      `/api/workspaces/${workspaceId}/snapshot-all`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ workspaceId }),
+                        signal: snapAbort.signal,
+                      },
+                    ).catch(() => null);
+                    window.clearTimeout(snapTimer);
+                    if (snapRes && !snapRes.ok && snapRes.status >= 500) {
+                      console.warn(
+                        "[learner-done] snapshot-all failed",
+                        snapRes.status,
+                      );
+                    }
+                  } catch {
+                    /* snapshot is best-effort after Done */
                   }
 
                   refreshNodes();
                   router.refresh();
-                  return { unlockedIds };
+
+                  if (effectErrors.length) {
+                    throw new Error(
+                      `Marked done, but generation failed: ${effectErrors[0]}`,
+                    );
+                  }
+                  return {
+                    unlockedIds,
+                    generatedCells: genCells.length,
+                    dynamicGenerated: dynamicIds.length,
+                  };
                 }}
               />
             ) : showCreatorDrawers &&

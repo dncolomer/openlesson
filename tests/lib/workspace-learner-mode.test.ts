@@ -182,7 +182,10 @@ describe("learner Done + unlock", () => {
 
   it("recommendLearnerDone from PoW summary", () => {
     expect(recommendLearnerDone(null).recommendation).toBe("unknown");
-    expect(recommendLearnerDone({ powCount: 0 }).recommendation).toBe("not_ok");
+    const empty = recommendLearnerDone({ powCount: 0 });
+    expect(empty.recommendation).toBe("not_ok");
+    // Advisory only — copy must not imply Done is blocked
+    expect(empty.rationale).toMatch(/Mark Done anyway|still/i);
     expect(recommendLearnerDone({ powCount: 2, latestScore: 70 }).recommendation).toBe(
       "ok",
     );
@@ -337,10 +340,19 @@ describe("learner mode UI structural", () => {
     expect(view).toContain("/workspace/${workspaceId}/tap?");
     expect(view).toContain('params.set("interactionKind", "exercise")');
     expect(view).toContain("onSavePlanningPrompt");
-    // Done awaits set_block_status + snapshot-all with onPhase
+    // Done: set_block_status, then Generator/Dynamic effects, then soft snapshot
     expect(view).toContain("set_block_status");
+    expect(view).toContain("generatorTargetCellsAfterDone");
+    expect(view).toContain("runBlockEffectGenerate");
     expect(view).toContain("snapshot-all");
     expect(view).toContain("onPhase");
+    // Effects must not wait on snapshot-all (order: applying_unlocks before snapshot)
+    const markDoneStart = view.indexOf("onMarkDone={async");
+    const applyingIdx = view.indexOf('report("applying_unlocks")', markDoneStart);
+    const snapIdx = view.indexOf('report("snapshot_lwm")', markDoneStart);
+    expect(markDoneStart).toBeGreaterThan(-1);
+    expect(applyingIdx).toBeGreaterThan(markDoneStart);
+    expect(snapIdx).toBeGreaterThan(applyingIdx);
     expect(view).toContain("lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}");
     expect(grid).toContain("learnerMode");
     expect(grid).toContain("data-learner-mode");
@@ -369,6 +381,10 @@ describe("learner mode UI structural", () => {
     expect(grid).toContain("data-learner-dep-highlight");
     expect(learner).toContain("data-learner-pow-summary-stats");
     expect(learner).toContain("data-learner-mark-done");
+    expect(learner).toContain("Mark Done anyway");
+    // Force mark done is not gated on map lock or PoW Not OK
+    expect(learner).toContain("disabled={busy || !onMarkDone || isCompleted}");
+    expect(learner).not.toContain("disabled={busy || locked || !onMarkDone || isCompleted}");
     expect(learner).toContain("data-learner-done-panel");
     expect(learner).toContain("data-learner-dag");
     expect(learner).toContain("onPhase");

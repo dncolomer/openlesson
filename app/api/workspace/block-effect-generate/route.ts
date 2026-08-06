@@ -24,6 +24,7 @@ import {
 import { isBlockCompletedStatus } from "@/lib/map-ground-rules";
 import { buildSkillGridLayout, isCellOccupied } from "@/lib/block-skill-grid";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type EffectMode = EffectGenerationMode | "generator_cell";
 
@@ -81,7 +82,10 @@ export async function POST(req: NextRequest) {
       requireAyclAuthoring: false,
     });
     if (!auth.ok) return auth.response;
-    const { supabase } = auth;
+    // Admin client for effect writes: learners mark Done and Generator must be
+    // able to insert/update blocks even when RLS only allows workspace owners.
+    // Access is still gated by guardWorkspaceRoute above.
+    const supabase = createAdminClient();
 
     const { data: workspace } = await supabase
       .from("workspaces")

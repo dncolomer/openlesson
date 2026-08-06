@@ -272,6 +272,8 @@ describe("creator effects wired into workspace UI + API", () => {
     expect(genRoute).not.toContain("promptable");
     expect(genRoute).toContain("dynamic");
     expect(genRoute).toContain("generator_cell");
+    // Learners can spawn generator targets after Mark Done (admin write after auth)
+    expect(genRoute).toContain("createAdminClient");
 
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).not.toContain('data-creator-effect-icon="promptable"');

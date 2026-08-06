@@ -93,7 +93,11 @@ export function WorkspaceLearnerBlockPane({
     blockId: string;
     status: string;
     onPhase?: (phase: LearnerDoneProgressPhase) => void;
-  }) => Promise<{ unlockedIds?: string[] } | void>;
+  }) => Promise<{
+    unlockedIds?: string[];
+    generatedCells?: number;
+    dynamicGenerated?: number;
+  } | void>;
   /** Host refresh after effect generation mutates blocks. */
   onBlocksUpdated?: (nodes: unknown[]) => void;
   onDynamicGenerated?: (blockId: string) => void;
@@ -233,7 +237,9 @@ export function WorkspaceLearnerBlockPane({
   };
 
   const markDone = async () => {
-    if (!onMarkDone || locked) return;
+    // Force Mark Done is always allowed (including when PoW is Not OK or
+    // map lock chrome is set) so Generator/Dynamic effects can still fire.
+    if (!onMarkDone || isCompleted) return;
     const reco = progress.recommendation;
     const rationale = progress.rationale;
     setProgress(
@@ -258,9 +264,18 @@ export function WorkspaceLearnerBlockPane({
       const unlocked = result?.unlockedIds?.length
         ? ` Unlocked ${result.unlockedIds.length} block(s).`
         : "";
+      const generated =
+        typeof result?.generatedCells === "number" && result.generatedCells > 0
+          ? ` Generated ${result.generatedCells} block(s) from Generator.`
+          : "";
+      const dyn =
+        typeof result?.dynamicGenerated === "number" &&
+        result.dynamicGenerated > 0
+          ? ` Updated ${result.dynamicGenerated} Dynamic block(s).`
+          : "";
       setProgress(
         learnerDoneProgressForPhase("complete", {
-          message: `Block marked done.${unlocked}`,
+          message: `Block marked done.${unlocked}${generated}${dyn}`,
           recommendation: reco,
           rationale,
         }),
@@ -660,7 +675,7 @@ export function WorkspaceLearnerBlockPane({
           <button
             type="button"
             data-learner-mark-done
-            disabled={busy || locked || !onMarkDone || isCompleted}
+            disabled={busy || !onMarkDone || isCompleted}
             onClick={() => void markDone()}
             className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
           >
@@ -668,12 +683,14 @@ export function WorkspaceLearnerBlockPane({
               ? "Working…"
               : isCompleted
                 ? "Already done"
-                : "Mark as Done"}
+                : reco === "not_ok" || locked
+                  ? "Mark Done anyway"
+                  : "Mark as Done"}
           </button>
           <p className="text-[10px] leading-snug text-neutral-600">
-            Recommendation uses your PoW on this block. You can mark Done
-            regardless — status updates, LWM snapshot refreshes, and dependent
-            blocks unlock when rules allow.
+            PoW recommendation is advisory only. Mark Done always persists
+            status, runs Generator / Dynamic effects, unlocks dependents, and
+            refreshes the learning world model in the background.
           </p>
 
           <p className="sr-only" data-workspace-id={workspaceId}>

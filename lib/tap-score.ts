@@ -9,10 +9,6 @@ import {
   buildTapStartingTopicsTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
 import {
-  buildGroundedDialogueQuestion,
-  buildGroundedExerciseItem,
-} from "@/lib/practice-item-builders";
-import {
   formatPromptWorkspaceContextBlock,
   parseBlockLocalContext,
   type PromptBlockInventoryItem,
@@ -364,21 +360,14 @@ Learner-visible prompts must stay on this domain context. Never invent unrelated
   });
 }
 
-export function buildTapOpeningQuestionFallback(brief: TapScoreBrief) {
-  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  // Same pure dialogue builder used by Simulation so author previews match live fallbacks.
-  return buildGroundedDialogueQuestion(
-    {
-      blockTitle: focusedBlock?.title || null,
-      blockDescription: focusedBlock?.description || null,
-      workspaceTitle: brief.plan.title,
-      rootTopic: brief.plan.root_topic,
-      workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
-      workspaceDescription: brief.plan.description,
-      notes: brief.plan.notes,
-    },
-    0,
-  );
+/**
+ * Offline-only fallback when xAI opening generation fails.
+ * Intentionally generic — no block-title / attachments / A-B-C shells.
+ * Prefer raw model text from {@link generateTapOpeningQuestion} whenever available.
+ */
+export function buildTapOpeningQuestionFallback(_brief: TapScoreBrief) {
+  void _brief;
+  return "What concrete claim will you demonstrate, and what single intermediate result proves it?";
 }
 
 function slugifyTopicId(value: string, index: number) {
@@ -414,57 +403,47 @@ function normalizeTapStartingTopics(raw: unknown): TapStartingTopic[] | null {
   return topics.length === TAP_STARTING_TOPIC_COUNT ? topics : null;
 }
 
+/**
+ * Offline-only topic cards when xAI topic generation fails.
+ * Opening questions are generic (no title-shell / attachments / A-B-C patterns).
+ * Prefer {@link generateTapStartingTopics} model output whenever available.
+ */
 export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartingTopic[] {
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  const planTitle = brief.plan.title || brief.plan.root_topic;
-  const shared = {
-    workspaceTitle: brief.plan.title,
-    rootTopic: brief.plan.root_topic,
-    workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
-    workspaceDescription: brief.plan.description,
-    notes: brief.plan.notes,
-  };
+  const openings = [
+    "What concrete claim will you demonstrate, and what intermediate result proves it?",
+    "Name one mistake that would yield a wrong conclusion here, and the first signal that catches it.",
+    "Finish one worked check — what single piece of evidence shows you are correct?",
+  ] as const;
 
   if (focusedBlock) {
     return [
       {
         id: "core-idea",
-        title: `Core idea of ${focusedBlock.title}`.slice(0, 48),
-        subtitle: "Define the central mechanism.",
-        openingQuestion: buildGroundedDialogueQuestion(
-          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
-          0,
-        ),
+        title: "Core idea",
+        subtitle: "State the central claim you will demonstrate.",
+        openingQuestion: openings[0],
       },
       {
         id: "why-it-matters",
         title: "Why it matters",
-        subtitle: "Connect concept to a real decision.",
-        openingQuestion: buildGroundedDialogueQuestion(
-          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
-          1,
-        ),
+        subtitle: "Connect the claim to a real decision.",
+        openingQuestion: openings[1],
       },
       {
         id: "transfer",
         title: "Apply and transfer",
-        subtitle: "Use it in a new scenario.",
-        openingQuestion: buildGroundedDialogueQuestion(
-          { ...shared, blockTitle: focusedBlock.title, blockDescription: focusedBlock.description },
-          2,
-        ),
+        subtitle: "Use it in a worked instance.",
+        openingQuestion: openings[2],
       },
     ];
   }
 
   const nodeTopics = brief.nodes.slice(0, TAP_STARTING_TOPIC_COUNT).map((node, index) => ({
     id: slugifyTopicId(node.title, index),
-    title: node.title,
-    subtitle: node.description?.trim().slice(0, 80) || `Key ideas in ${node.title}.`,
-    openingQuestion: buildGroundedDialogueQuestion(
-      { ...shared, blockTitle: node.title, blockDescription: node.description },
-      index,
-    ),
+    title: "Topic",
+    subtitle: "Demonstrate understanding with a checkable result.",
+    openingQuestion: openings[index % openings.length]!,
   }));
 
   if (nodeTopics.length === TAP_STARTING_TOPIC_COUNT) {
@@ -473,20 +452,13 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
 
   const fillers: TapStartingTopic[] = [0, 1, 2].map((index) => ({
     id: ["big-picture", "causal-links", "blind-spots"][index],
-    title: [
-      `${planTitle}: big picture`.slice(0, 48),
-      "Causal connections",
-      "Gaps and blind spots",
-    ][index],
+    title: ["Big picture", "Causal connections", "Gaps and blind spots"][index],
     subtitle: [
-      "What matters most across the workspace.",
+      "What matters most.",
       "How ideas depend on each other.",
       "What still feels fragile.",
     ][index],
-    openingQuestion: buildGroundedDialogueQuestion(
-      { ...shared, blockTitle: planTitle, blockDescription: brief.plan.description },
-      index,
-    ),
+    openingQuestion: openings[index]!,
   }));
 
   return [...nodeTopics, ...fillers].slice(0, TAP_STARTING_TOPIC_COUNT);
@@ -515,35 +487,20 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
   return buildTapStartingTopicsFallback(brief);
 }
 
-export function buildTapPracticeOpeningQuestionFallback(brief: TapScoreBrief): string {
-  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  const target = focusedBlock?.title || brief.plan.title || brief.plan.root_topic || "this topic";
-  const hint = (focusedBlock?.description || brief.plan.description || "").replace(/\s+/g, " ").trim().slice(0, 100);
-  const goal = (brief.plan.workspace_goal || "").replace(/\s+/g, " ").trim().slice(0, 80);
-  if (hint) {
-    return `In simple terms, what is the basic idea behind "${target}" (${hint})?`;
-  }
-  if (goal) {
-    return `In simple terms, what is "${target}" — just the basic idea that matters for "${goal}"?`;
-  }
-  return `In simple terms, what is "${target}" — just the basic idea in a sentence or two?`;
+/** Offline practice warm-up when xAI fails — no block-title shell. */
+export function buildTapPracticeOpeningQuestionFallback(_brief: TapScoreBrief): string {
+  void _brief;
+  return "In simple terms, what is the basic idea here — one checkable sentence?";
 }
 
-/** Drill-style solo exercise fallback (timed drill / exercise TAP) — shared with Simulation. */
-export function buildTapExerciseFallbackFromBrief(brief: TapScoreBrief): string {
-  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  return buildGroundedExerciseItem(
-    {
-      blockTitle: focusedBlock?.title || null,
-      blockDescription: focusedBlock?.description || null,
-      workspaceTitle: brief.plan.title,
-      rootTopic: brief.plan.root_topic,
-      workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
-      workspaceDescription: brief.plan.description,
-      notes: brief.plan.notes,
-    },
-    0,
-  );
+/**
+ * Offline drill exercise when xAI fails.
+ * Generic checkable prompt — no title “on this setup”, attachments dump, or A/B/C shell.
+ * Prefer raw model exercises from generate paths whenever available.
+ */
+export function buildTapExerciseFallbackFromBrief(_brief: TapScoreBrief): string {
+  void _brief;
+  return "Exercise: Work one fully specified problem from this domain. Show intermediate steps and box a single final answer.";
 }
 
 export async function generateTapOpeningQuestion(

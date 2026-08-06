@@ -163,7 +163,7 @@ describe("deriveSimulationSamples — pure path (real builders)", () => {
     );
   });
 
-  it("normalizeSimulationSampleResponse pads thin LLM payloads via pure builders", () => {
+  it("normalizeSimulationSampleResponse keeps raw model strings only (no pure pad)", () => {
     const scope = { kind: "block" as const, blockId: "b-ppv" };
     const out = normalizeSimulationSampleResponse(
       {
@@ -173,10 +173,33 @@ describe("deriveSimulationSamples — pure path (real builders)", () => {
       scope,
       fixture,
     );
-    expect(out.questions.length).toBe(SIMULATION_QUESTION_COUNT);
-    expect(out.exercises.length).toBe(SIMULATION_EXERCISE_COUNT);
+    // Raw model only — do not pad with pure title/material shells
+    expect(out.questions).toEqual(["What is PPV when prevalence is 1%?"]);
+    expect(out.exercises).toEqual([]);
     expect(out.questions[0]).toMatch(/PPV|prevalence/i);
     expect(out.scope).toEqual(scope);
+
+    const empty = normalizeSimulationSampleResponse(null, scope, fixture);
+    expect(empty.questions).toEqual([]);
+    expect(empty.exercises).toEqual([]);
+
+    const full = normalizeSimulationSampleResponse(
+      {
+        questions: ["Q1 raw model", "Q2 raw model", "Q3 raw model"],
+        exercises: [
+          "Exercise: E1 raw model with numbers 2 and 3",
+          "Exercise: E2 raw model",
+          "Exercise: E3 raw model",
+        ],
+      },
+      scope,
+      fixture,
+    );
+    expect(full.questions).toEqual(["Q1 raw model", "Q2 raw model", "Q3 raw model"]);
+    expect(full.exercises[0]).toBe("Exercise: E1 raw model with numbers 2 and 3");
+    // Must not inject pure shells
+    expect(full.questions.join("\n")).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
+    expect(full.exercises.join("\n")).not.toMatch(/Work this fixed problem|on this setup/i);
   });
 });
 
@@ -250,10 +273,11 @@ describe("real-prompt assembly path (live Explore/Drill symbols)", () => {
     expect(route).toContain("workspace-simulation-samples");
     expect(route).toMatch(/scope|blockId/);
     expect(route).toContain("callXaiJSON");
-    // LLM JSON flakiness must not hard-fail the tab when pure builders can fill in
-    expect(route).toContain("deriveSimulationSamples");
     expect(route).toContain("parseJsonLoose");
-    expect(route).toMatch(/fallback/);
+    expect(route).toContain("normalizeSimulationSampleResponse");
+    // Raw xAI only — no pure-template substitute when the model is empty
+    expect(route).not.toContain("deriveSimulationSamples");
+    expect(route).toMatch(/no pure-template fallback|empty simulation samples/i);
     expect(route).toMatch(/maxTokens:\s*2800|maxTokens:\s*2\d{3}/);
 
     writeLog(

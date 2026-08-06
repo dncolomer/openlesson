@@ -116,7 +116,9 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(panel).toContain("data-simulation-generate");
     expect(panel).toContain("data-simulation-questions");
     expect(panel).toContain("data-simulation-exercises");
-    expect(panel).toContain("deriveSimulationSamples");
+    // Raw xAI generate path only — no pure seed preview on the tab
+    expect(panel).not.toContain("deriveSimulationSamples");
+    expect(panel).toContain("data-simulation-generate");
     expect(panel).toContain("/api/workspace/simulation-samples");
     expect(panel).toContain("Block Simulation"); // points authors to per-block drawer
 
@@ -177,8 +179,10 @@ describe("workspace Simulation section helpers + UI structure", () => {
         "api_path=" + panel.includes("/api/workspace/simulation-samples"),
         "shell_mount=" + view.includes("data-workspace-simulation-host"),
         "shell_workspace_id=" + /workspaceId=\{workspaceId\}/.test(view),
-        "uses_deriveSimulationSamples=" +
-          panel.includes("deriveSimulationSamples"),
+        "no_pure_seed_display=" +
+          String(!panel.includes("deriveSimulationSamples")),
+        "generate_api=" +
+          panel.includes("/api/workspace/simulation-samples"),
       ].join("\n") + "\n",
       "utf8",
     );

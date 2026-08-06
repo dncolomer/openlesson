@@ -165,19 +165,12 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
     expect(ex0).not.toMatch(/state the problem you chose|non-trivial problem in|stay within this scope/i);
     expect(isMetaLearningFluff(ex0)).toBe(false);
 
-    // Live TAP opening fallback uses the same dialogue builder
+    // TAP offline fallback is generic (prefer raw xAI from generateTapOpeningQuestion)
     const liveOpen = buildTapOpeningQuestionFallback(sampleBrief);
-    expect(liveOpen).toBe(buildGroundedDialogueQuestion({
-      blockTitle: "Positive predictive value",
-      blockDescription:
-        "Compute PPV from sensitivity, specificity, and prevalence for a diagnostic test.",
-      workspaceTitle: "Bayesian clinical reasoning",
-      rootTopic: "Bayes",
-      workspaceGoal: "Update clinical beliefs from test evidence correctly",
-      workspaceDescription: "Update clinical beliefs from test evidence",
-      notes: null,
-    }, 0));
+    expect(liveOpen.length).toBeGreaterThan(20);
     expect(liveOpen).not.toMatch(/core mechanism|explain it precisely/i);
+    expect(liveOpen).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=|on this setup/i);
+    expect(liveOpen).not.toMatch(/Positive predictive value|Using “/i);
 
     const task = kernelOpeningTask();
     expect(task).toMatch(/workspace goal/i);
@@ -424,29 +417,29 @@ describe("Simulation shares live practice builders", () => {
       expect(eRich[i].question).toBe(buildGroundedExerciseItem(liveCtx, i));
     }
 
-    // Live TAP opening fallback is the same dialogue builder index 0
-    expect(qRich[0].question).toBe(
-      buildTapOpeningQuestionFallback({
-        plan: {
-          id: "ws",
-          title: richCtx.workspaceTitle!,
-          root_topic: richCtx.rootTopic!,
-          description: null,
-          workspace_goal: richCtx.workspaceGoal,
-          notes: null,
+    // TAP offline fallback is generic — not equal to pure grounded dialogue shells
+    const tapFb = buildTapOpeningQuestionFallback({
+      plan: {
+        id: "ws",
+        title: richCtx.workspaceTitle!,
+        root_topic: richCtx.rootTopic!,
+        description: null,
+        workspace_goal: richCtx.workspaceGoal,
+        notes: null,
+      },
+      nodes: [
+        {
+          id: "b1",
+          title: richCtx.blockTitle!,
+          description: richCtx.blockDescription!,
+          status: "available",
         },
-        nodes: [
-          {
-            id: "b1",
-            title: richCtx.blockTitle!,
-            description: richCtx.blockDescription!,
-            status: "available",
-          },
-        ],
-        sessions: [],
-        focusSession: null,
-      }),
-    );
+      ],
+      sessions: [],
+      focusSession: null,
+    });
+    expect(tapFb).not.toBe(qRich[0].question);
+    expect(tapFb).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=|on this setup/i);
 
     // Thin context equality
     const simThin = deriveBlockSimulation({
@@ -530,11 +523,12 @@ describe("Simulation shares live practice builders", () => {
     );
 
     const tab = read("components/WorkspaceSimulationPanel.tsx");
-    // Tab redo: scope + generate samples via real builders (not overview-only)
-    expect(tab).toContain("deriveSimulationSamples");
-    expect(tab).toContain("workspaceGoal");
+    // Tab: xAI generate only — no pure seed display
+    expect(tab).not.toContain("deriveSimulationSamples");
     expect(tab).toContain("data-simulation-generate");
     expect(tab).toContain("/api/workspace/simulation-samples");
+    expect(tab).toContain("data-simulation-generate-hint");
+    expect(tab).not.toContain("data-simulation-seed-hint");
   });
 
   it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {
@@ -667,6 +661,10 @@ describe("opening task is the shipped live generator contract", () => {
     expect(kernelOpeningTask().length).toBeGreaterThan(80);
     const tapScoreSrc = read("lib/tap-score.ts");
     expect(tapScoreSrc).toContain("buildTapOpeningQuestionTask");
-    expect(tapScoreSrc).toContain("buildGroundedDialogueQuestion");
+    // Primary path is xAI; pure grounded shells are not wired as opening source
+    expect(tapScoreSrc).toContain("generateTapOpeningQuestion");
+    expect(tapScoreSrc).toContain("callXai");
+    expect(tapScoreSrc).not.toContain("buildGroundedDialogueQuestion");
+    expect(tapScoreSrc).not.toContain("buildGroundedExerciseItem");
   });
 });

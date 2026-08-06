@@ -356,7 +356,9 @@ describe("simulation API structural wiring", () => {
     expect(route).toContain("externalResources");
     expect(route).toContain("files: loaded.files");
     expect(route).toContain("buildSimulationSamplePrompts");
-    expect(route).toContain("deriveSimulationSamples");
+    expect(route).toContain("normalizeSimulationSampleResponse");
+    // API returns raw model strings — no pure seed substitute
+    expect(route).not.toContain("deriveSimulationSamples");
     expect(route).toContain("local_context");
   });
 

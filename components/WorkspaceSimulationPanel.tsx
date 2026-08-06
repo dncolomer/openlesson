@@ -2,19 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { WorkspaceSimulationBlockRef } from "@/lib/workspace-simulation-overview";
-import {
-  deriveSimulationSamples,
-  type SimulationSampleScope,
-  type SimulationSampleScopeKind,
-  type SimulationSampleWorkspaceContext,
+import type {
+  SimulationSampleScope,
+  SimulationSampleScopeKind,
 } from "@/lib/workspace-simulation-samples";
-import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 /**
  * Workspace Simulation tab: pick a block or the entire workspace, then
- * generate Explore (questions) + Drill (exercises) samples using the same
- * real prompt builders as live practice interfaces.
+ * Generate sample Explore questions + Drill exercises from xAI.
+ * Lists stay empty until Generate returns model text (no pure-template seed).
  */
 export function WorkspaceSimulationPanel({
   workspaceId,
@@ -73,50 +70,9 @@ export function WorkspaceSimulationPanel({
     activeScope != null &&
     (activeScope.kind === "workspace" || Boolean(activeScope.blockId));
 
-  const workspaceCtx = useMemo((): SimulationSampleWorkspaceContext => {
-    return {
-      workspaceTitle: title,
-      rootTopic: rootTopic ?? workspaceTitle,
-      workspaceGoal,
-      workspaceDescription,
-      notes: workspaceNotes,
-      locale,
-      blocks: blocks.map((b) => ({
-        id: b.id,
-        title: b.title,
-        description: b.description,
-        planning_prompt: b.planning_prompt,
-        local_context: parseBlockLocalContext(b.local_context) ?? null,
-        is_start: b.is_start,
-        next_block_ids: b.next_block_ids,
-        lock_until_block_ids: b.lock_until_block_ids,
-      })),
-    };
-  }, [
-    blocks,
-    locale,
-    rootTopic,
-    title,
-    workspaceDescription,
-    workspaceGoal,
-    workspaceNotes,
-    workspaceTitle,
-  ]);
-
-  /** Offline seed preview (same pure builders as live Explore/Drill fallbacks). */
-  const seedPreview = useMemo(() => {
-    if (!activeScope) return null;
-    return deriveSimulationSamples(activeScope, workspaceCtx);
-  }, [activeScope, workspaceCtx]);
-
-  const displayQuestions =
-    questions.length > 0 ? questions : seedPreview?.questions ?? [];
-  const displayExercises =
-    exercises.length > 0 ? exercises : seedPreview?.exercises ?? [];
-  const showingSeed =
-    questions.length === 0 &&
-    exercises.length === 0 &&
-    (seedPreview?.questions.length ?? 0) > 0;
+  // Display only xAI/API results — never pure-builder seed shells.
+  const displayQuestions = questions;
+  const displayExercises = exercises;
 
   const generate = async () => {
     if (!workspaceId || !activeScope || generating) return;
@@ -212,12 +168,11 @@ export function WorkspaceSimulationPanel({
           Simulation
         </h2>
         <p className="max-w-2xl text-[12px] leading-relaxed text-neutral-400">
-          Preview sample{" "}
+          Generate sample{" "}
           <span className="text-neutral-200">Explore questions</span> and{" "}
           <span className="text-neutral-200">Drill exercises</span> for{" "}
-          <span className="text-neutral-200">{title}</span> using the same
-          prompts as live practice. Pick a block or the entire workspace, then
-          generate.
+          <span className="text-neutral-200">{title}</span> via xAI. Lists stay
+          empty until you generate — no offline template previews.
         </p>
       </header>
 
@@ -331,13 +286,15 @@ export function WorkspaceSimulationPanel({
             {error}
           </p>
         ) : null}
-        {showingSeed ? (
+        {!generating &&
+        questions.length === 0 &&
+        exercises.length === 0 &&
+        !error ? (
           <p
             className="mt-2 text-[11px] text-neutral-600"
-            data-simulation-seed-hint
+            data-simulation-generate-hint
           >
-            Showing deterministic preview from live Explore/Drill builders.
-            Click Generate for model samples.
+            Click Generate samples for xAI questions and exercises.
           </p>
         ) : null}
       </section>
@@ -388,7 +345,7 @@ export function WorkspaceSimulationPanel({
               className="text-[12px] text-neutral-600"
               data-simulation-questions-empty
             >
-              No questions yet — choose a scope and generate samples.
+              No questions yet — click Generate samples for xAI output.
             </p>
           ) : (
             <ul className="space-y-1.5" data-simulation-question-list>
@@ -445,7 +402,7 @@ export function WorkspaceSimulationPanel({
               className="text-[12px] text-neutral-600"
               data-simulation-exercises-empty
             >
-              No exercises yet — choose a scope and generate samples.
+              No exercises yet — click Generate samples for xAI output.
             </p>
           ) : (
             <ul className="space-y-1.5" data-simulation-exercise-list>

@@ -19,7 +19,6 @@ import {
   buildGroundedExerciseItem,
   buildSimulationSamplesSystemPrompt,
   buildSimulationSamplesUserPrompt,
-  isMetaLearningFluff,
   type PracticeExternalLink,
   type PracticeItemContext,
 } from "@/lib/practice-item-builders";
@@ -383,40 +382,40 @@ export function deriveSimulationSamples(
 
 /**
  * Normalize an LLM/API payload into questions + exercises for the tab.
- * Falls back to pure builders when the model response is thin.
+ * Returns **raw model strings only** — never pads or replaces with pure
+ * grounded shells (`buildGroundedDialogueQuestion` / exercise A-B-C templates).
+ * Empty / non-object payloads yield empty lists (caller may 502).
  */
 export function normalizeSimulationSampleResponse(
   raw: unknown,
   scope: SimulationSampleScope,
-  workspace: SimulationSampleWorkspaceContext,
+  _workspace?: SimulationSampleWorkspaceContext,
 ): {
   questions: string[];
   exercises: string[];
   probes: SimulationProbe[];
   scope: SimulationSampleScope;
 } {
-  const seed = deriveSimulationSamples(scope, workspace);
+  void _workspace;
   if (!raw || typeof raw !== "object") {
     return {
-      questions: seed.questions,
-      exercises: seed.exercises,
-      probes: seed.probes,
+      questions: [],
+      exercises: [],
+      probes: [],
       scope,
     };
   }
   const rec = raw as Record<string, unknown>;
 
-  const questionsRaw = Array.isArray(rec.questions)
-    ? rec.questions
-    : [];
-  const exercisesRaw = Array.isArray(rec.exercises)
-    ? rec.exercises
-    : [];
+  const questionsRaw = Array.isArray(rec.questions) ? rec.questions : [];
+  const exercisesRaw = Array.isArray(rec.exercises) ? rec.exercises : [];
   const probesRaw = Array.isArray(rec.probes) ? rec.probes : [];
 
+  // Keep model text as-is (trimmed). Do not filter as "meta" and rewrite —
+  // authors asked for raw xAI items, not pure-template substitutes.
   const fromQuestions = questionsRaw
     .map((q) => (typeof q === "string" ? clean(q) : ""))
-    .filter((q) => q.length >= 8 && !isMetaLearningFluff(q));
+    .filter((q) => q.length >= 4);
   const fromExercises = exercisesRaw
     .map((ex) => {
       if (typeof ex === "string") return clean(ex);
@@ -428,7 +427,7 @@ export function normalizeSimulationSampleResponse(
       }
       return "";
     })
-    .filter((q) => q.length >= 8 && !isMetaLearningFluff(q));
+    .filter((q) => q.length >= 4);
 
   const probeQs: string[] = [];
   const probeEx: string[] = [];
@@ -436,7 +435,7 @@ export function normalizeSimulationSampleResponse(
     if (!p || typeof p !== "object") continue;
     const pr = p as Record<string, unknown>;
     const text = clean(pr.question || pr.prompt || pr.text);
-    if (text.length < 8 || isMetaLearningFluff(text)) continue;
+    if (text.length < 4) continue;
     const kind = clean(pr.kind || pr.type).toLowerCase();
     const diff = clean(pr.difficulty).toLowerCase();
     if (kind === "exercise" || (!kind && diff === "stretch")) {
@@ -446,26 +445,24 @@ export function normalizeSimulationSampleResponse(
     }
   }
 
-  const questionsDraft = [
+  const questions = [
     ...fromQuestions,
     ...probeQs.filter((q) => !fromQuestions.includes(q)),
   ].slice(0, SIMULATION_QUESTION_COUNT);
-  const exercisesDraft = [
+  const exercises = [
     ...fromExercises,
     ...probeEx.filter((q) => !fromExercises.includes(q)),
   ].slice(0, SIMULATION_EXERCISE_COUNT);
 
-  // Build probes then re-run enforceSimulationProbeQuota so meta LLM output is
-  // replaced with the same pure builders live Explore/Drill use.
-  const draftProbes: SimulationProbe[] = [
-    ...questionsDraft.map((question, i) => ({
+  const probes: SimulationProbe[] = [
+    ...questions.map((question, i) => ({
       id: `q-${i}`,
       question,
       coachCue: "",
       difficulty: (i === 0 ? "warmup" : "core") as SimulationProbe["difficulty"],
       kind: "question" as const,
     })),
-    ...exercisesDraft.map((question, i) => ({
+    ...exercises.map((question, i) => ({
       id: `ex-${i}`,
       question,
       coachCue: "",
@@ -474,24 +471,9 @@ export function normalizeSimulationSampleResponse(
     })),
   ];
 
-  const probes = enforceSimulationProbeQuota(draftProbes, {
-    title: seed.practiceContext.blockTitle,
-    description: seed.practiceContext.blockDescription,
-    workspaceGoal: seed.practiceContext.workspaceGoal,
-    workspaceTitle: seed.practiceContext.workspaceTitle,
-    rootTopic: seed.practiceContext.rootTopic,
-    planningPrompt: seed.practiceContext.planningPrompt,
-    localNotes: seed.practiceContext.localNotes,
-    notes: seed.practiceContext.notes,
-    files: seed.practiceContext.files,
-    externalLinks: seed.practiceContext.externalLinks,
-  });
-  const { questions: qProbes, exercises: eProbes } =
-    partitionSimulationProbes(probes);
-
   return {
-    questions: qProbes.map((p) => p.question),
-    exercises: eProbes.map((p) => p.question),
+    questions,
+    exercises,
     probes,
     scope,
   };

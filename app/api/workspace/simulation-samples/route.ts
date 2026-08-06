@@ -9,7 +9,6 @@ import {
 } from "@/lib/xai-client";
 import {
   buildSimulationSamplePrompts,
-  deriveSimulationSamples,
   normalizeSimulationSampleResponse,
   normalizeSimulationSampleScope,
   type SimulationSampleBlockRef,
@@ -220,43 +219,25 @@ export async function POST(req: NextRequest) {
       if (recovered.ok) modelPayload = recovered.data;
     }
 
+    // Raw model strings only — never substitute pure title/material shells.
     const normalized = normalizeSimulationSampleResponse(
       modelPayload,
       scope,
       workspaceCtx,
     );
 
-    // Pure Explore/Drill builders always produce samples for non-empty context —
-    // prefer those over hard-failing the Simulation tab on LLM JSON flakiness.
     if (
       normalized.questions.length === 0 &&
       normalized.exercises.length === 0
     ) {
-      const fallback = deriveSimulationSamples(scope, workspaceCtx);
-      if (fallback.questions.length === 0 && fallback.exercises.length === 0) {
-        return NextResponse.json(
-          {
-            error:
-              ai.error ||
-              "Model returned empty simulation samples and pure builders had no substance",
-          },
-          { status: 502 },
-        );
-      }
-      console.warn(
-        "[simulation-samples] empty LLM samples; using pure builders. reason=",
-        ai.error || "empty",
+      return NextResponse.json(
+        {
+          error:
+            ai.error ||
+            "Model returned empty simulation samples (no pure-template fallback)",
+        },
+        { status: 502 },
       );
-      return NextResponse.json({
-        ok: true,
-        scope: scope.kind,
-        blockId: focusedBlockId,
-        questions: fallback.questions,
-        exercises: fallback.exercises,
-        probes: fallback.probes,
-        fallback: true,
-        fallbackReason: ai.error || "empty_model_samples",
-      });
     }
 
     return NextResponse.json({
@@ -266,9 +247,6 @@ export async function POST(req: NextRequest) {
       questions: normalized.questions,
       exercises: normalized.exercises,
       probes: normalized.probes,
-      ...(modelPayload
-        ? {}
-        : { fallback: true, fallbackReason: ai.error || "parse_failed" }),
     });
   } catch (error) {
     console.error("simulation-samples error:", error);

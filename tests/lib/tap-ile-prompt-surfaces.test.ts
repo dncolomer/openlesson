@@ -135,21 +135,27 @@ describe("TAP prompt surface (shipped builders)", () => {
     // Suggested opening the model may copy must be natural knowledge verification.
     const opening = suggestedOpeningSpeech(facilitator);
     expect(opening.length).toBeGreaterThan(20);
-    expect(opening).toMatch(/core idea|explain/i);
+    expect(opening).toMatch(/checkable|intermediate result|concrete/i);
     expect(opening).not.toMatch(/out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|ILE/i);
 
     const runtimeOpening = suggestedOpeningSpeech(runtime);
     expect(runtimeOpening).toBe(opening);
     expect(suggestedOpeningSpeech(selective)).toBe(opening);
 
-    // Opening/topic fallbacks are learner-visible copy — must be clean.
+    // Offline opening/topic fallbacks are learner-visible — generic, no title shells.
     const openingFallback = buildTapOpeningQuestionFallback(sampleBrief);
     const topicsFallback = buildTapStartingTopicsFallback(sampleBrief);
     expect(openingFallback).not.toMatch(/out loud/i);
-    expect(openingFallback).toMatch(/core idea|learned|explain/i);
+    expect(openingFallback).toMatch(/concrete claim|intermediate result|prove/i);
+    expect(openingFallback).not.toMatch(
+      /attachments\s*:|Given parameters\s+A\s*=|on this setup|Using “/i,
+    );
     expect(openingFallback).not.toMatch(/Uncertain Systems|Proof of Work|\bPoW\b/i);
     for (const topic of topicsFallback) {
       expect(topic.openingQuestion).not.toMatch(/out loud/i);
+      expect(topic.openingQuestion).not.toMatch(
+        /attachments\s*:|Given parameters\s+A\s*=|on this setup/i,
+      );
       expect(topic.title + topic.subtitle + topic.openingQuestion).not.toMatch(
         /Uncertain Systems|Proof of Work|\bPoW\b|Think Aloud Protocol/i,
       );

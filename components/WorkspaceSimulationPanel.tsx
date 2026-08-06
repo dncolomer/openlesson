@@ -342,81 +342,127 @@ export function WorkspaceSimulationPanel({
         ) : null}
       </section>
 
-      {/* Questions (Explore) */}
-      <section
-        className="space-y-2"
-        data-workspace-simulation-questions
-        data-simulation-questions
+      {/* Questions | Exercises — 2-col on desktop for a compact authoring view */}
+      <div
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-3"
+        data-simulation-samples-grid
+        data-simulation-samples-layout="two-col"
+        data-simulation-generating={generating ? "true" : "false"}
       >
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Questions
-          <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
-            Explore / dialogue
-          </span>
-          <span className="ml-1 font-mono text-neutral-600">
-            ({displayQuestions.length})
-          </span>
-        </h3>
-        {displayQuestions.length === 0 ? (
-          <p
-            className="text-[12px] text-neutral-600"
-            data-simulation-questions-empty
-          >
-            No questions yet — choose a scope and generate samples.
-          </p>
-        ) : (
-          <ul className="space-y-1.5" data-simulation-question-list>
-            {displayQuestions.map((q, i) => (
-              <li
-                key={`q-${i}`}
-                data-simulation-question={i}
-                data-simulation-probe-kind="question"
-                className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
-              >
-                {q}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        {/* Questions (Explore) */}
+        <section
+          className="min-w-0 space-y-2"
+          data-workspace-simulation-questions
+          data-simulation-questions
+          aria-busy={generating || undefined}
+        >
+          <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Questions
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
+              Explore / dialogue
+            </span>
+            <span className="ml-1 font-mono text-neutral-600">
+              ({generating ? "…" : displayQuestions.length})
+            </span>
+          </h3>
+          {generating ? (
+            <ul
+              className="space-y-1.5"
+              data-simulation-questions-loading
+              data-simulation-loading="questions"
+              aria-label="Generating questions"
+            >
+              {[0, 1, 2].map((i) => (
+                <li
+                  key={`q-skel-${i}`}
+                  data-simulation-question-skeleton={i}
+                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
+                >
+                  <div className="h-2.5 w-[92%] animate-pulse rounded bg-white/10" />
+                  <div className="mt-2 h-2.5 w-[68%] animate-pulse rounded bg-white/[0.07]" />
+                </li>
+              ))}
+            </ul>
+          ) : displayQuestions.length === 0 ? (
+            <p
+              className="text-[12px] text-neutral-600"
+              data-simulation-questions-empty
+            >
+              No questions yet — choose a scope and generate samples.
+            </p>
+          ) : (
+            <ul className="space-y-1.5" data-simulation-question-list>
+              {displayQuestions.map((q, i) => (
+                <li
+                  key={`q-${i}`}
+                  data-simulation-question={i}
+                  data-simulation-probe-kind="question"
+                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                >
+                  {q}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      {/* Exercises (Drill) */}
-      <section
-        className="space-y-2"
-        data-workspace-simulation-exercises
-        data-simulation-exercises
-      >
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Exercises
-          <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
-            Drill / solo
-          </span>
-          <span className="ml-1 font-mono text-neutral-600">
-            ({displayExercises.length})
-          </span>
-        </h3>
-        {displayExercises.length === 0 ? (
-          <p
-            className="text-[12px] text-neutral-600"
-            data-simulation-exercises-empty
-          >
-            No exercises yet — choose a scope and generate samples.
-          </p>
-        ) : (
-          <ul className="space-y-1.5" data-simulation-exercise-list>
-            {displayExercises.map((ex, i) => (
-              <li
-                key={`ex-${i}`}
-                data-simulation-exercise={i}
-                data-simulation-probe-kind="exercise"
-                className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
-              >
-                {ex}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        {/* Exercises (Drill) */}
+        <section
+          className="min-w-0 space-y-2"
+          data-workspace-simulation-exercises
+          data-simulation-exercises
+          aria-busy={generating || undefined}
+        >
+          <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Exercises
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-neutral-600">
+              Drill / solo
+            </span>
+            <span className="ml-1 font-mono text-neutral-600">
+              ({generating ? "…" : displayExercises.length})
+            </span>
+          </h3>
+          {generating ? (
+            <ul
+              className="space-y-1.5"
+              data-simulation-exercises-loading
+              data-simulation-loading="exercises"
+              aria-label="Generating exercises"
+            >
+              {[0, 1, 2].map((i) => (
+                <li
+                  key={`ex-skel-${i}`}
+                  data-simulation-exercise-skeleton={i}
+                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
+                >
+                  <div className="h-2.5 w-[88%] animate-pulse rounded bg-white/10" />
+                  <div className="mt-2 h-2.5 w-[54%] animate-pulse rounded bg-white/[0.07]" />
+                </li>
+              ))}
+            </ul>
+          ) : displayExercises.length === 0 ? (
+            <p
+              className="text-[12px] text-neutral-600"
+              data-simulation-exercises-empty
+            >
+              No exercises yet — choose a scope and generate samples.
+            </p>
+          ) : (
+            <ul className="space-y-1.5" data-simulation-exercise-list>
+              {displayExercises.map((ex, i) => (
+                <li
+                  key={`ex-${i}`}
+                  data-simulation-exercise={i}
+                  data-simulation-probe-kind="exercise"
+                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                >
+                  {ex}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       <p
         className="text-[11px] leading-relaxed text-neutral-600"

@@ -183,4 +183,46 @@ describe("workspace Simulation section helpers + UI structure", () => {
       "utf8",
     );
   });
+
+  it("samples UI: loading skeletons while generating + compact two-column Q/E layout", () => {
+    const panel = read("components/WorkspaceSimulationPanel.tsx");
+
+    // 2-col layout wrapper (desktop md:grid-cols-2; stacked on narrow)
+    expect(panel).toContain("data-simulation-samples-grid");
+    expect(panel).toContain('data-simulation-samples-layout="two-col"');
+    expect(panel).toMatch(/grid[\s\S]*md:grid-cols-2/);
+    expect(panel).toContain("data-simulation-questions");
+    expect(panel).toContain("data-simulation-exercises");
+
+    // Loading effect on questions + exercises surfaces (not button-only)
+    expect(panel).toContain("data-simulation-questions-loading");
+    expect(panel).toContain("data-simulation-exercises-loading");
+    expect(panel).toContain('data-simulation-loading="questions"');
+    expect(panel).toContain('data-simulation-loading="exercises"');
+    expect(panel).toContain("data-simulation-question-skeleton");
+    expect(panel).toContain("data-simulation-exercise-skeleton");
+    expect(panel).toContain("animate-pulse");
+    // generating state gates the loading UI on both columns
+    expect(panel).toMatch(
+      /generating\s*\?\s*\([\s\S]*data-simulation-questions-loading[\s\S]*data-simulation-exercises-loading|generating\s*\?\s*\([\s\S]*data-simulation-exercises-loading/,
+    );
+    expect(panel).toContain('data-simulation-generating={generating ? "true" : "false"}');
+    expect(panel).toContain("aria-busy={generating || undefined}");
+
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(
+      join(SCRATCH, "simulation-samples-layout-loading.log"),
+      [
+        "two_col_grid=" + panel.includes("data-simulation-samples-grid"),
+        "two_col_attr=" + panel.includes('data-simulation-samples-layout="two-col"'),
+        "md_grid_cols_2=" + /md:grid-cols-2/.test(panel),
+        "q_loading=" + panel.includes("data-simulation-questions-loading"),
+        "e_loading=" + panel.includes("data-simulation-exercises-loading"),
+        "pulse=" + panel.includes("animate-pulse"),
+        "generating_attr=" +
+          panel.includes('data-simulation-generating={generating ? "true" : "false"}'),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+  });
 });

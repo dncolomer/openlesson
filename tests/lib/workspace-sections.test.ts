@@ -288,6 +288,29 @@ describe("WorkspaceView section shell wiring", () => {
     expect(identitySource).not.toContain("Set workspace goal");
   });
 
+  it("unifies name/description/goal into one Settings save with field helpers", () => {
+    // Single save control — not per-field Save buttons
+    expect(identitySettingsSource).toContain("data-identity-save");
+    expect(identitySettingsSource).toContain("saveIdentity");
+    expect(identitySettingsSource).not.toContain("saveTitle");
+    expect(identitySettingsSource).not.toContain("saveDescription");
+    expect(identitySettingsSource).not.toContain("saveGoal");
+    expect(identitySettingsSource).not.toContain("savingTitle");
+    expect(identitySettingsSource).not.toContain("savingDescription");
+    expect(identitySettingsSource).not.toContain("savingGoal");
+    // One PUT body carries all three fields
+    expect(identitySettingsSource).toMatch(
+      /JSON\.stringify\(\{[\s\S]*title:[\s\S]*description:[\s\S]*workspace_goal:/,
+    );
+    // Helper lines under each field
+    expect(identitySettingsSource).toContain('data-field-helper="title"');
+    expect(identitySettingsSource).toContain('data-field-helper="description"');
+    expect(identitySettingsSource).toContain('data-field-helper="goal"');
+    expect(identitySettingsSource).toContain("planView.workspaceNameHelper");
+    expect(identitySettingsSource).toContain("planView.workspaceDescriptionHelper");
+    expect(identitySettingsSource).toContain("planView.workspaceGoalHelper");
+  });
+
   it("renders notes with the same attachment-row chrome as files", () => {
     expect(notesFilesSource).toContain('data-resource-row="attachment"');
     expect(notesFilesSource).toContain("NotesTypeIcon");

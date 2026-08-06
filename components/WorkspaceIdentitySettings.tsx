@@ -12,8 +12,8 @@ interface WorkspaceIdentitySettingsProps {
 }
 
 /**
- * Owner title + description editors for Settings.
- * Reuses visibility PUT handlers (title / description).
+ * Owner title + description + goal editors for Settings.
+ * Single save action writes all three via the visibility PUT path.
  */
 export function WorkspaceIdentitySettings({
   plan,
@@ -25,9 +25,7 @@ export function WorkspaceIdentitySettings({
   const [editTitle, setEditTitle] = useState(plan.title || plan.root_topic || "");
   const [editDescription, setEditDescription] = useState(plan.description || "");
   const [editGoal, setEditGoal] = useState(plan.workspace_goal || "");
-  const [savingTitle, setSavingTitle] = useState(false);
-  const [savingDescription, setSavingDescription] = useState(false);
-  const [savingGoal, setSavingGoal] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setEditTitle(plan.title || plan.root_topic || "");
@@ -43,68 +41,47 @@ export function WorkspaceIdentitySettings({
 
   if (!isOwner) return null;
 
-  const saveTitle = async () => {
-    if (!editTitle.trim()) return;
-    setSavingTitle(true);
+  const titleDirty =
+    editTitle.trim() !== (plan.title || plan.root_topic || "").trim();
+  const descriptionDirty =
+    (editDescription || "").trim() !== (plan.description || "").trim();
+  const goalDirty =
+    editGoal.trim() !== (plan.workspace_goal || "").trim();
+  const isDirty = titleDirty || descriptionDirty || goalDirty;
+  const canSave = editTitle.trim().length > 0 && isDirty && !saving;
+
+  const saveIdentity = async () => {
+    if (!editTitle.trim() || saving) return;
+    setSaving(true);
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: editTitle.trim() }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        onPlanUpdate({
-          ...plan,
-          root_topic: editTitle.trim(),
+        body: JSON.stringify({
           title: editTitle.trim(),
-        });
-      }
-    } catch (err) {
-      console.error("Error updating title:", err);
-    } finally {
-      setSavingTitle(false);
-    }
-  };
-
-  const saveDescription = async () => {
-    setSavingDescription(true);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: editDescription }),
+          description: editDescription,
+          workspace_goal: editGoal.trim() || null,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        onPlanUpdate({ ...plan, description: editDescription || undefined });
-      }
-    } catch (err) {
-      console.error("Error updating description:", err);
-    } finally {
-      setSavingDescription(false);
-    }
-  };
-
-  const saveGoal = async () => {
-    setSavingGoal(true);
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspace_goal: editGoal.trim() || null }),
-      });
-      const data = await res.json();
-      if (data.success) {
+        const nextTitle = (data.title as string | undefined) || editTitle.trim();
         onPlanUpdate({
           ...plan,
-          workspace_goal: data.workspace_goal || editGoal.trim() || undefined,
+          root_topic: nextTitle,
+          title: nextTitle,
+          description:
+            typeof data.description === "string"
+              ? data.description || undefined
+              : editDescription || undefined,
+          workspace_goal:
+            data.workspace_goal || editGoal.trim() || undefined,
         });
       }
     } catch (err) {
-      console.error("Error updating workspace goal:", err);
+      console.error("Error updating workspace identity:", err);
     } finally {
-      setSavingGoal(false);
+      setSaving(false);
     }
   };
 
@@ -119,7 +96,7 @@ export function WorkspaceIdentitySettings({
           {t("planView.sectionAbout")}
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-          Name, description, and goal for this workspace.
+          {t("planView.identitySettingsIntro")}
         </p>
       </div>
 
@@ -129,25 +106,21 @@ export function WorkspaceIdentitySettings({
             htmlFor="workspace-settings-title"
             className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500"
           >
-            Name
+            {t("planView.workspaceName")}
           </label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              id="workspace-settings-title"
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => void saveTitle()}
-              disabled={savingTitle || !editTitle.trim()}
-              className="shrink-0 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
-            >
-              {savingTitle ? t("common.saving") : t("common.save")}
-            </button>
-          </div>
+          <input
+            id="workspace-settings-title"
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
+          />
+          <p
+            className="mt-1.5 text-xs text-neutral-500"
+            data-field-helper="title"
+          >
+            {t("planView.workspaceNameHelper")}
+          </p>
         </div>
 
         <div>
@@ -155,7 +128,7 @@ export function WorkspaceIdentitySettings({
             htmlFor="workspace-settings-description"
             className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500"
           >
-            Description
+            {t("planView.workspaceDescription")}
           </label>
           <textarea
             id="workspace-settings-description"
@@ -165,16 +138,12 @@ export function WorkspaceIdentitySettings({
             rows={4}
             className="mt-2 min-h-[6rem] w-full resize-y rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
           />
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => void saveDescription()}
-              disabled={savingDescription}
-              className="rounded-md border border-neutral-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-neutral-400 hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {savingDescription ? t("common.saving") : t("common.save")}
-            </button>
-          </div>
+          <p
+            className="mt-1.5 text-xs text-neutral-500"
+            data-field-helper="description"
+          >
+            {t("planView.workspaceDescriptionHelper")}
+          </p>
         </div>
 
         <div data-settings-section="goal" data-workspace-goal-settings>
@@ -189,19 +158,27 @@ export function WorkspaceIdentitySettings({
             type="text"
             value={editGoal}
             onChange={(e) => setEditGoal(e.target.value)}
-            placeholder="e.g. Trial-to-paid activation"
+            placeholder={t("planView.workspaceGoalPlaceholder")}
             className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
           />
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => void saveGoal()}
-              disabled={savingGoal}
-              className="rounded-md border border-neutral-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-neutral-400 hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {savingGoal ? t("common.saving") : t("common.save")}
-            </button>
-          </div>
+          <p
+            className="mt-1.5 text-xs text-neutral-500"
+            data-field-helper="goal"
+          >
+            {t("planView.workspaceGoalHelper")}
+          </p>
+        </div>
+
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => void saveIdentity()}
+            disabled={!canSave}
+            data-identity-save
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          >
+            {saving ? t("common.saving") : t("common.save")}
+          </button>
         </div>
       </div>
     </section>

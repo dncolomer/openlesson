@@ -642,27 +642,43 @@ describe("Practice Portal structural wiring", () => {
     expect(landingClient).not.toMatch(/PRACTICE PORTAL/);
     expect(landingClient).toMatch(/fixedBlockId|data-practice-portal-block-fixed/);
 
-    // TAP/ILE learner chrome: no long interface-tutorial intros
+    // TAP/ILE learner chrome: live onboardingGuide + briefing (not dead session.* helpers)
     const enCopy = JSON.parse(read("messages/en.json")) as {
-      tap?: { briefing?: { intro?: string; shortcutSend?: string } };
-      session?: {
-        welcomeMessage?: string;
-        followPlan?: string;
-        useSidebar?: string;
-        encouragement?: string;
+      tap?: { briefing?: { intro?: string }; welcome?: { panelIntro?: string } };
+      onboardingGuide?: {
+        tap?: { step2?: { title?: string; body?: string } };
+        ile?: {
+          step2?: { body?: string; bodyProject?: string };
+          step1?: { body?: string };
+        };
       };
+      welcome?: { panelIntro?: string };
     };
     expect(enCopy.tap?.briefing?.intro).toBeTruthy();
-    expect(enCopy.tap?.briefing?.intro).not.toMatch(/Enter sends|Del stashes|auto-stashes/i);
     expect((enCopy.tap?.briefing?.intro || "").length).toBeLessThan(80);
-    expect(enCopy.session?.welcomeMessage).not.toMatch(
-      /chapter by chapter|send thoughts, and use the tools/i,
+    // Live TAP SessionOnboardingGuide step2 (was "How the interface works" multi-line tutorial)
+    expect(enCopy.onboardingGuide?.tap?.step2?.title).not.toMatch(/How the interface works/i);
+    expect(enCopy.onboardingGuide?.tap?.step2?.body).not.toMatch(
+      /Stay speaking\. After 5 seconds|session is invalidated/i,
     );
-    expect(enCopy.session?.followPlan).not.toMatch(/crystallize your speech/i);
-    expect(enCopy.session?.useSidebar).not.toMatch(/thought history/i);
+    expect((enCopy.onboardingGuide?.tap?.step2?.body || "").split("\n").length).toBeLessThanOrEqual(2);
+    // Live ILE onboarding step2 (was multi-paragraph Thought Memory tutorial)
+    expect(enCopy.onboardingGuide?.ile?.step2?.body).not.toMatch(
+      /Thought Memory keeps every trace|stashed-thoughts pool below/i,
+    );
+    expect(enCopy.onboardingGuide?.ile?.step2?.bodyProject).not.toMatch(
+      /System 1|Open the Thoughts tool \(or use Open Thoughts\)/i,
+    );
+    expect((enCopy.onboardingGuide?.ile?.step2?.body || "").length).toBeLessThan(160);
+    // Welcome panel intros used by TutorWelcome on TAP/ILE
+    expect(enCopy.tap?.welcome?.panelIntro).not.toMatch(/How it works:|Socratic follow-ups/i);
+    expect(enCopy.welcome?.panelIntro).not.toMatch(/desktop-first workspace|comic-style dialogue/i);
     const exerciseTap = read("components/ExerciseTapClient.tsx");
+    expect(exerciseTap).toContain("SessionOnboardingGuide");
     expect(exerciseTap).not.toMatch(/Solution Stack — that stack is what will be evaluated/i);
     expect(exerciseTap).toMatch(/Solo practice|Del stashes|Solution/);
+    const tapClient = read("components/TapScoreClient.tsx");
+    expect(tapClient).toContain("SessionOnboardingGuide");
 
     const middleware = read("middleware.ts");
     expect(middleware).toMatch(/\/portal/);

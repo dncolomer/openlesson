@@ -96,6 +96,9 @@ const PROMPT_LANGUAGE_ENGLISH_NAME: Record<string, string> = {
  * Pure instruction block for model-facing system prompts so Helios / TAP / openings
  * reply fully in the learner's selected conversation language.
  * Empty/unknown → empty string (model defaults to English safely).
+ *
+ * Covers Practice warm-up openings and starting-topic cards (title / subtitle /
+ * openingQuestion) as well as live chat and exercise prompts.
  */
 export function buildConversationLanguageInstruction(
   locale: string | null | undefined,
@@ -105,11 +108,12 @@ export function buildConversationLanguageInstruction(
   const localName = getLanguageName(code);
   const engName = PROMPT_LANGUAGE_ENGLISH_NAME[code] || localName;
   if (code === "en") {
-    return "IMPORTANT: Respond in English throughout for every learner-visible sentence.";
+    return "IMPORTANT: Respond in English throughout for every learner-visible string (practice warm-up openings, starting-topic titles/subtitles/opening questions, live questions, facilitator replies, and exercise prompts).";
   }
   return [
     `IMPORTANT: The learner selected ${engName} (${localName}) as the conversation language.`,
-    `Respond fully in ${engName} for every learner-visible sentence (openings, questions, facilitator replies, and exercise prompts).`,
+    `Respond fully in ${engName} for every learner-visible string: practice warm-up openings, starting-topic card titles, subtitles, and opening questions, live questions, facilitator replies, and exercise prompts.`,
+    `JSON field values for title, subtitle, and openingQuestion must be written in ${engName} (not English).`,
     `Do not mix English with ${engName} unless the learner explicitly asks to switch languages.`,
   ].join(" ");
 }

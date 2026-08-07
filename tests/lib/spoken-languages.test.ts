@@ -191,6 +191,9 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     expect(ca).toMatch(/Catalan/i);
     expect(ca).toMatch(/Respond fully|Respond in/i);
     expect(ca).toMatch(/Do not mix English/i);
+    // Practice topics / warm-ups are explicit learner-visible surfaces
+    expect(ca).toMatch(/starting-topic|title|subtitle|openingQuestion/i);
+    expect(ca).toMatch(/practice warm-up/i);
     // Empty/unknown defaults: empty string for missing; coerce unknown → en instruction
     expect(buildConversationLanguageInstruction(null)).toBe("");
     expect(buildConversationLanguageInstruction(undefined)).toBe("");
@@ -245,6 +248,10 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     expect(tapScore).toMatch(
       /generateTapStartingTopics[\s\S]*conversationLanguage/,
     );
+    // Practice warm-up opening uses the same wrap (practice flag + language)
+    expect(tapScore).toMatch(
+      /withConversationLanguageInstruction\(\s*`\$\{context\}\\n\\n\$\{task\}`\s*,\s*options\?\.conversationLanguage/,
+    );
 
     const start = readFileSync(
       path.join(process.cwd(), "app/api/workspace-tap-score/start/route.ts"),
@@ -252,6 +259,10 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     );
     expect(start).toContain("conversationLanguage");
     expect(start).toMatch(/generateTapOpeningQuestion\([\s\S]*conversationLanguage/);
+    // Practice First: practice flag flows into opening generator with language
+    expect(start).toMatch(
+      /generateTapOpeningQuestion\(brief, minutes, \{\s*practice,\s*conversationLanguage/,
+    );
 
     const topics = readFileSync(
       path.join(process.cwd(), "app/api/workspace-tap-score/topics/route.ts"),
@@ -259,6 +270,17 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     );
     expect(topics).toContain("conversationLanguage");
     expect(topics).toMatch(/generateTapStartingTopics\([\s\S]*conversationLanguage/);
+
+    // Exercise TAP client mirrors conversational Practice language wiring
+    const exerciseTap = readFileSync(
+      path.join(process.cwd(), "components/ExerciseTapClient.tsx"),
+      "utf8",
+    );
+    expect(exerciseTap).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
+    expect(exerciseTap).toMatch(/workspace-tap-score\/start[\s\S]*conversationLanguage/);
+    expect(exerciseTap).toMatch(
+      /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage\]/,
+    );
 
     // Drill exercise authoring also gets language
     const domain = readFileSync(

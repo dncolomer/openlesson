@@ -102,7 +102,7 @@ export function buildTapOpeningQuestionTask(): string {
 
 /** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
 export function buildTapPracticeOpeningQuestionTask(): string {
-  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple — one everyday example with a checkable micro-result, a tiny calculation, or the plain-language name of the key quantity. Avoid "core mechanism… explain precisely", syllabus restatements, deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
+  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic and workspace goal when provided, but keep difficulty simple — one everyday example with a checkable micro-result, a tiny calculation, or the plain-language name of the key quantity. When a conversation-language instruction is present above, write the entire opening in that language. Avoid "core mechanism… explain precisely", syllabus restatements, deep transfer, edge cases, multi-step causal chains, advanced synthesis, and meta-learning icebreakers. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names. Never use "out loud" stage directions.`;
 }
 
 export const TAP_PRACTICE_THOUGHT_OVERLAY = `
@@ -132,6 +132,7 @@ Return JSON only:
 Rules:
 - Topics must be meaningfully different and grounded in the provided context (workspace goal, block description, notes, files, map topology when present).
 - openingQuestion must be one sentence, specific, and invite demonstration of domain knowledge (definitions, causal links, examples, transfer, repair) that will yield System 1 and System 2 traces for later analysis.
+- When a conversation-language instruction is present above, write title, subtitle, and openingQuestion fully in that language (not English unless English is selected). Schema keys stay English; values follow the conversation language.
 - When context is thin, still invent concrete domain angles inside the subject — never "What do you already know?" or "How would you approach learning this?".
 - No preamble inside openingQuestion.
 - No "out loud" / "think aloud" / "say … aloud" stage directions inside title, subtitle, or openingQuestion.

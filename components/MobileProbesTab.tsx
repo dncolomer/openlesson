@@ -238,7 +238,7 @@ export function MobileProbesTab({
             </div>
             {isGeneratingProbe ? (
               <div className="flex items-center gap-3">
-                <div className="w-3.5 h-3.5 border border-neutral-700 border-t-amber-500/70 rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border border-neutral-700 border-t-white/70 rounded-full animate-spin" />
                 <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.generatingProbe")} />
               </div>
             ) : (

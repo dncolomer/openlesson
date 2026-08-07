@@ -14,9 +14,12 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
-/** Forbidden product-chrome accent utilities (not data-vis hex palettes). */
+/**
+ * Forbidden product-chrome accent utilities (not data-vis hex palettes).
+ * Includes directional borders (border-t-cyan-500 spinner tops, etc.).
+ */
 const FORBIDDEN =
-  /\b(bg|text|border|ring|from|to|via|fill|stroke|outline)-(cyan|blue|sky|indigo|violet|purple|fuchsia|yellow|amber)-/;
+  /\b(bg|text|border|border-[trblxyse]|ring|from|to|via|fill|stroke|outline|placeholder|divide)-(cyan|blue|sky|indigo|violet|purple|fuchsia|yellow|amber)-/;
 
 const SHELL_PANELS = [
   "components/WorkspaceGuestLinksPanel.tsx",
@@ -27,6 +30,9 @@ const SHELL_PANELS = [
   "components/ui/ConfirmDialog.tsx",
   "components/StrengthsGapsPanel.tsx",
   "components/WorkspacePerformancePanel.tsx",
+  "components/ModelLoadingModal.tsx",
+  "components/ProbesPanel.tsx",
+  "components/MobileProbesTab.tsx",
 ];
 
 describe("UI monochrome chrome (white outline aesthetic)", () => {
@@ -36,6 +42,21 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
       const hit = src.match(FORBIDDEN);
       expect(hit, `${rel} still has accent utility: ${hit?.[0] ?? ""}`).toBeNull();
     }
+  });
+
+  it("loading spinners use white/neutral tops, not cyan/purple/amber", () => {
+    const modal = read("components/ModelLoadingModal.tsx");
+    expect(modal).toMatch(/animate-spin/);
+    expect(modal).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
+    expect(modal).toMatch(/border-t-white|border-t-neutral-/);
+
+    const probes = read("components/ProbesPanel.tsx");
+    expect(probes).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
+    expect(probes).toMatch(/border-t-white|border-t-neutral-/);
+
+    const mobile = read("components/MobileProbesTab.tsx");
+    expect(mobile).not.toMatch(/border-t-(cyan|purple|blue|amber|yellow|violet)-/);
+    expect(mobile).toMatch(/border-t-white|border-t-neutral-/);
   });
 
   it("Guest Links + TAPBench primary CTAs are white/black monochrome", () => {

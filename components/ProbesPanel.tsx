@@ -284,7 +284,7 @@ export function ProbesPanel({
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
         {isInitializing && planSteps.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <div className="w-6 h-6 border border-neutral-800 border-t-amber-500/70 rounded-full animate-spin" />
+            <div className="w-6 h-6 border border-neutral-800 border-t-white/70 rounded-full animate-spin" />
             <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.preparing")} />
           </div>
         ) : !currentStep ? (
@@ -297,7 +297,7 @@ export function ProbesPanel({
             </div>
             {isGeneratingProbe ? (
               <div className="flex items-center gap-3">
-                <div className="w-3.5 h-3.5 border border-neutral-700 border-t-amber-500/70 rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border border-neutral-700 border-t-white/70 rounded-full animate-spin" />
                 <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.generatingProbe")} />
               </div>
             ) : (

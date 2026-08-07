@@ -129,7 +129,7 @@ export default function SessionPrepModal({
                   {isPlanDone ? t('modelLoading.sessionPlanReady') : t('modelLoading.sessionPlan')}
                 </span>
                 {stage === "plan" && planLoading && (
-                  <div className="w-4 h-4 border-2 border-neutral-600 border-t-cyan-500 rounded-full animate-spin ml-auto" />
+                  <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin ml-auto" />
                 )}
               </div>
 
@@ -155,7 +155,7 @@ export default function SessionPrepModal({
                     {isModelDone ? t('modelLoading.localModelLoaded') : t('modelLoading.localModel')}
                   </span>
                   {stage === "model" && !modelProgress && (
-                    <div className="w-4 h-4 border-2 border-neutral-600 border-t-purple-500 rounded-full animate-spin ml-auto" />
+                    <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin ml-auto" />
                   )}
                 </div>
               )}

@@ -86,7 +86,8 @@ describe("white paper public page and science link", () => {
     const component = read("components/ScienceWhitepaperPage.tsx");
     expect(component).toContain("data-whitepaper-experiment-steps");
     expect(component).toContain("data-whitepaper-section");
-    expect(component).toContain("TAP_WHITEPAPER_EXPERIMENT_STEPS");
+    expect(component).toContain("experimentSteps");
+    expect(component).toContain("ScienceWhitepaper");
   });
 
   it("science page links to the white paper research path", () => {

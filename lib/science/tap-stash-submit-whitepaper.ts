@@ -4,6 +4,14 @@
  * Content is structured so tests can assert method terms and experiment outline.
  */
 
+import type { ScienceWhitepaper, WhitepaperSection } from "@/lib/science/whitepaper-types";
+import {
+  getWhitepaperExperimentText,
+  getWhitepaperFullText,
+} from "@/lib/science/whitepaper-types";
+
+export type { WhitepaperSection, ScienceWhitepaper };
+
 export const TAP_WHITEPAPER_PATH = "/science/think-aloud-protocol" as const;
 
 export const TAP_WHITEPAPER_META = {
@@ -52,34 +60,13 @@ export const TAP_WHITEPAPER_EXPERIMENT_STEPS = [
   },
 ] as const;
 
-export type WhitepaperSection = {
-  id: string;
-  heading: string;
-  /** Optional kicker for methods framing */
-  kicker?: string;
-  paragraphs: string[];
-  bullets?: string[];
-  /** Nested subsections (e.g. experiment steps) */
-  subsections?: Array<{
-    id: string;
-    heading: string;
-    paragraphs: string[];
-    bullets?: string[];
-  }>;
-};
+/** @deprecated Use ScienceWhitepaper; kept as alias for existing imports. */
+export type TapWhitepaper = ScienceWhitepaper;
 
-export type TapWhitepaper = {
-  path: typeof TAP_WHITEPAPER_PATH;
-  meta: typeof TAP_WHITEPAPER_META;
-  abstract: string;
-  keywords: string[];
-  sections: WhitepaperSection[];
-  references: Array<{ id: string; citation: string }>;
-};
-
-export const TAP_STASH_SUBMIT_WHITEPAPER: TapWhitepaper = {
+export const TAP_STASH_SUBMIT_WHITEPAPER: ScienceWhitepaper = {
   path: TAP_WHITEPAPER_PATH,
   meta: TAP_WHITEPAPER_META,
+  experimentSteps: TAP_WHITEPAPER_EXPERIMENT_STEPS,
   abstract: [
     "This working paper documents a software-mediated Think Aloud Protocol (TAP) designed to externalize cognition under contemporary AI-assisted work.",
     "Rather than treating the final answer as sufficient evidence of skill, the protocol elicits continuous verbalization and records a deliberate Stash / Submit decision on each crystallized thought fragment.",
@@ -243,38 +230,15 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: TapWhitepaper = {
 };
 
 /** Flatten all body text for term search / tests. */
-export function getTapWhitepaperFullText(paper: TapWhitepaper = TAP_STASH_SUBMIT_WHITEPAPER): string {
-  const parts: string[] = [
-    paper.meta.title,
-    paper.meta.description,
-    paper.abstract,
-    ...paper.keywords,
-  ];
-  for (const section of paper.sections) {
-    parts.push(section.heading, ...(section.paragraphs ?? []), ...(section.bullets ?? []));
-    for (const sub of section.subsections ?? []) {
-      parts.push(sub.heading, ...(sub.paragraphs ?? []), ...(sub.bullets ?? []));
-    }
-  }
-  for (const ref of paper.references) {
-    parts.push(ref.citation);
-  }
-  return parts.join("\n");
+export function getTapWhitepaperFullText(
+  paper: ScienceWhitepaper = TAP_STASH_SUBMIT_WHITEPAPER,
+): string {
+  return getWhitepaperFullText(paper);
 }
 
 /** Experiment section only (for verification excerpts). */
 export function getTapWhitepaperExperimentText(
-  paper: TapWhitepaper = TAP_STASH_SUBMIT_WHITEPAPER,
+  paper: ScienceWhitepaper = TAP_STASH_SUBMIT_WHITEPAPER,
 ): string {
-  const section = paper.sections.find((s) => s.id === "planned-experiment");
-  if (!section) return "";
-  const parts: string[] = [section.heading, ...section.paragraphs];
-  for (const sub of section.subsections ?? []) {
-    parts.push(sub.heading, ...sub.paragraphs, ...(sub.bullets ?? []));
-  }
-  // Also include canonical step titles/summaries for stable anchors
-  for (const step of TAP_WHITEPAPER_EXPERIMENT_STEPS) {
-    parts.push(step.title, step.summary);
-  }
-  return parts.join("\n");
+  return getWhitepaperExperimentText(paper, ["planned-experiment"]);
 }

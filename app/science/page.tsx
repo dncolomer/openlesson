@@ -12,6 +12,10 @@ import {
   TAP_WHITEPAPER_PATH,
   TAP_STASH_SUBMIT_WHITEPAPER,
 } from "@/lib/science/tap-stash-submit-whitepaper";
+import {
+  KNOWLEDGE_TOMOGRAPHY_WHITEPAPER,
+  KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
+} from "@/lib/science/knowledge-tomography-whitepaper";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
@@ -225,28 +229,51 @@ export default function SciencePage() {
           Methods &amp; planned experiments
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
-          Academic working papers on how we externalize cognition as Proof of Work and how we plan to
-          embed that data into a Map of Knowledge.
+          Academic working papers on knowledge tomography, how we externalize cognition as Proof of
+          Work, and how we plan to embed that data into a Map of Knowledge toward knowledge induction.
         </p>
-        <Link
-          href={TAP_WHITEPAPER_PATH}
-          data-science-research-link
-          className="mt-6 group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-            Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
-          </p>
-          <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
-            {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
-          </h3>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-            {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
-          </p>
-          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-            Read the white paper
-            <ArrowRight size={14} />
-          </span>
-        </Link>
+        <div className="mt-6 space-y-4">
+          <Link
+            href={KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH}
+            data-science-research-link
+            data-science-research-link-knowledge-tomography
+            className="group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+              Working paper · {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.date}
+            </p>
+            <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
+              {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.shortTitle}
+            </h3>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+              {KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.meta.description}
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+              Read the white paper
+              <ArrowRight size={14} />
+            </span>
+          </Link>
+          <Link
+            href={TAP_WHITEPAPER_PATH}
+            data-science-research-link
+            data-science-research-link-tap
+            className="group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+              Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
+            </p>
+            <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
+              {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
+            </h3>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+              {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+              Read the white paper
+              <ArrowRight size={14} />
+            </span>
+          </Link>
+        </div>
       </section>
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-16">

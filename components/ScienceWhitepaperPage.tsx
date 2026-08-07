@@ -2,14 +2,17 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import type { TapWhitepaper } from "@/lib/science/tap-stash-submit-whitepaper";
-import { TAP_WHITEPAPER_EXPERIMENT_STEPS } from "@/lib/science/tap-stash-submit-whitepaper";
+import type { ScienceWhitepaper } from "@/lib/science/whitepaper-types";
 
 type ScienceWhitepaperPageProps = {
-  paper: TapWhitepaper;
+  paper: ScienceWhitepaper;
 };
 
+const PLANNED_SECTION_IDS = new Set(["planned-experiment", "planned-study"]);
+
 export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
+  const experimentSteps = paper.experimentSteps ?? [];
+
   return (
     <main
       className="relative min-h-screen bg-[#0c0c0c] text-zinc-200 selection:bg-zinc-700 selection:text-white"
@@ -154,12 +157,12 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
                     ) : null}
                   </div>
 
-                  {section.id === "planned-experiment" ? (
+                  {PLANNED_SECTION_IDS.has(section.id) && experimentSteps.length > 0 ? (
                     <div
                       className="mt-8 grid gap-3 sm:grid-cols-1 md:grid-cols-3 md:gap-4"
                       data-whitepaper-experiment-steps
                     >
-                      {TAP_WHITEPAPER_EXPERIMENT_STEPS.map((step, index) => (
+                      {experimentSteps.map((step, index) => (
                         <div
                           key={step.id}
                           data-experiment-step={step.id}

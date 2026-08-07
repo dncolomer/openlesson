@@ -167,7 +167,7 @@ export function buildTapbenchExerciseAuthorUserPrompt(
  */
 export async function generateDomainExercise(
   input: GenerateDomainExerciseInput,
-): Promise<{ exercise: string; source: "explicit" | "llm" | "fallback" }> {
+): Promise<{ exercise: string; source: "explicit" | "llm" }> {
   const surface = input.surface || "tapbench";
   const explicit = (input.exerciseText || "").replace(/\s+/g, " ").trim();
   if (
@@ -227,11 +227,11 @@ export async function generateDomainExercise(
       let text = raw.replace(/\s+/g, " ").trim();
       text = text.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
       text = ensureExercisePrefix(text.replace(/^exercise\s*:\s*/i, ""));
-      if (!isLowQualityTapbenchExercise(text, input)) {
+      if (text.length >= 8 && !isLowQualityTapbenchExercise(text, input)) {
         return { exercise: text, source: "llm" };
       }
       console.warn(
-        `[domain-exercise:${surface}] LLM output rejected as low quality; using fallback`,
+        `[domain-exercise:${surface}] LLM output empty or low quality; no pure fallback`,
       );
     }
   } catch (err) {
@@ -241,34 +241,27 @@ export async function generateDomainExercise(
     );
   }
 
-  return {
-    exercise: buildTapbenchExerciseFallback({
-      ...input,
-      exerciseText: input.exerciseText || input.chapterDescription || null,
-      blockDescription:
-        input.blockDescription || input.chapterDescription || null,
-    }),
-    source: "fallback",
-  };
+  // Never substitute pure exercise shells — fail for callers to surface an error.
+  throw new Error("Failed to generate practice content");
 }
 
 /** TAPBench mint entry — same generator with agent surface. */
 export async function generateTapbenchExercise(
   input: GenerateDomainExerciseInput,
-): Promise<{ exercise: string; source: "explicit" | "llm" | "fallback" }> {
+): Promise<{ exercise: string; source: "explicit" | "llm" }> {
   return generateDomainExercise({ ...input, surface: input.surface || "tapbench" });
 }
 
 /** Human TAP timed drill entry. */
 export async function generateTapExercisePrompt(
   input: GenerateDomainExerciseInput,
-): Promise<{ exercise: string; source: "explicit" | "llm" | "fallback" }> {
+): Promise<{ exercise: string; source: "explicit" | "llm" }> {
   return generateDomainExercise({ ...input, surface: "tap_exercise" });
 }
 
 /** ILE Project Mode chapter entry. */
 export async function generateIleProjectExercise(
   input: GenerateDomainExerciseInput,
-): Promise<{ exercise: string; source: "explicit" | "llm" | "fallback" }> {
+): Promise<{ exercise: string; source: "explicit" | "llm" }> {
   return generateDomainExercise({ ...input, surface: "ile_project" });
 }

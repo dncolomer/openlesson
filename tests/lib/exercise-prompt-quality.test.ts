@@ -67,30 +67,34 @@ describe("assemblePromptWorkspaceContext", () => {
 });
 
 describe("TAP Exercise framing quality", () => {
-  it("rich description + files → domain substance, no out-loud stage directions", () => {
+  it("without explicit exerciseText returns empty (no pure title/description shells)", () => {
     const text = buildExercisePromptText(richBlock);
-    expect(text.startsWith("Exercise:")).toBe(true);
-    expect(containsOutLoudStageDirection(text)).toBe(false);
-    expect(text.toLowerCase()).not.toMatch(/out loud|think aloud|on your own/);
-    expect(text).toMatch(/index|N\+1|caching|tenant|Postgres/i);
-    expect(text).toMatch(/query-checklist|tenant_id|multi-tenant/i);
+    expect(text).toBe("");
     try {
-      writeFileSync(join(SCRATCH, "sample-exercise-prompt.txt"), text, "utf8");
+      writeFileSync(join(SCRATCH, "sample-exercise-prompt.txt"), text || "(empty)", "utf8");
     } catch {
       /* scratch optional outside harness */
     }
   });
 
-  it("title-only thin input → no legacy Work through out loud template", () => {
+  it("explicit model exercise is kept raw with Exercise: prefix", () => {
+    const text = buildExercisePromptText({
+      ...richBlock,
+      exerciseText:
+        "Given a multi-tenant Postgres table, pick a composite index for tenant_id + created_at and explain why.",
+    });
+    expect(text.startsWith("Exercise:")).toBe(true);
+    expect(containsOutLoudStageDirection(text)).toBe(false);
+    expect(text).toMatch(/tenant_id|Postgres|index/i);
+  });
+
+  it("title-only thin input → empty (no invented template)", () => {
     const text = buildExercisePromptText({
       blockTitle: "Binary search",
       workspaceTitle: "Algorithms",
     });
-    expect(containsOutLoudStageDirection(text)).toBe(false);
+    expect(text).toBe("");
     expect(text).not.toMatch(/Work through "Binary search" out loud/i);
-    expect(text).not.toMatch(/Think aloud through/i);
-    expect(text).toContain("Binary search");
-    expect(text.startsWith("Exercise:")).toBe(true);
   });
 
   it("resolveExercisePromptAfterIntro strips stage directions from topic cards", () => {
@@ -100,10 +104,10 @@ describe("TAP Exercise framing quality", () => {
       blockDescription: "Composite indexes and N+1.",
     });
     expect(containsOutLoudStageDirection(text)).toBe(false);
-    expect(text).toMatch(/index|N\+1|multi-tenant|Composite/i);
+    expect(text).toMatch(/index|multi-tenant/i);
   });
 
-  it("legacy Work through out loud + rich blockDescription yields description substance (not title wrapper)", () => {
+  it("legacy out-loud server opening is stripped, not replaced with pure description shells", () => {
     const legacy =
       'Exercise: Work through "Heaps" out loud on your own. Explain your reasoning as you go.';
     const text = resolveExercisePromptAfterIntro({
@@ -111,38 +115,10 @@ describe("TAP Exercise framing quality", () => {
       blockTitle: "Heaps",
       blockDescription:
         "Binary heap insert and extract-min with O(log n) bubble-up and sift-down.",
-      notes: "Compare with binary search tree height costs.",
-      files: [
-        {
-          name: "heap-notes.md",
-          excerpt: "sift-down swaps with the smaller child until heap property holds.",
-        },
-      ],
     });
     expect(containsOutLoudStageDirection(text)).toBe(false);
-    expect(text).not.toMatch(/Work through "Heaps"/i);
-    // Domain tokens from description / notes / file excerpt — not title-only.
-    expect(text).toMatch(/extract-min|sift-down|bubble-up|O\(log n\)|heap property|binary search tree/i);
-    expect(text).toMatch(/heap-notes|sift-down|materials/i);
-    try {
-      const thin = buildExercisePromptText({
-        blockTitle: "Binary search",
-        workspaceTitle: "Algorithms",
-      });
-      writeFileSync(
-        join(SCRATCH, "sample-exercise-prompt.txt"),
-        [
-          "=== RICH: legacy out-loud server + blockDescription/files ===",
-          text,
-          "",
-          "=== THIN: title-only ===",
-          thin,
-        ].join("\n"),
-        "utf8",
-      );
-    } catch {
-      /* optional */
-    }
+    // No pure reframe inventing description substance when only stripping stage directions
+    expect(text).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
   });
 });
 
@@ -203,14 +179,14 @@ describe("TAP dialog opening / topic fallbacks", () => {
 });
 
 describe("TAPBench exercise uses improved framer", () => {
-  it("no out-loud fallback when context is thin", () => {
+  it("thin context without explicit exerciseText is empty (no pure shell)", () => {
     const ex = buildTapbenchExercise({
       workspaceTitle: "Demo",
       blockTitle: "Caching",
       blockDescription: "Redis invalidation per tenant.",
     });
+    expect(ex).toBe("");
     expect(containsOutLoudStageDirection(ex)).toBe(false);
-    expect(ex).toMatch(/Redis|tenant|Caching/i);
   });
 });
 

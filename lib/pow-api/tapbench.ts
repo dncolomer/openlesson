@@ -129,7 +129,8 @@ export function normalizeTapbenchDurationSeconds(raw: unknown): number {
 }
 
 /**
- * Build non-empty exercise text from workspace/block framing (reuses Exercise TAP helpers).
+ * Build exercise text from **explicit** exercise body only (model/stored).
+ * Does not invent pure shells from title/goal. Empty if no explicit text.
  */
 export function buildTapbenchExercise(input: {
   exerciseText?: string | null;
@@ -146,12 +147,9 @@ export function buildTapbenchExercise(input: {
   unusableCells?: Array<{ row: number; col: number }> | null;
 }): string {
   const explicit =
-    (typeof input.exerciseText === "string" && input.exerciseText.trim()) ||
-    (typeof input.workspaceGoal === "string" && input.workspaceGoal.trim()) ||
-    (typeof input.rootTopic === "string" && input.rootTopic.trim()) ||
-    null;
-
-  const exercise = buildExercisePromptText({
+    typeof input.exerciseText === "string" ? input.exerciseText.trim() : "";
+  if (!explicit) return "";
+  return buildExercisePromptText({
     exerciseText: explicit,
     blockTitle: input.blockTitle,
     blockDescription: input.blockDescription,
@@ -164,11 +162,7 @@ export function buildTapbenchExercise(input: {
     focusedBlockId: input.focusedBlockId,
     blockLocalContext: input.blockLocalContext,
     unusableCells: input.unusableCells,
-  });
-
-  const trimmed = exercise.trim();
-  if (trimmed.length > 0) return trimmed;
-  return 'Exercise: Demonstrate your understanding of this material: explain the key idea, how the pieces fit together, and one place the idea is easy to misuse.';
+  }).trim();
 }
 
 export function buildTapbenchShareUrl(baseUrl: string, token: string): string {

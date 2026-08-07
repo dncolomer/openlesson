@@ -484,7 +484,7 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
     if (parsed) return parsed;
   }
 
-  return buildTapStartingTopicsFallback(brief);
+  throw new Error("Failed to generate practice content");
 }
 
 /** Offline practice warm-up when xAI fails — no block-title shell. */
@@ -526,5 +526,5 @@ export async function generateTapOpeningQuestion(
     return response.data.trim();
   }
 
-  return practice ? buildTapPracticeOpeningQuestionFallback(brief) : buildTapOpeningQuestionFallback(brief);
+  throw new Error("Failed to generate practice content");
 }

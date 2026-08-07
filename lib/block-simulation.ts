@@ -11,16 +11,7 @@ import {
   type BlockExampleTopicsInput,
   type BlockExampleTopicsResult,
 } from "@/lib/block-example-topics";
-import {
-  buildGroundedDialogueQuestion,
-  buildGroundedExerciseItem,
-  isMetaLearningFluff,
-  type PracticeItemContext,
-} from "@/lib/practice-item-builders";
-import {
-  isInventYourOwnExerciseMeta,
-  isLowQualityTapbenchExercise,
-} from "@/lib/pow-api/tapbench-exercise-quality";
+import type { PracticeItemContext } from "@/lib/practice-item-builders";
 import {
   containsOutLoudStageDirection,
   stripOutLoudStageDirections,
@@ -246,54 +237,6 @@ export function partitionSimulationProbes(probes: readonly SimulationProbe[]): {
   return { questions, exercises };
 }
 
-/**
- * Pad filler for simulation quota — same pure builders as live Explore/Drill fallbacks.
- * No "out loud" stage directions; subject-matter grounded even when thin.
- */
-function synthQuestion(
-  title: string,
-  i: number,
-  description: string,
-  extra?: PracticeItemContext,
-): string {
-  return buildGroundedDialogueQuestion(
-    {
-      blockTitle: title,
-      blockDescription: description,
-      workspaceGoal: extra?.workspaceGoal,
-      workspaceTitle: extra?.workspaceTitle,
-      rootTopic: extra?.rootTopic,
-      planningPrompt: extra?.planningPrompt,
-      localNotes: extra?.localNotes,
-      notes: extra?.notes,
-      ...extra,
-    },
-    i,
-  );
-}
-
-function synthExercise(
-  title: string,
-  i: number,
-  description: string,
-  extra?: PracticeItemContext,
-): string {
-  return buildGroundedExerciseItem(
-    {
-      blockTitle: title,
-      blockDescription: description,
-      workspaceGoal: extra?.workspaceGoal,
-      workspaceTitle: extra?.workspaceTitle,
-      rootTopic: extra?.rootTopic,
-      planningPrompt: extra?.planningPrompt,
-      localNotes: extra?.localNotes,
-      notes: extra?.notes,
-      ...extra,
-    },
-    i,
-  );
-}
-
 function sanitizeProbeText(text: string): string {
   const t = clean(text);
   if (!t) return t;
@@ -303,65 +246,24 @@ function sanitizeProbeText(text: string): string {
   return t;
 }
 
-/** Replace invent-your-own / meta exercise templates with a concrete grounded item. */
-function sanitizeExerciseProbeText(
-  text: string,
-  ground: PracticeItemContext,
-  index: number,
-): string {
-  let t = sanitizeProbeText(text);
-  if (
-    !t ||
-    isMetaLearningFluff(t) ||
-    isInventYourOwnExerciseMeta(t) ||
-    isLowQualityTapbenchExercise(t, {
-      blockTitle: ground.blockTitle,
-      blockDescription: ground.blockDescription,
-      workspaceTitle: ground.workspaceTitle,
-    })
-  ) {
-    return synthExercise(
-      clean(ground.blockTitle) || "This block",
-      index,
-      clean(ground.blockDescription),
-      ground,
-    );
-  }
-  return t;
-}
-
 /**
- * Replace generic meta dialogue questions (core mechanism / explain precisely /
- * syllabus restatement wrappers) with a concrete grounded dialogue item.
+ * Light sanitize only — never replace with pure grounded templates.
+ * Drops empty / pure-whitespace after stripping stage directions.
  */
-function sanitizeQuestionProbeText(
-  text: string,
-  ground: PracticeItemContext,
-  index: number,
-): string {
-  let t = sanitizeProbeText(text);
-  if (!t || isMetaLearningFluff(t)) {
-    return synthQuestion(
-      clean(ground.blockTitle) || "This block",
-      index,
-      clean(ground.blockDescription),
-      ground,
-    );
-  }
-  return t;
+function keepModelProbeText(text: string): string {
+  return sanitizeProbeText(text);
 }
 
 /**
- * Enforce exactly 3 questions + 3 exercises. Pads with synthetic prompts when short;
- * trims when long. Preserves contextSources when present.
+ * Cap question/exercise counts. Does **not** pad with pure synth shells and does
+ * **not** replace model text with buildGrounded* templates.
  */
 export function enforceSimulationProbeQuota(
   probes: readonly SimulationProbe[],
-  input: {
+  input?: {
     title?: string | null;
     description?: string | null;
     availableInfluence?: readonly string[] | null;
-    /** Optional workspace grounding shared with live Explore/Drill builders. */
     workspaceGoal?: string | null;
     workspaceTitle?: string | null;
     rootTopic?: string | null;
@@ -372,76 +274,30 @@ export function enforceSimulationProbeQuota(
     externalLinks?: PracticeItemContext["externalLinks"];
   },
 ): SimulationProbe[] {
-  const title = clean(input.title) || "This block";
-  const description = clean(input.description);
-  const available = [...(input.availableInfluence || [])];
-  const ground: PracticeItemContext = {
-    blockTitle: title,
-    blockDescription: description,
-    workspaceGoal: input.workspaceGoal,
-    workspaceTitle: input.workspaceTitle,
-    rootTopic: input.rootTopic,
-    planningPrompt: input.planningPrompt,
-    localNotes: input.localNotes,
-    notes: input.notes,
-    files: input.files,
-    externalLinks: input.externalLinks,
-  };
+  void input;
+  const title = clean(input?.title) || "this block";
   const { questions: qIn, exercises: eIn } = partitionSimulationProbes(probes);
 
   const questions: SimulationProbe[] = qIn
     .slice(0, SIMULATION_QUESTION_COUNT)
-    .map((p, i) => ({
-      ...p,
-      question: sanitizeQuestionProbeText(p.question, ground, i),
-    }));
-  while (questions.length < SIMULATION_QUESTION_COUNT) {
-    const i = questions.length;
-    const question = synthQuestion(title, i, description, ground);
-    questions.push({
-      id: `q-${i}`,
-      question,
-      coachCue: coachCueForQuestion(question, title),
-      difficulty: i === 0 ? "warmup" : "core",
-      kind: "question",
-      contextSources: pickInfluence(
-        available,
-        i === 0
-          ? ["Title", "Description"]
-          : i === 1
-            ? ["Description", "Planning prompt"]
-            : ["Title", "Local notes", "Local context"],
-      ),
-    });
-  }
+    .map((p) => {
+      const question = keepModelProbeText(p.question);
+      return question.length >= 4
+        ? { ...p, question, coachCue: p.coachCue || coachCueForQuestion(question, title) }
+        : null;
+    })
+    .filter((p): p is SimulationProbe => p != null);
 
   const exercises: SimulationProbe[] = eIn
     .slice(0, SIMULATION_EXERCISE_COUNT)
-    .map((p, i) => ({
-      ...p,
-      question: sanitizeExerciseProbeText(p.question, ground, i),
-    }));
-  while (exercises.length < SIMULATION_EXERCISE_COUNT) {
-    const i = exercises.length;
-    const question = synthExercise(title, i, description, ground);
-    exercises.push({
-      id: `ex-${i}`,
-      question,
-      coachCue: coachCueForQuestion(question, title),
-      difficulty: "stretch",
-      kind: "exercise",
-      contextSources: pickInfluence(
-        available,
-        i === 0
-          ? ["Description", "Local context", "Local notes"]
-          : i === 1
-            ? ["Planning prompt", "Local notes"]
-            : ["Title", "Description", "Local context"],
-      ),
-    });
-  }
+    .map((p) => {
+      const question = keepModelProbeText(p.question);
+      return question.length >= 4
+        ? { ...p, question, coachCue: p.coachCue || coachCueForQuestion(question, title) }
+        : null;
+    })
+    .filter((p): p is SimulationProbe => p != null);
 
-  // Re-id for stable list identity
   return [
     ...questions.map((p, i) => ({
       ...p,
@@ -459,57 +315,21 @@ export function enforceSimulationProbeQuota(
 }
 
 /**
- * Derive a full simulation snapshot from block fields (no LLM).
- * Always yields exactly 3 questions + 3 exercises with compact influence labels.
- *
- * Dialogue questions and solo exercises are seeded from the **same pure builders**
- * live Explore/Drill fallbacks use (`buildGroundedDialogueQuestion` /
- * `buildGroundedExerciseItem`) so author Simulation previews match learner UX.
+ * Derive a simulation snapshot from block fields (no LLM).
+ * Intent/outcome/topics/readiness only — **no pure Q/E seed**.
+ * Questions and exercises come from xAI regenerate (normalizeSimulationPayload).
  */
 export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulationResult {
   const title = clean(input.title) || "This block";
   const description = clean(input.description);
   const planning = clean(input.planningPrompt);
   const notes = clean(input.localNotes);
-  // Topics only — do NOT use deriveBlockExampleTopics questions as probe seeds
-  // (those templates diverge from live Explore dialogue builders).
   const samples: BlockExampleTopicsResult = deriveBlockExampleTopics({
     title,
     description,
     planningPrompt: planning,
     localNotes: notes,
   });
-
-  const availableInfluence = collectBlockContextInfluenceLabels(input);
-
-  // Prefer explicit files/links; fall back to chip-only name lists as bare materials.
-  const files: PracticeItemContext["files"] =
-    input.files && input.files.length > 0
-      ? input.files
-      : (input.localFileNames || [])
-          .map((n) => clean(n))
-          .filter(Boolean)
-          .map((name) => ({ name, excerpt: null as string | null }));
-  const externalLinks: PracticeItemContext["externalLinks"] =
-    input.externalLinks && input.externalLinks.length > 0
-      ? input.externalLinks
-      : (input.externalLabels || [])
-          .map((n) => clean(n))
-          .filter(Boolean)
-          .map((label) => ({ title: label, url: null, description: null }));
-
-  const ground: PracticeItemContext = {
-    blockTitle: title,
-    blockDescription: description,
-    workspaceGoal: input.workspaceGoal,
-    workspaceTitle: input.workspaceTitle,
-    rootTopic: input.rootTopic,
-    planningPrompt: planning,
-    localNotes: notes,
-    notes: input.notes,
-    files,
-    externalLinks,
-  };
 
   const goal = clean(input.workspaceGoal);
   const intent = description
@@ -525,58 +345,8 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
       )
     : `After this block you can teach “${title}” to a peer with an example.`;
 
-  // Seed from shared live builders (not example-topic template questions).
-  const seedProbes: SimulationProbe[] = [];
-  for (let i = 0; i < SIMULATION_QUESTION_COUNT; i++) {
-    const q = sanitizeProbeText(buildGroundedDialogueQuestion(ground, i));
-    seedProbes.push({
-      id: `probe-q-${i}`,
-      question: q,
-      coachCue: coachCueForQuestion(q, title),
-      difficulty: i === 0 ? "warmup" : "core",
-      kind: "question",
-      contextSources: pickInfluence(
-        availableInfluence,
-        i === 0
-          ? ["Title", "Description"]
-          : i === 1
-            ? ["Description", "Planning prompt", "Local notes"]
-            : ["Title", "Local notes", "Local context"],
-      ),
-    });
-  }
-  for (let i = 0; i < SIMULATION_EXERCISE_COUNT; i++) {
-    const q = sanitizeProbeText(buildGroundedExerciseItem(ground, i));
-    seedProbes.push({
-      id: `probe-ex-${i}`,
-      question: q,
-      coachCue: coachCueForQuestion(q, title),
-      difficulty: "stretch",
-      kind: "exercise",
-      contextSources: pickInfluence(
-        availableInfluence,
-        i === 0
-          ? ["Description", "Local context", "Local notes"]
-          : i === 1
-            ? ["Planning prompt", "Local notes"]
-            : ["Title", "Description", "Local context"],
-      ),
-    });
-  }
-
-  const probes = enforceSimulationProbeQuota(seedProbes, {
-    title,
-    description,
-    availableInfluence,
-    workspaceGoal: input.workspaceGoal,
-    workspaceTitle: input.workspaceTitle,
-    rootTopic: input.rootTopic,
-    planningPrompt: planning,
-    localNotes: notes,
-    notes: input.notes,
-    files,
-    externalLinks,
-  });
+  // No pure-template probes — empty until xAI regenerate.
+  const probes: SimulationProbe[] = [];
 
   const hasDescription = description.length >= 12;
   const hasLocal = Boolean(input.hasLocalContext || notes);
@@ -639,7 +409,11 @@ export function deriveBlockSimulation(input: BlockSimulationInput): BlockSimulat
   };
 }
 
-/** Normalize LLM payload into a simulation (falls back to empty probes). */
+/**
+ * Normalize LLM payload into a simulation.
+ * Uses **model probes only** — never pads or replaces with pure grounded shells.
+ * Non-object / empty payload → empty probes (caller should surface an error).
+ */
 export function normalizeSimulationPayload(
   raw: unknown,
   fallback?: BlockSimulationInput,
@@ -655,7 +429,9 @@ export function normalizeSimulationPayload(
         practiceModes: ["Explore (dialogue)", "Drill (solo exercise)"],
       };
 
-  if (!raw || typeof raw !== "object") return base;
+  if (!raw || typeof raw !== "object") {
+    return { ...base, probes: [] };
+  }
   const rec = raw as Record<string, unknown>;
 
   const samples = normalizeContentSamplesPayload(raw);
@@ -815,38 +591,18 @@ export function normalizeSimulationPayload(
         ? samples.topics
         : base.topics;
 
-  // Rebuild material rows for quota pad/sanitize (same as deriveBlockSimulation).
-  const fallbackFiles: PracticeItemContext["files"] =
-    fallback?.files && fallback.files.length > 0
-      ? fallback.files
-      : (fallback?.localFileNames || [])
-          .map((n) => clean(n))
-          .filter(Boolean)
-          .map((name) => ({ name, excerpt: null as string | null }));
-  const fallbackLinks: PracticeItemContext["externalLinks"] =
-    fallback?.externalLinks && fallback.externalLinks.length > 0
-      ? fallback.externalLinks
-      : (fallback?.externalLabels || [])
-          .map((n) => clean(n))
-          .filter(Boolean)
-          .map((label) => ({ title: label, url: null, description: null }));
-
-  const enforced = enforceSimulationProbeQuota(
-    probes.length ? probes : base.probes,
-    {
-      title: fallback?.title || "This block",
-      description: fallback?.description,
-      availableInfluence,
-      workspaceGoal: fallback?.workspaceGoal,
-      workspaceTitle: fallback?.workspaceTitle,
-      rootTopic: fallback?.rootTopic,
-      planningPrompt: fallback?.planningPrompt,
-      localNotes: fallback?.localNotes,
-      notes: fallback?.notes,
-      files: fallbackFiles,
-      externalLinks: fallbackLinks,
-    },
-  );
+  // Cap only — never pad with pure synth when model is short.
+  const enforced = enforceSimulationProbeQuota(probes, {
+    title: fallback?.title || "This block",
+    description: fallback?.description,
+    availableInfluence,
+    workspaceGoal: fallback?.workspaceGoal,
+    workspaceTitle: fallback?.workspaceTitle,
+    rootTopic: fallback?.rootTopic,
+    planningPrompt: fallback?.planningPrompt,
+    localNotes: fallback?.localNotes,
+    notes: fallback?.notes,
+  });
 
   return {
     intent: intent || base.intent,

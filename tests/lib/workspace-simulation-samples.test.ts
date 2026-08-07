@@ -108,56 +108,35 @@ describe("normalizeSimulationSampleScope", () => {
   });
 });
 
-describe("deriveSimulationSamples — pure path (real builders)", () => {
-  it("block scope: questions + exercises grounded in block + workspace goal", () => {
+describe("deriveSimulationSamples — empty Q/E (xAI only for items)", () => {
+  it("block scope: empty questions/exercises; prompts still grounded for LLM", () => {
     const scope = { kind: "block" as const, blockId: "b-ppv" };
     const bundle = deriveSimulationSamples(scope, fixture);
 
     expect(bundle.scope).toEqual(scope);
-    expect(bundle.questions.length).toBe(SIMULATION_QUESTION_COUNT);
-    expect(bundle.exercises.length).toBe(SIMULATION_EXERCISE_COUNT);
-    expect(bundle.probes.length).toBe(
-      SIMULATION_QUESTION_COUNT + SIMULATION_EXERCISE_COUNT,
-    );
+    expect(bundle.questions).toEqual([]);
+    expect(bundle.exercises).toEqual([]);
+    expect(bundle.probes).toEqual([]);
 
     const ctx = buildSimulationSamplePracticeContext(scope, fixture);
     expect(ctx.blockTitle).toMatch(/Positive predictive value/i);
     expect(ctx.workspaceGoal).toMatch(/clinical beliefs|test evidence/i);
-
-    // Same pure builders live Explore/Drill fallbacks use
-    expect(bundle.questions[0]).toBe(buildGroundedDialogueQuestion(ctx, 0));
-    expect(bundle.exercises[0]).toBe(buildGroundedExerciseItem(ctx, 0));
-
-    // Substance from focused block
-    expect(bundle.questions.join(" ")).toMatch(/Positive predictive value|PPV|prevalence/i);
     expect(bundle.userPrompt).toMatch(/Positive predictive value|Block inventory|workspace/i);
     expect(bundle.userPrompt).toMatch(/Bayesian clinical reasoning|Update clinical beliefs/i);
   });
 
-  it("workspace scope: distinct from block — no single focused block; non-empty samples", () => {
+  it("workspace scope: empty samples; user prompt is entire-workspace", () => {
     const scope = { kind: "workspace" as const };
     const bundle = deriveSimulationSamples(scope, fixture);
 
     expect(bundle.scope).toEqual(scope);
-    expect(bundle.questions.length).toBe(SIMULATION_QUESTION_COUNT);
-    expect(bundle.exercises.length).toBe(SIMULATION_EXERCISE_COUNT);
-    expect(bundle.questions.every((q) => q.length >= 8)).toBe(true);
-    expect(bundle.exercises.every((q) => q.length >= 8)).toBe(true);
+    expect(bundle.questions).toEqual([]);
+    expect(bundle.exercises).toEqual([]);
 
     const ctx = buildSimulationSamplePracticeContext(scope, fixture);
-    // Workspace subject uses workspace title, not the PPV block title as exclusive focus
     expect(ctx.blockTitle).toBe("Bayesian clinical reasoning");
     expect(ctx.workspaceGoal).toMatch(/clinical beliefs/i);
-
-    const blockBundle = deriveSimulationSamples(
-      { kind: "block", blockId: "b-ppv" },
-      fixture,
-    );
-    // Scopes produce different grounding (workspace title vs block title in items)
-    expect(bundle.questions[0]).not.toBe(blockBundle.questions[0]);
     expect(bundle.userPrompt).toMatch(/ENTIRE WORKSPACE|entire workspace/i);
-    expect(bundle.userPrompt).not.toMatch(/focused block text/i);
-    // Map inventory still present for workspace-wide grounding
     expect(bundle.userPrompt).toMatch(
       /Positive predictive value|Likelihood ratios|Block inventory|Map/i,
     );
@@ -258,9 +237,11 @@ describe("real-prompt assembly path (live Explore/Drill symbols)", () => {
     const samplesLib = read("lib/workspace-simulation-samples.ts");
     expect(samplesLib).toContain("buildSimulationSamplesSystemPrompt");
     expect(samplesLib).toContain("buildSimulationSamplesUserPrompt");
-    expect(samplesLib).toContain("buildGroundedDialogueQuestion");
-    expect(samplesLib).toContain("buildGroundedExerciseItem");
+    expect(samplesLib).toContain("normalizeSimulationSampleResponse");
     expect(samplesLib).toContain('from "@/lib/practice-item-builders"');
+    // No pure grounded item *calls* for user-facing seed
+    expect(samplesLib).not.toMatch(/buildGroundedDialogueQuestion\(/);
+    expect(samplesLib).not.toMatch(/buildGroundedExerciseItem\(/);
 
     const practiceLib = read("lib/practice-item-builders.ts");
     expect(practiceLib).toContain("buildTapOpeningQuestionTask");
@@ -329,8 +310,10 @@ describe("scope samples evidence log", () => {
         "block_scope_kind=" + block.scope.kind,
       ].join("\n") + "\n",
     );
-    expect(block.questions.length).toBeGreaterThan(0);
-    expect(ws.questions.length).toBeGreaterThan(0);
+    expect(block.questions.length).toBe(0);
+    expect(ws.questions.length).toBe(0);
+    expect(block.userPrompt.length).toBeGreaterThan(40);
+    expect(ws.userPrompt.length).toBeGreaterThan(40);
     expect(block.scope.kind).toBe("block");
     expect(ws.scope.kind).toBe("workspace");
   });

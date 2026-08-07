@@ -108,14 +108,14 @@ describe("generateTapbenchExercise", () => {
     expect(exercise).toMatch(/Prove|prime|Bertrand/i);
   });
 
-  it("falls back when LLM returns the banned wrap", async () => {
-    const { exercise, source } = await generateTapbenchExercise({
-      ...mathBlock,
-      generateText: async () =>
-        'Using what you know about "Number Theory & Discrete Math", complete this task: Integers, modular arithmetic, combinatorics, and graph theory.',
-    });
-    expect(source).toBe("fallback");
-    expect(exercise.toLowerCase()).not.toMatch(/using what you know about/);
+  it("throws generic error when LLM returns the banned wrap (no pure fallback)", async () => {
+    await expect(
+      generateTapbenchExercise({
+        ...mathBlock,
+        generateText: async () =>
+          'Using what you know about "Number Theory & Discrete Math", complete this task: Integers, modular arithmetic, combinatorics, and graph theory.',
+      }),
+    ).rejects.toThrow(/Failed to generate practice content/i);
   });
 
   it("author prompts ban topic restatement and require a real problem", () => {
@@ -128,18 +128,24 @@ describe("generateTapbenchExercise", () => {
   });
 });
 
-describe("pure framer no longer wraps topic catalogs as tasks", () => {
-  it("buildExercisePromptText for math catalog does not use complete-this-task wrap", () => {
+describe("explicit-only exercise text (no pure shells from title catalog)", () => {
+  it("buildExercisePromptText without explicit exerciseText is empty", () => {
     const text = buildExercisePromptText(mathBlock);
-    expect(text.toLowerCase()).not.toMatch(/using what you know about/);
-    expect(text.toLowerCase()).not.toMatch(
-      /complete this task:\s*integers, modular arithmetic/i,
-    );
+    expect(text).toBe("");
   });
 
-  it("buildTapbenchExercise for math catalog is not the banned template", () => {
+  it("buildTapbenchExercise without explicit exerciseText is empty", () => {
     const text = buildTapbenchExercise(mathBlock);
-    expect(isLowQualityTapbenchExercise(text, mathBlock)).toBe(false);
+    expect(text).toBe("");
+  });
+
+  it("buildTapbenchExercise keeps explicit model body", () => {
+    const text = buildTapbenchExercise({
+      ...mathBlock,
+      exerciseText: "Exercise: Prove that if n is composite then a prime p ≤ √n divides n.",
+    });
+    expect(text).toMatch(/Prove|composite|prime/i);
+    expect(text.toLowerCase()).not.toMatch(/using what you know about/);
   });
 });
 

@@ -80,6 +80,8 @@ describe("TAPBench mint / resolve / expiry", () => {
       {
         workspaceId: "ws-1",
         workspaceTitle: "Linear Algebra",
+        exerciseText:
+          "Exercise: Solve Ax = b for a 2×2 invertible matrix and box both unknowns.",
         durationSeconds: 900,
         nowMs: now,
         sessionToken: "tb_ws_token_abc",
@@ -90,7 +92,7 @@ describe("TAPBench mint / resolve / expiry", () => {
 
     expect(minted.session_token).toBe("tb_ws_token_abc");
     expect(minted.exercise.length).toBeGreaterThan(0);
-    expect(minted.exercise.toLowerCase()).toMatch(/linear algebra|exercise|think aloud/);
+    expect(minted.exercise.toLowerCase()).toMatch(/exercise|solve|matrix/);
     expect(minted.duration_seconds).toBe(900);
     expect(minted.expires_at).toBe(new Date(now + 900_000).toISOString());
     expect(minted.remaining_ms).toBe(900_000);
@@ -99,19 +101,21 @@ describe("TAPBench mint / resolve / expiry", () => {
     expect(minted.link.block_id).toBeNull();
   });
 
-  it("mints block-scoped link with block exercise framing", () => {
+  it("mints block-scoped link with explicit model exercise text", () => {
     const minted = mintTapbenchLink({
       workspaceId: "ws-1",
       blockId: "block-42",
       blockTitle: "Eigenvalues",
       blockDescription: "Compute characteristic polynomial",
+      exerciseText:
+        "Exercise: For matrix A = [[2,1],[0,3]], compute eigenvalues and box both.",
       durationSeconds: 600,
       sessionToken: "tb_block_token",
     });
 
     expect(minted.link.block_id).toBe("block-42");
-    expect(minted.exercise).toContain("Eigenvalues");
-    expect(minted.exercise.toLowerCase()).toMatch(/exercise|work through/);
+    expect(minted.exercise).toMatch(/eigenvalues|matrix/i);
+    expect(minted.exercise.toLowerCase()).toMatch(/exercise/);
     expect(minted.duration_seconds).toBe(600);
   });
 
@@ -120,6 +124,7 @@ describe("TAPBench mint / resolve / expiry", () => {
     const minted = mintAndStoreTapbenchLink({
       workspaceId: "ws-1",
       workspaceTitle: "Graphs",
+      exerciseText: "Exercise: Count paths of length 2 in K3.",
       durationSeconds: 120,
       nowMs: now,
       sessionToken: "tb_resolve_ok",
@@ -140,6 +145,7 @@ describe("TAPBench mint / resolve / expiry", () => {
     const now = 1_700_000_000_000;
     mintAndStoreTapbenchLink({
       workspaceId: "ws-1",
+      exerciseText: "Exercise: unit test placeholder",
       durationSeconds: 60,
       nowMs: now,
       sessionToken: "tb_expired",
@@ -158,6 +164,7 @@ describe("TAPBench mint / resolve / expiry", () => {
   it("list row always includes stable share URL from public_token", () => {
     const minted = mintAndStoreTapbenchLink({
       workspaceId: "ws-list",
+      exerciseText: "Exercise: list-row mint",
       durationSeconds: 300,
       sessionToken: "tb_list_token",
       id: "link-list",
@@ -168,11 +175,16 @@ describe("TAPBench mint / resolve / expiry", () => {
     expect(row.id).toBe("link-list");
   });
 
-  it("buildTapbenchExercise never returns empty string", () => {
-    expect(buildTapbenchExercise({}).trim().length).toBeGreaterThan(0);
+  it("buildTapbenchExercise is empty without explicit exerciseText", () => {
+    expect(buildTapbenchExercise({}).trim()).toBe("");
     expect(
       buildTapbenchExercise({ workspaceTitle: "Calc", blockTitle: "Limits" }),
-    ).toContain("Limits");
+    ).toBe("");
+    expect(
+      buildTapbenchExercise({
+        exerciseText: "Exercise: Evaluate lim x→0 sin(x)/x.",
+      }),
+    ).toMatch(/sin|limit|Exercise/i);
   });
 });
 
@@ -265,6 +277,7 @@ describe("Stash/Submit with TAPBench session — real flush helpers", () => {
     const now = 1_000_000;
     const minted = mintTapbenchLink({
       workspaceId: "ws-1",
+      exerciseText: "Exercise: boundary",
       durationSeconds: 60, // min duration
       nowMs: now,
       sessionToken: "tb_boundary",

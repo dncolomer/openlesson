@@ -70,7 +70,8 @@ describe("deriveWorkspaceSimulationOverview", () => {
     expect(o.samplePaths[0]!.map((s) => s.blockId)).toEqual(["s1", "a", "b"]);
     expect(o.samplePaths[0]![1]!.locked).toBe(true);
     expect(o.sampleProbes.length).toBeGreaterThanOrEqual(1);
-    expect(o.sampleProbes[0]!.questions.length).toBeGreaterThan(0);
+    // Q/E empty until xAI regenerate (no pure seed)
+    expect(o.sampleProbes[0]!.questions.length).toBe(0);
     expect(o.interactionModes.some((m) => /Explore|Drill|Start/i.test(m))).toBe(
       true,
     );

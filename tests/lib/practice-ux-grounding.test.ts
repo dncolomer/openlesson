@@ -385,7 +385,7 @@ describe("grounded dialogue + exercise builders (live + thin/guest)", () => {
 });
 
 describe("Simulation shares live practice builders", () => {
-  it("deriveBlockSimulation questions equal buildGroundedDialogueQuestion (rich + thin)", () => {
+  it("deriveBlockSimulation has empty probes (no pure Q/E seed)", () => {
     const groundRich = {
       title: richCtx.blockTitle,
       description: richCtx.blockDescription,
@@ -400,82 +400,21 @@ describe("Simulation shares live practice builders", () => {
     const simRich = deriveBlockSimulation(groundRich);
     const { questions: qRich, exercises: eRich } =
       partitionSimulationProbes(simRich.probes);
-    expect(qRich).toHaveLength(3);
-    expect(eRich).toHaveLength(3);
+    expect(qRich).toHaveLength(0);
+    expect(eRich).toHaveLength(0);
+    expect(simRich.probes).toHaveLength(0);
+    expect(simRich.intent).not.toMatch(/\bout loud\b/i);
 
-    const liveCtx = {
-      blockTitle: richCtx.blockTitle,
-      blockDescription: richCtx.blockDescription,
-      workspaceGoal: richCtx.workspaceGoal,
-      workspaceTitle: richCtx.workspaceTitle,
-      rootTopic: richCtx.rootTopic,
-      planningPrompt: richCtx.planningPrompt,
-      localNotes: richCtx.localNotes,
-    };
-    for (let i = 0; i < 3; i++) {
-      expect(qRich[i].question).toBe(buildGroundedDialogueQuestion(liveCtx, i));
-      expect(eRich[i].question).toBe(buildGroundedExerciseItem(liveCtx, i));
-    }
-
-    // TAP offline fallback is generic — not equal to pure grounded dialogue shells
-    const tapFb = buildTapOpeningQuestionFallback({
-      plan: {
-        id: "ws",
-        title: richCtx.workspaceTitle!,
-        root_topic: richCtx.rootTopic!,
-        description: null,
-        workspace_goal: richCtx.workspaceGoal,
-        notes: null,
-      },
-      nodes: [
-        {
-          id: "b1",
-          title: richCtx.blockTitle!,
-          description: richCtx.blockDescription!,
-          status: "available",
-        },
-      ],
-      sessions: [],
-      focusSession: null,
-    });
-    expect(tapFb).not.toBe(qRich[0].question);
-    expect(tapFb).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=|on this setup/i);
-
-    // Thin context equality
     const simThin = deriveBlockSimulation({
       title: thinCtx.blockTitle,
       workspaceTitle: thinCtx.workspaceTitle,
       rootTopic: thinCtx.rootTopic,
     });
-    const { questions: qThin, exercises: eThin } =
-      partitionSimulationProbes(simThin.probes);
-    for (let i = 0; i < 3; i++) {
-      expect(qThin[i].question).toBe(buildGroundedDialogueQuestion(thinCtx, i));
-      expect(eThin[i].question).toBe(buildGroundedExerciseItem(thinCtx, i));
-      expect(isMetaLearningFluff(qThin[i].question)).toBe(false);
-    }
-
-    for (const p of simRich.probes) {
-      expect(p.question).not.toMatch(/\bout loud\b/i);
-      expect(isMetaLearningFluff(p.question)).toBe(false);
-    }
-    expect(simRich.intent).not.toMatch(/\bout loud\b/i);
+    expect(simThin.probes).toHaveLength(0);
 
     writeEvidence(
       "simulation-shared-prompts.txt",
-      [
-        "probeCount=" + simRich.probes.length,
-        "simQ0_eq_live=" +
-          String(qRich[0].question === buildGroundedDialogueQuestion(liveCtx, 0)),
-        "simE0_eq_live=" +
-          String(eRich[0].question === buildGroundedExerciseItem(liveCtx, 0)),
-        "thinQ0_eq_live=" +
-          String(qThin[0].question === buildGroundedDialogueQuestion(thinCtx, 0)),
-        "noOutLoud=" +
-          String(simRich.probes.every((p) => !/\bout loud\b/i.test(p.question))),
-        "q0=" + qRich[0]?.question,
-        "e0=" + eRich[0]?.question.slice(0, 200),
-      ].join("\n"),
+      "probeCount=" + simRich.probes.length + "\nemptySeed=true",
     );
   });
 
@@ -507,20 +446,8 @@ describe("Simulation shares live practice builders", () => {
         rootTopic: richCtx.rootTopic,
       },
     );
-    expect(overview.sampleProbes.length).toBeGreaterThan(0);
-    const firstQ = overview.sampleProbes[0].questions[0]?.question;
-    expect(firstQ).toBe(
-      buildGroundedDialogueQuestion(
-        {
-          blockTitle: richCtx.blockTitle,
-          blockDescription: richCtx.blockDescription,
-          workspaceGoal: richCtx.workspaceGoal,
-          workspaceTitle: richCtx.workspaceTitle,
-          rootTopic: richCtx.rootTopic,
-        },
-        0,
-      ),
-    );
+    // Overview may list blocks; Q/E probes stay empty without xAI seed
+    expect(Array.isArray(overview.sampleProbes)).toBe(true);
 
     const tab = read("components/WorkspaceSimulationPanel.tsx");
     // Tab: xAI generate only — no pure seed display
@@ -568,13 +495,12 @@ describe("Simulation shares live practice builders", () => {
     expect(tabRoute).toMatch(/scope|blockId/);
 
     const lib = read("lib/block-simulation.ts");
-    expect(lib).toContain("buildGroundedDialogueQuestion");
-    expect(lib).toContain("buildGroundedExerciseItem");
+    expect(lib).toContain("enforceSimulationProbeQuota");
+    expect(lib).not.toMatch(/return synthQuestion|return synthExercise/);
 
     const samplesLib = read("lib/workspace-simulation-samples.ts");
-    expect(samplesLib).toContain("buildGroundedDialogueQuestion");
-    expect(samplesLib).toContain("buildGroundedExerciseItem");
     expect(samplesLib).toContain("buildSimulationSamplesSystemPrompt");
+    expect(samplesLib).toContain("normalizeSimulationSampleResponse");
   });
 });
 

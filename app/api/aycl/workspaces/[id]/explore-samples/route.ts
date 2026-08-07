@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ayclLandingPracticeContext,
   assembleAyclLandingSummary,
-  buildAyclExploreLearnFallback,
   buildAyclExploreLearnSystemPrompt,
   buildAyclExploreLearnUserPrompt,
   parseAyclExploreLearnSamples,
@@ -24,7 +23,7 @@ type SamplesAi = {
 
 /**
  * GET — on-demand Explore/Learn samples for the public AYCL landing page.
- * Uses xAI when available; always falls back to pure builders so the page works offline.
+ * Returns raw xAI questions/exercises only. No pure-template fallback.
  */
 export async function GET(
   _req: Request,
@@ -67,35 +66,31 @@ export async function GET(
       blocks: blocks || [],
     });
     const practiceCtx = ayclLandingPracticeContext(landing, blocks || []);
-    const fallback = buildAyclExploreLearnFallback(practiceCtx, 3);
 
-    let source: "xai" | "fallback" = "fallback";
-    let samples = fallback;
-
-    try {
-      const ai = await callXaiJSON<SamplesAi>(
-        [
-          systemMessage(buildAyclExploreLearnSystemPrompt()),
-          userMessage(buildAyclExploreLearnUserPrompt(landing, blocks || [])),
-        ],
-        { model: DEFAULT_MODEL, maxTokens: 2200, temperature: 0.55, retries: 2 },
+    const ai = await callXaiJSON<SamplesAi>(
+      [
+        systemMessage(buildAyclExploreLearnSystemPrompt()),
+        userMessage(buildAyclExploreLearnUserPrompt(landing, blocks || [])),
+      ],
+      { model: DEFAULT_MODEL, maxTokens: 2200, temperature: 0.55, retries: 2 },
+    );
+    if (!ai.success || !ai.data) {
+      return NextResponse.json(
+        { error: ai.error || "Failed to generate practice content" },
+        { status: 502 },
       );
-      if (ai.success && ai.data) {
-        samples = parseAyclExploreLearnSamples(ai.data, practiceCtx);
-        source = "xai";
-      }
-    } catch (err) {
-      console.warn(
-        "[aycl/explore-samples] xAI failed; using pure fallback",
-        err instanceof Error ? err.message : err,
+    }
+    const samples = parseAyclExploreLearnSamples(ai.data, practiceCtx);
+    if (samples.questions.length === 0 && samples.exercises.length === 0) {
+      return NextResponse.json(
+        { error: "Failed to generate practice content" },
+        { status: 502 },
       );
-      samples = fallback;
-      source = "fallback";
     }
 
     return NextResponse.json({
       workspaceId,
-      source,
+      source: "xai" as const,
       questions: samples.questions,
       exercises: samples.exercises,
       sectionTitle: "Things you'll Explore and Learn",
@@ -103,7 +98,7 @@ export async function GET(
   } catch (error) {
     console.error("[aycl/explore-samples]", error);
     return NextResponse.json(
-      { error: "Failed to generate explore samples" },
+      { error: "Failed to generate practice content" },
       { status: 500 },
     );
   }

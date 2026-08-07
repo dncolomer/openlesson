@@ -171,7 +171,7 @@ function cleanLen(s: string): number {
 }
 
 describe("deriveSimulationSamples pure path (shipped)", () => {
-  it("rich fixture samples reflect goal/files/links and differ from thin run", () => {
+  it("empty Q/E; LLM user prompt still includes goal/files/links", () => {
     const thin = deriveSimulationSamples(
       { kind: "block", blockId: "b1" },
       thinWorkspace,
@@ -181,82 +181,24 @@ describe("deriveSimulationSamples pure path (shipped)", () => {
       richWorkspace,
     );
 
-    expect(rich.questions).toHaveLength(3);
-    expect(rich.exercises).toHaveLength(3);
-    for (const q of [...rich.questions, ...rich.exercises]) {
-      expect(isMetaLearningFluff(q)).toBe(false);
-    }
-
-    const thinBlob = [...thin.questions, ...thin.exercises].join("\n");
-    const richBlob = [...rich.questions, ...rich.exercises].join("\n");
-    expect(richBlob).not.toBe(thinBlob);
-
-    // Material-specific tokens — must not pass with description-only substance
-    expect(richBlob).toMatch(/lab-panel/i);
-    expect(richBlob).toMatch(/CDC|cdc/i);
-    // Numbers from lab excerpt (2% prevalence / 90% / 95%) or worksheet (1000 / 20)
-    expect(richBlob).toMatch(
-      /0\.9|0\.95|0\.02|90%|95%|2%|1000|diseased|worksheet|false positive/i,
-    );
-    // Questions must include material body (not only goal-swapped title templates)
-    const richQs = rich.questions.join("\n");
-    expect(richQs).toMatch(
-      /lab-panel|CDC|prevalence|sensitivity|specificity|worksheet|1000|false positive/i,
-    );
-    const richEx = rich.exercises.join("\n");
-    expect(richEx).toMatch(
-      /lab-panel|CDC|0\.9|0\.95|0\.02|90|95|1000|worksheet|attached materials/i,
-    );
-
-    // Materials-only fixture (no useful description) still differs from thin
-    const materialsOnly = deriveSimulationSamples(
-      { kind: "block", blockId: "b1" },
-      {
-        ...thinWorkspace,
-        workspaceGoal: richWorkspace.workspaceGoal,
-        notes: richWorkspace.notes,
-        files: richWorkspace.files,
-        externalResources: richWorkspace.externalResources,
-        blocks: [
-          {
-            ...thinWorkspace.blocks![0],
-            description: "Predictive value basics",
-            local_context: richWorkspace.blocks![0].local_context,
-            planning_prompt: "Use the lab panel numbers",
-            next_block_ids: ["b2"],
-          },
-          richWorkspace.blocks![1],
-        ],
-      },
-    );
-    const matBlob = [
-      ...materialsOnly.questions,
-      ...materialsOnly.exercises,
-    ].join("\n");
-    expect(matBlob).not.toBe(thinBlob);
-    expect(matBlob).toMatch(/lab-panel|CDC|0\.9|0\.02|1000|worksheet/i);
+    expect(rich.questions).toEqual([]);
+    expect(rich.exercises).toEqual([]);
+    expect(thin.questions).toEqual([]);
 
     // User prompt for LLM path includes workspace context + links/files
     expect(rich.userPrompt).toMatch(/Workspace goal|clinical beliefs/i);
     expect(rich.userPrompt).toMatch(/lab-panel-case|File|files/i);
     expect(rich.userPrompt).toMatch(/External links|CDC|cdc-ppv/i);
     expect(rich.userPrompt).toMatch(/next →|Map layout|topology|inventory/i);
+    expect(rich.userPrompt).not.toBe(thin.userPrompt);
 
     writeEvidence(
       "simulation-context-pure.log",
       [
-        "=== THIN ===",
-        thinBlob,
-        "",
-        "=== RICH ===",
-        richBlob,
-        "",
+        "emptyQ=" + rich.questions.length,
         "=== RICH USER PROMPT (head) ===",
         rich.userPrompt.slice(0, 1200),
-        "",
         "practiceContext.files=" + JSON.stringify(rich.practiceContext.files),
-        "practiceContext.externalLinks=" +
-          JSON.stringify(rich.practiceContext.externalLinks),
         "practiceContext.workspaceGoal=" + rich.practiceContext.workspaceGoal,
       ].join("\n"),
     );
@@ -343,9 +285,11 @@ describe("deriveSimulationSamples pure path (shipped)", () => {
         { title: "CDC guide", description: "base rates and false positives" },
       ],
     });
+    // Pure seed no longer invents Q/E from materials — empty until xAI
+    expect(sim.probes).toHaveLength(0);
     const { questions, exercises } = partitionSimulationProbes(sim.probes);
-    const blob = [...questions, ...exercises].map((p) => p.question).join("\n");
-    expect(blob).toMatch(/lab-panel|CDC|0\.9|0\.02|90|95|2%|false positive/i);
+    expect(questions).toHaveLength(0);
+    expect(exercises).toHaveLength(0);
   });
 });
 
@@ -374,15 +318,12 @@ describe("simulation API structural wiring", () => {
     expect(route).toMatch(/normalizeSimulationPayload\([\s\S]*externalLinks,/);
   });
 
-  it("deriveBlockSimulation + normalize pass files/externalLinks into enforceSimulationProbeQuota", () => {
+  it("enforceSimulationProbeQuota does not pad with pure synth builders", () => {
     const src = read("lib/block-simulation.ts");
-    // Both call sites must thread material rows into quota enforcement
-    const quotaBlocks = src.split("enforceSimulationProbeQuota");
-    expect(quotaBlocks.length).toBeGreaterThanOrEqual(3); // def + 2 call sites
-    expect(src).toMatch(
-      /enforceSimulationProbeQuota\([\s\S]*?files,[\s\S]*?externalLinks,/,
-    );
-    // practiceDomainSubstance must not put localNotes ahead of description
+    expect(src).toContain("enforceSimulationProbeQuota");
+    expect(src).not.toMatch(/return synthQuestion|return synthExercise/);
+    expect(src).toMatch(/Does \*\*not\*\* pad with pure|never pad|No pure-template probes/i);
+    // practiceDomainSubstance still description-before-localNotes for LLM grounding helpers
     const practice = read("lib/practice-item-builders.ts");
     const domainFn = practice.slice(
       practice.indexOf("export function practiceDomainSubstance"),

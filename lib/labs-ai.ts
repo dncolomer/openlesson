@@ -51,32 +51,15 @@ export async function generateProbes(topic: string): Promise<Probe[]> {
       return response.data;
     }
 
-    console.warn("Probe generation failed, using fallback:", response.error);
-    return generateFallbackProbes(topic);
+    console.warn("Probe generation failed:", response.error);
+    throw new Error("Failed to generate practice content");
   } catch (err) {
     console.error("Error generating probes:", err);
-    return generateFallbackProbes(topic);
+    if (err instanceof Error && err.message === "Failed to generate practice content") {
+      throw err;
+    }
+    throw new Error("Failed to generate practice content");
   }
-}
-
-function generateFallbackProbes(topic: string): Probe[] {
-  return [
-    {
-      id: 1,
-      text: `What are the fundamental principles of ${topic}?`,
-      type: "conceptual",
-    },
-    {
-      id: 2,
-      text: `How would you apply the core concepts of ${topic} to solve a real-world problem?`,
-      type: "application",
-    },
-    {
-      id: 3,
-      text: `What are the strengths and limitations of ${topic} compared to alternative approaches?`,
-      type: "analysis",
-    },
-  ];
 }
 
 export function validateProbes(probes: unknown): probes is Probe[] {

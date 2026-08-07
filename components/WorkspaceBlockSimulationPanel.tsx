@@ -169,6 +169,7 @@ export function WorkspaceBlockSimulationPanel({
     ],
   );
 
+  // Empty Q/E until xAI regenerate — no pure-template seed list.
   const [sim, setSim] = useState<BlockSimulationResult>(() =>
     deriveBlockSimulation(seedInput),
   );
@@ -177,6 +178,7 @@ export function WorkspaceBlockSimulationPanel({
 
   useEffect(() => {
     if (regenerating) return;
+    // Reset chrome/readiness from block fields; keep probes empty (no pure shells).
     setSim(deriveBlockSimulation(seedInput));
     setError(null);
   }, [blockId, seedInput, regenerating]);
@@ -268,7 +270,7 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={questions}
           kind="question"
-          empty="No sample questions yet — regenerate after adding description or local context."
+          empty="No sample questions yet — click Regenerate for xAI samples."
         />
       </div>
 

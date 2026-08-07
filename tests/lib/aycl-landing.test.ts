@@ -13,12 +13,10 @@ import {
   ayclLandingPracticeContext,
   assembleAyclLandingSummary,
   AYCL_HACKATHONS,
-  buildAyclExploreLearnFallback,
   buildAyclExploreLearnSystemPrompt,
   buildAyclExploreLearnUserPrompt,
   parseAyclExploreLearnSamples,
 } from "@/lib/aycl-landing";
-import { isMetaLearningFluff } from "@/lib/practice-item-builders";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -179,7 +177,7 @@ describe("aycl landing model", () => {
 });
 
 describe("aycl explore/learn samples", () => {
-  it("builds prompts, parses xAI JSON, rejects meta, falls back offline", () => {
+  it("builds prompts, parses xAI JSON raw only (no pure pad)", () => {
     const landing = assembleAyclLandingSummary({
       workspace: fixtureWorkspace,
       blocks: fixtureBlocks,
@@ -192,47 +190,36 @@ describe("aycl explore/learn samples", () => {
     expect(system).toMatch(/core mechanism|FORBIDDEN|json/i);
     expect(user).toMatch(/Bayesian|PPV|clinical/i);
 
-    const fallback = buildAyclExploreLearnFallback(ctx, 3);
-    expect(fallback.questions).toHaveLength(3);
-    expect(fallback.exercises).toHaveLength(3);
-    for (const q of fallback.questions) {
-      expect(isMetaLearningFluff(q)).toBe(false);
-      expect(q).not.toMatch(/core mechanism|explain it precisely/i);
-    }
-    for (const ex of fallback.exercises) {
-      expect(ex).toMatch(/Exercise:|PPV|sensitivity|prevalence|Bayes|clinical/i);
-    }
-
-    // Meta LLM junk → replaced via parse
+    // Parse keeps raw model strings only (no pure pad)
     const parsed = parseAyclExploreLearnSamples(
       {
         questions: [
-          'What is the core mechanism in "Bayes" — and how would you explain it precisely?',
           "Good concrete question: compute PPV when prevalence is 2%.",
+          "Name one mistake that confuses sensitivity with PPV.",
         ],
         exercises: [
-          "Solve a non-trivial problem in Bayes. State the problem you chose.",
           "Exercise: A test has sensitivity 0.9, specificity 0.95, prevalence 0.01. Compute PPV.",
         ],
       },
       ctx,
     );
-    expect(parsed.questions).toHaveLength(3);
-    expect(parsed.exercises).toHaveLength(3);
-    expect(parsed.questions.every((q) => !isMetaLearningFluff(q))).toBe(true);
+    expect(parsed.questions).toHaveLength(2);
+    expect(parsed.exercises).toHaveLength(1);
     expect(
       parsed.questions.some((q) => /PPV|prevalence|2%/i.test(q)),
     ).toBe(true);
+
+    const empty = parseAyclExploreLearnSamples(null, ctx);
+    expect(empty.questions).toEqual([]);
+    expect(empty.exercises).toEqual([]);
 
     writeEvidence(
       "aycl-landing-explore-samples.log",
       [
         "system_has_forbidden=" + /FORBIDDEN|core mechanism/i.test(system),
-        "fallback_q0=" + fallback.questions[0],
-        "fallback_ex0=" + fallback.exercises[0].slice(0, 160),
         "parsed_q_count=" + parsed.questions.length,
-        "parsed_no_meta=" +
-          parsed.questions.every((q) => !isMetaLearningFluff(q)),
+        "parsed_no_pad=true",
+        "empty_parse=" + String(empty.questions.length === 0),
       ].join("\n"),
     );
   });
@@ -292,7 +279,9 @@ describe("aycl landing + hackathons structural", () => {
     expect(apiLanding).toContain("is_all_you_can_learn");
     expect(apiLanding).toContain("assembleAyclLandingSummary");
     expect(apiSamples).toContain("callXaiJSON");
-    expect(apiSamples).toContain("buildAyclExploreLearnFallback");
+    expect(apiSamples).toContain("parseAyclExploreLearnSamples");
+    expect(apiSamples).not.toContain("buildAyclExploreLearnFallback");
+    expect(apiSamples).toMatch(/Failed to generate practice content/);
     expect(apiSamples).toContain("parseAyclExploreLearnSamples");
 
     // Hackathons as Projects & Community page

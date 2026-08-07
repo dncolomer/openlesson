@@ -8,15 +8,11 @@
  */
 
 import {
-  enforceSimulationProbeQuota,
-  partitionSimulationProbes,
   SIMULATION_EXERCISE_COUNT,
   SIMULATION_QUESTION_COUNT,
   type SimulationProbe,
 } from "@/lib/block-simulation";
 import {
-  buildGroundedDialogueQuestion,
-  buildGroundedExerciseItem,
   buildSimulationSamplesSystemPrompt,
   buildSimulationSamplesUserPrompt,
   type PracticeExternalLink,
@@ -320,9 +316,8 @@ export function buildSimulationSamplePrompts(
 }
 
 /**
- * Deterministic pure samples (no LLM) using the same Explore/Drill builders.
- * Always returns exactly SIMULATION_QUESTION_COUNT questions +
- * SIMULATION_EXERCISE_COUNT exercises.
+ * Offline sample bundle shape (prompts + empty Q/E).
+ * Does **not** invent pure-template questions/exercises — those come from xAI only.
  */
 export function deriveSimulationSamples(
   scope: SimulationSampleScope,
@@ -331,49 +326,11 @@ export function deriveSimulationSamples(
   const { systemPrompt, userPrompt, practiceContext } =
     buildSimulationSamplePrompts(scope, workspace);
 
-  const probesIn: SimulationProbe[] = [];
-  for (let i = 0; i < SIMULATION_QUESTION_COUNT; i++) {
-    const question = buildGroundedDialogueQuestion(practiceContext, i);
-    probesIn.push({
-      id: `q-${i}`,
-      question,
-      coachCue: "",
-      difficulty: i === 0 ? "warmup" : "core",
-      kind: "question",
-    });
-  }
-  for (let i = 0; i < SIMULATION_EXERCISE_COUNT; i++) {
-    const question = buildGroundedExerciseItem(practiceContext, i);
-    probesIn.push({
-      id: `ex-${i}`,
-      question,
-      coachCue: "",
-      difficulty: "stretch",
-      kind: "exercise",
-    });
-  }
-
-  const probes = enforceSimulationProbeQuota(probesIn, {
-    title: practiceContext.blockTitle,
-    description: practiceContext.blockDescription,
-    workspaceGoal: practiceContext.workspaceGoal,
-    workspaceTitle: practiceContext.workspaceTitle,
-    rootTopic: practiceContext.rootTopic,
-    planningPrompt: practiceContext.planningPrompt,
-    localNotes: practiceContext.localNotes,
-    notes: practiceContext.notes,
-    files: practiceContext.files,
-    externalLinks: practiceContext.externalLinks,
-  });
-
-  const { questions: qProbes, exercises: eProbes } =
-    partitionSimulationProbes(probes);
-
   return {
     scope,
-    questions: qProbes.map((p) => p.question),
-    exercises: eProbes.map((p) => p.question),
-    probes,
+    questions: [],
+    exercises: [],
+    probes: [],
     systemPrompt,
     userPrompt,
     practiceContext,

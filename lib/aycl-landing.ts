@@ -305,12 +305,18 @@ export function buildAyclExploreLearnUserPrompt(
 /**
  * Parse xAI JSON into questions + exercises; drop meta fluff; pad with fallbacks.
  */
+/**
+ * Parse xAI Explore/Learn samples. Returns model strings only — never pads with
+ * pure grounded templates. Empty if payload is thin (caller should error).
+ */
 export function parseAyclExploreLearnSamples(
   raw: unknown,
-  ctx: PracticeItemContext,
+  _ctx?: PracticeItemContext,
 ): AyclExploreLearnSamples {
-  const fallback = buildAyclExploreLearnFallback(ctx, 3);
-  if (!raw || typeof raw !== "object") return fallback;
+  void _ctx;
+  if (!raw || typeof raw !== "object") {
+    return { questions: [], exercises: [] };
+  }
   const rec = raw as Record<string, unknown>;
 
   const takeStrings = (v: unknown): string[] => {
@@ -325,34 +331,12 @@ export function parseAyclExploreLearnSamples(
         }
         return "";
       })
-      .filter((s) => s.length >= 12);
+      .filter((s) => s.length >= 4);
   };
 
-  const questionsRaw = takeStrings(rec.questions).filter(
-    (q) => !isMetaLearningFluff(q),
-  );
-  const exercisesRaw = takeStrings(rec.exercises).filter(
-    (q) =>
-      !isMetaLearningFluff(q) &&
-      !isInventYourOwnExerciseMeta(q) &&
-      !isLowQualityTapbenchExercise(q, {
-        blockTitle: ctx.blockTitle,
-        blockDescription: ctx.blockDescription,
-        workspaceTitle: ctx.workspaceTitle,
-      }),
-  );
-
-  const questions = [...questionsRaw];
-  const exercises = [...exercisesRaw];
-  while (questions.length < 3) {
-    questions.push(fallback.questions[questions.length] || fallback.questions[0]);
-  }
-  while (exercises.length < 3) {
-    exercises.push(fallback.exercises[exercises.length] || fallback.exercises[0]);
-  }
   return {
-    questions: questions.slice(0, 3),
-    exercises: exercises.slice(0, 3),
+    questions: takeStrings(rec.questions).slice(0, 3),
+    exercises: takeStrings(rec.exercises).slice(0, 3),
   };
 }
 

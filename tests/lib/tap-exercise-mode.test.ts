@@ -94,30 +94,33 @@ describe("create TAP link interaction_kind wiring", () => {
 });
 
 describe("buildExercisePromptText", () => {
-  it("frames rich block description as a domain task without out-loud stage directions", () => {
+  it("returns empty without explicit exercise/opening text (no pure title/description shells)", () => {
     const text = buildExercisePromptText({
       blockTitle: "Binary search",
       blockDescription: "Find target in sorted array with O(log n) comparisons.",
     });
-    expect(text).toContain("Binary search");
-    expect(text).toMatch(/Find target in sorted array/i);
-    expect(text.startsWith("Exercise:")).toBe(true);
-    expect(text.toLowerCase()).not.toMatch(/out loud|think aloud/);
+    expect(text).toBe("");
   });
 
-  it("prefers block domain framing over conversational Teach me openings", () => {
-    const text = buildExercisePromptText({
+  it("keeps explicit exercise body; conversational Teach me alone is not rewritten into domain shells", () => {
+    const conversational = buildExercisePromptText({
       openingQuestion: 'Teach me what you learned about "Binary search".',
       blockTitle: "Binary search",
       blockDescription: "Locate a key using mid-point halving.",
     });
-    expect(text.startsWith("Exercise:")).toBe(true);
-    expect(text.toLowerCase()).not.toMatch(/^teach me/);
-    expect(text).toMatch(/Binary search|mid-point|halving/i);
-    expect(text.toLowerCase()).not.toMatch(/out loud/);
+    // keepRawExerciseText may pass conversational through; must not invent pure domain shell
+    expect(conversational).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
+
+    const explicit = buildExercisePromptText({
+      exerciseText: "Locate a key using mid-point halving; box the number of comparisons.",
+      blockTitle: "Binary search",
+    });
+    expect(explicit.startsWith("Exercise:")).toBe(true);
+    expect(explicit).toMatch(/mid-point|halving|comparisons/i);
+    expect(explicit.toLowerCase()).not.toMatch(/out loud/);
   });
 
-  it("frames free-form exercise text without stage directions and is idempotent", () => {
+  it("keeps free-form exercise text, strips stage directions, and is idempotent", () => {
     const raw = buildExercisePromptText({
       openingQuestion: "What is amortized analysis?",
       blockTitle: "Amortized analysis",
@@ -134,8 +137,7 @@ describe("buildExercisePromptText", () => {
 
     // Idempotent: re-running on Exercise: prompt must not double-frame.
     const serverPrompt = buildExercisePromptText({
-      blockTitle: "Heaps",
-      blockDescription: "Binary heap insert and extract-min.",
+      exerciseText: "Exercise: Binary heap insert and extract-min.",
     });
     expect(serverPrompt.startsWith("Exercise:")).toBe(true);
     const again = buildExercisePromptText({ openingQuestion: serverPrompt });
@@ -143,24 +145,22 @@ describe("buildExercisePromptText", () => {
     expect(again).not.toMatch(/Exercise:\s*Exercise:/i);
   });
 
-  it("falls back to workspace title when conversational text alone is present", () => {
+  it("does not invent pure shells from workspace title alone", () => {
     const text = buildExercisePromptText({
       workspaceTitle: "Algorithms 101",
       openingQuestion: "Teach me what you learned in Algorithms 101.",
     });
-    expect(text).toContain("Algorithms 101");
-    expect(text.startsWith("Exercise:")).toBe(true);
-    expect(text.toLowerCase()).not.toMatch(/^teach me|out loud/);
+    // May keep conversational opening as-is, but no title-invented domain template
+    expect(text).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
   });
 
-  it("uses file names when present as material cues", () => {
+  it("does not invent file-cue shells without explicit exercise text", () => {
     const text = buildExercisePromptText({
       blockTitle: "Query performance",
       blockDescription: "Index choices for multi-tenant Postgres.",
       files: [{ name: "schema.sql" }, { name: "n-plus-one.md", excerpt: "Avoid loops of child queries." }],
     });
-    expect(text.toLowerCase()).not.toMatch(/out loud/);
-    expect(text).toMatch(/schema\.sql|n-plus-one|multi-tenant|index/i);
+    expect(text).toBe("");
   });
 });
 
@@ -315,7 +315,7 @@ describe("resolveExercisePromptAfterIntro", () => {
     expect(resolved.startsWith("Exercise:")).toBe(true);
   });
 
-  it("legacy Work through + rich description prefers description substance", () => {
+  it("legacy Work through + rich description strips stage directions only (no pure reframe)", () => {
     const server = 'Exercise: Work through "Heaps" out loud on your own. Explain your reasoning as you go.';
     const resolved = resolveExercisePromptAfterIntro({
       serverOpeningQuestion: server,
@@ -323,8 +323,8 @@ describe("resolveExercisePromptAfterIntro", () => {
       blockDescription: "Binary heap insert and extract-min with sift-down.",
     });
     expect(resolved.toLowerCase()).not.toMatch(/out loud/);
-    expect(resolved).not.toMatch(/Work through "Heaps"/i);
-    expect(resolved).toMatch(/extract-min|sift-down|Binary heap/i);
+    // Must not invent description substance as a pure shell
+    expect(resolved).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
   });
 
   it("keeps already-framed clean server prompts unchanged", () => {

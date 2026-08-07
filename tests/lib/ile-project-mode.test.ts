@@ -217,15 +217,14 @@ describe("Project Mode chapter exercise framing", () => {
     expect(prompt).not.toMatch(/^Exercise: Work through/);
   });
 
-  it("falls back to block domain task only when chapter description is empty", () => {
+  it("returns empty when chapter description is empty (no pure block invent)", () => {
     const prompt = buildIleProjectChapterExercisePrompt({
       chapterDescription: "   ",
       blockTitle: "Security",
       blockDescription: "Auth and secrets",
     });
-    expect(prompt).toMatch(/Security|Auth and secrets/i);
-    expect(prompt).toContain("Auth and secrets");
-    expect(prompt.toLowerCase()).not.toMatch(/out loud|work through "security" out loud/);
+    expect(prompt).toBe("");
+    expect(prompt).not.toMatch(/Security|Auth and secrets/i);
   });
 });
 

@@ -235,14 +235,19 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
     expect(ctx.contextBlock).toMatch(/Unusable ground/i);
     expect(ctx.localContextLines.join("\n")).toMatch(/EXPLAIN ANALYZE|local-query-tips/i);
 
+    // Learner-facing exercise body is explicit-only (no pure inventory shells).
     const text = buildExercisePromptText(input);
-    expect(text.startsWith("Exercise:")).toBe(true);
-    expect(text).toMatch(/index|N\+1|tenant|Postgres|query-checklist/i);
-    // Framer output must surface inventory / local / unusable — not drop them.
-    expect(text).toMatch(/Block inventory|Local block context|EXPLAIN ANALYZE/i);
-    expect(text).toMatch(/Unusable ground|local-query-tips|Auth foundations/i);
+    expect(text).toBe("");
 
-    // Structural: exercise-tap merges blocks/local into the real assembler path.
+    const withExplicit = buildExercisePromptText({
+      ...input,
+      exerciseText:
+        "Given multi-tenant Postgres, pick a composite index and explain N+1 risk.",
+    });
+    expect(withExplicit.startsWith("Exercise:")).toBe(true);
+    expect(withExplicit).toMatch(/index|N\+1|tenant|Postgres/i);
+
+    // Structural: exercise-tap still can assemble context for LLM paths.
     const exerciseSrc = read("lib/exercise-tap.ts");
     expect(exerciseSrc).toContain("resolveExercisePromptContext");
     expect(exerciseSrc).toContain("assemblePromptWorkspaceContext");
@@ -252,7 +257,7 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
     expect(exerciseSrc).toContain('from "@/lib/prompt-workspace-context"');
   });
 
-  it("ILE project framer uses shared domain path with layout + local", () => {
+  it("ILE project framer uses chapter/explicit text only (context stays in prompts)", () => {
     const prompt = buildIleProjectChapterExercisePrompt({
       chapterDescription: richFixture.blockDescription,
       blockTitle: richFixture.blockTitle,
@@ -265,8 +270,15 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
       blockLocalContext: richFixture.blocks[1].local_context,
       unusableCells: richFixture.unusableCells,
     });
+    // Chapter description is passed as exerciseText — kept as body, not inventory dump
     expect(prompt).toMatch(/index|N\+1|tenant|Postgres/i);
-    expect(prompt).toMatch(/Block inventory|Local block context|Unusable ground|EXPLAIN ANALYZE/i);
+    expect(prompt).not.toMatch(/attachments\s*:|Given parameters\s+A\s*=/i);
+    const emptyChapter = buildIleProjectChapterExercisePrompt({
+      chapterDescription: "",
+      blockTitle: richFixture.blockTitle,
+      blockDescription: richFixture.blockDescription,
+    });
+    expect(emptyChapter).toBe("");
     const ileSrc = read("lib/ile-mode.ts");
     expect(ileSrc).toContain("buildExercisePromptText");
     expect(ileSrc).toContain("blocks:");
@@ -274,7 +286,7 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
     expect(ileSrc).toContain("unusableCells");
   });
 
-  it("TAPBench author user prompt includes inventory, topology, and local context", () => {
+  it("TAPBench author user prompt includes inventory; mint body is explicit-only", () => {
     const src = read("lib/pow-api/tapbench-exercise-generate.ts");
     expect(src).toContain("assemblePromptWorkspaceContext");
     expect(src).toContain("blocks: input.blocks");
@@ -301,7 +313,8 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
     expect(authorUser).toMatch(/Local block context|EXPLAIN ANALYZE|local-query-tips/i);
     expect(authorUser).toContain("query-checklist.md");
 
-    const ex = buildTapbenchExercise({
+    // Learner-facing mint body: empty without explicit exerciseText
+    const emptyEx = buildTapbenchExercise({
       workspaceTitle: richFixture.workspaceTitle,
       blockTitle: richFixture.blockTitle,
       blockDescription: richFixture.blockDescription,
@@ -312,8 +325,14 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
       files: richFixture.files,
       notes: richFixture.notes,
     });
-    expect(ex).toMatch(/index|N\+1|caching|Postgres|Data model/i);
-    expect(ex).toMatch(/Block inventory|Local block context|Unusable ground/i);
+    expect(emptyEx).toBe("");
+    const ex = buildTapbenchExercise({
+      exerciseText:
+        "Exercise: Choose an index for multi-tenant Postgres and explain N+1 risk.",
+      workspaceTitle: richFixture.workspaceTitle,
+      blockTitle: richFixture.blockTitle,
+    });
+    expect(ex).toMatch(/index|N\+1|Postgres/i);
   });
 
   it("tap-score brief path loads layout fields and injects shared context", () => {

@@ -311,7 +311,7 @@ export function WorkspaceBlockDetailPane({
       ) : null}
 
       {/* Goals drawer only for existing (persisted) blocks — not add-block/create flow. */}
-      {blockId ? (
+      {blockId && workspaceId ? (
         <WorkspaceRightPaneDrawer
           variant="section"
           drawerId="goals"

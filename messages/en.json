@@ -1848,7 +1848,7 @@
     "performanceSubTabPow": "PoW",
     "performanceSubTabTap": "Knowledge Links",
     "performanceSubTabModels": "Embeddings",
-    "performanceSubTabLwm": "Learning World Model",
+    "performanceSubTabLwm": "Learning Profiles",
     "performanceSubTabRanking": "Ranking",
     "performanceSubTabStrengthsGaps": "Strengths & Gaps",
     "performanceSectionsAriaLabel": "Knowledge views",

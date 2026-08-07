@@ -4115,7 +4115,7 @@ export function KnowledgeConfigTrajectoryPanel({
             >
               <p className="text-sm font-medium text-neutral-200">No subjects yet</p>
               <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
-                Generate LWM Snapshots from the Learning World Model tab to populate ranks.
+                Generate LWM Snapshots from the Learning Profiles tab to populate ranks.
               </p>
             </div>
           ) : (
@@ -4242,7 +4242,7 @@ export function KnowledgeConfigTrajectoryPanel({
                       >
                         {selectedRankingCard.hasSnapshot
                           ? "This snapshot has no report body (spider / strengths / gaps unavailable)."
-                          : "No snapshot for this person yet — generate one from Learning World Model."}
+                          : "No snapshot for this person yet — generate one from Learning Profiles."}
                       </div>
                     ) : (
                       <>

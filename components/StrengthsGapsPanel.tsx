@@ -484,7 +484,7 @@ export function StrengthsGapsPanel({
         >
           <p className="text-sm font-medium text-neutral-200">No snapshot data yet</p>
           <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
-            Generate LWM Snapshots from the Learning World Model tab to populate strengths, gaps,
+            Generate LWM Snapshots from the Learning Profiles tab to populate strengths, gaps,
             and PoW-linked analysis.
           </p>
         </div>

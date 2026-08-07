@@ -2,12 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  buildConversationLanguageInstruction,
   coerceSpokenLocale,
   isSpokenLocale,
   spokenLanguageNames,
   spokenLocales,
   toSpeechBcp47,
   tutoringLocales,
+  withConversationLanguageInstruction,
 } from "@/lib/tutoring-languages";
 import {
   setSpeechRecognitionConstructorForTests,
@@ -179,5 +181,106 @@ describe("ILE Spoken Language wiring", () => {
     expect(toSpeechBcp47("de")).toBe("de-DE");
     expect(toSpeechBcp47("es")).toBe("es-ES");
     expect(toSpeechBcp47("en")).toBe("en-US");
+  });
+});
+
+describe("conversation language instruction for Explore/Drill model replies", () => {
+  it("buildConversationLanguageInstruction requires Catalan for ca (not opaque code only)", () => {
+    const ca = buildConversationLanguageInstruction("ca");
+    expect(ca.length).toBeGreaterThan(20);
+    expect(ca).toMatch(/Catalan/i);
+    expect(ca).toMatch(/Respond fully|Respond in/i);
+    expect(ca).toMatch(/Do not mix English/i);
+    // Empty/unknown defaults: empty string for missing; coerce unknown → en instruction
+    expect(buildConversationLanguageInstruction(null)).toBe("");
+    expect(buildConversationLanguageInstruction(undefined)).toBe("");
+    expect(buildConversationLanguageInstruction("")).toBe("");
+    expect(buildConversationLanguageInstruction("en")).toMatch(/English/i);
+  });
+
+  it("withConversationLanguageInstruction prepends to system prompts", () => {
+    const base = "You facilitate a knowledge-verification conversation.";
+    const out = withConversationLanguageInstruction(base, "ca");
+    expect(out.startsWith("IMPORTANT:")).toBe(true);
+    expect(out).toContain(base);
+    expect(out).toMatch(/Catalan/i);
+    // Missing language leaves base unchanged
+    expect(withConversationLanguageInstruction(base, null)).toBe(base);
+    expect(withConversationLanguageInstruction(base, "")).toBe(base);
+  });
+
+  it("TAP chat path threads conversationLanguage into Helios system prompt", () => {
+    const chat = readFileSync(
+      path.join(process.cwd(), "app/api/workspace-tap-score/chat/route.ts"),
+      "utf8",
+    );
+    expect(chat).toContain("withConversationLanguageInstruction");
+    expect(chat).toContain("conversationLanguage");
+    expect(chat).toContain("buildTapSelectiveThoughtSystemPrompt");
+    // Must not call selective prompt without language wrap
+    expect(chat).toMatch(
+      /withConversationLanguageInstruction\(\s*buildTapSelectiveThoughtSystemPrompt/,
+    );
+
+    const tapClient = readFileSync(
+      path.join(process.cwd(), "components/TapScoreClient.tsx"),
+      "utf8",
+    );
+    expect(tapClient).toMatch(/conversationLanguage/);
+    // chat + start + topics bodies include conversationLanguage
+    expect(tapClient).toMatch(/workspace-tap-score\/chat[\s\S]*conversationLanguage/);
+    expect(tapClient).toMatch(/workspace-tap-score\/start[\s\S]*conversationLanguage/);
+    expect(tapClient).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
+  });
+
+  it("TAP opening/topics generators accept conversationLanguage", () => {
+    const tapScore = readFileSync(
+      path.join(process.cwd(), "lib/tap-score.ts"),
+      "utf8",
+    );
+    expect(tapScore).toContain("withConversationLanguageInstruction");
+    expect(tapScore).toMatch(
+      /generateTapOpeningQuestion[\s\S]*conversationLanguage/,
+    );
+    expect(tapScore).toMatch(
+      /generateTapStartingTopics[\s\S]*conversationLanguage/,
+    );
+
+    const start = readFileSync(
+      path.join(process.cwd(), "app/api/workspace-tap-score/start/route.ts"),
+      "utf8",
+    );
+    expect(start).toContain("conversationLanguage");
+    expect(start).toMatch(/generateTapOpeningQuestion\([\s\S]*conversationLanguage/);
+
+    const topics = readFileSync(
+      path.join(process.cwd(), "app/api/workspace-tap-score/topics/route.ts"),
+      "utf8",
+    );
+    expect(topics).toContain("conversationLanguage");
+    expect(topics).toMatch(/generateTapStartingTopics\([\s\S]*conversationLanguage/);
+
+    // Drill exercise authoring also gets language
+    const domain = readFileSync(
+      path.join(process.cwd(), "lib/pow-api/tapbench-exercise-generate.ts"),
+      "utf8",
+    );
+    expect(domain).toContain("withConversationLanguageInstruction");
+    expect(domain).toContain("conversationLanguage");
+  });
+
+  it("session-chat (ILE Explore) uses the same language instruction helper", () => {
+    const sessionChat = readFileSync(
+      path.join(process.cwd(), "app/api/session-chat/route.ts"),
+      "utf8",
+    );
+    expect(sessionChat).toContain("withConversationLanguageInstruction");
+    expect(sessionChat).toContain("tutoringLanguage");
+
+    const welcome = readFileSync(
+      path.join(process.cwd(), "app/api/session-chat/welcome/route.ts"),
+      "utf8",
+    );
+    expect(welcome).toContain("withConversationLanguageInstruction");
   });
 });

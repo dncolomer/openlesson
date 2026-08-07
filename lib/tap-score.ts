@@ -14,6 +14,7 @@ import {
   type PromptBlockInventoryItem,
 } from "@/lib/prompt-workspace-context";
 import { normalizeUnusableCells } from "@/lib/map-ground-rules";
+import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 
 export interface TapStartingTopic {
   id: string;
@@ -464,14 +465,22 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
   return [...nodeTopics, ...fillers].slice(0, TAP_STARTING_TOPIC_COUNT);
 }
 
-export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: number): Promise<TapStartingTopic[]> {
+export async function generateTapStartingTopics(
+  brief: TapScoreBrief,
+  minutes: number,
+  options?: { conversationLanguage?: string | null },
+): Promise<TapStartingTopic[]> {
   const context = buildTapScoreInstructions(brief, "curious", minutes);
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const target = focusedBlock?.title || brief.plan.title;
+  const system = withConversationLanguageInstruction(
+    `${context}\n\n${buildTapStartingTopicsTask(TAP_STARTING_TOPIC_COUNT)}`,
+    options?.conversationLanguage,
+  );
 
   const response = await callXaiJSON<{ topics?: TapStartingTopic[] }>(
     [
-      systemMessage(`${context}\n\n${buildTapStartingTopicsTask(TAP_STARTING_TOPIC_COUNT)}`),
+      systemMessage(system),
       userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for knowledge-verification demonstration about: ${target}`),
     ],
     { maxTokens: 900, temperature: 0.45, fetchTimeout: 45000 },
@@ -506,7 +515,7 @@ export function buildTapExerciseFallbackFromBrief(_brief: TapScoreBrief): string
 export async function generateTapOpeningQuestion(
   brief: TapScoreBrief,
   minutes: number,
-  options?: { practice?: boolean },
+  options?: { practice?: boolean; conversationLanguage?: string | null },
 ) {
   const practice = options?.practice === true;
   const context = buildTapScoreInstructions(brief, "curious", minutes);
@@ -516,9 +525,13 @@ export async function generateTapOpeningQuestion(
   const userAsk = practice
     ? `Generate an easy practice warm-up opening about (stay on topic, keep difficulty simple): ${target}`
     : `Generate the opening knowledge-verification prompt for demonstrating learning about: ${target}`;
+  const system = withConversationLanguageInstruction(
+    `${context}\n\n${task}`,
+    options?.conversationLanguage,
+  );
 
   const response = await callXai(
-    [systemMessage(`${context}\n\n${task}`), userMessage(userAsk)],
+    [systemMessage(system), userMessage(userAsk)],
     { maxTokens: 120, temperature: practice ? 0.4 : 0.55, fetchTimeout: 30000 },
   );
 

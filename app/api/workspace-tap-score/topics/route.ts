@@ -18,6 +18,14 @@ export async function POST(req: NextRequest) {
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const minutes = Math.max(1, Number(body.minutes || 15));
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
+    const conversationLanguage =
+      body.conversationLanguage != null
+        ? String(body.conversationLanguage)
+        : body.tutoringLanguage != null
+          ? String(body.tutoringLanguage)
+          : body.language != null
+            ? String(body.language)
+            : "";
 
     const access = await resolveTapSessionAccess({
       privateToken,
@@ -40,7 +48,9 @@ export async function POST(req: NextRequest) {
       resolvedFocusSessionId
     );
 
-    const topics = await generateTapStartingTopics(brief, minutes);
+    const topics = await generateTapStartingTopics(brief, minutes, {
+      conversationLanguage,
+    });
     return NextResponse.json({ topics });
   } catch (error) {
     console.error("[workspace-tap-score/topics] Error:", error);

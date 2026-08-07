@@ -271,6 +271,7 @@ export function ExerciseTapClient({
             entryQueryParams: entryQueryParamsRef.current,
             minutes,
             tapSessionId: tapSessionIdRef.current,
+            conversationLanguage,
           }),
         });
         const payload = await response.json();
@@ -286,7 +287,7 @@ export function ExerciseTapClient({
     return () => {
       cancelled = true;
     };
-  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes]);
+  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage]);
 
   const logExerciseTrace = useCallback(
     (input: {
@@ -571,6 +572,7 @@ export function ExerciseTapClient({
           openingQuestion: topic?.openingQuestion,
           topicId: topic?.id,
           topicTitle: topic?.title,
+          conversationLanguage,
         }),
       });
       const payload = await response.json();

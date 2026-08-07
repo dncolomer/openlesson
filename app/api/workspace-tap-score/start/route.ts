@@ -36,6 +36,14 @@ export async function POST(req: NextRequest) {
     const requestedDurationSeconds = practice ? TAP_PRACTICE_DURATION_SECONDS : minutes * 60;
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
     const bodyInteractionKind = resolveTapInteractionKindFromBody(body as Record<string, unknown>);
+    const conversationLanguage =
+      body.conversationLanguage != null
+        ? String(body.conversationLanguage)
+        : body.tutoringLanguage != null
+          ? String(body.tutoringLanguage)
+          : body.language != null
+            ? String(body.language)
+            : "";
 
     const access = await resolveTapSessionAccess({
       privateToken,
@@ -112,13 +120,17 @@ export async function POST(req: NextRequest) {
         blockLocalContext: focused?.local_context ?? null,
         unusableCells: brief.unusableCells,
         durationSeconds: requestedDurationSeconds,
+        conversationLanguage,
       });
       openingQuestion = generated.exercise;
     } else {
       // Conversational TAP already uses LLM opening generation.
       openingQuestion =
         requestedOpeningQuestion ||
-        (await generateTapOpeningQuestion(brief, minutes, { practice }));
+        (await generateTapOpeningQuestion(brief, minutes, {
+          practice,
+          conversationLanguage,
+        }));
     }
 
     // Private TAP links are multi-use: reopening a completed link restarts a run

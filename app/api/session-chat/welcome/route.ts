@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
-import { getLanguageName } from "@/lib/tutoring-languages";
+import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
         .limit(4)
       : { data: [] };
 
-    const languageName = tutoringLanguage ? getLanguageName(tutoringLanguage) : undefined;
     const recentContext = (recentSessions || [])
       .map((session, index) => {
         const report = typeof session.report === "string" ? session.report.slice(0, 400) : "";
@@ -68,17 +67,20 @@ export async function POST(request: NextRequest) {
       .join("\n") || "No prior completed sessions available.";
 
     const { buildIleWelcomeSystemPrompt } = await import("@/lib/prompt-kernel/surfaces/ile");
-    const response = await callXaiText([
-      systemMessage(`${buildIleWelcomeSystemPrompt()}
+    const welcomeSystem = withConversationLanguageInstruction(
+      `${buildIleWelcomeSystemPrompt()}
 
 Rules:
-- ${languageName ? `Write in ${languageName}.` : "Write in English."}
 - 2 short paragraphs maximum.
 - Sound personal and welcoming, not generic.
 - If prior sessions are relevant, lightly connect to them without sounding creepy or over-specific.
 - Mention the current topic naturally.
 - End with one gentle invitation to resume practice (question or next-step prompt).
-- Do not say you reviewed private data; just sound like you remember the learning journey.`),
+- Do not say you reviewed private data; just sound like you remember the learning journey.`,
+      tutoringLanguage,
+    );
+    const response = await callXaiText([
+      systemMessage(welcomeSystem),
       userMessage(`Current session topic: ${problem}\n\nRecent sessions:\n${recentContext}`),
     ], {
       model: DEFAULT_MODEL,

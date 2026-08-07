@@ -16,6 +16,7 @@ import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruptio
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
+import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,6 +35,15 @@ export async function POST(req: NextRequest) {
     const practice = isTapPracticeRequest(body.practice);
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestThought = String(body.thought || "").trim();
+    // Same selector as TAP briefing speech language (client conversationLanguage).
+    const conversationLanguage =
+      body.conversationLanguage != null
+        ? String(body.conversationLanguage)
+        : body.tutoringLanguage != null
+          ? String(body.tutoringLanguage)
+          : body.language != null
+            ? String(body.language)
+            : "";
 
     if (!latestThought) return NextResponse.json({ error: "thought is required" }, { status: 400 });
 
@@ -95,8 +105,13 @@ export async function POST(req: NextRequest) {
       )
       .join("\n\n");
 
+    const systemPrompt = withConversationLanguageInstruction(
+      buildTapSelectiveThoughtSystemPrompt(context, { practice }),
+      conversationLanguage,
+    );
+
     const response = await callXai([
-      systemMessage(buildTapSelectiveThoughtSystemPrompt(context, { practice })),
+      systemMessage(systemPrompt),
       userMessage(`Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}`),
     ], {
       maxTokens: practice ? 280 : 500,

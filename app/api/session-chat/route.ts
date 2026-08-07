@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
-import { getLanguageName } from "@/lib/tutoring-languages";
+import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
@@ -53,11 +53,10 @@ export async function POST(request: NextRequest) {
         tutoringLanguage = sessionData.metadata.tutoringLanguage;
       }
     }
-    const languageName = tutoringLanguage ? getLanguageName(tutoringLanguage) : undefined;
-
-    const systemPrompt = languageName 
-      ? `IMPORTANT: Respond in ${languageName} throughout.\n\n${BASE_SYSTEM_PROMPT}`
-      : BASE_SYSTEM_PROMPT;
+    const systemPrompt = withConversationLanguageInstruction(
+      BASE_SYSTEM_PROMPT,
+      tutoringLanguage,
+    );
 
     const inputMessages = (messages || []) as Array<{ role: string; content: string; imageDataUrl?: string }>;
     const planContext = sessionPlan?.steps?.length

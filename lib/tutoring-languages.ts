@@ -77,3 +77,51 @@ export function coerceSpokenLocale(locale: string | null | undefined): SpokenLoc
 export function getLanguageName(locale: string): string {
   return tutoringLanguageNames[locale as TutoringLocale] || "English";
 }
+
+/**
+ * English meta-names for LLM instructions (models follow "Respond in Catalan"
+ * more reliably than an opaque code or native endonym alone).
+ */
+const PROMPT_LANGUAGE_ENGLISH_NAME: Record<string, string> = {
+  en: "English",
+  ca: "Catalan",
+  vi: "Vietnamese",
+  zh: "Chinese (Mandarin)",
+  es: "Spanish",
+  de: "German",
+  pl: "Polish",
+};
+
+/**
+ * Pure instruction block for model-facing system prompts so Helios / TAP / openings
+ * reply fully in the learner's selected conversation language.
+ * Empty/unknown → empty string (model defaults to English safely).
+ */
+export function buildConversationLanguageInstruction(
+  locale: string | null | undefined,
+): string {
+  if (locale == null || !String(locale).trim()) return "";
+  const code = coerceSpokenLocale(locale);
+  const localName = getLanguageName(code);
+  const engName = PROMPT_LANGUAGE_ENGLISH_NAME[code] || localName;
+  if (code === "en") {
+    return "IMPORTANT: Respond in English throughout for every learner-visible sentence.";
+  }
+  return [
+    `IMPORTANT: The learner selected ${engName} (${localName}) as the conversation language.`,
+    `Respond fully in ${engName} for every learner-visible sentence (openings, questions, facilitator replies, and exercise prompts).`,
+    `Do not mix English with ${engName} unless the learner explicitly asks to switch languages.`,
+  ].join(" ");
+}
+
+/** Prepend conversation-language instruction to a system (or system+task) prompt. */
+export function withConversationLanguageInstruction(
+  systemPrompt: string,
+  locale: string | null | undefined,
+): string {
+  const instr = buildConversationLanguageInstruction(locale);
+  const base = String(systemPrompt || "");
+  if (!instr) return base;
+  if (!base.trim()) return instr;
+  return `${instr}\n\n${base}`;
+}

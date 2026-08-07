@@ -513,6 +513,7 @@ export function TapScoreClient({
           entryQueryParams: entryQueryParamsRef.current,
             minutes,
             tapSessionId: tapSessionIdRef.current,
+            conversationLanguage,
           }),
         });
         const payload = await response.json();
@@ -528,7 +529,7 @@ export function TapScoreClient({
     return () => {
       cancelled = true;
     };
-  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes]);
+  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage]);
 
   const stashedThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
@@ -892,6 +893,7 @@ export function TapScoreClient({
           practice: isPracticeModeRef.current,
           thought: clean,
           messages: nextMessages,
+          conversationLanguage,
         }),
       });
       const payload = await response.json();
@@ -973,6 +975,7 @@ export function TapScoreClient({
           openingQuestion: topic?.openingQuestion,
           topicId: topic?.id,
           topicTitle: topic?.title,
+          conversationLanguage,
         }),
       });
       const payload = await response.json();

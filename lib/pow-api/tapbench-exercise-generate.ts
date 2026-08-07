@@ -30,6 +30,7 @@ import {
   type DomainExerciseSurface,
   type TapbenchExerciseContext,
 } from "@/lib/pow-api/tapbench-exercise-quality";
+import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 
 export {
   buildDomainExerciseAuthorSystemPrompt,
@@ -59,6 +60,8 @@ export interface GenerateDomainExerciseInput extends TapbenchExerciseContext {
   unusableCells?: Array<{ row: number; col: number }> | null;
   durationSeconds?: number | null;
   surface?: DomainExerciseSurface;
+  /** Learner conversation language (e.g. ca) — exercise text should be in this language. */
+  conversationLanguage?: string | null;
   /** Inject LLM for tests. */
   generateText?: (messages: { role: string; content: string }[]) => Promise<string | null>;
 }
@@ -195,7 +198,10 @@ export async function generateDomainExercise(
     };
   }
 
-  const system = buildDomainExerciseAuthorSystemPrompt(surface);
+  const system = withConversationLanguageInstruction(
+    buildDomainExerciseAuthorSystemPrompt(surface),
+    input.conversationLanguage,
+  );
   const user = buildDomainExerciseAuthorUserPrompt(input);
 
   try {

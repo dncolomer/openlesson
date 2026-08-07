@@ -14,11 +14,32 @@ interface MarkerRadarChartProps {
   variant?: "default" | "large";
 }
 
-function truncateLabel(label: string, markerCount: number): string {
-  const maxLength = markerCount > 7 ? 12 : markerCount > 5 ? 14 : 18;
+/** Soft-wrap full label into lines (never truncates or ellipsizes). */
+function wrapLabelLines(label: string, maxCharsPerLine: number): string[] {
   const trimmed = label.trim();
-  if (trimmed.length <= maxLength) return trimmed;
-  return `${trimmed.slice(0, maxLength - 1)}…`;
+  if (!trimmed) return [""];
+  if (trimmed.length <= maxCharsPerLine) return [trimmed];
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [trimmed];
+
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    // Single overlong word: keep whole word (do not trim mid-token).
+    if (!current) {
+      current = word;
+      continue;
+    }
+    if (`${current} ${word}`.length <= maxCharsPerLine) {
+      current = `${current} ${word}`;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [trimmed];
 }
 
 export function MarkerRadarChart({
@@ -44,16 +65,33 @@ export function MarkerRadarChart({
         : 84;
   const labelOffset = isLarge
     ? markerCount > 7
-      ? 30
+      ? 34
       : markerCount > 5
-        ? 36
-        : 42
+        ? 40
+        : 46
     : markerCount > 7
-      ? 22
+      ? 26
       : markerCount > 5
-        ? 28
-        : 34;
-  const padding = isLarge ? 96 : 78;
+        ? 32
+        : 38;
+  // Prefer shorter wrap width when many markers so rings stay readable; still full text.
+  const maxCharsPerLine =
+    markerCount > 7 ? 16 : markerCount > 5 ? 20 : isLarge ? 28 : 22;
+  const labelLineHeight = isLarge ? 12 : 10;
+  const longestLabel = markers.reduce(
+    (max, m) => Math.max(max, (m.label || "").trim().length),
+    0,
+  );
+  const maxLines = Math.max(
+    1,
+    ...markers.map((m) => wrapLabelLines(m.label || "", maxCharsPerLine).length),
+  );
+  // Expand viewBox so full multi-line vertex labels are not clipped.
+  const charPad = isLarge ? 5.2 : 4.4;
+  const padding = Math.max(
+    isLarge ? 96 : 78,
+    48 + Math.min(longestLabel, maxCharsPerLine) * charPad + (maxLines - 1) * labelLineHeight,
+  );
   const size = radius * 2 + padding * 2;
   const center = padding + radius;
 
@@ -63,18 +101,21 @@ export function MarkerRadarChart({
     const value = score / 100;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
-    const displayLabel = truncateLabel(marker.label, markerCount);
+    const labelLines = wrapLabelLines(marker.label || "", maxCharsPerLine);
+    // Stack multi-line labels around the radial anchor so they stay near the vertex.
+    const labelBlockOffset = ((labelLines.length - 1) * labelLineHeight) / 2;
 
     return {
       x: center + cos * radius * value,
       y: center + sin * radius * value,
       labelX: center + cos * (radius + labelOffset),
-      labelY: center + sin * (radius + labelOffset),
+      labelY: center + sin * (radius + labelOffset) - labelBlockOffset,
       scoreX: center + cos * (radius * value + 10),
       scoreY: center + sin * (radius * value + 10),
       textAnchor: (Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end") as "middle" | "start" | "end",
       score,
-      displayLabel,
+      labelLines,
+      fullLabel: (marker.label || "").trim(),
       marker,
     };
   });
@@ -145,9 +186,18 @@ export function MarkerRadarChart({
             textAnchor={point.textAnchor}
             dominantBaseline="middle"
             className={`fill-neutral-400 ${isLarge ? "text-[10px] sm:text-xs" : "text-[8px] sm:text-[9px]"}`}
+            data-marker-label={point.marker.id}
           >
-            {point.displayLabel}
-            <title>{point.marker.label}</title>
+            <title>{point.fullLabel}</title>
+            {point.labelLines.map((line, lineIndex) => (
+              <tspan
+                key={`${point.marker.id}-line-${lineIndex}`}
+                x={point.labelX}
+                dy={lineIndex === 0 ? 0 : labelLineHeight}
+              >
+                {line}
+              </tspan>
+            ))}
           </text>
         </g>
       ))}

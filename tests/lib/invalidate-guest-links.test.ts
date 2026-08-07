@@ -560,7 +560,7 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(panel).toContain('data-guest-link-invalidate-all="tap"');
     expect(panel).toContain('data-guest-link-invalidate-all="ile"');
     // Revoked links are not copyable
-    expect(panel).toContain("isRevoked ? undefined : createdLinks[link.id]");
+    expect(panel).toContain("isRevoked ? undefined : listUrl || createdLinks[link.id]");
     expect(panel).toContain('link.status !== "revoked"');
   });
 

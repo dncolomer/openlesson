@@ -285,23 +285,34 @@ describe("collectGuestLinkBrowseStatuses", () => {
 });
 
 describe("WorkspaceGuestLinksPanel browse UI structure", () => {
-  it("exposes Create|Browse inner tabs, search, and kind+status filters", () => {
+  it("exposes Create|Browse only (no TAPBench third tab), search, and kind+status filters", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("data-guest-links-inner-tabs");
     expect(panel).toContain('data-guest-links-inner-tab="create"');
     expect(panel).toContain('data-guest-links-inner-tab="browse"');
+    expect(panel).not.toContain('data-guest-links-inner-tab="tapbench"');
     expect(panel).toContain("data-guest-links-search");
     expect(panel).toContain("data-guest-links-filter-kind");
     expect(panel).toContain("data-guest-links-filter-status");
     expect(panel).toContain("data-guest-links-browse-list");
+    expect(panel).toContain('value="tapbench"');
     expect(panel).toContain("filterGuestLinkBrowseRows");
     expect(panel).toContain("buildGuestLinkBrowseRows");
+    expect(panel).toContain("tapbenchLinks");
   });
 
-  it("create controls remain and browse keeps invalidate/reissue/copy hooks", () => {
+  it("create is one primary submit; TAPBench mint folded in; browse keeps invalidate/copy", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("createTapLink");
     expect(panel).toContain("createIleLink");
+    expect(panel).toContain("mintTapbenchLink");
+    expect(panel).toContain("createSelectedLink");
+    expect(panel).toContain("data-guest-links-create-submit");
+    expect(panel).toContain("data-create-tapbench-link");
+    // Fewer parallel mint CTAs: single submit, not dual anonymous+member stacks
+    expect(panel).toContain("data-guest-links-product-select");
+    expect(panel).not.toMatch(/onClick=\{\(\) => void createTapLink\("anonymous"\)\}/);
+    expect(panel).not.toMatch(/onClick=\{\(\) => void createIleLink\("anonymous"\)\}/);
     expect(panel).toContain('data-guest-link-invalidate="tap"');
     expect(panel).toContain('data-guest-link-invalidate="ile"');
     expect(panel).toContain('data-guest-link-invalidate-all="tap"');
@@ -309,5 +320,40 @@ describe("WorkspaceGuestLinksPanel browse UI structure", () => {
     expect(panel).toContain("reissueTapLink");
     expect(panel).toContain("reissueIleLink");
     expect(panel).toContain("copyLink");
+    expect(panel).toContain("downloadTapbenchSkills");
+  });
+});
+
+describe("buildGuestLinkBrowseRows includes TAPBench", () => {
+  it("merges tapbench rows with kind filter", () => {
+    const rows = buildGuestLinkBrowseRows(
+      [TAP_PENDING],
+      [ILE_ACTIVE],
+      {
+        blockTitleById: { "block-intro": "Intro", "block-advanced": "Adv" },
+        entireWorkspaceLabel: "Entire workspace",
+        participantLabelFor: (l) => l.participant_type || "—",
+        tapbenchLinks: [
+          {
+            id: "tb-1",
+            block_id: null,
+            status: "active",
+            created_at: "2026-07-22T10:00:00.000Z",
+            duration_seconds: 900,
+            exercise: "Prove something",
+            url: "https://app/tapbench/tok",
+          },
+        ],
+      },
+    );
+    expect(rows.some((r) => r.kind === "tapbench")).toBe(true);
+    const onlyTb = filterGuestLinkBrowseRows(rows, {
+      query: "",
+      kind: "tapbench",
+      status: "all",
+    });
+    expect(onlyTb).toHaveLength(1);
+    expect(onlyTb[0].id).toBe("tb-1");
+    expect(onlyTb[0].detail).toContain("Prove");
   });
 });

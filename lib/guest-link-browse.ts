@@ -1,9 +1,9 @@
 /**
- * Client-side browse/search/filter for workspace TAP + ILE guest links.
+ * Client-side browse/search/filter for workspace TAP + ILE + TAPBench links.
  * Pure transforms so the Settings UI can filter large lists without new APIs.
  */
 
-export type GuestLinkBrowseKind = "tap" | "ile";
+export type GuestLinkBrowseKind = "tap" | "ile" | "tapbench";
 
 /** Normalized row shown on the guest-links Browse surface. */
 export type GuestLinkBrowseRow = {
@@ -19,8 +19,12 @@ export type GuestLinkBrowseRow = {
   block_id: string | null;
   created_at: string;
   completed_at: string | null;
-  /** TAP only; minutes shown when present. */
+  /** TAP / TAPBench duration when present. */
   requested_duration_seconds?: number | null;
+  /** Optional free-text (e.g. TAPBench exercise) for search. */
+  detail?: string | null;
+  /** Always-visible share URL when list API provides it. */
+  url?: string | null;
 };
 
 export type GuestLinkBrowseKindFilter = "all" | GuestLinkBrowseKind;
@@ -55,6 +59,19 @@ export type IleLinkBrowseSource = {
   completed_at: string | null;
 };
 
+export type TapbenchLinkBrowseSource = {
+  id: string;
+  block_id: string | null;
+  status: string;
+  created_at: string;
+  duration_seconds?: number | null;
+  remaining_ms?: number | null;
+  exercise?: string | null;
+  url?: string | null;
+  public_token?: string | null;
+  guest_user_id?: string | null;
+};
+
 export type BuildGuestLinkBrowseRowsOptions = {
   blockTitleById: Map<string, string> | Record<string, string>;
   entireWorkspaceLabel: string;
@@ -64,6 +81,9 @@ export type BuildGuestLinkBrowseRowsOptions = {
     assigned_user_id: string | null;
     guest_user_id: string | null;
   }) => string;
+  /** Optional TAPBench mint list merged into the same browse surface. */
+  tapbenchLinks?: readonly TapbenchLinkBrowseSource[] | null;
+  tapbenchParticipantLabel?: string;
 };
 
 function blockTitle(
@@ -77,14 +97,21 @@ function blockTitle(
 }
 
 /**
- * Merge TAP + ILE API rows into a single browse list (newest first by created_at).
+ * Merge TAP + ILE (+ optional TAPBench) API rows into one browse list
+ * (newest first by created_at).
  */
 export function buildGuestLinkBrowseRows(
   tapLinks: TapLinkBrowseSource[],
   ileLinks: IleLinkBrowseSource[],
   options: BuildGuestLinkBrowseRowsOptions,
 ): GuestLinkBrowseRow[] {
-  const { blockTitleById, entireWorkspaceLabel, participantLabelFor } = options;
+  const {
+    blockTitleById,
+    entireWorkspaceLabel,
+    participantLabelFor,
+    tapbenchLinks,
+    tapbenchParticipantLabel = "Agent",
+  } = options;
 
   const tapRows: GuestLinkBrowseRow[] = tapLinks.map((link) => ({
     id: link.id,
@@ -115,7 +142,25 @@ export function buildGuestLinkBrowseRows(
     completed_at: link.completed_at,
   }));
 
-  return [...tapRows, ...ileRows].sort((a, b) => {
+  const tbRows: GuestLinkBrowseRow[] = (tapbenchLinks ?? []).map((link) => ({
+    id: link.id,
+    kind: "tapbench" as const,
+    status: link.status || "active",
+    scopeLabel: link.block_id
+      ? blockTitle(blockTitleById, link.block_id)
+      : entireWorkspaceLabel,
+    participantLabel: tapbenchParticipantLabel,
+    guest_user_id: link.guest_user_id ?? null,
+    assigned_user_id: null,
+    block_id: link.block_id,
+    created_at: link.created_at,
+    completed_at: null,
+    requested_duration_seconds: link.duration_seconds ?? null,
+    detail: link.exercise ?? null,
+    url: link.url ?? null,
+  }));
+
+  return [...tapRows, ...ileRows, ...tbRows].sort((a, b) => {
     const ta = Date.parse(a.created_at) || 0;
     const tb = Date.parse(b.created_at) || 0;
     return tb - ta;
@@ -128,7 +173,7 @@ function normalizeSearch(s: string): string {
 
 /**
  * Whether a browse row matches the free-text query.
- * Matches status, scope/block title, participant label, link id, and kind.
+ * Matches status, scope/block title, participant label, link id, kind, detail.
  */
 export function guestLinkBrowseRowMatchesQuery(
   row: GuestLinkBrowseRow,
@@ -145,6 +190,8 @@ export function guestLinkBrowseRowMatchesQuery(
     row.guest_user_id ?? "",
     row.assigned_user_id ?? "",
     row.block_id ?? "",
+    row.detail ?? "",
+    row.url ?? "",
   ]
     .join(" ")
     .toLowerCase();

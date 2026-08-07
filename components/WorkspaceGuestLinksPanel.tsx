@@ -12,7 +12,6 @@ import {
   productIntentFromGuestLink,
   PRODUCT_INTENT_LABELS,
   resolveProductIntent,
-  type LearningStyle,
 } from "@/lib/product-intent";
 import {
   buildGuestLinkBrowseRows,
@@ -22,9 +21,14 @@ import {
   type GuestLinkBrowseRow,
   type GuestLinkBrowseStatusFilter,
 } from "@/lib/guest-link-browse";
+import {
+  buildTapbenchSkillsMarkdown,
+  downloadTapbenchSkillsMarkdown,
+  TAPBENCH_SKILLS_MD_FILENAME,
+} from "@/lib/pow-api/tapbench-skills-md";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
-import { WorkspaceTapbenchLinksPanel } from "@/components/WorkspaceTapbenchLinksPanel";
+import type { TapbenchLinkRow } from "@/components/WorkspaceTapbenchLinksPanel";
 
 interface WorkspaceBlock {
   id: string;
@@ -74,7 +78,15 @@ interface OrgMember {
   username: string | null;
 }
 
-type GuestLinksInnerTab = "create" | "browse" | "tapbench";
+type GuestLinksInnerTab = "create" | "browse";
+
+/** Single create surface product kind (portal-style compact selector). */
+type CreateProductKind =
+  | "timed_explore"
+  | "timed_drill"
+  | "open_ended_explore"
+  | "open_ended_drill"
+  | "tapbench";
 
 function participantLabel(
   link: {
@@ -104,7 +116,7 @@ interface WorkspaceGuestLinksPanelProps {
 
 /**
  * Owner settings: create and browse shareable practice links.
- * UI is Explore/Drill × Open-ended/Timed (not product code names).
+ * Portal-inspired: Create | Browse only; one create form for TAP/ILE/TAPBench.
  */
 export function WorkspaceGuestLinksPanel({
   workspaceId,
@@ -116,27 +128,27 @@ export function WorkspaceGuestLinksPanel({
   const [blocks, setBlocks] = useState<WorkspaceBlock[]>([]);
   const [tapLinks, setTapLinks] = useState<TapLinkRow[]>([]);
   const [ileLinks, setIleLinks] = useState<IleLinkRow[]>([]);
+  const [tapbenchLinks, setTapbenchLinks] = useState<TapbenchLinkRow[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
+  /** Shared scope block (optional for timed/TAPBench; required for open-ended). */
   const [selectedBlockId, setSelectedBlockId] = useState("");
-  const [selectedIleBlockId, setSelectedIleBlockId] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
-  const [selectedIleMemberId, setSelectedIleMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
-  /** Timed Drill when true; Timed Exploration when false. */
-  const [timedStyle, setTimedStyle] = useState<LearningStyle>("explore");
-  /** Open-ended Drill when true; Open-ended Exploration when false. */
-  const [openEndedStyle, setOpenEndedStyle] = useState<LearningStyle>("explore");
-  // Back-compat aliases used by create payloads
-  const exerciseTap = timedStyle === "drill";
-  const ileProjectMode = openEndedStyle === "drill";
+  /** Compact product selector (replaces dual timed + dual open-ended + TAPBench stacks). */
+  const [createProduct, setCreateProduct] =
+    useState<CreateProductKind>("timed_explore");
+  /** anonymous (default) or assigned org member */
+  const [participantMode, setParticipantMode] = useState<"anonymous" | "user">(
+    "anonymous",
+  );
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
   const [creatingIleLink, setCreatingIleLink] = useState(false);
+  const [mintingTapbench, setMintingTapbench] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createIleError, setCreateIleError] = useState<string | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [createdLinks, setCreatedLinks] = useState<Record<string, string>>({});
   const [invalidating, setInvalidating] = useState(false);
@@ -144,10 +156,22 @@ export function WorkspaceGuestLinksPanel({
   const [browseKind, setBrowseKind] = useState<GuestLinkBrowseKindFilter>("all");
   const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
+  const isTimedProduct =
+    createProduct === "timed_explore" || createProduct === "timed_drill";
+  const isOpenEndedProduct =
+    createProduct === "open_ended_explore" || createProduct === "open_ended_drill";
+  const isTapbenchProduct = createProduct === "tapbench";
+  const timedStyle =
+    createProduct === "timed_drill" ? ("drill" as const) : ("explore" as const);
+  const openEndedStyle =
+    createProduct === "open_ended_drill" ? ("drill" as const) : ("explore" as const);
+  // Back-compat data hooks for exercise / project mode markers
+  const exerciseTap = timedStyle === "drill";
+  const ileProjectMode = openEndedStyle === "drill";
+  const creatingBusy = creatingLink || creatingIleLink || mintingTapbench;
+
   const fieldClass =
     "mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
-  const secondaryBtnClass =
-    "rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-white transition hover:border-neutral-500 disabled:opacity-40";
   const primaryBtnClass =
     "rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
@@ -160,8 +184,10 @@ export function WorkspaceGuestLinksPanel({
       blockTitleById,
       entireWorkspaceLabel: t("planView.tapLinksEntireWorkspace"),
       participantLabelFor: (link) => participantLabel(link, t),
+      tapbenchLinks,
+      tapbenchParticipantLabel: "Agent",
     });
-  }, [blockTitleById, ileLinks, t, tapLinks]);
+  }, [blockTitleById, ileLinks, t, tapLinks, tapbenchLinks]);
 
   const filteredBrowseRows = useMemo(() => {
     return filterGuestLinkBrowseRows(browseRows, {
@@ -181,9 +207,12 @@ export function WorkspaceGuestLinksPanel({
     setLinksLoading(true);
     setLinksError(null);
     try {
-      const [linksRes, ileRes, orgRes] = await Promise.all([
+      const [linksRes, ileRes, tbRes, orgRes] = await Promise.all([
         fetch(`/api/workspace/tap-links?workspaceId=${encodeURIComponent(workspaceId)}`),
         fetch(`/api/workspace/ile-links?workspaceId=${encodeURIComponent(workspaceId)}`),
+        fetch(
+          `/api/workspace/tapbench-links?workspaceId=${encodeURIComponent(workspaceId)}`,
+        ),
         fetch("/api/organization"),
       ]);
 
@@ -192,6 +221,15 @@ export function WorkspaceGuestLinksPanel({
 
       const ileData = await ileRes.json();
       if (!ileRes.ok) throw new Error(ileData.error || t("planView.ileLinksLoadError"));
+
+      const tbData = await tbRes.json().catch(() => ({}));
+      if (tbRes.ok) {
+        setTapbenchLinks(
+          Array.isArray(tbData.tapbench_links) ? tbData.tapbench_links : [],
+        );
+      } else {
+        setTapbenchLinks([]);
+      }
 
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
@@ -206,11 +244,11 @@ export function WorkspaceGuestLinksPanel({
       setTapLinks(linksData.tap_links || []);
       setIleLinks(ileData.ile_links || []);
 
-      setSelectedIleBlockId((current) => {
+      setSelectedBlockId((current) => {
         if (current) return current;
         if (nextBlocks.length === 0) return "";
-        const startBlock = nextBlocks.find((b) => b.is_start) || nextBlocks[0];
-        return startBlock.id;
+        // Prefer empty (workspace) for timed; preselect start for open-ended convenience.
+        return "";
       });
 
       if (orgRes.ok) {
@@ -296,6 +334,32 @@ export function WorkspaceGuestLinksPanel({
       workspaceId,
     ],
   );
+
+  const mintTapbenchLink = useCallback(async () => {
+    setMintingTapbench(true);
+    setCreateError(null);
+    try {
+      const response = await fetch("/api/workspace/tapbench-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          minutes,
+          ...(selectedBlockId ? { blockId: selectedBlockId } : {}),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to create TAPBench link");
+      await loadTapResources();
+      setInnerTab("browse");
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : "Failed to create TAPBench link",
+      );
+    } finally {
+      setMintingTapbench(false);
+    }
+  }, [loadTapResources, minutes, selectedBlockId, workspaceId]);
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
   const reissueTapLink = useCallback(
@@ -392,14 +456,14 @@ export function WorkspaceGuestLinksPanel({
   const createIleLink = useCallback(
     async (participantType: "anonymous" | "user") => {
       setCreatingIleLink(true);
-      setCreateIleError(null);
+      setCreateError(null);
       try {
-        if (!selectedIleBlockId) {
+        if (!selectedBlockId) {
           throw new Error(t("planView.ileLinksSelectBlock"));
         }
         const body: Record<string, unknown> = {
           workspaceId,
-          blockId: selectedIleBlockId,
+          blockId: selectedBlockId,
           participant_type: participantType,
           show_end_session: showEndSession,
           access_mode: "private",
@@ -407,8 +471,8 @@ export function WorkspaceGuestLinksPanel({
           project: openEndedStyle === "drill",
         };
         if (participantType === "user") {
-          if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
-          body.user_id = selectedIleMemberId;
+          if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
+          body.user_id = selectedMemberId;
         }
 
         const response = await fetch("/api/workspace/ile-links", {
@@ -428,7 +492,7 @@ export function WorkspaceGuestLinksPanel({
         await loadTapResources();
         setInnerTab("browse");
       } catch (error) {
-        setCreateIleError(
+        setCreateError(
           error instanceof Error ? error.message : t("planView.ileLinksCreateError"),
         );
       } finally {
@@ -437,8 +501,8 @@ export function WorkspaceGuestLinksPanel({
     },
     [
       loadTapResources,
-      selectedIleBlockId,
-      selectedIleMemberId,
+      selectedBlockId,
+      selectedMemberId,
       showEndSession,
       openEndedStyle,
       t,
@@ -446,11 +510,34 @@ export function WorkspaceGuestLinksPanel({
     ],
   );
 
+  /** Single primary create action — dispatches by selected product kind. */
+  const createSelectedLink = useCallback(async () => {
+    const participantType =
+      participantMode === "user" && orgMembers.length > 0 ? "user" : "anonymous";
+    if (isTapbenchProduct) {
+      await mintTapbenchLink();
+      return;
+    }
+    if (isOpenEndedProduct) {
+      await createIleLink(participantType);
+      return;
+    }
+    await createTapLink(participantType);
+  }, [
+    createIleLink,
+    createTapLink,
+    isOpenEndedProduct,
+    isTapbenchProduct,
+    mintTapbenchLink,
+    orgMembers.length,
+    participantMode,
+  ]);
+
   /** Same card: rotate private URL; keep guest and block scope. */
   const reissueIleLink = useCallback(
     async (linkId: string) => {
       setCreatingIleLink(true);
-      setCreateIleError(null);
+      setCreateError(null);
       try {
         const response = await fetch("/api/workspace/ile-links", {
           method: "POST",
@@ -468,7 +555,7 @@ export function WorkspaceGuestLinksPanel({
         }
         await loadTapResources();
       } catch (error) {
-        setCreateIleError(
+        setCreateError(
           error instanceof Error ? error.message : t("planView.ileLinksCreateError"),
         );
       } finally {
@@ -482,7 +569,7 @@ export function WorkspaceGuestLinksPanel({
     async (linkId: string) => {
       if (!window.confirm(t("planView.ileLinksInvalidateConfirm"))) return;
       setInvalidating(true);
-      setCreateIleError(null);
+      setCreateError(null);
       try {
         const response = await fetch("/api/workspace/ile-links", {
           method: "POST",
@@ -498,7 +585,7 @@ export function WorkspaceGuestLinksPanel({
         });
         await loadTapResources();
       } catch (error) {
-        setCreateIleError(
+        setCreateError(
           error instanceof Error ? error.message : t("planView.ileLinksInvalidateError"),
         );
       } finally {
@@ -511,7 +598,7 @@ export function WorkspaceGuestLinksPanel({
   const invalidateAllIleLinks = useCallback(async () => {
     if (!window.confirm(t("planView.ileLinksInvalidateAllConfirm"))) return;
     setInvalidating(true);
-    setCreateIleError(null);
+    setCreateError(null);
     try {
       const response = await fetch("/api/workspace/ile-links", {
         method: "POST",
@@ -531,7 +618,7 @@ export function WorkspaceGuestLinksPanel({
       });
       await loadTapResources();
     } catch (error) {
-      setCreateIleError(
+      setCreateError(
         error instanceof Error ? error.message : t("planView.ileLinksInvalidateError"),
       );
     } finally {
@@ -552,31 +639,89 @@ export function WorkspaceGuestLinksPanel({
     [t],
   );
 
+  const downloadTapbenchSkills = useCallback(
+    (link: TapbenchLinkRow) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+      const ok = downloadTapbenchSkillsMarkdown({
+        workspace_id: link.workspace_id || workspaceId,
+        block_id: link.block_id,
+        id: link.id,
+        session_token: link.public_token,
+        url: link.url,
+        exercise: link.exercise,
+        duration_seconds: link.duration_seconds,
+        expires_at: link.expires_at,
+        remaining_ms: link.remaining_ms,
+        status: link.status,
+        baseUrl: origin,
+      });
+      if (!ok) {
+        const md = buildTapbenchSkillsMarkdown({
+          workspace_id: link.workspace_id || workspaceId,
+          block_id: link.block_id,
+          id: link.id,
+          session_token: link.public_token,
+          url: link.url,
+          exercise: link.exercise,
+          duration_seconds: link.duration_seconds,
+          expires_at: link.expires_at,
+          remaining_ms: link.remaining_ms,
+          status: link.status,
+          baseUrl: origin,
+        });
+        const a = document.createElement("a");
+        a.href = `data:text/markdown;charset=utf-8,${encodeURIComponent(md)}`;
+        a.download = TAPBENCH_SKILLS_MD_FILENAME;
+        a.setAttribute("data-tapbench-skills-download-anchor", "1");
+        a.click();
+      }
+    },
+    [workspaceId],
+  );
+
   const renderBrowseRow = (link: GuestLinkBrowseRow) => {
     const isRevoked = link.status === "revoked";
     const isTap = link.kind === "tap";
+    const isIle = link.kind === "ile";
+    const isTapbench = link.kind === "tapbench";
+    const tbRow = isTapbench
+      ? tapbenchLinks.find((row) => row.id === link.id)
+      : undefined;
     // Prefer durable list URL (public_token); fall back to just-created client memory.
     const listUrl = isTap
       ? tapLinks.find((row) => row.id === link.id)?.url ||
         tapLinks.find((row) => row.id === link.id)?.private_url
-      : ileLinks.find((row) => row.id === link.id)?.url ||
-        ileLinks.find((row) => row.id === link.id)?.private_url;
+      : isIle
+        ? ileLinks.find((row) => row.id === link.id)?.url ||
+          ileLinks.find((row) => row.id === link.id)?.private_url
+        : link.url || tbRow?.url;
     // Revoked links are not copyable (keep expression shape for structural tests).
     const privateUrl = isRevoked ? undefined : listUrl || createdLinks[link.id];
-    const busy = invalidating || (isTap ? creatingLink : creatingIleLink);
-    const intent = productIntentFromGuestLink({
-      kind: link.kind,
-      session_mode: ileLinks.find((row) => row.id === link.id)?.session_mode,
-      interaction_kind: tapLinks.find((row) => row.id === link.id)?.interaction_kind,
-    });
-    const clusterLabel = productIntentClusterLabel(intent);
+    const busy =
+      invalidating ||
+      (isTap ? creatingLink : isIle ? creatingIleLink : mintingTapbench);
+    const intent =
+      isTap || isIle
+        ? productIntentFromGuestLink({
+            kind: isTap ? "tap" : "ile",
+            session_mode: ileLinks.find((row) => row.id === link.id)?.session_mode,
+            interaction_kind: tapLinks.find((row) => row.id === link.id)
+              ?.interaction_kind,
+          })
+        : null;
+    const clusterLabel = isTapbench
+      ? "TAPBench"
+      : intent
+        ? productIntentClusterLabel(intent)
+        : link.kind;
 
     return (
       <li
         key={`${link.kind}-${link.id}`}
         data-guest-link-status={link.status}
         data-guest-link-kind={link.kind}
-        data-product-intent-id={intent.id}
+        data-product-intent-id={intent?.id || (isTapbench ? "tapbench" : undefined)}
+        data-tapbench-link-id={isTapbench ? link.id : undefined}
         className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
       >
         <div className="min-w-0 text-neutral-400">
@@ -587,13 +732,13 @@ export function WorkspaceGuestLinksPanel({
             >
               {clusterLabel}
             </span>
-            {isTap && intent.interaction_kind === "exercise" ? (
+            {isTap && intent?.interaction_kind === "exercise" ? (
               <span
                 data-guest-link-interaction-kind="exercise"
                 className="mr-2 hidden"
               />
             ) : null}
-            {!isTap && intent.session_mode === "project" ? (
+            {isIle && intent?.session_mode === "project" ? (
               <span
                 data-guest-link-session-mode="project"
                 data-ile-project-mode-badge
@@ -612,7 +757,8 @@ export function WorkspaceGuestLinksPanel({
             ) : null}
           </p>
           <p>
-            {isTap ? t("planView.tapLinksScope") : t("planView.ileLinksBlock")}: {link.scopeLabel}
+            {isIle ? t("planView.ileLinksBlock") : t("planView.tapLinksScope")}:{" "}
+            {link.scopeLabel}
           </p>
           <p>
             {t("planView.tapLinksParticipant")}: {link.participantLabel}
@@ -622,13 +768,24 @@ export function WorkspaceGuestLinksPanel({
               </span>
             ) : null}
           </p>
-          {isTap && link.requested_duration_seconds != null ? (
+          {(isTap || isTapbench) && link.requested_duration_seconds != null ? (
             <p>{Math.round(link.requested_duration_seconds / 60)} min</p>
+          ) : null}
+          {isTapbench && link.detail ? (
+            <p className="mt-0.5 line-clamp-2 text-neutral-300">{link.detail}</p>
+          ) : null}
+          {isTapbench && privateUrl ? (
+            <p
+              className="mt-0.5 break-all font-mono text-[10px] text-cyan-500/90"
+              data-tapbench-link-url
+            >
+              {privateUrl}
+            </p>
           ) : null}
           <p className="font-mono text-[10px] text-neutral-600">{link.id}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {link.guest_user_id ? (
+          {link.guest_user_id && (isTap || isIle) ? (
             <button
               type="button"
               disabled={busy}
@@ -651,7 +808,7 @@ export function WorkspaceGuestLinksPanel({
               {t("planView.tapLinksInvalidate")}
             </button>
           ) : null}
-          {!isRevoked && !isTap ? (
+          {!isRevoked && isIle ? (
             <button
               type="button"
               disabled={invalidating || creatingIleLink}
@@ -662,11 +819,24 @@ export function WorkspaceGuestLinksPanel({
               {t("planView.ileLinksInvalidate")}
             </button>
           ) : null}
+          {isTapbench && tbRow ? (
+            <button
+              type="button"
+              onClick={() => downloadTapbenchSkills(tbRow)}
+              className="rounded-md border border-cyan-800/60 bg-cyan-950/30 px-2.5 py-1.5 text-[11px] text-cyan-200 transition hover:border-cyan-600"
+              data-download-tapbench-skills
+              data-tapbench-skills-md
+              title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}
+            >
+              Download skills.md
+            </button>
+          ) : null}
           {privateUrl ? (
             <button
               type="button"
               onClick={() => void copyLink(link.id, privateUrl)}
               className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+              data-copy-tapbench-link={isTapbench ? true : undefined}
             >
               {copiedLinkId === link.id
                 ? t("planView.tapLinksCopied")
@@ -692,8 +862,44 @@ export function WorkspaceGuestLinksPanel({
   const innerTabs = [
     { id: "create" as const, label: t("planView.guestLinksTabCreate") },
     { id: "browse" as const, label: t("planView.guestLinksTabBrowse") },
-    { id: "tapbench" as const, label: "TAPBench" },
   ];
+
+  const productOptions: Array<{
+    id: CreateProductKind;
+    label: string;
+    hint: string;
+  }> = [
+    {
+      id: "timed_explore",
+      label: PRODUCT_INTENT_LABELS.timedExplore,
+      hint: PRODUCT_INTENT_LABELS.timedExploreHint,
+    },
+    {
+      id: "timed_drill",
+      label: PRODUCT_INTENT_LABELS.timedDrill,
+      hint: PRODUCT_INTENT_LABELS.timedDrillHint,
+    },
+    {
+      id: "open_ended_explore",
+      label: PRODUCT_INTENT_LABELS.openEndedExplore,
+      hint: PRODUCT_INTENT_LABELS.openEndedExploreHint,
+    },
+    {
+      id: "open_ended_drill",
+      label: PRODUCT_INTENT_LABELS.openEndedDrill,
+      hint: PRODUCT_INTENT_LABELS.openEndedDrillHint,
+    },
+    {
+      id: "tapbench",
+      label: "TAPBench",
+      hint: "Timed agent exercise with Stash/Submit session token.",
+    },
+  ];
+
+  const createDisabled =
+    creatingBusy ||
+    (isOpenEndedProduct && !selectedBlockId) ||
+    (participantMode === "user" && !selectedMemberId && !isTapbenchProduct);
 
   return (
     <div className="flex w-full flex-col gap-0" data-settings-section="guest-links">
@@ -712,47 +918,113 @@ export function WorkspaceGuestLinksPanel({
           <div
             className="flex flex-col gap-5 p-5 sm:p-6"
             data-guest-links-inner-tab="create"
+            data-product-intent="guest-links-create"
+            data-tapbench-mint
+            data-region-tapbench-links
+            data-knowledge-links-tapbench
             role="tabpanel"
           >
-            <div data-product-intent="guest-links-create">
-              <h3 className="text-sm font-medium text-white">Timed runs</h3>
+            <div>
+              <h3 className="text-sm font-medium text-white">Create knowledge link</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Share a timed practice link. Choose Exploration (dialogue) or Drill (solo exercise).
+                Pick a product, scope, and participant — one create action mints the share link
+                (including TAPBench for agents).
               </p>
+            </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs text-neutral-400">
-                  {t("planView.tapLinksScope")}
-                  <select
-                    value={selectedBlockId}
-                    onChange={(event) => setSelectedBlockId(event.target.value)}
-                    className={fieldClass}
-                  >
+            <fieldset data-guest-links-product-select data-product-intent="create-product">
+              <legend className="text-xs text-neutral-400">Product</legend>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {productOptions.map((opt) => {
+                  const selected = createProduct === opt.id;
+                  return (
+                    <label
+                      key={opt.id}
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
+                        selected
+                          ? "border-white bg-white/5 text-white"
+                          : "border-neutral-700 bg-neutral-900 text-neutral-400"
+                      }`}
+                      data-guest-links-product={opt.id}
+                    >
+                      <input
+                        type="radio"
+                        name="guest-links-product"
+                        className="mt-0.5"
+                        checked={selected}
+                        onChange={() => setCreateProduct(opt.id)}
+                      />
+                      <span>
+                        <span className="block font-medium text-neutral-100">{opt.label}</span>
+                        <span className="mt-0.5 block text-[10px] text-neutral-500">
+                          {opt.hint}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {/* Structural hooks for timed/open-ended styles (selection via product radios). */}
+              <span
+                className="hidden"
+                data-product-intent="timed-style"
+                data-guest-link-exercise-tap={exerciseTap ? "true" : "false"}
+              />
+              <span
+                className="hidden"
+                data-product-intent="open-ended-style"
+                data-guest-link-ile-project-mode={ileProjectMode ? "true" : "false"}
+                data-ile-session-mode={ileProjectMode ? "project" : "learning"}
+              />
+            </fieldset>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-xs text-neutral-400">
+                {isOpenEndedProduct
+                  ? t("planView.ileLinksBlock")
+                  : t("planView.tapLinksScope")}
+                <select
+                  value={selectedBlockId}
+                  onChange={(event) => setSelectedBlockId(event.target.value)}
+                  className={fieldClass}
+                  data-tapbench-block-select={isTapbenchProduct ? true : undefined}
+                >
+                  {isOpenEndedProduct ? (
+                    <option value="">{t("planView.ileLinksSelectBlock")}</option>
+                  ) : (
                     <option value="">{t("planView.tapLinksEntireWorkspace")}</option>
-                    {blocks.map((block) => (
-                      <option key={block.id} value={block.id}>
-                        {block.title || block.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  )}
+                  {blocks.map((block) => (
+                    <option key={block.id} value={block.id}>
+                      {block.title || block.id}
+                      {block.is_start ? " (start)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
+              {isTimedProduct || isTapbenchProduct ? (
                 <label className="block text-xs text-neutral-400">
                   {t("planView.tapLinksMinutes")}
                   <input
                     type="number"
-                    min={TAP_LINK_MIN_MINUTES}
-                    max={TAP_LINK_MAX_MINUTES}
+                    min={isTapbenchProduct ? 1 : TAP_LINK_MIN_MINUTES}
+                    max={isTapbenchProduct ? 180 : TAP_LINK_MAX_MINUTES}
                     value={minutes}
                     onChange={(event) =>
-                      setMinutes(Number(event.target.value) || TAP_LINK_DEFAULT_MINUTES)
+                      setMinutes(
+                        Number(event.target.value) || TAP_LINK_DEFAULT_MINUTES,
+                      )
                     }
                     className={fieldClass}
+                    data-tapbench-minutes={isTapbenchProduct ? true : undefined}
                   />
                 </label>
-              </div>
+              ) : null}
+            </div>
 
-              <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+            {!isTapbenchProduct ? (
+              <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
                 <input
                   type="checkbox"
                   className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
@@ -763,63 +1035,37 @@ export function WorkspaceGuestLinksPanel({
                 <span>
                   <span className="font-medium text-neutral-300">Show End Session button</span>
                   <span className="mt-0.5 block text-neutral-500">
-                    Default on. Uncheck for open-ended runs. Share the same link with different query
-                    params (e.g. ?candidate_id=…) to attribute PoW to different guests.
+                    Default on. Uncheck to hide End Session on the guest runtime.
                   </span>
                 </span>
               </label>
+            ) : null}
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-product-intent="timed-style">
-                <button
-                  type="button"
-                  data-guest-link-exercise-tap={timedStyle === "drill" ? "false" : "true"}
-                  onClick={() => setTimedStyle("explore")}
-                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
-                    timedStyle === "explore"
-                      ? "border-white bg-white text-black"
-                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
-                  }`}
-                >
-                  <span className="font-medium">{PRODUCT_INTENT_LABELS.timedExplore}</span>
-                  <span className="mt-0.5 block text-[10px] opacity-80">
-                    {PRODUCT_INTENT_LABELS.timedExploreHint}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  data-guest-link-exercise-tap={timedStyle === "drill" ? "true" : "false"}
-                  onClick={() => setTimedStyle("drill")}
-                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
-                    timedStyle === "drill"
-                      ? "border-white bg-white text-black"
-                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
-                  }`}
-                >
-                  <span className="font-medium">{PRODUCT_INTENT_LABELS.timedDrill}</span>
-                  <span className="mt-0.5 block text-[10px] opacity-80">
-                    {PRODUCT_INTENT_LABELS.timedDrillHint}
-                  </span>
-                </button>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={creatingLink}
-                  onClick={() => void createTapLink("anonymous")}
-                  className={primaryBtnClass}
-                >
-                  {creatingLink
-                    ? t("planView.tapLinksCreating")
-                    : t("planView.tapLinksCreateAnonymous")}
-                </button>
-
-                {orgMembers.length > 0 ? (
-                  <>
+            {!isTapbenchProduct && orgMembers.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs text-neutral-400">
+                  Participant
+                  <select
+                    value={participantMode}
+                    onChange={(e) =>
+                      setParticipantMode(e.target.value as "anonymous" | "user")
+                    }
+                    className={fieldClass}
+                    data-guest-links-participant-mode
+                  >
+                    <option value="anonymous">
+                      {t("planView.tapLinksParticipantAnonymous")}
+                    </option>
+                    <option value="user">{t("planView.tapLinksParticipantMember")}</option>
+                  </select>
+                </label>
+                {participantMode === "user" ? (
+                  <label className="block text-xs text-neutral-400">
+                    {t("planView.tapLinksSelectMember")}
                     <select
                       value={selectedMemberId}
                       onChange={(event) => setSelectedMemberId(event.target.value)}
-                      className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                      className={fieldClass}
                     >
                       <option value="">{t("planView.tapLinksSelectMember")}</option>
                       {orgMembers.map((member) => (
@@ -828,128 +1074,38 @@ export function WorkspaceGuestLinksPanel({
                         </option>
                       ))}
                     </select>
-                    <button
-                      type="button"
-                      disabled={creatingLink || !selectedMemberId}
-                      onClick={() => void createTapLink("user")}
-                      className={secondaryBtnClass}
-                    >
-                      {creatingLink
-                        ? t("planView.tapLinksCreating")
-                        : t("planView.tapLinksCreateMember")}
-                    </button>
-                  </>
+                  </label>
                 ) : null}
               </div>
+            ) : null}
 
-              {createError ? <p className="mt-3 text-xs text-red-400">{createError}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={createDisabled}
+                onClick={() => void createSelectedLink()}
+                className={primaryBtnClass}
+                data-guest-links-create-submit
+                data-create-tapbench-link={isTapbenchProduct ? true : undefined}
+              >
+                {creatingBusy
+                  ? isTapbenchProduct
+                    ? "Creating…"
+                    : isOpenEndedProduct
+                      ? t("planView.ileLinksCreating")
+                      : t("planView.tapLinksCreating")
+                  : isTapbenchProduct
+                    ? "Create TAPBench link"
+                    : "Create link"}
+              </button>
             </div>
 
-            <div className="border-t border-neutral-800/80 pt-5" data-product-intent="open-ended-create">
-              <h3 className="text-sm font-medium text-white">Open-ended runs</h3>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Share an open-ended practice link for a single block. Choose Exploration (dialogue) or
-                Drill (exercises per chapter).
+            {createError ? (
+              <p className="text-xs text-red-400" data-guest-links-create-error>
+                {createError}
               </p>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs text-neutral-400 sm:col-span-2">
-                  {t("planView.ileLinksBlock")}
-                  <select
-                    value={selectedIleBlockId}
-                    onChange={(event) => setSelectedIleBlockId(event.target.value)}
-                    className={fieldClass}
-                  >
-                    <option value="">{t("planView.ileLinksSelectBlock")}</option>
-                    {blocks.map((block) => (
-                      <option key={block.id} value={block.id}>
-                        {block.title || block.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-product-intent="open-ended-style">
-                <button
-                  type="button"
-                  data-guest-link-ile-project-mode={openEndedStyle === "drill" ? "false" : "true"}
-                  data-ile-session-mode={openEndedStyle === "drill" ? "learning" : "learning"}
-                  onClick={() => setOpenEndedStyle("explore")}
-                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
-                    openEndedStyle === "explore"
-                      ? "border-white bg-white text-black"
-                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
-                  }`}
-                >
-                  <span className="font-medium">{PRODUCT_INTENT_LABELS.openEndedExplore}</span>
-                  <span className="mt-0.5 block text-[10px] opacity-80">
-                    {PRODUCT_INTENT_LABELS.openEndedExploreHint}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  data-guest-link-ile-project-mode={openEndedStyle === "drill" ? "true" : "false"}
-                  data-ile-session-mode={openEndedStyle === "drill" ? "project" : "learning"}
-                  onClick={() => setOpenEndedStyle("drill")}
-                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
-                    openEndedStyle === "drill"
-                      ? "border-white bg-white text-black"
-                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
-                  }`}
-                >
-                  <span className="font-medium">{PRODUCT_INTENT_LABELS.openEndedDrill}</span>
-                  <span className="mt-0.5 block text-[10px] opacity-80">
-                    {PRODUCT_INTENT_LABELS.openEndedDrillHint}
-                  </span>
-                </button>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={creatingIleLink || !selectedIleBlockId}
-                  onClick={() => void createIleLink("anonymous")}
-                  className={primaryBtnClass}
-                >
-                  {creatingIleLink
-                    ? t("planView.ileLinksCreating")
-                    : t("planView.ileLinksCreateAnonymous")}
-                </button>
-
-                {orgMembers.length > 0 ? (
-                  <>
-                    <select
-                      value={selectedIleMemberId}
-                      onChange={(event) => setSelectedIleMemberId(event.target.value)}
-                      className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-                    >
-                      <option value="">{t("planView.tapLinksSelectMember")}</option>
-                      {orgMembers.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {memberLabel(member)}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={creatingIleLink || !selectedIleBlockId || !selectedIleMemberId}
-                      onClick={() => void createIleLink("user")}
-                      className={secondaryBtnClass}
-                    >
-                      {creatingIleLink
-                        ? t("planView.ileLinksCreating")
-                        : t("planView.ileLinksCreateMember")}
-                    </button>
-                  </>
-                ) : null}
-              </div>
-
-              {createIleError ? (
-                <p className="mt-3 text-xs text-red-400">{createIleError}</p>
-              ) : null}
-              {linksError ? <p className="mt-3 text-xs text-red-400">{linksError}</p> : null}
-            </div>
+            ) : null}
+            {linksError ? <p className="text-xs text-red-400">{linksError}</p> : null}
           </div>
         ) : null}
 
@@ -993,6 +1149,7 @@ export function WorkspaceGuestLinksPanel({
                   <option value="all">{t("planView.guestLinksFilterKindAll")}</option>
                   <option value="tap">{t("planView.guestLinksFilterKindTap")}</option>
                   <option value="ile">{t("planView.guestLinksFilterKindIle")}</option>
+                  <option value="tapbench">TAPBench</option>
                 </select>
               </label>
               <label className="block text-xs text-neutral-400">
@@ -1050,7 +1207,6 @@ export function WorkspaceGuestLinksPanel({
             </div>
 
             {createError ? <p className="text-xs text-red-400">{createError}</p> : null}
-            {createIleError ? <p className="text-xs text-red-400">{createIleError}</p> : null}
             {linksError ? <p className="text-xs text-red-400">{linksError}</p> : null}
 
             {linksLoading ? (
@@ -1068,21 +1224,14 @@ export function WorkspaceGuestLinksPanel({
                 {t("planView.guestLinksBrowseNoMatches")}
               </p>
             ) : (
-              <ul className="space-y-2" data-guest-links-browse-list>
+              <ul
+                className="space-y-2"
+                data-guest-links-browse-list
+                data-tapbench-links-list
+              >
                 {filteredBrowseRows.map((row) => renderBrowseRow(row))}
               </ul>
             )}
-          </div>
-        ) : null}
-
-        {innerTab === "tapbench" ? (
-          <div
-            className="flex flex-col gap-5 p-5 sm:p-6"
-            data-guest-links-inner-tab="tapbench"
-            data-knowledge-links-tapbench-tab
-            role="tabpanel"
-          >
-            <WorkspaceTapbenchLinksPanel workspaceId={workspaceId} />
           </div>
         ) : null}
       </div>

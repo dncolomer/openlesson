@@ -66,21 +66,23 @@ describe("TAPBench project landing", () => {
 });
 
 describe("TAPBench operator UI under Knowledge Links", () => {
-  it("Knowledge Links hosts mint/list/skills download", () => {
+  it("Knowledge Links hosts mint/list/skills download in Create + Browse only", () => {
     const guest = read("components/WorkspaceGuestLinksPanel.tsx");
-    expect(guest).toContain("WorkspaceTapbenchLinksPanel");
-    expect(guest).toContain('id: "tapbench"');
-    expect(guest).toContain('data-guest-links-inner-tab="tapbench"');
-
-    const panel = read("components/WorkspaceTapbenchLinksPanel.tsx");
-    expect(panel).toContain("data-tapbench-mint");
-    expect(panel).toContain("data-create-tapbench-link");
-    expect(panel).toContain("data-tapbench-links-list");
-    expect(panel).toContain("data-copy-tapbench-link");
-    expect(panel).toContain("data-download-tapbench-skills");
-    expect(panel).toContain("data-tapbench-skills-md");
-    expect(panel).toContain("/api/workspace/tapbench-links");
-    expect(panel).toContain("downloadTapbenchSkillsMarkdown");
+    // No standalone third TAPBench tab — folded into Create + Browse
+    expect(guest).not.toContain('id: "tapbench" as const');
+    expect(guest).not.toContain('data-guest-links-inner-tab="tapbench"');
+    expect(guest).toContain('data-guest-links-inner-tab="create"');
+    expect(guest).toContain('data-guest-links-inner-tab="browse"');
+    expect(guest).toContain("data-tapbench-mint");
+    expect(guest).toContain("data-create-tapbench-link");
+    expect(guest).toContain("data-tapbench-links-list");
+    expect(guest).toContain("data-copy-tapbench-link");
+    expect(guest).toContain("data-download-tapbench-skills");
+    expect(guest).toContain("data-tapbench-skills-md");
+    expect(guest).toContain("/api/workspace/tapbench-links");
+    expect(guest).toContain("downloadTapbenchSkillsMarkdown");
+    expect(guest).toContain("mintTapbenchLink");
+    expect(guest).toContain('id: "tapbench"'); // product option in create form
   });
 
   it("Knowledge Regions no longer hosts TAPBench mint as a primary sub-tab", () => {

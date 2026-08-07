@@ -33,12 +33,14 @@ describe("UI: Knowledge Regions builder + Knowledge Links TAPBench", () => {
     expect(ui).toContain("data-region-link-filter");
     expect(ui).toContain("source_link_url");
 
-    const links = read("components/WorkspaceTapbenchLinksPanel.tsx");
+    // TAPBench mint/list is merged into Knowledge Links Create + Browse
+    const links = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(links).toContain("data-tapbench-mint");
     expect(links).toContain("data-create-tapbench-link");
     expect(links).toContain("data-tapbench-links-list");
     expect(links).toContain("data-tapbench-link-url");
     expect(links).toContain("/api/workspace/tapbench-links");
+    expect(links).not.toContain('data-guest-links-inner-tab="tapbench"');
   });
 
   it("public /tapbench/[token] page exists and middleware allows it", () => {

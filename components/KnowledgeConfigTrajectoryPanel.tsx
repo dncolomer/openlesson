@@ -1112,6 +1112,7 @@ export function KnowledgeConfigTrajectoryPanel({
   const [selectedRankingKey, setSelectedRankingKey] = useState<string | null>(null);
   type LwmDetailTab =
     | "profile"
+    | "goals"
     | "summary"
     | "markers"
     | "strengths"
@@ -3691,6 +3692,7 @@ export function KnowledgeConfigTrajectoryPanel({
                           {(
                             [
                               { id: "profile" as const, label: "Profile" },
+                              { id: "goals" as const, label: "Goals" },
                               { id: "summary" as const, label: "Summary" },
                               { id: "markers" as const, label: "Markers" },
                               { id: "strengths" as const, label: "Strengths" },
@@ -3759,20 +3761,54 @@ export function KnowledgeConfigTrajectoryPanel({
                           </div>
                         ) : null}
 
-                        {lwmDetailTab === "summary" ? (
-                          <div className="space-y-4" data-lwm-detail-summary>
-                            {selectedRunReport?.workspace_goal ||
-                            wm?.inferred_goal?.text ? (
-                              <div>
-                                <p className="text-[11px] font-medium text-neutral-400">
+                        {lwmDetailTab === "goals" ? (
+                          <div className="space-y-3" data-lwm-detail-goals>
+                            <p className="text-[11px] font-medium text-neutral-400">
+                              Goals used for this snapshot
+                            </p>
+                            {(selectedRunReport?.evaluated_goals ?? []).length > 0 ? (
+                              <ul className="space-y-2" data-lwm-evaluated-goals>
+                                {selectedRunReport!.evaluated_goals!.map((g, i) => (
+                                  <li
+                                    key={g.id || `${g.scope}-${i}`}
+                                    className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2"
+                                    data-lwm-evaluated-goal={g.id || undefined}
+                                    data-lwm-goal-scope={g.scope}
+                                  >
+                                    <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+                                      {g.scope}
+                                      {g.block_id ? ` · block` : ""}
+                                    </p>
+                                    <p className="mt-0.5 text-sm leading-relaxed text-neutral-200">
+                                      {g.text}
+                                    </p>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : selectedRunReport?.workspace_goal?.trim() ||
+                              wm?.inferred_goal?.text ? (
+                              <div
+                                className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2"
+                                data-lwm-workspace-goal
+                              >
+                                <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                                   Goal
                                 </p>
-                                <p className="mt-1 text-sm leading-relaxed text-neutral-300">
+                                <p className="mt-0.5 text-sm leading-relaxed text-neutral-200">
                                   {selectedRunReport?.workspace_goal?.trim() ||
                                     wm?.inferred_goal?.text}
                                 </p>
                               </div>
-                            ) : null}
+                            ) : (
+                              <p className="text-xs text-neutral-500">
+                                No goals recorded on this snapshot.
+                              </p>
+                            )}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "summary" ? (
+                          <div className="space-y-4" data-lwm-detail-summary>
                             {selectedRunReport?.summary ? (
                               <div>
                                 <p className="text-[11px] font-medium text-neutral-400">

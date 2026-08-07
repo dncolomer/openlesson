@@ -76,6 +76,7 @@ describe("LWM architecture (integrated detail)", () => {
     expect(section).toContain("MarkerRadarChart");
     expect(section).toContain("data-lwm-detail-tab");
     expect(section).toContain('id: "profile"');
+    expect(section).toContain('id: "goals"');
     expect(section).toContain('id: "summary"');
     expect(section).toContain('id: "markers"');
     expect(section).toContain('id: "strengths"');
@@ -84,6 +85,20 @@ describe("LWM architecture (integrated detail)", () => {
     expect(section).toContain('id: "details"');
     expect(src).toMatch(/useState<LwmDetailTab>\("profile"\)/);
     expect(section).toContain('lwmDetailTab === "profile"');
+    // Goals used for the snapshot live on their own tab (not under Summary)
+    expect(section).toContain('lwmDetailTab === "goals"');
+    expect(section).toContain("data-lwm-detail-goals");
+    expect(section).toContain("Goals used for this snapshot");
+    const goalsTab = section.indexOf('lwmDetailTab === "goals"');
+    const summaryTab = section.indexOf('lwmDetailTab === "summary"');
+    expect(goalsTab).toBeGreaterThan(0);
+    expect(summaryTab).toBeGreaterThan(goalsTab);
+    const summaryPanel = section.slice(
+      summaryTab,
+      section.indexOf('lwmDetailTab === "markers"'),
+    );
+    expect(summaryPanel).not.toContain("Goals used for this snapshot");
+    expect(summaryPanel).not.toContain("data-lwm-evaluated-goals");
     // Score explanations only via Explain Scores modal (not inline on profile)
     expect(section).toContain("data-lwm-explain-scores");
     expect(section).toMatch(/Explain[\s\S]*Scores/);

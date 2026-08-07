@@ -2663,20 +2663,20 @@
       "step1": {
         "title": "Tools & Chapters",
         "imageAlt": "Tools panel and chapter blocks",
-        "body": "Work chapters on the map. Tools for notes and canvas sit on the left."
+        "body": "Your block is organized as Chapters on a spatial grid — pan, zoom, and place steps where they belong. Open any chapter to work through it with Helios.\n\nThe Tools strip gives you Notebook, Canvas, Thought Memory, Grokipedia, and more. Chapters are living documents: you can edit and expand them freely during the session, even while paused."
       },
       "step2": {
-        "title": "Speak, then send",
-        "titleProject": "Speak, stash, solve",
+        "title": "Think aloud, then send",
+        "titleProject": "Think aloud — stash & solution",
         "imageAlt": "Selective thought interface",
-        "body": "Speak while you work. Enter sends to Helios; Del stashes; 1–3 send from stash.",
-        "bodyProject": "Speak while you work the chapter. Enter → Solution; Del → Stash. Manage stacks in Thoughts — no Helios chat in Project Mode."
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights.",
+        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Project Mode."
       },
       "step3": {
         "title": "Depth over speed",
         "titleProject": "Depth over speed",
-        "body": "Press Start when ready. Messy thinking is fine.",
-        "bodyProject": "Press Start when ready. Work each chapter as an exercise — messy thinking is fine.",
+        "body": "When you're ready, press Start block. Recording begins and Helios will listen to whatever you send — Enter for the live bar, or a number key for stashed thoughts. Take your time — messy thinking is how real learning surfaces.",
+        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise — no Helios conversation bubbles. Use Enter for Solution, Del for Stash, and open the Thoughts tool to manage both stacks. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
@@ -2694,17 +2694,17 @@
       "step1": {
         "title": "What you'll do",
         "imageAlt": "Think Aloud Protocol overview",
-        "body": "Think out loud on a timer. Helios asks short follow-ups. When time ends, your work is saved.",
-        "highlight": "Read the question out loud too — as if explaining to someone."
+        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved.",
+        "highlight": "Thinking out loud also means reading the question out loud. It’s easier if you imagine you’re explaining this to someone — or recording a live stream for an online audience."
       },
       "step2": {
-        "title": "Controls",
+        "title": "How the interface works",
         "imageAlt": "Selective thought interface",
-        "body": "Speak into the live bar. Enter sends · Del stashes · 1–3 send stash · E edits. Long silence auto-stashes and lowers purity."
+        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Enter — send to Helios\n• Del — stash for later\n• 1 / 2 / 3 — send a stashed thought\n• E — edit before sending\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
       },
       "step3": {
         "title": "Pick your starting focus",
-        "body": "Choose a starting angle to begin.",
+        "body": "Choose a starting angle. The timer begins and Helios opens with that topic’s question.",
         "quoteText": "The expert in anything was once a beginner who refused to give up.",
         "quoteAuthor": "",
         "start": "Play",
@@ -2759,8 +2759,8 @@
     },
     "welcome": {
       "greeting": "Hi, I'm {name}.",
-      "panelIntro": "Timed think-aloud with short follow-ups. Speak freely — Enter sends, Del stashes.",
-      "callToAction": "Press Play when ready.",
+      "panelIntro": "Welcome to the Think Aloud Protocol. This is a timed demonstration: you explain what you learned while I listen, then I ask Socratic follow-ups to surface gaps and strengths.\n\nHow it works: speak out loud — your transcription accumulates in the bar. Press Enter to send directly, Del to stash into the pool below, or E to edit before sending. I respond under my avatar with one question at a time. Thought Memory keeps every trace for resend or bookmarking.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
+      "callToAction": "When you're ready, press Play. The timer starts, and I'll open with a specific question about what you learned here.",
       "play": "Play",
       "starting": "Starting…",
       "skipTyping": "Skip typing"
@@ -2768,9 +2768,9 @@
   },
   "welcome": {
     "greeting": "Hi — I'm {name}.",
-    "panelIntro": "Work chapters with Helios. Speak while you work — Enter sends, Del stashes.",
-    "panelIntroMobile": "Work chapters, then Helios. Speak — Enter sends, Del stashes.",
-    "callToAction": "Press Start block when ready.",
+    "panelIntro": "Welcome to your Integrated Learning Environment. This is a desktop-first workspace for serious practice: you work through chapters on a spatial grid (pan, zoom, place steps where they belong), switch tools from the strip — Notebook, Canvas, Thought Memory, Grokipedia, and more — and face me on the right in a comic-style dialogue.\n\nHow it works: load a chapter from the map and think aloud while you work. Your transcription accumulates in the bar until you send or stash it. Press Enter to send directly, Del to stash into the pool below, or E to edit before sending. I respond under my avatar as plain text — not a chat thread. Use Mark done when a chapter is finished.\n\nThought Memory keeps every trace so you can select, resend, or bookmark insights later. Take your time — depth matters more than speed.",
+    "panelIntroMobile": "Welcome to your Integrated Learning Environment. Chapters is your starting view — a grid map of your block plan. Swipe between tools and Helios chat. Think aloud, press Enter to send or Del to stash thoughts, then send from the pool. Tap Mark done on each chapter when you're ready to move on.",
+    "callToAction": "When you're ready, press Start block. Recording begins, the chapter map stays on the left, and I'll listen to whatever you send.",
     "play": "Start block",
     "starting": "Starting…",
     "skipTyping": "Skip typing",

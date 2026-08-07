@@ -656,23 +656,23 @@ describe("Practice Portal structural wiring", () => {
     };
     expect(enCopy.tap?.briefing?.intro).toBeTruthy();
     expect((enCopy.tap?.briefing?.intro || "").length).toBeLessThan(80);
-    // Live TAP SessionOnboardingGuide step2 (was "How the interface works" multi-line tutorial)
-    expect(enCopy.onboardingGuide?.tap?.step2?.title).not.toMatch(/How the interface works/i);
-    expect(enCopy.onboardingGuide?.tap?.step2?.body).not.toMatch(
+    // Live TAP SessionOnboardingGuide step2: full interface tutorial (not microcopy stub)
+    expect(enCopy.onboardingGuide?.tap?.step2?.title).toMatch(/How the interface works/i);
+    expect(enCopy.onboardingGuide?.tap?.step2?.body).toMatch(
       /Stay speaking\. After 5 seconds|session is invalidated/i,
     );
-    expect((enCopy.onboardingGuide?.tap?.step2?.body || "").split("\n").length).toBeLessThanOrEqual(2);
-    // Live ILE onboarding step2 (was multi-paragraph Thought Memory tutorial)
-    expect(enCopy.onboardingGuide?.ile?.step2?.body).not.toMatch(
+    expect((enCopy.onboardingGuide?.tap?.step2?.body || "").split("\n").length).toBeGreaterThan(2);
+    // Live ILE onboarding step2: multi-paragraph Thought Memory / send controls
+    expect(enCopy.onboardingGuide?.ile?.step2?.body).toMatch(
       /Thought Memory keeps every trace|stashed-thoughts pool below/i,
     );
-    expect(enCopy.onboardingGuide?.ile?.step2?.bodyProject).not.toMatch(
+    expect(enCopy.onboardingGuide?.ile?.step2?.bodyProject).toMatch(
       /System 1|Open the Thoughts tool \(or use Open Thoughts\)/i,
     );
-    expect((enCopy.onboardingGuide?.ile?.step2?.body || "").length).toBeLessThan(160);
-    // Welcome panel intros used by TutorWelcome on TAP/ILE
-    expect(enCopy.tap?.welcome?.panelIntro).not.toMatch(/How it works:|Socratic follow-ups/i);
-    expect(enCopy.welcome?.panelIntro).not.toMatch(/desktop-first workspace|comic-style dialogue/i);
+    expect((enCopy.onboardingGuide?.ile?.step2?.body || "").length).toBeGreaterThan(160);
+    // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
+    expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
+    expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);
     const exerciseTap = read("components/ExerciseTapClient.tsx");
     expect(exerciseTap).toContain("SessionOnboardingGuide");
     expect(exerciseTap).not.toMatch(/Solution Stack — that stack is what will be evaluated/i);

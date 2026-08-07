@@ -270,7 +270,7 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={questions}
           kind="question"
-          empty="No sample questions yet — click Regenerate for xAI samples."
+          empty="No sample questions yet — click Regenerate."
         />
       </div>
 

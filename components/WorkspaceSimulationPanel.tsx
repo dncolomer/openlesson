@@ -171,8 +171,8 @@ export function WorkspaceSimulationPanel({
           Generate sample{" "}
           <span className="text-neutral-200">Explore questions</span> and{" "}
           <span className="text-neutral-200">Drill exercises</span> for{" "}
-          <span className="text-neutral-200">{title}</span> via xAI. Lists stay
-          empty until you generate — no offline template previews.
+          <span className="text-neutral-200">{title}</span>. Lists stay empty
+          until you generate.
         </p>
       </header>
 
@@ -294,7 +294,7 @@ export function WorkspaceSimulationPanel({
             className="mt-2 text-[11px] text-neutral-600"
             data-simulation-generate-hint
           >
-            Click Generate samples for xAI questions and exercises.
+            Click Generate samples for questions and exercises.
           </p>
         ) : null}
       </section>
@@ -345,7 +345,7 @@ export function WorkspaceSimulationPanel({
               className="text-[12px] text-neutral-600"
               data-simulation-questions-empty
             >
-              No questions yet — click Generate samples for xAI output.
+              No questions yet — click Generate samples.
             </p>
           ) : (
             <ul className="space-y-1.5" data-simulation-question-list>
@@ -402,7 +402,7 @@ export function WorkspaceSimulationPanel({
               className="text-[12px] text-neutral-600"
               data-simulation-exercises-empty
             >
-              No exercises yet — click Generate samples for xAI output.
+              No exercises yet — click Generate samples.
             </p>
           ) : (
             <ul className="space-y-1.5" data-simulation-exercise-list>

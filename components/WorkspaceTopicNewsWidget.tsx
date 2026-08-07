@@ -74,7 +74,7 @@ export function WorkspaceTopicNewsWidget({
           Recent news
         </p>
         <p className="text-xs leading-relaxed text-neutral-400">
-          xAI-powered headlines related to{" "}
+          Headlines related to{" "}
           <span className="text-neutral-200">{topicLabel}</span>
         </p>
       </header>

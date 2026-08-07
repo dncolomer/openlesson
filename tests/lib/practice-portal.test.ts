@@ -632,11 +632,37 @@ describe("Practice Portal structural wiring", () => {
     );
     expect(landingClient).toMatch(/Knowledge Portal/);
     expect(landingClient).toMatch(
-      /Choose the session type that best fits your style/,
+      /Choose the session type that best fits your style\./,
+    );
+    // No workspace-name suffix on that subtitle
+    expect(landingClient).not.toMatch(
+      /Choose the session type that best fits your style[\s\S]{0,40}for\s*</,
     );
     expect(landingClient).not.toMatch(/save it before you start/i);
     expect(landingClient).not.toMatch(/PRACTICE PORTAL/);
     expect(landingClient).toMatch(/fixedBlockId|data-practice-portal-block-fixed/);
+
+    // TAP/ILE learner chrome: no long interface-tutorial intros
+    const enCopy = JSON.parse(read("messages/en.json")) as {
+      tap?: { briefing?: { intro?: string; shortcutSend?: string } };
+      session?: {
+        welcomeMessage?: string;
+        followPlan?: string;
+        useSidebar?: string;
+        encouragement?: string;
+      };
+    };
+    expect(enCopy.tap?.briefing?.intro).toBeTruthy();
+    expect(enCopy.tap?.briefing?.intro).not.toMatch(/Enter sends|Del stashes|auto-stashes/i);
+    expect((enCopy.tap?.briefing?.intro || "").length).toBeLessThan(80);
+    expect(enCopy.session?.welcomeMessage).not.toMatch(
+      /chapter by chapter|send thoughts, and use the tools/i,
+    );
+    expect(enCopy.session?.followPlan).not.toMatch(/crystallize your speech/i);
+    expect(enCopy.session?.useSidebar).not.toMatch(/thought history/i);
+    const exerciseTap = read("components/ExerciseTapClient.tsx");
+    expect(exerciseTap).not.toMatch(/Solution Stack — that stack is what will be evaluated/i);
+    expect(exerciseTap).toMatch(/Solo practice|Del stashes|Solution/);
 
     const middleware = read("middleware.ts");
     expect(middleware).toMatch(/\/portal/);

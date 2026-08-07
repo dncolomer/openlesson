@@ -856,7 +856,7 @@ export function ExerciseTapClient({
                   }
                   showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
-                  intro="Speak out loud on your own — no dialogue partner. Del stashes raw thinking. Enter promotes thoughts into the Solution Stack — that stack is what will be evaluated as your solution at the end. Undo on a Solution card moves it back to Stash (out of the evaluated solution) without discarding the thought."
+                  intro="Solo practice. Del stashes; Enter promotes to Solution."
                   shortcutRows={[
                     { keys: ["Del"], label: "Stash (System 1)" },
                     { keys: ["Enter"], label: "To Solution Stack (System 2)" },

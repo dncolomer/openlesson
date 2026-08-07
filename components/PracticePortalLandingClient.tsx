@@ -221,14 +221,7 @@ export function PracticePortalLandingClient({
           {label?.trim() || title}
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-          Choose the session type that best fits your style
-          {title ? (
-            <>
-              {" "}
-              for <span className="text-zinc-200">{title}</span>
-            </>
-          ) : null}
-          .
+          Choose the session type that best fits your style.
         </p>
       </header>
 

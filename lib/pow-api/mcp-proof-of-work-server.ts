@@ -6,6 +6,11 @@ import {
   parseOpaqueSchemaRequest,
 } from "./proof-of-work-integration";
 import { CreateTapLinkError, createWorkspaceTapLink } from "./create-tap-link";
+import {
+  CreateTapbenchLinkError,
+  createWorkspaceTapbenchLink,
+  listWorkspaceTapbenchLinks,
+} from "./create-tapbench-link";
 import { rejectProgrammaticWorkspaceCreate } from "./workspace-create-ui-only";
 import { runVerticalScore } from "./run-vertical-score";
 import type { ScoreVertical } from "./performance-report";
@@ -256,7 +261,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "lwm_snapshot",
     description:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/ILE end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Evaluated against a goal set: default = all workspace goals + PoW-related block goals; or adhoc_goal; or selected goal_ids. Returns evaluated_goals on the response. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/ILE end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -265,6 +270,25 @@ export const MCP_EVIDENCE_TOOLS = [
         style_prompt: {
           type: "string",
           description: "Optional voice/tone (e.g. second person, formal coach).",
+        },
+        goal_mode: {
+          type: "string",
+          description:
+            "default | adhoc | selected. Default uses all workspace goals plus goals of blocks related to the PoW under evaluation.",
+        },
+        adhoc_goal: {
+          type: "string",
+          description: "Natural-language adhoc goal when goal_mode=adhoc.",
+        },
+        goal_ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Workspace and/or block goal catalog ids when goal_mode=selected.",
+        },
+        selected_goal_ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Alias for goal_ids.",
         },
       },
       required: ["workspace_id"],
@@ -321,6 +345,52 @@ export const MCP_EVIDENCE_TOOLS = [
         show_end_session: {
           type: "boolean",
           description: "When true (default), guest UI shows End Session.",
+        },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "list_tapbench_links",
+    description:
+      "List TAPBench (agent TAP) links for a workspace — exercise, remaining time, share URL, session token. REST: GET .../tapbench-links.",
+    inputSchema: {
+      type: "object",
+      properties: { workspace_id: { type: "string" } },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "create_tapbench_link",
+    description:
+      "Mint a TAPBench timed exercise session for a workspace or block. Returns session_token for Stash/Submit (X-Tapbench-Session). Optional block_id from list_blocks; optional duration_seconds or minutes; optional exercise text. REST: POST .../tapbench-links.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        block_id: {
+          type: "string",
+          description:
+            "Optional. blocks.id UUID from list_blocks. Omit for full-workspace TAPBench exercise.",
+        },
+        duration_seconds: {
+          type: "number",
+          description: "Session length in seconds (60–10800). Default 900 (15m).",
+        },
+        minutes: {
+          type: "number",
+          description: "Session length in minutes (alternative to duration_seconds).",
+        },
+        exercise: {
+          type: "string",
+          description: "Optional explicit exercise text. When omitted, a domain exercise is generated.",
+        },
+        exercise_text: {
+          type: "string",
+          description: "Alias of exercise.",
         },
       },
       required: ["workspace_id"],
@@ -1018,6 +1088,7 @@ export async function callMcpProofOfWorkTool(
       blockId,
       stylePrompt,
       workspaceRow: workspace,
+      goalSelectionBody: args as Record<string, unknown>,
     });
 
     return await evidenceToolResult(
@@ -1031,6 +1102,8 @@ export async function callMcpProofOfWorkTool(
           privacy: scored.privacy,
           workspace_goal: scored.workspace_goal,
           workspace_goal_source: scored.workspace_goal_source,
+          evaluated_goals: scored.evaluated_goals,
+          goals_fingerprint: scored.goals_fingerprint,
           report: scored.report,
           protocol_report: scored.protocol_report,
           proof_of_work_summary: scored.proof_of_work_summary,
@@ -1045,7 +1118,7 @@ export async function callMcpProofOfWorkTool(
             linked_sessions: 0,
             workspace_files: 0,
           },
-          workspaceGoal: workspace.workspace_goal,
+          workspaceGoal: scored.workspace_goal,
           workspaceTitle: workspace.title || workspace.root_topic || "workspace",
         }
       ),
@@ -1118,6 +1191,64 @@ export async function callMcpProofOfWorkTool(
       );
     } catch (error) {
       if (error instanceof CreateTapLinkError) throw new Error(error.message);
+      throw error;
+    }
+  }
+
+  if (name === "list_tapbench_links") {
+    requireScope(auth.scopes, "tap:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    try {
+      const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
+      const listed = await listWorkspaceTapbenchLinks({
+        supabase,
+        auth,
+        workspaceId,
+        baseUrl: appBase,
+      });
+      return await evidenceToolResult(listed, {
+        endpoint: "list_tapbench_links",
+        workspace_id: workspaceId,
+      });
+    } catch (error) {
+      if (error instanceof CreateTapbenchLinkError) throw new Error(error.message);
+      throw error;
+    }
+  }
+
+  if (name === "create_tapbench_link") {
+    requireScope(auth.scopes, "tap:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    const blockId = stringArg(args, "block_id") || null;
+    if (!workspaceId) throw new Error("workspace_id is required.");
+
+    try {
+      const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
+      const tapbenchLink = await createWorkspaceTapbenchLink({
+        supabase,
+        auth,
+        workspaceId,
+        blockId,
+        body: args,
+        baseUrl: appBase,
+      });
+      return await evidenceToolResult(
+        {
+          workspace_id: workspaceId,
+          tapbench_link: tapbenchLink,
+          session_token: tapbenchLink.session_token,
+          url: tapbenchLink.url,
+          exercise_source: tapbenchLink.exercise_source,
+        },
+        {
+          endpoint: "create_tapbench_link",
+          workspace_id: workspaceId,
+          block_id: blockId,
+        },
+      );
+    } catch (error) {
+      if (error instanceof CreateTapbenchLinkError) throw new Error(error.message);
       throw error;
     }
   }

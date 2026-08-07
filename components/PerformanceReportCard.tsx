@@ -34,6 +34,16 @@ export interface PerformanceReportCardProps {
   workspaceGoalSource?: WorkspaceGoalSource;
   /** When true, tab panels grow to fill the parent flex column (workspace performance tab). */
   fillHeight?: boolean;
+  /**
+   * Initial / report-change tab. Falls back to first available tab if missing.
+   * Use `"competency"` for spider-first (e.g. LWM panel beside dual score tiles).
+   */
+  defaultTab?: ScoreCardTab;
+  /**
+   * Hide the large primary score chrome — when a sibling UI already shows skill scores
+   * (LWM overview tiles). Overview tab still shows goal/summary without the giant number.
+   */
+  hidePrimaryScore?: boolean;
 }
 
 function severityColor(severity: "low" | "medium" | "high") {
@@ -377,6 +387,18 @@ function ScoreCardTabBar({
   );
 }
 
+function resolveDefaultScoreCardTab(
+  availableTabs: ScoreCardTab[],
+  preferred?: ScoreCardTab,
+): ScoreCardTab {
+  if (preferred && availableTabs.includes(preferred)) return preferred;
+  // Prefer spider (competency) when requested path is missing but markers exist
+  if (preferred === "competency" && availableTabs.includes("markers")) {
+    return "markers";
+  }
+  return availableTabs[0] ?? "overview";
+}
+
 export function PerformanceReportCard({
   report,
   label,
@@ -385,6 +407,8 @@ export function PerformanceReportCard({
   workspaceGoal: workspaceGoalProp,
   workspaceGoalSource,
   fillHeight = false,
+  defaultTab,
+  hidePrimaryScore = false,
 }: PerformanceReportCardProps) {
   const { t } = useI18n();
   const cardLabel = label ?? t("performanceReportCard.defaultLabel");
@@ -403,20 +427,22 @@ export function PerformanceReportCard({
     () => getAvailableScoreCardTabs(report, reportHistory),
     [report, reportHistory],
   );
-  const [activeTab, setActiveTab] = useState<ScoreCardTab>("overview");
+  const [activeTab, setActiveTab] = useState<ScoreCardTab>(() =>
+    resolveDefaultScoreCardTab(availableTabs, defaultTab),
+  );
   const tabPanelClassName = fillHeight
     ? "min-h-0 flex-1 overflow-y-auto py-2"
     : "w-full py-2";
 
   useEffect(() => {
-    setActiveTab("overview");
-  }, [report, cardLabel]);
+    setActiveTab(resolveDefaultScoreCardTab(availableTabs, defaultTab));
+  }, [report, cardLabel, defaultTab, availableTabs]);
 
   useEffect(() => {
     if (!availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0] ?? "overview");
+      setActiveTab(resolveDefaultScoreCardTab(availableTabs, defaultTab));
     }
-  }, [activeTab, availableTabs]);
+  }, [activeTab, availableTabs, defaultTab]);
 
   if (isSpacious) {
     return (
@@ -424,7 +450,7 @@ export function PerformanceReportCard({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h3 className="text-sm text-zinc-400">{cardLabel}</h3>
           <div className="flex flex-wrap items-center gap-3">
-            {primaryScore != null ? (
+            {!hidePrimaryScore && primaryScore != null ? (
               <span className="font-mono text-2xl text-white">
                 {primaryScore}
                 <span className="ml-1 text-sm text-zinc-500">/100</span>
@@ -449,7 +475,7 @@ export function PerformanceReportCard({
           {activeTab === "overview" ? (
             <div className="flex w-full flex-col items-center px-2 py-6 text-center sm:py-10">
               <div className="grid w-full grid-cols-1 gap-8 sm:max-w-md">
-                {primaryScore != null ? (
+                {!hidePrimaryScore && primaryScore != null ? (
                   <div>
                     <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
                       {verticalLabel}

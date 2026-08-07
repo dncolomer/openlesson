@@ -12,8 +12,8 @@ interface WorkspaceIdentitySettingsProps {
 }
 
 /**
- * Owner title + description + goal editors for Settings.
- * Single save action writes all three via the visibility PUT path.
+ * Owner title + description editors for Settings.
+ * Goals are managed on the standalone Goals tab (not Settings).
  */
 export function WorkspaceIdentitySettings({
   plan,
@@ -24,7 +24,6 @@ export function WorkspaceIdentitySettings({
   const { t } = useI18n();
   const [editTitle, setEditTitle] = useState(plan.title || plan.root_topic || "");
   const [editDescription, setEditDescription] = useState(plan.description || "");
-  const [editGoal, setEditGoal] = useState(plan.workspace_goal || "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,19 +34,13 @@ export function WorkspaceIdentitySettings({
     setEditDescription(plan.description || "");
   }, [plan.description]);
 
-  useEffect(() => {
-    setEditGoal(plan.workspace_goal || "");
-  }, [plan.workspace_goal]);
-
   if (!isOwner) return null;
 
   const titleDirty =
     editTitle.trim() !== (plan.title || plan.root_topic || "").trim();
   const descriptionDirty =
     (editDescription || "").trim() !== (plan.description || "").trim();
-  const goalDirty =
-    editGoal.trim() !== (plan.workspace_goal || "").trim();
-  const isDirty = titleDirty || descriptionDirty || goalDirty;
+  const isDirty = titleDirty || descriptionDirty;
   const canSave = editTitle.trim().length > 0 && isDirty && !saving;
 
   const saveIdentity = async () => {
@@ -60,7 +53,6 @@ export function WorkspaceIdentitySettings({
         body: JSON.stringify({
           title: editTitle.trim(),
           description: editDescription,
-          workspace_goal: editGoal.trim() || null,
         }),
       });
       const data = await res.json();
@@ -74,8 +66,6 @@ export function WorkspaceIdentitySettings({
             typeof data.description === "string"
               ? data.description || undefined
               : editDescription || undefined,
-          workspace_goal:
-            data.workspace_goal || editGoal.trim() || undefined,
         });
       }
     } catch (err) {
@@ -143,29 +133,6 @@ export function WorkspaceIdentitySettings({
             data-field-helper="description"
           >
             {t("planView.workspaceDescriptionHelper")}
-          </p>
-        </div>
-
-        <div data-settings-section="goal" data-workspace-goal-settings>
-          <label
-            htmlFor="workspace-settings-goal"
-            className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500"
-          >
-            {t("planView.workspaceGoal")}
-          </label>
-          <input
-            id="workspace-settings-goal"
-            type="text"
-            value={editGoal}
-            onChange={(e) => setEditGoal(e.target.value)}
-            placeholder={t("planView.workspaceGoalPlaceholder")}
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
-          />
-          <p
-            className="mt-1.5 text-xs text-neutral-500"
-            data-field-helper="goal"
-          >
-            {t("planView.workspaceGoalHelper")}
           </p>
         </div>
 

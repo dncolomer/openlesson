@@ -177,6 +177,7 @@ export async function POST(req: NextRequest) {
         participantGuestUserId: participants.participantGuestUserId,
         workspaceRow: plan,
         historySource: "web",
+        goalSelectionBody: body as Record<string, unknown>,
       });
 
       if (scored.empty) {
@@ -196,6 +197,8 @@ export async function POST(req: NextRequest) {
         label: LWM_SNAPSHOT_LABEL,
         workspace_goal: scored.workspace_goal,
         workspace_goal_source: scored.workspace_goal_source,
+        evaluated_goals: scored.evaluated_goals,
+        goals_fingerprint: scored.goals_fingerprint,
         learning_world_model: scored.learning_world_model ?? null,
         knowledge_config: scored.knowledge_config ?? null,
         subject: participants.subject,

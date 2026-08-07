@@ -25,6 +25,9 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private TAP link for the full workspace (optional body `block_id`). Links open `/tap/session/{token}`. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
+| `POST` | `/workspaces/{workspace_id}/tapbench-links` | `tap:write` | Mint a TAPBench agent session (optional `block_id`, `duration_seconds` / `minutes`, `exercise`). Returns `session_token` for Stash/Submit. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tapbench-links` | `tap:write` | Block-scoped TAPBench link. |
+| `GET` | `/workspaces/{workspace_id}/tapbench-links` | `tap:read` | List TAPBench links (exercise, remaining time, share URL). |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
 ## Upload Proof of Work
@@ -84,6 +87,22 @@ Programmatic create is **not available**. `POST /api/v3/pow/workspaces` and MCP 
 Returns a `private_url` for `/tap/session/{token}`. Workspace-scoped links evaluate the whole workspace; block-scoped links focus on that block. Poll `GET .../tap-links` for link `status`, then call `POST .../lwm-snapshot` to score TAP proof of work (verification only).
 
 Identified gaps can be routed into Integrated Learning Environment (ILE) practice blocks for remediation.
+
+## TAPBench links (agent timed exercise)
+
+Mint a TAPBench session for agents (Stash/Submit + `X-Tapbench-Session`):
+
+`POST /api/v3/pow/workspaces/{workspace_id}/tapbench-links`
+
+```json
+{
+  "block_id": "optional-block-uuid",
+  "duration_seconds": 900,
+  "exercise": "Optional concrete exercise text"
+}
+```
+
+Or block path: `POST .../blocks/{block_id}/tapbench-links`. Response includes `tapbench_link.session_token`, `url` (`/tapbench/{token}`), `exercise`, `expires_at`, `remaining_ms`, and `guest_user_id`. List with `GET .../tapbench-links`. MCP tools: `create_tapbench_link`, `list_tapbench_links`.
 
 ## Guests
 

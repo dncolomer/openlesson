@@ -3,10 +3,20 @@ import {
   type ScoreVertical,
   type VerticalScoreReport,
 } from "./performance-report";
+import {
+  normalizeEvaluatedGoals,
+  summarizeGoalsText,
+  type EvaluatedGoal,
+} from "./goals";
 
 export const WORKSPACE_GOAL_MAX_LENGTH = 240;
 
-export type WorkspaceGoalSource = "workspace" | "inferred" | "opaque_ref";
+export type WorkspaceGoalSource =
+  | "workspace"
+  | "inferred"
+  | "opaque_ref"
+  | "multi_goals"
+  | "adhoc";
 
 export interface WorkspaceGoalContext {
   title?: string | null;
@@ -39,20 +49,50 @@ export function finalizeVerticalScoreReport(
   report: VerticalScoreReport,
   storedWorkspaceGoal: string | null | undefined,
   context: WorkspaceGoalContext = {},
-  vertical?: ScoreVertical
+  vertical?: ScoreVertical,
+  evaluatedGoals?: EvaluatedGoal[] | null,
 ): {
   report: VerticalScoreReport;
   workspace_goal: string;
   workspace_goal_source: WorkspaceGoalSource;
+  evaluated_goals: EvaluatedGoal[];
 } {
   const resolvedVertical = vertical ?? report.vertical ?? "verification";
   const normalized = normalizeVerticalScoreReport(report, resolvedVertical);
+  const goals =
+    evaluatedGoals && evaluatedGoals.length > 0
+      ? evaluatedGoals
+      : normalizeEvaluatedGoals(normalized.evaluated_goals);
+
+  if (goals.length > 0) {
+    const summary =
+      summarizeGoalsText(goals).slice(0, WORKSPACE_GOAL_MAX_LENGTH) ||
+      normalizeWorkspaceGoal(storedWorkspaceGoal) ||
+      fallbackWorkspaceGoal(context);
+    const source: WorkspaceGoalSource = goals.some((g) => g.scope === "adhoc")
+      ? goals.length === 1
+        ? "adhoc"
+        : "multi_goals"
+      : "multi_goals";
+    return {
+      report: {
+        ...normalized,
+        workspace_goal: summary,
+        evaluated_goals: goals,
+      },
+      workspace_goal: summary,
+      workspace_goal_source: source,
+      evaluated_goals: goals,
+    };
+  }
+
   const stored = normalizeWorkspaceGoal(storedWorkspaceGoal);
   if (stored) {
     return {
-      report: { ...normalized, workspace_goal: stored },
+      report: { ...normalized, workspace_goal: stored, evaluated_goals: [] },
       workspace_goal: stored,
       workspace_goal_source: "workspace",
+      evaluated_goals: [],
     };
   }
 
@@ -60,9 +100,10 @@ export function finalizeVerticalScoreReport(
     normalizeWorkspaceGoal(normalized.workspace_goal) || fallbackWorkspaceGoal(context);
 
   return {
-    report: { ...normalized, workspace_goal: inferred },
+    report: { ...normalized, workspace_goal: inferred, evaluated_goals: [] },
     workspace_goal: inferred,
     workspace_goal_source: "inferred",
+    evaluated_goals: [],
   };
 }
 

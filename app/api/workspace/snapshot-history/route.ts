@@ -118,12 +118,17 @@ async function handle(
     to?: string | null;
     limit?: string | null;
     offset?: string | null;
+    /** Goals fingerprint for re-run gate (PoW∪goals uniqueness). */
+    goals_fingerprint?: string | null;
+    goal_mode?: string | null;
+    adhoc_goal?: string | null;
+    goal_ids?: string | null;
   },
   opts: { isOwner: boolean; ayclAccess?: boolean },
 ) {
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, user_id, is_group, organization_id")
+    .select("id, user_id, is_group, organization_id, workspace_goal")
     .eq("id", workspaceId)
     .single();
 
@@ -184,11 +189,33 @@ async function handle(
   });
 
   const eligibilitySubject = scope.subject;
+  const participantUserId = eligibilitySubject?.user_id ?? null;
+  const participantGuestUserId = eligibilitySubject?.guest_user_id ?? null;
+
+  // Goals-aware gate: default / adhoc / selected are distinct snapshot identities.
+  const { resolveGoalsForEligibility } = await import("@/lib/pow-api/goals-eligibility");
+  const goalIds = parseCsv(query.goal_ids);
+  const goalsResolved = await resolveGoalsForEligibility(supabase, {
+    workspaceId,
+    auth: authLike,
+    goalsFingerprint: query.goals_fingerprint,
+    selectionBody: {
+      goal_mode: query.goal_mode,
+      adhoc_goal: query.adhoc_goal,
+      goal_ids: goalIds.length > 0 ? goalIds : undefined,
+    },
+    participantUserId,
+    participantGuestUserId,
+    storedWorkspaceGoal:
+      (workspace as { workspace_goal?: string | null }).workspace_goal ?? null,
+  });
+
   const eligibility = await getAllEvalPowGateStatuses(supabase, {
     workspaceId,
     auth: authLike,
-    participantUserId: eligibilitySubject?.user_id ?? null,
-    participantGuestUserId: eligibilitySubject?.guest_user_id ?? null,
+    participantUserId,
+    participantGuestUserId,
+    goalsFingerprint: goalsResolved.goals_fingerprint,
   });
 
   return {
@@ -206,6 +233,8 @@ async function handle(
       count: runs.length,
       runs,
       eligibility,
+      goals_fingerprint: goalsResolved.goals_fingerprint,
+      evaluated_goals: goalsResolved.evaluated_goals,
     },
   };
 }
@@ -238,6 +267,10 @@ export async function GET(req: NextRequest) {
         to: url.searchParams.get("to"),
         limit: url.searchParams.get("limit"),
         offset: url.searchParams.get("offset"),
+        goals_fingerprint: url.searchParams.get("goals_fingerprint"),
+        goal_mode: url.searchParams.get("goal_mode"),
+        adhoc_goal: url.searchParams.get("adhoc_goal"),
+        goal_ids: url.searchParams.get("goal_ids"),
       },
       { isOwner: auth.isOwner, ayclAccess: auth.ayclAccess },
     );
@@ -284,6 +317,15 @@ export async function POST(req: NextRequest) {
         to: typeof body.to === "string" ? body.to : null,
         limit: body.limit != null ? String(body.limit) : null,
         offset: body.offset != null ? String(body.offset) : null,
+        goals_fingerprint:
+          typeof body.goals_fingerprint === "string" ? body.goals_fingerprint : null,
+        goal_mode: typeof body.goal_mode === "string" ? body.goal_mode : null,
+        adhoc_goal: typeof body.adhoc_goal === "string" ? body.adhoc_goal : null,
+        goal_ids: Array.isArray(body.goal_ids)
+          ? body.goal_ids.filter((id: unknown) => typeof id === "string").join(",")
+          : typeof body.goal_ids === "string"
+            ? body.goal_ids
+            : null,
       },
       { isOwner: auth.isOwner, ayclAccess: auth.ayclAccess },
     );

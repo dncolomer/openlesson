@@ -118,18 +118,20 @@ describe("privileged Knowledge + Settings gating", () => {
 });
 
 describe("availableWorkspaceSections", () => {
-  it("includes Context then Simulation for everyone; Knowledge/Settings for owners or org admins; DAGs owner-only", () => {
+  it("includes Context then Simulation for everyone; Knowledge/Settings for owners or org admins; DAGs owner-only; Goals for privileged", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "dags",
+      "goals",
       "context",
       "simulation",
       "knowledge",
       "settings",
     ]);
-    // Org admin (not owner): privileged Knowledge/Settings, but not DAGs
+    // Org admin (not owner): privileged Knowledge/Settings/Goals, but not DAGs
     expect(availableWorkspaceSections({ isOrgAdmin: true })).toEqual([
       "workspace",
+      "goals",
       "context",
       "simulation",
       "knowledge",
@@ -276,19 +278,21 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).not.toContain("WorkspacePromptImpactPanel");
   });
 
-  it("hosts workspace goal edit under Settings, not the builder surface", () => {
+  it("hosts multi goals on Goals tab, not Settings identity or builder surface", () => {
     expect(viewSource).not.toContain("WorkspaceGoalPanel");
+    expect(viewSource).toContain("WorkspaceGoalsPanel");
+    expect(viewSource).toContain("mountsGoalsPanel");
     expect(integrationSource).toContain("WorkspaceIdentitySettings");
-    expect(identitySettingsSource).toContain("data-workspace-goal-settings");
-    expect(identitySettingsSource).toContain("workspace_goal");
-    expect(identitySettingsSource).toContain("workspace-settings-goal");
+    // Settings no longer exposes a single goal field
+    expect(identitySettingsSource).not.toContain("data-workspace-goal-settings");
+    expect(identitySettingsSource).not.toContain("workspace-settings-goal");
+    expect(identitySettingsSource).not.toContain("editGoal");
     expect(identitySettingsSource).toContain(`/api/workspaces/`);
     expect(identitySource).not.toContain("saveConversionGoal");
-    expect(identitySource).not.toContain("Workspace goal");
     expect(identitySource).not.toContain("Set workspace goal");
   });
 
-  it("unifies name/description/goal into one Settings save with field helpers", () => {
+  it("unifies name/description into one Settings save with field helpers (goals on Goals tab)", () => {
     // Single save control — not per-field Save buttons
     expect(identitySettingsSource).toContain("data-identity-save");
     expect(identitySettingsSource).toContain("saveIdentity");
@@ -298,17 +302,20 @@ describe("WorkspaceView section shell wiring", () => {
     expect(identitySettingsSource).not.toContain("savingTitle");
     expect(identitySettingsSource).not.toContain("savingDescription");
     expect(identitySettingsSource).not.toContain("savingGoal");
-    // One PUT body carries all three fields
+    // One PUT body carries title + description (goals managed on Goals tab)
     expect(identitySettingsSource).toMatch(
-      /JSON\.stringify\(\{[\s\S]*title:[\s\S]*description:[\s\S]*workspace_goal:/,
+      /JSON\.stringify\(\{[\s\S]*title:[\s\S]*description:/,
+    );
+    expect(identitySettingsSource).not.toMatch(
+      /JSON\.stringify\(\{[\s\S]*workspace_goal:/,
     );
     // Helper lines under each field
     expect(identitySettingsSource).toContain('data-field-helper="title"');
     expect(identitySettingsSource).toContain('data-field-helper="description"');
-    expect(identitySettingsSource).toContain('data-field-helper="goal"');
+    expect(identitySettingsSource).not.toContain('data-field-helper="goal"');
     expect(identitySettingsSource).toContain("planView.workspaceNameHelper");
     expect(identitySettingsSource).toContain("planView.workspaceDescriptionHelper");
-    expect(identitySettingsSource).toContain("planView.workspaceGoalHelper");
+    expect(identitySettingsSource).not.toContain("planView.workspaceGoalHelper");
   });
 
   it("renders notes with the same attachment-row chrome as files", () => {
@@ -330,15 +337,15 @@ describe("WorkspaceView section shell wiring", () => {
     expect(notesFilesSource).toContain("nextNotesFileName");
   });
 
-  it("mounts title/description/goal edit under Settings and not on identity chrome", () => {
+  it("mounts title/description edit under Settings (goals on Goals tab) and not on identity chrome", () => {
     expect(integrationSource).toContain("WorkspaceIdentitySettings");
     expect(identitySettingsSource).toContain("data-workspace-identity-settings");
     expect(identitySettingsSource).toContain("workspace-settings-title");
     expect(identitySettingsSource).toContain("workspace-settings-description");
-    expect(identitySettingsSource).toContain("workspace-settings-goal");
+    expect(identitySettingsSource).not.toContain("workspace-settings-goal");
     expect(identitySettingsSource).toContain("title:");
     expect(identitySettingsSource).toContain("description:");
-    expect(identitySettingsSource).toContain("workspace_goal");
+    expect(identitySettingsSource).not.toContain("workspace_goal");
     expect(identitySettingsSource).toContain(`/api/workspaces/`);
     // Display-only identity chrome
     expect(identitySource).toContain("data-identity-display-only");

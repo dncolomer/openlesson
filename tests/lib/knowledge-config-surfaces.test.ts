@@ -129,23 +129,25 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("data-lwm-skill-score");
     expect(lwm).toContain("data-lwm-ghc-score");
     expect(lwm).toContain("data-lwm-last-updated");
-    expect(lwm).toContain("data-lwm-timeline");
-    expect(lwm).toContain("data-lwm-date-from");
-    expect(lwm).toContain("data-lwm-date-to");
-    expect(lwm).toContain("data-lwm-date-last-7d");
-    expect(lwm).toContain("defaultLwmTimelineDateWindow");
-    expect(lwm).toContain("data-lwm-score-trend");
+    expect(lwm).toContain("data-lwm-snapshot-sidebar");
+    expect(lwm).toContain("data-lwm-snapshot-list");
+    expect(lwm).toContain("data-lwm-detail");
+    expect(lwm).toContain("data-lwm-detail-tabs");
+    expect(lwm).toContain("data-lwm-detail-spider");
     expect(lwm).toContain("loadSnapshotHistory");
     expect(lwm).toContain("selectedLwmRunId");
-    expect(lwm).toContain("filterLwmHistoryByDateWindow");
-    expect(lwm).toContain("dualScoreSeriesFromRuns");
-    // Timeline filters default to last 7 days (not empty window).
-    expect(lwm).toContain("defaultLwmTimelineDateWindow({ days: 7 })");
-    expect(lwm).not.toMatch(
-      /const \[lwmFromDate,\s*setLwmFromDate\]\s*=\s*useState\(""\)/,
-    );
-    // Hero-first layout: primary scores + progressive history (not floating timestamp badge)
-    expect(lwm).toContain('data-lwm-layout="hero-first"');
+    expect(lwm).toContain("selectLwmHistoryRun");
+    // No date-window history UI / separate report card grid
+    expect(lwm).not.toContain("data-lwm-date-from");
+    expect(lwm).not.toContain("data-lwm-score-trend");
+    expect(lwm).not.toContain("defaultLwmTimelineDateWindow");
+    expect(lwm).not.toContain("PerformanceReportCard");
+    // Profile-zones layout: control → snapshot list + integrated detail
+    expect(lwm).toContain('data-lwm-layout="profile-zones"');
+    expect(lwm).toContain('data-lwm-zone="control"');
+    expect(lwm).toContain('data-lwm-zone="overview"');
+    expect(lwm).toContain('data-lwm-zone="report"');
+    expect(lwm).toContain('data-lwm-zone="history"');
     expect(lwm).toContain("data-lwm-primary");
     expect(lwm).toContain("data-lwm-history-section");
     expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);

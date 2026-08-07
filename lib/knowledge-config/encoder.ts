@@ -42,6 +42,11 @@ export interface KnowledgeConfigEncodeInput {
   worldModel?: LearningWorldModelV0 | null;
   /** Override as-of; default max timestamp_ms or now. */
   asOfMs?: number;
+  /**
+   * Evaluated goal text for this snapshot (multi-goals joined).
+   * Included in the semantic bag so distinct goal selections produce distinct embeddings.
+   */
+  evaluatedGoalsText?: string | null;
 }
 
 const SEM_BAG_DIM = 64;
@@ -282,17 +287,23 @@ function bagOfTokens(text: string, dim: number): number[] {
   return l2Normalize(bag);
 }
 
-function buildSem16(wm: LearningWorldModelV0 | null | undefined): number[] {
-  if (!wm) return new Array(KNOWLEDGE_CONFIG_SEM_DIM).fill(0);
+function buildSem16(
+  wm: LearningWorldModelV0 | null | undefined,
+  evaluatedGoalsText?: string | null,
+): number[] {
+  if (!wm && !evaluatedGoalsText?.trim()) {
+    return new Array(KNOWLEDGE_CONFIG_SEM_DIM).fill(0);
+  }
   const parts = [
-    wm.inferred_goal?.text || "",
-    ...(wm.learning_profile?.strengths || []),
-    ...(wm.learning_profile?.friction_patterns || []),
-    ...(wm.learning_profile?.preferred_modalities || []),
-    ...(wm.evidence_appetite?.want_more || []),
-    ...(wm.evidence_appetite?.saturated || []),
-    ...(wm.exploration?.blind_spots || []),
-    ...(wm.exploration?.pathways_touched || []),
+    evaluatedGoalsText?.trim() || "",
+    wm?.inferred_goal?.text || "",
+    ...(wm?.learning_profile?.strengths || []),
+    ...(wm?.learning_profile?.friction_patterns || []),
+    ...(wm?.learning_profile?.preferred_modalities || []),
+    ...(wm?.evidence_appetite?.want_more || []),
+    ...(wm?.evidence_appetite?.saturated || []),
+    ...(wm?.exploration?.blind_spots || []),
+    ...(wm?.exploration?.pathways_touched || []),
   ];
   const bag = bagOfTokens(parts.join(" "), SEM_BAG_DIM);
   return l2Normalize(projectWithMatrix(bag, SEM_PROJECTION));
@@ -314,7 +325,9 @@ function confidenceFromInput(input: KnowledgeConfigEncodeInput): number {
 export function encodeKnowledgeConfig(input: KnowledgeConfigEncodeInput): KnowledgeConfigEmbeddingV1 {
   // Weighted concat so structured axes dominate; residual cannot overwhelm cross-workspace geometry.
   const zStruct = l2Normalize(buildStruct48(input)).map((x) => x * Math.sqrt(0.85));
-  const zSem = l2Normalize(buildSem16(input.worldModel)).map((x) => x * Math.sqrt(0.15));
+  const zSem = l2Normalize(
+    buildSem16(input.worldModel, input.evaluatedGoalsText),
+  ).map((x) => x * Math.sqrt(0.15));
   const concatenated = [...zStruct, ...zSem];
   while (concatenated.length < KNOWLEDGE_CONFIG_DIM) concatenated.push(0);
   const vector = l2Normalize(concatenated.slice(0, KNOWLEDGE_CONFIG_DIM));

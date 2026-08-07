@@ -135,7 +135,7 @@ Content-Type: application/json
 
 **Tools (100% parity with public agent REST under `/api/v3/{pow,snapshot,stash}`; create is UI-only; key CRUD is browser-session only):**
 
-`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_snapshot_history`, `list_custom_knowledge_regions`, `create_custom_knowledge_region`, `eval_custom_knowledge_region`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
+`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `list_tapbench_links`, `create_tapbench_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_snapshot_history`, `list_custom_knowledge_regions`, `create_custom_knowledge_region`, `eval_custom_knowledge_region`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
 
 Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`.
 

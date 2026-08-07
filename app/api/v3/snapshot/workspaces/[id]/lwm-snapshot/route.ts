@@ -75,6 +75,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       participantUserId,
       participantGuestUserId,
       workspaceRow: workspace,
+      goalSelectionBody: body,
     });
 
     return NextResponse.json(
@@ -88,6 +89,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           privacy: scored.privacy,
           workspace_goal: scored.workspace_goal,
           workspace_goal_source: scored.workspace_goal_source,
+          evaluated_goals: scored.evaluated_goals,
+          goals_fingerprint: scored.goals_fingerprint,
           report: scored.report,
           protocol_report: scored.protocol_report,
           proof_of_work_summary: scored.proof_of_work_summary,
@@ -103,7 +106,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           report: scored.report,
           proof_of_work_artifacts: scored.proof_of_work_summary?.proof_of_work_artifacts,
           workspace_title: workspace.title || workspace.root_topic || null,
-          workspace_goal: workspace.workspace_goal,
+          workspace_goal: scored.workspace_goal,
           learning_world_model: scored.learning_world_model,
           artifact_summary:
             scored.report.summary || `${LWM_SNAPSHOT_LABEL} ${scored.report.score}`,

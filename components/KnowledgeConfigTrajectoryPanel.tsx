@@ -16,12 +16,7 @@ import {
   type ModelsTabSubjectRef,
 } from "@/lib/pow-api/models-tab-scope";
 import {
-  defaultLwmTimelineDateWindow,
-  dualScoreSeriesFromRuns,
-  filterLwmHistoryByDateWindow,
-  scoreSeriesPolyline,
   selectLwmHistoryRun,
-  timelineMarkersFromRuns,
   type LwmHistoryRunLike,
 } from "@/lib/pow-api/lwm-snapshot-history-ui";
 import {
@@ -51,13 +46,17 @@ import {
   workspaceKnowledgeToGlobalMapInputs,
 } from "@/lib/map-of-knowledge";
 import { MapOfKnowledgeGlobal } from "@/components/MapOfKnowledgeGlobal";
-import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import {
   normalizePerformanceReport,
 } from "@/lib/pow-api/performance-report";
 import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
+import {
+  explainLwmSnapshotReport,
+  lwmPrimaryBandLabel,
+  LWM_CLIENT_LABELS,
+} from "@/lib/pow-api/lwm-snapshot-interpretability";
 import {
   buildKnowledgeRanking,
   formatRankingScore,
@@ -794,6 +793,8 @@ function UserPicker({
   onChange,
   "data-picker": dataPicker,
   ariaLabel,
+  /** Compact LWM toolbar: no visible “User” label, tighter select. */
+  compact = false,
 }: {
   valueUserId: string;
   valueGuestUserId: string;
@@ -803,74 +804,66 @@ function UserPicker({
   onChange: (next: { userId: string; guestUserId: string }) => void;
   "data-picker"?: string;
   ariaLabel: string;
+  compact?: boolean;
 }) {
-  const fieldClass =
-    "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white";
+  const fieldClass = compact
+    ? "w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white"
+    : "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white";
 
   if (!canInspectOthers) {
     return (
       <div className="w-full" data-models-user-picker={dataPicker}>
-        <label className="block w-full">
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-            User
-          </span>
-          <select
-            value={currentUserId ? `u:${currentUserId}` : ""}
-            disabled
-            className={fieldClass}
-            aria-label={ariaLabel}
-            data-models-user-select={dataPicker}
-          >
-            <option value={currentUserId ? `u:${currentUserId}` : ""}>You</option>
-          </select>
-        </label>
+        <select
+          value={currentUserId ? `u:${currentUserId}` : ""}
+          disabled
+          className={fieldClass}
+          aria-label={ariaLabel}
+          data-models-user-select={dataPicker}
+        >
+          <option value={currentUserId ? `u:${currentUserId}` : ""}>You</option>
+        </select>
       </div>
     );
   }
 
   return (
     <div className="w-full" data-models-user-picker={dataPicker}>
-      <label className="block w-full">
-        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-          User
-        </span>
-        <select
-          value={selectValueFromSubject(valueUserId, valueGuestUserId, currentUserId)}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v.startsWith("g:")) {
-              onChange({ userId: "", guestUserId: v.slice(2) });
-            } else if (v.startsWith("u:")) {
-              onChange({ userId: v.slice(2), guestUserId: "" });
-            } else {
-              onChange({ userId: currentUserId || "", guestUserId: "" });
-            }
-          }}
-          className={fieldClass}
-          aria-label={ariaLabel}
-          data-models-user-select={dataPicker}
-        >
-          {currentUserId ? (
-            <option value={`u:${currentUserId}`}>You</option>
-          ) : (
-            <option value="">Select user</option>
-          )}
-          {availableSubjects
-            .filter((s) => s.user_id && s.user_id !== currentUserId)
-            .map((s) => (
-              <option key={subjectOptionKey(s)} value={`u:${s.user_id}`}>
-                {subjectOptionLabel(s, currentUserId)}
-              </option>
-            ))}
-          {availableSubjects
-            .filter((s) => s.guest_user_id)
-            .map((s) => (
-              <option key={subjectOptionKey(s)} value={`g:${s.guest_user_id}`}>
-                {subjectOptionLabel(s, currentUserId)}
-              </option>
-            ))}
-        </select>
-      </label>
+      <select
+        value={selectValueFromSubject(valueUserId, valueGuestUserId, currentUserId)}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v.startsWith("g:")) {
+            onChange({ userId: "", guestUserId: v.slice(2) });
+          } else if (v.startsWith("u:")) {
+            onChange({ userId: v.slice(2), guestUserId: "" });
+          } else {
+            onChange({ userId: currentUserId || "", guestUserId: "" });
+          }
+        }}
+        className={fieldClass}
+        aria-label={ariaLabel}
+        data-models-user-select={dataPicker}
+      >
+        {currentUserId ? (
+          <option value={`u:${currentUserId}`}>You</option>
+        ) : (
+          <option value="">Select user</option>
+        )}
+        {availableSubjects
+          .filter((s) => s.user_id && s.user_id !== currentUserId)
+          .map((s) => (
+            <option key={subjectOptionKey(s)} value={`u:${s.user_id}`}>
+              {subjectOptionLabel(s, currentUserId)}
+            </option>
+          ))}
+        {availableSubjects
+          .filter((s) => s.guest_user_id)
+          .map((s) => (
+            <option key={subjectOptionKey(s)} value={`g:${s.guest_user_id}`}>
+              {subjectOptionLabel(s, currentUserId)}
+            </option>
+          ))}
+      </select>
     </div>
   );
 }
@@ -1039,7 +1032,7 @@ interface KnowledgeConfigTrajectoryPanelProps {
   isOwner?: boolean;
   ayclToken?: string;
   /**
-   * Learner mode: force LWM + Embeddings to the logged-in user only —
+   * Self-view mode: force LWM + Embeddings to the logged-in user only —
    * no interactive subject picker even when isOwner is true.
    */
   lockSubjectToSelf?: boolean;
@@ -1083,6 +1076,18 @@ export function KnowledgeConfigTrajectoryPanel({
     last_eval_at?: string | null;
     new_pow_count?: number | null;
   } | null>(null);
+  /** Goal selection for Generate new snapshot: default | adhoc | selected. */
+  const [goalMode, setGoalMode] = useState<"default" | "adhoc" | "selected">("default");
+  const [adhocGoal, setAdhocGoal] = useState("");
+  const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
+  const [goalCatalog, setGoalCatalog] = useState<
+    Array<{ id: string; text: string; scope: "workspace" | "block"; block_id?: string | null }>
+  >([]);
+  /**
+   * Generate snapshot modal: opens on generate click so goal + progress stay
+   * out of the compact control bar. `single` = one subject; `all` = owner batch.
+   */
+  const [snapshotModalMode, setSnapshotModalMode] = useState<"single" | "all" | null>(null);
   /** Owner-only multi-subject LWM Snapshot-all with live NDJSON progress. */
   const [snapshotAllProgress, setSnapshotAllProgress] = useState<SnapshotAllProgressState>(
     () => initialSnapshotAllProgress(),
@@ -1105,18 +1110,18 @@ export function KnowledgeConfigTrajectoryPanel({
   const [rankingError, setRankingError] = useState<string | null>(null);
   /** Selected ranking subject key (`u:` / `g:`); defaults to #1 when list loads. */
   const [selectedRankingKey, setSelectedRankingKey] = useState<string | null>(null);
-  /** Date window (yyyy-mm-dd) focusing the timeline + trends. Defaults to last 7 days. */
-  const [lwmFromDate, setLwmFromDate] = useState(() => {
-    return defaultLwmTimelineDateWindow({ days: 7 }).from;
-  });
-  const [lwmToDate, setLwmToDate] = useState(() => {
-    // Pair with from on first paint; same helper + days keeps window coherent.
-    return defaultLwmTimelineDateWindow({ days: 7 }).to;
-  });
-  /** Full report is secondary — start collapsed for a cleaner LWM hero. */
-  const [lwmReportOpen, setLwmReportOpen] = useState(false);
-  /** Timeline + score trends grouped under progressive “History” disclosure. */
-  const [lwmHistoryOpen, setLwmHistoryOpen] = useState(false);
+  type LwmDetailTab =
+    | "profile"
+    | "summary"
+    | "markers"
+    | "strengths"
+    | "gaps"
+    | "next_steps"
+    | "details";
+  /** Integrated detail: profile (scores+spider) default; other report data as tabs. */
+  const [lwmDetailTab, setLwmDetailTab] = useState<LwmDetailTab>("profile");
+  /** Skill + authenticity explanations shown only via header “Explain Scores” modal. */
+  const [showScoreExplainModal, setShowScoreExplainModal] = useState(false);
   /** Browser fullscreen for the embeddings visual (covers navbar via Fullscreen API). */
   const [embeddingsFullscreen, setEmbeddingsFullscreen] = useState(false);
   const embeddingsShellRef = useRef<HTMLDivElement | null>(null);
@@ -1207,7 +1212,7 @@ export function KnowledgeConfigTrajectoryPanel({
     if (!lwmUserId && !lwmGuestUserId) setLwmUserId(currentUserId);
   }, [currentUserId, lwmGuestUserId, lwmUserId]);
 
-  // Non-inspectors / learner self-lock: force Embeddings + LWM to logged-in user.
+  // Non-inspectors / self-view lock: force Embeddings + LWM to logged-in user.
   useEffect(() => {
     if (canInspectOthers || !currentUserId) return;
     const selfKey = `u:${currentUserId}`;
@@ -1394,9 +1399,6 @@ export function KnowledgeConfigTrajectoryPanel({
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
       else if (lwmUserId) params.set("user_id", lwmUserId);
       else if (currentUserId) params.set("user_id", currentUserId);
-      // Server-side date bounds when set (also re-windowed client-side for focus).
-      if (lwmFromDate) params.set("from", `${lwmFromDate}T00:00:00.000Z`);
-      if (lwmToDate) params.set("to", `${lwmToDate}T23:59:59.999Z`);
 
       const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
       const data = await response.json().catch(() => ({}));
@@ -1433,9 +1435,7 @@ export function KnowledgeConfigTrajectoryPanel({
   }, [
     ayclToken,
     currentUserId,
-    lwmFromDate,
     lwmGuestUserId,
-    lwmToDate,
     lwmUserId,
     showLwm,
     workspaceId,
@@ -1461,10 +1461,27 @@ export function KnowledgeConfigTrajectoryPanel({
       setSnapshotEligibility(null);
       return;
     }
+    // Incomplete adhoc/custom selection: don't hard-block; generateSnapshot validates text/ids.
+    if (goalMode === "adhoc" && !adhocGoal.trim()) {
+      setSnapshotEligibility({ allowed: true });
+      return;
+    }
+    if (goalMode === "selected" && selectedGoalIds.length === 0) {
+      setSnapshotEligibility({ allowed: true });
+      return;
+    }
     try {
       const params = new URLSearchParams();
       params.set("workspaceId", workspaceId);
       params.set("limit", "1");
+      // Goals-aware gate: eligibility is per goal set (default / adhoc / selected).
+      params.set("goal_mode", goalMode);
+      if (goalMode === "adhoc" && adhocGoal.trim()) {
+        params.set("adhoc_goal", adhocGoal.trim());
+      }
+      if (goalMode === "selected" && selectedGoalIds.length > 0) {
+        params.set("goal_ids", selectedGoalIds.join(","));
+      }
       if (ayclToken) params.set("ayclToken", ayclToken);
       const subjectUser = lwmUserId || currentUserId;
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
@@ -1480,7 +1497,7 @@ export function KnowledgeConfigTrajectoryPanel({
         string,
         { allowed?: boolean; message?: string; last_eval_at?: string | null; new_pow_count?: number | null }
       >;
-      // Single strategy: verification / lwm snapshot gate
+      // Single strategy: verification / lwm snapshot gate (scoped to goals_fingerprint)
       const status = eligibility.verification ?? Object.values(eligibility)[0];
       if (!status) {
         setSnapshotEligibility({ allowed: true });
@@ -1495,23 +1512,101 @@ export function KnowledgeConfigTrajectoryPanel({
     } catch {
       setSnapshotEligibility({ allowed: true });
     }
-  }, [ayclToken, currentUserId, lwmGuestUserId, lwmUserId, workspaceId]);
+  }, [
+    adhocGoal,
+    ayclToken,
+    currentUserId,
+    goalMode,
+    lwmGuestUserId,
+    lwmUserId,
+    selectedGoalIds,
+    workspaceId,
+  ]);
+
+  // Load goal catalog for custom selection UI (workspace + block goals).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = new URLSearchParams({ workspaceId });
+        if (ayclToken) params.set("ayclToken", ayclToken);
+        const res = await fetch(`/api/workspace/goals?${params.toString()}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json().catch(() => ({}));
+        const ws = Array.isArray(data.workspace_goals) ? data.workspace_goals : [];
+        const bl = Array.isArray(data.block_goals) ? data.block_goals : [];
+        if (cancelled) return;
+        setGoalCatalog([
+          ...ws.map((g: { id: string; text: string }) => ({
+            id: g.id,
+            text: g.text,
+            scope: "workspace" as const,
+            block_id: null,
+          })),
+          ...bl.map((g: { id: string; text: string; block_id?: string }) => ({
+            id: g.id,
+            text: g.text,
+            scope: "block" as const,
+            block_id: g.block_id ?? null,
+          })),
+        ]);
+      } catch {
+        /* non-fatal for snapshot UI */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ayclToken, workspaceId]);
+
+  // Eligibility reloads when goal selection changes via loadSnapshotEligibility deps
+  // (goalMode / adhocGoal / selectedGoalIds) + the showLwm effect below.
+
+  const openSnapshotModal = useCallback(
+    (mode: "single" | "all") => {
+      setSnapshotError(null);
+      if (mode === "all") {
+        setSnapshotAllProgress(initialSnapshotAllProgress());
+      }
+      setSnapshotModalMode(mode);
+    },
+    [],
+  );
+
+  const closeSnapshotModal = useCallback(() => {
+    // Allow dismiss while running; generation continues in background.
+    setSnapshotModalMode(null);
+  }, []);
 
   const generateSnapshot = useCallback(async () => {
+    // Gate is goals-aware: same PoW + same goals blocked; different goals allowed server-side.
     if (snapshotEligibility && !snapshotEligibility.allowed) {
       setSnapshotError(
         snapshotEligibility.message ||
-          "No new proof of work since the last LWM Snapshot for this user.",
+          "No new proof of work since the last LWM Snapshot for this goal selection.",
       );
+      return;
+    }
+    if (goalMode === "adhoc" && !adhocGoal.trim()) {
+      setSnapshotError("Enter an adhoc goal, or switch to default / custom selection.");
+      return;
+    }
+    if (goalMode === "selected" && selectedGoalIds.length === 0) {
+      setSnapshotError("Select at least one workspace or block goal.");
       return;
     }
     setSnapshotLoading(true);
     setSnapshotError(null);
     try {
-      const body: Record<string, string> = { workspaceId };
+      const body: Record<string, unknown> = {
+        workspaceId,
+        goal_mode: goalMode,
+      };
       if (ayclToken) body.ayclToken = ayclToken;
       if (lwmGuestUserId) body.guest_user_id = lwmGuestUserId;
       else if (lwmUserId) body.user_id = lwmUserId;
+      if (goalMode === "adhoc") body.adhoc_goal = adhocGoal.trim();
+      if (goalMode === "selected") body.goal_ids = selectedGoalIds;
 
       const response = await fetch("/api/workspace/performance-report", {
         method: "POST",
@@ -1526,17 +1621,22 @@ export function KnowledgeConfigTrajectoryPanel({
       }
       await loadLwm();
       await loadSnapshotEligibility();
+      // Keep modal open briefly so progress completes, then dismiss.
+      setSnapshotModalMode(null);
     } catch (err) {
       setSnapshotError(err instanceof Error ? err.message : "Failed to generate LWM Snapshot");
     } finally {
       setSnapshotLoading(false);
     }
   }, [
+    adhocGoal,
     ayclToken,
+    goalMode,
     loadLwm,
     loadSnapshotEligibility,
     lwmGuestUserId,
     lwmUserId,
+    selectedGoalIds,
     snapshotEligibility,
     workspaceId,
   ]);
@@ -1553,6 +1653,14 @@ export function KnowledgeConfigTrajectoryPanel({
    */
   const generateSnapshotAll = useCallback(async () => {
     if (!isOwner || snapshotAllRunning || snapshotLoading) return;
+    if (goalMode === "adhoc" && !adhocGoal.trim()) {
+      setSnapshotError("Enter an adhoc goal, or switch to default / custom selection.");
+      return;
+    }
+    if (goalMode === "selected" && selectedGoalIds.length === 0) {
+      setSnapshotError("Select at least one workspace or block goal.");
+      return;
+    }
     setSnapshotError(null);
     setSnapshotAllProgress(
       reduceSnapshotAllProgress(initialSnapshotAllProgress(), {
@@ -1563,13 +1671,20 @@ export function KnowledgeConfigTrajectoryPanel({
     );
 
     try {
+      const body: Record<string, unknown> = {
+        stream: true,
+        goal_mode: goalMode,
+      };
+      if (goalMode === "adhoc") body.adhoc_goal = adhocGoal.trim();
+      if (goalMode === "selected") body.goal_ids = selectedGoalIds;
+
       const response = await fetch(`/api/workspaces/${workspaceId}/snapshot-all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/x-ndjson",
         },
-        body: JSON.stringify({ stream: true }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -1657,9 +1772,12 @@ export function KnowledgeConfigTrajectoryPanel({
       setSnapshotError(message);
     }
   }, [
+    adhocGoal,
+    goalMode,
     isOwner,
     loadLwm,
     loadSnapshotEligibility,
+    selectedGoalIds,
     snapshotAllRunning,
     snapshotLoading,
     workspaceId,
@@ -1840,22 +1958,13 @@ export function KnowledgeConfigTrajectoryPanel({
   const scores = wm?.scores_snapshot;
   const kc = lwmData?.knowledge_config;
 
-  /** Client-side date window focus (also sent server-side on history load). */
-  const windowedLwmRuns = useMemo(
-    () =>
-      filterLwmHistoryByDateWindow(lwmHistoryRuns, {
-        from: lwmFromDate || null,
-        to: lwmToDate || null,
-      }),
-    [lwmFromDate, lwmHistoryRuns, lwmToDate],
-  );
-
+  /** All snapshots for the selected subject (newest first from API). */
   const selectedLwmRun = useMemo(
-    () => selectLwmHistoryRun(windowedLwmRuns, selectedLwmRunId),
-    [selectedLwmRunId, windowedLwmRuns],
+    () => selectLwmHistoryRun(lwmHistoryRuns, selectedLwmRunId),
+    [selectedLwmRunId, lwmHistoryRuns],
   );
 
-  // Keep selection valid when window / subject history changes.
+  // Keep selection valid when subject history changes; default to newest.
   useEffect(() => {
     if (!selectedLwmRun) {
       if (selectedLwmRunId) setSelectedLwmRunId(null);
@@ -1866,15 +1975,9 @@ export function KnowledgeConfigTrajectoryPanel({
     }
   }, [selectedLwmRun, selectedLwmRunId]);
 
-  const lwmTimelineMarkers = useMemo(
-    () => timelineMarkersFromRuns(windowedLwmRuns),
-    [windowedLwmRuns],
-  );
-
-  const lwmScoreSeries = useMemo(
-    () => dualScoreSeriesFromRuns(windowedLwmRuns),
-    [windowedLwmRuns],
-  );
+  useEffect(() => {
+    setLwmDetailTab("profile");
+  }, [selectedLwmRun?.id]);
 
   const selectedRunReport = useMemo(() => {
     const report = selectedLwmRun?.report;
@@ -1896,6 +1999,26 @@ export function KnowledgeConfigTrajectoryPanel({
       : scores?.ghc_score != null
         ? Math.round(scores.ghc_score)
         : null;
+
+  /** Client-facing dual-score explanation (pure mapper; no re-score). */
+  const lwmExplanation = useMemo(() => {
+    if (selectedRunReport) {
+      return explainLwmSnapshotReport({
+        ...selectedRunReport,
+        score: displaySnapScore ?? selectedRunReport.score,
+        ghc_score: displayGhcScore ?? selectedRunReport.ghc_score,
+      });
+    }
+    if (displaySnapScore != null || displayGhcScore != null) {
+      return explainLwmSnapshotReport({
+        score: displaySnapScore ?? undefined,
+        ghc_score: displayGhcScore ?? undefined,
+        summary:
+          typeof wm?.inferred_goal?.text === "string" ? wm.inferred_goal.text : undefined,
+      });
+    }
+    return null;
+  }, [selectedRunReport, displaySnapScore, displayGhcScore, wm?.inferred_goal?.text]);
 
   const lwmUpdatedLabel = useMemo(() => {
     const iso = selectedLwmRun?.ran_at || wm?.updated_at || kc?.as_of || null;
@@ -2856,359 +2979,33 @@ export function KnowledgeConfigTrajectoryPanel({
         </div>
       ) : null}
 
-      {/* Learning World Model — hero scores first, progressive history/report */}
+      {/* Learning World Model — compact toolbar + list-detail results */}
       {showLwm ? (
         <section
           data-section="lwm"
-          data-lwm-layout="hero-first"
-          className="flex w-full min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4"
+          data-lwm-layout="profile-zones"
+          className="flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2"
         >
           {lwmError ? (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-300">
               {lwmError}
             </div>
           ) : null}
 
-          {/* PRIMARY: selected snapshot scores + actions */}
-          <div className="min-w-0" data-lwm-primary data-lwm-card-column>
-            {lwmLoading && !wm && windowedLwmRuns.length === 0 ? (
-              <p className="text-xs text-neutral-500">Loading learning world model…</p>
-            ) : !selectedLwmRun && !wm ? (
-              <div
-                className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
-                data-lwm-empty
-              >
-                <p className="text-sm font-medium text-neutral-200">No snapshots yet</p>
-                <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
-                  Generate a Learning World Model Snapshot for the selected person when they have
-                  new proof of work.
-                </p>
-                <div
-                  className="mt-4 flex flex-col items-center gap-2"
-                  data-lwm-snapshot-controls
-                >
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void generateSnapshot()}
-                      disabled={
-                        snapshotLoading ||
-                        snapshotAllRunning ||
-                        (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
-                        snapshotEligibility?.allowed === false
-                      }
-                      title={
-                        snapshotEligibility?.allowed === false
-                          ? snapshotEligibility.message ||
-                            "No new proof of work since the last LWM Snapshot for this user."
-                          : "Generate a new Learning World Model Snapshot for the selected user"
-                      }
-                      className="rounded-lg bg-white px-4 py-2.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-                      data-lwm-generate-snapshot
-                    >
-                      {snapshotLoading ? "Generating…" : "Generate new snapshot"}
-                    </button>
-                    {isOwner ? (
-                      <button
-                        type="button"
-                        onClick={() => void generateSnapshotAll()}
-                        disabled={snapshotLoading || snapshotAllRunning}
-                        title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
-                        className="rounded-lg border border-cyan-700/70 bg-cyan-950/40 px-4 py-2.5 text-xs font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-950/70 disabled:cursor-not-allowed disabled:opacity-40"
-                        data-lwm-generate-snapshot-all
-                      >
-                        {snapshotAllRunning
-                          ? `All users… ${snapshotAllProgress.completed}/${Math.max(snapshotAllProgress.total, 1)}`
-                          : "Snapshot all users"}
-                      </button>
-                    ) : null}
-                  </div>
-                  {snapshotEligibility?.allowed === false ? (
-                    <p className="max-w-xs text-[10px] text-neutral-500" data-lwm-snapshot-gate>
-                      {snapshotEligibility.message || "No new PoW since last snapshot."}
-                    </p>
-                  ) : null}
-                  {snapshotError ? (
-                    <p className="max-w-xs text-[10px] text-red-400" data-lwm-snapshot-error>
-                      {snapshotError}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div
-                className="relative w-full overflow-hidden rounded-2xl border border-cyan-900/40 bg-gradient-to-br from-neutral-950 via-neutral-950 to-cyan-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_20px_50px_rgba(0,0,0,0.45)]"
-                data-lwm-skill-card
-                data-lwm-selected-run={selectedLwmRun?.id || undefined}
-              >
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
-                  aria-hidden
-                />
-
-                {/* Hero header: scores dominate */}
-                <div className="flex flex-col gap-4 px-4 pb-4 pt-5 sm:px-5 sm:pt-6">
-                  <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
-                        Latest snapshot
-                      </p>
-                      <p className="mt-0.5 truncate text-base font-medium text-white sm:text-lg">
-                        {lwmScope.label || "Selected user"}
-                      </p>
-                      <p
-                        className="mt-0.5 text-xs tabular-nums text-neutral-400"
-                        data-lwm-last-updated
-                      >
-                        {lwmUpdatedLabel || "Not yet"}
-                      </p>
-                    </div>
-                    <div
-                      className="flex shrink-0 flex-col items-end gap-1.5"
-                      data-lwm-snapshot-controls
-                    >
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => void generateSnapshot()}
-                          disabled={
-                            snapshotLoading ||
-                            snapshotAllRunning ||
-                            (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
-                            snapshotEligibility?.allowed === false
-                          }
-                          title={
-                            snapshotEligibility?.allowed === false
-                              ? snapshotEligibility.message ||
-                                "No new proof of work since the last LWM Snapshot for this user."
-                              : "Generate a new Learning World Model Snapshot for the selected user"
-                          }
-                          className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-                          data-lwm-generate-snapshot
-                        >
-                          {snapshotLoading ? "Generating…" : "Generate new snapshot"}
-                        </button>
-                        {isOwner ? (
-                          <button
-                            type="button"
-                            onClick={() => void generateSnapshotAll()}
-                            disabled={snapshotLoading || snapshotAllRunning}
-                            title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
-                            className="rounded-lg border border-cyan-700/70 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-950/70 disabled:cursor-not-allowed disabled:opacity-40"
-                            data-lwm-generate-snapshot-all
-                          >
-                            {snapshotAllRunning
-                              ? `All users… ${snapshotAllProgress.completed}/${Math.max(snapshotAllProgress.total, 1)}`
-                              : "Snapshot all users"}
-                          </button>
-                        ) : null}
-                      </div>
-                      {snapshotEligibility?.allowed === false ? (
-                        <p
-                          className="max-w-[14rem] text-right text-[10px] text-neutral-500"
-                          data-lwm-snapshot-gate
-                        >
-                          {snapshotEligibility.message || "No new PoW since last snapshot."}
-                        </p>
-                      ) : null}
-                      {snapshotError ? (
-                        <p
-                          className="max-w-[14rem] text-right text-[10px] text-red-400"
-                          data-lwm-snapshot-error
-                        >
-                          {snapshotError}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex min-w-0 flex-wrap items-stretch gap-3">
-                    <div
-                      className="flex h-[5.5rem] w-[5.5rem] shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-24 sm:w-24"
-                      data-lwm-skill-score
-                    >
-                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-cyan-100 sm:text-4xl">
-                        {displaySnapScore != null ? displaySnapScore : "—"}
-                      </span>
-                      <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
-                        snap
-                      </span>
-                    </div>
-                    <div
-                      className="flex h-[5.5rem] w-[5.5rem] shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-24 sm:w-24"
-                      data-lwm-ghc-score
-                    >
-                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-amber-100 sm:text-4xl">
-                        {displayGhcScore != null ? displayGhcScore : "—"}
-                      </span>
-                      <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
-                        GHC
-                      </span>
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-                      {selectedRunReport?.summary || wm?.inferred_goal?.text ? (
-                        <p className="line-clamp-3 text-sm leading-relaxed text-neutral-300">
-                          {typeof selectedRunReport?.summary === "string"
-                            ? selectedRunReport.summary
-                            : wm?.inferred_goal?.text}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-neutral-500">
-                          Snapshot scores for this person. Open history or report for more detail.
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        {kc && !kc.empty ? (
-                          <Chip>
-                            conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
-                          </Chip>
-                        ) : null}
-                        {selectedLwmRun?.source ? <Chip>{selectedLwmRun.source}</Chip> : null}
-                        {windowedLwmRuns.length > 0 ? (
-                          <Chip tone="cyan">
-                            {windowedLwmRuns.length} in window
-                          </Chip>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {wm &&
-                ((wm.learning_profile?.strengths?.length ?? 0) > 0 ||
-                  (wm.evidence_appetite?.want_more?.length ?? 0) > 0 ||
-                  (wm.evidence_appetite?.saturated?.length ?? 0) > 0) ? (
-                  <div className="space-y-2 border-t border-white/5 px-4 py-3 sm:px-5">
-                    {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {wm.learning_profile.strengths.slice(0, 8).map((s) => (
-                          <Chip key={s}>{s}</Chip>
-                        ))}
-                      </div>
-                    ) : null}
-                    {wm.evidence_appetite &&
-                    ((wm.evidence_appetite.want_more?.length ?? 0) > 0 ||
-                      (wm.evidence_appetite.saturated?.length ?? 0) > 0) ? (
-                      <div className="flex flex-wrap gap-1">
-                        {(wm.evidence_appetite.want_more || []).slice(0, 6).map((item) => (
-                          <Chip key={`want-${item}`} tone="cyan">
-                            + {item}
-                          </Chip>
-                        ))}
-                        {(wm.evidence_appetite.saturated || []).slice(0, 4).map((item) => (
-                          <Chip key={`sat-${item}`} tone="amber">
-                            sat {item}
-                          </Chip>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div
-                  className="border-t border-white/5 px-4 py-3 sm:px-5"
-                  data-lwm-selected-snapshot-report
-                >
-                  <button
-                    type="button"
-                    data-lwm-report-toggle
-                    onClick={() => setLwmReportOpen((v) => !v)}
-                    className="flex w-full items-center justify-between gap-2 text-left text-xs text-neutral-300 transition hover:text-white"
-                  >
-                    <span className="font-medium">Full report</span>
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
-                      {lwmReportOpen ? "Hide" : "Show"}
-                    </span>
-                  </button>
-                  {lwmReportOpen ? (
-                    selectedRunReport ? (
-                      <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
-                        <PerformanceReportCard
-                          report={selectedRunReport}
-                          layout="spacious"
-                          label="Snapshot report"
-                        />
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-xs text-neutral-500">
-                        No report payload on this snapshot.
-                      </p>
-                    )
-                  ) : null}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Snapshot-all progress (owner) — sits under primary actions */}
-          {isOwner && snapshotAllProgress.phase !== "idle" ? (
-            <div
-              className="rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2.5"
-              data-lwm-snapshot-all-progress
-              data-lwm-snapshot-all-phase={snapshotAllProgress.phase}
-            >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-medium text-neutral-300">All users</span>
-                <span
-                  className="font-mono text-[10px] tabular-nums text-cyan-200/90"
-                  data-lwm-snapshot-all-counts
-                >
-                  {snapshotAllProgress.completed}/{snapshotAllProgress.total || "…"}
-                </span>
-              </div>
-              {snapshotAllProgress.total > 0 ? (
-                <div
-                  className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-neutral-800"
-                  data-lwm-snapshot-all-bar
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={snapshotAllProgress.total}
-                  aria-valuenow={snapshotAllProgress.completed}
-                >
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      snapshotAllProgress.phase === "error"
-                        ? "bg-red-500"
-                        : snapshotAllProgress.phase === "complete"
-                          ? "bg-emerald-500"
-                          : "bg-cyan-400"
-                    }`}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (snapshotAllProgress.completed /
-                          Math.max(1, snapshotAllProgress.total)) *
-                          100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-              ) : snapshotAllRunning ? (
-                <div className="mb-1.5 h-1.5 animate-pulse rounded-full bg-cyan-900/60" />
-              ) : null}
-              <p
-                className={`text-[10px] leading-snug ${
-                  snapshotAllProgress.phase === "error"
-                    ? "text-red-400"
-                    : snapshotAllProgress.phase === "complete"
-                      ? "text-emerald-300/90"
-                      : "text-neutral-400"
-                }`}
-                data-lwm-snapshot-all-status
-              >
-                {snapshotAllProgressText}
-              </p>
-            </div>
-          ) : null}
-
-          {/* SECONDARY: subject + date filters (compact) */}
+          {/* ── A. Compact toolbar: user + generate ─────────────────── */}
           <div
-            className="flex flex-wrap items-end gap-2.5 rounded-xl border border-neutral-800/80 bg-neutral-950/40 px-3 py-2.5"
+            className="flex flex-wrap items-center gap-1.5"
+            data-lwm-zone="control"
             data-lwm-filters
           >
-            <div className="min-w-[10rem] max-w-xs flex-1" data-lwm-controls-column data-picker="lwm">
+            <div
+              className="min-w-[10rem] max-w-xs flex-1"
+              data-lwm-controls-column
+              data-picker="lwm"
+            >
               <UserPicker
                 ariaLabel="Learning world model user"
+                compact
                 valueUserId={lwmUserId}
                 valueGuestUserId={lwmGuestUserId}
                 currentUserId={currentUserId}
@@ -3221,262 +3018,1014 @@ export function KnowledgeConfigTrajectoryPanel({
                 }}
               />
             </div>
-            <label className="flex flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
-              From
-              <input
-                type="date"
-                value={lwmFromDate}
-                onChange={(e) => setLwmFromDate(e.target.value)}
-                data-lwm-date-from
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
-              />
-            </label>
-            <label className="flex flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
-              To
-              <input
-                type="date"
-                value={lwmToDate}
-                onChange={(e) => setLwmToDate(e.target.value)}
-                data-lwm-date-to
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
-              />
-            </label>
-            <button
-              type="button"
-              data-lwm-date-last-7d
-              onClick={() => {
-                const w = defaultLwmTimelineDateWindow({ days: 7 });
-                setLwmFromDate(w.from);
-                setLwmToDate(w.to);
-              }}
-              className="rounded-md border border-neutral-700 px-2 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
-              title="Set timeline window to the last 7 calendar days"
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              data-lwm-snapshot-controls
             >
-              Last 7 days
-            </button>
-            {(lwmFromDate || lwmToDate) && (
               <button
                 type="button"
-                data-lwm-date-clear
-                onClick={() => {
-                  setLwmFromDate("");
-                  setLwmToDate("");
-                }}
-                className="rounded-md border border-neutral-700 px-2 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                onClick={() => openSnapshotModal("single")}
+                disabled={
+                  snapshotLoading ||
+                  snapshotAllRunning ||
+                  (!currentUserId && !lwmUserId && !lwmGuestUserId)
+                }
+                title="Choose a goal and generate a Learning World Model Snapshot for the selected user"
+                className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                data-lwm-generate-snapshot
               >
-                Clear dates
+                {snapshotLoading ? "Generating…" : "Generate new snapshot"}
               </button>
-            )}
+              {isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => openSnapshotModal("all")}
+                  disabled={snapshotLoading || snapshotAllRunning}
+                  title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
+                  className="rounded-md border border-white/80 bg-transparent px-2.5 py-1.5 text-xs font-medium text-white transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  data-lwm-generate-snapshot-all
+                >
+                  {snapshotAllRunning
+                    ? `All users… ${snapshotAllProgress.completed}/${Math.max(snapshotAllProgress.total, 1)}`
+                    : "Snapshot all users"}
+                </button>
+              ) : null}
+            </div>
+            {snapshotAllRunning && snapshotModalMode === null ? (
+              <p
+                className="w-full text-[10px] text-neutral-500"
+                data-lwm-snapshot-all-running-hint
+              >
+                Snapshotting all users…{" "}
+                <button
+                  type="button"
+                  className="text-neutral-300 underline-offset-2 hover:underline"
+                  onClick={() => setSnapshotModalMode("all")}
+                >
+                  Show progress
+                </button>
+              </p>
+            ) : null}
           </div>
 
-          {/* SECONDARY: history (timeline + trends) — progressive disclosure */}
-          <div
-            className="rounded-xl border border-neutral-800/80 bg-neutral-950/40"
-            data-lwm-history-section
-          >
-            <button
-              type="button"
-              data-lwm-history-toggle
-              aria-expanded={lwmHistoryOpen}
-              onClick={() => setLwmHistoryOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-neutral-900/50"
+          {/* Generate modal: goal selection + progress (keeps control bar compact) */}
+          {snapshotModalMode ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="lwm-snapshot-modal-title"
+              data-lwm-snapshot-modal
+              data-lwm-snapshot-modal-mode={snapshotModalMode}
             >
-              <span className="text-xs font-medium text-neutral-200">History</span>
-              <span className="flex items-center gap-2 text-[10px] text-neutral-500">
-                <span data-lwm-timeline-count>
-                  {lwmHistoryLoading
-                    ? "Loading…"
-                    : `${windowedLwmRuns.length} snapshot${windowedLwmRuns.length === 1 ? "" : "s"}`}
-                </span>
-                <span className="font-mono uppercase tracking-wide">
-                  {lwmHistoryOpen ? "Hide" : "Show"}
-                </span>
-              </span>
-            </button>
+              <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                onClick={() => {
+                  if (!snapshotLoading && !snapshotAllRunning) closeSnapshotModal();
+                }}
+              />
+              <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+                <div className="border-b border-neutral-800/70 px-5 pb-4 pt-5">
+                  <h3
+                    id="lwm-snapshot-modal-title"
+                    className="text-base font-semibold text-white"
+                  >
+                    {snapshotModalMode === "all"
+                      ? "Snapshot all users"
+                      : "Generate snapshot"}
+                  </h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-400">
+                    {snapshotModalMode === "all"
+                      ? "Pick the goal for this batch, then run a Learning World Model Snapshot for every subject in this workspace."
+                      : "Pick the goal for this run, then generate a snapshot for the selected user."}
+                  </p>
 
-            {lwmHistoryOpen ? (
-              <div className="space-y-3 border-t border-neutral-800/80 px-3.5 pb-3.5 pt-3">
-                {/* Horizontal snapshot timeline */}
-                <div
-                  className="rounded-lg border border-neutral-800/60 bg-neutral-950/50 px-3 py-3"
-                  data-lwm-timeline
-                  role="listbox"
-                  aria-label="Snapshot timeline"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-neutral-400">Timeline</span>
-                  </div>
-                  {windowedLwmRuns.length === 0 ? (
-                    <p
-                      className="py-4 text-center text-xs text-neutral-500"
-                      data-lwm-timeline-empty
-                    >
-                      {lwmHistoryLoading
-                        ? "Loading snapshots…"
-                        : "No snapshots in this window. Generate one or widen the date range."}
+                  <div
+                    className="mt-4 space-y-2 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3"
+                    data-lwm-goal-selection
+                  >
+                    <p className="text-[11px] font-medium text-neutral-300">
+                      Goal for this snapshot
+                      {snapshotModalMode === "all" ? (
+                        <span className="font-normal text-neutral-500">
+                          {" "}
+                          (applied to every user)
+                        </span>
+                      ) : null}
                     </p>
-                  ) : (
-                    <div className="relative mx-1 h-14" data-lwm-timeline-track>
-                      <div
-                        className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-neutral-700"
-                        aria-hidden
-                      />
-                      {lwmTimelineMarkers.map((m) => {
-                        const selected = selectedLwmRun?.id === m.id;
-                        return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            data-lwm-timeline-point={m.id}
-                            title={`${m.ran_at} · snap ${m.snapshotScore ?? "—"} · GHC ${m.ghcScore ?? "—"}`}
-                            onClick={() => setSelectedLwmRunId(m.id)}
-                            className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-                            style={{ left: `${m.t * 100}%` }}
-                          >
-                            <span
-                              className={`block h-3 w-3 rounded-full border-2 transition ${
-                                selected
-                                  ? "scale-125 border-cyan-200 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.55)]"
-                                  : "border-neutral-500 bg-neutral-800 hover:border-cyan-400/80 hover:bg-cyan-900/50"
-                              }`}
-                            />
-                            <span
-                              className={`max-w-[4.5rem] truncate font-mono text-[9px] tabular-nums ${
-                                selected ? "text-cyan-200" : "text-neutral-500"
-                              }`}
-                            >
-                              {new Date(m.atMs).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </button>
-                        );
-                      })}
+                    <div
+                      className="flex flex-wrap gap-1"
+                      role="group"
+                      aria-label="Goal selection mode"
+                    >
+                      {(
+                        [
+                          { id: "default" as const, label: "Default" },
+                          { id: "adhoc" as const, label: "Adhoc" },
+                          { id: "selected" as const, label: "Custom" },
+                        ] as const
+                      ).map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          data-lwm-goal-mode={m.id}
+                          data-active={goalMode === m.id ? "true" : "false"}
+                          disabled={snapshotLoading || snapshotAllRunning}
+                          onClick={() => setGoalMode(m.id)}
+                          className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
+                            goalMode === m.id
+                              ? "bg-white text-black"
+                              : "border border-neutral-700 text-neutral-400 hover:text-neutral-200"
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
                     </div>
-                  )}
+                    {goalMode === "default" ? (
+                      <p
+                        className="text-[11px] leading-snug text-neutral-500"
+                        data-lwm-goal-default-hint
+                      >
+                        All workspace goals + goals of blocks linked by PoW
+                        {snapshotModalMode === "all"
+                          ? " (resolved per subject)."
+                          : "."}
+                      </p>
+                    ) : null}
+                    {goalMode === "adhoc" ? (
+                      <input
+                        type="text"
+                        value={adhocGoal}
+                        onChange={(e) => setAdhocGoal(e.target.value)}
+                        disabled={snapshotLoading || snapshotAllRunning}
+                        placeholder="Adhoc goal for this run…"
+                        className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white focus:border-neutral-400 focus:outline-none disabled:opacity-50"
+                        data-lwm-adhoc-goal
+                      />
+                    ) : null}
+                    {goalMode === "selected" ? (
+                      <div
+                        className="max-h-36 space-y-1 overflow-y-auto"
+                        data-lwm-goal-picker
+                      >
+                        {goalCatalog.length === 0 ? (
+                          <p className="text-[11px] text-neutral-500">
+                            No catalog goals yet. Add them on the Goals tab.
+                          </p>
+                        ) : (
+                          goalCatalog.map((g) => {
+                            const checked = selectedGoalIds.includes(g.id);
+                            return (
+                              <label
+                                key={g.id}
+                                className="flex cursor-pointer items-start gap-2 text-[11px] text-neutral-300"
+                                data-lwm-goal-option={g.id}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={snapshotLoading || snapshotAllRunning}
+                                  onChange={() =>
+                                    setSelectedGoalIds((prev) =>
+                                      checked
+                                        ? prev.filter((id) => id !== g.id)
+                                        : [...prev, g.id],
+                                    )
+                                  }
+                                  className="mt-0.5"
+                                />
+                                <span className="line-clamp-2">
+                                  [{g.scope}] {g.text}
+                                </span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    ) : null}
+                    {snapshotModalMode === "single" &&
+                    snapshotEligibility?.allowed === false ? (
+                      <p
+                        className="text-[11px] text-amber-400/90"
+                        data-lwm-snapshot-gate
+                      >
+                        {snapshotEligibility.message ||
+                          "No new PoW since last snapshot for this goal selection."}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Progress */}
+                  <div
+                    className="mt-4 space-y-2 rounded-xl border border-neutral-800 bg-neutral-950/40 p-3"
+                    data-lwm-snapshot-progress
+                    data-lwm-snapshot-all-progress={
+                      snapshotModalMode === "all" ? "true" : undefined
+                    }
+                    data-lwm-snapshot-all-phase={
+                      snapshotModalMode === "all"
+                        ? snapshotAllProgress.phase
+                        : undefined
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-neutral-300">
+                        Progress
+                      </span>
+                      {snapshotModalMode === "all" &&
+                      snapshotAllProgress.phase !== "idle" ? (
+                        <span
+                          className="font-mono text-[10px] tabular-nums text-neutral-300"
+                          data-lwm-snapshot-all-counts
+                        >
+                          {snapshotAllProgress.completed}/
+                          {snapshotAllProgress.total || "…"}
+                        </span>
+                      ) : snapshotLoading ? (
+                        <span className="text-[10px] text-neutral-400">Running…</span>
+                      ) : (
+                        <span className="text-[10px] text-neutral-500">Ready</span>
+                      )}
+                    </div>
+
+                    {snapshotModalMode === "all" &&
+                    snapshotAllProgress.total > 0 ? (
+                      <div
+                        className="h-2 overflow-hidden rounded-full bg-neutral-800"
+                        data-lwm-snapshot-all-bar
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={snapshotAllProgress.total}
+                        aria-valuenow={snapshotAllProgress.completed}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            snapshotAllProgress.phase === "error"
+                              ? "bg-red-500"
+                              : snapshotAllProgress.phase === "complete"
+                                ? "bg-white"
+                                : "bg-neutral-300"
+                          }`}
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              (snapshotAllProgress.completed /
+                                Math.max(1, snapshotAllProgress.total)) *
+                                100,
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    ) : snapshotLoading || snapshotAllRunning ? (
+                      <div
+                        className="h-2 overflow-hidden rounded-full bg-neutral-800"
+                        data-lwm-snapshot-progress-bar
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuetext="In progress"
+                      >
+                        <div className="h-full w-1/3 animate-pulse rounded-full bg-neutral-400" />
+                      </div>
+                    ) : (
+                      <div className="h-2 rounded-full bg-neutral-800/80" />
+                    )}
+
+                    <p
+                      className={`text-[11px] leading-snug ${
+                        snapshotError || snapshotAllProgress.phase === "error"
+                          ? "text-red-400"
+                          : snapshotAllProgress.phase === "complete"
+                            ? "text-neutral-200"
+                            : "text-neutral-400"
+                      }`}
+                      {...(snapshotModalMode === "all"
+                        ? { "data-lwm-snapshot-all-status": true }
+                        : {})}
+                      data-lwm-snapshot-progress-status
+                    >
+                      {snapshotModalMode === "all"
+                        ? snapshotAllProgress.phase === "idle"
+                          ? "Press start to snapshot every user."
+                          : snapshotAllProgressText
+                        : snapshotLoading
+                          ? "Generating Learning World Model Snapshot…"
+                          : "Press generate when the goal looks right."}
+                    </p>
+                    {snapshotError ? (
+                      <p className="text-[11px] text-red-400" data-lwm-snapshot-error>
+                        {snapshotError}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
 
-                {/* Dual score trend */}
-                <div
-                  className="rounded-lg border border-neutral-800/60 bg-neutral-950/50 p-3"
-                  data-lwm-score-trend
-                >
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-neutral-400">Score trends</span>
-                    <div className="flex items-center gap-3 text-[10px] text-neutral-500">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-1.5 w-4 rounded-full bg-cyan-400" /> Snapshot
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-1.5 w-4 rounded-full bg-amber-400" /> GHC
-                      </span>
-                    </div>
-                  </div>
-                  {lwmScoreSeries.length < 1 ? (
-                    <p className="py-6 text-center text-xs text-neutral-500">No score history yet.</p>
-                  ) : (
-                    <svg
-                      viewBox="0 0 480 140"
-                      className="h-32 w-full"
-                      role="img"
-                      aria-label="Snapshot and GHC scores over time"
-                      data-lwm-score-trend-chart
+                <div className="flex gap-2 px-5 py-4">
+                  <button
+                    type="button"
+                    onClick={closeSnapshotModal}
+                    className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900 py-2.5 px-4 text-sm text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
+                  >
+                    {snapshotLoading || snapshotAllRunning ? "Hide" : "Cancel"}
+                  </button>
+                  {snapshotModalMode === "single" ? (
+                    <button
+                      type="button"
+                      onClick={() => void generateSnapshot()}
+                      disabled={
+                        snapshotLoading ||
+                        snapshotAllRunning ||
+                        snapshotEligibility?.allowed === false ||
+                        (goalMode === "adhoc" && !adhocGoal.trim()) ||
+                        (goalMode === "selected" && selectedGoalIds.length === 0)
+                      }
+                      className="flex-1 rounded-xl bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      data-lwm-snapshot-modal-confirm
                     >
-                      {[0, 25, 50, 75, 100].map((y) => {
-                        const py = 8 + (1 - y / 100) * 124;
-                        return (
-                          <g key={y}>
-                            <line
-                              x1={8}
-                              x2={472}
-                              y1={py}
-                              y2={py}
-                              stroke="#262626"
-                              strokeWidth={1}
-                            />
-                            <text
-                              x={4}
-                              y={py + 3}
-                              fill="#525252"
-                              fontSize={9}
-                              textAnchor="start"
-                            >
-                              {y}
-                            </text>
-                          </g>
-                        );
-                      })}
-                      {(() => {
-                        const snap = scoreSeriesPolyline(
-                          lwmScoreSeries,
-                          "snapshotScore",
-                          480,
-                          140,
-                          8,
-                        );
-                        const ghc = scoreSeriesPolyline(
-                          lwmScoreSeries,
-                          "ghcScore",
-                          480,
-                          140,
-                          8,
-                        );
-                        return (
-                          <>
-                            {ghc ? (
-                              <polyline
-                                fill="none"
-                                stroke="#fbbf24"
-                                strokeWidth={2}
-                                strokeLinejoin="round"
-                                strokeLinecap="round"
-                                points={ghc}
-                                data-lwm-trend-ghc
-                              />
-                            ) : null}
-                            {snap ? (
-                              <polyline
-                                fill="none"
-                                stroke="#22d3ee"
-                                strokeWidth={2.25}
-                                strokeLinejoin="round"
-                                strokeLinecap="round"
-                                points={snap}
-                                data-lwm-trend-snapshot
-                              />
-                            ) : null}
-                            {lwmScoreSeries.map((p) => {
-                              if (p.snapshotScore == null) return null;
-                              const minT = lwmScoreSeries[0].atMs;
-                              const maxT = lwmScoreSeries[lwmScoreSeries.length - 1].atMs;
-                              const span = Math.max(1, maxT - minT);
-                              const x = 8 + ((p.atMs - minT) / span) * 464;
-                              const y = 8 + (1 - p.snapshotScore / 100) * 124;
-                              const selected = selectedLwmRun?.id === p.id;
-                              return (
-                                <circle
-                                  key={p.id}
-                                  cx={x}
-                                  cy={y}
-                                  r={selected ? 4.5 : 3}
-                                  fill={selected ? "#a5f3fc" : "#22d3ee"}
-                                  className="cursor-pointer"
-                                  onClick={() => setSelectedLwmRunId(p.id)}
-                                  data-lwm-trend-point={p.id}
-                                />
-                              );
-                            })}
-                          </>
-                        );
-                      })()}
-                    </svg>
+                      {snapshotLoading ? "Generating…" : "Generate"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void generateSnapshotAll()}
+                      disabled={
+                        snapshotLoading ||
+                        snapshotAllRunning ||
+                        snapshotAllProgress.phase === "complete" ||
+                        (goalMode === "adhoc" && !adhocGoal.trim()) ||
+                        (goalMode === "selected" && selectedGoalIds.length === 0)
+                      }
+                      className="flex-1 rounded-xl bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      data-lwm-snapshot-modal-confirm-all
+                    >
+                      {snapshotAllRunning
+                        ? "Running…"
+                        : snapshotAllProgress.phase === "complete"
+                          ? "Done"
+                          : snapshotAllProgress.phase === "error"
+                            ? "Retry"
+                            : "Start"}
+                    </button>
                   )}
                 </div>
               </div>
-            ) : null}
+            </div>
+          ) : null}
+
+          {/* ── B–C. Snapshot list + profile (single frame) ─────────── */}
+          <div
+            className="flex min-h-0 min-w-0 flex-1 flex-col"
+            data-lwm-primary
+            data-lwm-card-column
+            data-lwm-zone="results"
+          >
+            {lwmLoading && !wm && lwmHistoryRuns.length === 0 ? (
+              <p className="text-xs text-neutral-500">Loading learning world model…</p>
+            ) : !selectedLwmRun && !wm && lwmHistoryRuns.length === 0 ? (
+              <div
+                className="rounded-xl border border-dashed border-neutral-700 bg-neutral-950/40 px-4 py-6 text-center"
+                data-lwm-empty
+              >
+                <p className="text-sm font-medium text-neutral-200">No snapshots yet</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
+                  Pick a person above, then{" "}
+                  <span className="text-neutral-300">Generate new snapshot</span> to choose a goal
+                  after proof of work.
+                </p>
+              </div>
+            ) : (
+              <div
+                className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/80"
+                data-lwm-results-layout="list-detail"
+                data-lwm-selected-run={selectedLwmRun?.id || undefined}
+              >
+                {/* Side list: all snapshots for selected user */}
+                <aside
+                  className="flex w-52 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950/60 sm:w-56"
+                  data-lwm-zone="history"
+                  data-lwm-history-section
+                  data-lwm-snapshot-sidebar
+                >
+                  <div className="flex shrink-0 items-baseline justify-between gap-2 border-b border-neutral-800 px-2.5 py-1.5">
+                    <p className="text-[11px] font-medium text-neutral-300">Snapshots</p>
+                    <p className="text-[10px] text-neutral-500" data-lwm-timeline-count>
+                      {lwmHistoryLoading
+                        ? "…"
+                        : `${lwmHistoryRuns.length}`}
+                    </p>
+                  </div>
+                  {lwmHistoryLoading && lwmHistoryRuns.length === 0 ? (
+                    <p className="px-2.5 py-3 text-xs text-neutral-500">Loading…</p>
+                  ) : lwmHistoryRuns.length === 0 ? (
+                    <p
+                      className="px-2.5 py-3 text-xs text-neutral-500"
+                      data-lwm-timeline-empty
+                    >
+                      No snapshots for this person yet.
+                    </p>
+                  ) : (
+                    <ol
+                      className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain p-1"
+                      data-lwm-snapshot-list
+                      role="listbox"
+                      aria-label="Snapshots for selected user"
+                    >
+                      {lwmHistoryRuns.map((run, index) => {
+                        const selected = selectedLwmRun?.id === run.id;
+                        const ranLabel = (() => {
+                          const ms = Date.parse(run.ran_at);
+                          if (!Number.isFinite(ms)) return run.ran_at;
+                          try {
+                            return new Intl.DateTimeFormat(undefined, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }).format(new Date(ms));
+                          } catch {
+                            return run.ran_at;
+                          }
+                        })();
+                        return (
+                          <li key={run.id}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onClick={() => setSelectedLwmRunId(run.id)}
+                              className={`w-full rounded-md px-2 py-1.5 text-left transition ${
+                                selected
+                                  ? "bg-white/10 ring-1 ring-white/25"
+                                  : "hover:bg-neutral-900/80"
+                              }`}
+                              data-lwm-snapshot-item={run.id}
+                              data-lwm-timeline-point={run.id}
+                              data-lwm-snapshot-selected={selected ? "true" : "false"}
+                            >
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-[10px] font-medium text-neutral-500">
+                                  #{index + 1}
+                                </span>
+                                <span className="flex items-center gap-1 text-[10px] font-mono tabular-nums">
+                                  <span
+                                    className="rounded border border-neutral-600 bg-neutral-900 px-1 py-0.5 text-neutral-100"
+                                    data-lwm-skill-score-chip
+                                  >
+                                    {Math.round(run.score)}
+                                  </span>
+                                  <span
+                                    className="rounded border border-neutral-700 bg-neutral-900/80 px-1 py-0.5 text-neutral-300"
+                                    data-lwm-ghc-score-chip
+                                  >
+                                    {run.ghc_score != null ? Math.round(run.ghc_score) : "—"}
+                                  </span>
+                                </span>
+                              </div>
+                              <p className="mt-0.5 truncate text-[11px] text-neutral-200" data-lwm-snapshot-ran-at>
+                                {ranLabel}
+                              </p>
+                              {run.source ? (
+                                <p className="truncate text-[10px] text-neutral-500">
+                                  {run.source}
+                                </p>
+                              ) : null}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                </aside>
+
+                {/* Main: integrated detail (scores + spider, then tabs) */}
+                <div
+                  className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-neutral-950/40"
+                  data-lwm-zone="overview"
+                  data-lwm-skill-card
+                  data-lwm-detail
+                >
+                  {!selectedLwmRun && !wm ? (
+                    <div className="px-5 py-10 text-center text-xs text-neutral-500">
+                      Select a snapshot from the list.
+                    </div>
+                  ) : (
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      {/* Header: person + dual scores */}
+                      <div className="shrink-0 border-b border-neutral-800 px-3 py-2 sm:px-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p
+                              className="truncate text-sm font-medium text-white"
+                              data-lwm-group="person"
+                            >
+                              {lwmScope.label || "Selected user"}
+                            </p>
+                            <p
+                              className="mt-0.5 text-[11px] text-neutral-500"
+                              data-lwm-last-updated
+                            >
+                              {lwmUpdatedLabel || "Not yet"}
+                            </p>
+                          </div>
+                          <div
+                            className="flex flex-wrap items-center gap-2"
+                            data-lwm-group="scores"
+                          >
+                            <div
+                              className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white px-3 py-2 text-black"
+                              data-lwm-skill-score
+                            >
+                              <p className="text-[10px] font-medium text-neutral-600">
+                                {LWM_CLIENT_LABELS.primary_score_short}
+                              </p>
+                              <p className="font-mono text-2xl font-semibold tabular-nums leading-none text-black">
+                                {displaySnapScore != null ? displaySnapScore : "—"}
+                              </p>
+                            </div>
+                            <div
+                              className="min-w-[5.5rem] rounded-lg border border-white/60 bg-neutral-100 px-3 py-2 text-black"
+                              data-lwm-ghc-score
+                            >
+                              <p className="text-[10px] font-medium text-neutral-600">
+                                {LWM_CLIENT_LABELS.ghc_score_short}
+                              </p>
+                              <p className="font-mono text-2xl font-semibold tabular-nums leading-none text-black">
+                                {displayGhcScore != null ? displayGhcScore : "—"}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowScoreExplainModal(true)}
+                              className="flex min-h-[3.25rem] min-w-[5.5rem] flex-col justify-center rounded-lg border border-white/60 bg-transparent px-3 py-2 text-left transition hover:border-white hover:bg-white/10"
+                              data-lwm-explain-scores
+                              title="Explain skill readiness and authenticity scores"
+                            >
+                              <p className="text-[10px] font-medium text-neutral-400">
+                                Explain
+                              </p>
+                              <p className="text-sm font-semibold leading-tight text-white">
+                                Scores
+                              </p>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {showScoreExplainModal ? (
+                        <div
+                          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-labelledby="lwm-score-explain-title"
+                          data-lwm-score-explain-modal
+                        >
+                          <div
+                            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                            onClick={() => setShowScoreExplainModal(false)}
+                          />
+                          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+                            <div className="border-b border-neutral-800/70 px-5 pb-4 pt-5">
+                              <h3
+                                id="lwm-score-explain-title"
+                                className="text-base font-semibold text-white"
+                              >
+                                Explain scores
+                              </h3>
+                              <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-400">
+                                Skill / readiness and authenticity measure different
+                                things. Both apply to this selected snapshot.
+                              </p>
+                              <div
+                                className="mt-4 space-y-3"
+                                data-lwm-score-explanations
+                              >
+                                <div
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
+                                  data-lwm-primary-explanation
+                                >
+                                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                    <p className="text-[12px] font-medium text-neutral-200">
+                                      {LWM_CLIENT_LABELS.primary_score}
+                                    </p>
+                                    <p className="font-mono text-sm font-semibold tabular-nums text-white">
+                                      {displaySnapScore != null ? displaySnapScore : "—"}
+                                    </p>
+                                  </div>
+                                  {lwmExplanation?.primary_meaning ? (
+                                    <p
+                                      className="mt-1.5 text-xs leading-relaxed text-neutral-400"
+                                      data-lwm-primary-meaning
+                                    >
+                                      {lwmExplanation.primary_meaning}
+                                    </p>
+                                  ) : (
+                                    <p className="mt-1.5 text-xs text-neutral-500">
+                                      No skill explanation yet.
+                                    </p>
+                                  )}
+                                  {lwmExplanation ? (
+                                    <p
+                                      className="mt-1.5 text-[11px] text-neutral-500"
+                                      data-lwm-primary-band={lwmExplanation.primary_band}
+                                    >
+                                      Stage:{" "}
+                                      {lwmPrimaryBandLabel(lwmExplanation.primary_band)}
+                                    </p>
+                                  ) : null}
+                                </div>
+                                <div
+                                  className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
+                                  data-lwm-ghc-explanation
+                                >
+                                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                                    <p className="text-[12px] font-medium text-neutral-200">
+                                      {LWM_CLIENT_LABELS.ghc_score}
+                                    </p>
+                                    <p className="font-mono text-sm font-semibold tabular-nums text-white">
+                                      {displayGhcScore != null ? displayGhcScore : "—"}
+                                    </p>
+                                  </div>
+                                  {lwmExplanation?.ghc_meaning ? (
+                                    <p
+                                      className="mt-1.5 text-xs leading-relaxed text-neutral-400"
+                                      data-lwm-ghc-meaning
+                                    >
+                                      {lwmExplanation.ghc_meaning}
+                                    </p>
+                                  ) : (
+                                    <p className="mt-1.5 text-xs text-neutral-500">
+                                      No authenticity explanation yet.
+                                    </p>
+                                  )}
+                                  {lwmExplanation?.ghc_confidence ? (
+                                    <p className="mt-1.5 text-[11px] text-neutral-500">
+                                      Confidence: {lwmExplanation.ghc_confidence}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex justify-end px-5 py-4">
+                              <button
+                                type="button"
+                                onClick={() => setShowScoreExplainModal(false)}
+                                className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                                data-lwm-score-explain-close
+                              >
+                                Close
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Tab bar */}
+                      <div
+                        className="shrink-0 border-b border-neutral-800"
+                        data-lwm-detail-tabs
+                      >
+                        <div
+                          className="-mb-px flex gap-0.5 overflow-x-auto px-2"
+                          role="tablist"
+                          aria-label="Snapshot detail sections"
+                        >
+                          {(
+                            [
+                              { id: "profile" as const, label: "Profile" },
+                              { id: "summary" as const, label: "Summary" },
+                              { id: "markers" as const, label: "Markers" },
+                              { id: "strengths" as const, label: "Strengths" },
+                              { id: "gaps" as const, label: "Gaps" },
+                              { id: "next_steps" as const, label: "Next steps" },
+                              { id: "details" as const, label: "Details" },
+                            ] as const
+                          ).map((tab) => {
+                            const active = lwmDetailTab === tab.id;
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={active}
+                                data-lwm-detail-tab={tab.id}
+                                data-active={active ? "true" : "false"}
+                                onClick={() => setLwmDetailTab(tab.id)}
+                                className={`shrink-0 border-b-2 px-2.5 py-1.5 text-xs font-medium transition ${
+                                  active
+                                    ? "border-white text-white"
+                                    : "border-transparent text-neutral-500 hover:text-neutral-300"
+                                }`}
+                              >
+                                {tab.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Tab panels */}
+                      <div
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4"
+                        role="tabpanel"
+                        data-lwm-detail-panel={lwmDetailTab}
+                        data-lwm-report-body
+                        data-lwm-zone="report"
+                        data-lwm-selected-snapshot-report
+                        data-lwm-report-column
+                      >
+                        {lwmDetailTab === "profile" ? (
+                          <div className="flex flex-col gap-5" data-lwm-detail-profile>
+                            <div
+                              className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-4"
+                              data-lwm-detail-spider
+                            >
+                              <p className="text-[11px] font-medium text-neutral-400">
+                                Competency profile
+                              </p>
+                              {(selectedRunReport?.marker_scores ?? []).length > 0 ? (
+                                <div className="mt-3 flex justify-center">
+                                  <MarkerRadarChart
+                                    markers={selectedRunReport?.marker_scores ?? []}
+                                    variant="large"
+                                    ariaLabel="Competency marker scores"
+                                    className="aspect-square h-auto w-full max-w-[min(100%,24rem)]"
+                                  />
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-xs text-neutral-500">
+                                  No spider markers on this snapshot.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "summary" ? (
+                          <div className="space-y-4" data-lwm-detail-summary>
+                            {selectedRunReport?.workspace_goal ||
+                            wm?.inferred_goal?.text ? (
+                              <div>
+                                <p className="text-[11px] font-medium text-neutral-400">
+                                  Goal
+                                </p>
+                                <p className="mt-1 text-sm leading-relaxed text-neutral-300">
+                                  {selectedRunReport?.workspace_goal?.trim() ||
+                                    wm?.inferred_goal?.text}
+                                </p>
+                              </div>
+                            ) : null}
+                            {selectedRunReport?.summary ? (
+                              <div>
+                                <p className="text-[11px] font-medium text-neutral-400">
+                                  Summary
+                                </p>
+                                <p className="mt-1 text-sm leading-relaxed text-neutral-300">
+                                  {selectedRunReport.summary}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-neutral-500">No summary on this snapshot.</p>
+                            )}
+                            {(selectedRunReport?.growth_areas ?? []).length > 0 ? (
+                              <div>
+                                <p className="text-[11px] font-medium text-neutral-400">
+                                  Growth areas
+                                </p>
+                                <ul className="mt-1.5 space-y-1 text-sm text-neutral-400">
+                                  {selectedRunReport!.growth_areas.map((item) => (
+                                    <li key={item} className="flex gap-2">
+                                      <span className="text-neutral-600">↑</span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                            {(selectedRunReport?.suggestions ?? []).length > 0 ? (
+                              <div>
+                                <p className="text-[11px] font-medium text-neutral-400">
+                                  Suggestions
+                                </p>
+                                <ul className="mt-1.5 space-y-1 text-sm text-neutral-400">
+                                  {selectedRunReport!.suggestions.map((item) => (
+                                    <li key={item} className="flex gap-2">
+                                      <span className="text-neutral-600">•</span>
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "markers" ? (
+                          <div data-lwm-detail-markers>
+                            {(selectedRunReport?.marker_scores ?? []).length > 0 ? (
+                              <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                                {selectedRunReport!.marker_scores.map((marker) => (
+                                  <div
+                                    key={marker.id}
+                                    className="border-b border-neutral-800/60 pb-4"
+                                  >
+                                    <div className="flex items-baseline justify-between gap-3">
+                                      <span className="text-sm font-medium text-neutral-200">
+                                        {marker.label}
+                                      </span>
+                                      <span className="font-mono text-lg text-white">
+                                        {marker.score}
+                                      </span>
+                                    </div>
+                                    {marker.rationale ? (
+                                      <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+                                        {marker.rationale}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-neutral-500">No markers on this snapshot.</p>
+                            )}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "strengths" ? (
+                          <div data-lwm-detail-strengths>
+                            {(selectedRunReport?.strengths ?? []).length > 0 ? (
+                              <ul className="space-y-2 text-sm leading-relaxed text-neutral-300">
+                                {selectedRunReport!.strengths.map((item) => (
+                                  <li key={item} className="flex gap-2">
+                                    <span className="text-neutral-500">+</span>
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-neutral-500">No strengths listed.</p>
+                            )}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "gaps" ? (
+                          <div data-lwm-detail-gaps>
+                            {(() => {
+                              const gapAnalysis = normalizePerformanceGapAnalysis(
+                                selectedRunReport?.gap_analysis,
+                              );
+                              if (gapAnalysis.gaps.length === 0) {
+                                return (
+                                  <p className="text-xs text-neutral-500">
+                                    {gapAnalysis.summary || "No gaps identified."}
+                                  </p>
+                                );
+                              }
+                              return (
+                                <div className="space-y-2">
+                                  {gapAnalysis.summary ? (
+                                    <p className="text-xs leading-relaxed text-neutral-400">
+                                      {gapAnalysis.summary}
+                                    </p>
+                                  ) : null}
+                                  <ul className="space-y-2">
+                                    {gapAnalysis.gaps.map((gap) => (
+                                      <li
+                                        key={gap.title}
+                                        className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
+                                      >
+                                        <div className="font-medium text-neutral-200">
+                                          {gap.title}
+                                        </div>
+                                        {gap.proof_of_work ? (
+                                          <p className="mt-1 leading-relaxed text-neutral-400">
+                                            {gap.proof_of_work}
+                                          </p>
+                                        ) : null}
+                                        {gap.suggested_repair ? (
+                                          <p className="mt-1 text-neutral-500">
+                                            Repair: {gap.suggested_repair}
+                                          </p>
+                                        ) : null}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "next_steps" ? (
+                          <div data-lwm-detail-next-steps>
+                            {(() => {
+                              const gapAnalysis = normalizePerformanceGapAnalysis(
+                                selectedRunReport?.gap_analysis,
+                              );
+                              const dirs = gapAnalysis.next_steps.directions ?? [];
+                              const events = gapAnalysis.next_steps.events ?? [];
+                              if (dirs.length === 0 && events.length === 0) {
+                                return (
+                                  <p className="text-xs text-neutral-500">
+                                    No next steps on this snapshot.
+                                  </p>
+                                );
+                              }
+                              return (
+                                <div className="space-y-4">
+                                  {dirs.length > 0 ? (
+                                    <div>
+                                      <p className="text-[11px] font-medium text-neutral-400">
+                                        Directions
+                                      </p>
+                                      <ul className="mt-1.5 space-y-1.5 text-sm text-neutral-300">
+                                        {dirs.map((d) => (
+                                          <li key={d} className="flex gap-2">
+                                            <span className="text-neutral-600">→</span>
+                                            <span>{d}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ) : null}
+                                  {events.length > 0 ? (
+                                    <div>
+                                      <p className="text-[11px] font-medium text-neutral-400">
+                                        Events
+                                      </p>
+                                      <ul className="mt-1.5 space-y-1.5 text-sm text-neutral-300">
+                                        {events.map((e) => (
+                                          <li key={e} className="flex gap-2">
+                                            <span className="text-neutral-600">•</span>
+                                            <span>{e}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : null}
+
+                        {lwmDetailTab === "details" ? (
+                          <div className="space-y-3 text-xs text-neutral-400" data-lwm-detail-meta>
+                            {(kc && !kc.empty) || selectedLwmRun?.source ? (
+                              <div data-lwm-group="evidence">
+                                <p className="font-medium text-neutral-300">Evidence</p>
+                                {kc && !kc.empty ? (
+                                  <p className="mt-1">
+                                    Knowledge embedding confidence:{" "}
+                                    {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count}{" "}
+                                    proof-of-work event
+                                    {kc.pow_event_count === 1 ? "" : "s"}
+                                  </p>
+                                ) : null}
+                                {selectedLwmRun?.source ? (
+                                  <p className="mt-1">Source: {selectedLwmRun.source}</p>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <p className="text-neutral-500">No extra evidence metadata.</p>
+                            )}
+                            {wm &&
+                            ((wm.learning_profile?.strengths?.length ?? 0) > 0 ||
+                              (wm.evidence_appetite?.want_more?.length ?? 0) > 0 ||
+                              (wm.evidence_appetite?.saturated?.length ?? 0) > 0) ? (
+                              <div data-lwm-group="profile" data-lwm-profile-disclosure>
+                                <p className="font-medium text-neutral-300">
+                                  World-model notes
+                                </p>
+                                {wm.learning_profile?.strengths &&
+                                wm.learning_profile.strengths.length > 0 ? (
+                                  <p className="mt-1">
+                                    Strengths: {wm.learning_profile.strengths.slice(0, 8).join(" · ")}
+                                  </p>
+                                ) : null}
+                                {wm.evidence_appetite?.want_more &&
+                                wm.evidence_appetite.want_more.length > 0 ? (
+                                  <p className="mt-1">
+                                    Could use more evidence on:{" "}
+                                    {wm.evidence_appetite.want_more.slice(0, 6).join(" · ")}
+                                  </p>
+                                ) : null}
+                                {wm.evidence_appetite?.saturated &&
+                                wm.evidence_appetite.saturated.length > 0 ? (
+                                  <p className="mt-1">
+                                    Already well covered:{" "}
+                                    {wm.evidence_appetite.saturated.slice(0, 4).join(" · ")}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
           </div>
         </section>
       ) : null}

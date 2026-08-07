@@ -1,6 +1,7 @@
 /**
- * Gate re-running an LWM Snapshot until new proof of work is available.
- * Single strategy only (LWM Snapshot strategy).
+ * Gate re-running an LWM Snapshot until new proof of work is available
+ * for the same goal selection. Distinct goal sets are distinct snapshot
+ * identities and do not share the no-new-PoW block.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -22,10 +23,12 @@ export const NO_NEW_POW_CODE = "no_new_pow" as const;
 export interface EvalPowGateStatus {
   vertical: ScoreVertical;
   allowed: boolean;
-  /** ISO timestamp of the last snapshot for the subject, if any. */
+  /** ISO timestamp of the last snapshot for the subject (+ goals), if any. */
   last_eval_at: string | null;
-  /** New PoW artifacts since last_eval_at; null when never snapshotted. */
+  /** New PoW artifacts since last_eval_at; null when never snapshotted for this goal set. */
   new_pow_count: number | null;
+  /** Goals fingerprint this gate decision applies to (when provided). */
+  goals_fingerprint?: string | null;
   code?: typeof NO_NEW_POW_CODE;
   message?: string;
 }
@@ -38,6 +41,12 @@ export interface EvalPowGateOptions {
   participantUserId?: string | null;
   participantGuestUserId?: string | null;
   blockId?: string | null;
+  /**
+   * Fingerprint of the evaluated goal set for this run.
+   * When set, only prior snapshots with the same fingerprint gate re-runs.
+   * When omitted, falls back to any prior snapshot (legacy single-goal behavior).
+   */
+  goalsFingerprint?: string | null;
 }
 
 export function verticalLabel(_vertical?: ScoreVertical): string {
@@ -46,21 +55,23 @@ export function verticalLabel(_vertical?: ScoreVertical): string {
 
 /**
  * Pure decision helper for tests and UI previews.
- * First snapshot is always allowed; re-runs require new_pow_count > 0.
+ * First snapshot for a goal set is always allowed; re-runs require new_pow_count > 0.
  */
 export function decideEvalPowGate(input: {
   vertical?: ScoreVertical;
   lastEvalAt: string | null;
   newPowCount: number;
+  goalsFingerprint?: string | null;
 }): EvalPowGateStatus {
   const vertical = SNAPSHOT_VERTICAL;
-  const { lastEvalAt, newPowCount } = input;
+  const { lastEvalAt, newPowCount, goalsFingerprint } = input;
   if (!lastEvalAt) {
     return {
       vertical,
       allowed: true,
       last_eval_at: null,
       new_pow_count: null,
+      goals_fingerprint: goalsFingerprint ?? null,
     };
   }
   if (newPowCount > 0) {
@@ -69,6 +80,7 @@ export function decideEvalPowGate(input: {
       allowed: true,
       last_eval_at: lastEvalAt,
       new_pow_count: newPowCount,
+      goals_fingerprint: goalsFingerprint ?? null,
     };
   }
   return {
@@ -76,9 +88,26 @@ export function decideEvalPowGate(input: {
     allowed: false,
     last_eval_at: lastEvalAt,
     new_pow_count: 0,
+    goals_fingerprint: goalsFingerprint ?? null,
     code: NO_NEW_POW_CODE,
-    message: `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}. Upload more proof of work before generating a new snapshot.`,
+    message: `No new proof of work since the last ${LWM_SNAPSHOT_LABEL} for this goal selection. Upload more proof of work or choose different goals before generating a new snapshot.`,
   };
+}
+
+/**
+ * Pure helper: whether same PoW + same goals is blocked, different goals allowed.
+ * Drives unit tests of identity semantics without re-implementing the gate.
+ */
+export function decideEvalPowGateWithGoals(input: {
+  lastEvalAtForGoals: string | null;
+  newPowCountSinceLastForGoals: number;
+  goalsFingerprint: string;
+}): EvalPowGateStatus {
+  return decideEvalPowGate({
+    lastEvalAt: input.lastEvalAtForGoals,
+    newPowCount: input.newPowCountSinceLastForGoals,
+    goalsFingerprint: input.goalsFingerprint,
+  });
 }
 
 function resolveEvidenceFilter(
@@ -143,9 +172,9 @@ export async function countProofOfWorkSince(
 }
 
 /**
- * Latest snapshot ran_at for the subject.
+ * Latest snapshot ran_at for the subject, optionally matching goals_fingerprint.
  * Treats historical verification (and any prior vertical) as the same snapshot timeline
- * so re-runs still require new PoW after any prior score archive.
+ * so re-runs still require new PoW after any prior score archive for that goal set.
  */
 export async function getLatestEvalRanAt(
   supabase: SupabaseClient,
@@ -153,21 +182,34 @@ export async function getLatestEvalRanAt(
     workspaceId: string;
     subject?: SubjectRef | null;
     vertical?: ScoreVertical;
+    goalsFingerprint?: string | null;
   },
 ): Promise<string | null> {
-  // Single strategy: look at all history for subject (limit 1 by ran_at desc).
-  // Do not filter by vertical so legacy aug/opt archives still gate re-snapshots.
+  // Single strategy: look at all history for subject (limit enough to filter by goals).
+  // Do not filter by vertical so legacy aug/opt archives still gate re-snapshots when no goals fp.
   const rows = await listEvalRunHistory(supabase, {
     workspaceId: options.workspaceId,
     subject: options.subject,
     vertical: null,
-    limit: 1,
+    limit: options.goalsFingerprint ? 50 : 1,
   });
-  return rows[0]?.ran_at ?? null;
+
+  if (!options.goalsFingerprint) {
+    return rows[0]?.ran_at ?? null;
+  }
+
+  const fp = options.goalsFingerprint;
+  for (const row of rows) {
+    if (row.goals_fingerprint === fp) return row.ran_at;
+    // Also match when fingerprint is stored only on report evaluated_goals via recomputation —
+    // history row may have goals_fingerprint null for legacy; skip those for multi-goal gate.
+  }
+  return null;
 }
 
 /**
- * Whether an LWM Snapshot may run given prior history and new PoW availability.
+ * Whether an LWM Snapshot may run given prior history and new PoW availability
+ * for the same goal selection.
  */
 export async function getEvalPowGateStatus(
   supabase: SupabaseClient,
@@ -184,6 +226,7 @@ export async function getEvalPowGateStatus(
     workspaceId: options.workspaceId,
     subject,
     vertical: SNAPSHOT_VERTICAL,
+    goalsFingerprint: options.goalsFingerprint ?? null,
   });
 
   if (!lastEvalAt) {
@@ -191,6 +234,7 @@ export async function getEvalPowGateStatus(
       vertical: SNAPSHOT_VERTICAL,
       lastEvalAt: null,
       newPowCount: 0,
+      goalsFingerprint: options.goalsFingerprint ?? null,
     });
   }
 
@@ -207,6 +251,7 @@ export async function getEvalPowGateStatus(
     vertical: SNAPSHOT_VERTICAL,
     lastEvalAt,
     newPowCount,
+    goalsFingerprint: options.goalsFingerprint ?? null,
   });
 }
 
@@ -240,7 +285,7 @@ export async function getAllEvalPowGateStatuses(
 }
 
 /**
- * Throw if re-running snapshot without new PoW.
+ * Throw if re-running snapshot without new PoW for this goal selection.
  * Call after empty-evidence checks and before expensive score generation.
  */
 export async function assertEvalAllowedWithNewPow(
@@ -254,7 +299,7 @@ export async function assertEvalAllowedWithNewPow(
   if (!status.allowed) {
     const err = new Error(
       status.message ||
-        `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}.`,
+        `No new proof of work since the last ${LWM_SNAPSHOT_LABEL} for this goal selection.`,
     );
     (err as Error & { code?: string; status?: number }).code = NO_NEW_POW_CODE;
     (err as Error & { code?: string; status?: number }).status = 409;

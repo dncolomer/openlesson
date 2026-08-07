@@ -17,6 +17,10 @@ import {
   labelForSnapshotSubject,
   type SnapshotAllProgressEvent,
 } from "@/lib/pow-api/snapshot-all-progress";
+import {
+  parseGoalSelectionFromBody,
+  type GoalSelectionInput,
+} from "@/lib/pow-api/goals";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -52,6 +56,9 @@ async function scoreOneSubject(options: {
   workspaceId: string;
   plan: SnapshotWorkspaceRow;
   subject: SnapshotSubjectRef;
+  /** Shared goal selection applied to every subject in the batch. */
+  goalSelection?: GoalSelectionInput | null;
+  goalSelectionBody?: Record<string, unknown> | null;
 }): Promise<SubjectRunResult> {
   const userId = options.subject.user_id ?? null;
   const guestId = options.subject.guest_user_id ?? null;
@@ -69,6 +76,8 @@ async function scoreOneSubject(options: {
       participantGuestUserId: guestId,
       workspaceRow: options.plan,
       historySource: "web",
+      goalSelection: options.goalSelection ?? null,
+      goalSelectionBody: options.goalSelectionBody ?? null,
     });
 
     if (scored.empty) {
@@ -128,9 +137,10 @@ async function scoreOneSubject(options: {
  * Owner-only: generate an LWM Snapshot for every known subject in the workspace
  * (owner + PoW users/guests + session participants + prior knowledge subjects).
  *
- * Body: `{ "stream": true }` (or Accept: application/x-ndjson) for progressive
- * NDJSON events so the LWM UI can show live progress. Default is a single JSON
- * summary (dashboard card).
+ * Body: `{ "stream": true, goal_mode?, adhoc_goal?, goal_ids? }` (or Accept:
+ * application/x-ndjson) for progressive NDJSON events so the LWM UI can show
+ * live progress. Goal selection matches single-subject LWM Snapshot and is
+ * applied to every subject. Default is a single JSON summary (dashboard card).
  */
 export async function POST(
   req: NextRequest,
@@ -151,6 +161,29 @@ export async function POST(
       body = (await req.json()) as Record<string, unknown>;
     } catch {
       body = {};
+    }
+
+    const goalSelection = parseGoalSelectionFromBody(body);
+    if (goalSelection.mode === "adhoc") {
+      const text =
+        typeof goalSelection.adhoc_goal === "string"
+          ? goalSelection.adhoc_goal.trim()
+          : "";
+      if (!text) {
+        return NextResponse.json(
+          { error: "adhoc_goal is required when goal_mode is adhoc" },
+          { status: 400 },
+        );
+      }
+    }
+    if (goalSelection.mode === "selected") {
+      const ids = goalSelection.goal_ids ?? goalSelection.selected_goal_ids ?? [];
+      if (!ids.length) {
+        return NextResponse.json(
+          { error: "goal_ids is required when goal_mode is selected" },
+          { status: 400 },
+        );
+      }
     }
 
     const accept = req.headers.get("accept") || "";
@@ -220,6 +253,8 @@ export async function POST(
           workspaceId,
           plan,
           subject,
+          goalSelection,
+          goalSelectionBody: body,
         });
         results.push(result);
         if (result.status === "ok") succeeded += 1;
@@ -295,6 +330,8 @@ export async function POST(
               workspaceId,
               plan,
               subject,
+              goalSelection,
+              goalSelectionBody: body,
             });
 
             if (result.status === "ok") succeeded += 1;

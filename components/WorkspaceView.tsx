@@ -19,6 +19,7 @@ import { WorkspaceBlockLocalContextPanel } from "@/components/WorkspaceBlockLoca
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceSimulationPanel } from "@/components/WorkspaceSimulationPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
+import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
 import {
   WorkspaceAddBlockPane,
   type WorkspaceAddBlockSubmitOpts,
@@ -2183,7 +2184,7 @@ export function WorkspaceView({
     }
   };
 
-  // Nav order: Workspace → DAGs → Context → Simulation → Knowledge → Settings
+  // Nav order: Workspace → DAGs → Goals → Context → Simulation → Knowledge → Settings
   const sectionConfig = [
     {
       key: "workspace" as const,
@@ -2204,6 +2205,19 @@ export function WorkspaceView({
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h3v3h-3v-3zm6 0h3v3h-3v-3zm-6 6h3v3h-3v-3zm6 0h3v3h-3v-3z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 9h3M9 10.5v3M13.5 13.5h-3M15 13.5v-3" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(!isLearnerMode && visibleSections.includes("goals")
+      ? [
+          {
+            key: "goals" as const,
+            label: t("planView.sectionGoals") || "Goals",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ),
           },
@@ -2432,6 +2446,34 @@ export function WorkspaceView({
                 });
               }}
               onDelete={handleDeleteDag}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        sectionLayout.mountsGoalsPanel &&
+        visibleSections.includes("goals") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId,
+            isOwner,
+          }}
+        >
+          <div
+            data-workspace-goals-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceGoalsPanel
+              workspaceId={workspaceId}
+              isOwner={isOwner}
+              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceSectionSurface>

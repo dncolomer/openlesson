@@ -117,6 +117,10 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         routeRel: "app/api/v3/pow/workspaces/[id]/tap-links/route.ts",
       },
       {
+        built: powWorkspaceResource(workspaceId, "tapbench-links"),
+        routeRel: "app/api/v3/pow/workspaces/[id]/tapbench-links/route.ts",
+      },
+      {
         built: snapshotWorkspaceResource(workspaceId, "lwm-snapshot"),
         routeRel: "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
       },

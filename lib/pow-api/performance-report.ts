@@ -108,8 +108,20 @@ export interface VerticalScoreReport {
   verification_score?: number;
   augmentation_score?: number;
   optimization_score?: number;
-  /** Inferred or owner-set workspace goal. */
+  /**
+   * Derived summary of evaluated goals (interim single-string field).
+   * Source of truth for multi-goals is `evaluated_goals`.
+   */
   workspace_goal: string;
+  /**
+   * Goals this snapshot was scored against (ids + text + scope), frozen at run time.
+   */
+  evaluated_goals?: Array<{
+    id: string | null;
+    text: string;
+    scope: "workspace" | "block" | "adhoc";
+    block_id?: string | null;
+  }>;
   /** Genuine Human Cognition — secondary signal, not a second primary strategy. */
   ghc_score: number;
   ghc_confidence: GhcConfidence;

@@ -30,10 +30,11 @@ describe("AYCL section layout mapping (shared helper)", () => {
     expect(layout.showBlockMapChrome).toBe(false);
   });
 
-  it("owner-equivalent sections include DAGs second after Workspace", () => {
+  it("owner-equivalent sections include DAGs second after Workspace, then Goals", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "dags",
+      "goals",
       "context",
       "simulation",
       "knowledge",

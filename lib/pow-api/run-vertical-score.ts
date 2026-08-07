@@ -23,6 +23,17 @@ import { finalizeVerticalScoreReport } from "./workspace-goal";
 import { updateLearnerStateAfterScore } from "./learner-state-engine";
 import { assertEvalAllowedWithNewPow } from "./eval-pow-gate";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
+import {
+  blockIdsFromProofOfWork,
+  fingerprintGoals,
+  fingerprintPowSet,
+  parseGoalSelectionFromBody,
+  resolveEvaluatedGoals,
+  summarizeGoalsText,
+  type EvaluatedGoal,
+  type GoalSelectionInput,
+} from "./goals";
+import { loadGoalCatalogs } from "./goals-store";
 
 export interface RunVerticalScoreInput {
   supabase: SupabaseClient;
@@ -40,6 +51,13 @@ export interface RunVerticalScoreInput {
   updateLearnerState?: boolean;
   /** Tag for eval_run_history (api | web | tap | score | test). Default "api". */
   historySource?: string;
+  /**
+   * Goal selection for this snapshot: default | adhoc | selected catalog ids.
+   * Also accepts a raw request body via goalSelectionBody.
+   */
+  goalSelection?: GoalSelectionInput | null;
+  /** Raw API body; goal fields are parsed when goalSelection is omitted. */
+  goalSelectionBody?: Record<string, unknown> | null;
   workspaceRow?: {
     id: string;
     title: string | null;
@@ -56,7 +74,11 @@ export interface RunVerticalScoreInput {
 export interface RunVerticalScoreResult {
   report: VerticalScoreReport;
   workspace_goal: string;
-  workspace_goal_source: "workspace" | "inferred" | "opaque_ref";
+  workspace_goal_source: "workspace" | "inferred" | "opaque_ref" | "multi_goals" | "adhoc";
+  /** Goals this snapshot was evaluated against. */
+  evaluated_goals: EvaluatedGoal[];
+  goals_fingerprint: string | null;
+  pow_set_fingerprint: string | null;
   protocol_report?: unknown;
   evaluation_mode?: string;
   privacy?: ReturnType<typeof buildPrivacyMetadata>;
@@ -110,6 +132,7 @@ export async function runVerticalScore(
   let contextCounts: RunVerticalScoreResult["proof_of_work_summary"] = null;
   let storedGoal = workspace.workspace_goal;
   let proofOfWorkRows: Array<{
+    id?: string;
     type?: string;
     proof_of_work_type?: string;
     block_id?: string | null;
@@ -155,13 +178,17 @@ export async function runVerticalScore(
           notes: workspace.notes,
           root_topic: workspace.root_topic,
         },
-        vertical
+        vertical,
+        [],
       );
       const evalMeta = parseWorkspaceEvaluationMeta(workspace);
       return {
         report: finalized.report,
         workspace_goal: finalized.workspace_goal,
         workspace_goal_source: finalized.workspace_goal_source,
+        evaluated_goals: finalized.evaluated_goals,
+        goals_fingerprint: null,
+        pow_set_fingerprint: null,
         evaluation_mode: evalMeta.evaluation_mode,
         privacy: buildPrivacyMetadata(evalMeta),
         proof_of_work_summary: contextCounts,
@@ -173,7 +200,46 @@ export async function runVerticalScore(
     }
   }
 
-  // Re-running the same vertical requires new proof of work since the last archive.
+  // Resolve multi-goals for this run (default / adhoc / selected).
+  const selection: GoalSelectionInput =
+    input.goalSelection ??
+    parseGoalSelectionFromBody(input.goalSelectionBody ?? null);
+  const catalogs = await loadGoalCatalogs(supabase, workspaceId);
+  const powRelatedBlockIds = blockIdsFromProofOfWork(proofOfWorkRows);
+  // When scoping to a single block, ensure that block is in the related set.
+  if (blockId && !powRelatedBlockIds.includes(blockId)) {
+    powRelatedBlockIds.push(blockId);
+  }
+
+  let evaluatedGoals = resolveEvaluatedGoals({
+    selection,
+    workspaceGoals: catalogs.workspaceGoals,
+    blockGoals: catalogs.blockGoals,
+    powRelatedBlockIds,
+  });
+
+  // Empty catalog + default: fall back to legacy workspace_goal string as a single implicit goal
+  // so generation/scoring still has something to score against (no migration of old data).
+  if (evaluatedGoals.length === 0 && selection.mode !== "selected") {
+    const legacy = (storedGoal || workspace.workspace_goal || "").trim();
+    if (legacy) {
+      evaluatedGoals = [
+        { id: null, text: legacy.slice(0, 500), scope: "workspace", block_id: null },
+      ];
+    } else if (selection.mode === "adhoc") {
+      // adhoc with empty text already resolved empty
+    }
+  }
+
+  const goalsFingerprint =
+    evaluatedGoals.length > 0 ? fingerprintGoals(evaluatedGoals) : null;
+  const powKeys = proofOfWorkRows
+    .map((r, i) => (typeof r.id === "string" && r.id ? r.id : `pow:${i}:${r.timestamp_ms ?? 0}`))
+    .filter(Boolean);
+  const powSetFingerprint =
+    powKeys.length > 0 ? fingerprintPowSet(powKeys) : null;
+
+  // Re-running the same goal selection requires new proof of work since the last archive.
   await assertEvalAllowedWithNewPow(supabase, {
     workspaceId,
     vertical,
@@ -181,7 +247,11 @@ export async function runVerticalScore(
     participantUserId,
     participantGuestUserId,
     blockId,
+    goalsFingerprint,
   });
+
+  const goalsSummary =
+    summarizeGoalsText(evaluatedGoals) || storedGoal || workspace.workspace_goal;
 
   const evalMeta = parseWorkspaceEvaluationMeta(workspace);
   const opaque = isOpaqueWorkspace(evalMeta);
@@ -195,7 +265,8 @@ export async function runVerticalScore(
     workspaceId,
     workspaceTitle: workspace.title,
     workspaceRootTopic: workspace.root_topic,
-    storedWorkspaceGoal: storedGoal,
+    storedWorkspaceGoal: goalsSummary,
+    evaluatedGoals,
     fileIds: activeFileIds,
     vertical,
     blockId,
@@ -212,21 +283,37 @@ export async function runVerticalScore(
   }
 
   const finalized = opaque
-    ? finalizeOpaqueVerticalScoreReport(generation.data, goalRef, evalMeta.protocol_config, vertical)
-    : {
-        ...finalizeVerticalScoreReport(
+    ? {
+        ...finalizeOpaqueVerticalScoreReport(
           generation.data,
-          storedGoal,
-          {
-            title: workspace.title,
-            description: workspace.description,
-            notes: workspace.notes,
-            root_topic: workspace.root_topic,
-          },
-          vertical
+          goalRef,
+          evalMeta.protocol_config,
+          vertical,
         ),
-        protocol_report: undefined,
-      };
+        evaluated_goals: evaluatedGoals,
+      }
+    : finalizeVerticalScoreReport(
+        generation.data,
+        goalsSummary,
+        {
+          title: workspace.title,
+          description: workspace.description,
+          notes: workspace.notes,
+          root_topic: workspace.root_topic,
+        },
+        vertical,
+        evaluatedGoals,
+      );
+
+  // Ensure report carries evaluated_goals
+  const reportWithGoals: VerticalScoreReport = {
+    ...finalized.report,
+    evaluated_goals: evaluatedGoals,
+    workspace_goal:
+      finalized.workspace_goal ||
+      summarizeGoalsText(evaluatedGoals) ||
+      finalized.report.workspace_goal,
+  };
 
   let learning_world_model: LearningWorldModelV0 | null = null;
   let knowledge_config: LearningWorldModelV0["knowledge_config"] = null;
@@ -239,7 +326,7 @@ export async function runVerticalScore(
         supabase,
         workspaceId,
         auth,
-        report: finalized.report,
+        report: reportWithGoals,
         vertical,
         participantUserId,
         participantGuestUserId,
@@ -248,6 +335,8 @@ export async function runVerticalScore(
         trigger: "score",
         blockId: blockId ?? null,
         historySource: input.historySource ?? "api",
+        evaluatedGoals,
+        goalsFingerprint,
       });
       learning_world_model = state.worldModel;
       knowledge_config = state.knowledgeConfig;
@@ -261,10 +350,15 @@ export async function runVerticalScore(
   }
 
   return {
-    report: finalized.report,
-    workspace_goal: finalized.workspace_goal,
+    report: reportWithGoals,
+    workspace_goal: reportWithGoals.workspace_goal,
     workspace_goal_source: finalized.workspace_goal_source,
-    protocol_report: opaque ? finalized.protocol_report : undefined,
+    evaluated_goals: evaluatedGoals,
+    goals_fingerprint: goalsFingerprint,
+    pow_set_fingerprint: powSetFingerprint,
+    protocol_report: opaque
+      ? (finalized as { protocol_report?: unknown }).protocol_report
+      : undefined,
     evaluation_mode: evalMeta.evaluation_mode,
     privacy,
     proof_of_work_summary: contextCounts,

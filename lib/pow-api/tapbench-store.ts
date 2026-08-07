@@ -60,6 +60,8 @@ export async function mintTapbenchLinkPersisted(
     input: MintTapbenchLinkInput;
     /** Workspace org id for guest provisioning. */
     organizationId?: string | null;
+    /** API key that minted the link (agent path). */
+    createdByApiKeyId?: string | null;
   },
 ): Promise<MintTapbenchLinkResult> {
   let guestUserId = options.input.guestUserId ?? null;
@@ -72,6 +74,7 @@ export async function mintTapbenchLinkPersisted(
         workspaceId: options.input.workspaceId,
         organizationId: options.organizationId ?? null,
         createdByUserId: options.input.createdBy,
+        createdByApiKeyId: options.createdByApiKeyId ?? null,
         guestType: "anonymous_tapbench_link",
       });
       guestUserId = guest.id;

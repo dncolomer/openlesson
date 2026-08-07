@@ -9,6 +9,11 @@ import {
   normalizeSubject,
   type SubjectRef,
 } from "./learning-world-model-store";
+import {
+  fingerprintGoals,
+  normalizeEvaluatedGoals,
+  type EvaluatedGoal,
+} from "./goals";
 
 export type EvalRunHistorySource = "score" | "web" | "api" | "tap" | "ile" | "test";
 
@@ -23,6 +28,9 @@ export interface EvalRunHistoryRow {
   ghc_confidence: string | null;
   report: VerticalScoreReport;
   workspace_goal: string | null;
+  /** Goals evaluated for this snapshot (frozen at ran_at). */
+  evaluated_goals: EvaluatedGoal[];
+  goals_fingerprint: string | null;
   block_id: string | null;
   source: string;
   ran_at: string;
@@ -37,6 +45,9 @@ export interface InsertEvalRunHistoryOptions {
   blockId?: string | null;
   source?: EvalRunHistorySource | string;
   ranAt?: string | Date;
+  /** Explicit evaluated goals (preferred). Falls back to report.evaluated_goals. */
+  evaluatedGoals?: EvaluatedGoal[] | null;
+  goalsFingerprint?: string | null;
 }
 
 export interface ListEvalRunHistoryOptions {
@@ -79,6 +90,15 @@ export async function insertEvalRunHistory(
       ? clampScore(report.ghc_score)
       : null;
 
+  const evaluatedGoals =
+    options.evaluatedGoals ??
+    normalizeEvaluatedGoals(
+      (report as VerticalScoreReport & { evaluated_goals?: unknown }).evaluated_goals,
+    );
+  const goalsFingerprint =
+    options.goalsFingerprint ??
+    (evaluatedGoals.length > 0 ? fingerprintGoals(evaluatedGoals) : null);
+
   const payload = {
     workspace_id: options.workspaceId,
     subject_user_id,
@@ -89,6 +109,8 @@ export async function insertEvalRunHistory(
     ghc_confidence: report.ghc_confidence ?? null,
     report,
     workspace_goal: report.workspace_goal ?? null,
+    evaluated_goals: evaluatedGoals,
+    goals_fingerprint: goalsFingerprint,
     block_id: options.blockId ?? null,
     source: options.source ?? "score",
     ran_at: ranAt,
@@ -98,7 +120,7 @@ export async function insertEvalRunHistory(
     .from("eval_run_history")
     .insert(payload)
     .select(
-      "id, workspace_id, subject_user_id, subject_guest_user_id, vertical, score, ghc_score, ghc_confidence, report, workspace_goal, block_id, source, ran_at, created_at",
+      "id, workspace_id, subject_user_id, subject_guest_user_id, vertical, score, ghc_score, ghc_confidence, report, workspace_goal, evaluated_goals, goals_fingerprint, block_id, source, ran_at, created_at",
     )
     .maybeSingle();
 
@@ -117,6 +139,11 @@ export async function insertEvalRunHistory(
 }
 
 function mapRow(data: Record<string, unknown>): EvalRunHistoryRow {
+  const fromCol = normalizeEvaluatedGoals(data.evaluated_goals);
+  const fromReport = normalizeEvaluatedGoals(
+    (data.report as VerticalScoreReport & { evaluated_goals?: unknown } | null)?.evaluated_goals,
+  );
+  const evaluated_goals = fromCol.length > 0 ? fromCol : fromReport;
   return {
     id: data.id as string,
     workspace_id: data.workspace_id as string,
@@ -128,6 +155,10 @@ function mapRow(data: Record<string, unknown>): EvalRunHistoryRow {
     ghc_confidence: (data.ghc_confidence as string | null) ?? null,
     report: data.report as VerticalScoreReport,
     workspace_goal: (data.workspace_goal as string | null) ?? null,
+    evaluated_goals,
+    goals_fingerprint:
+      (data.goals_fingerprint as string | null) ??
+      (evaluated_goals.length > 0 ? fingerprintGoals(evaluated_goals) : null),
     block_id: (data.block_id as string | null) ?? null,
     source: (data.source as string) || "score",
     ran_at: data.ran_at as string,
@@ -149,7 +180,7 @@ export async function listEvalRunHistory(
   let query = supabase
     .from("eval_run_history")
     .select(
-      "id, workspace_id, subject_user_id, subject_guest_user_id, vertical, score, ghc_score, ghc_confidence, report, workspace_goal, block_id, source, ran_at, created_at",
+      "id, workspace_id, subject_user_id, subject_guest_user_id, vertical, score, ghc_score, ghc_confidence, report, workspace_goal, evaluated_goals, goals_fingerprint, block_id, source, ran_at, created_at",
     )
     .eq("workspace_id", options.workspaceId)
     .order("ran_at", { ascending: false })

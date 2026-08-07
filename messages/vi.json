@@ -1876,7 +1876,8 @@
     "practicePortalScopeWorkspaceDesc": "No block choice — sessions are always workspace-level. Timed products only.",
     "practicePortalScopeWorkspaceNote": "Workspace-level portals hide the block picker. Open-ended products are unavailable because they require a practice block; enable Timed Exploration / Timed Drill instead.",
     "practicePortalBlockSelectPlaceholder": "Select a block…",
-    "practicePortalBlockRequired": "Choose a fixed practice block, or switch scope to visitor pick / entire workspace."
+    "practicePortalBlockRequired": "Choose a fixed practice block, or switch scope to visitor pick / entire workspace.",
+    "sectionGoals": "Mục tiêu"
   },
   "integrationAccess": {
     "quickStartTitle": "Kết nối nhanh",

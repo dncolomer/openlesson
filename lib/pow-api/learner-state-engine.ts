@@ -24,6 +24,12 @@ import {
 import { insertEvalRunHistory } from "./eval-run-history-store";
 import type { KnowledgeConfigSnapshotTrigger } from "@/lib/knowledge-config";
 import type { AuthContext } from "./types";
+import {
+  goalsEmbeddingText,
+  normalizeEvaluatedGoals,
+  summarizeGoalsText,
+  type EvaluatedGoal,
+} from "./goals";
 
 export interface UpdateLearnerStateAfterScoreOptions {
   supabase: SupabaseClient;
@@ -50,6 +56,9 @@ export interface UpdateLearnerStateAfterScoreOptions {
   blockId?: string | null;
   /** Source tag for eval_run_history (score | web | api). */
   historySource?: string;
+  /** Goals this snapshot was scored against. */
+  evaluatedGoals?: EvaluatedGoal[] | null;
+  goalsFingerprint?: string | null;
 }
 
 function uniqueNonEmptyStrings(values: unknown[]): string[] {
@@ -170,16 +179,21 @@ export function scoresDeltaFromReport(
     };
   }
 
-  if (report.workspace_goal?.trim()) {
+  const multiGoals = normalizeEvaluatedGoals(report.evaluated_goals);
+  const goalText =
+    (multiGoals.length > 0 ? summarizeGoalsText(multiGoals) : null) ||
+    report.workspace_goal?.trim() ||
+    "";
+  if (goalText) {
     delta.inferred_goal = {
       ...(base.inferred_goal || {
         text: "",
         confidence: 0.5,
         source: "evolved" as const,
       }),
-      text: report.workspace_goal.trim(),
+      text: goalText,
       confidence: Math.max(0.4, base.inferred_goal?.confidence ?? 0.5),
-      source: base.inferred_goal?.source ?? "evolved",
+      source: multiGoals.length > 0 ? "workspace" : (base.inferred_goal?.source ?? "evolved"),
     };
   }
 
@@ -203,6 +217,10 @@ export async function updateLearnerStateAfterScore(
     participantGuestUserId: options.participantGuestUserId,
   });
 
+  const evaluatedGoals =
+    options.evaluatedGoals ??
+    normalizeEvaluatedGoals(options.report.evaluated_goals);
+
   // Archive full scorecard first so history survives even if LWM/knowledge-config write races fail.
   let evalRunHistoryId: string | null = null;
   let evalRunHistoryError: string | null = null;
@@ -211,9 +229,14 @@ export async function updateLearnerStateAfterScore(
       workspaceId: options.workspaceId,
       subject,
       vertical: options.vertical,
-      report: options.report,
+      report: {
+        ...options.report,
+        evaluated_goals: evaluatedGoals,
+      },
       blockId: options.blockId ?? null,
       source: options.historySource ?? "score",
+      evaluatedGoals,
+      goalsFingerprint: options.goalsFingerprint ?? null,
     });
     evalRunHistoryId = archived.id;
     if (!archived.id) {
@@ -225,7 +248,10 @@ export async function updateLearnerStateAfterScore(
     console.warn("[learner-state-engine] eval run history insert failed:", err);
   }
 
-  const delta = scoresDeltaFromReport(options.report, options.vertical);
+  const delta = scoresDeltaFromReport(
+    { ...options.report, evaluated_goals: evaluatedGoals },
+    options.vertical,
+  );
   const { id: lwmIdAfterMerge, model: merged } = await applyLearningWorldModelDelta(
     options.supabase,
     options.workspaceId,
@@ -234,12 +260,14 @@ export async function updateLearnerStateAfterScore(
   );
 
   // Product geometry: v1-d64 only for LWM pointer + velocity baseline.
+  // Evaluated goal text enters the embedding so goal selection shifts vectors.
   const previous = await loadLatestKnowledgeConfig(options.supabase, options.workspaceId, subject);
   const encodeInput = {
     workspaceId: options.workspaceId,
     totalBlocks: options.totalBlocks,
     powRows: powRowsFromPerformanceContext(options.proofOfWork || []),
     worldModel: merged,
+    evaluatedGoalsText: goalsEmbeddingText(evaluatedGoals),
   };
   const embedding = encodeAndMeasureVelocity(encodeInput, previous);
 

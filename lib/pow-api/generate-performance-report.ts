@@ -8,12 +8,19 @@ import {
   type VerticalScoreReport,
 } from "@/lib/pow-api/performance-report";
 import { callXaiResponsesWithFiles, type CallResponsesResult } from "@/lib/xai-client";
+import {
+  formatGoalsForScoringPrompt,
+  summarizeGoalsText,
+  type EvaluatedGoal,
+} from "@/lib/pow-api/goals";
 
 export interface GenerateWorkspacePerformanceReportInput {
   workspaceId: string;
   workspaceTitle: string | null;
   workspaceRootTopic: string | null;
   storedWorkspaceGoal: string | null;
+  /** Multi-goals for this snapshot (preferred over storedWorkspaceGoal alone). */
+  evaluatedGoals?: EvaluatedGoal[] | null;
   fileIds: string[];
   vertical: ScoreVertical;
   blockId?: string | null;
@@ -51,15 +58,28 @@ async function requestVerticalScoreReport(
     goalRef,
     vertical,
     storedWorkspaceGoal,
+    evaluatedGoals,
   } = input;
 
   const prompt = opaque
     ? `Generate a structural-only opaque ${vertical} score report for workspace ${workspaceId}.`
     : `Generate a ${vertical} score report for workspace "${workspaceTitle || workspaceRootTopic}".`;
 
-  const instructions = opaque
+  const goalsPrompt =
+    evaluatedGoals && evaluatedGoals.length > 0
+      ? formatGoalsForScoringPrompt(evaluatedGoals)
+      : "";
+  const goalSummary =
+    (evaluatedGoals && evaluatedGoals.length > 0
+      ? summarizeGoalsText(evaluatedGoals)
+      : null) || storedWorkspaceGoal;
+
+  const baseInstructions = opaque
     ? buildOpaqueVerticalScoreInstructions(vertical, blockId, goalRef)
-    : buildVerticalScoreInstructions(vertical, blockId, storedWorkspaceGoal, stylePrompt);
+    : buildVerticalScoreInstructions(vertical, blockId, goalSummary, stylePrompt);
+  const instructions = goalsPrompt
+    ? `${baseInstructions}\n${goalsPrompt}`
+    : baseInstructions;
 
   const schema = buildVerticalScoreReportSchema(vertical);
 

@@ -37,6 +37,24 @@ Base path: `/api/v3/snapshot`
 
 **Re-run gate:** re-running an **LWM Snapshot** for the same subject requires **new proof of work** since the last snapshot (`ran_at`). Single strategy only. Without new PoW, score endpoints return `409` with `code: no_new_pow`.
 
+### LWM Snapshot response (plain language)
+
+`POST .../lwm-snapshot` (MCP `lwm_snapshot`) returns one scorecard. Canonical field inventory + client labels live in `lib/pow-api/lwm-snapshot-interpretability.ts` (`listLwmSnapshotResponseFields`, `explainLwmSnapshotReport`).
+
+| Field | Client-friendly name | What it means |
+| :--- | :--- | :--- |
+| `score` / `lwm_snapshot_score` | **Skill / readiness** (0–100) | How well the person demonstrated skill and explored the workspace. **Primary** score. |
+| `ghc_score` + `ghc_confidence` | **Authenticity of work** (0–100) | How genuine the *process* looks (think-aloud / System 1 vs 2 patterns). **Secondary** — not skill. |
+| `workspace_goal` | What success looks like | Goal the score is judged against. |
+| `marker_scores[]` | Skill breakdown | Spider axes: `id`, `label`, `score`, `rationale`. |
+| `summary`, `strengths`, `growth_areas` | Narrative | Human-readable analysis. |
+| `gap_analysis` | Gaps + next steps | `gaps[]` plus `next_steps.directions` / `events`. |
+| `suggestions`, `confidence` | Tips + evidence clarity | Action tips; evidence confidence band. |
+| `temporal_summary` | Timing patterns | Optional pacing note. |
+| `learning_world_model` / `knowledge_config` | Side payloads | Durable state / embedding after score — not letter grades. |
+
+**Important:** Skill and authenticity answer different questions. A short session can score ~30 skill and ~70+ authenticity if traces look structured but shallow.
+
 ## Authentication
 
 ```http
@@ -72,6 +90,9 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | `create_tap_link` | Request a private TAP link (optional body `block_id`). |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | `create_tap_link` | Block-scoped TAP link. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | `list_tap_links` | List TAP links and completion status. |
+| `POST` | `/workspaces/{workspace_id}/tapbench-links` | `tap:write` | `create_tapbench_link` | Mint a TAPBench timed agent session (optional body `block_id`, `duration_seconds` / `minutes`, `exercise`). Returns `session_token`, `url`, `exercise`, timing, `guest_user_id`. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tapbench-links` | `tap:write` | `create_tapbench_link` | Block-scoped TAPBench link. |
+| `GET` | `/workspaces/{workspace_id}/tapbench-links` | `tap:read` | `list_tapbench_links` | List TAPBench links (exercise, remaining time, share URL). |
 | `POST` | `/org/guests` | `org:write` | — | Org admins create guest users (not an MCP tool). |
 | `GET`/`POST`/`DELETE`/`PATCH` | `/keys…` | browser session | — | API key CRUD is browser-session only (not MCP). |
 
@@ -98,7 +119,13 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 ### TAPBench sessions
 
-Mint via workspace Knowledge Regions (`POST /api/workspace/tapbench-links`) or resolve `GET /api/tapbench/{token}`. Pass `session_token` as `X-Tapbench-Session` (or body field) on stash routes until `remaining_ms` is 0.
+Mint with the agent PoW API (Bearer API key, same scopes as TAP links):
+
+- `POST /api/v3/pow/workspaces/{workspace_id}/tapbench-links` (MCP `create_tapbench_link`) — optional body `block_id`, `duration_seconds` / `minutes`, `exercise`
+- `POST /api/v3/pow/workspaces/{workspace_id}/blocks/{block_id}/tapbench-links` — block-scoped
+- `GET /api/v3/pow/workspaces/{workspace_id}/tapbench-links` (MCP `list_tapbench_links`)
+
+Browser/UI mint remains available at `POST /api/workspace/tapbench-links`. Resolve any token with `GET /api/tapbench/{token}`. Pass `session_token` as `X-Tapbench-Session` (or body field) on Stash routes until `remaining_ms` is 0.
 
 ## Predictive Interruptions (TIM)
 

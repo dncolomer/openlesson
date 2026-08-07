@@ -18,6 +18,7 @@ import {
   WorkspaceBlockGeneratorEffectPanel,
   type WorkspaceBlockEffectsSaveInput,
 } from "@/components/WorkspaceBlockEffectsPanels";
+import { BlockGoalsPanel } from "@/components/BlockGoalsPanel";
 import {
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
@@ -34,8 +35,8 @@ import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
- * Simulation, Split (multi-cell), Expand, Edit, Dynamic / Generator
- * effects, Local context.
+ * Simulation, Split (multi-cell), Expand, Edit, Goals (post-creation),
+ * Dynamic / Generator effects, Local context.
  * Title/description live in Edit (not a separate Details/Sessions drawer).
  * Clone is a left map-strip tool (not a drawer).
  * Accordion: opening any drawer collapses the others.
@@ -304,6 +305,27 @@ export function WorkspaceBlockDetailPane({
               busy={editBusy}
               onUpdate={onUpdateBlock}
               onDelete={onDeleteBlock}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      {/* Goals drawer only for existing (persisted) blocks — not add-block/create flow. */}
+      {blockId ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="goals"
+          title="Goals"
+          defaultExpanded={false}
+          bodyClassName="space-y-2"
+          surfaceDataAttr="data-block-goals-drawer"
+        >
+          <div data-block-detail-tab-content="goals" data-block-goals-drawer>
+            <BlockGoalsPanel
+              workspaceId={workspaceId}
+              blockId={blockId}
+              canEdit={canEdit}
+              ayclToken={ayclToken}
             />
           </div>
         </WorkspaceRightPaneDrawer>

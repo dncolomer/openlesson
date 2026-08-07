@@ -51,6 +51,8 @@ export type ProofOfWorkApiEndpoint =
   | "get_learning_progress"
   | "list_tap_links"
   | "create_tap_link"
+  | "list_tapbench_links"
+  | "create_tapbench_link"
   | "get_workspace_detail"
   | "get_world_model"
   | "get_knowledge_config"

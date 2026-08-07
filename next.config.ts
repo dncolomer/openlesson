@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Isolated dist dir for parallel `next dev` (e.g. pilot servers) without fighting .next/dev/lock
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Prevent @huggingface/transformers from being bundled server-side
   serverExternalPackages: [
     "@huggingface/transformers",

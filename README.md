@@ -141,7 +141,7 @@ The app will be available at `http://localhost:3000`.
 Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
 - List and read existing verification workspaces and blocks
-- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via Snapshot API endpoints
+- Issue Think Aloud Protocol (TAP) and TAPBench (agent) links via `POST .../tap-links` / `POST .../tapbench-links`, poll via GET twins, and score via Snapshot API endpoints
 - Upload proof-of-work artifacts (or buffer via the Stash API), then request LWM Snapshot / world model / knowledge config
 - Connect via MCP (`/api/mcp`, Bearer or OAuth) with **100% parity** to public agent REST under `/api/v3/{pow,snapshot,stash}`
 

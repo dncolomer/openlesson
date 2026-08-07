@@ -8,6 +8,7 @@ export type WorkspaceSectionKey =
   | "context"
   | "simulation"
   | "dags"
+  | "goals"
   | "knowledge"
   | "settings";
 
@@ -19,12 +20,14 @@ export type WorkspaceMainSurface =
   | "context"
   | "simulation"
   | "dags"
+  | "goals"
   | "knowledge"
   | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
   "dags",
+  "goals",
   "context",
   "simulation",
   "knowledge",
@@ -46,6 +49,8 @@ export type WorkspaceSectionLayout = {
   mountsSimulationPanel: boolean;
   /** Creator DAGs tab — list/edit/delete created multi-block DAGs. */
   mountsDagsPanel: boolean;
+  /** Goals tab — multi workspace goals CRUD. */
+  mountsGoalsPanel: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -69,6 +74,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: true,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -82,6 +88,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: true,
         mountsDagsPanel: false,
+        mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -95,6 +102,21 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: true,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+      };
+    case "goals":
+      return {
+        section: "goals",
+        mainSurface: "goals",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsGoalsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -108,6 +130,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
@@ -121,6 +144,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
@@ -135,6 +159,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsGoalsPanel: false,
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -155,17 +180,23 @@ export function canAccessPrivilegedWorkspaceSections(options: {
 }
 
 /**
- * Privileged sections (Knowledge, Settings): non-privileged callers fall back to Workspace.
+ * Privileged sections (Knowledge, Settings, Goals): non-privileged callers fall back to Workspace.
  * Context and Simulation are open to all workspace viewers.
+ * DAGs is owner-only.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
   options: { isOwner?: boolean; isOrgAdmin?: boolean },
 ): WorkspaceSectionKey {
   if (
-    (requested === "settings" || requested === "knowledge") &&
+    (requested === "settings" ||
+      requested === "knowledge" ||
+      requested === "goals") &&
     !canAccessPrivilegedWorkspaceSections(options)
   ) {
+    return "workspace";
+  }
+  if (requested === "dags" && !options.isOwner) {
     return "workspace";
   }
   return requested;
@@ -177,10 +208,10 @@ export function availableWorkspaceSections(options: {
   isOrgAdmin?: boolean;
 }): WorkspaceSectionKey[] {
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    // Nav order: Workspace, DAGs (owner only), Context, Simulation, Knowledge, Settings.
+    // Nav order: Workspace, DAGs (owner), Goals, Context, Simulation, Knowledge, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];
     if (options.isOwner) sections.push("dags");
-    sections.push("context", "simulation", "knowledge", "settings");
+    sections.push("goals", "context", "simulation", "knowledge", "settings");
     return sections;
   }
   // Buyers / consumers: Context + Simulation (author/learner insight) + Workspace.

@@ -1,22 +1,38 @@
 /**
  * Workspace TAPBench links — mint + list (always-visible share URLs).
- * Used by Knowledge Regions tab.
+ * Used by Knowledge Regions tab. Shares createWorkspaceTapbenchLink with agent PoW API.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
-  listTapbenchLinksPersisted,
-  mintTapbenchLinkPersisted,
-} from "@/lib/pow-api/tapbench-store";
-import { normalizeTapbenchDurationSeconds } from "@/lib/pow-api/tapbench";
-import { generateTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-generate";
-import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
+  CreateTapbenchLinkError,
+  createWorkspaceTapbenchLink,
+} from "@/lib/pow-api/create-tapbench-link";
+import { listTapbenchLinksPersisted } from "@/lib/pow-api/tapbench-store";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 
 function baseUrl(req: NextRequest) {
   return process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+}
+
+/**
+ * Session/browser mint must NOT set auth_method=api_key with a fake key_id.
+ * createdByApiKeyId only returns key_id for real Bearer API keys; a non-UUID
+ * like "session" would break organization_guest_users.created_by_api_key_id (FK).
+ */
+export function sessionAuthContext(userId: string): AuthContext {
+  return {
+    user_id: userId,
+    guest_user_id: null,
+    organization_id: null,
+    is_org_admin: false,
+    key_id: "",
+    scopes: ["*"],
+    // Omit auth_method so createdByApiKeyId(auth) is null (same as pre-agent UI mint).
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -64,111 +80,46 @@ export async function POST(req: NextRequest) {
           ? body.block_id.trim()
           : "";
 
-    const rawDuration =
-      body.duration_seconds ??
-      body.durationSeconds ??
-      (body.minutes != null ? Number(body.minutes) * 60 : undefined);
-    const durationSeconds = normalizeTapbenchDurationSeconds(rawDuration);
-
-    // Load full workspace prompt context (inventory, topology, local, unusable).
-    // Primary TAPBench mint path must feed the shared assembler — not titles alone.
-    const promptCtx = await loadWorkspacePromptContext(auth.supabase, workspaceId, {
-      focusedBlockId: blockId || null,
-    });
-
-    if (!promptCtx) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-
-    // organization_id still needed for mint; load workspace ownership fields.
-    const { data: workspace } = await auth.supabase
-      .from("workspaces")
-      .select("id, organization_id, title, workspace_goal, root_topic")
-      .eq("id", workspaceId)
-      .single();
-
-    if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-
-    if (blockId && !promptCtx.blocks.some((b) => b.id === blockId)) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
-    }
-
-    const blockTitle = promptCtx.focusedBlockTitle;
-    const blockDescription = promptCtx.focusedBlockDescription;
-
-    const explicitExercise =
-      typeof body.exercise === "string"
-        ? body.exercise
-        : typeof body.exerciseText === "string"
-          ? body.exerciseText
-          : typeof body.exercise_text === "string"
-            ? body.exercise_text
-            : null;
-
-    // Author a real problem (LLM). Never mint the old topic-list template as the exercise.
-    const generated = await generateTapbenchExercise({
-      workspaceTitle: promptCtx.workspaceTitle ?? workspace.title,
-      workspaceGoal: promptCtx.workspaceGoal ?? workspace.workspace_goal,
-      rootTopic: promptCtx.rootTopic ?? workspace.root_topic,
-      workspaceDescription: promptCtx.workspaceDescription,
-      notes: promptCtx.notes,
-      blockTitle,
-      blockDescription,
-      exerciseText: explicitExercise,
-      files: promptCtx.files,
-      // JIT URL bias: external links from loadWorkspacePromptContext
-      externalResources: promptCtx.externalResources,
-      blocks: promptCtx.blocks,
-      focusedBlockId: promptCtx.focusedBlockId,
-      blockLocalContext: promptCtx.blockLocalContext,
-      unusableCells: promptCtx.unusableCells,
-      durationSeconds,
-    });
-    const exerciseText = generated.exercise;
-
-    const minted = await mintTapbenchLinkPersisted({
+    const tapbenchLink = await createWorkspaceTapbenchLink({
       supabase: auth.supabase,
+      auth: sessionAuthContext(auth.user.id),
+      workspaceId,
+      blockId: blockId || null,
+      body,
       baseUrl: baseUrl(req),
-      organizationId: workspace.organization_id ?? null,
-      input: {
-        workspaceId,
-        blockId: blockId || null,
-        durationSeconds,
-        workspaceTitle: workspace.title,
-        workspaceGoal: workspace.workspace_goal,
-        rootTopic: workspace.root_topic,
-        blockTitle,
-        blockDescription,
-        exerciseText,
-        createdBy: auth.user.id,
-      },
+      // guardWorkspaceRoute already authorized this session for the workspace.
+      skipAccessCheck: true,
     });
 
     return NextResponse.json(
       {
         workspace_id: workspaceId,
         tapbench_link: {
-          id: minted.link.id,
-          workspace_id: minted.link.workspace_id,
-          block_id: minted.link.block_id,
-          status: minted.link.status,
-          exercise: minted.exercise,
-          duration_seconds: minted.duration_seconds,
-          expires_at: minted.expires_at,
-          remaining_ms: minted.remaining_ms,
-          created_at: minted.link.created_at,
-          public_token: minted.session_token,
-          url: minted.url,
-          session_token: minted.session_token,
-          guest_user_id: minted.link.guest_user_id,
+          id: tapbenchLink.id,
+          workspace_id: tapbenchLink.workspace_id,
+          block_id: tapbenchLink.block_id,
+          status: tapbenchLink.status,
+          exercise: tapbenchLink.exercise,
+          duration_seconds: tapbenchLink.duration_seconds,
+          expires_at: tapbenchLink.expires_at,
+          remaining_ms: tapbenchLink.remaining_ms,
+          created_at: tapbenchLink.created_at,
+          public_token: tapbenchLink.session_token,
+          url: tapbenchLink.url,
+          session_token: tapbenchLink.session_token,
+          guest_user_id: tapbenchLink.guest_user_id,
         },
-        exercise_source: generated.source,
+        exercise_source: tapbenchLink.exercise_source,
       },
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof CreateTapbenchLinkError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     console.error("[workspace/tapbench-links] POST failed:", error);
     return NextResponse.json({ error: "Failed to create TAPBench link" }, { status: 500 });
   }

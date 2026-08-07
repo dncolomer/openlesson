@@ -109,6 +109,26 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
+    name: "list_tapbench_links",
+    scope: "tap:read",
+    summary:
+      "List TAPBench (agent TAP) links for a workspace — exercise, timing, share URL.",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`,
+    },
+  },
+  {
+    name: "create_tapbench_link",
+    scope: "tap:write",
+    summary:
+      "Mint a TAPBench timed exercise link for a workspace or block (Stash/Submit session token).",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`,
+    },
+  },
+  {
     name: "get_world_model",
     scope: "workspaces:read",
     summary: "Durable learning world model for a workspace × subject.",

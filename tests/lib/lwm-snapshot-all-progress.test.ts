@@ -148,6 +148,7 @@ describe("LWM multi-user snapshot surface (structural)", () => {
 
     const lwm = readFileSync(lwmPath, "utf8");
     expect(lwm).toContain("data-lwm-generate-snapshot-all");
+    expect(lwm).toContain("data-lwm-snapshot-modal");
     expect(lwm).toContain("data-lwm-snapshot-all-progress");
     expect(lwm).toContain("data-lwm-snapshot-all-status");
     expect(lwm).toContain("data-lwm-snapshot-all-bar");
@@ -158,6 +159,12 @@ describe("LWM multi-user snapshot surface (structural)", () => {
     expect(lwm).toContain("application/x-ndjson");
     expect(lwm).toContain("reduceSnapshotAllProgress");
     expect(lwm).toContain("consumeSnapshotAllNdjson");
+    expect(lwm).toMatch(/openSnapshotModal\("all"\)/);
+    // Same goal selection UI + payload as single-subject generate
+    expect(lwm).toContain("data-lwm-goal-selection");
+    expect(lwm).toMatch(/goal_mode:\s*goalMode/);
+    expect(lwm).toMatch(/body\.adhoc_goal\s*=\s*adhocGoal/);
+    expect(lwm).toMatch(/body\.goal_ids\s*=\s*selectedGoalIds/);
     // Owner-gated
     expect(lwm).toMatch(/isOwner[\s\S]*data-lwm-generate-snapshot-all|data-lwm-generate-snapshot-all[\s\S]*isOwner/);
 
@@ -168,15 +175,23 @@ describe("LWM multi-user snapshot surface (structural)", () => {
     expect(route).toContain("application/x-ndjson");
     expect(route).toContain("subject_start");
     expect(route).toContain("stream");
+    expect(route).toContain("parseGoalSelectionFromBody");
+    expect(route).toContain("goalSelection");
     // Must not fake success without scoring
     expect(route).not.toMatch(/status:\s*["']ok["']\s*,\s*\/\/\s*fake/i);
   });
 
-  it("dashboard snapshot-all still uses non-stream JSON summary path", () => {
-    const dash = readFileSync(join(ROOT, "app/dashboard/page.tsx"), "utf8");
-    expect(dash).toContain("/snapshot-all");
-    expect(dash).toContain("handleSnapshotAll");
-    // Dashboard may omit stream flag (default JSON)
-    expect(dash).toContain("succeeded");
+  it("snapshot-all route still supports non-stream JSON summary (no stream body)", () => {
+    // Dashboard no longer hosts snapshot-all; LWM UI is the streaming client.
+    // Route still defaults to a single JSON summary when stream is omitted.
+    const route = readFileSync(
+      join(ROOT, "app/api/workspaces/[id]/snapshot-all/route.ts"),
+      "utf8",
+    );
+    expect(route).toContain("wantStream");
+    expect(route).toContain("succeeded");
+    expect(route).toContain("skipped");
+    expect(route).toContain("failed");
+    expect(route).toMatch(/NextResponse\.json\(\{[\s\S]*succeeded/);
   });
 });

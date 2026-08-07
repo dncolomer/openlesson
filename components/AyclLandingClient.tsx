@@ -146,7 +146,7 @@ export function AyclLandingClient({
           )}
           {landing.category ? (
             <span
-              className="mt-3 inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90"
+              className="mt-3 inline-flex rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90"
               data-aycl-landing-category
             >
               {landing.category}

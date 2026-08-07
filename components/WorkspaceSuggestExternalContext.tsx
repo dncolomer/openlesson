@@ -207,7 +207,7 @@ export function WorkspaceSuggestExternalContext({
                     href={s.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block truncate text-[10px] text-cyan-400/80 hover:underline"
+                    className="block truncate text-[10px] text-neutral-300/80 hover:underline"
                   >
                     {s.url}
                   </a>

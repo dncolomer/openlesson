@@ -96,7 +96,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
               type="checkbox"
               checked={exactCopy}
               onChange={(e) => setExactCopy(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-blue-600 focus:ring-blue-600"
+              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-neutral-100 focus:ring-neutral-600"
             />
             <span>{t('remixModal.exactCopy')}</span>
           </label>
@@ -124,7 +124,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
           <button
             onClick={handleRemix}
             disabled={loading}
-            className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-3 bg-white hover:bg-white disabled:opacity-50 text-black text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

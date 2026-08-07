@@ -66,8 +66,8 @@ export function FeatureStatus({
         {/* Coming Soon */}
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
           <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-            <span className="text-sm font-medium text-amber-400">{t('featureStatus.comingSoon')}</span>
+            <span className="w-2 h-2 rounded-full bg-white" />
+            <span className="text-sm font-medium text-neutral-300">{t('featureStatus.comingSoon')}</span>
           </div>
           <ul className="space-y-2">
             {comingSoon.map((feature, index) => (

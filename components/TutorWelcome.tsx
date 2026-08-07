@@ -97,7 +97,7 @@ export function TutorWelcome({
           <div
             className={`${
               compactMobile ? "w-24 h-24" : "w-28 h-28"
-            } rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden`}
+            } rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden`}
           >
             <span
               className={`${
@@ -129,7 +129,7 @@ export function TutorWelcome({
           {displayed}
           {!typingDone && (
             <span
-              className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-amber-400/80 animate-pulse"
+              className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-neutral-800/80 animate-pulse"
               aria-hidden="true"
             />
           )}

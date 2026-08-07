@@ -78,9 +78,9 @@ function isSyntheticRegion(m: { description?: string | null; subject_count?: num
   return Boolean(m.description?.includes("[synthetic:grok-4.5]"));
 }
 
-/** Shared Settings primary CTA — cyan, not violet/lila. */
+/** Shared Settings primary CTA — white fill, black text (monochrome outline aesthetic). */
 const PRIMARY_CTA_CLASS =
-  "rounded-lg bg-cyan-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:opacity-40";
+  "rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
 interface CustomVerificationModelsPanelProps {
   workspaceId: string;

@@ -276,13 +276,13 @@ export function WorkspaceSimulationPanel({
         </div>
 
         {!workspaceId ? (
-          <p className="mt-2 text-[11px] text-amber-300/90">
+          <p className="mt-2 text-[11px] text-neutral-300/90">
             Workspace id missing — open this tab from a saved workspace to
             generate.
           </p>
         ) : null}
         {error ? (
-          <p className="mt-2 text-[11px] text-amber-300/90" data-simulation-error>
+          <p className="mt-2 text-[11px] text-neutral-300/90" data-simulation-error>
             {error}
           </p>
         ) : null}

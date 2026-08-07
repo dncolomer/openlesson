@@ -80,12 +80,12 @@ const ACCENT_CLASSES: Record<
     eyebrow: "text-zinc-500",
   },
   amber: {
-    card: "border-amber-500/30 bg-amber-950/20 backdrop-blur-sm hover:border-amber-400/50",
+    card: "border-neutral-600/30 bg-neutral-950/20 backdrop-blur-sm hover:border-neutral-500/50",
     button:
-      "border-amber-500/40 bg-amber-950/40 text-amber-50 hover:border-amber-400/60 hover:bg-amber-900/40",
-    pill: "border-amber-400/35 bg-amber-500/10 text-amber-200",
-    dot: "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.65)]",
-    eyebrow: "text-amber-200/70",
+      "border-neutral-600/40 bg-neutral-950/40 text-neutral-50 hover:border-neutral-500/60 hover:bg-neutral-950/40",
+    pill: "border-neutral-500/35 bg-neutral-800/10 text-neutral-300",
+    dot: "bg-neutral-200 shadow-[0_0_10px_rgba(251,191,36,0.65)]",
+    eyebrow: "text-neutral-300/70",
   },
 };
 
@@ -320,14 +320,14 @@ export function PracticePortalLandingClient({
                   </span>
                   <span
                     className={`mt-2 text-base font-medium ${
-                      accent === "amber" ? "text-amber-50" : "text-white"
+                      accent === "amber" ? "text-neutral-50" : "text-white"
                     }`}
                   >
                     {productIntentClusterLabel(product.launch)}
                   </span>
                   <span
                     className={`mt-1 text-xs leading-relaxed ${
-                      accent === "amber" ? "text-amber-100/50" : "text-zinc-500"
+                      accent === "amber" ? "text-neutral-200/50" : "text-zinc-500"
                     }`}
                   >
                     {productIntentClusterHint(product.launch)}
@@ -341,7 +341,7 @@ export function PracticePortalLandingClient({
                     >
                       <p
                         className={`mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] ${
-                          accent === "amber" ? "text-amber-200/60" : "text-zinc-500"
+                          accent === "amber" ? "text-neutral-300/60" : "text-zinc-500"
                         }`}
                       >
                         Session length
@@ -349,7 +349,7 @@ export function PracticePortalLandingClient({
                       <div
                         className={`inline-flex w-full rounded-sm border p-0.5 ${
                           accent === "amber"
-                            ? "border-amber-500/25 bg-black/30"
+                            ? "border-neutral-600/25 bg-black/30"
                             : "border-zinc-700 bg-black/40"
                         }`}
                         role="group"
@@ -368,8 +368,8 @@ export function PracticePortalLandingClient({
                               className={`min-w-0 flex-1 rounded-sm px-2 py-1.5 font-mono text-[11px] tracking-wide transition disabled:opacity-40 ${
                                 accent === "amber"
                                   ? selected
-                                    ? "bg-amber-500/20 text-amber-50"
-                                    : "text-amber-100/45 hover:text-amber-100/80"
+                                    ? "bg-neutral-800/20 text-neutral-50"
+                                    : "text-neutral-200/45 hover:text-neutral-200/80"
                                   : selected
                                     ? "bg-white/15 text-white"
                                     : "text-zinc-500 hover:text-zinc-200"
@@ -424,7 +424,7 @@ export function PracticePortalLandingClient({
             data-minted-kind={mintResult.product_id}
             className={`mt-4 rounded-sm border p-4 sm:p-5 ${
               productAccent(mintResult.product_id) === "amber"
-                ? "border-amber-500/35 bg-gradient-to-br from-amber-950/40 via-zinc-950/80 to-zinc-950/90"
+                ? "border-neutral-600/35 bg-gradient-to-br from-neutral-800/40 via-zinc-950/80 to-zinc-950/90"
                 : "border-zinc-600 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-zinc-950"
             }`}
           >
@@ -456,7 +456,7 @@ export function PracticePortalLandingClient({
             </div>
             <a
               href={mintResult.url}
-              className="mt-3 block break-all font-mono text-xs text-cyan-300/90 underline-offset-2 hover:underline"
+              className="mt-3 block break-all font-mono text-xs text-neutral-300/90 underline-offset-2 hover:underline"
               data-practice-portal-session-url
             >
               {mintResult.url}

@@ -579,7 +579,7 @@ export function MapOfKnowledgeClient() {
   }, [findYourselfLink, notifyEmail]);
 
   const selectClass =
-    "h-8 rounded-sm border border-zinc-700 bg-black/50 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-zinc-500 focus:border-cyan-500/40";
+    "h-8 rounded-sm border border-zinc-700 bg-black/50 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-zinc-500 focus:border-neutral-600/40";
   const toolBtnClass = (active: boolean) =>
     `inline-flex h-8 items-center rounded-sm border px-2.5 font-mono text-[11px] tracking-wide transition ${
       active
@@ -808,15 +808,15 @@ export function MapOfKnowledgeClient() {
           {findYourselfError ? (
             <div
               role="alert"
-              className="mt-2 rounded-sm border border-amber-500/25 bg-amber-950/20 px-3 py-2.5"
+              className="mt-2 rounded-sm border border-neutral-600/25 bg-neutral-950/20 px-3 py-2.5"
               data-map-find-yourself-error
               data-map-not-on-map={findYourselfAwaitingSnapshot ? "true" : undefined}
             >
-              <p className="text-xs leading-relaxed text-amber-100/90">{findYourselfError}</p>
+              <p className="text-xs leading-relaxed text-neutral-200/90">{findYourselfError}</p>
               {findYourselfAwaitingSnapshot ? (
                 <div className="mt-3 space-y-2" data-map-ready-notify data-map-newsletter-subscribe>
                   <label className="block">
-                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/60">
+                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/60">
                       Email
                     </span>
                     <input
@@ -835,7 +835,7 @@ export function MapOfKnowledgeClient() {
                     />
                   </label>
                   <p
-                    className="text-[11px] leading-relaxed text-amber-100/55"
+                    className="text-[11px] leading-relaxed text-neutral-200/55"
                     data-map-newsletter-subscribe-note
                   >
                     {MAP_NEWSLETTER_SUBSCRIBE_NOTE}
@@ -856,7 +856,7 @@ export function MapOfKnowledgeClient() {
                     </p>
                   ) : null}
                   {notifyMessage ? (
-                    <p className="text-[11px] text-cyan-200/90" data-map-ready-notify-success>
+                    <p className="text-[11px] text-neutral-300/90" data-map-ready-notify-success>
                       {notifyMessage}
                     </p>
                   ) : null}
@@ -866,7 +866,7 @@ export function MapOfKnowledgeClient() {
           ) : null}
           {findYourselfOk ? (
             <p
-              className="mt-2 text-xs leading-relaxed text-cyan-200/90"
+              className="mt-2 text-xs leading-relaxed text-neutral-300/90"
               data-map-find-yourself-success
             >
               {findYourselfOk}
@@ -1070,14 +1070,14 @@ export function MapOfKnowledgeClient() {
                             onClick={() => toggleRegion(region.id)}
                             className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
                               on
-                                ? "border-cyan-500/25 bg-cyan-950/20 text-zinc-200"
+                                ? "border-neutral-600/25 bg-neutral-950/20 text-zinc-200"
                                 : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
                             }`}
                             data-map-region-toggle
                           >
                             <span
                               className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
-                                on ? "border-cyan-400 bg-cyan-400/80" : "border-zinc-600"
+                                on ? "border-white/60 bg-neutral-800/80" : "border-zinc-600"
                               }`}
                             />
                             <span className="min-w-0">
@@ -1151,7 +1151,7 @@ export function MapOfKnowledgeClient() {
           Place yourself on the Map of Knowledge by running a short timed session on a public
           workspace. Choose a{" "}
           <span className="text-zinc-300">timed exploratory dialog</span> (interactive LLM-powered
-          dialog) or a <span className="text-amber-200/90">timed exercise without dialog</span>{" "}
+          dialog) or a <span className="text-neutral-300/90">timed exercise without dialog</span>{" "}
           (solo monolog).
           In both cases you still <span className="text-zinc-300">think aloud</span> — then you
           appear on the map after you practice.
@@ -1324,32 +1324,32 @@ export function MapOfKnowledgeClient() {
 
               {/* Timed Drill card: duration options (15 / 30 / 45) inside the box */}
               <div
-                className="flex flex-col rounded-sm border border-amber-500/30 bg-amber-950/20 p-4 transition hover:border-amber-400/50"
+                className="flex flex-col rounded-sm border border-neutral-600/30 bg-neutral-950/20 p-4 transition hover:border-neutral-500/50"
                 data-mint-timed-drill-card
                 data-timed-drill-minutes={timedDrillMinutes}
               >
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
-                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/70">
+                  <span className="h-2.5 w-2.5 rounded-full bg-neutral-200 shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
+                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/70">
                     {PLACEMENT_PRODUCTS.timed_drill.eyebrow}
                   </span>
                 </span>
-                <span className="mt-2 text-base font-medium text-amber-50">
+                <span className="mt-2 text-base font-medium text-neutral-50">
                   {PLACEMENT_PRODUCTS.timed_drill.label}
                 </span>
-                <span className="mt-1 text-xs leading-relaxed text-amber-100/50">
+                <span className="mt-1 text-xs leading-relaxed text-neutral-200/50">
                   {PLACEMENT_PRODUCTS.timed_drill.shortDiff}
                 </span>
 
                 <div className="mt-3 w-full" data-timed-drill-duration-picker>
                   <p
-                    className="mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/60"
+                    className="mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/60"
                     id="timed-drill-duration-label"
                   >
                     Session length
                   </p>
                   <div
-                    className="inline-flex w-full rounded-sm border border-amber-500/25 bg-black/30 p-0.5"
+                    className="inline-flex w-full rounded-sm border border-neutral-600/25 bg-black/30 p-0.5"
                     role="group"
                     aria-labelledby="timed-drill-duration-label"
                     data-timed-drill-duration-options
@@ -1364,8 +1364,8 @@ export function MapOfKnowledgeClient() {
                           disabled={minting !== null}
                           className={`min-w-0 flex-1 rounded-sm px-2 py-1.5 font-mono text-[11px] tracking-wide transition ${
                             selected
-                              ? "bg-amber-500/20 text-amber-50"
-                              : "text-amber-100/45 hover:text-amber-100/80"
+                              ? "bg-neutral-800/20 text-neutral-50"
+                              : "text-neutral-200/45 hover:text-neutral-200/80"
                           } disabled:opacity-40`}
                           data-timed-drill-duration={mins}
                           aria-pressed={selected}
@@ -1381,7 +1381,7 @@ export function MapOfKnowledgeClient() {
                   type="button"
                   disabled={!selectedBlockId || minting !== null}
                   onClick={() => void mintLink("timed_drill")}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-xs font-medium text-amber-50 transition hover:border-amber-400/60 hover:bg-amber-900/40 disabled:opacity-40"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-neutral-600/40 bg-neutral-950/40 px-3 py-2 text-xs font-medium text-neutral-50 transition hover:border-neutral-500/60 hover:bg-neutral-950/40 disabled:opacity-40"
                   data-mint-timed-drill
                 >
                   <Sparkles size={12} aria-hidden />
@@ -1407,7 +1407,7 @@ export function MapOfKnowledgeClient() {
                 data-minted-kind={mintResult.kind}
                 className={`rounded-sm border p-4 sm:p-5 ${
                   mintResult.kind === "timed_drill"
-                    ? "border-amber-500/35 bg-gradient-to-br from-amber-950/40 via-zinc-950/80 to-zinc-950/90"
+                    ? "border-neutral-600/35 bg-gradient-to-br from-neutral-800/40 via-zinc-950/80 to-zinc-950/90"
                     : "border-zinc-600 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-zinc-950"
                 }`}
               >
@@ -1416,7 +1416,7 @@ export function MapOfKnowledgeClient() {
                     <span
                       className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
                         mintResult.kind === "timed_drill"
-                          ? "border-amber-400/40 bg-amber-500/15"
+                          ? "border-neutral-500/40 bg-neutral-800/15"
                           : "border-slate-400/30 bg-slate-500/10"
                       }`}
                       aria-hidden
@@ -1424,7 +1424,7 @@ export function MapOfKnowledgeClient() {
                       <span
                         className={`h-3 w-3 rounded-full ${
                           mintResult.kind === "timed_drill"
-                            ? "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)]"
+                            ? "bg-neutral-200 shadow-[0_0_12px_rgba(251,191,36,0.8)]"
                             : "bg-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.55)]"
                         }`}
                       />
@@ -1434,7 +1434,7 @@ export function MapOfKnowledgeClient() {
                         <span
                           className={`rounded-sm border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] ${
                             mintResult.kind === "timed_drill"
-                              ? "border-amber-400/35 bg-amber-500/10 text-amber-200"
+                              ? "border-neutral-500/35 bg-neutral-800/10 text-neutral-300"
                               : "border-zinc-600 bg-zinc-800/80 text-zinc-300"
                           }`}
                         >
@@ -1473,7 +1473,7 @@ export function MapOfKnowledgeClient() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`mt-1 block break-all font-mono text-xs leading-relaxed underline-offset-2 hover:underline sm:text-sm ${
-                      mintResult.kind === "timed_drill" ? "text-amber-200/90" : "text-cyan-300/90"
+                      mintResult.kind === "timed_drill" ? "text-neutral-300/90" : "text-neutral-300/90"
                     }`}
                     title={mintResult.url}
                   >
@@ -1483,16 +1483,16 @@ export function MapOfKnowledgeClient() {
                 </div>
 
                 <div
-                  className="mt-3 rounded-sm border border-amber-500/30 bg-amber-950/25 px-3 py-2.5"
+                  className="mt-3 rounded-sm border border-neutral-600/30 bg-neutral-950/25 px-3 py-2.5"
                   data-minted-save-link-reminder
                   role="note"
                 >
-                  <p className="text-sm font-medium text-amber-100">
+                  <p className="text-sm font-medium text-neutral-200">
                     Save this link if you want to find yourself on the map later
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+                  <p className="mt-1 text-xs leading-relaxed text-neutral-200/70">
                     After you finish the session and your practice is processed, come back to Map of
-                    Knowledge, open <span className="text-amber-50">Find yourself</span>, and paste
+                    Knowledge, open <span className="text-neutral-50">Find yourself</span>, and paste
                     this URL to overlay your position on Local Map. If you lose the link, we cannot
                     match you to your dot.
                   </p>
@@ -1505,7 +1505,7 @@ export function MapOfKnowledgeClient() {
                     rel="noopener noreferrer"
                     className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-sm px-4 py-2.5 text-sm font-medium transition sm:flex-none ${
                       mintResult.kind === "timed_drill"
-                        ? "bg-amber-400 text-black hover:bg-amber-300"
+                        ? "bg-neutral-200 text-black hover:bg-neutral-300"
                         : "bg-white text-black hover:bg-zinc-200"
                     }`}
                   >
@@ -1537,7 +1537,7 @@ export function MapOfKnowledgeClient() {
               <div className="flex items-center gap-3 rounded-sm border border-dashed border-zinc-800 bg-zinc-950/40 px-4 py-3 text-xs text-zinc-600">
                 <span className="inline-flex gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-slate-500" />
-                  <span className="h-2 w-2 rounded-full bg-amber-400/80" />
+                  <span className="h-2 w-2 rounded-full bg-neutral-800/80" />
                 </span>
                 Mint a link, think aloud in the session, then appear on the map.
               </div>

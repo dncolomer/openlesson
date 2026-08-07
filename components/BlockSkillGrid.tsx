@@ -709,7 +709,7 @@ function BlockLocalContextDocBadge() {
 function BlockStarterFlagBadge() {
   return (
     <span
-      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-amber-300/95"
+      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-300/95"
       data-block-starter-flag
       data-block-starter-badge
       title="Starter block"
@@ -3826,7 +3826,7 @@ export function BlockSkillGrid({
             role="presentation"
             data-stretch-handle={handle}
             data-stretch-block={blockId}
-            className="pointer-events-auto border border-white/90 bg-sky-400 shadow-sm hover:bg-sky-300"
+            className="pointer-events-auto border border-white/90 bg-neutral-200 shadow-sm hover:bg-neutral-300"
             style={stretchHandleStyle(handle)}
             title={`Stretch ${handle.toUpperCase()}`}
             onPointerDown={(e) => handleStretchPointerDown(blockId, handle, e)}
@@ -4160,7 +4160,7 @@ export function BlockSkillGrid({
         {lassoOverlay?.kind === "rect" ? (
           <div
             data-map-lasso-rect
-            className="pointer-events-none absolute z-[12] border border-cyan-400/80 bg-cyan-400/10"
+            className="pointer-events-none absolute z-[12] border border-neutral-500/80 bg-neutral-800/10"
             style={{
               left: lassoOverlay.left,
               top: lassoOverlay.top,
@@ -4172,7 +4172,7 @@ export function BlockSkillGrid({
         {lassoOverlay?.kind === "circle" ? (
           <div
             data-map-lasso-circle
-            className="pointer-events-none absolute z-[12] rounded-full border border-cyan-400/80 bg-cyan-400/10"
+            className="pointer-events-none absolute z-[12] rounded-full border border-neutral-500/80 bg-neutral-800/10"
             style={{
               left: lassoOverlay.cx - lassoOverlay.r,
               top: lassoOverlay.cy - lassoOverlay.r,
@@ -5829,7 +5829,7 @@ export function BlockSkillGrid({
                 : `${selectedEmptyCells.length} cells`}
             </p>
             {!shapeFreeform.ok && shapeFootprint ? (
-              <p className="mt-1 text-[11px] text-amber-400/90" data-shape-not-contiguous>
+              <p className="mt-1 text-[11px] text-neutral-300/90" data-shape-not-contiguous>
                 Select edge-connected cells only (no diagonal gaps). Any contiguous shape works as one lecture.
               </p>
             ) : (

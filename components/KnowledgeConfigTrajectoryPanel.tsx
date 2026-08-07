@@ -97,7 +97,7 @@ const REGION_OVERLAY_COLORS = [
   "#f472b6",
   "#a78bfa",
   "#34d399",
-  "#fbbf24",
+  "#a3a3a3",
   "#60a5fa",
   "#fb7185",
 ];
@@ -105,13 +105,13 @@ const REGION_OVERLAY_COLORS = [
 /** Distinct colors for multi-subject trajectory points / paths. */
 const SUBJECT_TRAJECTORY_COLORS = [
   "#a78bfa",
-  "#22d3ee",
+  "#e5e5e5",
   "#f472b6",
   "#34d399",
-  "#fbbf24",
+  "#a3a3a3",
   "#60a5fa",
   "#fb7185",
-  "#c084fc",
+  "#d4d4d4",
 ];
 
 interface AvailableSubject {
@@ -532,7 +532,7 @@ function ProjectionSpaceWidget({
           <defs>
             <linearGradient id="knowledgecfg-path" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#e5e5e5" stopOpacity="0.95" />
             </linearGradient>
             <clipPath id="projection-plot-clip">
               <rect x={0} y={0} width={w} height={h} />
@@ -629,7 +629,7 @@ function ProjectionSpaceWidget({
                   const fill = multiSubject
                     ? subjectColorForKey(c.subjectKey, subjectKeyOrder)
                     : latestForSubject
-                      ? "#22d3ee"
+                      ? "#e5e5e5"
                       : isFirst
                         ? "#a78bfa"
                         : "#818cf8";
@@ -675,7 +675,7 @@ function ProjectionSpaceWidget({
                   const p = mapPoint(lp.x, lp.y);
                   const fill = multiSubject
                     ? subjectColorForKey(lp.subjectKey, subjectKeyOrder)
-                    : "#22d3ee";
+                    : "#e5e5e5";
                   return (
                     <g
                       key={`latest-${lp.subjectKey || "s"}-${lp.as_of_ms}-${i}`}
@@ -717,7 +717,7 @@ function ProjectionSpaceWidget({
                 cx={mapPoint(latestPoints[0].x, latestPoints[0].y).x}
                 cy={mapPoint(latestPoints[0].x, latestPoints[0].y).y}
                 r={6}
-                fill="#22d3ee"
+                fill="#e5e5e5"
                 stroke="#ecfeff"
                 strokeWidth="1.25"
                 data-projection-point="latest"
@@ -732,13 +732,8 @@ function ProjectionSpaceWidget({
   );
 }
 
-function Chip({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "cyan" | "amber" }) {
-  const cls =
-    tone === "cyan"
-      ? "border-cyan-900/60 bg-cyan-950/40 text-cyan-200"
-      : tone === "amber"
-        ? "border-amber-900/60 bg-amber-950/30 text-amber-200"
-        : "border-neutral-800 bg-neutral-900 text-neutral-300";
+function Chip({ children }: { children: ReactNode; tone?: "neutral" | "cyan" | "amber" }) {
+  const cls = "border-neutral-800 bg-neutral-900 text-neutral-300";
   return (
     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] ${cls}`}>{children}</span>
   );
@@ -2653,11 +2648,11 @@ export function KnowledgeConfigTrajectoryPanel({
                   <>
                     {projectionDisplayMode === "trajectory" ? (
                       <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-violet-400" /> start
+                        <span className="h-2 w-2 rounded-full bg-neutral-200" /> start
                       </span>
                     ) : null}
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-cyan-400" /> latest
+                      <span className="h-2 w-2 rounded-full bg-neutral-200" /> latest
                     </span>
                   </>
                 )}
@@ -2853,7 +2848,7 @@ export function KnowledgeConfigTrajectoryPanel({
                                         onClick={() => toggleRegionOverlay(r.id)}
                                         className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
                                           checked
-                                            ? "border-cyan-500/25 bg-cyan-950/20 text-zinc-200"
+                                            ? "border-neutral-600/25 bg-neutral-950/20 text-zinc-200"
                                             : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
                                         } ${!hasCentroid ? "cursor-not-allowed opacity-40" : ""}`}
                                         data-region-overlay-toggle={r.id}
@@ -2863,7 +2858,7 @@ export function KnowledgeConfigTrajectoryPanel({
                                         <span
                                           className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
                                             checked
-                                              ? "border-cyan-400 bg-cyan-400/80"
+                                              ? "border-white/60 bg-neutral-800/80"
                                               : "border-zinc-600"
                                           }`}
                                         />
@@ -2880,7 +2875,7 @@ export function KnowledgeConfigTrajectoryPanel({
                                             !dist.error &&
                                             Number.isFinite(dist.knowledge_distance) ? (
                                             <span
-                                              className="block font-mono text-[10px] text-violet-200/90"
+                                              className="block font-mono text-[10px] text-neutral-300/90"
                                               data-knowledge-distance-inline={r.id}
                                             >
                                               d={dist.knowledge_distance.toFixed(3)}
@@ -2906,7 +2901,7 @@ export function KnowledgeConfigTrajectoryPanel({
                     data-region-overlay-distances
                   >
                     <p
-                      className="shrink-0 px-2.5 pt-2 text-[11px] text-cyan-200/80"
+                      className="shrink-0 px-2.5 pt-2 text-[11px] text-neutral-300/80"
                       data-region-overlay-count
                     >
                       {regionOverlays.length} region{regionOverlays.length === 1 ? "" : "s"} selected
@@ -2937,10 +2932,10 @@ export function KnowledgeConfigTrajectoryPanel({
                               </span>
                             </div>
                             {dist?.error ? (
-                              <p className="mt-0.5 text-amber-200/90">{dist.error}</p>
+                              <p className="mt-0.5 text-neutral-300/90">{dist.error}</p>
                             ) : dist && Number.isFinite(dist.knowledge_distance) ? (
                               <div className="mt-1 flex flex-wrap gap-1.5 text-neutral-400">
-                                <span className="rounded-full border border-violet-800/60 bg-violet-950/40 px-1.5 py-0.5 font-mono text-violet-100">
+                                <span className="rounded-full border border-neutral-800/60 bg-neutral-950/40 px-1.5 py-0.5 font-mono text-neutral-200">
                                   dist {dist.knowledge_distance.toFixed(4)}
                                 </span>
                                 <span className="rounded-full border border-neutral-700 px-1.5 py-0.5 font-mono">
@@ -2950,7 +2945,7 @@ export function KnowledgeConfigTrajectoryPanel({
                                   className={`rounded-full border px-1.5 py-0.5 ${
                                     dist.in_region
                                       ? "border-emerald-800 text-emerald-300"
-                                      : "border-amber-900 text-amber-200"
+                                      : "border-neutral-800 text-neutral-300"
                                   }`}
                                 >
                                   {dist.in_region ? "In region" : "Outside"}
@@ -3208,7 +3203,7 @@ export function KnowledgeConfigTrajectoryPanel({
                     {snapshotModalMode === "single" &&
                     snapshotEligibility?.allowed === false ? (
                       <p
-                        className="text-[11px] text-amber-400/90"
+                        className="text-[11px] text-neutral-300/90"
                         data-lwm-snapshot-gate
                       >
                         {snapshotEligibility.message ||
@@ -4141,7 +4136,7 @@ export function KnowledgeConfigTrajectoryPanel({
                           onClick={() => setSelectedRankingKey(card.subjectKey)}
                           className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
                             selected
-                              ? "border-cyan-700/70 bg-cyan-950/30 ring-1 ring-cyan-800/40"
+                              ? "border-neutral-700/70 bg-neutral-950/30 ring-1 ring-neutral-800/40"
                               : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600 hover:bg-neutral-900/60"
                           }`}
                           data-ranking-card={card.subjectKey}
@@ -4156,13 +4151,13 @@ export function KnowledgeConfigTrajectoryPanel({
                             </p>
                             <div className="flex items-center gap-1.5 text-[10px] font-mono tabular-nums">
                               <span
-                                className="rounded-full border border-cyan-900/50 bg-cyan-950/40 px-1.5 py-0.5 text-cyan-100"
+                                className="rounded-full border border-neutral-800/50 bg-neutral-950/40 px-1.5 py-0.5 text-neutral-200"
                                 data-ranking-snapshot-score
                               >
                                 {formatRankingScore(card.snapshotScore)}
                               </span>
                               <span
-                                className="rounded-full border border-amber-900/50 bg-amber-950/40 px-1.5 py-0.5 text-amber-100"
+                                className="rounded-full border border-neutral-800/50 bg-neutral-950/40 px-1.5 py-0.5 text-neutral-200"
                                 data-ranking-ghc-score
                               >
                                 {formatRankingScore(card.ghcScore)}
@@ -4216,19 +4211,19 @@ export function KnowledgeConfigTrajectoryPanel({
                         </h3>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <div className="rounded-lg border border-cyan-900/40 bg-cyan-950/20 px-3 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">
+                        <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-neutral-300/80">
                             Snapshot
                           </p>
-                          <p className="font-mono text-xl font-semibold tabular-nums text-cyan-100">
+                          <p className="font-mono text-xl font-semibold tabular-nums text-neutral-200">
                             {formatRankingScore(selectedRankingCard.snapshotScore)}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-amber-300/80">
+                        <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-neutral-300/80">
                             GHC
                           </p>
-                          <p className="font-mono text-xl font-semibold tabular-nums text-amber-100">
+                          <p className="font-mono text-xl font-semibold tabular-nums text-neutral-200">
                             {formatRankingScore(selectedRankingCard.ghcScore)}
                           </p>
                         </div>

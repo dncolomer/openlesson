@@ -85,7 +85,7 @@ export function WorkspaceDashboardCard({
               title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
               className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition ${
                 isPinned
-                  ? "border-amber-600/70 bg-amber-950/40 text-amber-200 hover:border-amber-500 hover:bg-amber-950/60"
+                  ? "border-neutral-600/70 bg-neutral-950/40 text-neutral-300 hover:border-white/60 hover:bg-neutral-950/60"
                   : "border-neutral-700 bg-neutral-900/60 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
               }`}
             >
@@ -100,7 +100,7 @@ export function WorkspaceDashboardCard({
           <span
             className={
               plan.status === "archived"
-                ? "rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200"
+                ? "rounded border border-neutral-600/30 px-1.5 py-0.5 text-neutral-300"
                 : "capitalize"
             }
           >
@@ -136,7 +136,7 @@ export function WorkspaceDashboardCard({
                 type="button"
                 onClick={() => onArchive(plan.id)}
                 disabled={archivingWorkspaceId === plan.id}
-                className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200 disabled:opacity-50"
+                className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300 disabled:opacity-50"
               >
                 {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
               </button>

@@ -325,11 +325,11 @@ function ResultsContent() {
               />
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center h-full rounded-xl">
-                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
                   <span className="text-xl font-serif text-neutral-400">H</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="animate-spin w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full" />
                   <LoadingStatusMessage tone="subtle" message={t("results.generatingReport")} />
                 </div>
               </div>
@@ -397,24 +397,24 @@ function ResultsContent() {
                 <div className="mb-3">
                   {suggestingTopic ? (
                     <div className="flex items-center gap-2 text-xs text-neutral-500">
-                      <div className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+                      <div className="animate-spin w-3 h-3 border border-white/60 border-t-transparent rounded-full" />
                       {t('results.suggestingTopic')}
                     </div>
                   ) : suggestedPlanTopic && !planTopic ? (
                     <button
                       onClick={handleUseSuggestedTopic}
                       disabled={generatingPlan}
-                      className="w-full text-left p-2.5 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-colors group"
+                      className="w-full text-left p-2.5 rounded-lg border border-neutral-600/30 bg-neutral-800/10 hover:bg-neutral-800/20 transition-colors group"
                     >
                       <div className="flex items-start gap-2">
-                        <svg className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-3.5 h-3.5 text-neutral-300 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-blue-400 mb-0.5">{t('results.aiSuggestedTopic')}</p>
-                          <p className="text-xs text-white group-hover:text-blue-300 transition-colors">{suggestedPlanTopic}</p>
+                          <p className="text-[10px] text-neutral-300 mb-0.5">{t('results.aiSuggestedTopic')}</p>
+                          <p className="text-xs text-white group-hover:text-neutral-300 transition-colors">{suggestedPlanTopic}</p>
                         </div>
-                        <span className="text-[10px] text-blue-400/70 flex-shrink-0">{t('results.clickToUse')}</span>
+                        <span className="text-[10px] text-neutral-300/70 flex-shrink-0">{t('results.clickToUse')}</span>
                       </div>
                     </button>
                   ) : null}
@@ -443,7 +443,7 @@ function ResultsContent() {
                     disabled={generatingPlan}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] border rounded-lg transition-colors ${
                       attachedFiles.length > 0
-                        ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                        ? "text-neutral-300 border-neutral-600/40 bg-neutral-800/10"
                         : "text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 border-neutral-700 hover:border-neutral-600"
                     }`}
                   >

@@ -21,7 +21,7 @@ type StrengthsGapsPanelProps = {
 function severityClass(severity: BrowsableGap["severity"]): string {
   if (severity === "high") return "border-red-900/50 bg-red-950/30 text-red-200";
   if (severity === "low") return "border-emerald-900/40 bg-emerald-950/20 text-emerald-200";
-  return "border-amber-900/40 bg-amber-950/20 text-amber-100";
+  return "border-neutral-800/40 bg-neutral-950/20 text-neutral-200";
 }
 
 function actionKindLabel(kind: LinkedPowAction["kind"]): string {
@@ -67,7 +67,7 @@ function SeverityMiniBar({
       ) : null}
       {stack.medium > 0 ? (
         <span
-          className="h-full bg-amber-500/80"
+          className="h-full bg-neutral-800/80"
           style={{ width: `${stack.medium * 100}%` }}
           data-severity-medium-frac={stack.medium}
         />
@@ -274,7 +274,7 @@ function CohortVennGrid({
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wide text-neutral-500">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-500/80" /> Gaps
+            <span className="h-2 w-2 rounded-full bg-neutral-800/80" /> Gaps
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500/80" /> Strengths
@@ -284,7 +284,7 @@ function CohortVennGrid({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2" data-cohort-venn-columns>
         <div data-cohort-venn-col="gaps">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-amber-500/80">
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-200/80">
             Shared gaps
           </p>
           {gaps.length === 0 ? (
@@ -315,7 +315,7 @@ function CohortVennGrid({
                     <p className="mt-2 line-clamp-2 text-center text-xs font-medium text-neutral-100">
                       {theme.label}
                     </p>
-                    <p className="mt-0.5 text-center font-mono text-[10px] tabular-nums text-amber-200/80">
+                    <p className="mt-0.5 text-center font-mono text-[10px] tabular-nums text-neutral-300/80">
                       {theme.subjectCount} overlap · {coveragePct}% cohort
                     </p>
                     <p
@@ -535,7 +535,7 @@ export function StrengthsGapsPanel({
                       data-severity-filter={sev}
                       className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
                         severityFilter === sev
-                          ? "border-cyan-700/60 bg-cyan-950/40 text-cyan-100"
+                          ? "border-neutral-700/60 bg-neutral-950/40 text-neutral-200"
                           : "border-neutral-800 text-neutral-500 hover:border-neutral-600"
                       }`}
                     >
@@ -563,7 +563,7 @@ export function StrengthsGapsPanel({
                             data-gap-selected={selected ? "true" : "false"}
                             className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
                               selected
-                                ? "border-amber-700/60 bg-amber-950/25 ring-1 ring-amber-800/40"
+                                ? "border-neutral-700/60 bg-neutral-950/25 ring-1 ring-neutral-800/40"
                                 : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600"
                             }`}
                           >
@@ -656,7 +656,7 @@ export function StrengthsGapsPanel({
                               data-gap-pow-link-kind={action.kind}
                               className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-2"
                             >
-                              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-cyan-300/80">
+                              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-neutral-300/80">
                                 {actionKindLabel(action.kind)}
                               </p>
                               <p className="mt-1 text-sm leading-relaxed text-neutral-200">
@@ -763,7 +763,7 @@ export function StrengthsGapsPanel({
                   <dt className="text-[10px] uppercase tracking-wide text-neutral-500">
                     Shared gap themes
                   </dt>
-                  <dd className="mt-1 font-mono text-lg text-amber-100">
+                  <dd className="mt-1 font-mono text-lg text-neutral-200">
                     {analysis.sharedGapThemes.length}
                   </dd>
                 </div>
@@ -803,7 +803,7 @@ export function StrengthsGapsPanel({
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <p className="text-sm font-medium text-neutral-100">{theme.label}</p>
-                            <span className="font-mono text-[11px] tabular-nums text-amber-200/90">
+                            <span className="font-mono text-[11px] tabular-nums text-neutral-300/90">
                               {theme.subjectCount} subjects
                             </span>
                           </div>

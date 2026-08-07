@@ -150,9 +150,9 @@ function dialogueAvatarClasses(isActiveTurn: boolean, turnMode: HeliosTurnMode =
   return cn(
     "grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
     turnMode === "interruption"
-      ? "animate-dialogue-interruption-pulse border-sky-500/70 from-sky-500/15 ring-sky-500/40"
+      ? "animate-dialogue-interruption-pulse border-neutral-600/70 from-neutral-800/15 ring-neutral-600/40"
       : isActiveTurn
-        ? "animate-dialogue-turn-pulse border-red-500/70 from-amber-500/15 ring-red-500/40"
+        ? "animate-dialogue-turn-pulse border-red-500/70 from-neutral-800/15 ring-red-500/40"
         : "border-white/70 from-white/10 ring-white/40",
   );
 }
@@ -171,7 +171,7 @@ function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string, turnM
     "rounded-2xl border px-4 py-3 backdrop-blur-sm",
     cornerClass,
     turnMode === "interruption"
-      ? "animate-dialogue-interruption-pulse border-sky-500/70 bg-neutral-950/55"
+      ? "animate-dialogue-interruption-pulse border-neutral-600/70 bg-neutral-950/55"
       : isActiveTurn
         ? "animate-dialogue-turn-pulse border-red-500/70 bg-neutral-950/55"
         : "border-white/50 bg-neutral-950/55",
@@ -190,7 +190,7 @@ export function HeliosProbeAvatar({
     <div className="relative h-28 w-28 shrink-0">
       <div className={dialogueAvatarClasses(isActiveTurn, turnMode)}>
         {isInterruption ? (
-          <Zap className="size-8 text-sky-300" strokeWidth={2.25} aria-hidden />
+          <Zap className="size-8 text-neutral-300" strokeWidth={2.25} aria-hidden />
         ) : (
           <span className="font-serif text-3xl leading-none text-neutral-200">H</span>
         )}

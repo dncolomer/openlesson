@@ -39,7 +39,7 @@ export function ExerciseTapShell({
           data-exercise-prompt
           className="min-w-0 flex-1 rounded-xl border border-neutral-800/90 bg-neutral-950/75 px-4 py-3"
         >
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber-200/70">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/70">
             Exercise
           </p>
           <p className="mt-1.5 text-sm leading-relaxed text-neutral-100 sm:text-base">

@@ -170,7 +170,7 @@ export default function ProbabilisticComputingHackathonPage() {
           <span className="rounded-sm border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-400">
             Past event
           </span>
-          <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">
+          <span className="rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
             Registration closed
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -313,7 +313,7 @@ export default function ProbabilisticComputingHackathonPage() {
             >
               <div className="border-b border-zinc-800/80 bg-zinc-900/40 px-5 py-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">
+                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                     {project.place} place
                   </span>
                   <span className="text-sm font-medium text-white">{project.prize}</span>
@@ -352,7 +352,7 @@ export default function ProbabilisticComputingHackathonPage() {
               key={pkg.id}
               className="flex flex-col rounded-xl border border-dashed border-zinc-700/80 bg-zinc-950/50 p-5 backdrop-blur-sm"
             >
-              <span className="w-fit border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">
+              <span className="w-fit border border-neutral-600/30 bg-neutral-800/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                 {pkg.badge}
               </span>
               <h3 className="mt-4 text-base font-medium leading-snug text-white">{pkg.title}</h3>

@@ -307,7 +307,7 @@ export function WorkspaceDataStudioPanel({
         </p>
       ) : null}
       {statusMsg ? (
-        <p className="text-xs text-cyan-400/90" data-studio-status>
+        <p className="text-xs text-neutral-300/90" data-studio-status>
           {statusMsg}
         </p>
       ) : null}

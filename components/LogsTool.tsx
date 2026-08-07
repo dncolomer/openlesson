@@ -95,9 +95,9 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       case "error":
         return "text-red-400 bg-red-500/10 border-red-500/30";
       case "warning":
-        return "text-yellow-400 bg-yellow-500/10 border-yellow-500/30";
+        return "text-neutral-300 bg-neutral-800/10 border-neutral-600/30";
       case "info":
-        return "text-blue-400 bg-blue-500/10 border-blue-500/30";
+        return "text-neutral-300 bg-neutral-800/10 border-neutral-600/30";
     }
   };
 
@@ -106,16 +106,16 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       case "error":
         return "bg-red-400";
       case "warning":
-        return "bg-yellow-400";
+        return "bg-neutral-200";
       case "info":
-        return "bg-blue-400";
+        return "bg-neutral-200";
     }
   };
 
   const getHealthStatus = (data: TransferHealthData) => {
     if (data.sent === 0) return { color: "bg-neutral-600", dot: "bg-neutral-500" };
     if (data.failed === 0) return { color: "text-emerald-400", dot: "bg-emerald-400" };
-    if (data.failed < data.saved) return { color: "text-yellow-400", dot: "bg-yellow-400" };
+    if (data.failed < data.saved) return { color: "text-neutral-300", dot: "bg-neutral-200" };
     return { color: "text-red-400", dot: "bg-red-400" };
   };
 

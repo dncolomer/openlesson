@@ -61,10 +61,10 @@ export function AyclWorkspaceView({
           {initialPlan.title || initialPlan.root_topic}
         </h1>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-300">
+          <span className="rounded border border-neutral-600/30 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
             Lifetime access
           </span>
-          <span className="rounded border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-sky-300">
+          <span className="rounded border border-neutral-600/25 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
             Private copy
           </span>
           <span

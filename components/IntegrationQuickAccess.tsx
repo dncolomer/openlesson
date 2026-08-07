@@ -91,7 +91,7 @@ export function IntegrationQuickAccess({
       ) : null}
 
       {showWorkspaceLevelNote ? (
-        <div className="rounded-lg border border-cyan-900/40 bg-cyan-950/20 px-4 py-3 text-sm text-cyan-100/90">
+        <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-sm text-neutral-200/90">
           {t("integrationAccess.workspaceLevelNote")}
         </div>
       ) : null}

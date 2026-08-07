@@ -2309,10 +2309,10 @@ export function WorkspaceView({
 
       {isAycl && ayclCapabilities?.canUpgrade ? (
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-neutral-600/20 bg-neutral-800/10 px-4 py-2"
           data-aycl-upgrade-bar
         >
-          <p className="text-[11px] text-amber-100/90">
+          <p className="text-[11px] text-neutral-200/90">
             {ayclUpgradeOfferDescription()}{" "}
             <span className="font-medium text-white" data-aycl-upgrade-price>
               {ayclUpgradePriceLabel}
@@ -2608,7 +2608,7 @@ export function WorkspaceView({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-neutral-400">{t("planView.productAle")}</span>
-                      <span className="rounded-sm border border-amber-400/20 bg-amber-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-amber-200/90">
+                      <span className="rounded-sm border border-neutral-500/20 bg-neutral-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-neutral-300/90">
                         {t("planView.productUpcoming")}
                       </span>
                     </div>
@@ -2628,7 +2628,7 @@ export function WorkspaceView({
                   </button>
                   <Link
                     href="/map-of-knowledge"
-                    className="block w-full rounded-md border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-center text-xs text-cyan-200/90 transition-all hover:bg-cyan-950/40"
+                    className="block w-full rounded-md border border-neutral-600/20 bg-neutral-950/20 px-3 py-2 text-center text-xs text-neutral-300/90 transition-all hover:bg-neutral-950/40"
                   >
                     Map of Knowledge
                   </Link>

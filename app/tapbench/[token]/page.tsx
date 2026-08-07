@@ -99,7 +99,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             Load{" "}
             <a
               href={skillsPath}
-              className="text-cyan-400 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-300"
+              className="text-neutral-300 underline decoration-neutral-200 underline-offset-2 hover:text-neutral-300"
               data-tapbench-skills-md-link
             >
               {TAPBENCH_SKILLS_MD_FILENAME}
@@ -109,11 +109,11 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
         </div>
 
         <section
-          className="rounded-lg border border-cyan-900/40 bg-cyan-950/15 p-5"
+          className="rounded-lg border border-neutral-800/40 bg-neutral-950/15 p-5"
           data-tapbench-skills-md
           data-tapbench-skills-filename={TAPBENCH_SKILLS_MD_FILENAME}
         >
-          <h2 className="text-[11px] font-medium uppercase tracking-wide text-cyan-500/90">
+          <h2 className="text-[11px] font-medium uppercase tracking-wide text-neutral-200/90">
             Agent skill — {TAPBENCH_SKILLS_MD_FILENAME}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-300">
@@ -128,7 +128,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             <a
               href={skillsPath}
               download={TAPBENCH_SKILLS_MD_FILENAME}
-              className="inline-flex items-center rounded-md border border-cyan-700/50 bg-cyan-950/40 px-3 py-1.5 text-xs font-medium text-cyan-200 hover:bg-cyan-900/40"
+              className="inline-flex items-center rounded-md border border-neutral-700/50 bg-neutral-950/40 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-950/40"
               data-download-tapbench-skills
               data-tapbench-skills-download
             >
@@ -165,7 +165,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             <div className="text-[11px] uppercase tracking-wide text-zinc-500">
               Remaining
             </div>
-            <div className="mt-1 font-mono text-lg text-cyan-400">
+            <div className="mt-1 font-mono text-lg text-neutral-300">
               {remainingSec}s
             </div>
             <div className="mt-1 text-[10px] text-zinc-600">
@@ -196,7 +196,7 @@ export default async function TapbenchResolvePage({ params }: PageProps) {
             Full protocol is in{" "}
             <a
               href={skillsPath}
-              className="text-cyan-500/90 underline decoration-cyan-800 underline-offset-2"
+              className="text-neutral-200/90 underline decoration-neutral-300 underline-offset-2"
               data-tapbench-skills-md-link
             >
               {TAPBENCH_SKILLS_MD_FILENAME}

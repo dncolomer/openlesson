@@ -98,7 +98,7 @@ export default function SciencePage() {
         >
           <article className="border border-zinc-800 bg-zinc-950/75 p-6 backdrop-blur-sm sm:p-8">
             {thesisSlide.kicker ? (
-              <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-cyan-200/80">
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-300/80">
                 {thesisSlide.kicker}
               </p>
             ) : null}
@@ -141,7 +141,7 @@ export default function SciencePage() {
                     ) : null}
                     <div className="min-w-0 flex-1">
                       {label ? (
-                        <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90">
+                        <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-neutral-300/90">
                           {label}
                         </p>
                       ) : null}

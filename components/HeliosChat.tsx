@@ -82,7 +82,7 @@ const CHAT_WELCOME_MESSAGES: Record<string, string> = {
 function HeliosAvatar({ size = 28 }: { size?: number }) {
   return (
     <div
-      className="shrink-0 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-neutral-700 flex items-center justify-center"
+      className="shrink-0 rounded-full bg-gradient-to-br from-neutral-800/20 via-neutral-800 to-neutral-900 border border-neutral-700 flex items-center justify-center"
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -430,13 +430,13 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
             }}
             className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors ${
               autoVoiceEnabled
-                ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200"
+                ? "border-neutral-500/50 bg-neutral-800/10 text-neutral-300"
                 : "border-neutral-800 bg-neutral-900/80 text-neutral-500 hover:text-neutral-300"
             }`}
             title={t("heliosChat.autoVoiceTitle")}
             aria-pressed={autoVoiceEnabled}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${autoVoiceEnabled ? "bg-cyan-300" : "bg-neutral-600"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${autoVoiceEnabled ? "bg-neutral-300" : "bg-neutral-600"}`} />
             {autoVoiceEnabled ? t("heliosChat.voiceOn") : t("heliosChat.voiceOff")}
           </button>
           <button

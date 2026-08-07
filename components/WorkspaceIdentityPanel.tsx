@@ -45,7 +45,7 @@ export function WorkspaceIdentityPanel({
         </span>
       )}
       {plan.is_all_you_can_learn && (
-        <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-300/90">
+        <span className="rounded border border-neutral-600/25 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300/90">
           Paid
         </span>
       )}

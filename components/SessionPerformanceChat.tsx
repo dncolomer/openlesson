@@ -195,7 +195,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
             <>
               {/* Helios-style avatar */}
               <div className="relative mb-3">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center overflow-hidden ring-2 ring-violet-500/20 ring-offset-2 ring-offset-transparent">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border border-neutral-600/30 flex items-center justify-center overflow-hidden ring-2 ring-neutral-600/20 ring-offset-2 ring-offset-transparent">
                   <span className="text-2xl font-serif text-neutral-200">H</span>
                 </div>
                 {/* Soft glow */}
@@ -212,7 +212,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                   {displayedIntro}
                   {!typingDone && (
                     <span
-                      className="inline-block w-[2px] h-[1em] align-[-0.1em] ml-0.5 bg-violet-400/80 animate-pulse"
+                      className="inline-block w-[2px] h-[1em] align-[-0.1em] ml-0.5 bg-neutral-800/80 animate-pulse"
                       aria-hidden="true"
                     />
                   )}
@@ -264,7 +264,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-violet-400 hover:text-violet-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -279,7 +279,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
             <>
               {/* Small avatar at top */}
               <div className="relative mb-2 flex-shrink-0 self-center">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center ring-1 ring-violet-500/20 ring-offset-1 ring-offset-transparent">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border border-neutral-600/30 flex items-center justify-center ring-1 ring-neutral-600/20 ring-offset-1 ring-offset-transparent">
                   <span className="text-lg font-serif text-neutral-200">H</span>
                 </div>
               </div>
@@ -291,11 +291,11 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                       {/* Mini avatar */}
                       {msg.role === "assistant" ? (
-                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-neutral-800/20 via-neutral-800 to-neutral-900 border border-neutral-600/30 flex items-center justify-center">
                           <span className="text-[9px] font-serif text-neutral-300">H</span>
                         </div>
                       ) : (
-                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
@@ -306,7 +306,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                       <div
                         className={`relative group flex-1 min-w-0 px-2.5 py-1.5 rounded-lg ${
                           msg.role === "user"
-                            ? "bg-blue-600 text-white rounded-br-sm"
+                            ? "bg-white text-black rounded-br-sm"
                             : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-bl-sm"
                         }`}
                       >
@@ -314,8 +314,8 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                           className="prose prose-invert prose-sm max-w-none text-sm leading-7
                           prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold
                           prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4
-                          prose-li:my-1 prose-li:leading-6 prose-code:text-cyan-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-                          prose-strong:text-neutral-100 prose-a:text-cyan-400"
+                          prose-li:my-1 prose-li:leading-6 prose-code:text-neutral-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          prose-strong:text-neutral-100 prose-a:text-neutral-300"
                         >
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm, remarkMath]}
@@ -350,14 +350,14 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                   {/* Loading indicator */}
                   {isLoading && (
                     <div className="flex gap-2">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-neutral-800/20 via-neutral-800 to-neutral-900 border border-neutral-600/30 flex items-center justify-center">
                         <span className="text-[9px] font-serif text-neutral-300">H</span>
                       </div>
                       <div className="bg-neutral-800/70 border border-neutral-700/50 px-2.5 py-1.5 rounded-lg rounded-bl-sm">
                         <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-1 h-1 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-1 h-1 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <div className="w-1 h-1 bg-neutral-800/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-1 h-1 bg-neutral-800/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <div className="w-1 h-1 bg-neutral-800/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
                       </div>
                     </div>
@@ -384,7 +384,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-violet-400 hover:text-violet-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

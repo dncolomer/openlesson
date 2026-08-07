@@ -255,7 +255,7 @@ export function WorkspaceBlockSimulationPanel({
       </div>
 
       {error ? (
-        <p className="text-[11px] text-amber-300/90" data-simulation-error>
+        <p className="text-[11px] text-neutral-300/90" data-simulation-error>
           {error}
         </p>
       ) : null}

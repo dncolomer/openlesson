@@ -21,7 +21,7 @@ interface WorkspaceFilesTabProps {
 function FileTypeIcon({ mimeType, className = "w-5 h-5" }: { mimeType: string; className?: string }) {
   if (mimeType.startsWith("image/")) {
     return (
-      <svg className={`${className} text-violet-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className={`${className} text-neutral-300`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
       </svg>
     );
@@ -34,7 +34,7 @@ function FileTypeIcon({ mimeType, className = "w-5 h-5" }: { mimeType: string; c
     );
   }
   return (
-    <svg className={`${className} text-blue-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className={`${className} text-neutral-300`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   );
@@ -249,7 +249,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-white disabled:bg-neutral-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {uploading ? (
                   <>
@@ -273,7 +273,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
         )}
 
         {isOwner && atLimit && (
-          <p className="text-xs text-amber-400/80 pt-2 border-t border-neutral-800">
+          <p className="text-xs text-neutral-300/80 pt-2 border-t border-neutral-800">
             {t('workspaceFiles.fileLimitReached')}
           </p>
         )}

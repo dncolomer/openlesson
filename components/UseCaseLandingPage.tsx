@@ -185,7 +185,7 @@ export function UseCaseLandingPage({ page }: UseCaseLandingPageProps) {
           <ul className="mt-6 space-y-3">
             {page.highlights.map((highlight) => (
               <li key={highlight} className="flex gap-3 text-sm leading-relaxed text-zinc-400">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-cyan-400/80" />
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-neutral-800/80" />
                 <span>{highlight}</span>
               </li>
             ))}

@@ -81,8 +81,8 @@ export default function SessionPrepModal({
         <div className="flex items-center gap-3 mb-6">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
             localInferenceEnabled 
-              ? 'bg-gradient-to-br from-purple-500 to-blue-600'
-              : 'bg-gradient-to-br from-cyan-500 to-blue-600'
+              ? 'bg-gradient-to-br from-neutral-700 to-neutral-700'
+              : 'bg-gradient-to-br from-neutral-700 to-neutral-700'
           }`}>
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -117,7 +117,7 @@ export default function SessionPrepModal({
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
                   isPlanDone 
                     ? 'bg-green-500 text-black' 
-                    : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-neutral-800/20 text-neutral-300 border border-neutral-600/30'
                 }`}>
                   {isPlanDone ? (
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -140,7 +140,7 @@ export default function SessionPrepModal({
                     isModelDone
                       ? 'bg-green-500 text-black'
                       : stage === "model"
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                        ? 'bg-neutral-800/20 text-neutral-300 border border-neutral-600/30'
                         : 'bg-neutral-800 text-neutral-500 border border-neutral-700'
                   }`}>
                     {isModelDone ? (
@@ -171,8 +171,8 @@ export default function SessionPrepModal({
                 <div
                   className={`h-full rounded-full transition-all duration-300 ease-out ${
                     localInferenceEnabled && stage === "model"
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500'
-                      : 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                      ? 'bg-gradient-to-r from-neutral-700 to-neutral-700'
+                      : 'bg-gradient-to-r from-neutral-700 to-neutral-700'
                   }`}
                   style={{ width: `${overallPct}%` }}
                 />

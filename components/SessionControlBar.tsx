@@ -54,13 +54,13 @@ export function SessionControlBar({
             isPlaying
               ? "w-2.5 h-2.5 bg-red-500 animate-pulse"
               : isPaused
-              ? "w-2.5 h-2.5 bg-amber-500"
+              ? "w-2.5 h-2.5 bg-white"
               : "w-2 h-2 bg-neutral-600"
           }`} />
 
           {/* Timer */}
           <span className={`text-xs font-mono tabular-nums transition-colors ${
-            isPlaying ? "text-red-400" : isPaused ? "text-amber-400" : "text-neutral-500"
+            isPlaying ? "text-red-400" : isPaused ? "text-neutral-300" : "text-neutral-500"
           }`}>
             {formatTime(elapsedSeconds)}
           </span>
@@ -95,8 +95,8 @@ export function SessionControlBar({
             disabled={!isPlaying}
             className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
               !isPlaying
-                ? "text-amber-500/20 cursor-default"
-                : "text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
+                ? "text-neutral-200/20 cursor-default"
+                : "text-neutral-300 hover:bg-neutral-800/20 hover:text-neutral-300"
             }`}
             title={t('tools.pause')}
           >
@@ -128,7 +128,7 @@ export function SessionControlBar({
         {/* Status label */}
         <div className="w-px h-6 bg-neutral-700/50" />
         <span className={`text-[10px] font-medium uppercase tracking-wider min-w-[60px] ${
-          isPlaying ? "text-red-400" : isPaused ? "text-amber-400" : "text-neutral-500"
+          isPlaying ? "text-red-400" : isPaused ? "text-neutral-300" : "text-neutral-500"
         }`}>
           {isPlaying ? t('session.recording') : isPaused ? t('session.paused') : t('session.stopped')}
         </span>

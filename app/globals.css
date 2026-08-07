@@ -61,8 +61,8 @@ body {
 }
 
 @keyframes welcome-border {
-  0%, 100% { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); }
-  50% { border-color: #fbbf24; box-shadow: 0 0 16px rgba(251, 191, 36, 0.5); }
+  0%, 100% { border-color: #a3a3a3; box-shadow: 0 0 8px rgba(255, 255, 255, 0.3); }
+  50% { border-color: #e5e5e5; box-shadow: 0 0 16px rgba(255, 255, 255, 0.5); }
 }
 
 .animate-welcome {
@@ -107,10 +107,10 @@ body {
 /* Glow pulse for full probe slots */
 @keyframes glow-pulse {
   0%, 100% { 
-    box-shadow: 0 0 5px rgba(34, 211, 238, 0.3); 
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3); 
   }
   50% { 
-    box-shadow: 0 0 15px rgba(34, 211, 238, 0.6); 
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6); 
   }
 }
 
@@ -155,18 +155,18 @@ body {
 /* Step completion celebration - full confetti explosion */
 @keyframes step-celebrate-glow {
   0% { 
-    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
   }
   30% {
-    box-shadow: 0 0 30px 10px rgba(34, 211, 238, 0.6), 
+    box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.6), 
                 0 0 60px 20px rgba(52, 211, 153, 0.3);
   }
   60% {
-    box-shadow: 0 0 50px 15px rgba(251, 191, 36, 0.4),
+    box-shadow: 0 0 50px 15px rgba(255, 255, 255, 0.4),
                 0 0 80px 30px rgba(244, 114, 182, 0.2);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 

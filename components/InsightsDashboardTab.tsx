@@ -249,7 +249,7 @@ export function InsightsDashboardTab({
                 type="button"
                 disabled={loadingThoughts || suggesting || thoughts.length < 2}
                 onClick={() => void suggestInsights()}
-                className="rounded-md border border-cyan-800/80 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-100 transition hover:border-cyan-600 hover:bg-cyan-950/70 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-md border border-neutral-800/80 bg-neutral-950/40 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {suggesting
                   ? "Generating suggestions…"
@@ -280,7 +280,7 @@ export function InsightsDashboardTab({
       </div>
 
       {scoped && lastInsightUrl ? (
-        <div className="rounded-md border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-xs text-cyan-100">
+        <div className="rounded-md border border-neutral-600/25 bg-neutral-800/10 px-4 py-3 text-xs text-neutral-200">
           Insight bookmarked.{" "}
           <Link href={lastInsightUrl} className="underline underline-offset-2 hover:text-white">
             View now
@@ -289,14 +289,14 @@ export function InsightsDashboardTab({
       ) : null}
 
       {scoped && actionError ? (
-        <div className="rounded-md border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-xs text-amber-100">
+        <div className="rounded-md border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-xs text-neutral-200">
           {actionError}
         </div>
       ) : null}
 
       {scoped && suggestions.length > 0 ? (
         <div className="space-y-3">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-amber-200/80">Suggested insights</p>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-300/80">Suggested insights</p>
           <div className={compact ? "grid gap-3 md:grid-cols-2" : "grid gap-4 md:grid-cols-2"}>
             {suggestions.map((suggestion, index) => {
               const key = `${suggestion.title}-${index}`;
@@ -304,14 +304,14 @@ export function InsightsDashboardTab({
               return (
                 <div
                   key={key}
-                  className="rounded-md border border-amber-500/20 bg-amber-500/5 p-4 transition hover:border-amber-500/35"
+                  className="rounded-md border border-neutral-600/20 bg-neutral-800/5 p-4 transition hover:border-neutral-600/35"
                 >
                   <h3 className="text-base font-medium leading-snug text-neutral-100">{suggestion.title}</h3>
                   <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-neutral-400">{suggestion.summary}</p>
-                  <p className="mt-3 font-mono text-[10px] uppercase tracking-wide text-amber-200/70">
+                  <p className="mt-3 font-mono text-[10px] uppercase tracking-wide text-neutral-300/70">
                     From {suggestion.thoughtIds.length} trace{suggestion.thoughtIds.length === 1 ? "" : "s"}
                   </p>
-                  <div className="mt-4 flex items-center gap-3 border-t border-amber-500/15 pt-3">
+                  <div className="mt-4 flex items-center gap-3 border-t border-neutral-600/15 pt-3">
                     <button
                       type="button"
                       disabled={Boolean(bookmarkingKey)}
@@ -394,7 +394,7 @@ export function InsightsDashboardTab({
                       type="button"
                       disabled={isArchiving}
                       onClick={() => void handleArchive(insight)}
-                      className="text-xs text-neutral-500 transition hover:text-amber-200 disabled:opacity-50"
+                      className="text-xs text-neutral-500 transition hover:text-neutral-300 disabled:opacity-50"
                     >
                       {isArchiving ? "Archiving…" : "Archive"}
                     </button>

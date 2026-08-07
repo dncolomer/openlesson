@@ -209,12 +209,12 @@ export function SessionHeliosPanel({
                   className={`rounded-2xl border px-5 py-4 backdrop-blur-md sm:px-6 sm:py-5 ${
                     chapterThoughtsLocked
                       ? "border-neutral-600/70 bg-neutral-950/75 shadow-none"
-                      : "border-amber-400/40 bg-neutral-950/80 shadow-[0_0_24px_rgba(251,191,36,0.06)]"
+                      : "border-neutral-500/40 bg-neutral-950/80 shadow-[0_0_24px_rgba(251,191,36,0.06)]"
                   }`}
                 >
                   <p
                     className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
-                      chapterThoughtsLocked ? "text-neutral-500" : "text-amber-200/85"
+                      chapterThoughtsLocked ? "text-neutral-500" : "text-neutral-300/85"
                     }`}
                   >
                     Project Mode · Exercise
@@ -324,7 +324,7 @@ export function SessionHeliosPanel({
                           </p>
                         ) : null}
                         {chapterFollowUpsError ? (
-                          <p className="text-xs text-amber-300/90" data-ile-follow-ups-error>
+                          <p className="text-xs text-neutral-300/90" data-ile-follow-ups-error>
                             {chapterFollowUpsError}
                           </p>
                         ) : null}
@@ -337,9 +337,9 @@ export function SessionHeliosPanel({
                                   data-ile-follow-up-topic={index}
                                   disabled={!onSelectChapterFollowUp}
                                   onClick={() => onSelectChapterFollowUp?.(suggestion)}
-                                  className="w-full rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2.5 text-left transition hover:border-cyan-400/50 hover:bg-cyan-500/10 disabled:opacity-50"
+                                  className="w-full rounded-lg border border-neutral-600/30 bg-neutral-800/5 px-3 py-2.5 text-left transition hover:border-neutral-500/50 hover:bg-neutral-800/10 disabled:opacity-50"
                                 >
-                                  <p className="text-xs font-semibold text-cyan-100">
+                                  <p className="text-xs font-semibold text-neutral-200">
                                     {suggestion.title}
                                   </p>
                                   {suggestion.description &&
@@ -396,7 +396,7 @@ export function SessionHeliosPanel({
                         isListening: thought.isListening,
                         enabled: thought.speechEnabled,
                       })}
-                      className={`w-full ${thought.speechError ? "text-amber-300/90" : "text-neutral-300"}`}
+                      className={`w-full ${thought.speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                     />
                   </div>
                   {thought.speechEnabled &&
@@ -405,7 +405,7 @@ export function SessionHeliosPanel({
                     <button
                       type="button"
                       onClick={() => void thought.retryMicrophone()}
-                      className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 transition hover:border-amber-400/60 hover:bg-amber-500/20"
+                      className="shrink-0 rounded-md border border-neutral-600/40 bg-neutral-800/10 px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
                     >
                       {thought.speechError ? "Retry" : "Start"}
                     </button>

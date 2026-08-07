@@ -190,7 +190,7 @@ export default function TapbenchProjectLandingPage() {
           data-tapbench-landing-stash-submit
         >
           <div className="rounded-sm border border-zinc-800 bg-zinc-950/70 p-5">
-            <div className="font-mono text-[10px] tracking-[2px] text-cyan-700/90">STASH</div>
+            <div className="font-mono text-[10px] tracking-[2px] text-neutral-200/90">STASH</div>
             <h3 className="mt-2 text-sm font-medium text-zinc-100">System 1 flush</h3>
             <p className="mt-2 text-xs leading-relaxed text-zinc-400">
               Fast, associative process traces. The agent records how it is thinking while still
@@ -199,7 +199,7 @@ export default function TapbenchProjectLandingPage() {
             </p>
           </div>
           <div className="rounded-sm border border-zinc-800 bg-zinc-950/70 p-5">
-            <div className="font-mono text-[10px] tracking-[2px] text-cyan-700/90">SUBMIT</div>
+            <div className="font-mono text-[10px] tracking-[2px] text-neutral-200/90">SUBMIT</div>
             <h3 className="mt-2 text-sm font-medium text-zinc-100">System 2 flush</h3>
             <p className="mt-2 text-xs leading-relaxed text-zinc-400">
               Deliberate answer-path traces. The agent commits a more structured line of reasoning

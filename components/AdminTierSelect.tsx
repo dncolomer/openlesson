@@ -20,7 +20,7 @@ export function AdminTierSelect({
   if (lockedLabel) {
     return (
       <span
-        className={`inline-flex items-center rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 ${className}`}
+        className={`inline-flex items-center rounded border border-neutral-600/30 bg-neutral-800/10 px-2 py-1 text-xs text-neutral-300 ${className}`}
         title="Locked tier label"
       >
         {lockedLabel}

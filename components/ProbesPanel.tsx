@@ -374,7 +374,7 @@ export function ProbesPanel({
                   {/* Avatar with notification ring + badge */}
                   <div className="relative">
                     <div
-                      className={`w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
+                      className={`w-28 h-28 rounded-full bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
                         isCurrentPlanStep
                           ? "border-red-500/70 ring-2 ring-red-500/40 ring-offset-2 ring-offset-[#0a0a0a]"
                           : "border-neutral-800"
@@ -456,7 +456,7 @@ export function ProbesPanel({
                   {probeDisplayed}
                   {!probeTypingDone && (
                     <span
-                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-amber-400/80 animate-pulse"
+                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-neutral-800/80 animate-pulse"
                       aria-hidden="true"
                     />
                   )}

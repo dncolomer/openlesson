@@ -85,7 +85,7 @@ export default function PlansPage() {
         {plans.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-neutral-500 mb-4">{t('plans.noPlansYet')}</p>
-            <Link href="/" className="text-blue-400 hover:underline">
+            <Link href="/" className="text-neutral-300 hover:underline">
               {t('plans.createFirstPlan')}
             </Link>
           </div>
@@ -106,7 +106,7 @@ export default function PlansPage() {
                   <div className="flex items-center gap-2">
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       plan.status === 'active' 
-                        ? 'bg-blue-900/50 text-blue-400'
+                        ? 'bg-neutral-950/50 text-neutral-300'
                         : plan.status === 'completed'
                         ? 'bg-green-900/50 text-green-400'
                         : 'bg-neutral-800 text-neutral-400'
@@ -116,7 +116,7 @@ export default function PlansPage() {
                     <button
                       type="button"
                       onClick={() => handleArchive(plan.id)}
-                      className="rounded border border-neutral-700 px-2 py-1 text-[10px] uppercase tracking-wide text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200"
+                      className="rounded border border-neutral-700 px-2 py-1 text-[10px] uppercase tracking-wide text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300"
                     >
                       Archive
                     </button>

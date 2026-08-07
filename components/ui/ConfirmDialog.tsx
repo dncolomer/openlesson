@@ -73,8 +73,8 @@ interface ConfirmDialogProps {
 
 const ICON_PILL: Record<ConfirmVariant, string> = {
   destructive: "bg-red-500/15 border border-red-500/30 text-red-400",
-  warning: "bg-amber-500/20 border border-amber-500/30 text-amber-400",
-  info: "bg-cyan-500/20 border border-cyan-500/30 text-cyan-400",
+  warning: "bg-neutral-800/20 border border-neutral-600/30 text-neutral-300",
+  info: "bg-neutral-800/20 border border-neutral-600/30 text-neutral-300",
   success: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
   neutral: "bg-neutral-800 border border-neutral-700 text-neutral-200",
 };
@@ -124,9 +124,9 @@ const CONFIRM_TONE: Record<NonNullable<ConfirmDialogProps["confirmTone"]>, strin
   primary:
     "text-neutral-900 bg-neutral-100 hover:bg-white active:bg-white border border-transparent",
   warning:
-    "text-amber-200 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 active:bg-amber-500/25",
+    "text-neutral-300 bg-neutral-800/15 border border-neutral-600/30 hover:bg-neutral-800/25 active:bg-neutral-800/25",
   info:
-    "text-cyan-200 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/25 active:bg-cyan-500/25",
+    "text-neutral-300 bg-neutral-800/15 border border-neutral-600/30 hover:bg-neutral-800/25 active:bg-neutral-800/25",
 };
 
 function resolveConfirmTone(

@@ -99,7 +99,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-neutral-200 mb-3">{t('terms.ipHeading')}</h2>
             <p>
               {t('terms.ipBody')}{" "}
-              <a href="https://github.com/dncolomer/socrates" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/dncolomer/socrates" className="text-neutral-300 hover:text-neutral-300" target="_blank" rel="noopener noreferrer">
                 github.com/dncolomer/socrates
               </a>.
             </p>

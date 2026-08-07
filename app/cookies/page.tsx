@@ -95,12 +95,12 @@ export default function CookiesPage() {
               {t('cookies.managingCookiesIntro')}
             </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{t('cookies.browserChrome')}</a></li>
-              <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{t('cookies.browserFirefox')}</a></li>
-              <li><a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{t('cookies.browserSafari')}</a></li>
-              <li><a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{t('cookies.browserEdge')}</a></li>
+              <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserChrome')}</a></li>
+              <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserFirefox')}</a></li>
+              <li><a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserSafari')}</a></li>
+              <li><a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-neutral-300">{t('cookies.browserEdge')}</a></li>
             </ul>
-            <p className="mt-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-amber-400/80 text-xs">
+            <p className="mt-3 p-3 rounded-lg bg-neutral-800/5 border border-neutral-600/20 text-neutral-300/80 text-xs">
               <strong>{t('cookies.noteLabel')}:</strong> {t('cookies.disablingNote')}
             </p>
           </section>

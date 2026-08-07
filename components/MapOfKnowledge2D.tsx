@@ -348,7 +348,7 @@ export function MapOfKnowledge2D({
       aria-label="Interactive 2D Map of Knowledge. Drag to pan, scroll or pinch to zoom, arrow keys or WASD to pan, plus and minus to zoom, zero or R to reset."
       data-map-2d-root
       data-map-2d-interactive
-      className={`relative w-full overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/40 ${heightClass} ${className}`}
+      className={`relative w-full overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-neutral-600/40 ${heightClass} ${className}`}
       style={{ backgroundColor: MAP_INFINITE_GRID.background }}
       onClick={() => containerRef.current?.focus()}
     >

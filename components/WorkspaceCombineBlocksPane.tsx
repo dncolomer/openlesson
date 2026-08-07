@@ -616,7 +616,7 @@ export function WorkspaceCombineBlocksPane({
 
         {!contiguous ? (
           <p
-            className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] leading-snug text-amber-200/90"
+            className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
             data-combine-not-contiguous
           >
             Selected blocks must share edges (be contiguous on the map) before they
@@ -758,7 +758,7 @@ export function WorkspaceCombineBlocksPane({
 
           {bridgeAnchors.length < 2 ? (
             <p
-              className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] leading-snug text-amber-200/90"
+              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
               data-bridge-need-anchors
             >
               Need at least two selected blocks with map positions to draw a
@@ -766,7 +766,7 @@ export function WorkspaceCombineBlocksPane({
             </p>
           ) : bridgeSelection.selected.length === 0 ? (
             <p
-              className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] leading-snug text-amber-200/90"
+              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
               data-bridge-no-cells
             >
               No placeable empty cells along the corridor — clear space between
@@ -999,7 +999,7 @@ export function WorkspaceCombineBlocksPane({
 
               {dagHasCycle ? (
                 <p
-                  className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] text-amber-200/90"
+                  className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
                   data-dag-cycle-warning
                 >
                   Draft has a directed cycle. You can still Apply; prefer

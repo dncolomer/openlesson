@@ -66,7 +66,7 @@ export function TapBriefingConfig({
     >
       <div>
         {kicker ? (
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-amber-200/80">{kicker}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-300/80">{kicker}</p>
         ) : null}
         <p
           className={`font-mono text-[10px] uppercase tracking-[2px] text-neutral-500 ${kicker ? "mt-1" : ""}`}

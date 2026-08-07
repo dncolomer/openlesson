@@ -110,11 +110,11 @@ export default function AllYouCanLearnPage() {
           data-aycl-catalog-hero
         >
           <div
-            className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl"
+            className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-neutral-800/10 blur-3xl"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -bottom-16 -right-10 h-44 w-44 rounded-full bg-amber-400/10 blur-3xl"
+            className="pointer-events-none absolute -bottom-16 -right-10 h-44 w-44 rounded-full bg-neutral-800/10 blur-3xl"
             aria-hidden
           />
           <div
@@ -125,7 +125,7 @@ export default function AllYouCanLearnPage() {
           <div className="relative px-5 py-7 text-center sm:px-8 sm:py-8">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-amber-300/90 shadow-[0_0_8px_rgba(252,211,77,0.7)]"
+                className="h-1.5 w-1.5 rounded-full bg-neutral-900/90 shadow-[0_0_8px_rgba(252,211,77,0.7)]"
                 aria-hidden
               />
               Marketplace · Recreational learning · Lifetime access
@@ -212,7 +212,7 @@ export default function AllYouCanLearnPage() {
                 }
                 className={`rounded-full border px-3 py-1 text-xs transition ${
                   categoryFilter === "all"
-                    ? "border-amber-500/40 bg-amber-500/15 text-amber-100"
+                    ? "border-neutral-600/40 bg-neutral-800/15 text-neutral-200"
                     : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                 }`}
               >
@@ -229,7 +229,7 @@ export default function AllYouCanLearnPage() {
                     data-aycl-category-chip-active={active ? "true" : "false"}
                     className={`rounded-full border px-3 py-1 text-xs transition ${
                       active
-                        ? "border-amber-500/40 bg-amber-500/15 text-amber-100"
+                        ? "border-neutral-600/40 bg-neutral-800/15 text-neutral-200"
                         : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
                     }`}
                   >
@@ -300,13 +300,13 @@ export default function AllYouCanLearnPage() {
                         <div className="flex flex-wrap gap-1.5">
                           {workspace.category ? (
                             <span
-                              className="border border-cyan-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90 backdrop-blur-sm"
+                              className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90 backdrop-blur-sm"
                               data-aycl-card-category-badge
                             >
                               {workspace.category}
                             </span>
                           ) : null}
-                          <span className="border border-amber-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90 backdrop-blur-sm">
+                          <span className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90 backdrop-blur-sm">
                             Lifetime
                           </span>
                         </div>

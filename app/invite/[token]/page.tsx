@@ -90,7 +90,7 @@ function StatusIcon({ tone }: { tone: "success" | "error" | "warning" }) {
   const tones = {
     success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
     error: "border-red-500/30 bg-red-500/10 text-red-400",
-    warning: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+    warning: "border-neutral-600/30 bg-neutral-800/10 text-neutral-300",
   };
   const paths = {
     success: "M5 13l4 4L19 7",

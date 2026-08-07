@@ -108,7 +108,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
             >
               <h2
                 id="abstract-heading"
-                className="font-mono text-[11px] uppercase tracking-[1.8px] text-cyan-200/80"
+                className="font-mono text-[11px] uppercase tracking-[1.8px] text-neutral-300/80"
               >
                 Abstract
               </h2>
@@ -165,7 +165,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
                           data-experiment-step={step.id}
                           className="rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800 sm:p-5"
                         >
-                          <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-cyan-200/70">
+                          <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-neutral-300/70">
                             Step {index + 1}
                           </p>
                           <h3 className="mt-2 text-base font-medium text-zinc-100">

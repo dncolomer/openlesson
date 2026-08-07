@@ -410,7 +410,7 @@ export function SessionItem({
   const dotColor = isCompleted
     ? "bg-green-400"
     : isInProgress
-      ? "bg-yellow-400 animate-pulse"
+      ? "bg-neutral-200 animate-pulse"
       : isLocked
         ? "bg-neutral-600"
         : "bg-neutral-400";
@@ -441,7 +441,7 @@ export function SessionItem({
                 isCompleted
                   ? "bg-green-500/15 text-green-400"
                   : isInProgress
-                    ? "bg-yellow-500/15 text-yellow-400"
+                    ? "bg-neutral-800/15 text-neutral-300"
                     : "bg-neutral-800 text-neutral-400"
               }`}
             >

@@ -336,11 +336,11 @@ export function MapOfKnowledgeGlobal3D({
         nameSprite.position.set(0, n.orbit_near + 0.35, 0);
         group.add(nameSprite);
 
-        const insideSprite = makeCountSprite(String(n.inside_count), "#67e8f9");
+        const insideSprite = makeCountSprite(String(n.inside_count), "#f5f5f5");
         insideSprite.position.set(n.orbit_inside * 0.75, n.orbit_inside * 0.35, 0);
         group.add(insideSprite);
 
-        const nearSprite = makeCountSprite(String(n.near_count), "#fbbf24");
+        const nearSprite = makeCountSprite(String(n.near_count), "#a3a3a3");
         nearSprite.position.set(-n.orbit_near * 0.75, n.orbit_near * 0.35, 0);
         group.add(nearSprite);
 
@@ -495,10 +495,10 @@ export function MapOfKnowledgeGlobal3D({
             data-map-global-legend-body
           >
             <li>
-              <span className="text-cyan-300">Inner orbit</span> — users inside region
+              <span className="text-neutral-300">Inner orbit</span> — users inside region
             </li>
             <li>
-              <span className="text-amber-300">Outer orbit</span> — near, not inside
+              <span className="text-neutral-300">Outer orbit</span> — near, not inside
             </li>
             <li>Region dots use multi-algo x,y,z layout</li>
             <li className="text-zinc-500">Drag to orbit · scroll to zoom</li>
@@ -538,19 +538,19 @@ export function MapOfKnowledgeGlobal3D({
             </button>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="border border-cyan-500/25 bg-cyan-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-cyan-500/90">
+            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
+              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
                 Inside
               </dt>
-              <dd className="mt-0.5 font-mono text-base text-cyan-100" data-summary-inside>
+              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-inside>
                 {selectedSummary.inside_count}
               </dd>
             </div>
-            <div className="border border-amber-500/25 bg-amber-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-amber-500/90">
+            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
+              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
                 Near
               </dt>
-              <dd className="mt-0.5 font-mono text-base text-amber-100" data-summary-near>
+              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-near>
                 {selectedSummary.near_count}
               </dd>
             </div>
@@ -562,7 +562,7 @@ export function MapOfKnowledgeGlobal3D({
           {onOpenLocalMap && (
             <button
               type="button"
-              className="mt-3 w-full rounded-sm border border-cyan-700/60 bg-cyan-950/40 px-3 py-2 text-left text-[11px] font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-900/40"
+              className="mt-3 w-full rounded-sm border border-neutral-700/60 bg-neutral-950/40 px-3 py-2 text-left text-[11px] font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/40"
               onClick={() => onOpenLocalMap(selectedSummary.region_id)}
               data-map-global-open-local
             >

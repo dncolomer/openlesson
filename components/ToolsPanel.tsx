@@ -283,13 +283,13 @@ function WebcamMiniPreview() {
 function AudioMiniMeter({ active }: { active: boolean }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Audio recording is active" : "Audio recording is off"}>
-      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-blue-400 animate-pulse" : "bg-neutral-700"}`} />
-      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-blue-400" : "text-neutral-600"}`}>Audio {active ? "on" : "off"}</span>
+      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-neutral-200 animate-pulse" : "bg-neutral-700"}`} />
+      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-neutral-300" : "text-neutral-600"}`}>Audio {active ? "on" : "off"}</span>
       <div className="ml-auto flex items-end gap-0.5 h-3">
         {[4, 8, 12, 7].map((height, index) => (
           <div
             key={index}
-            className={`w-1 rounded-full ${active ? "bg-blue-400/80" : "bg-neutral-700"}`}
+            className={`w-1 rounded-full ${active ? "bg-neutral-800/80" : "bg-neutral-700"}`}
             style={{ height: active ? height : 3 }}
           />
         ))}
@@ -301,9 +301,9 @@ function AudioMiniMeter({ active }: { active: boolean }) {
 function WebcamMiniStatus({ active }: { active: boolean }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Webcam tracking is active" : "Webcam tracking is off"}>
-      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-violet-400 animate-pulse" : "bg-neutral-700"}`} />
-      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-violet-400" : "text-neutral-600"}`}>Webcam {active ? "on" : "off"}</span>
-      <svg className={`ml-auto w-3.5 h-3.5 ${active ? "text-violet-400" : "text-neutral-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-neutral-200 animate-pulse" : "bg-neutral-700"}`} />
+      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-neutral-300" : "text-neutral-600"}`}>Webcam {active ? "on" : "off"}</span>
+      <svg className={`ml-auto w-3.5 h-3.5 ${active ? "text-neutral-300" : "text-neutral-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
       </svg>
     </div>
@@ -324,8 +324,8 @@ function EEGMiniStatus({
   const inferredQuality = activeChannels >= 4 ? "good" : activeChannels >= 2 ? "fair" : "poor";
   const quality = isStreaming ? (museDeviceStatus?.signalQuality || inferredQuality) : "poor";
   const label = !isStreaming ? "EEG off" : quality === "good" ? "EEG good" : quality === "fair" ? "EEG fair" : "EEG poor";
-  const textColor = quality === "good" ? "text-green-400" : quality === "fair" ? "text-amber-400" : "text-red-400";
-  const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-amber-400" : "bg-red-400";
+  const textColor = quality === "good" ? "text-green-400" : quality === "fair" ? "text-neutral-300" : "text-red-400";
+  const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-neutral-200" : "bg-red-400";
 
   return (
     <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
@@ -345,7 +345,7 @@ function EEGMiniStatus({
             : isGood
               ? "bg-green-400"
               : isFair
-                ? "bg-amber-400"
+                ? "bg-neutral-200"
                 : "bg-red-400";
           return (
             <div key={channel} className="flex items-center gap-0.5" title={`${channel}: ${isActive ? `${samples} recent samples` : "no recent samples"}`}>

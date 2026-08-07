@@ -73,7 +73,7 @@ export function ActiveProbe({
     return (
       <div className="w-full h-full">
         <div className="bg-neutral-900/80 border border-neutral-700/50 rounded-2xl p-6 h-full flex items-center gap-4">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-800/20 flex items-center justify-center">
             <ThinkingDots />
           </div>
           <p className="text-neutral-400 text-sm italic">
@@ -102,33 +102,33 @@ export function ActiveProbe({
   return (
     <div className="w-full h-full relative">
       {flashPulse && (
-        <div className="absolute inset-0 rounded-2xl bg-blue-500/20 animate-probe-flash pointer-events-none z-10" />
+        <div className="absolute inset-0 rounded-2xl bg-neutral-800/20 animate-probe-flash pointer-events-none z-10" />
       )}
       <div
         className={`bg-neutral-900 border rounded-2xl p-4 sm:p-5 h-full flex flex-col transition-all duration-500 ${
           animateIn
             ? flashPulse
-              ? "opacity-100 translate-y-0 border-blue-400/60 shadow-[0_0_30px_rgba(59,130,246,0.3)] scale-[1.01]"
-              : "opacity-100 translate-y-0 border-blue-500/30 shadow-lg shadow-blue-500/5"
+              ? "opacity-100 translate-y-0 border-neutral-500/60 shadow-[0_0_30px_rgba(59,130,246,0.3)] scale-[1.01]"
+              : "opacity-100 translate-y-0 border-neutral-600/30 shadow-lg shadow-neutral-900/5"
             : "opacity-0 translate-y-4 border-neutral-700/50"
         }`}
         style={{ transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
       >
         <div className="mb-3 pb-3 border-b border-neutral-800/60">
-          <p className="text-[11px] sm:text-xs text-amber-400/80 font-medium truncate" title={problem}>
+          <p className="text-[11px] sm:text-xs text-neutral-300/80 font-medium truncate" title={problem}>
             {problem}
           </p>
         </div>
 
         {flashPulse && (
           <div className="flex items-center gap-2 mb-3 animate-probe-badge">
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-            <span className="text-[11px] font-medium text-blue-400 uppercase tracking-wider">{t('activeProbe.newQuestion')}</span>
+            <div className="w-2 h-2 rounded-full bg-neutral-200 animate-ping" />
+            <span className="text-[11px] font-medium text-neutral-300 uppercase tracking-wider">{t('activeProbe.newQuestion')}</span>
           </div>
         )}
         <div className="flex items-start gap-3 sm:gap-4">
           <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-700 ${
-            flashPulse ? "bg-blue-600/40 scale-110" : "bg-blue-600/20"
+            flashPulse ? "bg-neutral-800/40 scale-110" : "bg-neutral-800/20"
           }`}>
             <QuestionIcon />
           </div>
@@ -143,8 +143,8 @@ export function ActiveProbe({
                 }}
                 className={`p-2 sm:p-1.5 rounded-md transition-all ${
                   probe.starred
-                    ? "text-amber-400 hover:text-amber-300"
-                    : "text-neutral-600 hover:text-amber-400 hover:bg-neutral-800"
+                    ? "text-neutral-300 hover:text-neutral-300"
+                    : "text-neutral-600 hover:text-neutral-300 hover:bg-neutral-800"
                 }`}
                 title={probe.starred ? t('probes.unstarQuestion') : t('probes.starQuestion')}
               >
@@ -195,16 +195,16 @@ export function ActiveProbe({
 function ThinkingDots() {
   return (
     <div className="flex gap-1">
-      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+      <div className="w-1.5 h-1.5 rounded-full bg-neutral-200 animate-bounce" style={{ animationDelay: "0ms" }} />
+      <div className="w-1.5 h-1.5 rounded-full bg-neutral-200 animate-bounce" style={{ animationDelay: "150ms" }} />
+      <div className="w-1.5 h-1.5 rounded-full bg-neutral-200 animate-bounce" style={{ animationDelay: "300ms" }} />
     </div>
   );
 }
 
 function QuestionIcon() {
   return (
-    <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );

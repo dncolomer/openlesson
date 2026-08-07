@@ -378,7 +378,7 @@ function PricingPageContent() {
             Explore real-world cost scenarios on the right.
           </p>
           {needsPlan && (
-            <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="mt-6 rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-4 py-3 text-sm text-neutral-200">
               Choose a plan to continue. Start API Metered or try everything unlimited for 3 days for $19.99.
             </div>
           )}
@@ -405,7 +405,7 @@ function PricingPageContent() {
                     PoW.
                   </p>
                 </div>
-                <span className="border border-amber-500/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">
+                <span className="border border-neutral-600/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                   Metered
                 </span>
               </div>

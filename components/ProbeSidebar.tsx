@@ -54,7 +54,7 @@ export function ProbeSidebar({
         >
           <span className="text-neutral-300 font-bold text-sm">?</span>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full text-black text-xs flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

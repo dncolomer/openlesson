@@ -574,7 +574,7 @@ export function MapOfKnowledge3D({
         </ul>
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-2 text-[10px] text-zinc-500">
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-400" /> ILE
+            <span className="h-2 w-2 rounded-full bg-neutral-200" /> ILE
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-slate-400" /> TAP

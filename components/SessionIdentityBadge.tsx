@@ -28,12 +28,12 @@ export function SessionIdentityBadge({
       }
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
         isGuest
-          ? "border-cyan-400/35 bg-cyan-950/50 text-cyan-100/90"
+          ? "border-neutral-500/35 bg-neutral-950/50 text-neutral-200/90"
           : "border-neutral-600 bg-neutral-900/80 text-neutral-300"
       } ${className}`}
     >
       <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${isGuest ? "bg-cyan-300" : "bg-emerald-400"}`}
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${isGuest ? "bg-neutral-300" : "bg-emerald-400"}`}
         aria-hidden
       />
       <span>

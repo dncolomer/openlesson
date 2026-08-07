@@ -257,7 +257,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
           disabled={inputDisabled}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
             attachedFiles.length > 0
-              ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+              ? "text-neutral-300 border-neutral-600/40 bg-neutral-800/10"
               : "text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-800 border-slate-800 hover:border-slate-700"
           }`}
         >

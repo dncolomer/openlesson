@@ -84,7 +84,7 @@ export default function HackathonsPage() {
               </div>
               <div className="space-y-4 p-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="border border-cyan-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90">
+                  <span className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
                     Hackathon
                   </span>
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">

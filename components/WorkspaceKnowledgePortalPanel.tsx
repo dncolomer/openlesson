@@ -738,7 +738,7 @@ export function WorkspaceKnowledgePortalPanel({
                         </p>
                         {url ? (
                           <p
-                            className="mt-1 break-all font-mono text-[10px] text-sky-400/80"
+                            className="mt-1 break-all font-mono text-[10px] text-neutral-300/80"
                             data-practice-portal-url={portal.id}
                           >
                             {url}

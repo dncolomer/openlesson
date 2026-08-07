@@ -246,7 +246,7 @@ export function WorkspaceGenerateShapePane({
         className="space-y-3"
       >
         {!shapeFreeform.ok && shapeFootprint ? (
-          <p className="text-[11px] text-amber-400/90" data-shape-not-contiguous>
+          <p className="text-[11px] text-neutral-300/90" data-shape-not-contiguous>
             Select edge-connected cells only (no diagonal gaps). Any contiguous shape works as
             one lecture.
           </p>

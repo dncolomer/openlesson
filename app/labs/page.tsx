@@ -49,7 +49,7 @@ export default function LabsPage() {
             className={`block p-6 rounded-xl border transition-all duration-200 ${
               tool.badgeType === "coming-soon"
                 ? "border-slate-800 bg-slate-900/30 opacity-60 hover:opacity-80"
-                : "border-slate-700 bg-slate-800/30 hover:border-blue-500/50 hover:bg-slate-800/50"
+                : "border-slate-700 bg-slate-800/30 hover:border-neutral-600/50 hover:bg-slate-800/50"
             }`}
             onMouseEnter={() => setHoveredTool(tool.id)}
             onMouseLeave={() => setHoveredTool(null)}
@@ -64,7 +64,7 @@ export default function LabsPage() {
                       <span
                         className={`px-2 py-0.5 text-xs rounded-full ${
                           tool.badgeType === "new"
-                            ? "bg-blue-500/20 text-blue-400"
+                            ? "bg-neutral-800/20 text-neutral-300"
                             : "bg-slate-700 text-slate-400"
                         }`}
                       >
@@ -83,7 +83,7 @@ export default function LabsPage() {
               {tool.badgeType !== "coming-soon" && (
                 <svg
                   className={`w-5 h-5 text-slate-500 transition-transform ${
-                    hoveredTool === tool.id ? "translate-x-1 text-blue-400" : ""
+                    hoveredTool === tool.id ? "translate-x-1 text-neutral-300" : ""
                   }`}
                   fill="none"
                   viewBox="0 0 24 24"

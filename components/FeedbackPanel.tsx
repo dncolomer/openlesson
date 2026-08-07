@@ -9,10 +9,10 @@ interface FeedbackPanelProps {
 
 const statusStyles = {
   blue: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/30",
-    text: "text-blue-400",
-    dot: "bg-blue-500",
+    bg: "bg-neutral-800/10",
+    border: "border-neutral-600/30",
+    text: "text-neutral-300",
+    dot: "bg-white",
   },
   red: {
     bg: "bg-red-500/10",
@@ -21,10 +21,10 @@ const statusStyles = {
     dot: "bg-red-500",
   },
   yellow: {
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/30",
-    text: "text-yellow-400",
-    dot: "bg-yellow-500",
+    bg: "bg-neutral-800/10",
+    border: "border-neutral-600/30",
+    text: "text-neutral-300",
+    dot: "bg-white",
   },
   green: {
     bg: "bg-green-500/10",

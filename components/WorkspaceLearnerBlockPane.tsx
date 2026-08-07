@@ -642,7 +642,7 @@ export function WorkspaceLearnerBlockPane({
                   reco === "ok"
                     ? "text-emerald-300"
                     : reco === "not_ok"
-                      ? "text-amber-300"
+                      ? "text-neutral-300"
                       : "text-neutral-400"
                 }
               >

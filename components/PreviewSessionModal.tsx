@@ -31,11 +31,11 @@ interface PreviewSessionModalProps {
 function useTypeConfig() {
   const { t } = useI18n();
   return {
-    question: { icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", label: t('sessionPlan.question'), color: "text-blue-400 bg-blue-500/10" },
+    question: { icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", label: t('sessionPlan.question'), color: "text-neutral-300 bg-neutral-800/10" },
     task: { icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4", label: t('sessionPlan.task'), color: "text-emerald-400 bg-emerald-500/10" },
-    suggestion: { icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z", label: t('sessionPlan.suggestion'), color: "text-amber-400 bg-amber-500/10" },
-    checkpoint: { icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", label: t('sessionPlan.checkpoint'), color: "text-violet-400 bg-violet-500/10" },
-    feedback: { icon: "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z", label: t('sessionPlan.feedback'), color: "text-cyan-400 bg-cyan-500/10" },
+    suggestion: { icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z", label: t('sessionPlan.suggestion'), color: "text-neutral-300 bg-neutral-800/10" },
+    checkpoint: { icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", label: t('sessionPlan.checkpoint'), color: "text-neutral-300 bg-neutral-800/10" },
+    feedback: { icon: "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z", label: t('sessionPlan.feedback'), color: "text-neutral-300 bg-neutral-800/10" },
   } as Record<string, { icon: string; label: string; color: string }>;
 }
 
@@ -193,9 +193,9 @@ export function PreviewSessionModal({
                   text={preview.goal}
                 />
                 <ExpandableSection
-                  icon={<svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>}
+                  icon={<svg className="w-3.5 h-3.5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>}
                    label={t('previewSession.strategy')}
-                  labelColor="text-blue-400"
+                  labelColor="text-neutral-300"
                   text={preview.strategy}
                 />
               </div>
@@ -227,7 +227,7 @@ export function PreviewSessionModal({
             {preview && onStartSession && (
               <button
                 onClick={onStartSession}
-                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition-colors"
+                className="flex-1 px-4 py-2.5 bg-white hover:bg-white text-black text-sm font-medium rounded-xl transition-colors"
               >
                 {t('previewSession.startSession')}
               </button>

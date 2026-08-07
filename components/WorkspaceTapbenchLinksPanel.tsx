@@ -28,7 +28,7 @@ export interface TapbenchLinkRow {
 }
 
 const PRIMARY_CTA_CLASS =
-  "rounded-lg bg-cyan-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:opacity-40";
+  "rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
 interface WorkspaceTapbenchLinksPanelProps {
   workspaceId: string;
@@ -233,7 +233,7 @@ export function WorkspaceTapbenchLinksPanel({
                   {Math.max(0, Math.round(link.remaining_ms / 1000))}s
                 </div>
                 <div
-                  className="mt-1 break-all font-mono text-[10px] text-cyan-500/90"
+                  className="mt-1 break-all font-mono text-[10px] text-neutral-200/90"
                   data-tapbench-link-url
                 >
                   {link.url}
@@ -243,7 +243,7 @@ export function WorkspaceTapbenchLinksPanel({
                 <button
                   type="button"
                   onClick={() => downloadTapbenchSkills(link)}
-                  className="rounded-md border border-cyan-800/60 bg-cyan-950/30 px-2.5 py-1.5 text-[11px] text-cyan-200 transition hover:border-cyan-600"
+                  className="rounded-md border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
                   data-download-tapbench-skills
                   data-tapbench-skills-md
                   title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}

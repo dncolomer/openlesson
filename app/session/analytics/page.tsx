@@ -64,12 +64,12 @@ function formatDateTime(iso: string): string {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: "bg-blue-900/30 text-blue-400",
-    paused: "bg-yellow-900/30 text-yellow-400",
+    active: "bg-neutral-950/30 text-neutral-300",
+    paused: "bg-neutral-950/30 text-neutral-300",
     completed: "bg-green-900/30 text-green-400",
     ended_by_tutor: "bg-red-900/30 text-red-400",
-    planning: "bg-purple-900/30 text-purple-400",
-    ready: "bg-cyan-900/30 text-cyan-400",
+    planning: "bg-neutral-950/30 text-neutral-300",
+    ready: "bg-neutral-950/30 text-neutral-300",
   };
   return (
     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${colors[status] || "bg-neutral-700 text-neutral-400"}`}>
@@ -79,7 +79,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function GapScoreBar({ score }: { score: number }) {
-  const color = score < 0.4 ? "bg-green-500" : score < 0.7 ? "bg-yellow-500" : "bg-red-500";
+  const color = score < 0.4 ? "bg-green-500" : score < 0.7 ? "bg-white" : "bg-red-500";
   return (
     <div className="flex items-center gap-2">
       <div className="w-16 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
@@ -205,21 +205,21 @@ function TimelineSlider({
 
         {/* Active range (draggable) */}
         <div
-          className="absolute top-0 bottom-0 border-y border-blue-500/40 bg-blue-500/5 cursor-grab active:cursor-grabbing"
+          className="absolute top-0 bottom-0 border-y border-neutral-600/40 bg-neutral-800/5 cursor-grab active:cursor-grabbing"
           style={{ left: `${rangeStart * 100}%`, right: `${(1 - rangeEnd) * 100}%` }}
           onPointerDown={(e) => handlePointerDown(e, "range")}
         />
 
         {/* Start handle */}
         <div
-          className="absolute top-0 bottom-0 w-2 -ml-1 bg-blue-500/80 hover:bg-blue-400 rounded cursor-col-resize z-10"
+          className="absolute top-0 bottom-0 w-2 -ml-1 bg-neutral-800/80 hover:bg-neutral-200 rounded cursor-col-resize z-10"
           style={{ left: `${rangeStart * 100}%` }}
           onPointerDown={(e) => handlePointerDown(e, "start")}
         />
 
         {/* End handle */}
         <div
-          className="absolute top-0 bottom-0 w-2 -ml-1 bg-blue-500/80 hover:bg-blue-400 rounded cursor-col-resize z-10"
+          className="absolute top-0 bottom-0 w-2 -ml-1 bg-neutral-800/80 hover:bg-neutral-200 rounded cursor-col-resize z-10"
           style={{ left: `${rangeEnd * 100}%` }}
           onPointerDown={(e) => handlePointerDown(e, "end")}
         />
@@ -511,7 +511,7 @@ function AnalyticsContent() {
                 {durationMin > 0 ? `${durationMin}m` : ""} {durationSec > 0 ? `${durationSec}s` : ""}
               </span>
               {session.workspaceTitle && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-900/30 text-purple-400">
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-950/30 text-neutral-300">
                   {session.workspaceTitle}
                 </span>
               )}
@@ -542,13 +542,13 @@ function AnalyticsContent() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? "border-blue-500 text-blue-400"
+                    ? "border-white/60 text-neutral-300"
                     : "border-transparent text-neutral-500 hover:text-neutral-300"
                 }`}
               >
                 {tab.label}
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                  activeTab === tab.id ? "bg-blue-500/20 text-blue-400" : "bg-neutral-800 text-neutral-600"
+                  activeTab === tab.id ? "bg-neutral-800/20 text-neutral-300" : "bg-neutral-800 text-neutral-600"
                 }`}>
                   {tab.count}
                 </span>
@@ -598,7 +598,7 @@ function AnalyticsContent() {
                               {probe.requestType}
                             </span>
                           )}
-                          {probe.starred && <span className="text-yellow-500 text-xs">&#9733;</span>}
+                          {probe.starred && <span className="text-neutral-200 text-xs">&#9733;</span>}
                         </div>
                         <GapScoreBar score={probe.gapScore} />
                       </div>
@@ -609,7 +609,7 @@ function AnalyticsContent() {
                       {probe.signals && probe.signals.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {probe.signals.map((sig, i) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/20 text-blue-400">
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-950/20 text-neutral-300">
                               {sig}
                             </span>
                           ))}
@@ -729,7 +729,7 @@ function AnalyticsContent() {
                 <EmptyState label={t("analytics.noData")} />
               ) : filteredFacialChunks.length === 0 ? (
                 <div className="flex items-center gap-2 py-8 justify-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full" />
                   <span className="text-xs text-neutral-500">{t('analytics.loadingFacialData')}</span>
                 </div>
               ) : (
@@ -847,7 +847,7 @@ function BandPowerCell({ value }: { value?: number }) {
   return (
     <div className="flex items-center gap-1.5">
       <div className="w-8 h-1 bg-neutral-800 rounded-full overflow-hidden">
-        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, value * 100)}%` }} />
+        <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, value * 100)}%` }} />
       </div>
       <span>{value.toFixed(2)}</span>
     </div>
@@ -857,10 +857,10 @@ function BandPowerCell({ value }: { value?: number }) {
 function EmotionBadge({ emotion }: { emotion?: string }) {
   const colors: Record<string, string> = {
     happy: "bg-green-900/30 text-green-400",
-    confused: "bg-yellow-900/30 text-yellow-400",
+    confused: "bg-neutral-950/30 text-neutral-300",
     frustrated: "bg-red-900/30 text-red-400",
-    thinking: "bg-blue-900/30 text-blue-400",
-    surprised: "bg-purple-900/30 text-purple-400",
+    thinking: "bg-neutral-950/30 text-neutral-300",
+    surprised: "bg-neutral-950/30 text-neutral-300",
     bored: "bg-orange-900/30 text-orange-400",
   };
   return (
@@ -873,7 +873,7 @@ function EmotionBadge({ emotion }: { emotion?: string }) {
 function AttentionBadge({ level }: { level?: string }) {
   const colors: Record<string, string> = {
     high: "text-green-400",
-    medium: "text-yellow-400",
+    medium: "text-neutral-300",
     low: "text-red-400",
   };
   return <span className={`text-[10px] ${colors[level || ""] || "text-neutral-500"}`}>{level || "-"}</span>;

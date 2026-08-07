@@ -26,10 +26,10 @@ export function BrainStateBar({ powers, isConnected }: BrainStateBarProps) {
   if (total === 0) return null;
 
   const bands = [
-    { name: "θ", value: powers.theta, color: "bg-purple-500/70" },
-    { name: "α", value: powers.alpha, color: "bg-blue-500/70" },
+    { name: "θ", value: powers.theta, color: "bg-neutral-800/70" },
+    { name: "α", value: powers.alpha, color: "bg-neutral-800/70" },
     { name: "β", value: powers.beta, color: "bg-green-500/70" },
-    { name: "γ", value: powers.gamma, color: "bg-yellow-500/70" },
+    { name: "γ", value: powers.gamma, color: "bg-neutral-800/70" },
   ];
 
   // Focus score: alpha/beta ratio (higher alpha relative to beta = more relaxed focus)
@@ -62,11 +62,11 @@ export function BrainStateBar({ powers, isConnected }: BrainStateBarProps) {
         <div className="absolute bottom-full left-0 mb-2 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-xs z-20 w-48">
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span className="text-purple-400">{t('brainState.theta')}</span>
+              <span className="text-neutral-300">{t('brainState.theta')}</span>
               <span className="text-neutral-300">{(powers.theta * 100).toFixed(0)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-blue-400">{t('brainState.alpha')}</span>
+              <span className="text-neutral-300">{t('brainState.alpha')}</span>
               <span className="text-neutral-300">{(powers.alpha * 100).toFixed(0)}%</span>
             </div>
             <div className="flex justify-between">
@@ -74,7 +74,7 @@ export function BrainStateBar({ powers, isConnected }: BrainStateBarProps) {
               <span className="text-neutral-300">{(powers.beta * 100).toFixed(0)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-yellow-400">{t('brainState.gamma')}</span>
+              <span className="text-neutral-300">{t('brainState.gamma')}</span>
               <span className="text-neutral-300">{(powers.gamma * 100).toFixed(0)}%</span>
             </div>
             <div className="pt-1 border-t border-neutral-700 flex justify-between">

@@ -66,8 +66,9 @@ describe("custom verification model surfaces", () => {
     expect(ui).not.toContain('action: "knowledge_distance"');
     expect(ui).not.toContain("data-knowledge-distance-btn");
     expect(ui).not.toContain("Eval against region");
-    expect(ui).toContain("bg-cyan-600");
+    expect(ui).toContain("bg-white");
     expect(ui).toContain("PRIMARY_CTA_CLASS");
+    expect(ui).not.toMatch(/bg-cyan-|text-blue-|border-amber-|bg-blue-/);
     expect(ui).toContain("subjects");
     expect(ui).toContain("data-custom-knowledge-regions");
 

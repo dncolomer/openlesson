@@ -23,15 +23,15 @@ export function PublicWorkspaceForkCallout({
     <div
       className={
         isLight
-          ? "rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3"
-          : "rounded-md border border-amber-500/25 bg-amber-950/20 px-3 py-2.5"
+          ? "rounded-lg border border-neutral-600 bg-neutral-50 px-3.5 py-3"
+          : "rounded-md border border-neutral-600/25 bg-neutral-950/20 px-3 py-2.5"
       }
     >
       <p
         className={
           isLight
-            ? "text-xs font-semibold text-amber-950"
-            : "text-xs font-medium text-amber-100/90"
+            ? "text-xs font-semibold text-neutral-500"
+            : "text-xs font-medium text-neutral-200/90"
         }
       >
         {t("sessionItem.forkDetailTitle")}
@@ -39,7 +39,7 @@ export function PublicWorkspaceForkCallout({
       <p
         className={
           isLight
-            ? "mt-1 text-[11px] leading-relaxed text-amber-900/75"
+            ? "mt-1 text-[11px] leading-relaxed text-neutral-400/75"
             : "mt-1 text-[11px] leading-relaxed text-neutral-400"
         }
       >

@@ -312,10 +312,10 @@ export function SessionOnboardingGuide({
               </p>
               {slide.kind === "visual" && slide.highlight ? (
                 <aside
-                  className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3.5 py-3 text-sm leading-relaxed text-amber-50/95"
+                  className="mt-4 rounded-xl border border-neutral-500/35 bg-neutral-800/10 px-3.5 py-3 text-sm leading-relaxed text-neutral-50/95"
                   data-onboarding-highlight
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber-200/80">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/80">
                     Tip
                   </p>
                   <p className="mt-1.5 whitespace-pre-line">{slide.highlight}</p>

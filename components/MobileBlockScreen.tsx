@@ -32,7 +32,7 @@ export function MobileBlockScreen({
         <div className="mb-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
           Uncertain Systems
         </div>
-        <div className="mx-auto h-1 w-16 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
+        <div className="mx-auto h-1 w-16 rounded-full bg-gradient-to-r from-neutral-700 to-neutral-700" />
       </div>
 
       <div className="mb-6">

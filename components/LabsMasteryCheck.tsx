@@ -257,7 +257,7 @@ export function LabsMasteryCheck() {
             </p>
             <button
               onClick={connectMuse}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-white hover:bg-white text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
             >
               {deviceStatus.includes("Connecting") ? "Connecting..." : "Connect Muse Device"}
             </button>
@@ -276,7 +276,7 @@ export function LabsMasteryCheck() {
       
       {appState === "connecting" && (
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="w-12 h-12 border-4 border-white/60 border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-slate-400">{deviceStatus}</p>
         </div>
       )}
@@ -367,16 +367,16 @@ export function LabsMasteryCheck() {
             
             {/* DEBUG: Raw sample values */}
             {Object.keys(debugRawSamples).length > 0 && (
-              <div className="mt-4 p-3 bg-cyan-900/20 border border-cyan-800 rounded-lg">
-                <h4 className="text-xs text-cyan-400 mb-2">DEBUG: Raw Sample Values (first 12 of latest packet)</h4>
+              <div className="mt-4 p-3 bg-neutral-950/20 border border-neutral-800 rounded-lg">
+                <h4 className="text-xs text-neutral-300 mb-2">DEBUG: Raw Sample Values (first 12 of latest packet)</h4>
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                   {Object.entries(debugRawSamples).map(([ch, samples]) => (
                     <div key={ch}>
-                      <span className="text-cyan-500">{ch}:</span>
-                      <span className="text-cyan-300 ml-2">
+                      <span className="text-neutral-200">{ch}:</span>
+                      <span className="text-neutral-300 ml-2">
                         [{samples.map(v => v.toFixed(1)).join(", ")}]
                       </span>
-                      <div className="text-cyan-600 text-[10px]">
+                      <div className="text-neutral-100 text-[10px]">
                         min: {Math.min(...samples).toFixed(1)} | max: {Math.max(...samples).toFixed(1)} | avg: {(samples.reduce((a,b) => a+b,0)/samples.length).toFixed(1)}
                       </div>
                     </div>
@@ -426,11 +426,11 @@ export function LabsMasteryCheck() {
             </div>
             
             {(channelQuality.length === 0 || channelQuality.every(ch => ch.status === "poor")) && (
-              <div className="mt-4 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
-                <p className="text-sm text-amber-400 mb-2">
+              <div className="mt-4 p-3 bg-neutral-950/20 border border-neutral-800 rounded-lg">
+                <p className="text-sm text-neutral-300 mb-2">
                   ⚠️ No signal detected. Make sure:
                 </p>
-                <ul className="text-xs text-amber-300 list-disc list-inside">
+                <ul className="text-xs text-neutral-300 list-disc list-inside">
                   <li>Muse is powered on and LEDs are blinking</li>
                   <li>Headband is on your head with electrodes touching skin</li>
                   <li>Remove any hair between electrodes and skin</li>
@@ -504,14 +504,14 @@ export function LabsMasteryCheck() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g., Quantum Computing, Machine Learning, World War II..."
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-white/60"
                 />
               </div>
               
               <button
                 onClick={startTest}
                 disabled={generatingProbes || !topic.trim()}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                className="w-full py-3 bg-white hover:bg-white text-black rounded-lg font-medium transition-colors disabled:opacity-50"
               >
                 {generatingProbes ? "Generating Probes..." : "Generate Probes & Start Block"}
               </button>
@@ -525,8 +525,8 @@ export function LabsMasteryCheck() {
                 {probes.map((probe) => (
                   <div key={probe.id} className="p-4 bg-slate-900/50 rounded-lg">
                     <span className={`text-xs px-2 py-0.5 rounded ${
-                      probe.type === "conceptual" ? "bg-purple-900/50 text-purple-400" :
-                      probe.type === "application" ? "bg-blue-900/50 text-blue-400" :
+                      probe.type === "conceptual" ? "bg-neutral-950/50 text-neutral-300" :
+                      probe.type === "application" ? "bg-neutral-950/50 text-neutral-300" :
                       "bg-orange-900/50 text-orange-400"
                     }`}>
                       {probe.type}
@@ -553,7 +553,7 @@ export function LabsMasteryCheck() {
           {appState === "complete" && (
             <button
               onClick={reset}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors"
+              className="w-full py-3 bg-white hover:bg-white text-black rounded-lg font-medium transition-colors"
             >
               Start New Block
             </button>
@@ -566,7 +566,7 @@ export function LabsMasteryCheck() {
                 setChannelQuality([]);
                 setCalibrationResult(null);
               }}
-              className="mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition-colors"
+              className="mt-4 px-4 py-2 bg-white hover:bg-white text-black rounded-lg text-sm font-medium transition-colors"
             >
               Retry Connection
             </button>

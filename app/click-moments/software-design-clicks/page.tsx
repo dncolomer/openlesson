@@ -48,8 +48,8 @@ const stages = [
 
 function HeliosMark() {
   return (
-    <div className="relative flex size-20 items-center justify-center rounded-full border border-cyan-300/60 bg-neutral-950/50 shadow-[0_0_0_5px_rgba(103,232,249,0.08),0_0_42px_rgba(103,232,249,0.16)]">
-      <div className="absolute inset-1.5 rounded-full border border-cyan-300/35" />
+    <div className="relative flex size-20 items-center justify-center rounded-full border border-neutral-600/60 bg-neutral-950/50 shadow-[0_0_0_5px_rgba(103,232,249,0.08),0_0_42px_rgba(103,232,249,0.16)]">
+      <div className="absolute inset-1.5 rounded-full border border-neutral-600/35" />
       <span className="font-serif text-3xl text-white">H</span>
     </div>
   );
@@ -96,7 +96,7 @@ export default function SoftwareDesignClicksPage() {
             <div className="hidden shrink-0 text-center sm:block">
               <HeliosMark />
               <p className="mt-3 text-sm text-zinc-300">Helios</p>
-              <div className="mx-auto mt-2 h-1 w-8 rounded-full bg-cyan-300" />
+              <div className="mx-auto mt-2 h-1 w-8 rounded-full bg-neutral-300" />
             </div>
           </header>
 
@@ -134,7 +134,7 @@ export default function SoftwareDesignClicksPage() {
                       <ul className="mt-4 space-y-2 text-[clamp(13px,1.2vw,16px)] leading-snug text-zinc-400">
                         {stage.points.map((point) => (
                           <li key={point} className="flex gap-2">
-                            <span className="mt-0.5 text-cyan-300">-</span>
+                            <span className="mt-0.5 text-neutral-300">-</span>
                             <span>{point}</span>
                           </li>
                         ))}

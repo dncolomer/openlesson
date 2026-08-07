@@ -80,20 +80,20 @@ function PracticeFirstCard({
   return (
     <article
       data-tap-practice-first
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-cyan-950/30 transition hover:border-cyan-300/55"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-500/35 bg-neutral-950/30 transition hover:border-neutral-600/55"
     >
-      <div className="relative flex h-28 flex-col justify-end bg-gradient-to-br from-cyan-950/80 via-neutral-950 to-black p-3 sm:h-32">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-300/80">Warm-up</p>
-        <p className="mt-1 font-serif text-base leading-tight text-cyan-50">{title}</p>
+      <div className="relative flex h-28 flex-col justify-end bg-gradient-to-br from-neutral-800/80 via-neutral-950 to-black p-3 sm:h-32">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/80">Warm-up</p>
+        <p className="mt-1 font-serif text-base leading-tight text-neutral-50">{title}</p>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-3">
-        <p className="line-clamp-2 text-xs leading-snug text-cyan-100/70">{subtitle}</p>
+        <p className="line-clamp-2 text-xs leading-snug text-neutral-200/70">{subtitle}</p>
         <button
           type="button"
           disabled={isStarting}
           onClick={onPracticeFirst}
           aria-busy={isThisStarting}
-          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-400/25 disabled:cursor-wait disabled:opacity-70"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-neutral-600/40 bg-neutral-800/15 px-4 py-2 text-xs font-semibold text-neutral-50 transition hover:bg-neutral-800/25 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
             <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>

@@ -36,7 +36,7 @@ interface FileDropZoneProps {
 function FileTypeIcon({ mimeType }: { mimeType: string }) {
   if (mimeType.startsWith("image/")) {
     return (
-      <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
       </svg>
     );
@@ -50,7 +50,7 @@ function FileTypeIcon({ mimeType }: { mimeType: string }) {
   }
   // text / markdown
   return (
-    <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   );
@@ -188,7 +188,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
           onClick={() => fileInputRef.current?.click()}
           className={`flex flex-col items-center justify-center gap-1.5 px-4 py-4 border border-dashed rounded-xl cursor-pointer transition-colors ${
             isDragging
-              ? "border-blue-500/60 bg-blue-500/5"
+              ? "border-neutral-600/60 bg-neutral-800/5"
               : "border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800/30"
           }`}
         >
@@ -226,7 +226,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
       )}
 
       {atLimit && (
-        <p className="text-xs text-amber-400/80">{t('workspaceFiles.fileLimitReached')}</p>
+        <p className="text-xs text-neutral-300/80">{t('workspaceFiles.fileLimitReached')}</p>
       )}
       {error && <p className="text-xs text-red-400">{error}</p>}
 

@@ -283,7 +283,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 key={view.id}
                 type="button"
                 onClick={() => setActiveView(view.id)}
-                className={`rounded-[3px] px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
+                className={`rounded-[3px] px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-black"}`}
                 aria-pressed={selectedView}
               >
                 {view.label}

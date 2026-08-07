@@ -791,7 +791,7 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t('dashboard.allSessions')}</h2>
-              <Link href="/" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+              <Link href="/" className="text-sm text-neutral-300 hover:text-neutral-300 transition-colors">
                 {t('dashboard.startNewSession')}
               </Link>
             </div>
@@ -826,7 +826,7 @@ export default function DashboardPage() {
                           return next;
                         });
                       }}
-                      className="w-3.5 h-3.5 rounded bg-neutral-800 border-neutral-600 text-blue-500 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0 accent-blue-500"
+                      className="w-3.5 h-3.5 rounded bg-neutral-800 border-neutral-600 text-neutral-200 focus:ring-1 focus:ring-neutral-600 focus:ring-offset-0 accent-neutral-200"
                     />
                     <span className="text-sm text-neutral-400 group-hover:text-neutral-200 transition-colors">
                       {opt.label}
@@ -839,7 +839,7 @@ export default function DashboardPage() {
             {filteredSessions.length === 0 ? (
               <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
                 <p className="text-sm">{t('dashboard.noMatchingSessions')}</p>
-                <Link href="/" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
+                <Link href="/" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.startYourFirstSession')}
                 </Link>
               </div>
@@ -864,13 +864,13 @@ export default function DashboardPage() {
                             className={`inline-flex px-1.5 py-0.5 rounded text-[10px] ${
                               session.status === "completed"
                                 ? "bg-green-900/30 text-green-400"
-                                : "bg-yellow-900/30 text-yellow-400"
+                                : "bg-neutral-950/30 text-neutral-300"
                             }`}
                           >
                             {session.status === "completed" ? t('dashboard.completed') : t('dashboard.active')}
                           </span>
                           {session.workspaceTitle && (
-                            <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] bg-purple-900/30 text-purple-400">
+                            <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] bg-neutral-950/30 text-neutral-300">
                               {session.workspaceTitle}
                             </span>
                           )}
@@ -883,7 +883,7 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             router.push(`/session/analytics?id=${session.id}`);
                           }}
-                          className="p-1.5 text-neutral-600 hover:text-blue-400 transition-colors"
+                          className="p-1.5 text-neutral-600 hover:text-neutral-300 transition-colors"
                           title={t('dashboard.sessionAnalytics')}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -897,7 +897,7 @@ export default function DashboardPage() {
                               e.stopPropagation();
                               handleStartOverSession(session.id);
                             }}
-                            className="p-1.5 text-neutral-600 hover:text-amber-400 transition-colors"
+                            className="p-1.5 text-neutral-600 hover:text-neutral-300 transition-colors"
                             title={t('dashboard.startOver')}
                             aria-label={t('dashboard.startOver')}
                           >
@@ -1028,7 +1028,7 @@ export default function DashboardPage() {
             {filteredWorkspaces.length === 0 ? (
               <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
-                <Link href="/workspace/new" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
+                <Link href="/workspace/new" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createYourFirstPlan')}
                 </Link>
               </div>
@@ -1108,7 +1108,7 @@ export default function DashboardPage() {
           const planBadge = (() => {
             if (isBillingBypass) {
               return (
-                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                <span className="rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200/90">
                   Bypass
                 </span>
               );
@@ -1122,7 +1122,7 @@ export default function DashboardPage() {
             }
             if (usageData?.plan === "api_metered") {
               return (
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
+                <span className="rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200/90">
                   Metered
                 </span>
               );
@@ -1355,7 +1355,7 @@ export default function DashboardPage() {
                               personalUsed >= personalLimit
                                 ? "bg-red-400"
                                 : personalUsed >= personalLimit * 0.8
-                                  ? "bg-amber-400"
+                                  ? "bg-neutral-200"
                                   : "bg-white"
                             }`}
                             style={{ width: `${usageProgress(personalUsed, personalLimit)}%` }}
@@ -1411,7 +1411,7 @@ export default function DashboardPage() {
                                   ? "bg-red-400"
                                   : usageData.organization.used >=
                                       usageData.organization.limit * 0.8
-                                    ? "bg-amber-400"
+                                    ? "bg-neutral-200"
                                     : "bg-white"
                               }`}
                               style={{
@@ -1537,7 +1537,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               {isBillingBypass && (
-                                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                                <span className="rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200/90">
                                   Billing: Bypass
                                 </span>
                               )}
@@ -1566,7 +1566,7 @@ export default function DashboardPage() {
                             </p>
                           )}
                           {!xaiUsageLoading && !xai.available && (
-                            <p className="mt-3 text-xs text-amber-200/80">
+                            <p className="mt-3 text-xs text-neutral-300/80">
                               {xai.error || "Could not load xAI usage for this key."}
                             </p>
                           )}
@@ -1789,7 +1789,7 @@ export default function DashboardPage() {
               {providerInfo ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full bg-neutral-800/10 text-neutral-300 border border-neutral-600/20">
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M13.982 10.622 20.54 3h-1.554l-5.693 6.618L8.745 3H3.5l6.876 10.007L3.5 21h1.554l6.012-6.989L15.868 21h5.245l-7.131-10.378Zm-2.128 2.474-.697-.997-5.543-7.93H8l4.474 6.4.697.996 5.815 8.318h-2.387l-4.745-6.787Z"/></svg>
                       xAI Direct
                     </span>
@@ -1812,7 +1812,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <h2 className="text-lg font-semibold">{t('dashboard.modelSelection')}</h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-neutral-800/10 text-neutral-300 border border-neutral-600/20 rounded-full">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -1843,7 +1843,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <h2 className="text-lg font-semibold">{t('dashboard.promptModifications')}</h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs bg-neutral-800/10 text-neutral-300 border border-neutral-600/20 rounded-full">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>

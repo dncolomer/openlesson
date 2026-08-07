@@ -19,7 +19,7 @@ const themeStyles: Record<ThemeColor, {
     buttonDisabled: "disabled:bg-neutral-800 disabled:text-neutral-600",
   },
   teal: {
-    textarea: "bg-teal-950/50 border-teal-900/50 focus:border-teal-700 placeholder-teal-600/50",
+    textarea: "bg-teal-950/50 border-teal-900/50 focus:border-teal-700 placeholder-neutral-600",
     button: "bg-teal-500 hover:bg-teal-400 text-white",
     buttonDisabled: "disabled:bg-teal-900/50 disabled:text-teal-700",
   },
@@ -29,19 +29,19 @@ const themeStyles: Record<ThemeColor, {
     buttonDisabled: "disabled:bg-slate-800 disabled:text-slate-600",
   },
   blue: {
-    textarea: "bg-blue-950/50 border-blue-900/50 focus:border-blue-700 placeholder-blue-600/50",
-    button: "bg-blue-500 hover:bg-blue-400 text-white",
-    buttonDisabled: "disabled:bg-blue-900/50 disabled:text-blue-700",
+    textarea: "bg-neutral-950/50 border-neutral-800/50 focus:border-neutral-700 placeholder-neutral-600",
+    button: "bg-white hover:bg-neutral-200 text-black",
+    buttonDisabled: "disabled:bg-neutral-950/50 disabled:text-neutral-200",
   },
   amber: {
-    textarea: "bg-amber-950/50 border-amber-900/50 focus:border-amber-700 placeholder-amber-600/50",
-    button: "bg-amber-500 hover:bg-amber-400 text-black",
-    buttonDisabled: "disabled:bg-amber-900/50 disabled:text-amber-700",
+    textarea: "bg-neutral-950/50 border-neutral-800/50 focus:border-neutral-700 placeholder-neutral-600",
+    button: "bg-white hover:bg-neutral-200 text-black",
+    buttonDisabled: "disabled:bg-neutral-950/50 disabled:text-neutral-200",
   },
   violet: {
-    textarea: "bg-violet-950/50 border-violet-900/50 focus:border-violet-700 placeholder-violet-600/50",
-    button: "bg-violet-500 hover:bg-violet-400 text-white",
-    buttonDisabled: "disabled:bg-violet-900/50 disabled:text-violet-700",
+    textarea: "bg-neutral-950/50 border-neutral-800/50 focus:border-neutral-700 placeholder-neutral-600",
+    button: "bg-white hover:bg-neutral-200 text-black",
+    buttonDisabled: "disabled:bg-neutral-950/50 disabled:text-neutral-200",
   },
   glass: {
     textarea: "bg-white/10 border-white/20 focus:border-white/40 placeholder-white/50 text-white",

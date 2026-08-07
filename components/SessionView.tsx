@@ -3012,7 +3012,7 @@ export function SessionView({
             <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
               <div className="flex items-center gap-4">
                 <div className="relative shrink-0">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 sm:h-16 sm:w-16">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 sm:h-16 sm:w-16">
                     <span className="font-serif text-2xl text-neutral-200 sm:text-3xl">H</span>
                   </div>
                   <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_28px_rgba(245,158,11,0.1)]" />

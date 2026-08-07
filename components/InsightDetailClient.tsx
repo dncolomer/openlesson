@@ -116,7 +116,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
                 type="button"
                 onClick={() => void handleArchive()}
                 disabled={archiving}
-                className="rounded-md border border-amber-800/60 bg-amber-950/30 px-3 py-1.5 text-xs text-amber-200 transition hover:border-amber-600 disabled:opacity-50"
+                className="rounded-md border border-neutral-800/60 bg-neutral-950/30 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-white/60 disabled:opacity-50"
               >
                 {archiving ? "Archiving…" : "Archive"}
               </button>

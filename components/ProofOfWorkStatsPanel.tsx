@@ -186,7 +186,7 @@ export function ProofOfWorkStatsPanel({
       {stats && stats.total_artifacts > 0 ? (
         <>
           {stats.sample_capped ? (
-            <p className="text-[11px] text-amber-500/90">
+            <p className="text-[11px] text-neutral-200/90">
               {t("planView.powStatsSampleCapped", {
                 sampled: stats.sampled_artifacts,
                 total: stats.total_artifacts,

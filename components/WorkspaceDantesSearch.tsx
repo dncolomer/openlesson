@@ -172,7 +172,7 @@ export function WorkspaceDantesSearch({
       {topicsLoading ? (
         <p className="text-[11px] text-neutral-600">Loading topics…</p>
       ) : topicsError ? (
-        <p className="text-[11px] text-amber-200/90" data-dantes-topics-error>
+        <p className="text-[11px] text-neutral-300/90" data-dantes-topics-error>
           {topicsError}
         </p>
       ) : (
@@ -217,7 +217,7 @@ export function WorkspaceDantesSearch({
           {resourcesLoading ? (
             <p className="text-[11px] text-neutral-600">Loading resources…</p>
           ) : resourcesError ? (
-            <p className="text-[11px] text-amber-200/90">{resourcesError}</p>
+            <p className="text-[11px] text-neutral-300/90">{resourcesError}</p>
           ) : (
             <ul className="max-h-48 space-y-1 overflow-y-auto">
               {resources.map((resource, index) => {

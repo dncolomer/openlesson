@@ -216,7 +216,7 @@ export function WorkspaceDagsPanel({
 
           {editHasCycle ? (
             <p
-              className="rounded-md border border-amber-500/30 bg-amber-950/30 px-2.5 py-2 text-[11px] text-amber-200/90"
+              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
               data-dag-cycle-warning
             >
               Draft has a directed cycle. You can still save; prefer acyclic

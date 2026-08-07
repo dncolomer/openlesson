@@ -180,7 +180,7 @@ export function WorkspaceAyclMarketplaceSettings({
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
             data-aycl-listing-enabled
-            className="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-amber-400 focus:ring-amber-500/40"
+            className="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-neutral-300 focus:ring-neutral-600/40"
           />
           <span className="text-sm text-neutral-200">
             Enable Paid (AYCL) — show on marketplace catalog

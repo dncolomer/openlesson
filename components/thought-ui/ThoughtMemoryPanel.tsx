@@ -282,7 +282,7 @@ export function ThoughtMemoryPanel({
       {mode === "insights" ? (
         <div className={cn(scrollListClassName, "space-y-3 text-sm text-neutral-400")}>
           {lastInsightUrl ? (
-            <div className="rounded-md border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
+            <div className="rounded-md border border-neutral-600/25 bg-neutral-800/10 px-3 py-2 text-xs text-neutral-200">
               Latest insight saved.{" "}
               <Link href={lastInsightUrl} className="underline underline-offset-2 hover:text-white">
                 View now
@@ -323,7 +323,7 @@ export function ThoughtMemoryPanel({
                       type="button"
                       disabled={archivingInsightId === insight.id}
                       onClick={() => void handleArchiveInsight(insight)}
-                      className="text-[11px] text-neutral-500 underline underline-offset-2 transition hover:text-amber-200 disabled:opacity-50"
+                      className="text-[11px] text-neutral-500 underline underline-offset-2 transition hover:text-neutral-300 disabled:opacity-50"
                     >
                       {archivingInsightId === insight.id ? "Archiving…" : "Archive"}
                     </button>
@@ -373,18 +373,18 @@ export function ThoughtMemoryPanel({
           </div>
 
           {generationEnabled && insightSuggestions.length > 0 ? (
-            <div className="mb-3 shrink-0 space-y-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5">
-              <p className="text-[10px] uppercase tracking-[1.5px] text-amber-200/80">Suggested insights</p>
+            <div className="mb-3 shrink-0 space-y-2 rounded-md border border-neutral-600/20 bg-neutral-800/5 p-2.5">
+              <p className="text-[10px] uppercase tracking-[1.5px] text-neutral-300/80">Suggested insights</p>
               {insightSuggestions.map((suggestion, index) => (
                 <button
                   key={`${suggestion.title}-${index}`}
                   type="button"
                   onClick={() => applySuggestion(suggestion)}
-                  className="block w-full rounded-md border border-neutral-800 bg-black/30 px-2.5 py-2 text-left transition hover:border-amber-500/35 hover:bg-black/45"
+                  className="block w-full rounded-md border border-neutral-800 bg-black/30 px-2.5 py-2 text-left transition hover:border-neutral-600/35 hover:bg-black/45"
                 >
                   <p className="text-sm font-medium text-neutral-100">{suggestion.title}</p>
                   <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-500">{suggestion.summary}</p>
-                  <p className="mt-1.5 text-[10px] uppercase tracking-wide text-amber-200/70">
+                  <p className="mt-1.5 text-[10px] uppercase tracking-wide text-neutral-300/70">
                     Select {suggestion.thoughtIds.length} traces
                   </p>
                 </button>

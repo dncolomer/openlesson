@@ -59,7 +59,7 @@ export default function LegalPage() {
             </p>
             <p className="mt-3">
               {t('legal.openSourceNote')}{" "}
-              <a href="https://github.com/dncolomer/socrates" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/dncolomer/socrates" className="text-neutral-300 hover:text-neutral-300" target="_blank" rel="noopener noreferrer">
                 github.com/dncolomer/socrates
               </a>.
             </p>

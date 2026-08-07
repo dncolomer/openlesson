@@ -594,7 +594,7 @@ function MapOfKnowledgeGlobal2D({
                 />
                 <circle
                   r={selected ? 9 : 7}
-                  fill={selected ? "#67e8f9" : "#22d3ee"}
+                  fill={selected ? "#f5f5f5" : "#e5e5e5"}
                   stroke="#ecfeff"
                   strokeWidth={selected ? 2 : 1.5}
                   data-map-global-region-dot
@@ -603,7 +603,7 @@ function MapOfKnowledgeGlobal2D({
                   transform={`translate(${innerR * 0.72},${-innerR * 0.72})`}
                   data-map-global-bubble-inside
                 >
-                  <circle r={10} fill="#0e7490" stroke="#67e8f9" strokeWidth={1} />
+                  <circle r={10} fill="#404040" stroke="#f5f5f5" strokeWidth={1} />
                   <text
                     textAnchor="middle"
                     y={3.5}
@@ -621,11 +621,11 @@ function MapOfKnowledgeGlobal2D({
                   transform={`translate(${outerR * 0.72},${outerR * 0.72})`}
                   data-map-global-bubble-near
                 >
-                  <circle r={10} fill="#78350f" stroke="#fbbf24" strokeWidth={1} />
+                  <circle r={10} fill="#78350f" stroke="#a3a3a3" strokeWidth={1} />
                   <text
                     textAnchor="middle"
                     y={3.5}
-                    className="fill-amber-50"
+                    className="fill-neutral-50"
                     style={{
                       fontSize: 9,
                       fontFamily: "ui-monospace, monospace",
@@ -742,10 +742,10 @@ function MapOfKnowledgeGlobal2D({
             data-map-global-legend-body
           >
             <li>
-              <span className="text-cyan-300">Inner orbit</span> — users inside region
+              <span className="text-neutral-300">Inner orbit</span> — users inside region
             </li>
             <li>
-              <span className="text-amber-300">Outer orbit</span> — near, not inside
+              <span className="text-neutral-300">Outer orbit</span> — near, not inside
             </li>
             <li>Dotted links show inter-region distance</li>
             <li className="text-zinc-500">Drag to pan · scroll to zoom</li>
@@ -785,19 +785,19 @@ function MapOfKnowledgeGlobal2D({
             </button>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="border border-cyan-500/25 bg-cyan-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-cyan-500/90">
+            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
+              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
                 Inside
               </dt>
-              <dd className="mt-0.5 font-mono text-base text-cyan-100" data-summary-inside>
+              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-inside>
                 {selectedSummary.inside_count}
               </dd>
             </div>
-            <div className="border border-amber-500/25 bg-amber-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-amber-500/90">
+            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
+              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
                 Near
               </dt>
-              <dd className="mt-0.5 font-mono text-base text-amber-100" data-summary-near>
+              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-near>
                 {selectedSummary.near_count}
               </dd>
             </div>

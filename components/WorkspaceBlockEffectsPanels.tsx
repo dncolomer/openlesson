@@ -244,12 +244,12 @@ export function WorkspaceBlockDynamicEffectPanel({
     return (
       <div
         data-block-dynamic-effect-needs-base
-        className="space-y-1.5 rounded-md border border-amber-500/30 bg-amber-950/20 px-2.5 py-2"
+        className="space-y-1.5 rounded-md border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
-        <p className="text-[12px] font-medium text-amber-100/95">
+        <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
-        <p className="text-[11px] leading-relaxed text-amber-100/75">
+        <p className="text-[11px] leading-relaxed text-neutral-200/75">
           Dynamic only works on an existing block. Add this block, then open it
           and pick unlock-after blocks on the map.
         </p>
@@ -556,12 +556,12 @@ export function WorkspaceBlockGeneratorEffectPanel({
     return (
       <div
         data-block-generator-effect-needs-base
-        className="space-y-1.5 rounded-md border border-amber-500/30 bg-amber-950/20 px-2.5 py-2"
+        className="space-y-1.5 rounded-md border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
-        <p className="text-[12px] font-medium text-amber-100/95">
+        <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
-        <p className="text-[11px] leading-relaxed text-amber-100/75">
+        <p className="text-[11px] leading-relaxed text-neutral-200/75">
           Generator only works on an existing block. Add this block, then open
           it and configure Generator targets in the drawer.
         </p>

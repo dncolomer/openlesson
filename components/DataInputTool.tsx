@@ -99,7 +99,7 @@ export function DataInputTool({
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors ${
               activeTab === tab
-                ? "text-blue-400 border-b-2 border-blue-400 bg-blue-500/10"
+                ? "text-neutral-300 border-b-2 border-white/60 bg-neutral-800/10"
                 : "text-neutral-400 hover:text-neutral-200"
             }`}
           >
@@ -144,7 +144,7 @@ export function DataInputTool({
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                   isMuseConnected
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+                    : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
                 }`}
               >
                 {museStatus === "connecting" ? t('common.connecting') : isMuseConnected ? t('common.disconnect') : t('common.connect')}
@@ -162,8 +162,8 @@ export function DataInputTool({
                 <span className="text-neutral-500">{t('dataInput.status')}:</span>
                 <span className={`${
                   museStatus === "streaming" ? "text-green-400" :
-                  museStatus === "connected" ? "text-yellow-400" :
-                  museStatus === "connecting" ? "text-yellow-400" :
+                  museStatus === "connected" ? "text-neutral-300" :
+                  museStatus === "connecting" ? "text-neutral-300" :
                   "text-neutral-500"
                 }`}>
                   {museStatus.charAt(0).toUpperCase() + museStatus.slice(1)}
@@ -190,7 +190,7 @@ export function DataInputTool({
                     <span className="text-neutral-500">Quality: </span>
                     <span className={
                       museDeviceStatus.signalQuality === "good" ? "text-green-400" :
-                      museDeviceStatus.signalQuality === "fair" ? "text-yellow-400" :
+                      museDeviceStatus.signalQuality === "fair" ? "text-neutral-300" :
                       "text-red-400"
                     }>{museDeviceStatus.signalQuality}</span>
                   </div>
@@ -200,7 +200,7 @@ export function DataInputTool({
               {!bandPowers && isMuseConnected && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500">{t('dataInput.signal')}:</span>
-                  <span className="text-yellow-400">{t('dataInput.waitingForSignal')}</span>
+                  <span className="text-neutral-300">{t('dataInput.waitingForSignal')}</span>
                 </div>
               )}
             </div>
@@ -212,9 +212,9 @@ export function DataInputTool({
                   {[
                     { label: "δ", value: bandPowers.delta, color: "bg-red-500" },
                     { label: "θ", value: bandPowers.theta, color: "bg-orange-500" },
-                    { label: "α", value: bandPowers.alpha, color: "bg-yellow-500" },
+                    { label: "α", value: bandPowers.alpha, color: "bg-white" },
                     { label: "β", value: bandPowers.beta, color: "bg-green-500" },
-                    { label: "γ", value: bandPowers.gamma, color: "bg-blue-500" },
+                    { label: "γ", value: bandPowers.gamma, color: "bg-white" },
                   ].map((band) => {
                     const maxVal = Math.max(bandPowers.delta, bandPowers.theta, bandPowers.alpha, bandPowers.beta, bandPowers.gamma) || 1;
                     const height = Math.max(4, (band.value / maxVal) * 40);
@@ -259,7 +259,7 @@ export function DataInputTool({
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                   isWebcamEnabled
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+                    : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isWebcamEnabled ? t('dataInput.disableWebcam') : t('dataInput.enableWebcam')}
@@ -278,7 +278,7 @@ export function DataInputTool({
                   <div className="grid grid-cols-3 gap-1 text-xs font-mono">
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.engagement')}: </span>
-                      <span className={latestFacialData.engagementScore >= 70 ? "text-green-400" : latestFacialData.engagementScore >= 40 ? "text-yellow-400" : "text-red-400"}>
+                      <span className={latestFacialData.engagementScore >= 70 ? "text-green-400" : latestFacialData.engagementScore >= 40 ? "text-neutral-300" : "text-red-400"}>
                         {Math.round(latestFacialData.engagementScore)}%
                       </span>
                     </div>
@@ -288,7 +288,7 @@ export function DataInputTool({
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.processing')}: </span>
-                      <span className="text-blue-400">{Math.round(latestFacialData.processingScore)}%</span>
+                      <span className="text-neutral-300">{Math.round(latestFacialData.processingScore)}%</span>
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.frustration')}: </span>
@@ -296,7 +296,7 @@ export function DataInputTool({
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.smile')}: </span>
-                      <span className="text-purple-400">{Math.round(latestFacialData.smileScore)}%</span>
+                      <span className="text-neutral-300">{Math.round(latestFacialData.smileScore)}%</span>
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.emotion')}: </span>
@@ -304,7 +304,7 @@ export function DataInputTool({
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.attention')}: </span>
-                      <span className={latestFacialData.attentionLevel === "high" ? "text-green-400" : latestFacialData.attentionLevel === "medium" ? "text-yellow-400" : "text-red-400"}>
+                      <span className={latestFacialData.attentionLevel === "high" ? "text-green-400" : latestFacialData.attentionLevel === "medium" ? "text-neutral-300" : "text-red-400"}>
                         {latestFacialData.attentionLevel.toUpperCase()}
                       </span>
                     </div>
@@ -314,7 +314,7 @@ export function DataInputTool({
                     </div>
                     <div className="p-1.5 rounded bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.gaze')}: </span>
-                      <span className={latestFacialData.gazeDirection === "at_camera" ? "text-green-400" : latestFacialData.gazeDirection === "away" ? "text-yellow-400" : "text-neutral-400"}>
+                      <span className={latestFacialData.gazeDirection === "at_camera" ? "text-green-400" : latestFacialData.gazeDirection === "away" ? "text-neutral-300" : "text-neutral-400"}>
                         {latestFacialData.gazeDirection.toUpperCase().replace("_", " ")}
                       </span>
                     </div>
@@ -345,7 +345,7 @@ export function DataInputTool({
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                   isScreenCapturing
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+                    : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isScreenCapturing ? t('dataInput.stopCapturing') : t('dataInput.startCapturing')}

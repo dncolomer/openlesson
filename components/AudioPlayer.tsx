@@ -159,7 +159,7 @@ export function AudioPlayer({ audioBlob }: AudioPlayerProps) {
     <div className="flex items-center gap-4">
       <button
         onClick={togglePlay}
-        className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+        className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-white text-black transition-colors"
       >
         {isPlaying ? (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

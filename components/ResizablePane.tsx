@@ -181,8 +181,8 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
       {/* ---- Separator bar ---- */}
       {collapsedSide === null && (
         <div
-          className={`w-1.5 cursor-col-resize bg-neutral-800 hover:bg-blue-500/70 flex-shrink-0 transition-colors ${
-            isDragging ? "bg-blue-500" : ""
+          className={`w-1.5 cursor-col-resize bg-neutral-800 hover:bg-neutral-800/70 flex-shrink-0 transition-colors ${
+            isDragging ? "bg-white" : ""
           }`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}

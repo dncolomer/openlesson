@@ -19,7 +19,7 @@ export function SwipeableTabs({
   tabs,
   activeTab: controlledActiveTab,
   onTabChange,
-  tabIndicatorColor = "bg-cyan-500",
+  tabIndicatorColor = "bg-white",
 }: SwipeableTabsProps) {
   const [internalActiveTab, setInternalActiveTab] = useState(0);
   const activeTab = controlledActiveTab ?? internalActiveTab;

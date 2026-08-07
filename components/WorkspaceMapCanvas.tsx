@@ -146,7 +146,7 @@ export function WorkspaceMapCanvas({
         </p>
       </div>
       {loadError ? (
-        <p className="px-2.5 py-1 text-[10px] text-amber-500/90" data-canvas-load-error>
+        <p className="px-2.5 py-1 text-[10px] text-neutral-200/90" data-canvas-load-error>
           {loadError}
         </p>
       ) : null}

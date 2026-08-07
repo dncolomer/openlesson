@@ -1212,7 +1212,7 @@ export function TapScoreClient({
                         startingLabel={t("onboardingGuide.tap.step3.starting")}
                       />
                       {topicsError ? (
-                        <p className="mt-2 text-center text-xs text-amber-300/90">{topicsError}</p>
+                        <p className="mt-2 text-center text-xs text-neutral-300/90">{topicsError}</p>
                       ) : null}
                     </>
                   )}
@@ -1250,13 +1250,13 @@ export function TapScoreClient({
             {isPracticeMode ? (
               <div
                 data-tap-practice-banner
-                className="mb-3 shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2.5 text-center"
+                className="mb-3 shrink-0 rounded-xl border border-neutral-500/40 bg-neutral-800/10 px-4 py-2.5 text-center"
               >
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200/90">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/90">
                   {t("tap.practice.bannerKicker")}
                 </p>
-                <p className="mt-0.5 text-sm font-medium text-cyan-50">{t("tap.practice.bannerTitle")}</p>
-                <p className="mt-0.5 text-xs text-cyan-100/70">{t("tap.practice.bannerHint")}</p>
+                <p className="mt-0.5 text-sm font-medium text-neutral-50">{t("tap.practice.bannerTitle")}</p>
+                <p className="mt-0.5 text-xs text-neutral-200/70">{t("tap.practice.bannerHint")}</p>
               </div>
             ) : null}
             <div className="grid h-full min-h-0 gap-4 grid-rows-[minmax(0,1fr)_minmax(0,24rem)] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[minmax(0,1fr)]">
@@ -1291,7 +1291,7 @@ export function TapScoreClient({
                       </div>
                       <div
                         className={`flex h-7 items-center font-mono text-lg leading-none tabular-nums tracking-tight ${
-                          remainingSeconds <= 60 ? "text-amber-300" : "text-white"
+                          remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
                         }`}
                       >
                         {formatCountdown(remainingSeconds)}
@@ -1314,7 +1314,7 @@ export function TapScoreClient({
                               className={`h-2.5 w-2.5 shrink-0 rounded-full border transition-colors ${
                                 filled
                                   ? sessionPurity === 1
-                                    ? "border-amber-300/80 bg-amber-300"
+                                    ? "border-neutral-600/80 bg-neutral-300"
                                     : "border-emerald-400/70 bg-emerald-400"
                                   : "border-neutral-700 bg-transparent"
                               }`}
@@ -1324,7 +1324,7 @@ export function TapScoreClient({
                         })}
                         <span
                           className={`ml-0.5 font-mono text-sm leading-none tabular-nums ${
-                            sessionPurity <= 1 ? "text-amber-300" : "text-neutral-400"
+                            sessionPurity <= 1 ? "text-neutral-300" : "text-neutral-400"
                           }`}
                         >
                           {sessionPurity}/{TAP_SESSION_PURITY_MAX}
@@ -1364,7 +1364,7 @@ export function TapScoreClient({
                         // Speech strip only mounts in live phase; keep enabled tied to it.
                         enabled: phase === "live",
                       })}
-                      className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
+                      className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                     />
                   </div>
                   {speechSupported !== false && !isListening ? (
@@ -1437,7 +1437,7 @@ export function TapScoreClient({
             className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
             data-tap-practice-done
           >
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-300/80">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
               {t("tap.practice.doneKicker")}
             </p>
             <h1 className="mt-2 text-2xl font-medium text-neutral-100 sm:text-3xl">

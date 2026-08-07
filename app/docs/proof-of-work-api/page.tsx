@@ -450,7 +450,7 @@ function EndpointDoc({ spec }: { spec: EndpointSpec }) {
         <span className="rounded-sm border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-[10px] text-neutral-500">
           {spec.scope}
         </span>
-        <span className="rounded-sm border border-cyan-400/20 bg-cyan-950/20 px-2 py-1 font-mono text-[10px] text-cyan-200/90">
+        <span className="rounded-sm border border-neutral-500/20 bg-neutral-950/20 px-2 py-1 font-mono text-[10px] text-neutral-300/90">
           {spec.status}
         </span>
       </div>

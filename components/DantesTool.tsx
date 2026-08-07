@@ -147,7 +147,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
             <h3 className="text-sm font-semibold text-white">Dantes.io</h3>
             <p className="mt-1 text-xs text-neutral-500">Curated learning resources matched to this session.</p>
           </div>
-          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-cyan-200">Smart Match</span>
+          <span className="rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-300">Smart Match</span>
         </div>
         <div className="mt-4">
           <input
@@ -179,7 +179,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
                   onClick={() => setSelectedTopic(topic)}
                   className={`w-full rounded-xl border p-3 text-left transition-colors ${
                     selectedTopic?.slug === topic.slug
-                      ? "border-cyan-500/40 bg-cyan-500/10"
+                      ? "border-neutral-600/40 bg-neutral-800/10"
                       : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700 hover:bg-neutral-900"
                   }`}
                 >
@@ -191,7 +191,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
                   {topic.matchedTerms.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {topic.matchedTerms.slice(0, 3).map((term) => (
-                        <span key={term} className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">{term}</span>
+                        <span key={term} className="rounded-full border border-neutral-600/20 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] text-neutral-300">{term}</span>
                       ))}
                     </div>
                   )}
@@ -259,7 +259,7 @@ function ResourceCard({ resource }: { resource: DantesResource }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-300">{RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}</span>
             <span className="text-[11px] capitalize text-neutral-500">{resource.difficulty}</span>
-            {resource.isPaid && <span className="text-[11px] text-amber-300">{resource.price ?? "Paid"}</span>}
+            {resource.isPaid && <span className="text-[11px] text-neutral-300">{resource.price ?? "Paid"}</span>}
           </div>
           <h5 className="mt-2 text-sm font-semibold text-white">{resource.title}</h5>
           {(resource.author || resource.provider || resource.duration) && (

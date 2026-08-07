@@ -188,7 +188,7 @@ export function WorkspaceBlockLocalContextPanel({
     >
       <div className="space-y-0.5" data-block-local-summary>
         {lockUntilTitles && lockUntilTitles.length > 0 ? (
-          <p className="text-[11px] text-amber-200/80" data-block-lock-until>
+          <p className="text-[11px] text-neutral-300/80" data-block-lock-until>
             Locked until: {lockUntilTitles.join(", ")}
           </p>
         ) : null}

@@ -15,7 +15,8 @@ function readLwm(): string {
 function lwmSection(src: string): string {
   const i = src.indexOf('data-lwm-layout=');
   if (i < 0) return src;
-  return src.slice(i, i + 55000);
+  // LWM panel is large (modals + list-detail + tabs); keep enough of the section.
+  return src.slice(i, i + 120000);
 }
 
 describe("LWM architecture (integrated detail)", () => {

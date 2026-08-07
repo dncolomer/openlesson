@@ -199,7 +199,10 @@ describe("TAP client practice surface (not ILE)", () => {
       nodes: [{ id: "n1", title: "Kepler's laws", description: null, status: null }],
       sessions: [],
     });
-    expect(fallback).toContain("Kepler's laws");
+    // Offline practice warm-up: generic, no block-title shell (prefer raw xAI)
+    expect(fallback).not.toContain("Kepler's laws");
+    expect(fallback).not.toContain("Orbital Mechanics");
     expect(fallback.toLowerCase()).toMatch(/simple|basic/);
+    expect(fallback).not.toMatch(/attachments\s*:|on this setup|Given parameters/i);
   });
 });

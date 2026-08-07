@@ -181,11 +181,15 @@ describe("TAP dialog opening / topic fallbacks", () => {
     files: [{ name: "schema.sql" }, { name: "caching-notes.md" }],
   };
 
-  it("opening fallback is domain-grounded and has no stage directions", () => {
+  it("opening fallback is generic offline text without stage directions or title shells", () => {
     const q = buildTapOpeningQuestionFallback(brief);
     expect(containsOutLoudStageDirection(q)).toBe(false);
     expect(q.toLowerCase()).not.toMatch(/out loud|think aloud/);
-    expect(q).toMatch(/Data model|index|N\+1|caching|Postgres|query/i);
+    // Prefer raw xAI openings; offline fallback must not re-cite block titles
+    expect(q).toMatch(/concrete claim|intermediate result|prove/i);
+    expect(q).not.toMatch(
+      /Data model|Postgres|attachments\s*:|Given parameters\s+A\s*=|on this setup/i,
+    );
   });
 
   it("starting topics use description/file cues without out loud", () => {

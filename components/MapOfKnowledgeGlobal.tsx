@@ -17,6 +17,10 @@ import {
   type GlobalMapViewTransform,
 } from "@/lib/map-of-knowledge/global-map";
 import {
+  GLOBAL_MAP_INSIDE_COLOR,
+  GLOBAL_MAP_NEAR_COLOR,
+} from "@/lib/map-of-knowledge/global-map-colors";
+import {
   MAP_INFINITE_GRID,
   mapInfiniteGridPatternAttrs,
   mapInfiniteGridPatternFill,
@@ -579,7 +583,11 @@ function MapOfKnowledgeGlobal2D({
                 <circle
                   r={outerR}
                   fill="none"
-                  stroke={selected ? "rgba(251,191,36,0.7)" : "rgba(251,191,36,0.35)"}
+                  stroke={
+                    selected
+                      ? GLOBAL_MAP_NEAR_COLOR.orbitStrokeSelected
+                      : GLOBAL_MAP_NEAR_COLOR.orbitStroke
+                  }
                   strokeWidth={selected ? 1.5 : 1}
                   strokeDasharray="2 3"
                   data-map-global-orbit-near
@@ -587,14 +595,22 @@ function MapOfKnowledgeGlobal2D({
                 <circle
                   r={innerR}
                   fill="none"
-                  stroke={selected ? "rgba(34,211,238,0.85)" : "rgba(34,211,238,0.45)"}
+                  stroke={
+                    selected
+                      ? GLOBAL_MAP_INSIDE_COLOR.orbitStrokeSelected
+                      : GLOBAL_MAP_INSIDE_COLOR.orbitStroke
+                  }
                   strokeWidth={selected ? 1.75 : 1.25}
                   strokeDasharray="2 2"
                   data-map-global-orbit-inside
                 />
                 <circle
                   r={selected ? 9 : 7}
-                  fill={selected ? "#f5f5f5" : "#e5e5e5"}
+                  fill={
+                    selected
+                      ? GLOBAL_MAP_INSIDE_COLOR.hexSelected
+                      : GLOBAL_MAP_INSIDE_COLOR.hex
+                  }
                   stroke="#ecfeff"
                   strokeWidth={selected ? 2 : 1.5}
                   data-map-global-region-dot
@@ -603,7 +619,12 @@ function MapOfKnowledgeGlobal2D({
                   transform={`translate(${innerR * 0.72},${-innerR * 0.72})`}
                   data-map-global-bubble-inside
                 >
-                  <circle r={10} fill="#404040" stroke="#f5f5f5" strokeWidth={1} />
+                  <circle
+                    r={10}
+                    fill={GLOBAL_MAP_INSIDE_COLOR.bubbleFill}
+                    stroke={GLOBAL_MAP_INSIDE_COLOR.bubbleStroke}
+                    strokeWidth={1}
+                  />
                   <text
                     textAnchor="middle"
                     y={3.5}
@@ -621,11 +642,16 @@ function MapOfKnowledgeGlobal2D({
                   transform={`translate(${outerR * 0.72},${outerR * 0.72})`}
                   data-map-global-bubble-near
                 >
-                  <circle r={10} fill="#78350f" stroke="#a3a3a3" strokeWidth={1} />
+                  <circle
+                    r={10}
+                    fill={GLOBAL_MAP_NEAR_COLOR.bubbleFill}
+                    stroke={GLOBAL_MAP_NEAR_COLOR.bubbleStroke}
+                    strokeWidth={1}
+                  />
                   <text
                     textAnchor="middle"
                     y={3.5}
-                    className="fill-neutral-50"
+                    className={GLOBAL_MAP_NEAR_COLOR.bubbleTextClass}
                     style={{
                       fontSize: 9,
                       fontFamily: "ui-monospace, monospace",
@@ -742,10 +768,12 @@ function MapOfKnowledgeGlobal2D({
             data-map-global-legend-body
           >
             <li>
-              <span className="text-neutral-300">Inner orbit</span> — users inside region
+              <span className={GLOBAL_MAP_INSIDE_COLOR.legendTextClass}>Inner orbit</span> — users
+              inside region
             </li>
             <li>
-              <span className="text-neutral-300">Outer orbit</span> — near, not inside
+              <span className={GLOBAL_MAP_NEAR_COLOR.legendTextClass}>Outer orbit</span> — near, not
+              inside
             </li>
             <li>Dotted links show inter-region distance</li>
             <li className="text-zinc-500">Drag to pan · scroll to zoom</li>
@@ -785,19 +813,15 @@ function MapOfKnowledgeGlobal2D({
             </button>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
-                Inside
-              </dt>
-              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-inside>
+            <div className={GLOBAL_MAP_INSIDE_COLOR.summaryCardClass}>
+              <dt className={GLOBAL_MAP_INSIDE_COLOR.summaryDtClass}>Inside</dt>
+              <dd className={GLOBAL_MAP_INSIDE_COLOR.summaryDdClass} data-summary-inside>
                 {selectedSummary.inside_count}
               </dd>
             </div>
-            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
-                Near
-              </dt>
-              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-near>
+            <div className={GLOBAL_MAP_NEAR_COLOR.summaryCardClass}>
+              <dt className={GLOBAL_MAP_NEAR_COLOR.summaryDtClass}>Near</dt>
+              <dd className={GLOBAL_MAP_NEAR_COLOR.summaryDdClass} data-summary-near>
                 {selectedSummary.near_count}
               </dd>
             </div>

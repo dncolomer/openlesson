@@ -13,6 +13,10 @@ import {
   type MapRegion,
   type MapUserLocation,
 } from "@/lib/map-of-knowledge";
+import {
+  GLOBAL_MAP_INSIDE_COLOR,
+  GLOBAL_MAP_NEAR_COLOR,
+} from "@/lib/map-of-knowledge/global-map-colors";
 
 export type MapOfKnowledgeGlobal3DProps = {
   userLocations: MapUserLocation[];
@@ -290,7 +294,7 @@ export function MapOfKnowledgeGlobal3D({
         // Outer near orbit (amber)
         const nearGeo = new THREE.TorusGeometry(n.orbit_near, 0.01, 8, 48);
         const nearMat = new THREE.MeshBasicMaterial({
-          color: 0xfbbf24,
+          color: GLOBAL_MAP_NEAR_COLOR.three,
           transparent: true,
           opacity: selected ? 0.75 : 0.4,
         });
@@ -302,7 +306,7 @@ export function MapOfKnowledgeGlobal3D({
         // Inner inside orbit (cyan) — opposing tilt so the pair reads as nested 3D rings
         const inGeo = new THREE.TorusGeometry(n.orbit_inside, 0.012, 8, 48);
         const inMat = new THREE.MeshBasicMaterial({
-          color: 0x22d3ee,
+          color: GLOBAL_MAP_INSIDE_COLOR.three,
           transparent: true,
           opacity: selected ? 0.95 : 0.55,
         });
@@ -314,8 +318,12 @@ export function MapOfKnowledgeGlobal3D({
         // Core region sphere (small dot)
         const coreGeo = new THREE.SphereGeometry(n.display_radius, 16, 12);
         const coreMat = new THREE.MeshStandardMaterial({
-          color: selected ? 0x67e8f9 : 0x22d3ee,
-          emissive: selected ? 0x22d3ee : 0x0e7490,
+          color: selected
+            ? GLOBAL_MAP_INSIDE_COLOR.threeSelected
+            : GLOBAL_MAP_INSIDE_COLOR.three,
+          emissive: selected
+            ? GLOBAL_MAP_INSIDE_COLOR.three
+            : GLOBAL_MAP_INSIDE_COLOR.threeEmissive,
           emissiveIntensity: selected ? 0.55 : 0.25,
           roughness: 0.35,
           metalness: 0.25,
@@ -336,11 +344,14 @@ export function MapOfKnowledgeGlobal3D({
         nameSprite.position.set(0, n.orbit_near + 0.35, 0);
         group.add(nameSprite);
 
-        const insideSprite = makeCountSprite(String(n.inside_count), "#f5f5f5");
+        const insideSprite = makeCountSprite(
+          String(n.inside_count),
+          GLOBAL_MAP_INSIDE_COLOR.sprite,
+        );
         insideSprite.position.set(n.orbit_inside * 0.75, n.orbit_inside * 0.35, 0);
         group.add(insideSprite);
 
-        const nearSprite = makeCountSprite(String(n.near_count), "#a3a3a3");
+        const nearSprite = makeCountSprite(String(n.near_count), GLOBAL_MAP_NEAR_COLOR.sprite);
         nearSprite.position.set(-n.orbit_near * 0.75, n.orbit_near * 0.35, 0);
         group.add(nearSprite);
 
@@ -495,10 +506,12 @@ export function MapOfKnowledgeGlobal3D({
             data-map-global-legend-body
           >
             <li>
-              <span className="text-neutral-300">Inner orbit</span> — users inside region
+              <span className={GLOBAL_MAP_INSIDE_COLOR.legendTextClass}>Inner orbit</span> — users
+              inside region
             </li>
             <li>
-              <span className="text-neutral-300">Outer orbit</span> — near, not inside
+              <span className={GLOBAL_MAP_NEAR_COLOR.legendTextClass}>Outer orbit</span> — near, not
+              inside
             </li>
             <li>Region dots use multi-algo x,y,z layout</li>
             <li className="text-zinc-500">Drag to orbit · scroll to zoom</li>
@@ -538,19 +551,15 @@ export function MapOfKnowledgeGlobal3D({
             </button>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
-                Inside
-              </dt>
-              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-inside>
+            <div className={GLOBAL_MAP_INSIDE_COLOR.summaryCardClass}>
+              <dt className={GLOBAL_MAP_INSIDE_COLOR.summaryDtClass}>Inside</dt>
+              <dd className={GLOBAL_MAP_INSIDE_COLOR.summaryDdClass} data-summary-inside>
                 {selectedSummary.inside_count}
               </dd>
             </div>
-            <div className="border border-neutral-600/25 bg-neutral-950/20 px-2 py-1.5">
-              <dt className="font-mono text-[9px] uppercase tracking-wide text-neutral-200/90">
-                Near
-              </dt>
-              <dd className="mt-0.5 font-mono text-base text-neutral-200" data-summary-near>
+            <div className={GLOBAL_MAP_NEAR_COLOR.summaryCardClass}>
+              <dt className={GLOBAL_MAP_NEAR_COLOR.summaryDtClass}>Near</dt>
+              <dd className={GLOBAL_MAP_NEAR_COLOR.summaryDdClass} data-summary-near>
                 {selectedSummary.near_count}
               </dd>
             </div>

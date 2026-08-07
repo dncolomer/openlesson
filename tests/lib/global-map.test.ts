@@ -22,6 +22,11 @@ import {
   zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
 import {
+  GLOBAL_MAP_INSIDE_COLOR,
+  GLOBAL_MAP_MEMBERSHIP_COLORS,
+  GLOBAL_MAP_NEAR_COLOR,
+} from "@/lib/map-of-knowledge/global-map-colors";
+import {
   reprojectMapLayout,
   type MapRegion,
   type MapUserLocation,
@@ -556,5 +561,90 @@ describe("Global Map UI structure", () => {
     expect(knowledgeSrc).toContain("toggleAllWorkspaceRegions");
     expect(knowledgeSrc).toContain("selectedRegionIds.has(r.id)");
     expect(knowledgeSrc).toMatch(/selectedRegionIds\.has\(r\.id\)/);
+  });
+});
+
+describe("Global Map dual membership colors (cyan/amber)", () => {
+  function isCyanFamily(hex: string): boolean {
+    const h = hex.replace("#", "").toLowerCase();
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    // Cyan-ish: blue channel high, green high, red relatively lower
+    return b > 180 && g > 140 && r < 140;
+  }
+
+  function isAmberFamily(hex: string): boolean {
+    const h = hex.replace("#", "").toLowerCase();
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    // Amber/orange: red+green high, blue low
+    return r > 180 && g > 140 && b < 100;
+  }
+
+  it("ships distinct inside=cyan and near=amber dual coding constants", () => {
+    expect(GLOBAL_MAP_MEMBERSHIP_COLORS.inside).toBe(GLOBAL_MAP_INSIDE_COLOR);
+    expect(GLOBAL_MAP_MEMBERSHIP_COLORS.near).toBe(GLOBAL_MAP_NEAR_COLOR);
+
+    expect(isCyanFamily(GLOBAL_MAP_INSIDE_COLOR.hex)).toBe(true);
+    expect(isCyanFamily(GLOBAL_MAP_INSIDE_COLOR.hexSelected)).toBe(true);
+    expect(isAmberFamily(GLOBAL_MAP_NEAR_COLOR.hex)).toBe(true);
+    expect(isAmberFamily(GLOBAL_MAP_NEAR_COLOR.sprite)).toBe(true);
+
+    expect(GLOBAL_MAP_INSIDE_COLOR.hex.toLowerCase()).not.toBe(
+      GLOBAL_MAP_NEAR_COLOR.hex.toLowerCase(),
+    );
+    expect(GLOBAL_MAP_INSIDE_COLOR.sprite.toLowerCase()).not.toBe(
+      GLOBAL_MAP_NEAR_COLOR.sprite.toLowerCase(),
+    );
+    expect(GLOBAL_MAP_INSIDE_COLOR.three).not.toBe(GLOBAL_MAP_NEAR_COLOR.three);
+    expect(GLOBAL_MAP_INSIDE_COLOR.legendTextClass).toMatch(/cyan/);
+    expect(GLOBAL_MAP_NEAR_COLOR.legendTextClass).toMatch(/amber/);
+    expect(GLOBAL_MAP_INSIDE_COLOR.summaryCardClass).toMatch(/cyan/);
+    expect(GLOBAL_MAP_NEAR_COLOR.summaryCardClass).toMatch(/amber/);
+  });
+
+  it("Global Map 2D uses shared dual colors for orbits, bubbles, legend, summary", () => {
+    const src = readFileSync(join(root, "components/MapOfKnowledgeGlobal.tsx"), "utf8");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR");
+    expect(src).toContain("global-map-colors");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.hex");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.hexSelected");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.orbitStroke");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.orbitStroke");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.bubbleFill");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.bubbleStroke");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.legendTextClass");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.legendTextClass");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.summaryCardClass");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.summaryCardClass");
+    // Not neutral-only for dual membership roles
+    expect(src).not.toMatch(
+      /data-map-global-bubble-inside[\s\S]{0,200}fill="#404040"[\s\S]{0,80}stroke="#f5f5f5"/,
+    );
+  });
+
+  it("Global Map 3D uses the same dual colors for orbits, sprites, legend, summary", () => {
+    const src = readFileSync(join(root, "components/MapOfKnowledgeGlobal3D.tsx"), "utf8");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR");
+    expect(src).toContain("global-map-colors");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.three");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.three");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.sprite");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.sprite");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.legendTextClass");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.legendTextClass");
+    expect(src).toContain("GLOBAL_MAP_INSIDE_COLOR.summaryCardClass");
+    expect(src).toContain("GLOBAL_MAP_NEAR_COLOR.summaryCardClass");
+    // Count sprites must not be neutral-only
+    expect(src).not.toMatch(
+      /makeCountSprite\(\s*String\(n\.inside_count\),\s*"#f5f5f5"\s*\)/,
+    );
+    expect(src).not.toMatch(
+      /makeCountSprite\(\s*String\(n\.near_count\),\s*"#a3a3a3"\s*\)/,
+    );
   });
 });

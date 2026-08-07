@@ -5,6 +5,10 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
+import {
+  VISION_TOMOGRAPHY_INDUCTION_COPY,
+  VISION_TOMOGRAPHY_INDUCTION_PATHS,
+} from "@/lib/vision/knowledge-tomography-induction-copy";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems/vision",
@@ -96,6 +100,61 @@ export default function VisionPage() {
             title="More Attention, Same Energy"
             body="Increase attention markers without a proportional energy cost to the user, then compound that into a full automation stack for human learning."
           />
+        </div>
+      </section>
+
+      <section
+        id="knowledge-tomography-induction"
+        data-vision-tomography-induction
+        className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12"
+        aria-labelledby="vision-tomography-induction-heading"
+      >
+        <SectionHeading
+          id="vision-tomography-induction-heading"
+          eyebrow={VISION_TOMOGRAPHY_INDUCTION_COPY.eyebrow}
+          title={VISION_TOMOGRAPHY_INDUCTION_COPY.title}
+        />
+        <p
+          className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg"
+          data-vision-tomography-induction-lead
+        >
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
+        </p>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <VisionCard
+            eyebrow={VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.eyebrow}
+            title={VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.title}
+            body={VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.body}
+          />
+          <VisionCard
+            eyebrow={VISION_TOMOGRAPHY_INDUCTION_COPY.induction.eyebrow}
+            title={VISION_TOMOGRAPHY_INDUCTION_COPY.induction.title}
+            body={VISION_TOMOGRAPHY_INDUCTION_COPY.induction.body}
+          />
+        </div>
+        <p
+          className="mt-6 max-w-3xl text-sm leading-relaxed text-zinc-500 sm:text-base"
+          data-vision-tomography-induction-distinction
+        >
+          {VISION_TOMOGRAPHY_INDUCTION_COPY.distinction}
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Link
+            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.science}
+            data-vision-science-link
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.scienceLabel}
+            <ArrowRight size={14} />
+          </Link>
+          <Link
+            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper}
+            data-vision-knowledge-tomography-paper-link
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
+            <ArrowRight size={14} />
+          </Link>
         </div>
       </section>
 
@@ -215,11 +274,24 @@ export default function VisionPage() {
   );
 }
 
-function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  id,
+}: {
+  eyebrow: string;
+  title: string;
+  id?: string;
+}) {
   return (
     <div>
       <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">{eyebrow}</div>
-      <h2 className="max-w-3xl text-4xl font-medium leading-[1.08] tracking-[-1.8px] text-white sm:text-5xl">{title}</h2>
+      <h2
+        id={id}
+        className="max-w-3xl text-4xl font-medium leading-[1.08] tracking-[-1.8px] text-white sm:text-5xl"
+      >
+        {title}
+      </h2>
     </div>
   );
 }

@@ -279,6 +279,9 @@ export function WorkspaceBlockDetailPane({
               nodes={expandNodes!}
               unusableCells={unusableCells}
               busy={editBusy}
+              workspaceId={workspaceId}
+              locale={locale}
+              ayclToken={ayclToken}
               onSubmit={onExpandBlock!}
               onExpandPreviewChange={onExpandPreviewChange}
             />

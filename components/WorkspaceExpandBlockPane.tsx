@@ -16,11 +16,19 @@ import {
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
+import { RabbitHoleExpandModal } from "@/components/RabbitHoleExpandModal";
+import { mapCandidatesToFrozenSlots } from "@/lib/rabbit-hole-expand";
 
 export type WorkspaceExpandBlockSubmitOpts = {
   frozenSlots: Array<{ row: number; col: number }>;
   range: number;
   density: number;
+  /**
+   * Ordered rabbit-hole candidate questions mapped 1:1 onto frozen slots
+   * (prompt overrides per slot). When set, expand uses these topics instead
+   * of the generic expand-from-source slot prompt.
+   */
+  candidatePrompts?: string[];
 };
 
 /**
@@ -33,6 +41,9 @@ export function WorkspaceExpandBlockPane({
   nodes,
   unusableCells = null,
   busy = false,
+  workspaceId,
+  locale = "en",
+  ayclToken = null,
   onSubmit,
   onExpandPreviewChange,
 }: {
@@ -41,6 +52,9 @@ export function WorkspaceExpandBlockPane({
   nodes: SkillGridNode[];
   unusableCells?: Array<{ row: number; col: number }> | null;
   busy?: boolean;
+  workspaceId?: string;
+  locale?: string;
+  ayclToken?: string | null;
   onSubmit: (
     source: ExpandSourceIdentity,
     opts: WorkspaceExpandBlockSubmitOpts,
@@ -54,6 +68,7 @@ export function WorkspaceExpandBlockPane({
   const [sampleSeed, setSampleSeed] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rabbitHoleOpen, setRabbitHoleOpen] = useState(false);
 
   // Stable callback ref so parent re-renders don't re-fire the preview effect.
   const onExpandPreviewChangeRef = useRef(onExpandPreviewChange);
@@ -169,16 +184,29 @@ export function WorkspaceExpandBlockPane({
   const title =
     String(sourceIdentity.title || "").trim() || "selected block";
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (candidatePrompts?: string[]) => {
     if (submitting || busy || cellsToCreate.length === 0) return;
     setSubmitting(true);
     setError(null);
     const slots = expandSelection.frozenSlots;
     try {
+      let frozenSlots = slots;
+      let prompts = candidatePrompts;
+      if (candidatePrompts && candidatePrompts.length > 0) {
+        const mapped = mapCandidatesToFrozenSlots({
+          candidates: candidatePrompts,
+          frozenSlots: slots,
+        });
+        frozenSlots = mapped.map((m) => m.slot);
+        prompts = mapped.map((m) => m.candidate);
+      }
       await onSubmit(sourceIdentity, {
-        frozenSlots: slots,
+        frozenSlots,
         range,
         density,
+        ...(prompts && prompts.length > 0
+          ? { candidatePrompts: prompts }
+          : {}),
       });
     } catch (err) {
       setError(
@@ -187,6 +215,11 @@ export function WorkspaceExpandBlockPane({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRabbitHoleConfirm = (candidates: string[]) => {
+    setRabbitHoleOpen(false);
+    void handleSubmit(candidates);
   };
 
   return (
@@ -272,21 +305,48 @@ export function WorkspaceExpandBlockPane({
           />
         </label>
 
-        <button
-          type="button"
-          data-expand-block-randomize
-          data-add-randomize
-          disabled={
-            busy ||
-            submitting ||
-            densityIsMax ||
-            expandSelection.candidates.length <= 1
-          }
-          onClick={() => setSampleSeed((s) => nextRandomizeSeed(s))}
-          className="w-full rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        <div
+          className="flex flex-col gap-1.5 sm:flex-row"
+          data-expand-block-selection-actions
         >
-          Randomize selection
-        </button>
+          <button
+            type="button"
+            data-expand-block-randomize
+            data-add-randomize
+            disabled={
+              busy ||
+              submitting ||
+              densityIsMax ||
+              expandSelection.candidates.length <= 1
+            }
+            onClick={() => setSampleSeed((s) => nextRandomizeSeed(s))}
+            className="min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Randomize selection
+          </button>
+          <button
+            type="button"
+            data-expand-block-rabbit-hole
+            data-rabbit-hole-expansion
+            disabled={
+              busy ||
+              submitting ||
+              cellsToCreate.length === 0 ||
+              !workspaceId
+            }
+            onClick={() => setRabbitHoleOpen(true)}
+            className="min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            title={
+              !workspaceId
+                ? "Workspace required"
+                : cellsToCreate.length === 0
+                  ? "Select empty cells with Range/Density first"
+                  : "Explore rabbit-hole questions to seed expansion topics"
+            }
+          >
+            Rabbit Hole Expansion
+          </button>
+        </div>
         <p className="text-[10px] leading-snug text-neutral-600">
           Multi-create runs in the background — progress and Stop appear under
           the minimap so you can keep editing the map.
@@ -308,6 +368,19 @@ export function WorkspaceExpandBlockPane({
               ? "Expand 1 block"
               : `Expand ${cellsToCreate.length} blocks`}
       </button>
+
+      {workspaceId ? (
+        <RabbitHoleExpandModal
+          open={rabbitHoleOpen}
+          source={sourceIdentity}
+          outlineTarget={cellsToCreate.length}
+          workspaceId={workspaceId}
+          locale={locale}
+          ayclToken={ayclToken}
+          onClose={() => setRabbitHoleOpen(false)}
+          onConfirm={handleRabbitHoleConfirm}
+        />
+      ) : null}
     </div>
   );
 }

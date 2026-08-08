@@ -51,6 +51,7 @@ import {
   buildExpandFromSourceSlotPrompt,
   type ExpandSourceIdentity,
 } from "@/lib/expand-block-from-source";
+import { buildRabbitHoleExpandSlotPrompt } from "@/lib/rabbit-hole-expand";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
 import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import {
@@ -656,12 +657,22 @@ export function WorkspaceView({
                 placements,
                 nodesById,
               );
-              const slotPrompt = buildExpandFromSourceSlotPrompt({
-                source,
-                slot,
-                slotIndex: i,
-                totalSlots: slots.length,
-              });
+              const candidate = opts.candidatePrompts?.[i];
+              const slotPrompt =
+                candidate && String(candidate).trim()
+                  ? buildRabbitHoleExpandSlotPrompt({
+                      source,
+                      candidate: String(candidate).trim(),
+                      slot,
+                      slotIndex: i,
+                      totalSlots: slots.length,
+                    })
+                  : buildExpandFromSourceSlotPrompt({
+                      source,
+                      slot,
+                      slotIndex: i,
+                      totalSlots: slots.length,
+                    });
               const response = await fetch("/api/workspace/add-block-at-slot", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

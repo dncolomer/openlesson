@@ -866,11 +866,14 @@ export function parseMapSearchAiResponse(
   raw: unknown,
   validBlockIds: ReadonlySet<string> | readonly string[],
 ): { blockIds: string[]; rationale: string } {
-  const valid =
-    validBlockIds instanceof Set
-      ? validBlockIds
+  const valid: Set<string> = Array.isArray(validBlockIds)
+    ? new Set(validBlockIds.map((id) => clean(id)).filter(Boolean))
+    : validBlockIds instanceof Set
+      ? new Set(validBlockIds)
       : new Set(
-          (validBlockIds || []).map((id) => clean(id)).filter(Boolean),
+          Array.from(validBlockIds as Iterable<string>)
+            .map((id) => clean(id))
+            .filter(Boolean),
         );
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};

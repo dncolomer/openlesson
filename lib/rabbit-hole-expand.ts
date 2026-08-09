@@ -250,6 +250,8 @@ export function mapCandidatesToFrozenSlots(input: {
 
 /**
  * Per-slot prompt when expanding from rabbit-hole candidates.
+ * Optional `userGuidance` is included only when non-empty (same modifier as
+ * generic expand-from-source).
  */
 export function buildRabbitHoleExpandSlotPrompt(input: {
   source: ExpandSourceIdentity;
@@ -257,11 +259,14 @@ export function buildRabbitHoleExpandSlotPrompt(input: {
   slot: AddExpandCell;
   slotIndex: number;
   totalSlots: number;
+  /** Optional free-text modifier from Expand drawer; omitted/empty = source+candidate only. */
+  userGuidance?: string | null;
 }): string {
   const title = String(input.source?.title ?? "").trim() || "Untitled block";
   const description = String(input.source?.description ?? "").trim();
   const planning = String(input.source?.planning_prompt ?? "").trim();
   const candidate = String(input.candidate ?? "").trim();
+  const guidance = String(input.userGuidance ?? "").trim();
   const i = Math.max(0, Math.floor(Number(input.slotIndex) || 0));
   const total = Math.max(1, Math.floor(Number(input.totalSlots) || 1));
   const { row, col } = input.slot;
@@ -275,6 +280,9 @@ export function buildRabbitHoleExpandSlotPrompt(input: {
   }
   if (planning) {
     parts.push(`Source planning / teaching notes: ${planning}`);
+  }
+  if (guidance) {
+    parts.push(`Creator guidance for the expansion:\n${guidance}`);
   }
   parts.push(`Rabbit-hole expansion question / topic: "${candidate}"`);
   parts.push(

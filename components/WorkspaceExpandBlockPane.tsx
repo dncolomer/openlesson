@@ -24,6 +24,11 @@ export type WorkspaceExpandBlockSubmitOpts = {
   range: number;
   density: number;
   /**
+   * Optional free-text modifier / guidance for expand generation.
+   * Empty or omitted is allowed and does not block submit.
+   */
+  userGuidance?: string;
+  /**
    * Ordered rabbit-hole candidate questions mapped 1:1 onto frozen slots
    * (prompt overrides per slot). When set, expand uses these topics instead
    * of the generic expand-from-source slot prompt.
@@ -66,6 +71,7 @@ export function WorkspaceExpandBlockPane({
   const [range, setRange] = useState(1);
   const [density, setDensity] = useState(ADD_DENSITY_MAX);
   const [sampleSeed, setSampleSeed] = useState(1);
+  const [userGuidance, setUserGuidance] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rabbitHoleOpen, setRabbitHoleOpen] = useState(false);
@@ -78,6 +84,7 @@ export function WorkspaceExpandBlockPane({
     setRange(1);
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
+    setUserGuidance("");
     setError(null);
   }, [sourceBlock.id]);
 
@@ -200,10 +207,12 @@ export function WorkspaceExpandBlockPane({
         frozenSlots = mapped.map((m) => m.slot);
         prompts = mapped.map((m) => m.candidate);
       }
+      const guidance = userGuidance.trim();
       await onSubmit(sourceIdentity, {
         frozenSlots,
         range,
         density,
+        ...(guidance ? { userGuidance: guidance } : {}),
         ...(prompts && prompts.length > 0
           ? { candidatePrompts: prompts }
           : {}),
@@ -253,6 +262,21 @@ export function WorkspaceExpandBlockPane({
           Places separate 1×1 blocks (not one multi-cell shape). Use Range for
           neighborhood size and Density for how many slots fill.
         </p>
+
+        <label className="block space-y-1" data-expand-block-modifier>
+          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+            Modifier prompt
+          </span>
+          <textarea
+            data-expand-block-modifier-input
+            value={userGuidance}
+            onChange={(e) => setUserGuidance(e.target.value)}
+            rows={3}
+            disabled={busy || submitting}
+            placeholder="Optional guidance for the expansion (e.g. emphasize applications, keep beginner-friendly, or focus on proofs)…"
+            className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          />
+        </label>
 
         <label className="block space-y-1" data-expand-block-range data-add-range>
           <div className="flex items-center justify-between gap-2">

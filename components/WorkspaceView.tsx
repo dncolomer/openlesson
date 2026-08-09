@@ -53,6 +53,12 @@ import {
 } from "@/lib/expand-block-from-source";
 import { buildRabbitHoleExpandSlotPrompt } from "@/lib/rabbit-hole-expand";
 import type { WorkspaceExpandBlockSubmitOpts } from "@/components/WorkspaceExpandBlockPane";
+import {
+  createMapExploreShellState,
+  resolveMapExploreRightColumn,
+  toggleMapExploreShell,
+  type MapExploreShellState,
+} from "@/lib/empty-map-pane";
 import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import {
   availableWorkspaceSections,
@@ -345,6 +351,28 @@ export function WorkspaceView({
    * BlockSkillGrid clears local multi-block + empty-cell state when this changes.
    */
   const [mapSelectionClearNonce, setMapSelectionClearNonce] = useState(0);
+  /** Map explore FAB toggle (not the default empty-selection pane). */
+  const [mapExploreShell, setMapExploreShell] = useState<MapExploreShellState>(
+    () => createMapExploreShellState(),
+  );
+  /** Host-driven multi-select apply from empty-map Search / Suggest spot. */
+  const [applyMapSelection, setApplyMapSelection] = useState<{
+    token: number;
+    blockIds?: string[] | null;
+    emptyCells?: Array<{ row: number; col: number }> | null;
+  } | null>(null);
+  /** Selective Explanation free-shape overlay (independent of selection). */
+  const [selectiveExplanationActive, setSelectiveExplanationActive] =
+    useState(false);
+  const [selectiveExplanationPolygon, setSelectiveExplanationPolygon] =
+    useState<Array<{ x: number; y: number }> | null>(null);
+  const [injectMapNote, setInjectMapNote] = useState<{
+    token: number;
+    body: string;
+    x: number;
+    y: number;
+    source?: "creator" | "learner";
+  } | null>(null);
   /** Add-block Range/Density expand preview (highlight only). */
   const [addExpandPreviewCells, setAddExpandPreviewCells] = useState<
     Array<{ row: number; col: number }> | null
@@ -452,6 +480,84 @@ export function WorkspaceView({
     }
   }, []);
 
+  const handleEmptyMapSearchBlocks = useCallback((blockIds: string[]) => {
+    const ids = (blockIds || []).map((id) => String(id).trim()).filter(Boolean);
+    setApplyMapSelection((prev) => ({
+      token: (prev?.token || 0) + 1,
+      blockIds: ids,
+      emptyCells: null,
+    }));
+    if (ids.length >= 1) {
+      setEmptySurface(clearWorkspaceAddTarget());
+      setCloneArm(createDisarmedCloneState());
+      setMobileColumn("workspace");
+    }
+    if (ids.length >= 2) {
+      setExpandedBlockId(clearWorkspaceBlockSelection());
+      setSelectedFilledBlockIds(ids);
+    } else if (ids.length === 1) {
+      setSelectedFilledBlockIds([]);
+      setExpandedBlockId(ids[0]);
+    } else {
+      setSelectedFilledBlockIds([]);
+      setExpandedBlockId(clearWorkspaceBlockSelection());
+    }
+  }, []);
+
+  const handleEmptyMapSuggestCells = useCallback(
+    (cells: Array<{ row: number; col: number }>) => {
+      const list = (cells || [])
+        .filter((c) => Number.isFinite(c.row) && Number.isFinite(c.col))
+        .map((c) => ({ row: Math.trunc(c.row), col: Math.trunc(c.col) }));
+      setApplyMapSelection((prev) => ({
+        token: (prev?.token || 0) + 1,
+        blockIds: null,
+        emptyCells: list,
+      }));
+      setExpandedBlockId(clearWorkspaceBlockSelection());
+      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+      setCloneArm(createDisarmedCloneState());
+      setMobileColumn("workspace");
+      // Play: visibility-only multi empty (no create surface). Build: open generate/add.
+      if (interactionMode !== "learner") {
+        const surface = resolveEmptySelectionSurface({
+          selectedEmptyCells: list,
+          unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+        });
+        setEmptySurface(surface);
+      } else {
+        setEmptySurface(clearWorkspaceAddTarget());
+      }
+    },
+    [interactionMode, unusableCells],
+  );
+
+  const handleSelectiveExplanationComplete = useCallback(
+    (polygon: Array<{ x: number; y: number }>) => {
+      setSelectiveExplanationPolygon(polygon);
+      setSelectiveExplanationActive(false);
+    },
+    [],
+  );
+
+  const handleCreateNoteFromSummary = useCallback(
+    (input: {
+      body: string;
+      x: number;
+      y: number;
+      source: "creator" | "learner";
+    }) => {
+      setInjectMapNote((prev) => ({
+        token: (prev?.token || 0) + 1,
+        body: input.body,
+        x: input.x,
+        y: input.y,
+        source: input.source,
+      }));
+    },
+    [],
+  );
+
   const handleCloseEmptyCreate = useCallback(() => {
     setEmptySurface(clearWorkspaceAddTarget());
   }, []);
@@ -460,11 +566,29 @@ export function WorkspaceView({
     setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
   }, []);
 
-  const rightPane = resolveWorkspaceRightPane(
+  const naturalRightPane = resolveWorkspaceRightPane(
     expandedBlockId,
     emptySurface,
     selectedFilledBlockIds,
   );
+  const mapExploreColumn = resolveMapExploreRightColumn({
+    exploreOpen: mapExploreShell.open,
+    naturalPane: naturalRightPane,
+    previousPane: mapExploreShell.previousPane,
+  });
+  /** When explore FAB is open, force explore surface (hide drawers). */
+  const rightPane = mapExploreColumn.showExplore
+    ? "map_tools"
+    : mapExploreColumn.displayPane === "map_explore"
+      ? "map_tools"
+      : naturalRightPane;
+  const showMapExplore = mapExploreColumn.showExplore;
+
+  const handleToggleMapExplore = useCallback(() => {
+    setMapExploreShell((prev) =>
+      toggleMapExploreShell(prev, naturalRightPane),
+    );
+  }, [naturalRightPane]);
   const addTargetCell =
     emptySurface?.kind === "add_block" ? emptySurface.cell : null;
   const generateShapeCells =
@@ -542,6 +666,16 @@ export function WorkspaceView({
 
   const handleEmptySelectionChange = useCallback(
     (cells: Array<{ row: number; col: number }> | null) => {
+      // Play mode: empty multi-select is visibility-only (no Add / generate panes).
+      if (interactionMode === "learner") {
+        setEmptySurface(clearWorkspaceAddTarget());
+        if (cells && cells.length > 0) {
+          setExpandedBlockId(clearWorkspaceBlockSelection());
+          setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        }
+        return;
+      }
+
       // Generator pick: toggle empty cells into generator targets (no Add pane).
       // Use ref so the first click after enabling is not lost to a stale render.
       if (generatorPickActiveRef.current && generatorEmptyToggleRef.current) {
@@ -595,7 +729,7 @@ export function WorkspaceView({
         setMobileColumn("workspace");
       }
     },
-    [cloneArm, handleClonePaste, unusableCells],
+    [cloneArm, handleClonePaste, interactionMode, unusableCells],
   );
 
   const handleExpandFromSourceBlock = useCallback(
@@ -658,6 +792,7 @@ export function WorkspaceView({
                 nodesById,
               );
               const candidate = opts.candidatePrompts?.[i];
+              const userGuidance = opts.userGuidance;
               const slotPrompt =
                 candidate && String(candidate).trim()
                   ? buildRabbitHoleExpandSlotPrompt({
@@ -666,12 +801,14 @@ export function WorkspaceView({
                       slot,
                       slotIndex: i,
                       totalSlots: slots.length,
+                      userGuidance,
                     })
                   : buildExpandFromSourceSlotPrompt({
                       source,
                       slot,
                       slotIndex: i,
                       totalSlots: slots.length,
+                      userGuidance,
                     });
               const response = await fetch("/api/workspace/add-block-at-slot", {
                 method: "POST",
@@ -2349,11 +2486,7 @@ export function WorkspaceView({
         variant="bar"
         workspaceTitle={plan.title || plan.root_topic}
         interactionMode={interactionMode}
-        onInteractionModeChange={
-          isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle
-            ? undefined
-            : selectInteractionMode
-        }
+        showModeToggle={false}
       />
 
       {!isLearnerMode && sectionLayout.mountsContextPanel && (
@@ -2662,7 +2795,7 @@ export function WorkspaceView({
           </div>
         </aside>
 
-        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}>
+        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} relative flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}>
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -2683,13 +2816,14 @@ export function WorkspaceView({
             ayclToken={ayclToken}
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
-            onEmptySelectionChange={
-              isLearnerMode ? undefined : handleEmptySelectionChange
-            }
-            onSelectedBlockIdsChange={
-              isLearnerMode ? undefined : handleSelectedBlockIdsChange
-            }
+            onEmptySelectionChange={handleEmptySelectionChange}
+            onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
             mapSelectionClearNonce={mapSelectionClearNonce}
+            applyMapSelection={applyMapSelection}
+            selectiveExplanationActive={selectiveExplanationActive}
+            selectiveExplanationPolygon={selectiveExplanationPolygon}
+            onSelectiveExplanationComplete={handleSelectiveExplanationComplete}
+            injectMapNote={injectMapNote}
             unusableCells={unusableCells}
             onMapGround={
               isOwner && !isLearnerMode ? handleMapGround : undefined
@@ -2733,6 +2867,16 @@ export function WorkspaceView({
             expandJobs={isLearnerMode ? [] : expandJobs}
             clusterMapJob={isLearnerMode ? null : clusterMapJob}
             onAbortExpandJob={handleAbortExpandJob}
+            mapExploreOpen={showMapExplore}
+            onMapExploreToggle={handleToggleMapExplore}
+            interactionMode={interactionMode}
+            onInteractionModeChange={
+              isAycl &&
+              ayclCapabilities &&
+              !ayclCapabilities.allowCreatorModeToggle
+                ? undefined
+                : selectInteractionMode
+            }
           />
         </aside>
 
@@ -2750,9 +2894,36 @@ export function WorkspaceView({
           <main
             className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-0"
             data-workspace-right-column
-            data-workspace-right-pane={rightPane}
+            data-workspace-right-pane={
+              showMapExplore ? "map_explore" : rightPane
+            }
+            data-map-explore-open={showMapExplore ? "true" : "false"}
           >
-            {showLearnerDrawer &&
+            {showMapExplore ? (
+              <WorkspaceMapAuthoringPane
+                canEdit={isOwner && showCreatorDrawers}
+                interactionMode={interactionMode}
+                workspaceId={workspaceId}
+                ayclToken={ayclToken}
+                locale={locale}
+                blocks={nodes}
+                unusableCells={unusableCells}
+                exploreOpen
+                selectivePolygon={selectiveExplanationPolygon}
+                selectiveDrawing={selectiveExplanationActive}
+                onSearchSelectBlocks={handleEmptyMapSearchBlocks}
+                onSuggestSelectEmptyCells={handleEmptyMapSuggestCells}
+                onStartSelectiveDraw={() => {
+                  setSelectiveExplanationActive(true);
+                  setSelectiveExplanationPolygon(null);
+                }}
+                onClearSelectiveOverlay={() => {
+                  setSelectiveExplanationActive(false);
+                  setSelectiveExplanationPolygon(null);
+                }}
+                onCreateNoteFromSummary={handleCreateNoteFromSummary}
+              />
+            ) : showLearnerDrawer &&
             detailBlock &&
             detailIndex >= 0 ? (
               <WorkspaceLearnerBlockPane
@@ -3196,6 +3367,13 @@ export function WorkspaceView({
             ) : (
               <WorkspaceMapAuthoringPane
                 canEdit={isOwner && showCreatorDrawers}
+                interactionMode={interactionMode}
+                workspaceId={workspaceId}
+                ayclToken={ayclToken}
+                locale={locale}
+                blocks={nodes}
+                unusableCells={unusableCells}
+                exploreOpen={false}
               />
             )}
           </main>

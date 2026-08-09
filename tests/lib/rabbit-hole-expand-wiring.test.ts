@@ -180,6 +180,34 @@ describe("Rabbit Hole Expansion Expand-drawer wiring", () => {
     });
     expect(generic).toContain("Seed Topic");
 
+    // Optional modifier guidance on rabbit-hole + generic expand paths
+    expect(expandPane).toContain("data-expand-block-modifier");
+    expect(expandPane).toContain("userGuidance");
+    expect(expandFn).toMatch(
+      /buildRabbitHoleExpandSlotPrompt\(\{[\s\S]*?userGuidance/,
+    );
+    const modifier = "prefer visual / geometric intuition";
+    const rhWithGuidance = buildRabbitHoleExpandSlotPrompt({
+      source: { title: "Seed Topic", description: "Desc" },
+      candidate: mapped[0]?.candidate || process.candidates[0],
+      slot: mapped[0]?.slot || sel.frozenSlots[0],
+      slotIndex: 0,
+      totalSlots: mapped.length,
+      userGuidance: modifier,
+    });
+    expect(rhWithGuidance).toContain(modifier);
+    expect(rhWithGuidance).toContain("Seed Topic");
+    expect(rhWithGuidance).toMatch(/Creator guidance for the expansion/i);
+    const rhEmpty = buildRabbitHoleExpandSlotPrompt({
+      source: { title: "Seed Topic" },
+      candidate: "Why does this matter?",
+      slot: sel.frozenSlots[0],
+      slotIndex: 0,
+      totalSlots: 1,
+      userGuidance: "",
+    });
+    expect(rhEmpty).not.toMatch(/Creator guidance for the expansion/i);
+
     writeEvidence(
       "rabbit-hole-expand-wiring.log",
       [
@@ -195,6 +223,10 @@ describe("Rabbit Hole Expansion Expand-drawer wiring", () => {
         "process_candidates=" + JSON.stringify(process.candidates),
         "mapped_n=" + mapped.length,
         "rh_prompt_snip=" + rhPrompt.slice(0, 180),
+        "rh_modifier_included=" + rhWithGuidance.includes(modifier),
+        "rh_empty_omits_guidance=" +
+          !rhEmpty.includes("Creator guidance for the expansion"),
+        "host_forwards_userGuidance_to_rh=true",
       ].join("\n"),
     );
   });

@@ -204,6 +204,67 @@ describe("resolveExpandFromSourceSelection", () => {
       canShowExpandBlockDrawer({ canEdit: true, soleFilledSelected: false }),
     ).toBe(false);
   });
+
+  it("optional modifier guidance is included only when non-empty", () => {
+    const source = {
+      title: "Quadratic formula",
+      description: "ax^2+bx+c=0",
+      planning_prompt: "Derive then practice",
+    };
+    const modifier =
+      "Emphasize real-world applications and keep examples beginner-friendly";
+
+    const withGuidance = buildExpandFromSourceContextPrompt(source, modifier);
+    expect(withGuidance).toContain("Quadratic formula");
+    expect(withGuidance).toContain(modifier);
+    expect(withGuidance).toMatch(/Creator guidance for the expansion/i);
+
+    const slotWith = buildExpandFromSourceSlotPrompt({
+      source,
+      slot: { row: 6, col: 5 },
+      slotIndex: 0,
+      totalSlots: 3,
+      userGuidance: modifier,
+    });
+    expect(slotWith).toContain(modifier);
+    expect(slotWith).toContain("Quadratic formula");
+    expect(slotWith).toMatch(/row 6, col 5/);
+
+    // Empty / omitted / whitespace: source-only behavior (no guidance line)
+    const emptyCtx = buildExpandFromSourceContextPrompt(source, "");
+    const omittedCtx = buildExpandFromSourceContextPrompt(source);
+    const wsCtx = buildExpandFromSourceContextPrompt(source, "   \n\t  ");
+    for (const p of [emptyCtx, omittedCtx, wsCtx]) {
+      expect(p).toContain("Quadratic formula");
+      expect(p).toContain("ax^2+bx+c=0");
+      expect(p).not.toMatch(/Creator guidance for the expansion/i);
+    }
+    const slotEmpty = buildExpandFromSourceSlotPrompt({
+      source,
+      slot: { row: 6, col: 5 },
+      slotIndex: 0,
+      totalSlots: 1,
+      userGuidance: "",
+    });
+    expect(slotEmpty).toContain("Quadratic formula");
+    expect(slotEmpty).not.toMatch(/Creator guidance for the expansion/i);
+
+    writeEvidence(
+      "expand-modifier-prompt-tests.log",
+      [
+        "with_guidance_contains_modifier=" + withGuidance.includes(modifier),
+        "slot_with_contains_modifier=" + slotWith.includes(modifier),
+        "empty_omits_guidance_line=" +
+          !emptyCtx.includes("Creator guidance for the expansion"),
+        "omitted_omits_guidance_line=" +
+          !omittedCtx.includes("Creator guidance for the expansion"),
+        "ws_omits_guidance_line=" +
+          !wsCtx.includes("Creator guidance for the expansion"),
+        "with_guidance_snip=" + withGuidance.slice(0, 280),
+        "slot_with_snip=" + slotWith.slice(0, 280),
+      ].join("\n"),
+    );
+  });
 });
 
 describe("structural expand-from-source module", () => {

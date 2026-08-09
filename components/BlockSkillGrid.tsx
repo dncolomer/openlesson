@@ -22,6 +22,8 @@ import {
   SKILL_GRID_CELL_SIZE,
   SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
   SKILL_GRID_GAP,
+  SKILL_GRID_MAX_ZOOM,
+  SKILL_GRID_MIN_ZOOM,
   SKILL_GRID_PITCH,
   type GridCell,
   type SkillGridNode,
@@ -38,6 +40,7 @@ import {
   canDeleteMapNote,
   canEditMapNoteContent,
   canMutateMapNoteGeometry,
+  createLearnerMapNote,
   createLearnerMapNoteAtViewportCenter,
   defaultMapNotesPlaneVisible,
   deleteLearnerMapNote,
@@ -194,13 +197,22 @@ import {
 } from "@/lib/map-ground-rules";
 import {
   buildMinimapClusterGraph,
+  cellsForMinimapCluster,
+  getPanZoomToOneToOneClusterView,
   MINIMAP_FRAME_HEIGHT,
   MINIMAP_FRAME_PADDING,
   MINIMAP_FRAME_WIDTH,
   placementsFromOccupiedCells,
-  projectMinimapClusters,
+  projectMinimapTiles,
   type MinimapCluster,
+  type MinimapCountLabel,
+  type MinimapGridCell,
 } from "@/lib/map-minimap-clusters";
+import {
+  WORKSPACE_INTERACTION_MODES,
+  workspaceModeDisplayLabel,
+  type WorkspaceInteractionMode,
+} from "@/lib/workspace-mode";
 import {
   buildShapeContextSourceOptions,
   toggleShapeContextSelection,
@@ -281,6 +293,49 @@ interface BlockSkillGridProps {
    * empty-cell selection so residual chrome cannot remain after ops like cluster.
    */
   mapSelectionClearNonce?: number;
+  /**
+   * Host-driven multi-select apply (Map Search / Suggest empty spots).
+   * When `token` increases, apply blockIds and/or emptyCells without lasso.
+   */
+  applyMapSelection?: {
+    token: number;
+    blockIds?: string[] | null;
+    emptyCells?: Array<{ row: number; col: number }> | null;
+  } | null;
+  /**
+   * Selective Explanation: free-shape draw mode independent of lasso multi-select.
+   * Drawing does not toggle selectedBlockIds / empty cells.
+   */
+  selectiveExplanationActive?: boolean;
+  /** Completed free-shape polygon in continuous grid coords (overlay display). */
+  selectiveExplanationPolygon?: Array<{ x: number; y: number }> | null;
+  /** Fired when free-shape draw completes (polygon in grid continuous coords). */
+  onSelectiveExplanationComplete?: (
+    polygon: Array<{ x: number; y: number }>,
+  ) => void;
+  /**
+   * Inject a map Note at world plane position (Selective Explanation → Note).
+   * When token increases, create note with body at (x, y).
+   */
+  injectMapNote?: {
+    token: number;
+    body: string;
+    x: number;
+    y: number;
+    source?: "creator" | "learner";
+  } | null;
+  /**
+   * Map explore open state + toggle (button under minimap, above Add Note).
+   * Host owns open/close restore of the right column.
+   */
+  mapExploreOpen?: boolean;
+  onMapExploreToggle?: () => void;
+  /**
+   * Build / Play mode toggle under minimap (right under the minimap frame).
+   * When onInteractionModeChange is omitted, the toggle is hidden.
+   */
+  interactionMode?: "creator" | "learner";
+  onInteractionModeChange?: (mode: "creator" | "learner") => void;
   /**
    * @deprecated Prefer onEmptySelectionChange — still maps single cell for older hosts.
    */
@@ -918,6 +973,15 @@ export function BlockSkillGrid({
   onAbortExpandJob,
   clusterMapJob = null,
   mapSelectionClearNonce = 0,
+  applyMapSelection = null,
+  selectiveExplanationActive = false,
+  selectiveExplanationPolygon = null,
+  onSelectiveExplanationComplete,
+  injectMapNote = null,
+  mapExploreOpen = false,
+  onMapExploreToggle,
+  interactionMode: interactionModeProp,
+  onInteractionModeChange,
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
@@ -1520,6 +1584,110 @@ export function BlockSkillGrid({
     onSelectedBlockIdsChange,
   ]);
 
+  // Host-driven multi-select apply (Map Search / Suggest empty spots).
+  const applyMapSelectionTokenRef = useRef(0);
+  useEffect(() => {
+    if (!applyMapSelection || !applyMapSelection.token) return;
+    if (applyMapSelection.token === applyMapSelectionTokenRef.current) return;
+    applyMapSelectionTokenRef.current = applyMapSelection.token;
+    const blockIds = (applyMapSelection.blockIds || [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean);
+    const emptyCells = (applyMapSelection.emptyCells || [])
+      .filter(
+        (c) =>
+          c &&
+          Number.isFinite(c.row) &&
+          Number.isFinite(c.col),
+      )
+      .map((c) => ({ row: Math.trunc(c.row), col: Math.trunc(c.col) }));
+
+    if (blockIds.length > 0) {
+      selectedBlockIdsRef.current = blockIds;
+      setSelectedBlockIds(blockIds);
+      selectedEmptyCellsRef.current = [];
+      setSelectedEmptyCells([]);
+      onEmptySelectionChange?.(null);
+      onAddTargetChange?.(null);
+      onSelectedBlockIdsChange?.(blockIds);
+      if (blockIds.length === 1) onSelectNode(blockIds[0]);
+      else onSelectNode(null);
+      return;
+    }
+    if (emptyCells.length > 0) {
+      selectedEmptyCellsRef.current = emptyCells;
+      setSelectedEmptyCells(emptyCells);
+      selectedBlockIdsRef.current = [];
+      setSelectedBlockIds([]);
+      onSelectedBlockIdsChange?.(null);
+      onSelectNode(null);
+      onEmptySelectionChange?.(emptyCells);
+      return;
+    }
+    // Explicit empty apply: clear
+    selectedEmptyCellsRef.current = [];
+    selectedBlockIdsRef.current = [];
+    setSelectedEmptyCells([]);
+    setSelectedBlockIds([]);
+    onEmptySelectionChange?.(null);
+    onSelectedBlockIdsChange?.(null);
+    onSelectNode(null);
+  }, [
+    applyMapSelection,
+    onAddTargetChange,
+    onEmptySelectionChange,
+    onSelectNode,
+    onSelectedBlockIdsChange,
+  ]);
+
+  // Selective Explanation free-shape draw (independent of lasso selection).
+  const selectiveDragRef = useRef<{
+    pointerId: number;
+    points: Array<{ x: number; y: number }>;
+  } | null>(null);
+  const [selectiveDrawOverlay, setSelectiveDrawOverlay] = useState<Array<{
+    x: number;
+    y: number;
+  }> | null>(null);
+  const selectiveExplanationActiveRef = useRef(selectiveExplanationActive);
+  selectiveExplanationActiveRef.current = selectiveExplanationActive;
+
+  // Inject map Note from Selective Explanation → Note.
+  const injectMapNoteTokenRef = useRef(0);
+  useEffect(() => {
+    if (!injectMapNote || !injectMapNote.token) return;
+    if (injectMapNote.token === injectMapNoteTokenRef.current) return;
+    injectMapNoteTokenRef.current = injectMapNote.token;
+    if (!mountMapNotes || !workspaceId) return;
+    const body = String(injectMapNote.body || "").trim();
+    const source =
+      injectMapNote.source === "learner" || injectMapNote.source === "creator"
+        ? injectMapNote.source
+        : learnerMode
+          ? "learner"
+          : "creator";
+    const note = createLearnerMapNote({
+      body,
+      x: Number(injectMapNote.x) || 0,
+      y: Number(injectMapNote.y) || 0,
+      source,
+    });
+    if (source === "learner" || learnerMode) {
+      persistLearnerNotes(upsertLearnerMapNote(learnerNotes, note));
+    } else {
+      persistCreatorNotes(upsertLearnerMapNote(creatorNotes, note));
+    }
+  }, [
+    creatorNotes,
+    injectMapNote,
+    learnerMode,
+    learnerNotes,
+    mountMapNotes,
+    persistCreatorNotes,
+    persistLearnerNotes,
+    workspaceId,
+  ]);
+
   // Drop optimistic rows once parent nodes catch up from the server.
   useEffect(() => {
     setOptimisticPlacements((prev) => {
@@ -1783,31 +1951,92 @@ export function BlockSkillGrid({
     return map;
   }, [placements, spans, nodesById]);
 
-  const minimapGraph = useMemo(
-    () => buildMinimapClusterGraph(placementsFromOccupiedCells(occupiedByBlockId)),
+  const minimapPlacements = useMemo(
+    () => placementsFromOccupiedCells(occupiedByBlockId),
     [occupiedByBlockId],
   );
 
-  const minimapPoints = useMemo(
-    () =>
-      projectMinimapClusters(
-        minimapGraph.clusters,
-        MINIMAP_FRAME_WIDTH,
-        MINIMAP_FRAME_HEIGHT,
-        MINIMAP_FRAME_PADDING,
-      ),
-    [minimapGraph.clusters],
+  const minimapGraph = useMemo(
+    () => buildMinimapClusterGraph(minimapPlacements),
+    [minimapPlacements],
   );
 
-  const panToCluster = useCallback(
-    (cluster: MinimapCluster) => {
+  /** Mini map tiles + fog (no inter-cluster link edges). */
+  const minimapTileView = useMemo(
+    () =>
+      projectMinimapTiles({
+        placements: minimapPlacements,
+        width: MINIMAP_FRAME_WIDTH,
+        height: MINIMAP_FRAME_HEIGHT,
+        padding: MINIMAP_FRAME_PADDING,
+        clusters: minimapGraph.clusters,
+      }),
+    [minimapGraph.clusters, minimapPlacements],
+  );
+
+  const panToMinimapCell = useCallback(
+    (cell: MinimapGridCell) => {
       const viewport = viewportRef.current;
       if (!viewport) return;
       const { width, height } = viewport.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      setPan(getPanToCenterCell(width, height, cluster.centerCell, zoom));
+      // Single cell: 1:1 zoom centered on that cell
+      const cam = getPanZoomToOneToOneClusterView({
+        viewportWidth: width,
+        viewportHeight: height,
+        cells: [cell],
+        oneToOneZoom: 1,
+        pitch: SKILL_GRID_PITCH,
+        cellSize: SKILL_GRID_CELL_SIZE,
+        minZoom: SKILL_GRID_MIN_ZOOM,
+        maxZoom: SKILL_GRID_MAX_ZOOM,
+      });
+      setZoom(cam.zoom);
+      setPan(cam.pan);
     },
-    [zoom],
+    [],
+  );
+
+  const panToCluster = useCallback(
+    (cluster: MinimapCluster | MinimapCountLabel) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const { width, height } = viewport.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+
+      // Resolve full cluster (labels only carry center + id)
+      const full: MinimapCluster | undefined =
+        "blockIds" in cluster && Array.isArray((cluster as MinimapCluster).blockIds)
+          ? (cluster as MinimapCluster)
+          : minimapGraph.clusters.find(
+              (c) =>
+                c.id === (cluster as MinimapCountLabel).clusterId ||
+                c.centerBlockId === cluster.centerBlockId,
+            );
+
+      const cells = cellsForMinimapCluster(
+        minimapPlacements,
+        full || {
+          blockIds: cluster.centerBlockId ? [cluster.centerBlockId] : [],
+          centerCell: cluster.centerCell,
+          centerBlockId: cluster.centerBlockId,
+        },
+      );
+
+      const cam = getPanZoomToOneToOneClusterView({
+        viewportWidth: width,
+        viewportHeight: height,
+        cells,
+        oneToOneZoom: 1,
+        pitch: SKILL_GRID_PITCH,
+        cellSize: SKILL_GRID_CELL_SIZE,
+        minZoom: SKILL_GRID_MIN_ZOOM,
+        maxZoom: SKILL_GRID_MAX_ZOOM,
+      });
+      setZoom(cam.zoom);
+      setPan(cam.pan);
+    },
+    [minimapGraph.clusters, minimapPlacements],
   );
 
   const applyCenterOnStart = useCallback(
@@ -1999,6 +2228,29 @@ export function BlockSkillGrid({
 
       if (event.button !== 0) return;
 
+      // Selective Explanation free-shape (independent of block/empty selection).
+      // Capture on the stable viewport — never on a surface that unmounts mid-gesture.
+      if (selectiveExplanationActiveRef.current && !viewOnly) {
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+        const rect = viewport.getBoundingClientRect();
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        selectiveDragRef.current = {
+          pointerId: event.pointerId,
+          points: [{ x: localX, y: localY }],
+        };
+        setSelectiveDrawOverlay([{ x: localX, y: localY }]);
+        try {
+          viewport.setPointerCapture(event.pointerId);
+        } catch {
+          /* some browsers reject capture if pointer not active */
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       // Annotation draw mode (creator + selected layer): draw white strokes anywhere.
       if (
         !learnerMode &&
@@ -2085,6 +2337,28 @@ export function BlockSkillGrid({
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+    // Selective Explanation free-shape draw (viewport-local points).
+    const sel = selectiveDragRef.current;
+    if (sel && sel.pointerId === event.pointerId) {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      const last = sel.points[sel.points.length - 1];
+      const step = last
+        ? Math.hypot(localX - last.x, localY - last.y)
+        : Infinity;
+      if (step >= 3) {
+        sel.points.push({ x: localX, y: localY });
+      } else if (last) {
+        last.x = localX;
+        last.y = localY;
+      }
+      setSelectiveDrawOverlay([...sel.points]);
+      return;
+    }
+
     const ann = annotationDrawRef.current;
     if (ann && ann.pointerId === event.pointerId) {
       const viewport = viewportRef.current;
@@ -2171,6 +2445,51 @@ export function BlockSkillGrid({
 
   const endDrag = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      // Selective Explanation free-shape complete → grid polygon (no selection change).
+      const sel = selectiveDragRef.current;
+      if (sel && sel.pointerId === event.pointerId) {
+        selectiveDragRef.current = null;
+        setSelectiveDrawOverlay(null);
+        const viewport = viewportRef.current;
+        // Release capture on the stable viewport (where pointerdown captured).
+        if (viewport?.hasPointerCapture?.(event.pointerId)) {
+          try {
+            viewport.releasePointerCapture(event.pointerId);
+          } catch {
+            /* ignore */
+          }
+        } else if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+          try {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (!viewport || !onSelectiveExplanationComplete) return;
+        const vrect = viewport.getBoundingClientRect();
+        const pts = [...sel.points];
+        let pathPx = 0;
+        for (let i = 1; i < pts.length; i++) {
+          pathPx += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        }
+        if (pathPx < PAN_CLICK_THRESHOLD * 2 || pts.length < 3) return;
+        const polygon = pts.map((p) =>
+          clientPointToGridPoint({
+            clientX: vrect.left + p.x,
+            clientY: vrect.top + p.y,
+            viewportLeft: vrect.left,
+            viewportTop: vrect.top,
+            panX: pan.x,
+            panY: pan.y,
+            zoom,
+            pitch: SKILL_GRID_PITCH,
+          }),
+        );
+        // Do NOT touch selectedBlockIds / selectedEmptyCells — overlay only.
+        onSelectiveExplanationComplete(polygon);
+        return;
+      }
+
       const ann = annotationDrawRef.current;
       if (ann && ann.pointerId === event.pointerId) {
         annotationDrawRef.current = null;
@@ -2424,6 +2743,7 @@ export function BlockSkillGrid({
       onAddTargetChange,
       onEmptySelectionChange,
       onSelectNode,
+      onSelectiveExplanationComplete,
       pan.x,
       pan.y,
       persistAnnotationLayers,
@@ -4152,11 +4472,69 @@ export function BlockSkillGrid({
           data-map-lasso-mode={activeLassoShape || "false"}
           data-map-lasso-shape={activeLassoShape || undefined}
           data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
+          data-selective-explanation-active={
+            selectiveExplanationActive ? "true" : "false"
+          }
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+        {/* Selective Explanation live free-shape (independent of lasso selection). */}
+        {selectiveDrawOverlay && selectiveDrawOverlay.length > 0 ? (
+          <svg
+            data-selective-explanation-draw
+            className="pointer-events-none absolute inset-0 z-[14] h-full w-full overflow-visible"
+            aria-hidden
+          >
+            <polygon
+              fill="rgba(255, 255, 255, 0.08)"
+              stroke="rgba(255, 255, 255, 0.9)"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              points={selectiveDrawOverlay.map((p) => `${p.x},${p.y}`).join(" ")}
+            />
+          </svg>
+        ) : null}
+        {/* Completed selective overlay in world/grid space (rendered via continuous grid → screen). */}
+        {selectiveExplanationPolygon &&
+        selectiveExplanationPolygon.length >= 3 &&
+        !selectiveDrawOverlay ? (
+          <svg
+            data-selective-explanation-overlay
+            className="pointer-events-none absolute inset-0 z-[13] h-full w-full overflow-visible"
+            aria-hidden
+          >
+            <polygon
+              fill="rgba(255, 255, 255, 0.06)"
+              stroke="rgba(255, 255, 255, 0.85)"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeDasharray="4 3"
+              points={selectiveExplanationPolygon
+                .map((p) => {
+                  const sx = p.x * SKILL_GRID_PITCH * zoom + pan.x;
+                  const sy = p.y * SKILL_GRID_PITCH * zoom + pan.y;
+                  return `${sx},${sy}`;
+                })
+                .join(" ")}
+            />
+          </svg>
+        ) : null}
+        {/* Full-map surface for Selective Explanation free-shape.
+            Stay mounted for the entire active draw lifetime (mirror annotation surface).
+            Unmounting on selectiveDrawOverlay would release pointer capture mid-gesture. */}
+        {selectiveExplanationActive ? (
+          <div
+            data-selective-explanation-surface
+            className="absolute inset-0 z-[11] cursor-crosshair"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
+        ) : null}
         {lassoOverlay?.kind === "rect" ? (
           <div
             data-map-lasso-rect
@@ -4289,21 +4667,26 @@ export function BlockSkillGrid({
             )}
           </svg>
         ) : null}
-        {/* Rectangular minimap: cluster graph, top-right overlay (always shown) */}
+        {/* Rectangular minimap: mini map tiles + soft fog (no hard bbox / no edges) */}
         <div
           data-block-minimap
+          data-minimap-mode="tiles"
           data-minimap-cluster-count={minimapGraph.clusters.length}
-          data-minimap-empty={minimapGraph.clusters.length === 0 ? "true" : "false"}
-          className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+          data-minimap-block-count={minimapTileView.totalBlocks}
+          data-minimap-tile-count={minimapTileView.tiles.length}
+          data-minimap-empty={
+            minimapTileView.tiles.length === 0 ? "true" : "false"
+          }
+          className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/95 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
           style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
           onPointerDown={(e) => e.stopPropagation()}
           title={
-            minimapGraph.clusters.length > 0
-              ? "Minimap — click a cluster to center the map"
-              : "Minimap — create a cluster to see it here"
+            minimapTileView.tiles.length > 0
+              ? "Minimap — click a cluster or square for 1:1 view"
+              : "Minimap — create blocks to see them here"
           }
         >
-          {minimapGraph.clusters.length === 0 ? (
+          {minimapTileView.tiles.length === 0 ? (
             <div
               className="flex h-full w-full items-center justify-center px-4 text-center"
               data-minimap-empty-message
@@ -4317,67 +4700,115 @@ export function BlockSkillGrid({
               width={MINIMAP_FRAME_WIDTH}
               height={MINIMAP_FRAME_HEIGHT}
               className="block"
-              aria-label="Block cluster minimap"
+              aria-label="Block map minimap"
+              data-minimap-tile-view
             >
-              {/* Edges between neighboring clusters (MST) */}
-              {minimapGraph.edges.map((edge) => {
-                const a = minimapPoints.get(edge.fromClusterId);
-                const b = minimapPoints.get(edge.toClusterId);
-                if (!a || !b) return null;
+              <defs>
+                <radialGradient
+                  id="minimap-fog-gradient"
+                  cx="50%"
+                  cy="50%"
+                  r="75%"
+                >
+                  <stop offset="0%" stopColor="rgba(14,14,16,0.2)" />
+                  <stop offset="60%" stopColor="rgba(8,8,10,0.55)" />
+                  <stop offset="100%" stopColor="rgba(4,4,6,0.88)" />
+                </radialGradient>
+                <pattern
+                  id="minimap-fog-noise"
+                  width="7"
+                  height="7"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <rect width="7" height="7" fill="rgba(16,16,20,0.35)" />
+                  <circle cx="1.4" cy="2.2" r="0.5" fill="rgba(70,70,78,0.28)" />
+                  <circle cx="4.5" cy="5" r="0.4" fill="rgba(55,55,62,0.3)" />
+                  <circle cx="3.2" cy="1.2" r="0.3" fill="rgba(90,90,100,0.2)" />
+                </pattern>
+              </defs>
+              {/* Soft ambient fog only — no hard rectangular fog-cell bbox around clusters */}
+              <rect
+                data-minimap-fog-base
+                x={0}
+                y={0}
+                width={MINIMAP_FRAME_WIDTH}
+                height={MINIMAP_FRAME_HEIGHT}
+                fill="url(#minimap-fog-gradient)"
+              />
+              <rect
+                data-minimap-fog-texture
+                x={0}
+                y={0}
+                width={MINIMAP_FRAME_WIDTH}
+                height={MINIMAP_FRAME_HEIGHT}
+                fill="url(#minimap-fog-noise)"
+                opacity={0.7}
+                pointerEvents="none"
+              />
+              {/* Occupied mini squares (map tiles) — pointerdown → 1:1 navigation */}
+              {minimapTileView.tiles.map((tile) => (
+                <rect
+                  key={`tile-${tile.blockId}-${tile.row}:${tile.col}`}
+                  data-minimap-tile
+                  data-minimap-tile-block={tile.blockId}
+                  data-minimap-tile-row={tile.row}
+                  data-minimap-tile-col={tile.col}
+                  x={tile.x}
+                  y={tile.y}
+                  width={tile.w}
+                  height={tile.h}
+                  rx={Math.min(1.5, tile.w * 0.2)}
+                  fill="rgba(255,255,255,0.82)"
+                  stroke="rgba(255,255,255,0.95)"
+                  strokeWidth={0.6}
+                  className="cursor-pointer transition hover:fill-white"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    panToMinimapCell({ row: tile.row, col: tile.col });
+                  }}
+                />
+              ))}
+              {/* Invisible cluster hit targets (no visible circles / numbers) */}
+              {minimapTileView.labels.map((label) => {
+                const r = Math.min(16, 10 + Math.log2(label.count + 1) * 2);
                 return (
-                  <line
-                    key={`${edge.fromClusterId}-${edge.toClusterId}`}
-                    data-minimap-edge
-                    x1={a.x}
-                    y1={a.y}
-                    x2={b.x}
-                    y2={b.y}
-                    stroke="rgba(255,255,255,0.22)"
-                    strokeWidth={1.25}
-                  />
-                );
-              })}
-              {minimapGraph.clusters.map((cluster) => {
-                const pt = minimapPoints.get(cluster.id);
-                if (!pt) return null;
-                const r = Math.min(14, 8 + Math.log2(cluster.count + 1) * 2.2);
-                return (
-                  <g key={cluster.id}>
+                  <g
+                    key={label.clusterId}
+                    data-minimap-cluster={label.clusterId}
+                    data-minimap-cluster-count={label.count}
+                    data-minimap-center-block={label.centerBlockId}
+                    className="cursor-pointer"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      panToCluster(label);
+                    }}
+                  >
                     <circle
-                      cx={pt.x}
-                      cy={pt.y}
+                      data-minimap-cluster-hit
+                      cx={label.x}
+                      cy={label.y}
                       r={r}
-                      fill="rgba(255,255,255,0.12)"
-                      stroke="rgba(255,255,255,0.55)"
-                      strokeWidth={1.25}
-                      className="cursor-pointer transition hover:fill-white/25"
-                      data-minimap-cluster={cluster.id}
-                      data-minimap-cluster-count={cluster.count}
-                      data-minimap-center-block={cluster.centerBlockId}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        panToCluster(cluster);
-                      }}
+                      fill="transparent"
+                      stroke="none"
                     />
-                    <text
-                      x={pt.x}
-                      y={pt.y}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      className="pointer-events-none select-none fill-neutral-100"
-                      style={{ fontSize: cluster.count >= 10 ? 9 : 10, fontWeight: 600 }}
-                    >
-                      {cluster.count}
-                    </text>
                   </g>
                 );
               })}
+              {/* Counts kept as data attrs only (not rendered) for tests / tooling */}
+              <g
+                data-minimap-total-blocks={minimapTileView.totalBlocks}
+                data-minimap-counts-hidden="true"
+              />
             </svg>
           )}
         </div>
 
-        {/* Right stack under minimap: notes + annotation layers */}
-        {!viewOnly && (mountMapNotes || workspaceId) ? (
+        {/* Right stack under minimap: Build/Play, Explore Map, Add note, layers */}
+        {!viewOnly &&
+        (mountMapNotes ||
+          workspaceId ||
+          onMapExploreToggle ||
+          onInteractionModeChange) ? (
           <div
             ref={minimapStackRef}
             data-map-minimap-stack
@@ -4391,6 +4822,70 @@ export function BlockSkillGrid({
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
+            {typeof onInteractionModeChange === "function" ? (
+              <div
+                className="flex w-full shrink-0 items-center gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+                data-workspace-mode-toggle
+                data-workspace-mode-under-minimap
+                role="group"
+                aria-label="Workspace mode"
+              >
+                {WORKSPACE_INTERACTION_MODES.map((id) => {
+                  const mode: WorkspaceInteractionMode =
+                    interactionModeProp === "learner" ||
+                    interactionModeProp === "creator"
+                      ? interactionModeProp
+                      : learnerMode
+                        ? "learner"
+                        : "creator";
+                  const active = mode === id;
+                  const label = workspaceModeDisplayLabel(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      data-workspace-mode={id}
+                      data-active={active ? "true" : "false"}
+                      aria-pressed={active}
+                      aria-label={label}
+                      onClick={() => onInteractionModeChange(id)}
+                      className={`min-w-0 flex-1 rounded px-2 py-1.5 text-center text-[10px] font-medium uppercase tracking-wide transition ${
+                        active
+                          ? "bg-white/15 text-white"
+                          : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {typeof onMapExploreToggle === "function" ? (
+              <button
+                type="button"
+                data-map-explore-toggle
+                data-map-explore-under-minimap
+                data-map-explore-open={mapExploreOpen ? "true" : "false"}
+                aria-label={
+                  mapExploreOpen ? "Close Explore Map" : "Open Explore Map"
+                }
+                aria-pressed={mapExploreOpen}
+                title={
+                  mapExploreOpen
+                    ? "Close Explore Map drawers"
+                    : "Explore Map: search, spots, overview, selective summary"
+                }
+                onClick={() => onMapExploreToggle()}
+                className={`w-full rounded-md border px-2.5 py-1.5 text-left text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
+                  mapExploreOpen
+                    ? "border-white/30 bg-white text-black hover:bg-neutral-200"
+                    : "border-neutral-700/90 bg-neutral-950/90 text-neutral-200 hover:text-white"
+                }`}
+              >
+                Explore Map
+              </button>
+            ) : null}
             {mountMapNotes ? (
               <div
                 className="flex items-stretch gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
@@ -4486,6 +4981,16 @@ export function BlockSkillGrid({
               </div>
             ) : null}
 
+            {/* Small separator between Add note and annotation layers */}
+            {mountMapNotes && workspaceId ? (
+              <div
+                data-map-notes-layers-separator
+                role="separator"
+                aria-hidden
+                className="mx-1 my-0.5 h-px shrink-0 bg-neutral-700/70"
+              />
+            ) : null}
+
             {/* Annotation layers: creator add/select/delete; learner toggle under Add note */}
             {workspaceId ? (
               <div
@@ -4515,14 +5020,14 @@ export function BlockSkillGrid({
                             setAnnotationNameDraft("");
                           }
                         }}
-                        className="mb-1 w-full rounded border border-neutral-700 bg-black/40 px-1.5 py-1 text-[11px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+                        className="mb-1 w-full rounded border border-neutral-700 bg-black/40 px-2 py-1 text-left text-[11px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
                       />
                       <div className="flex gap-1">
                         <button
                           type="button"
                           data-annotation-layer-add-confirm
                           onClick={() => handleAnnotationLayerAdd()}
-                          className="flex-1 rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-white/15"
+                          className="flex-1 rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-left text-[10px] font-medium text-white hover:bg-white/15"
                         >
                           Add
                         </button>
@@ -4545,7 +5050,7 @@ export function BlockSkillGrid({
                       data-annotation-layer-add
                       title="Add a freehand annotation layer"
                       onClick={() => setAnnotationNameOpen(true)}
-                      className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
+                      className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
                     >
                       Add layer
                     </button>
@@ -4580,7 +5085,7 @@ export function BlockSkillGrid({
                               : "Select layer to draw"
                           }
                           onClick={() => handleAnnotationLayerSelect(layer.id)}
-                          className={`min-w-0 flex-1 truncate px-2 py-1.5 text-left text-[11px] font-medium transition ${
+                          className={`min-w-0 flex-1 truncate px-2.5 py-1.5 text-left text-[11px] font-medium transition ${
                             selected
                               ? "text-white"
                               : "text-neutral-200 hover:text-white"
@@ -4590,7 +5095,7 @@ export function BlockSkillGrid({
                         </button>
                       ) : (
                         <span
-                          className="min-w-0 flex-1 truncate px-2 py-1.5 text-[11px] font-medium text-neutral-200"
+                          className="min-w-0 flex-1 truncate px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200"
                           data-annotation-layer-label={layer.id}
                         >
                           {layer.name}

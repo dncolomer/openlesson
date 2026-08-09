@@ -150,13 +150,17 @@ export type ExpandSourceIdentity = {
 /**
  * Build the main prompt/context string from the selected filled block.
  * Used as the base for every expand slot (AI invents neighbors around this).
+ * Optional `userGuidance` is included only when non-empty (empty does not alter
+ * source-only behavior).
  */
 export function buildExpandFromSourceContextPrompt(
   source: ExpandSourceIdentity | null | undefined,
+  userGuidance?: string | null,
 ): string {
   const title = String(source?.title ?? "").trim() || "Untitled block";
   const description = String(source?.description ?? "").trim();
   const planning = String(source?.planning_prompt ?? "").trim();
+  const guidance = String(userGuidance ?? "").trim();
   const parts = [
     `Expand around the selected learning block as the main context.`,
     `Source block title: "${title}"`,
@@ -167,6 +171,9 @@ export function buildExpandFromSourceContextPrompt(
   if (planning) {
     parts.push(`Source planning / teaching notes: ${planning}`);
   }
+  if (guidance) {
+    parts.push(`Creator guidance for the expansion:\n${guidance}`);
+  }
   parts.push(
     `Create neighboring 1×1 blocks that complement and extend this source — distinct subtopics, same overall theme. Do not duplicate the source title.`,
   );
@@ -175,14 +182,20 @@ export function buildExpandFromSourceContextPrompt(
 
 /**
  * Per-slot prompt for add-block-at-slot multi-create from a filled source.
+ * Optional `userGuidance` is folded into the base context when non-empty.
  */
 export function buildExpandFromSourceSlotPrompt(input: {
   source: ExpandSourceIdentity;
   slot: AddExpandCell;
   slotIndex: number;
   totalSlots: number;
+  /** Optional free-text modifier from Expand drawer; omitted/empty = source-only. */
+  userGuidance?: string | null;
 }): string {
-  const base = buildExpandFromSourceContextPrompt(input.source);
+  const base = buildExpandFromSourceContextPrompt(
+    input.source,
+    input.userGuidance,
+  );
   const i = Math.max(0, Math.floor(Number(input.slotIndex) || 0));
   const total = Math.max(1, Math.floor(Number(input.totalSlots) || 1));
   const { row, col } = input.slot;

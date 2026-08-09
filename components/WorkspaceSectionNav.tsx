@@ -3,7 +3,11 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
+import {
+  WORKSPACE_INTERACTION_MODES,
+  workspaceModeDisplayLabel,
+  type WorkspaceInteractionMode,
+} from "@/lib/workspace-mode";
 
 export type WorkspaceSectionNavItem = {
   key: WorkspaceSectionKey;
@@ -18,7 +22,7 @@ interface WorkspaceSectionNavProps {
   variant?: "bar" | "pills";
   /** Workspace name shown on the right of the section tabs. */
   workspaceTitle?: string | null;
-  /** Creator vs Learner mode (toggle next to workspace name). */
+  /** Build (authoring) vs Play (practice) mode (toggle next to workspace name). */
   interactionMode?: WorkspaceInteractionMode;
   onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
   /** Show mode toggle (default true when onInteractionModeChange provided). */
@@ -48,28 +52,25 @@ export function WorkspaceSectionNav({
       role="group"
       aria-label="Workspace mode"
     >
-      {(
-        [
-          { id: "creator" as const, label: "Creator" },
-          { id: "learner" as const, label: "Learner" },
-        ] as const
-      ).map((m) => {
-        const active = interactionMode === m.id;
+      {WORKSPACE_INTERACTION_MODES.map((id) => {
+        const active = interactionMode === id;
+        const label = workspaceModeDisplayLabel(id);
         return (
           <button
-            key={m.id}
+            key={id}
             type="button"
-            data-workspace-mode={m.id}
+            data-workspace-mode={id}
             data-active={active ? "true" : "false"}
             aria-pressed={active}
-            onClick={() => onInteractionModeChange?.(m.id)}
+            aria-label={label}
+            onClick={() => onInteractionModeChange?.(id)}
             className={`rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
               active
                 ? "bg-white/15 text-white"
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            {m.label}
+            {label}
           </button>
         );
       })}

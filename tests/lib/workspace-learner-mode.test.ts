@@ -9,6 +9,9 @@ import {
   mountsLearnerPracticeDrawer,
   resolveActiveSectionForMode,
   resolveWorkspaceModeShell,
+  workspaceModeDisplayLabel,
+  WORKSPACE_MODE_DISPLAY_LABELS,
+  WORKSPACE_INTERACTION_MODES,
 } from "@/lib/workspace-mode";
 import {
   blocksUnlockedAfterDone,
@@ -25,7 +28,8 @@ import {
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1fc58fd2694a/implementer";
+  process.env.GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-672c722c3036/implementer";
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");
@@ -284,8 +288,97 @@ describe("learner map chrome + DAG view", () => {
   });
 });
 
+describe("Build / Play mode display labels", () => {
+  it("maps creator→Build and learner→Play; shell behavior unchanged for wire ids", () => {
+    expect(workspaceModeDisplayLabel("creator")).toBe("Build");
+    expect(workspaceModeDisplayLabel("learner")).toBe("Play");
+    expect(WORKSPACE_MODE_DISPLAY_LABELS.creator).toBe("Build");
+    expect(WORKSPACE_MODE_DISPLAY_LABELS.learner).toBe("Play");
+    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["creator", "learner"]);
+
+    // Wire ids still drive authoring vs practice shell (labels only changed)
+    expect(mountsCreatorAuthoringDrawers("creator")).toBe(true);
+    expect(mountsLearnerPracticeDrawer("creator")).toBe(false);
+    expect(mountsCreatorAuthoringDrawers("learner")).toBe(false);
+    expect(mountsLearnerPracticeDrawer("learner")).toBe(true);
+    const creatorShell = resolveWorkspaceModeShell({
+      mode: "creator",
+      isOwner: true,
+    });
+    const learnerShell = resolveWorkspaceModeShell({
+      mode: "learner",
+      isLoggedIn: true,
+    });
+    expect(creatorShell.map.showAuthoringToolStrip).toBe(true);
+    expect(creatorShell.soleBlockPane).toBe("creator_default");
+    expect(learnerShell.map.showAuthoringToolStrip).toBe(false);
+    expect(learnerShell.soleBlockPane).toBe("learner_practice");
+
+    const grid = read("components/BlockSkillGrid.tsx");
+    const view = read("components/WorkspaceView.tsx");
+    // Build/Play toggle lives under minimap (not top nav)
+    expect(grid).toContain("data-workspace-mode-toggle");
+    expect(grid).toContain("data-workspace-mode-under-minimap");
+    expect(grid).toContain("workspaceModeDisplayLabel");
+    expect(grid).toContain("WORKSPACE_INTERACTION_MODES");
+    expect(view).toContain("showModeToggle={false}");
+    expect(view).toContain("onInteractionModeChange");
+    // Toggle must not hardcode Creator/Learner button text
+    expect(grid).not.toMatch(/label:\s*"Creator"/);
+    expect(grid).not.toMatch(/label:\s*"Learner"/);
+    expect(grid).not.toMatch(/>\s*Creator\s*</);
+    expect(grid).not.toMatch(/>\s*Learner\s*</);
+    // Builds labels from helper (Build/Play live in workspace-mode)
+    const modeLib = read("lib/workspace-mode.ts");
+    expect(modeLib).toContain('creator: "Build"');
+    expect(modeLib).toContain('learner: "Play"');
+
+    mkdirSync(SCRATCH, { recursive: true });
+    writeFileSync(
+      join(SCRATCH, "build-play-mode-behavior.log"),
+      [
+        "creator_label=" + workspaceModeDisplayLabel("creator"),
+        "learner_label=" + workspaceModeDisplayLabel("learner"),
+        "wire_modes=" + WORKSPACE_INTERACTION_MODES.join(","),
+        "creator_authoring_drawers=" +
+          mountsCreatorAuthoringDrawers("creator"),
+        "learner_practice_drawer=" + mountsLearnerPracticeDrawer("learner"),
+        "creator_strip=" + creatorShell.map.showAuthoringToolStrip,
+        "learner_strip=" + learnerShell.map.showAuthoringToolStrip,
+        "under_minimap_toggle=" +
+          grid.includes("data-workspace-mode-under-minimap"),
+        "nav_showModeToggle_false=" + view.includes("showModeToggle={false}"),
+      ].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      join(SCRATCH, "build-play-labels-structural.log"),
+      [
+        "toggle_under_minimap=" +
+          grid.includes("data-workspace-mode-under-minimap"),
+        "toggle_present=" + grid.includes("data-workspace-mode-toggle"),
+        "uses_workspaceModeDisplayLabel=" +
+          grid.includes("workspaceModeDisplayLabel"),
+        "uses_WORKSPACE_INTERACTION_MODES=" +
+          grid.includes("WORKSPACE_INTERACTION_MODES"),
+        "no_hardcoded_Creator_label=" + !/label:\s*"Creator"/.test(grid),
+        "no_hardcoded_Learner_label=" + !/label:\s*"Learner"/.test(grid),
+        "no_Creator_button_text=" + !/>\s*Creator\s*</.test(grid),
+        "no_Learner_button_text=" + !/>\s*Learner\s*</.test(grid),
+        "helper_Build=" + (workspaceModeDisplayLabel("creator") === "Build"),
+        "helper_Play=" + (workspaceModeDisplayLabel("learner") === "Play"),
+        "mode_lib_Build=" + modeLib.includes('creator: "Build"'),
+        "mode_lib_Play=" + modeLib.includes('learner: "Play"'),
+        "wire_id_creator_still_used=" + modeLib.includes('"creator"'),
+        "wire_id_learner_still_used=" + modeLib.includes('"learner"'),
+      ].join("\n"),
+      "utf8",
+    );
+  });
+});
+
 describe("learner mode UI structural", () => {
-  it("toggle near title; learner drawer vs creator drawers; map flags", () => {
+  it("Build/Play toggle under minimap; learner drawer vs creator drawers; map flags", () => {
     const nav = read("components/WorkspaceSectionNav.tsx");
     const view = read("components/WorkspaceView.tsx");
     const grid = read("components/BlockSkillGrid.tsx");
@@ -293,10 +386,18 @@ describe("learner mode UI structural", () => {
     const perf = read("components/WorkspacePerformancePanel.tsx");
     const mapGround = read("app/api/workspace/map-ground/route.ts");
 
-    expect(nav).toContain("data-workspace-mode-toggle");
-    expect(nav).toContain("data-workspace-mode={m.id}");
-    expect(nav).toContain('id: "creator"');
-    expect(nav).toContain('id: "learner"');
+    // Mode toggle is under minimap stack (not active on nav)
+    expect(grid).toContain("data-workspace-mode-toggle");
+    expect(grid).toContain("data-workspace-mode-under-minimap");
+    expect(grid).toContain('data-workspace-mode={id}');
+    expect(grid).toContain("workspaceModeDisplayLabel");
+    expect(view).toContain("showModeToggle={false}");
+    expect(view).toMatch(
+      /onInteractionModeChange=\{[\s\S]*?selectInteractionMode/,
+    );
+    // Display: Build / Play (not Creator / Learner)
+    expect(grid).not.toMatch(/label:\s*"Creator"/);
+    expect(grid).not.toMatch(/label:\s*"Learner"/);
     expect(view).toContain("WorkspaceLearnerBlockPane");
     expect(view).toContain("selectInteractionMode");
     // Mode flip clears sole / multi / empty selection (both directions)
@@ -317,8 +418,8 @@ describe("learner mode UI structural", () => {
     expect(grid).toMatch(
       /learnerModeRef\.current === learnerMode[\s\S]*?setSelectedBlockIds\(\[\]\)/,
     );
-    // Creator detail must hide Explore/Drill (Learner-only pane).
-    expect(view).toContain("hidePracticeLaunch");
+    // Practice Explore/Drill live on learner drawer; authoring on creator drawers.
+    // (SessionItem still supports hidePracticeLaunch; map shell uses mode panes.)
     expect(view).toMatch(
       /showLearnerDrawer[\s\S]*WorkspaceLearnerBlockPane/,
     );
@@ -326,6 +427,8 @@ describe("learner mode UI structural", () => {
     expect(view).toMatch(
       /showCreatorDrawers[\s\S]*WorkspaceBlockDetailPane/,
     );
+    expect(view).toContain("mountsCreatorAuthoringDrawers");
+    expect(view).toContain("mountsLearnerPracticeDrawer");
     // Real PoW stats path + parser (user-scoped, all quality — not practice-only)
     expect(view).toContain("parseLearnerPowSummaryFromApi");
     expect(view).toContain('subjectKey: "me"');
@@ -433,7 +536,9 @@ describe("learner mode UI structural", () => {
       join(SCRATCH, "workspace-learner-mode-ui.log"),
       [
         "workspace-learner-mode-ui",
-        "toggle=" + nav.includes("data-workspace-mode-toggle"),
+        "toggle_under_minimap=" +
+          grid.includes("data-workspace-mode-under-minimap"),
+        "nav_mode_toggle_off=" + view.includes("showModeToggle={false}"),
         "learner_pane=" + view.includes("WorkspaceLearnerBlockPane"),
         "learner_launch_card=" + learner.includes("data-learner-launch-card"),
         "learner_timebox=" + learner.includes("allowTimed"),

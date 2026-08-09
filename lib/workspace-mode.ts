@@ -17,6 +17,24 @@ export const WORKSPACE_INTERACTION_MODES: readonly WorkspaceInteractionMode[] = 
   "learner",
 ] as const;
 
+/**
+ * User-visible labels for the workspace mode toggle (next to workspace name).
+ * Wire/state ids stay `"creator"` | `"learner"`; display is Build / Play.
+ */
+export const WORKSPACE_MODE_DISPLAY_LABELS: Readonly<
+  Record<WorkspaceInteractionMode, string>
+> = {
+  creator: "Build",
+  learner: "Play",
+} as const;
+
+/** Display label for a mode id (Build for authoring, Play for practice). */
+export function workspaceModeDisplayLabel(
+  mode: WorkspaceInteractionMode,
+): string {
+  return WORKSPACE_MODE_DISPLAY_LABELS[mode];
+}
+
 export function isWorkspaceInteractionMode(
   value: unknown,
 ): value is WorkspaceInteractionMode {

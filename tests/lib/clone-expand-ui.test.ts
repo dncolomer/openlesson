@@ -70,6 +70,13 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     expect(expandPane).toContain("data-expand-block-density");
     expect(expandPane).toContain("resolveExpandFromSourceSelection");
     expect(expandPane).toContain("data-expand-block-submit");
+    // Optional modifier / guidance field on Expand pane + submit opts
+    expect(expandPane).toContain("data-expand-block-modifier");
+    expect(expandPane).toContain("data-expand-block-modifier-input");
+    expect(expandPane).toContain("userGuidance");
+    expect(expandPane).toMatch(
+      /userGuidance\.trim\(\)|guidance \? \{ userGuidance/,
+    );
 
     // Host wiring: arm → empty click paste; expand → multi-create job
     expect(view).toContain("handleCloneArm");
@@ -88,10 +95,14 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     );
     const expandFn = view.slice(
       view.indexOf("handleExpandFromSourceBlock"),
-      view.indexOf("handleExpandFromSourceBlock") + 3500,
+      view.indexOf("handleExpandFromSourceBlock") + 4500,
     );
     expect(expandFn).toContain("add-block-at-slot");
     expect(expandFn).toContain("runAddExpandCreateLoop");
+    expect(expandFn).toContain("userGuidance");
+    expect(expandFn).toMatch(
+      /buildExpandFromSourceSlotPrompt\(\{[\s\S]*?userGuidance/,
+    );
     expect(expandFn).not.toContain('op: "generate_shape"');
 
     expect(gridOps).toContain('"clone_block"');
@@ -130,6 +141,16 @@ describe("Clone left-bar + Expand block UI wiring", () => {
             slotIndex: 0,
             totalSlots: 2,
           }).slice(0, 200),
+        "expand_prompt_with_modifier=" +
+          buildExpandFromSourceSlotPrompt({
+            source: { title: "T", description: "D" },
+            slot: { row: 1, col: 1 },
+            slotIndex: 0,
+            totalSlots: 2,
+            userGuidance: "focus on applications",
+          }).includes("focus on applications"),
+        "pane_has_modifier_field=true",
+        "host_forwards_userGuidance=true",
         "expand_sel_n=" +
           resolveExpandFromSourceSelection({
             sourceBlock: {
@@ -153,6 +174,32 @@ describe("Clone left-bar + Expand block UI wiring", () => {
             hasGridOps: true,
             selectedBlockCount: 1,
             selectedEmptyCellCount: 0,
+          }),
+      ].join("\n"),
+    );
+
+    writeEvidence(
+      "expand-modifier-wiring.log",
+      [
+        "pane_data_expand_block_modifier=true",
+        "pane_data_expand_block_modifier_input=true",
+        "pane_userGuidance_state=true",
+        "submit_opts_userGuidance=true",
+        "host_slot_prompt_userGuidance=true",
+        "host_rabbit_hole_userGuidance=" +
+          String(
+            expandFn.includes("buildRabbitHoleExpandSlotPrompt") &&
+              /buildRabbitHoleExpandSlotPrompt\(\{[\s\S]*?userGuidance/.test(
+                expandFn,
+              ),
+          ),
+        "prompt_with_modifier=" +
+          buildExpandFromSourceSlotPrompt({
+            source: { title: "T" },
+            slot: { row: 0, col: 1 },
+            slotIndex: 0,
+            totalSlots: 1,
+            userGuidance: "keep beginner-friendly",
           }),
       ].join("\n"),
     );

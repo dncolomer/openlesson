@@ -85,6 +85,30 @@ interface SessionListProps {
    * Null/[] clears combine.
    */
   onSelectedBlockIdsChange?: (blockIds: string[] | null) => void;
+  /** Host-driven multi-select apply (Map Search / Suggest empty spots). */
+  applyMapSelection?: {
+    token: number;
+    blockIds?: string[] | null;
+    emptyCells?: Array<{ row: number; col: number }> | null;
+  } | null;
+  selectiveExplanationActive?: boolean;
+  selectiveExplanationPolygon?: Array<{ x: number; y: number }> | null;
+  onSelectiveExplanationComplete?: (
+    polygon: Array<{ x: number; y: number }>,
+  ) => void;
+  injectMapNote?: {
+    token: number;
+    body: string;
+    x: number;
+    y: number;
+    source?: "creator" | "learner";
+  } | null;
+  /** Map explore toggle under minimap (above Add Note). */
+  mapExploreOpen?: boolean;
+  onMapExploreToggle?: () => void;
+  /** Build / Play mode toggle under minimap (not in top nav). */
+  interactionMode?: "creator" | "learner";
+  onInteractionModeChange?: (mode: "creator" | "learner") => void;
   /**
    * @deprecated Prefer onEmptySelectionChange.
    * Single empty placeable cell for right-pane Add block (null clears).
@@ -204,6 +228,15 @@ export function SessionList({
   onExpandedNodeIdChange,
   onEmptySelectionChange,
   onSelectedBlockIdsChange,
+  applyMapSelection = null,
+  selectiveExplanationActive = false,
+  selectiveExplanationPolygon = null,
+  onSelectiveExplanationComplete,
+  injectMapNote = null,
+  mapExploreOpen = false,
+  onMapExploreToggle,
+  interactionMode = "creator",
+  onInteractionModeChange,
   onAddTargetChange,
   unusableCells = null,
   onMapGround,
@@ -545,6 +578,15 @@ export function SessionList({
             onAbortExpandJob={onAbortExpandJob}
             clusterMapJob={clusterMapJob}
             mapSelectionClearNonce={mapSelectionClearNonce}
+            applyMapSelection={applyMapSelection}
+            selectiveExplanationActive={selectiveExplanationActive}
+            selectiveExplanationPolygon={selectiveExplanationPolygon}
+            onSelectiveExplanationComplete={onSelectiveExplanationComplete}
+            injectMapNote={injectMapNote}
+            mapExploreOpen={mapExploreOpen}
+            onMapExploreToggle={onMapExploreToggle}
+            interactionMode={interactionMode}
+            onInteractionModeChange={onInteractionModeChange}
             appearingNodeIds={appearingNodeIds}
             onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{

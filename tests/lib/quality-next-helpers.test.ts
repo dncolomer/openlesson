@@ -2,9 +2,21 @@
  * Ready-next quality items: nested error envelopes, map selection, TAP hook
  * forming text, SessionItem learner writes, grid chrome extract.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { NextRequest } from "next/server";
+
+const getUser = vi.fn();
+const from = vi.fn();
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(async () => ({
+    auth: { getUser },
+    from,
+  })),
+}));
+
 import {
   buildNestedApiErrorEnvelope,
   classifyApiErrorEnvelope,
@@ -21,6 +33,12 @@ import {
   tapLiveSpeechFlushText,
 } from "@/lib/tap-session-runtime";
 import { shouldWriteLearnerBlocksViaBrowserClient } from "@/lib/workspace-learner-writes";
+import {
+  guardWorkspaceRoute,
+  requireAuthenticatedUser,
+} from "@/lib/api/require-auth";
+import { requireProductAccess } from "@/lib/api/product-access";
+import { POST as workspaceNewsPost } from "@/app/api/workspace/news/route";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -46,6 +64,68 @@ describe("quality-next shipped helpers", () => {
     const productBody = await res.json();
     expect(classifyApiErrorEnvelope(productBody)).toBe("nested_code");
     expect(errorMessageFromBody(productBody, "x")).toBe("workspaceId is required");
+
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    const unauth = await requireAuthenticatedUser();
+    expect(unauth.ok).toBe(false);
+    if (unauth.ok) throw new Error("expected unauthenticated");
+    expect(unauth.response.status).toBe(401);
+    const unauthBody = await unauth.response.json();
+    expect(classifyApiErrorEnvelope(unauthBody)).toBe("nested_code");
+    expect(errorMessageFromBody(unauthBody, "x")).toBe("Not authenticated");
+
+    const missingWs = await guardWorkspaceRoute("   ");
+    expect(missingWs.ok).toBe(false);
+    if (missingWs.ok) throw new Error("expected missing workspaceId");
+    const missingWsBody = await missingWs.response.json();
+    expect(classifyApiErrorEnvelope(missingWsBody)).toBe("nested_code");
+    expect(errorMessageFromBody(missingWsBody, "x")).toBe("workspaceId is required");
+
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({ data: { id: "ws-1", user_id: "other" }, error: null }),
+        }),
+      }),
+    });
+    const forbidden = await guardWorkspaceRoute("ws-1");
+    expect(forbidden.ok).toBe(false);
+    if (forbidden.ok) throw new Error("expected forbidden workspace");
+    expect(forbidden.response.status).toBe(403);
+    const forbiddenBody = await forbidden.response.json();
+    expect(classifyApiErrorEnvelope(forbiddenBody)).toBe("nested_code");
+    expect(errorMessageFromBody(forbiddenBody, "x")).toBe("Forbidden");
+
+    const profileDenied = await requireProductAccess(
+      {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: null, error: { message: "missing" } }),
+            }),
+          }),
+        }),
+      } as never,
+      { id: "user-1" } as never,
+    );
+    expect(profileDenied.ok).toBe(false);
+    if (profileDenied.ok) throw new Error("expected profile required");
+    expect(profileDenied.response.status).toBe(403);
+    const profileBody = await profileDenied.response.json();
+    expect(classifyApiErrorEnvelope(profileBody)).toBe("nested_code");
+    expect(errorMessageFromBody(profileBody, "x")).toBe("Profile not found");
+
+    const newsRes = await workspaceNewsPost(
+      new NextRequest("http://local/api/workspace/news", {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
+    );
+    expect(newsRes.ok).toBe(false);
+    const newsBody = await newsRes.json();
+    expect(classifyApiErrorEnvelope(newsBody)).toBe("nested_code");
+    expect(errorMessageFromBody(newsBody, "")).not.toBe("");
 
     const empty = emptyWorkspaceMapSelection();
     const cells = nextWorkspaceMapSelection(empty, {
@@ -115,6 +195,13 @@ describe("quality-next shipped helpers", () => {
       [
         `envelopeKind=${classifyApiErrorEnvelope(productBody)}`,
         `msg=${errorMessageFromBody(productBody, "x")}`,
+        `auth401=${classifyApiErrorEnvelope(unauthBody)}`,
+        `auth401msg=${errorMessageFromBody(unauthBody, "x")}`,
+        `guard400=${classifyApiErrorEnvelope(missingWsBody)}`,
+        `guard403=${classifyApiErrorEnvelope(forbiddenBody)}`,
+        `product403=${classifyApiErrorEnvelope(profileBody)}`,
+        `newsStatus=${newsRes.status}`,
+        `newsEnvelope=${classifyApiErrorEnvelope(newsBody)}`,
         `emptyClickCells=${cells.emptyCells.length}`,
         `oneBlockId=${oneBlock.expandedBlockId}`,
         `hookText=${tapHookFormingText({ getFormingText: () => "live" })}`,

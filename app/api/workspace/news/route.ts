@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   callXaiWithSchema,
   userMessage,
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const query = buildWorkspaceNewsQuery(ctx);
     if (!query.trim()) {
-      return NextResponse.json({ items: [], error: "missing_topic" }, { status: 400 });
+      return jsonError(400, "missing_topic");
     }
 
     const newsSchema: JsonSchema = {
@@ -66,14 +67,9 @@ export async function POST(request: NextRequest) {
     );
 
     if (!response.success || !response.data) {
-      return NextResponse.json(
-        {
-          items: [],
-          error: response.error || "xai_failed",
-          queryPreview: query.slice(0, 200),
-        },
-        { status: 502 },
-      );
+      return jsonError(502, response.error || "xai_failed", undefined, {
+        queryPreview: query.slice(0, 200),
+      });
     }
 
     const items = normalizeWorkspaceNewsItems(response.data);
@@ -83,12 +79,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("workspace news error:", error);
-    return NextResponse.json(
-      {
-        items: [],
-        error: error instanceof Error ? error.message : "unknown_error",
-      },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "unknown_error");
   }
 }

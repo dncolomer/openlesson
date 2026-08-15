@@ -3,8 +3,9 @@
 // Mirrors middleware hasProductAccess for non-page callers.
 // ============================================
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { jsonError } from "@/lib/api-error-envelope";
 import { hasProductAccess, type ProductAccessOrg, type ProductAccessProfile } from "@/lib/plans";
 import { ensureTrialExpiryApplied } from "@/lib/usage-metrics";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,10 +34,7 @@ export async function requireProductAccess(
   if (error || !rawProfile) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: "Profile not found", code: "profile_required" },
-        { status: 403 }
-      ),
+      response: jsonError(403, "Profile not found", "profile_required"),
     };
   }
 
@@ -76,14 +74,9 @@ export async function requireProductAccess(
   if (!hasProductAccess(profile, org)) {
     return {
       ok: false,
-      response: NextResponse.json(
-        {
-          error: "Active subscription required",
-          code: "product_access_required",
-          renew_url: "/pricing",
-        },
-        { status: 403 }
-      ),
+      response: jsonError(403, "Active subscription required", "product_access_required", {
+        renew_url: "/pricing",
+      }),
     };
   }
 

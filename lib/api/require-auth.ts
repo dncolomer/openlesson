@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
@@ -38,7 +39,7 @@ export async function requireAuthenticatedUser(): Promise<AuthenticatedRequest> 
   if (error || !user) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
+      response: jsonError(401, "Not authenticated"),
     };
   }
 
@@ -57,11 +58,11 @@ export async function requireSessionOwnership(
     .single();
 
   if (error || !session) {
-    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    return jsonError(404, "Session not found");
   }
 
   if (session.user_id !== userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return jsonError(403, "Forbidden");
   }
 
   return null;
@@ -91,7 +92,7 @@ export async function guardWorkspaceRoute(
   if (!normalizedWorkspaceId) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "workspaceId is required" }, { status: 400 }),
+      response: jsonError(400, "workspaceId is required"),
     };
   }
 
@@ -101,26 +102,23 @@ export async function guardWorkspaceRoute(
     if ("error" in aycl) {
       return {
         ok: false,
-        response: NextResponse.json({ error: aycl.error }, { status: aycl.status }),
+        response: jsonError(aycl.status, aycl.error),
       };
     }
     if (aycl.workspaceId !== normalizedWorkspaceId) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     if (options?.requireAyclAuthoring && !aycl.capabilities.canAuthor) {
       return {
         ok: false,
-        response: NextResponse.json(
-          {
-            error:
-              "This access does not include creation tools. Upgrade to unlock creation on this workspace.",
-            code: "aycl_authoring_required",
-            accessTier: aycl.accessTier,
-          },
-          { status: 403 },
+        response: jsonError(
+          403,
+          "This access does not include creation tools. Upgrade to unlock creation on this workspace.",
+          "aycl_authoring_required",
+          { accessTier: aycl.accessTier },
         ),
       };
     }
@@ -139,13 +137,13 @@ export async function guardWorkspaceRoute(
     if ("error" in ile) {
       return {
         ok: false,
-        response: NextResponse.json({ error: ile.error }, { status: ile.status }),
+        response: jsonError(ile.status, ile.error),
       };
     }
     if (ile.workspaceId !== normalizedWorkspaceId) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     return {
@@ -168,14 +166,14 @@ export async function guardWorkspaceRoute(
   if (error || !workspace) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Workspace not found" }, { status: 404 }),
+      response: jsonError(404, "Workspace not found"),
     };
   }
 
   if (workspace.user_id !== auth.user.id) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: jsonError(403, "Forbidden"),
     };
   }
 
@@ -209,7 +207,7 @@ export async function guardSessionRoute(
     if ("error" in aycl) {
       return {
         ok: false,
-        response: NextResponse.json({ error: aycl.error }, { status: aycl.status }),
+        response: jsonError(aycl.status, aycl.error),
       };
     }
 
@@ -226,7 +224,7 @@ export async function guardSessionRoute(
     if ("error" in ile) {
       return {
         ok: false,
-        response: NextResponse.json({ error: ile.error }, { status: ile.status }),
+        response: jsonError(ile.status, ile.error),
       };
     }
 
@@ -244,7 +242,7 @@ export async function guardSessionRoute(
   if (options?.requireSessionId && !sessionId) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "sessionId is required" }, { status: 400 }),
+      response: jsonError(400, "sessionId is required"),
     };
   }
 

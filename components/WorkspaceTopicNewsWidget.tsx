@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { WorkspaceNewsItem } from "@/lib/workspace-news";
 
 /**
@@ -43,12 +44,11 @@ export function WorkspaceTopicNewsWidget({
       });
       const data = (await res.json().catch(() => ({}))) as {
         items?: WorkspaceNewsItem[];
-        error?: string;
       };
       const next = Array.isArray(data.items) ? data.items : [];
       setItems(next);
       if (!res.ok && next.length === 0) {
-        setError(data.error || "Could not load news");
+        setError(errorMessageFromBody(data, "Could not load news"));
       }
     } catch (err) {
       setItems([]);

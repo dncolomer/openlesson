@@ -22,6 +22,10 @@ vi.mock("@/lib/aycl-session-auth", () => ({
   resolveAyclSessionAccess: vi.fn(),
 }));
 
+import {
+  classifyApiErrorEnvelope,
+  errorMessageFromBody,
+} from "@/lib/api-error-envelope";
 import { hasProductAccess } from "@/lib/plans";
 import { requireProductAccess } from "@/lib/api/product-access";
 import {
@@ -89,7 +93,12 @@ describe("product access + ownership helpers", () => {
     if (result.ok) return;
     expect(result.response.status).toBe(403);
     const body = await result.response.json();
-    expect(body.code).toBe("product_access_required");
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("Active subscription required");
+    expect(
+      (body as { error?: { details?: { product_code?: string } } }).error?.details
+        ?.product_code,
+    ).toBe("product_access_required");
   });
 
   it("requireProductAccess allows admins", async () => {
@@ -134,7 +143,9 @@ describe("product access + ownership helpers", () => {
     });
     const res = await requireSessionOwnership({ from } as never, "user-1", "sess-1");
     expect(res?.status).toBe(404);
-    expect(await res?.json()).toEqual({ error: "Session not found" });
+    const body = await res?.json();
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("Session not found");
   });
 
   it("guardSessionRoute requires sessionId when configured", async () => {

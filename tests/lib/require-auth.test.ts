@@ -16,6 +16,10 @@ vi.mock("@/lib/aycl-session-auth", () => ({
 }));
 
 import {
+  classifyApiErrorEnvelope,
+  errorMessageFromBody,
+} from "@/lib/api-error-envelope";
+import {
   ayclTokenFromBody,
   guardSessionRoute,
   guardWorkspaceRoute,
@@ -42,7 +46,8 @@ describe("require-auth helpers", () => {
     if (result.ok) return;
     expect(result.response.status).toBe(401);
     const body = await result.response.json();
-    expect(body.error).toBe("Not authenticated");
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("Not authenticated");
   });
 
   it("requireAuthenticatedUser returns user + supabase when authenticated", async () => {
@@ -65,7 +70,9 @@ describe("require-auth helpers", () => {
     const supabase = { from } as never;
     const res = await requireSessionOwnership(supabase, "user-1", "sess-1");
     expect(res?.status).toBe(404);
-    expect(await res?.json()).toEqual({ error: "Session not found" });
+    const body = await res?.json();
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("Session not found");
   });
 
   it("requireSessionOwnership returns 403 when owned by another user", async () => {
@@ -101,6 +108,9 @@ describe("require-auth helpers", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(400);
+    const body = await result.response.json();
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("workspaceId is required");
   });
 
   it("guardWorkspaceRoute forbids non-owners", async () => {
@@ -117,6 +127,9 @@ describe("require-auth helpers", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(403);
+    const body = await result.response.json();
+    expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
+    expect(errorMessageFromBody(body, "")).toBe("Forbidden");
   });
 
   it("guardSessionRoute requires auth when no session id", async () => {

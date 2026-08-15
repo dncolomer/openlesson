@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/pow-api/performance-report";
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const { data: workspace } = await access.supabase
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const auth: AuthContext = {
@@ -70,10 +71,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (scored.empty) {
-      return NextResponse.json(
-        { error: "No performance proof of work yet for this participant." },
-        { status: 400 },
-      );
+      return jsonError(400, "No performance proof of work yet for this participant.");
     }
 
     return NextResponse.json({
@@ -102,9 +100,6 @@ export async function POST(req: NextRequest) {
         : code === "no_new_pow"
           ? 409
           : 500;
-    return NextResponse.json(
-      { error: message, code: code !== "internal_error" ? code : undefined },
-      { status },
-    );
+    return jsonError(status, message, code !== "internal_error" ? code : undefined);
   }
 }

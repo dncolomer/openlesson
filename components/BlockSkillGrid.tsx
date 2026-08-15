@@ -208,9 +208,10 @@ import {
 import { resolveMapOccupiedTileBadges } from "@/lib/map-tile-badges";
 import {
   LassoShapeIcon,
-  ToolIcon,
   toolTooltip,
 } from "@/components/block-skill-grid/map-tool-icons";
+import { MapToolStripButton } from "@/components/block-skill-grid/map-tool-strip-button";
+import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
 import {
   BlockCreatorEffectsBadge,
   BlockDependencyLockBadge,
@@ -3839,40 +3840,16 @@ export function BlockSkillGrid({
           ? `${toolTooltip(tool, labels, { cloneArmed })} · ${lassoShapeTooltip(lassoShape)}`
           : toolTooltip(tool, labels, { cloneArmed });
     return (
-      <button
-        key={tool}
-        type="button"
-        data-block-map-tool={tool}
-        data-active={isActiveMode ? "true" : "false"}
-        data-clone-armed={
-          tool === "clone" ? (cloneArmed ? "true" : "false") : undefined
-        }
-        data-lasso-shape={tool === "lasso" ? lassoShape : undefined}
-        data-prereq-edit-active={
-          tool === "lock_until" && prereqEdit.active ? "true" : undefined
-        }
-        disabled={!enabled}
-        onClick={() => handleToolClick(tool)}
+      <MapToolStripButton
+        tool={tool}
+        enabled={enabled}
+        isActiveMode={isActiveMode}
         title={title}
-        aria-label={title}
-        aria-pressed={
-          tool === "select" ||
-          tool === "lasso" ||
-          tool === "lock_until" ||
-          tool === "clone"
-            ? isActiveMode
-            : undefined
-        }
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm transition ${
-          isActiveMode
-            ? "border-white/40 bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.12)]"
-            : enabled
-              ? "border-transparent bg-transparent text-neutral-300 hover:border-neutral-600 hover:bg-neutral-800/80 hover:text-white"
-              : "border-transparent bg-transparent text-neutral-600 opacity-45"
-        } disabled:cursor-not-allowed`}
-      >
-        <ToolIcon id={tool} lassoShape={lassoShape} />
-      </button>
+        cloneArmed={cloneArmed}
+        lassoShape={lassoShape}
+        prereqEditActive={prereqEdit.active}
+        onClick={() => handleToolClick(tool)}
+      />
     );
   };
 
@@ -4332,161 +4309,18 @@ export function BlockSkillGrid({
           </svg>
         ) : null}
         {/* Rectangular minimap: mini map tiles + soft fog (no hard bbox / no edges) */}
-        <div
-          data-block-minimap
-          data-minimap-mode="tiles"
-          data-minimap-cluster-count={minimapGraph.clusters.length}
-          data-minimap-block-count={minimapTileView.totalBlocks}
-          data-minimap-tile-count={minimapTileView.tiles.length}
-          data-minimap-empty={
-            minimapTileView.tiles.length === 0 ? "true" : "false"
-          }
-          className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/95 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
-          style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
-          onPointerDown={(e) => e.stopPropagation()}
-          title={
-            minimapTileView.tiles.length > 0
-              ? "Minimap — click a cluster or square for 1:1 view"
-              : "Minimap — create blocks to see them here"
-          }
-        >
-          {minimapTileView.tiles.length === 0 ? (
-            <div
-              className="flex h-full w-full items-center justify-center px-4 text-center"
-              data-minimap-empty-message
-            >
-              <p className="text-[11px] leading-snug text-neutral-500">
-                Create a cluster to see it in the minimap
-              </p>
-            </div>
-          ) : (
-            <svg
-              width={MINIMAP_FRAME_WIDTH}
-              height={MINIMAP_FRAME_HEIGHT}
-              className="block"
-              aria-label="Block map minimap"
-              data-minimap-tile-view
-            >
-              <defs>
-                <radialGradient
-                  id="minimap-fog-gradient"
-                  cx="50%"
-                  cy="50%"
-                  r="75%"
-                >
-                  <stop offset="0%" stopColor="rgba(14,14,16,0.2)" />
-                  <stop offset="60%" stopColor="rgba(8,8,10,0.55)" />
-                  <stop offset="100%" stopColor="rgba(4,4,6,0.88)" />
-                </radialGradient>
-                <pattern
-                  id="minimap-fog-noise"
-                  width="7"
-                  height="7"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <rect width="7" height="7" fill="rgba(16,16,20,0.35)" />
-                  <circle cx="1.4" cy="2.2" r="0.5" fill="rgba(70,70,78,0.28)" />
-                  <circle cx="4.5" cy="5" r="0.4" fill="rgba(55,55,62,0.3)" />
-                  <circle cx="3.2" cy="1.2" r="0.3" fill="rgba(90,90,100,0.2)" />
-                </pattern>
-              </defs>
-              {/* Soft ambient fog only — no hard rectangular fog-cell bbox around clusters */}
-              <rect
-                data-minimap-fog-base
-                x={0}
-                y={0}
-                width={MINIMAP_FRAME_WIDTH}
-                height={MINIMAP_FRAME_HEIGHT}
-                fill="url(#minimap-fog-gradient)"
-              />
-              <rect
-                data-minimap-fog-texture
-                x={0}
-                y={0}
-                width={MINIMAP_FRAME_WIDTH}
-                height={MINIMAP_FRAME_HEIGHT}
-                fill="url(#minimap-fog-noise)"
-                opacity={0.7}
-                pointerEvents="none"
-              />
-              {/* Occupied mini squares (map tiles) — pointerdown → 1:1 navigation */}
-              {minimapTileView.tiles.map((tile) => (
-                <rect
-                  key={`tile-${tile.blockId}-${tile.row}:${tile.col}`}
-                  data-minimap-tile
-                  data-minimap-tile-block={tile.blockId}
-                  data-minimap-tile-row={tile.row}
-                  data-minimap-tile-col={tile.col}
-                  x={tile.x}
-                  y={tile.y}
-                  width={tile.w}
-                  height={tile.h}
-                  rx={Math.min(1.5, tile.w * 0.2)}
-                  fill="rgba(255,255,255,0.82)"
-                  stroke="rgba(255,255,255,0.95)"
-                  strokeWidth={0.6}
-                  className="cursor-pointer transition hover:fill-white"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    panToMinimapCell({ row: tile.row, col: tile.col });
-                  }}
-                />
-              ))}
-              {/* Invisible cluster hit targets (no visible circles / numbers) */}
-              {minimapTileView.labels.map((label) => {
-                const r = Math.min(16, 10 + Math.log2(label.count + 1) * 2);
-                return (
-                  <g
-                    key={label.clusterId}
-                    data-minimap-cluster={label.clusterId}
-                    data-minimap-cluster-count={label.count}
-                    data-minimap-center-block={label.centerBlockId}
-                    className="cursor-pointer"
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      panToCluster(label);
-                    }}
-                  >
-                    <circle
-                      data-minimap-cluster-hit
-                      cx={label.x}
-                      cy={label.y}
-                      r={r}
-                      fill="transparent"
-                      stroke="none"
-                    />
-                  </g>
-                );
-              })}
-              {/* Counts kept as data attrs only (not rendered) for tests / tooling */}
-              <g
-                data-minimap-total-blocks={minimapTileView.totalBlocks}
-                data-minimap-counts-hidden="true"
-              />
-              {/* Main-map viewport indicator — drag pans the real map */}
-              {minimapViewportRect ? (
-                <rect
-                  data-minimap-viewport-rect
-                  data-minimap-viewport-window
-                  x={minimapViewportRect.x}
-                  y={minimapViewportRect.y}
-                  width={minimapViewportRect.w}
-                  height={minimapViewportRect.h}
-                  fill="rgba(96, 165, 250, 0.18)"
-                  stroke="rgba(147, 197, 253, 0.95)"
-                  strokeWidth={1.5}
-                  rx={2}
-                  className="cursor-grab active:cursor-grabbing"
-                  style={{ pointerEvents: "all" }}
-                  onPointerDown={onMinimapViewportPointerDown}
-                  onPointerMove={onMinimapViewportPointerMove}
-                  onPointerUp={onMinimapViewportPointerUp}
-                  onPointerCancel={onMinimapViewportPointerUp}
-                />
-              ) : null}
-            </svg>
-          )}
-        </div>
+        <MapMinimapChrome
+          clusterCount={minimapGraph.clusters.length}
+          totalBlocks={minimapTileView.totalBlocks}
+          tiles={minimapTileView.tiles}
+          labels={minimapTileView.labels}
+          viewportRect={minimapViewportRect}
+          onTilePointerDown={panToMinimapCell}
+          onClusterPointerDown={panToCluster}
+          onViewportPointerDown={onMinimapViewportPointerDown}
+          onViewportPointerMove={onMinimapViewportPointerMove}
+          onViewportPointerUp={onMinimapViewportPointerUp}
+        />
 
         {/* Right stack under minimap: Build/Play, Explore Map, Add note, layers.
             View-only preview: only existing notes + handwriting toggles (no authoring). */}

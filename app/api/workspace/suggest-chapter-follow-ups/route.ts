@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ayclTokenFromBody,
   ileTokenFromBody,
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!sessionId || typeof sessionId !== "string") {
-      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+      return jsonError(400, "sessionId is required");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       .eq("id", sessionId)
       .maybeSingle();
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return jsonError(404, "Session not found");
     }
 
     const { data: planRow } = await supabase
@@ -125,20 +126,17 @@ ${languageNote}`),
     );
 
     if (!ai.success || !ai.data) {
-      return NextResponse.json(
-        { error: ai.error || "Failed to generate follow-up topics" },
-        { status: 502 },
-      );
+      return jsonError(502, ai.error || "Failed to generate follow-up topics");
     }
 
     const suggestions = normalizeChapterFollowUpSuggestions(ai.data, 3);
     if (suggestions.length === 0) {
-      return NextResponse.json({ error: "No follow-up topics generated" }, { status: 502 });
+      return jsonError(502, "No follow-up topics generated");
     }
 
     return NextResponse.json({ suggestions });
   } catch (error) {
     console.error("[suggest-chapter-follow-ups]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

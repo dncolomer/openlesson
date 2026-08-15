@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createSessionPlanLLM } from "@/lib/xai";
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { blockTitle, nodeDescription, planTopic, planningPrompt } = await req.json();
 
     if (!blockTitle) {
-      return NextResponse.json({ error: "blockTitle is required" }, { status: 400 });
+      return jsonError(400, "blockTitle is required");
     }
 
     // Generate a session plan without persisting it
@@ -29,10 +30,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.success || !result.plan) {
-      return NextResponse.json(
-        { error: result.error || "Failed to generate session preview" },
-        { status: 500 }
-      );
+      return jsonError(500, result.error || "Failed to generate session preview");
     }
 
     return NextResponse.json({
@@ -43,9 +41,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[Preview Session] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to generate preview" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to generate preview");
   }
 }

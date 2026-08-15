@@ -74,7 +74,9 @@ import {
   isTapLiveThoughtSpeechEnabled,
   shouldRestartLocalTapSpeechBindings,
   tapLiveSpeechFlushText,
+  tapHookFormingText,
 } from "@/lib/tap-session-runtime";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
@@ -540,7 +542,7 @@ export function TapScoreClient({
           }),
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Could not load starting topics");
+        if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not load starting topics"));
         if (cancelled) return;
         setStartingTopics(Array.isArray(payload.topics) ? payload.topics : []);
       } catch (err) {
@@ -704,18 +706,14 @@ export function TapScoreClient({
   }
 
   function flushFinalBuffer() {
-    const text = tapLiveSpeechFlushText({
-      hookFormingText: tapThoughtSpeech.getFormingText(),
-      crystallizableText: crystallizableTextRef.current || crystallizableText,
-      localFinalBuffer: finalBufferRef.current,
-    });
+    const text = tapHookFormingText(tapThoughtSpeech);
     clearTranscriptionBuffers();
     if (text) addThought(text);
   }
 
   const stashCurrentTranscription = useCallback(
     (options?: { auto?: boolean; fromContext?: boolean }) => {
-      const text = normalize(crystallizableTextRef.current || crystallizableText);
+      const text = tapHookFormingText(tapThoughtSpeech);
       clearTranscriptionDisplay();
       restartSpeechRecognitionSession();
       if (!text) {
@@ -779,7 +777,7 @@ export function TapScoreClient({
       }
       const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silenceMs);
-      const hasTranscript = Boolean(normalize(crystallizableTextRef.current));
+      const hasTranscript = Boolean(tapHookFormingText(tapThoughtSpeech));
 
       if (
         shouldAutoStashOnSilence(silenceMs, hasTranscript, TAP_SILENCE_AUTO_STASH_MS) &&
@@ -813,14 +811,15 @@ export function TapScoreClient({
       return;
     }
     if (isEndingRef.current) return;
+    const forming = tapHookFormingText(tapThoughtSpeech);
     const ratio = thoughtContextFillRatio(
-      crystallizableText,
+      forming,
       THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
     );
     if (
       shouldAutoStashOnContextFull(ratio) &&
       !contextStashInFlightRef.current &&
-      normalize(crystallizableText)
+      forming
     ) {
       contextStashInFlightRef.current = true;
       stashCurrentTranscription({ fromContext: true });
@@ -929,7 +928,7 @@ export function TapScoreClient({
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not get TAP response");
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get TAP response"));
       const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
       setMessages((current) => [...current, assistant]);
       handlePowInterruption(payload.interruption ?? null);
@@ -941,7 +940,7 @@ export function TapScoreClient({
   }
 
   async function sendCurrentTranscription() {
-    const text = normalize(crystallizableText);
+    const text = tapHookFormingText(tapThoughtSpeech);
     if (!text) return;
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
@@ -1012,7 +1011,7 @@ export function TapScoreClient({
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not start TAP session");
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not start TAP session"));
       if (payload.tapSessionId) {
         tapSessionIdRef.current = payload.tapSessionId;
         setTapSessionId(payload.tapSessionId);
@@ -1121,7 +1120,7 @@ export function TapScoreClient({
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not save TAP session");
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not save TAP session"));
 
       // Practice always returns to a practice-done screen (unlimited retries).
       if (practice) {
@@ -1193,7 +1192,7 @@ export function TapScoreClient({
   }, [phase, startedAt, liveMinutes]);
 
   function beginEditTranscription() {
-    const text = normalize(crystallizableText);
+    const text = tapHookFormingText(tapThoughtSpeech);
     if (!text) return;
     bumpUserActivity();
     setEditingTranscription({ draft: text, originalText: text });

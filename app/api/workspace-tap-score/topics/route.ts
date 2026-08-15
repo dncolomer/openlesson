@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   loadTapScoreBriefForAccess,
   resolveTapSessionAccess,
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const focusNodeIds = blockId ? [blockId] : access.blockId ? [access.blockId] : [];
@@ -55,6 +56,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[workspace-tap-score/topics] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

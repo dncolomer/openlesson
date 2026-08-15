@@ -3,6 +3,7 @@
  * Read: owner / AYCL / canAccessWorkspaceEval. Write: owner / AYCL only.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,13 +34,13 @@ async function resolveGoalsAccess(
     if ("error" in aycl) {
       return {
         ok: false,
-        response: NextResponse.json({ error: aycl.error }, { status: aycl.status }),
+        response: jsonError(aycl.status, aycl.error),
       };
     }
     if (aycl.workspaceId !== workspaceId) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     return { ok: true, supabase: aycl.supabase as SupabaseClient };
@@ -58,7 +59,7 @@ async function resolveGoalsAccess(
   if (!plan) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Workspace not found" }, { status: 404 }),
+      response: jsonError(404, "Workspace not found"),
     };
   }
 
@@ -72,7 +73,7 @@ async function resolveGoalsAccess(
     if (!access.isOwner) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     return { ok: true, supabase: admin };
@@ -81,7 +82,7 @@ async function resolveGoalsAccess(
   if (resolveEvalPersistenceClientMode(access) === "deny") {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: jsonError(403, "Forbidden"),
     };
   }
 
@@ -93,10 +94,7 @@ export async function GET(req: NextRequest) {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId") || "";
     const blockId = req.nextUrl.searchParams.get("blockId") || "";
     if (!workspaceId || !blockId) {
-      return NextResponse.json(
-        { error: "workspaceId and blockId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and blockId are required");
     }
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
     const auth = await resolveGoalsAccess(workspaceId, ayclToken, "read");
@@ -106,7 +104,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ block_goals: goals });
   } catch (error) {
     console.error("[workspace/block-goals GET]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -116,10 +114,7 @@ export async function POST(req: NextRequest) {
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     const blockId = typeof body.blockId === "string" ? body.blockId : "";
     if (!workspaceId || !blockId) {
-      return NextResponse.json(
-        { error: "workspaceId and blockId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and blockId are required");
     }
     const auth = await resolveGoalsAccess(workspaceId, ayclTokenFromBody(body), "write");
     if (!auth.ok) return auth.response;
@@ -132,7 +127,7 @@ export async function POST(req: NextRequest) {
       .eq("workspace_id", workspaceId)
       .maybeSingle();
     if (!block) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return jsonError(404, "Block not found");
     }
 
     const result = await createBlockGoal(auth.supabase, {
@@ -142,12 +137,12 @@ export async function POST(req: NextRequest) {
       sortOrder: typeof body.sort_order === "number" ? body.sort_order : undefined,
     });
     if (!result.row) {
-      return NextResponse.json({ error: result.error || "Failed to create goal" }, { status: 400 });
+      return jsonError(400, result.error || "Failed to create goal");
     }
     return NextResponse.json({ goal: result.row, success: true });
   } catch (error) {
     console.error("[workspace/block-goals POST]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -162,10 +157,7 @@ export async function PUT(req: NextRequest) {
           ? body.id
           : "";
     if (!workspaceId || !goalId) {
-      return NextResponse.json(
-        { error: "workspaceId and goalId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and goalId are required");
     }
     const auth = await resolveGoalsAccess(workspaceId, ayclTokenFromBody(body), "write");
     if (!auth.ok) return auth.response;
@@ -177,12 +169,12 @@ export async function PUT(req: NextRequest) {
       sortOrder: typeof body.sort_order === "number" ? body.sort_order : undefined,
     });
     if (!result.row) {
-      return NextResponse.json({ error: result.error || "Failed to update goal" }, { status: 400 });
+      return jsonError(400, result.error || "Failed to update goal");
     }
     return NextResponse.json({ goal: result.row, success: true });
   } catch (error) {
     console.error("[workspace/block-goals PUT]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -199,21 +191,18 @@ export async function DELETE(req: NextRequest) {
       ayclToken = ayclToken || ayclTokenFromBody(body);
     }
     if (!workspaceId || !goalId) {
-      return NextResponse.json(
-        { error: "workspaceId and goalId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and goalId are required");
     }
     const auth = await resolveGoalsAccess(workspaceId, ayclToken, "write");
     if (!auth.ok) return auth.response;
 
     const result = await deleteBlockGoal(auth.supabase, { workspaceId, goalId });
     if (!result.ok) {
-      return NextResponse.json({ error: result.error || "Failed to delete goal" }, { status: 400 });
+      return jsonError(400, result.error || "Failed to delete goal");
     }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[workspace/block-goals DELETE]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

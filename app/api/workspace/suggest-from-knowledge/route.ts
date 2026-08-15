@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   assembleSuggestFromKnowledgeXaiMessages,
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = body.workspaceId as string | undefined;
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
       ayclToken: ayclTokenFromBody(body),
@@ -171,14 +172,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!modelPayload) {
-      return NextResponse.json(
-        {
-          error:
-            ai.error ||
-            "Failed to generate knowledge suggestions (xAI unavailable or empty response)",
-        },
-        { status: 502 },
-      );
+      return jsonError(502, ai.error ||
+            "Failed to generate knowledge suggestions (xAI unavailable or empty response)",);
     }
 
     const suggestions = normalizeSuggestFromKnowledgeResponse(modelPayload, {
@@ -187,15 +182,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (suggestions.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Model returned no usable author prompts",
+      return jsonError(502, "Model returned no usable author prompts",
           suggestions: [],
           snapshotCount: assembled.snapshotCount,
-          blockCount: assembled.blockCount,
-        },
-        { status: 502 },
-      );
+          blockCount: assembled.blockCount,);
     }
 
     return NextResponse.json({
@@ -206,9 +196,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("suggest-from-knowledge", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Internal error");
   }
 }

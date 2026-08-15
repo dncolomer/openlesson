@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import {
   buildTapThoughtTracePayload,
@@ -51,16 +52,16 @@ export async function POST(req: NextRequest) {
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
     if (!tapSessionId) {
-      return NextResponse.json({ error: "tapSessionId is required" }, { status: 400 });
+      return jsonError(400, "tapSessionId is required");
     }
     if (traceType !== "system1" && traceType !== "system2") {
-      return NextResponse.json({ error: "traceType must be system1 or system2" }, { status: 400 });
+      return jsonError(400, "traceType must be system1 or system2");
     }
     if (traceType === "system1" && !SYSTEM1_ACTIONS.has(action as TapSystem1Action)) {
-      return NextResponse.json({ error: "Invalid system1 action" }, { status: 400 });
+      return jsonError(400, "Invalid system1 action");
     }
     if (traceType === "system2" && !SYSTEM2_ACTIONS.has(action as TapSystem2Action)) {
-      return NextResponse.json({ error: "Invalid system2 action" }, { status: 400 });
+      return jsonError(400, "Invalid system2 action");
     }
 
     const access = await resolveTapSessionAccess({
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const payload = stampPoWPracticeFlag(
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !row) {
-      return NextResponse.json({ error: error?.message || "Failed to store TAP trace" }, { status: 500 });
+      return jsonError(500, error?.message || "Failed to store TAP trace");
     }
 
     const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
@@ -166,6 +167,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[workspace-tap-score/trace] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

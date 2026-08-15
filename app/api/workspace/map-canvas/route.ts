@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ayclTokenFromBody,
   guardWorkspaceRoute,
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
   try {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
@@ -69,20 +70,17 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (!plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
     if (plan.user_id !== user.id && !plan.is_public) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     const { scene } = await loadScene(supabase, workspaceId);
     return NextResponse.json({ scene });
   } catch (err) {
     console.error("[map-canvas] GET", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load canvas" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Failed to load canvas");
   }
 }
 
@@ -92,7 +90,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const workspaceId = String(body.workspaceId || "").trim();
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -111,23 +109,15 @@ export async function PUT(req: NextRequest) {
     if (error) {
       console.error("[map-canvas] PUT", error);
       if (/schema cache|map_canvas_scene|does not exist/i.test(error.message || "")) {
-        return NextResponse.json(
-          {
-            error: "map_canvas_scene column missing — run npm run db:migrate",
-            scene,
-          },
-          { status: 503 },
-        );
+        return jsonError(503, "map_canvas_scene column missing — run npm run db:migrate",
+            scene,);
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     return NextResponse.json({ ok: true, scene });
   } catch (err) {
     console.error("[map-canvas] PUT", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to save canvas" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Failed to save canvas");
   }
 }

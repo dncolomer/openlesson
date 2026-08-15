@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!workspaceId || typeof row !== "number" || typeof col !== "number" || !prompt?.trim()) {
-      return NextResponse.json({ error: "Plan ID, grid position, and prompt are required" }, { status: 400 });
+      return jsonError(400, "Plan ID, grid position, and prompt are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (planError || !plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      return jsonError(404, "Plan not found");
     }
 
     const { data: nodes, error: nodesError } = await supabase
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (nodesError || !nodes) {
-      return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
+      return jsonError(500, "Failed to fetch blocks");
     }
 
     const { data: workspaceFiles } = await supabase
@@ -118,14 +119,14 @@ export async function POST(req: NextRequest) {
     const { occupancy } = buildSkillGridLayout(skillNodes);
 
     if (isCellOccupied(occupancy, row, col)) {
-      return NextResponse.json({ error: "That grid slot is already occupied" }, { status: 409 });
+      return jsonError(409, "That grid slot is already occupied");
     }
 
     const hasSavedCollision = nodes.some(
       (node) => node.position_x === col && node.position_y === row,
     );
     if (hasSavedCollision) {
-      return NextResponse.json({ error: "That grid slot is already occupied" }, { status: 409 });
+      return jsonError(409, "That grid slot is already occupied");
     }
 
     const languageNote =
@@ -240,7 +241,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
     );
 
     if (!aiResponse.success || !aiResponse.data?.title?.trim()) {
-      return NextResponse.json({ error: aiResponse.error || "Failed to generate block" }, { status: 502 });
+      return jsonError(502, aiResponse.error || "Failed to generate block");
     }
 
     const local_context =
@@ -281,7 +282,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
         allowDynamicWithoutDag: true,
       });
       if (!validated.ok) {
-        return NextResponse.json({ error: validated.error }, { status: 400 });
+        return jsonError(400, validated.error);
       }
       if (hasAnyCreatorEffect(validated.effects)) {
         creatorEffectsWire = serializeBlockCreatorEffects(validated.effects, {
@@ -340,7 +341,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
     }
 
     if (insertError || !newNode) {
-      return NextResponse.json({ error: "Failed to create block" }, { status: 500 });
+      return jsonError(500, "Failed to create block");
     }
 
     const { data: updatedNodes, error: fetchError } = await supabase
@@ -349,7 +350,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       .eq("workspace_id", workspaceId);
 
     if (fetchError) {
-      return NextResponse.json({ error: "Block created but failed to refresh plan" }, { status: 500 });
+      return jsonError(500, "Block created but failed to refresh plan");
     }
 
     return NextResponse.json({
@@ -362,6 +363,6 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
     console.error("Add block at slot error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }

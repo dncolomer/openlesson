@@ -384,35 +384,35 @@ describe("getPanZoomToOneToOneClusterView", () => {
 describe("structural: minimap on BlockSkillGrid", () => {
   it("mounts rectangular top-right overlay; cluster click uses 1:1 view", () => {
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain("data-block-minimap");
+    const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
+    expect(grid).toContain("MapMinimapChrome");
+    expect(mini).toContain("data-block-minimap");
     expect(grid).toContain("buildMinimapClusterGraph");
     expect(grid).toContain("projectMinimapTiles");
     expect(grid).toContain("getPanZoomToOneToOneClusterView");
     expect(grid).toContain("cellsForMinimapCluster");
     expect(grid).toContain("getPanToCenterCell");
-    expect(grid).toContain("data-minimap-tile");
-    expect(grid).toContain("data-minimap-fog-base");
+    expect(mini).toContain("data-minimap-tile");
+    expect(mini).toContain("data-minimap-fog-base");
     // Soft fog only — no hard fog-cell bounding box around all clusters
     expect(grid).not.toMatch(
       /minimapTileView\.fogCells\.map[\s\S]{0,40}?data-minimap-fog-cell/,
     );
-    expect(grid).toContain("data-minimap-cluster");
-    expect(grid).toContain("data-minimap-cluster-hit");
-    expect(grid).toContain("data-minimap-block-count");
+    expect(mini).toContain("data-minimap-cluster");
+    expect(mini).toContain("data-minimap-cluster-hit");
+    expect(mini).toContain("data-minimap-block-count");
     // Never render block-count numbers on the minimap (even on click/hold)
-    expect(grid).not.toContain("data-minimap-block-count-label");
+    expect(mini).not.toContain("data-minimap-block-count-label");
     expect(grid).not.toContain("minimapCountsHeld");
-    expect(grid).toContain("data-minimap-counts-hidden");
+    expect(mini).toContain("data-minimap-counts-hidden");
     // Clusters navigate on pointerdown
-    expect(grid).toContain("panToCluster(label)");
-    expect(grid).toMatch(
-      /onPointerDown=\{[\s\S]{0,200}?panToCluster\(label\)/,
-    );
+    expect(grid).toContain("onClusterPointerDown={panToCluster}");
+    expect(mini).toContain("onClusterPointerDown(label)");
     expect(grid).toContain("getPanZoomToOneToOneClusterView");
     // Minimap shell must not call setPointerCapture (only a "do NOT" comment is ok)
-    const miniChunk = grid.slice(
-      grid.indexOf("data-block-minimap"),
-      grid.indexOf("data-block-minimap") + 1800,
+    const miniChunk = mini.slice(
+      mini.indexOf("data-block-minimap"),
+      mini.indexOf("data-block-minimap") + 1800,
     );
     expect(miniChunk).not.toMatch(
       /\.setPointerCapture\s*\(|setPointerCapture\?\./,
@@ -426,18 +426,18 @@ describe("structural: minimap on BlockSkillGrid", () => {
     expect(grid).toContain("MINIMAP_FRAME_HEIGHT");
     expect(grid).not.toMatch(/const MINIMAP_WIDTH = 148/);
     // Always mounted — empty workspace shows a create-cluster hint
-    expect(grid).toContain("data-minimap-empty");
-    expect(grid).toContain("data-minimap-empty-message");
-    expect(grid).toMatch(/Create a cluster to see it in the minimap/i);
+    expect(mini).toContain("data-minimap-empty");
+    expect(mini).toContain("data-minimap-empty-message");
+    expect(mini).toMatch(/Create a cluster to see it in the minimap/i);
     // Top-right placement
-    expect(grid).toMatch(/top-2|top-3/);
-    expect(grid).toMatch(/right-2|right-3/);
+    expect(mini).toMatch(/top-2|top-3/);
+    expect(mini).toMatch(/right-2|right-3/);
 
     writeEvidence(
       "minimap-tiles-structural.log",
       [
-        "hasOverlay=" + grid.includes("data-block-minimap"),
-        "hasTiles=" + grid.includes("data-minimap-tile"),
+        "hasOverlay=" + mini.includes("data-block-minimap"),
+        "hasTiles=" + mini.includes("data-minimap-tile"),
         "softFogOnly=" +
           String(
             grid.includes("data-minimap-fog-base") &&

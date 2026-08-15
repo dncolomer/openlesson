@@ -8,6 +8,7 @@ import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { nextWorkspaceMapSelection, emptyWorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { Block } from "@/lib/domain/types";
 import {
   postWorkspaceGridOp,
@@ -355,7 +356,7 @@ export function SessionList({
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to add block");
+          throw new Error(errorMessageFromBody(errorData, "Failed to add block"));
         }
 
         const data = await response.json();

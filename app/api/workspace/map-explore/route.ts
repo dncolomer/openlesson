@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   callXaiJSON,
@@ -115,10 +116,7 @@ export async function POST(req: NextRequest) {
     const workspaceId =
       typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -135,13 +133,7 @@ export async function POST(req: NextRequest) {
       op !== "overview" &&
       op !== "area_summary"
     ) {
-      return NextResponse.json(
-        {
-          error:
-            "op must be one of: search, suggest_spot, overview, area_summary",
-        },
-        { status: 400 },
-      );
+      return jsonError(400, "op must be one of: search, suggest_spot, overview, area_summary",);
     }
 
     const blocks = asBlocks(body.blocks);
@@ -332,12 +324,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[map-explore]", err);
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Failed to explore map with xAI",
-      },
-      { status: 500 },
+    return jsonError(
+      500,
+      err instanceof Error ? err.message : "Failed to explore map with xAI",
     );
   }
 }

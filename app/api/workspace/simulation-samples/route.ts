@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   callXaiJSON,
@@ -70,10 +71,7 @@ export async function POST(req: NextRequest) {
       "";
 
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId is required");
     }
 
     const scopeResult = normalizeSimulationSampleScope({
@@ -81,7 +79,7 @@ export async function POST(req: NextRequest) {
       blockId,
     });
     if ("error" in scopeResult) {
-      return NextResponse.json({ error: scopeResult.error }, { status: 400 });
+      return jsonError(400, scopeResult.error);
     }
     const scope: SimulationSampleScope = scopeResult;
 
@@ -100,7 +98,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!loaded) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     if (scope.kind === "block") {
@@ -115,7 +113,7 @@ export async function POST(req: NextRequest) {
           .eq("workspace_id", workspaceId)
           .maybeSingle();
         if (!one) {
-          return NextResponse.json({ error: "Block not found" }, { status: 404 });
+          return jsonError(404, "Block not found");
         }
       }
     }
@@ -244,14 +242,8 @@ export async function POST(req: NextRequest) {
       normalized.questions.length === 0 &&
       normalized.exercises.length === 0
     ) {
-      return NextResponse.json(
-        {
-          error:
-            ai.error ||
-            "Model returned empty simulation samples (no pure-template fallback)",
-        },
-        { status: 502 },
-      );
+      return jsonError(502, ai.error ||
+            "Model returned empty simulation samples (no pure-template fallback)",);
     }
 
     return NextResponse.json({
@@ -266,6 +258,6 @@ export async function POST(req: NextRequest) {
     console.error("simulation-samples error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status: status });
+    return jsonError(status, message);
   }
 }

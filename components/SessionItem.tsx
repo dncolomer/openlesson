@@ -6,6 +6,13 @@ import { useRouter } from "next/navigation";
 import { createClient, type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "../lib/i18n";
 import { BlockDetailCard } from "./BlockDetailCard";
+import {
+  buildLearnerLaunchBody,
+  buildLearnerPromptSaveBody,
+  WORKSPACE_LEARNER_LAUNCH_PATH,
+  WORKSPACE_LEARNER_PROMPT_PATH,
+} from "@/lib/workspace-learner-writes";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 interface Block {
   id: string;
@@ -127,36 +134,43 @@ export function SessionItem({
         return;
       }
 
+      if (!workspaceId) {
+        throw new Error("workspaceId is required to launch");
+      }
       if (editedPlanningPrompt !== (node.planning_prompt || "")) {
-        await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
-      }
-      await supabase.from("blocks").update({ status: "in_progress" }).eq("id", node.id);
-      const { createSession } = await import("@/lib/storage");
-      const session = await createSession(
-        node.title,
-        undefined,
-        editedPlanningPrompt || undefined,
-        undefined,
-        workspaceId || undefined,
-        {
-          session_mode: ileMode,
-          ile_session_mode: ileMode,
-          block_id: node.id,
-          block_title: node.title,
-        },
-      );
-      await supabase.from("blocks").update({ session_id: session.id }).eq("id", node.id);
-
-      if (workspaceId) {
-        await supabase.from("block_sessions").insert({
-          block_id: node.id,
-          session_id: session.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          workspace_id: workspaceId,
+        const promptRes = await fetch(WORKSPACE_LEARNER_PROMPT_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            buildLearnerPromptSaveBody({
+              workspaceId,
+              blockId: node.id,
+              planningPrompt: editedPlanningPrompt,
+            }),
+          ),
         });
+        const promptData = await promptRes.json().catch(() => ({}));
+        if (!promptRes.ok) {
+          throw new Error(errorMessageFromBody(promptData, "Failed to save prompt"));
+        }
+      }
+      const launchRes = await fetch(WORKSPACE_LEARNER_LAUNCH_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          buildLearnerLaunchBody({
+            workspaceId,
+            blockId: node.id,
+            sessionMode: ileMode,
+          }),
+        ),
+      });
+      const launchData = await launchRes.json().catch(() => ({}));
+      if (!launchRes.ok || !launchData.sessionId) {
+        throw new Error(errorMessageFromBody(launchData, "Failed to launch ILE"));
       }
 
-      router.push(`/session?id=${session.id}`);
+      router.push(`/session?id=${launchData.sessionId}`);
     } catch (err) {
       console.error("Failed to start session:", err);
       setIsStarting(false);
@@ -207,7 +221,22 @@ export function SessionItem({
     setSavingPrompt(true);
     setPromptSaved(false);
     try {
-      await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
+      if (!workspaceId) throw new Error("workspaceId is required to save prompt");
+      const promptRes = await fetch(WORKSPACE_LEARNER_PROMPT_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          buildLearnerPromptSaveBody({
+            workspaceId,
+            blockId: node.id,
+            planningPrompt: editedPlanningPrompt,
+          }),
+        ),
+      });
+      const promptData = await promptRes.json().catch(() => ({}));
+      if (!promptRes.ok) {
+        throw new Error(errorMessageFromBody(promptData, "Failed to save prompt"));
+      }
       setPromptSaved(true);
       setTimeout(() => setPromptSaved(false), 2000);
     } catch (err) {
@@ -215,7 +244,7 @@ export function SessionItem({
     } finally {
       setSavingPrompt(false);
     }
-  }, [editedPlanningPrompt, node.planning_prompt, node.id, supabase]);
+  }, [editedPlanningPrompt, node.planning_prompt, node.id, workspaceId]);
 
   const handleClick = () => {
     if (onToggleExpand) onToggleExpand();

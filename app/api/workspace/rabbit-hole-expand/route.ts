@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   callXaiJSON,
@@ -46,10 +47,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!workspaceId || typeof workspaceId !== "string") {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -107,14 +105,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ questions, count, depth });
   } catch (err) {
     console.error("[rabbit-hole-expand]", err);
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to generate rabbit-hole questions",
-      },
-      { status: 500 },
+    return jsonError(
+      500,
+      err instanceof Error ? err.message : "Failed to generate rabbit-hole questions",
     );
   }
 }

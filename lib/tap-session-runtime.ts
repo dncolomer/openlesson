@@ -16,6 +16,12 @@ export function shouldRestartLocalTapSpeechBindings(phase: string): boolean {
   return !isTapLiveThoughtSpeechEnabled(phase);
 }
 
+/** Live TAP speech source — hook forming text only. */
+export function tapHookFormingText(hook: { getFormingText?: () => string }): string {
+  const text = hook.getFormingText?.();
+  return typeof text === "string" ? text.trim() : "";
+}
+
 /** End-session / stash flush: hook forming text first, not a dead local buffer. */
 export function tapLiveSpeechFlushText(input: {
   hookFormingText?: string | null;

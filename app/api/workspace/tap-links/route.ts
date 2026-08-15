@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import {
   decideProductWorkspaceAccess,
@@ -85,12 +86,12 @@ async function resolveWebAuth(workspaceId: string): Promise<
 export async function GET(req: NextRequest) {
   const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
   if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    return jsonError(400, "workspaceId is required");
   }
 
   const access = await resolveWebAuth(workspaceId);
   if ("error" in access) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+    return jsonError(access.status, access.error);
   }
 
   const { data: links, error } = await access.supabase
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[workspace/tap-links] List error:", error);
-    return NextResponse.json({ error: "Failed to list TAP links" }, { status: 500 });
+    return jsonError(500, "Failed to list TAP links");
   }
 
   const origin = baseUrl(req);
@@ -145,12 +146,12 @@ export async function POST(req: NextRequest) {
       body.invalidateAll === "true";
 
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     if (invalidateAll) {
@@ -196,9 +197,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ tap_link: tapLink }, { status: 201 });
   } catch (error) {
     if (error instanceof CreateTapLinkError || error instanceof InvalidateGuestLinkError) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+      return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/tap-links] Create error:", error);
-    return NextResponse.json({ error: "Failed to create TAP link" }, { status: 500 });
+    return jsonError(500, "Failed to create TAP link");
   }
 }

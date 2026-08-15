@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
   ileTokenFromPowBody,
@@ -18,12 +19,12 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return jsonError(400, "Invalid JSON body");
     }
 
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const sessionId =
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const base64 = typeof body.data === "string" ? body.data : "";
     if (!base64) {
-      return NextResponse.json({ error: "data (base64) is required" }, { status: 400 });
+      return jsonError(400, "data (base64) is required");
     }
 
     const toolName = typeof body.tool_name === "string" ? body.tool_name : undefined;
@@ -114,9 +115,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     console.error("[workspace/proof-of-work] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload proof of work" },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to upload proof of work");
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
@@ -30,10 +31,10 @@ export async function POST(req: NextRequest) {
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
     if (!workspaceId || !sessionId) {
-      return NextResponse.json({ error: "workspaceId and sessionId are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and sessionId are required");
     }
     if (!SPEECH_EVENTS.has(event)) {
-      return NextResponse.json({ error: "event must be start or stop" }, { status: 400 });
+      return jsonError(400, "event must be start or stop");
     }
 
     const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
@@ -105,6 +106,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[workspace-ile/speech] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

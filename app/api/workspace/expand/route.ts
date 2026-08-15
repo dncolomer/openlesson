@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     const { blockId } = await req.json();
     
     if (!blockId) {
-      return NextResponse.json({ error: "Node ID is required" }, { status: 400 });
+      return jsonError(400, "Node ID is required");
     }
 
     const { data: node, error: nodeError } = await supabase
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (nodeError || !node) {
-      return NextResponse.json({ error: "Node not found" }, { status: 404 });
+      return jsonError(404, "Node not found");
     }
 
     const { data: plan } = await supabase
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!plan || (plan.user_id !== user.id && !plan.is_public)) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      return jsonError(403, "Access denied");
     }
 
     const { data: workspaceFiles } = await supabase
@@ -88,13 +89,13 @@ Rules:
     );
 
     if (!response.success || !response.data) {
-      return NextResponse.json({ error: "Failed to expand plan" }, { status: 500 });
+      return jsonError(500, "Failed to expand plan");
     }
 
     const newNodes = response.data.nodes || [];
 
     if (newNodes.length === 0) {
-      return NextResponse.json({ error: "No nodes to expand" }, { status: 400 });
+      return jsonError(400, "No nodes to expand");
     }
 
     const blockIdMap = new Map<string, string>();
@@ -163,9 +164,6 @@ Rules:
 
   } catch (error) {
     console.error("Expand plan error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Internal error");
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   callXaiJSON,
@@ -77,10 +78,7 @@ export async function POST(req: NextRequest) {
       "";
 
     if (!workspaceId || !blockId) {
-      return NextResponse.json(
-        { error: "workspaceId and blockId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and blockId are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -100,7 +98,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (blockError || !block) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return jsonError(404, "Block not found");
     }
 
     const { data: workspace } = await supabase
@@ -288,10 +286,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!modelPayload) {
-      return NextResponse.json(
-        { error: ai.error || "Failed to generate simulation" },
-        { status: 502 },
-      );
+      return jsonError(502, ai.error || "Failed to generate simulation");
     }
 
     const samples = normalizeContentSamplesPayload(modelPayload);
@@ -319,10 +314,7 @@ export async function POST(req: NextRequest) {
       samples.questions.length === 0 &&
       simulation.probes.length === 0
     ) {
-      return NextResponse.json(
-        { error: "Model returned empty simulation" },
-        { status: 502 },
-      );
+      return jsonError(502, "Model returned empty simulation");
     }
 
     const { questions: qProbes, exercises: eProbes } = partitionSimulationProbes(
@@ -365,6 +357,6 @@ export async function POST(req: NextRequest) {
     console.error("block-content-samples error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status: status });
+    return jsonError(status, message);
   }
 }

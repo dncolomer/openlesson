@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
 import { resolveEvalDefinition } from "@/lib/pow-api/proof-of-work-integration";
 import {
@@ -15,12 +16,12 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return jsonError(400, "Invalid JSON body");
   }
 
   const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
   if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    return jsonError(400, "workspaceId is required");
   }
 
   const access = await requireWorkspaceOwnerSession(workspaceId);
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (!request) {
-    return NextResponse.json({ error: "definition is required" }, { status: 400 });
+    return jsonError(400, "definition is required");
   }
 
   try {

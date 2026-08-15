@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   loadTapScoreBriefForAccess,
   resolveTapSessionAccess,
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const focusNodeIds = blockId ? [blockId] : access.blockId ? [access.blockId] : [];
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (privateToken) {
-      return NextResponse.json({ error: "TAP session missing for private link" }, { status: 500 });
+      return jsonError(500, "TAP session missing for private link");
     }
 
     const { data: row, error } = await access.supabase
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !row) {
-      return NextResponse.json({ error: error?.message || "Could not start TAP session" }, { status: 500 });
+      return jsonError(500, error?.message || "Could not start TAP session");
     }
 
     return NextResponse.json({
@@ -197,6 +198,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[workspace-tap-score/start] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

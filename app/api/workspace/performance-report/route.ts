@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,13 +47,13 @@ async function resolveWebEvalAuth(
     if ("error" in aycl) {
       return {
         ok: false,
-        response: NextResponse.json({ error: aycl.error }, { status: aycl.status }),
+        response: jsonError(aycl.status, aycl.error),
       };
     }
     if (aycl.workspaceId !== workspaceId) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     return {
@@ -77,7 +78,7 @@ async function resolveWebEvalAuth(
   if (planError || !plan) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Workspace not found" }, { status: 404 }),
+      response: jsonError(404, "Workspace not found"),
     };
   }
 
@@ -89,7 +90,7 @@ async function resolveWebEvalAuth(
   if (resolveEvalPersistenceClientMode(access) === "deny") {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: jsonError(403, "Forbidden"),
     };
   }
 
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await resolveWebEvalAuth(workspaceId, ayclTokenFromBody(body));
@@ -133,20 +134,13 @@ export async function POST(req: NextRequest) {
         planError.code === "42703" ||
         planError.code === "PGRST204"
       ) {
-        return NextResponse.json(
-          {
-            error:
-              "Database schema is missing workspaces.workspace_goal. Apply migration 20260719120000_workspace_goal_rename.",
-            code: "schema_outdated",
-          },
-          { status: 500 },
-        );
+        return jsonError(500, "Database schema is missing workspaces.workspace_goal. Apply migration 20260719120000_workspace_goal_rename.", "schema_outdated",);
       }
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     if (!plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const isWorkspaceOwner = accessIsOwner || Boolean(auth.ayclAccess);
@@ -181,13 +175,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (scored.empty) {
-        return NextResponse.json(
-          {
-            error:
-              "No performance proof of work yet. Complete sessions, upload proof of work, or run a TAP block first.",
-          },
-          { status: 400 },
-        );
+        return jsonError(400, "No performance proof of work yet. Complete sessions, upload proof of work, or run a TAP block first.",);
       }
 
       return NextResponse.json({
@@ -214,21 +202,14 @@ export async function POST(req: NextRequest) {
           : undefined,
       );
       if (code === NO_NEW_POW_CODE) {
-        return NextResponse.json(
-          {
-            error:
-              scoreErr instanceof Error
+        return jsonError(409, scoreErr instanceof Error
                 ? scoreErr.message
-                : `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}.`,
-            code: NO_NEW_POW_CODE,
-          },
-          { status: 409 },
-        );
+                : `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}.`, NO_NEW_POW_CODE,);
       }
       throw scoreErr;
     }
   } catch (error) {
     console.error("[performance-report] Error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

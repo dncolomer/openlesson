@@ -29,7 +29,9 @@ import {
   isTapLiveThoughtSpeechEnabled,
   shouldRestartLocalTapSpeechBindings,
   tapLiveSpeechFlushText,
+  tapHookFormingText,
 } from "@/lib/tap-session-runtime";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
@@ -283,7 +285,7 @@ export function ExerciseTapClient({
           }),
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Could not load starting topics");
+        if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not load starting topics"));
         if (cancelled) return;
         setStartingTopics(Array.isArray(payload.topics) ? payload.topics : []);
       } catch (err) {
@@ -413,7 +415,7 @@ export function ExerciseTapClient({
   /** System 1: Del / silence — stash live speech into stash history. */
   const stashCurrentTranscription = useCallback(
     (options?: { auto?: boolean }) => {
-      const text = normalize(crystallizableTextRef.current || crystallizableText);
+      const text = tapHookFormingText(tapThoughtSpeech);
       clearTranscriptionDisplay();
       restartSpeechRecognitionSession();
       if (!text) {
@@ -466,7 +468,7 @@ export function ExerciseTapClient({
    * without live speech → promote latest stash item.
    */
   const submitCurrentOrLatestStash = useCallback(() => {
-    const text = normalize(crystallizableTextRef.current || crystallizableText);
+    const text = tapHookFormingText(tapThoughtSpeech);
     if (text) {
       clearTranscriptionDisplay();
       restartSpeechRecognitionSession();
@@ -536,7 +538,7 @@ export function ExerciseTapClient({
       if (!shouldEvaluateSessionPurity({ waitingForHelios: false })) return;
       const silence = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silence);
-      const hasText = Boolean(normalize(crystallizableTextRef.current));
+      const hasText = Boolean(tapHookFormingText(tapThoughtSpeech));
       if (shouldAutoStashOnSilence(silence, hasText) && !autoStashInFlightRef.current) {
         autoStashInFlightRef.current = true;
         stashCurrentTranscription({ auto: true });
@@ -603,7 +605,7 @@ export function ExerciseTapClient({
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not start Exercise TAP");
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not start Exercise TAP"));
       if (payload.tapSessionId) {
         tapSessionIdRef.current = payload.tapSessionId;
         setTapSessionId(payload.tapSessionId);
@@ -641,11 +643,7 @@ export function ExerciseTapClient({
     setSessionEndedImpure(impure);
     let finalLists = listsRef.current;
     if (!impure) {
-      const text = tapLiveSpeechFlushText({
-        hookFormingText: tapThoughtSpeech.getFormingText(),
-        crystallizableText: crystallizableTextRef.current || crystallizableText,
-        localFinalBuffer: finalBufferRef.current,
-      });
+      const text = tapHookFormingText(tapThoughtSpeech);
       if (text) {
         // Flush remaining live speech into stash (sys1), then promote to submission (sys2).
         const stashed = stashExerciseSpeech(finalLists, text);
@@ -722,7 +720,7 @@ export function ExerciseTapClient({
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not save Exercise TAP");
+      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not save Exercise TAP"));
 
       if (practice) {
         setPhase("practice_done");

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const ileToken = ileTokenFromBody(body);
 
     if (row === undefined || col === undefined) {
-      return NextResponse.json({ error: "Grid position is required" }, { status: 400 });
+      return jsonError(400, "Grid position is required");
     }
 
     const spanW = parsePositiveInt(spanWRaw, 1);
@@ -57,11 +58,11 @@ export async function POST(req: NextRequest) {
       cellList.length > 1;
 
     if (mode === "chapter" && !sessionId) {
-      return NextResponse.json({ error: "Session ID is required for chapter suggestions" }, { status: 400 });
+      return jsonError(400, "Session ID is required for chapter suggestions");
     }
 
     if (mode === "block" && !workspaceId) {
-      return NextResponse.json({ error: "Plan ID is required for block suggestions" }, { status: 400 });
+      return jsonError(400, "Plan ID is required for block suggestions");
     }
 
     const auth =
@@ -92,11 +93,11 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (sessionError || !session) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+        return jsonError(404, "Session not found");
       }
 
       if (session.user_id !== user.id) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        return jsonError(403, "Access denied");
       }
 
       const { data: sessionPlan, error: planError } = await supabase
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (planError) {
-        return NextResponse.json({ error: "Failed to fetch chapter plan" }, { status: 500 });
+        return jsonError(500, "Failed to fetch chapter plan");
       }
 
       workspaceTitle = session.problem || "Session chapters";
@@ -135,11 +136,11 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (planError || !plan) {
-        return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+        return jsonError(404, "Plan not found");
       }
 
       if (plan.user_id !== user.id) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        return jsonError(403, "Access denied");
       }
 
       workspaceTitle = plan.title || plan.root_topic || "Untitled workspace";
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
         .eq("workspace_id", workspaceId);
 
       if (nodesError) {
-        return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
+        return jsonError(500, "Failed to fetch blocks");
       }
 
       blockList = (nodes || []).length
@@ -212,7 +213,7 @@ Suggest exactly 3 distinct ${entityLabel} topics that would fit naturally at thi
     );
 
     if (!response.success || !response.data?.suggestions?.length) {
-      return NextResponse.json({ error: "Failed to generate suggestions" }, { status: 500 });
+      return jsonError(500, "Failed to generate suggestions");
     }
 
     const suggestions = response.data.suggestions
@@ -221,7 +222,7 @@ Suggest exactly 3 distinct ${entityLabel} topics that would fit naturally at thi
       .slice(0, 3);
 
     if (suggestions.length === 0) {
-      return NextResponse.json({ error: "No suggestions returned" }, { status: 500 });
+      return jsonError(500, "No suggestions returned");
     }
 
     return NextResponse.json({ suggestions });
@@ -229,6 +230,6 @@ Suggest exactly 3 distinct ${entityLabel} topics that would fit naturally at thi
     console.error("Suggest blocks error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }

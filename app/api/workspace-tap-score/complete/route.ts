@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { hashPrivateToken } from "@/lib/tap-score";
 import {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       body.sessionQuality === "impure" || body.impure === true ? "impure" : "pure";
 
     if (transcript.length === 0) {
-      return NextResponse.json({ error: "transcript is required" }, { status: 400 });
+      return jsonError(400, "transcript is required");
     }
 
     const access = await resolveTapSessionAccess({
@@ -49,12 +50,12 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const resolvedTapSessionId = access.tapSessionId;
     if (!resolvedTapSessionId) {
-      return NextResponse.json({ error: "tapSessionId is required" }, { status: 400 });
+      return jsonError(400, "tapSessionId is required");
     }
 
     const { data: workspace } = await access.supabase
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const auth: AuthContext = {
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest) {
 
     if (writeError) {
       console.error("[workspace-tap-score/complete] Write error:", writeError);
-      return NextResponse.json({ error: writeError.message }, { status: 500 });
+      return jsonError(500, writeError.message);
     }
 
     if (access.completionWebhookUrl) {
@@ -224,6 +225,6 @@ export async function POST(req: NextRequest) {
     console.error("[workspace-tap-score/complete] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 500;
-    return NextResponse.json({ error: message }, { status: status });
+    return jsonError(status, message);
   }
 }

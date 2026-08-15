@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
 import { buildTapScoreInstructions, TapScoreMode } from "@/lib/tap-score";
 import { buildTapSelectiveThoughtSystemPrompt } from "@/lib/prompt-kernel/surfaces/tap";
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
             ? String(body.language)
             : "";
 
-    if (!latestThought) return NextResponse.json({ error: "thought is required" }, { status: 400 });
+    if (!latestThought) return jsonError(400, "thought is required");
 
     // Always resolve access first (enforces assigned_user_id when present).
     const access = await resolveTapSessionAccess({
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     });
 
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     workspaceId = access.workspaceId;
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
       if (existing?.session_id) focusSessionId = existing.session_id;
     }
 
-    if (!workspaceId) return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    if (!workspaceId) return jsonError(400, "workspaceId is required");
     if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
 
     // Shared brief loader: owner for guest/assigned private links (not participant userId).
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.success || !response.data) {
-      return NextResponse.json({ error: response.error || "Failed to generate TAP response" }, { status: 500 });
+      return jsonError(500, response.error || "Failed to generate TAP response");
     }
 
     const heliosReply = response.data;
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
         .eq("id", access.workspaceId)
         .single();
       if (!workspace) {
-        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+        return jsonError(404, "Workspace not found");
       }
       try {
         await uploadWorkspaceProofOfWork(
@@ -186,10 +187,7 @@ export async function POST(req: NextRequest) {
         );
       } catch (err) {
         console.error("[workspace-tap-score/chat] PoW upload failed:", err);
-        return NextResponse.json(
-          { error: err instanceof Error ? err.message : "Failed to store proof of work" },
-          { status: 502 },
-        );
+        return jsonError(502, err instanceof Error ? err.message : "Failed to store proof of work");
       }
 
       proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
@@ -218,6 +216,6 @@ export async function POST(req: NextRequest) {
     console.error("[workspace-tap-score/chat] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }

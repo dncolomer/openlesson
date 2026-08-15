@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import {
@@ -52,19 +53,14 @@ export async function POST(req: NextRequest) {
     };
 
     if (!workspaceId || typeof workspaceId !== "string") {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     if (
       mode !== "dynamic" &&
       mode !== "generator_cell" &&
       mode !== "generator_target"
     ) {
-      return NextResponse.json(
-        {
-          error: "mode must be dynamic | generator_cell",
-        },
-        { status: 400 },
-      );
+      return jsonError(400, "mode must be dynamic | generator_cell",);
     }
 
     // generator_target kept as alias → generator_cell for older clients
@@ -72,7 +68,7 @@ export async function POST(req: NextRequest) {
       mode === "generator_target" ? "generator_cell" : mode;
 
     if (effectiveMode === "dynamic" && (!blockId || typeof blockId !== "string")) {
-      return NextResponse.json({ error: "blockId is required" }, { status: 400 });
+      return jsonError(400, "blockId is required");
     }
 
     const ayclToken = ayclTokenFromBody(body as Record<string, unknown>);
@@ -100,7 +96,7 @@ export async function POST(req: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (nodesError) {
-      return NextResponse.json({ error: "Failed to load blocks" }, { status: 500 });
+      return jsonError(500, "Failed to load blocks");
     }
 
     const blocks = (nodes || []) as Array<Record<string, unknown>>;
@@ -124,45 +120,30 @@ export async function POST(req: NextRequest) {
     if (effectiveMode === "generator_cell") {
       const genId = String(generatorBlockId || "").trim();
       if (!genId) {
-        return NextResponse.json(
-          { error: "generatorBlockId is required for generator_cell" },
-          { status: 400 },
-        );
+        return jsonError(400, "generatorBlockId is required for generator_cell");
       }
       const row = Number(rowBody);
       const col = Number(colBody);
       if (!Number.isFinite(row) || !Number.isFinite(col)) {
-        return NextResponse.json(
-          { error: "row and col are required for generator_cell" },
-          { status: 400 },
-        );
+        return jsonError(400, "row and col are required for generator_cell");
       }
       const cell = { row: Math.trunc(row), col: Math.trunc(col) };
 
       const generator = blocks.find((b) => String(b.id) === genId);
       if (!generator) {
-        return NextResponse.json(
-          { error: "Generator block not found" },
-          { status: 404 },
-        );
+        return jsonError(404, "Generator block not found");
       }
       const genEffects = parseBlockCreatorEffects(generator.creator_effects, {
         selfBlockId: genId,
       });
       if (!isGeneratorEffectEnabled(genEffects)) {
-        return NextResponse.json(
-          { error: "Generator effect is not enabled on the source block" },
-          { status: 400 },
-        );
+        return jsonError(400, "Generator effect is not enabled on the source block");
       }
       const allowed = genEffects.generator.targetCells.some(
         (c) => c.row === cell.row && c.col === cell.col,
       );
       if (!allowed) {
-        return NextResponse.json(
-          { error: "Cell is not a generator empty target of the source" },
-          { status: 400 },
-        );
+        return jsonError(400, "Cell is not a generator empty target of the source");
       }
 
       const skillNodes = toSkillGridNodes(
@@ -170,10 +151,7 @@ export async function POST(req: NextRequest) {
       );
       const { occupancy } = buildSkillGridLayout(skillNodes);
       if (isCellOccupied(occupancy, cell.row, cell.col)) {
-        return NextResponse.json(
-          { error: "Target cell is no longer empty" },
-          { status: 409 },
-        );
+        return jsonError(409, "Target cell is no longer empty");
       }
 
       const geometryNote = formatGeneratorGeometryNote({
@@ -220,14 +198,8 @@ export async function POST(req: NextRequest) {
       );
 
       if (!generated.success || !generated.data) {
-        return NextResponse.json(
-          {
-            error:
-              generated.error ||
-              "Failed to generate block content for generator cell",
-          },
-          { status: 502 },
-        );
+        return jsonError(502, generated.error ||
+              "Failed to generate block content for generator cell",);
       }
 
       const result = normalizeEffectGenerationResult(generated.data, {
@@ -253,14 +225,8 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (insertError || !newNode) {
-        return NextResponse.json(
-          {
-            error:
-              insertError?.message ||
-              "Failed to create generated block on empty cell",
-          },
-          { status: 500 },
-        );
+        return jsonError(500, insertError?.message ||
+              "Failed to create generated block on empty cell",);
       }
 
       const { data: updatedNodes } = await supabase
@@ -283,12 +249,12 @@ export async function POST(req: NextRequest) {
 
     // ── dynamic: update existing block from learner history ──────────────
     if (effectiveMode !== "dynamic") {
-      return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
+      return jsonError(400, "Invalid mode");
     }
 
     const target = blocks.find((b) => String(b.id) === blockId);
     if (!target) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return jsonError(404, "Block not found");
     }
 
     const effects = parseBlockCreatorEffects(target.creator_effects, {
@@ -296,10 +262,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!isDynamicEffectEnabled(effects)) {
-      return NextResponse.json(
-        { error: "Dynamic effect is not enabled on this block" },
-        { status: 400 },
-      );
+      return jsonError(400, "Dynamic effect is not enabled on this block");
     }
     const completedBlocks = blocks
       .filter((b) => isBlockCompletedStatus(String(b.status || "")))
@@ -328,14 +291,8 @@ export async function POST(req: NextRequest) {
     );
 
     if (!generated.success || !generated.data) {
-      return NextResponse.json(
-        {
-          error:
-            generated.error ||
-            "Failed to generate block content for effect",
-        },
-        { status: 502 },
-      );
+      return jsonError(502, generated.error ||
+            "Failed to generate block content for effect",);
     }
 
     const result = normalizeEffectGenerationResult(generated.data, {
@@ -354,10 +311,7 @@ export async function POST(req: NextRequest) {
       .eq("workspace_id", workspaceId);
 
     if (updateError) {
-      return NextResponse.json(
-        { error: "Failed to update block with generated content" },
-        { status: 500 },
-      );
+      return jsonError(500, "Failed to update block with generated content");
     }
 
     const { data: updatedNodes } = await supabase
@@ -376,9 +330,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[block-effect-generate]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Internal error");
   }
 }

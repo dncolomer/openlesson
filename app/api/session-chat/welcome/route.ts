@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       tutoringLanguage?: string;
     };
     if (!sessionId || !problem) {
-      return NextResponse.json({ error: "Missing sessionId or problem" }, { status: 400 });
+      return jsonError(400, "Missing sessionId or problem");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!currentSession) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+      return jsonError(403, "Not authorized");
     }
 
     const workspaceId = typeof currentSession.metadata?.workspace_id === "string"
@@ -89,17 +90,17 @@ Rules:
     });
 
     if (!response.success || !response.data) {
-      return NextResponse.json({ error: response.error || "Welcome generation failed" }, { status: 500 });
+      return jsonError(500, response.error || "Welcome generation failed");
     }
 
     const message = sanitizeAssistantText(response.data);
     if (!message) {
-      return NextResponse.json({ error: "Welcome generation returned empty message" }, { status: 500 });
+      return jsonError(500, "Welcome generation returned empty message");
     }
 
     return NextResponse.json({ message });
   } catch (error) {
     console.error("Session chat welcome error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

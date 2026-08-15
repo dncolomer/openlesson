@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
@@ -221,7 +222,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!workspaceId || !op) {
-      return NextResponse.json({ error: "workspaceId and op are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and op are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (nodesError || !nodes) {
-      return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
+      return jsonError(500, "Failed to fetch blocks");
     }
 
     const skillNodes = toSkillGridNodes(nodes);
@@ -263,20 +264,14 @@ export async function POST(req: NextRequest) {
           ? Math.trunc((body as { col: number }).col)
           : NaN;
       if (!sourceId || !Number.isFinite(row) || !Number.isFinite(col)) {
-        return NextResponse.json(
-          { error: "sourceBlockId, row, and col are required for clone_block" },
-          { status: 400 },
-        );
+        return jsonError(400, "sourceBlockId, row, and col are required for clone_block");
       }
       const source = nodes.find((n) => n.id === sourceId);
       if (!source) {
-        return NextResponse.json({ error: "Source block not found" }, { status: 404 });
+        return jsonError(404, "Source block not found");
       }
       if (isCellOccupied(occupancy, row, col)) {
-        return NextResponse.json(
-          { error: "That grid slot is already occupied" },
-          { status: 409 },
-        );
+        return jsonError(409, "That grid slot is already occupied");
       }
       const { unusableCells: cloneUnusable } = await loadWorkspaceContext(
         supabase,
@@ -284,10 +279,7 @@ export async function POST(req: NextRequest) {
       );
       const ground = canPlaceOnMapGround([{ row, col }], cloneUnusable);
       if (!ground.ok && ground.reason === "unusable") {
-        return NextResponse.json(
-          { error: "Target cell is unusable ground", code: "unusable_ground" },
-          { status: 409 },
-        );
+        return jsonError(409, "Target cell is unusable ground", "unusable_ground");
       }
 
       const built = buildCloneInsertPayload({
@@ -375,10 +367,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (insertError || !newNode) {
-        return NextResponse.json(
-          { error: insertError?.message || "Failed to clone block" },
-          { status: 500 },
-        );
+        return jsonError(500, insertError?.message || "Failed to clone block");
       }
 
       const { data: updatedNodes } = await supabase
@@ -397,10 +386,10 @@ export async function POST(req: NextRequest) {
 
     if (op === "update_block") {
       if (!blockId || typeof title !== "string" || !title.trim()) {
-        return NextResponse.json({ error: "blockId and title are required" }, { status: 400 });
+        return jsonError(400, "blockId and title are required");
       }
       const existing = nodes.find((n) => n.id === blockId);
-      if (!existing) return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      if (!existing) return jsonError(404, "Block not found");
 
       const updateFields: Record<string, unknown> = {
         title: title.trim(),
@@ -448,7 +437,7 @@ export async function POST(req: NextRequest) {
           })),
         });
         if (!validated.ok) {
-          return NextResponse.json({ error: validated.error }, { status: 400 });
+          return jsonError(400, validated.error);
         }
         updateFields.creator_effects = serializeBlockCreatorEffects(
           validated.effects,
@@ -495,7 +484,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (updateError) {
-        return NextResponse.json({ error: "Failed to update block" }, { status: 500 });
+        return jsonError(500, "Failed to update block");
       }
 
       const { data: updatedNodes } = await supabase
@@ -513,10 +502,10 @@ export async function POST(req: NextRequest) {
 
     if (op === "delete_block") {
       if (!blockId || typeof blockId !== "string") {
-        return NextResponse.json({ error: "blockId is required" }, { status: 400 });
+        return jsonError(400, "blockId is required");
       }
       const existing = nodes.find((n) => n.id === blockId);
-      if (!existing) return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      if (!existing) return jsonError(404, "Block not found");
 
       // Strip deleted id from peers' next / lock-until lists.
       for (const n of nodes) {
@@ -547,7 +536,7 @@ export async function POST(req: NextRequest) {
         .eq("workspace_id", workspaceId);
 
       if (deleteError) {
-        return NextResponse.json({ error: "Failed to delete block" }, { status: 500 });
+        return jsonError(500, "Failed to delete block");
       }
 
       // If the deleted block was the start, promote the earliest remaining block.
@@ -583,15 +572,12 @@ export async function POST(req: NextRequest) {
         ? blockIds.map((id) => String(id || "").trim()).filter(Boolean)
         : [];
       if (ids.length === 0) {
-        return NextResponse.json(
-          { error: "blockIds required for delete_blocks" },
-          { status: 400 },
-        );
+        return jsonError(400, "blockIds required for delete_blocks");
       }
       const idSet = new Set(ids);
       const existing = nodes.filter((n) => idSet.has(n.id));
       if (existing.length === 0) {
-        return NextResponse.json({ error: "No matching blocks" }, { status: 404 });
+        return jsonError(404, "No matching blocks");
       }
       const hadStart = existing.some((n) => n.is_start);
 
@@ -629,10 +615,7 @@ export async function POST(req: NextRequest) {
         .eq("workspace_id", workspaceId);
 
       if (deleteError) {
-        return NextResponse.json(
-          { error: "Failed to delete blocks" },
-          { status: 500 },
-        );
+        return jsonError(500, "Failed to delete blocks");
       }
 
       if (hadStart) {
@@ -669,10 +652,7 @@ export async function POST(req: NextRequest) {
         !Array.isArray(draft.blockIds) ||
         draft.blockIds.length < 2
       ) {
-        return NextResponse.json(
-          { error: "dagDraft with ≥2 blockIds required for apply_dag" },
-          { status: 400 },
-        );
+        return jsonError(400, "dagDraft with ≥2 blockIds required for apply_dag");
       }
       const refs = nodes.map((n) => ({
         id: n.id,
@@ -767,10 +747,7 @@ export async function POST(req: NextRequest) {
     if (op === "delete_dag") {
       const id = typeof dagId === "string" ? dagId.trim() : "";
       if (!id) {
-        return NextResponse.json(
-          { error: "dagId required for delete_dag" },
-          { status: 400 },
-        );
+        return jsonError(400, "dagId required for delete_dag");
       }
       const refs = nodes.map((n) => ({
         id: n.id,
@@ -798,7 +775,7 @@ export async function POST(req: NextRequest) {
       // Registry or discovered-from-next (so map graphs without workspace_dags still delete)
       const record = resolveWorkspaceDagForMutation(existing, id, refs);
       if (!record) {
-        return NextResponse.json({ error: "DAG not found" }, { status: 404 });
+        return jsonError(404, "DAG not found");
       }
       const updates = buildWorkspaceDagDeleteUpdates(record.blockIds, refs);
       for (const u of updates) {
@@ -846,11 +823,11 @@ export async function POST(req: NextRequest) {
     if (op === "move") {
       const ids = Array.isArray(blockIds) ? blockIds.filter(Boolean) : [];
       if (ids.length === 0) {
-        return NextResponse.json({ error: "blockIds required for move" }, { status: 400 });
+        return jsonError(400, "blockIds required for move");
       }
       const moving = placed.filter((p) => ids.includes(p.id));
       if (moving.length !== ids.length) {
-        return NextResponse.json({ error: "One or more blocks not found or unplaced" }, { status: 400 });
+        return jsonError(400, "One or more blocks not found or unplaced");
       }
       const next = translateBlocksPreservingShape(
         moving,
@@ -859,7 +836,7 @@ export async function POST(req: NextRequest) {
         placedOccupancy,
       );
       if (!next) {
-        return NextResponse.json({ error: "Move collides with occupied cells" }, { status: 409 });
+        return jsonError(409, "Move collides with occupied cells");
       }
 
       const { unusableCells: moveUnusable } = await loadWorkspaceContext(supabase, workspaceId);
@@ -867,10 +844,7 @@ export async function POST(req: NextRequest) {
         const cells = placedBlockCells(block);
         const ground = canPlaceOnMapGround(cells, moveUnusable);
         if (!ground.ok && ground.reason === "unusable") {
-          return NextResponse.json(
-            { error: "Move lands on unusable ground", code: "unusable_ground" },
-            { status: 409 },
-          );
+          return jsonError(409, "Move lands on unusable ground", "unusable_ground");
         }
       }
 
@@ -903,35 +877,23 @@ export async function POST(req: NextRequest) {
       // Absolute per-block anchors (cluster blocks, etc.). Content/shape unchanged.
       const raw = Array.isArray(placementsBody) ? placementsBody : [];
       if (raw.length === 0) {
-        return NextResponse.json(
-          { error: "placements required for relocate" },
-          { status: 400 },
-        );
+        return jsonError(400, "placements required for relocate");
       }
       const byPlaced = new Map(placed.map((p) => [p.id, p]));
       const next: PlacedBlockRef[] = [];
       for (const item of raw) {
         const id = String(item?.id || "").trim();
         if (!id) {
-          return NextResponse.json(
-            { error: "Each placement needs id" },
-            { status: 400 },
-          );
+          return jsonError(400, "Each placement needs id");
         }
         const src = byPlaced.get(id);
         if (!src) {
-          return NextResponse.json(
-            { error: `Block not found or unplaced: ${id}` },
-            { status: 400 },
-          );
+          return jsonError(400, `Block not found or unplaced: ${id}`);
         }
         const px = Number(item.position_x);
         const py = Number(item.position_y);
         if (!Number.isFinite(px) || !Number.isFinite(py)) {
-          return NextResponse.json(
-            { error: `Invalid position for ${id}` },
-            { status: 400 },
-          );
+          return jsonError(400, `Invalid position for ${id}`);
         }
         next.push({
           id,
@@ -953,10 +915,7 @@ export async function POST(req: NextRequest) {
         relocateUnusable,
       );
       if (collision) {
-        return NextResponse.json(
-          { error: collision, code: "relocate_collision" },
-          { status: 409 },
-        );
+        return jsonError(409, collision, "relocate_collision");
       }
 
       for (const block of next) {
@@ -988,14 +947,14 @@ export async function POST(req: NextRequest) {
     if (op === "resize") {
       // Sole-block edge/corner stretch — settle only (client previews without persist).
       if (!blockId || typeof blockId !== "string") {
-        return NextResponse.json({ error: "blockId required for resize" }, { status: 400 });
+        return jsonError(400, "blockId required for resize");
       }
       if (!isStretchHandle(stretchHandleBody)) {
-        return NextResponse.json({ error: "valid stretch handle required for resize" }, { status: 400 });
+        return jsonError(400, "valid stretch handle required for resize");
       }
       const target = placed.find((p) => p.id === blockId);
       if (!target) {
-        return NextResponse.json({ error: "Block not found or unplaced" }, { status: 400 });
+        return jsonError(400, "Block not found or unplaced");
       }
       const settled = stretchBlockFromHandle(
         target,
@@ -1005,20 +964,14 @@ export async function POST(req: NextRequest) {
         placedOccupancy,
       );
       if (!settled) {
-        return NextResponse.json(
-          { error: "Resize invalid (collision, no-op, or out of bounds)" },
-          { status: 409 },
-        );
+        return jsonError(409, "Resize invalid (collision, no-op, or out of bounds)");
       }
 
       const { unusableCells: resizeUnusable } = await loadWorkspaceContext(supabase, workspaceId);
       const resizeCells = placedBlockCells(settled);
       const ground = canPlaceOnMapGround(resizeCells, resizeUnusable);
       if (!ground.ok && ground.reason === "unusable") {
-        return NextResponse.json(
-          { error: "Resize lands on unusable ground", code: "unusable_ground" },
-          { status: 409 },
-        );
+        return jsonError(409, "Resize lands on unusable ground", "unusable_ground");
       }
 
       const { error: resizeError } = await supabase
@@ -1033,7 +986,7 @@ export async function POST(req: NextRequest) {
         .eq("id", settled.id);
 
       if (resizeError) {
-        return NextResponse.json({ error: "Failed to resize block" }, { status: 500 });
+        return jsonError(500, "Failed to resize block");
       }
 
       const { data: updatedNodes } = await supabase
@@ -1052,11 +1005,11 @@ export async function POST(req: NextRequest) {
     if (op === "split") {
       const ids = Array.isArray(blockIds) ? blockIds.filter(Boolean) : [];
       if (ids.length === 0) {
-        return NextResponse.json({ error: "blockIds required for split" }, { status: 400 });
+        return jsonError(400, "blockIds required for split");
       }
       const targets = nodes.filter((n) => ids.includes(n.id));
       if (targets.length === 0) {
-        return NextResponse.json({ error: "No blocks to split" }, { status: 400 });
+        return jsonError(400, "No blocks to split");
       }
 
       const singles = splitBlocksToSingles(
@@ -1182,11 +1135,11 @@ export async function POST(req: NextRequest) {
     if (op === "merge") {
       const ids = Array.isArray(blockIds) ? blockIds.filter(Boolean) : [];
       if (ids.length < 2) {
-        return NextResponse.json({ error: "Select at least two blocks to merge" }, { status: 400 });
+        return jsonError(400, "Select at least two blocks to merge");
       }
       const targets = nodes.filter((n) => ids.includes(n.id));
       if (targets.length < 2) {
-        return NextResponse.json({ error: "Not enough blocks to merge" }, { status: 400 });
+        return jsonError(400, "Not enough blocks to merge");
       }
 
       const mergePlaced = targets
@@ -1201,16 +1154,13 @@ export async function POST(req: NextRequest) {
         }));
       const freeform = mergeBlocksToFreeform(mergePlaced);
       if (!freeform) {
-        return NextResponse.json({ error: "Could not compute merge footprint" }, { status: 400 });
+        return jsonError(400, "Could not compute merge footprint");
       }
       const footprint = freeform.footprint;
 
       // Only the union of source cells is required free (ignoring the sources themselves).
       if (!canPlaceAbsoluteCells(freeform.absoluteCells, placedOccupancy, ids)) {
-        return NextResponse.json(
-          { error: "Merge region collides with other blocks" },
-          { status: 409 },
-        );
+        return jsonError(409, "Merge region collides with other blocks");
       }
 
       const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
@@ -1250,7 +1200,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (!aiResponse.success || !aiResponse.data?.title?.trim()) {
-        return NextResponse.json({ error: aiResponse.error || "Failed to merge blocks" }, { status: 502 });
+        return jsonError(502, aiResponse.error || "Failed to merge blocks");
       }
 
       const keepId = targets[0].id;
@@ -1283,7 +1233,7 @@ export async function POST(req: NextRequest) {
         mergeErr = retry.error;
       }
       if (mergeErr) {
-        return NextResponse.json({ error: "Failed to update merged block" }, { status: 500 });
+        return jsonError(500, "Failed to update merged block");
       }
 
       if (dropIds.length) {
@@ -1309,17 +1259,14 @@ export async function POST(req: NextRequest) {
       const selection = Array.isArray(cells) ? cells : [];
       const freeformSel = selectionIsFreeformLectureShape(selection);
       if (!freeformSel.footprint || freeformSel.reason === "empty") {
-        return NextResponse.json({ error: "cells required for generate_shape" }, { status: 400 });
+        return jsonError(400, "cells required for generate_shape");
       }
       if (freeformSel.reason === "not_contiguous") {
-        return NextResponse.json(
-          {
-            error:
-              "Select a contiguous region (edge-connected cells). Diagonal-only gaps are not allowed.",
-            code: "selection_not_contiguous",
-            selectedCount: freeformSel.selectedCount,
-          },
-          { status: 400 },
+        return jsonError(
+          400,
+          "Select a contiguous region (edge-connected cells). Diagonal-only gaps are not allowed.",
+          "selection_not_contiguous",
+          { selectedCount: freeformSel.selectedCount },
         );
       }
       const footprint = freeformSel.footprint;
@@ -1327,17 +1274,11 @@ export async function POST(req: NextRequest) {
       const absolute =
         freeformShapeFromCells(selection)?.absoluteCells ?? selection;
       if (!prompt?.trim()) {
-        return NextResponse.json({ error: "prompt required for generate_shape" }, { status: 400 });
+        return jsonError(400, "prompt required for generate_shape");
       }
       // Only selected cells must be free (freeform shapes may leave bbox holes empty).
       if (!canPlaceAbsoluteCells(absolute, placedOccupancy)) {
-        return NextResponse.json(
-          {
-            error: "One or more selected cells are already occupied",
-            code: "cells_occupied",
-          },
-          { status: 409 },
-        );
+        return jsonError(409, "One or more selected cells are already occupied", "cells_occupied");
       }
 
       const {
@@ -1349,13 +1290,7 @@ export async function POST(req: NextRequest) {
       } = await loadWorkspaceContext(supabase, workspaceId);
       const ground = canPlaceOnMapGround(absolute, shapeUnusable);
       if (!ground.ok && ground.reason === "unusable") {
-        return NextResponse.json(
-          {
-            error: "Selection includes unusable ground cells",
-            code: "unusable_ground",
-          },
-          { status: 409 },
-        );
+        return jsonError(409, "Selection includes unusable ground cells", "unusable_ground");
       }
 
       const selectedKeys = Array.isArray(contextSourceKeys)
@@ -1453,7 +1388,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (!aiResponse.success || !aiResponse.data?.title?.trim()) {
-        return NextResponse.json({ error: aiResponse.error || "Failed to generate block" }, { status: 502 });
+        return jsonError(502, aiResponse.error || "Failed to generate block");
       }
 
       const local_context =
@@ -1528,7 +1463,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (insertError || !newNode) {
-        return NextResponse.json({ error: "Failed to create block" }, { status: 500 });
+        return jsonError(500, "Failed to create block");
       }
 
       const { data: updatedNodes } = await supabase
@@ -1548,11 +1483,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
+    return jsonError(400, `Unknown op: ${op}`);
   } catch (error) {
     console.error("Grid ops error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }

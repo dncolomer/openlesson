@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
@@ -33,10 +34,10 @@ export async function POST(req: NextRequest) {
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
     if (!tapSessionId) {
-      return NextResponse.json({ error: "tapSessionId is required" }, { status: 400 });
+      return jsonError(400, "tapSessionId is required");
     }
     if (!SPEECH_EVENTS.has(event)) {
-      return NextResponse.json({ error: "event must be start or stop" }, { status: 400 });
+      return jsonError(400, "event must be start or stop");
     }
 
     const access = await resolveTapSessionAccess({
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const payload = stampPoWPracticeFlag(
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
       .eq("id", access.workspaceId)
       .single();
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
     const row = await uploadWorkspaceProofOfWork(
       access.supabase,
@@ -132,6 +133,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[workspace-tap-score/speech] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

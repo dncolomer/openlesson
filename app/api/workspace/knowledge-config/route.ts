@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
@@ -60,13 +61,13 @@ async function resolveWebAuth(
     if ("error" in aycl) {
       return {
         ok: false,
-        response: NextResponse.json({ error: aycl.error }, { status: aycl.status }),
+        response: jsonError(aycl.status, aycl.error),
       };
     }
     if (aycl.workspaceId !== workspaceId) {
       return {
         ok: false,
-        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        response: jsonError(403, "Forbidden"),
       };
     }
     return {
@@ -91,7 +92,7 @@ async function resolveWebAuth(
   if (!workspace) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Workspace not found" }, { status: 404 }),
+      response: jsonError(404, "Workspace not found"),
     };
   }
 
@@ -110,7 +111,7 @@ async function resolveWebAuth(
   if (!decided.allowed) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: jsonError(403, "Forbidden"),
     };
   }
 
@@ -273,7 +274,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const workspaceId = url.searchParams.get("workspaceId") || "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await resolveWebAuth(workspaceId, url.searchParams.get("ayclToken"));
     if (!auth.ok) return auth.response;
@@ -287,7 +288,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(payload);
   } catch (error) {
     console.error("[workspace/knowledge-config] GET failed:", error);
-    return NextResponse.json({ error: "Failed to load knowledge config" }, { status: 500 });
+    return jsonError(500, "Failed to load knowledge config");
   }
 }
 
@@ -296,7 +297,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await resolveWebAuth(workspaceId, ayclTokenFromBody(body));
     if (!auth.ok) return auth.response;
@@ -330,6 +331,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payload);
   } catch (error) {
     console.error("[workspace/knowledge-config] POST failed:", error);
-    return NextResponse.json({ error: "Failed to load knowledge config" }, { status: 500 });
+    return jsonError(500, "Failed to load knowledge config");
   }
 }

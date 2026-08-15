@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/xai-client";
 import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     const { workspaceId, userPrompt, conversationHistory, model: userModel, locale, images, gridRow, gridCol } = body;
 
     if (!workspaceId || !userPrompt) {
-      return NextResponse.json({ error: "Plan ID and prompt are required" }, { status: 400 });
+      return jsonError(400, "Plan ID and prompt are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
@@ -77,11 +78,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (planError || !plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      return jsonError(404, "Plan not found");
     }
 
     if (plan.user_id !== user.id && !plan.is_public) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      return jsonError(403, "Access denied");
     }
 
     const { data: nodes, error: nodesError } = await supabase
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
       .order("created_at", { ascending: true });
 
     if (nodesError || !nodes) {
-      return NextResponse.json({ error: "Failed to fetch nodes" }, { status: 500 });
+      return jsonError(500, "Failed to fetch nodes");
     }
 
     const { data: workspaceFiles } = await supabase
@@ -163,7 +164,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
     if (!aiResponse.success || !aiResponse.data) {
       console.error("[Chat] AI response failed:", aiResponse.error);
       console.error("[Chat] Raw content:", aiResponse.rawContent?.substring(0, 1000));
-      return NextResponse.json({ error: aiResponse.error || "Failed to get AI response" }, { status: 502 });
+      return jsonError(502, aiResponse.error || "Failed to get AI response");
     }
 
 
@@ -341,10 +342,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
     console.error("Chat plan error:", error);
     const message = error instanceof Error ? error.message : "Internal error";
     const status = message.includes("XAI_API_KEY") ? 503 : 500;
-    return NextResponse.json(
-      { error: message },
-      { status }
-    );
+    return jsonError(status, message);
   }
 }
 

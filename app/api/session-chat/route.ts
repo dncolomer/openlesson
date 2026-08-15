@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { ayclTokenFromBody,
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan } = body;
 
     if (!problem) {
-      return NextResponse.json({ error: "Missing problem" }, { status: 400 });
+      return jsonError(400, "Missing problem");
     }
 
     const ayclToken = ayclTokenFromBody(body);
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.success || !response.data) {
       console.error("Session chat API error:", response.error);
-      return NextResponse.json({ error: `API error: ${response.error}` }, { status: 500 });
+      return jsonError(500, `API error: ${response.error}`);
     }
 
     const lastLearner =
@@ -194,6 +195,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Session chat error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

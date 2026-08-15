@@ -142,7 +142,9 @@ describe("clone left-bar UI wiring", () => {
     expect(grid).toContain("onCloneArm");
     expect(grid).toContain("cloneArmed");
     expect(grid).toContain("data-clone-armed");
-    expect(grid).toContain("data-block-map-tool={tool}");
+    expect(grid).toContain("MapToolStripButton");
+    const strip = read("components/block-skill-grid/map-tool-strip-button.tsx");
+    expect(strip).toContain("data-block-map-tool={tool}");
     // Activate arms sole selection
     expect(grid).toMatch(/case "clone"[\s\S]*?onCloneArm/);
 

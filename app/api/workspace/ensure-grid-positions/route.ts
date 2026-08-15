@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
 
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
+      return jsonError(400, "Plan ID is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       .eq("workspace_id", workspaceId);
 
     if (nodesError || !nodes) {
-      return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
+      return jsonError(500, "Failed to fetch blocks");
     }
 
     const needsBackfill = nodes.some(
@@ -44,12 +45,12 @@ export async function POST(req: NextRequest) {
       .eq("workspace_id", workspaceId);
 
     if (fetchError) {
-      return NextResponse.json({ error: "Backfill failed to refresh nodes" }, { status: 500 });
+      return jsonError(500, "Backfill failed to refresh nodes");
     }
 
     return NextResponse.json({ changed: true, updatedNodes: updatedNodes || [] });
   } catch (error) {
     console.error("Ensure grid positions error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }

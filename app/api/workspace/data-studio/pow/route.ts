@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -122,7 +123,7 @@ export async function GET(req: NextRequest) {
   try {
     const workspaceId = (req.nextUrl.searchParams.get("workspaceId") || "").trim();
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
@@ -148,10 +149,7 @@ export async function GET(req: NextRequest) {
     if (linkInput) {
       const parsed = parseStudioSessionLinkInput(linkInput);
       if (!parsed) {
-        return NextResponse.json(
-          { error: "Could not parse session link or token", code: "invalid_link" },
-          { status: 400 },
-        );
+        return jsonError(400, "Could not parse session link or token", "invalid_link");
       }
       resolved = await resolveSessionLinkFromToken(
         auth.supabase,
@@ -160,10 +158,7 @@ export async function GET(req: NextRequest) {
         workspaceId,
       );
       if (!resolved) {
-        return NextResponse.json(
-          { error: "No guest link found for that token in this workspace", code: "not_found" },
-          { status: 404 },
-        );
+        return jsonError(404, "No guest link found for that token in this workspace", "not_found");
       }
     }
 
@@ -210,7 +205,7 @@ export async function GET(req: NextRequest) {
       const { data, count, error } = await query.range(from, to);
       if (error) {
         console.error("[workspace/data-studio/pow] list range", error);
-        return NextResponse.json({ error: "Failed to load proof of work" }, { status: 500 });
+        return jsonError(500, "Failed to load proof of work");
       }
 
       let rows = (data || []) as Record<string, unknown>[];
@@ -258,7 +253,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
     if (error) {
       console.error("[workspace/data-studio/pow] list candidates", error);
-      return NextResponse.json({ error: "Failed to load proof of work" }, { status: 500 });
+      return jsonError(500, "Failed to load proof of work");
     }
 
     let rows = (data || []) as Record<string, unknown>[];
@@ -330,7 +325,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[workspace/data-studio/pow] GET", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -344,7 +339,7 @@ export async function PATCH(req: NextRequest) {
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     const id = typeof body.id === "string" ? body.id.trim() : "";
     if (!workspaceId || !id) {
-      return NextResponse.json({ error: "workspaceId and id are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and id are required");
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
@@ -360,7 +355,7 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle();
 
     if (loadErr || !existing) {
-      return NextResponse.json({ error: "Proof of work not found" }, { status: 404 });
+      return jsonError(404, "Proof of work not found");
     }
 
     const patch = buildStudioPowPatch(existing.metadata, {
@@ -386,7 +381,7 @@ export async function PATCH(req: NextRequest) {
 
     if (upErr || !updated) {
       console.error("[workspace/data-studio/pow] PATCH", upErr);
-      return NextResponse.json({ error: "Failed to update proof of work" }, { status: 500 });
+      return jsonError(500, "Failed to update proof of work");
     }
 
     const details = mapProofOfWorkRow(updated as Parameters<typeof mapProofOfWorkRow>[0], null);
@@ -401,7 +396,7 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (err) {
     console.error("[workspace/data-studio/pow] PATCH", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -417,13 +412,10 @@ export async function POST(req: NextRequest) {
       ? body.ids.map((x: unknown) => String(x || "").trim()).filter(Boolean)
       : [];
     if (!workspaceId || ids.length === 0) {
-      return NextResponse.json(
-        { error: "workspaceId and non-empty ids are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and non-empty ids are required");
     }
     if (ids.length > 100) {
-      return NextResponse.json({ error: "At most 100 ids per bulk request" }, { status: 400 });
+      return jsonError(400, "At most 100 ids per bulk request");
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
@@ -440,7 +432,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[workspace/data-studio/pow] bulk load", error);
-      return NextResponse.json({ error: "Failed to load proof of work" }, { status: 500 });
+      return jsonError(500, "Failed to load proof of work");
     }
 
     const updatedIds: string[] = [];
@@ -473,6 +465,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[workspace/data-studio/pow] POST bulk", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

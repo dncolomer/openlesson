@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   CreateTapbenchLinkError,
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
   try {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[workspace/tapbench-links] GET failed:", error);
-    return NextResponse.json({ error: "Failed to list TAPBench links" }, { status: 500 });
+    return jsonError(500, "Failed to list TAPBench links");
   }
 }
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -115,12 +116,9 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     if (error instanceof CreateTapbenchLinkError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status },
-      );
+      return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/tapbench-links] POST failed:", error);
-    return NextResponse.json({ error: "Failed to create TAPBench link" }, { status: 500 });
+    return jsonError(500, "Failed to create TAPBench link");
   }
 }

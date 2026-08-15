@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ayclTokenFromBody,
   guardWorkspaceRoute,
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
           ? body.workspace_id.trim()
           : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const topicRaw =
@@ -41,10 +42,7 @@ export async function POST(req: NextRequest) {
           : "";
     const topic = topicRaw.replace(/\s+/g, " ").trim();
     if (!topic) {
-      return NextResponse.json(
-        { error: "topic or prompt is required" },
-        { status: 400 },
-      );
+      return jsonError(400, "topic or prompt is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -84,22 +82,14 @@ export async function POST(req: NextRequest) {
 
     if (!response.success) {
       console.error("[suggest-external-context] xAI error", response.error);
-      return NextResponse.json(
-        {
-          error: response.error || "Failed to suggest external sources",
-          suggestions: [],
-        },
-        { status: 502 },
-      );
+      return jsonError(502, response.error || "Failed to suggest external sources",
+          suggestions: [],);
     }
 
     const suggestions = normalizeExternalContextSuggestions(response.data);
     return NextResponse.json({ suggestions });
   } catch (err) {
     console.error("[suggest-external-context]", err);
-    return NextResponse.json(
-      { error: "Internal error", suggestions: [] },
-      { status: 500 },
-    );
+    return jsonError(500, "Internal error", suggestions: []);
   }
 }

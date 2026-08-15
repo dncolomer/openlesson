@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -85,12 +86,12 @@ async function resolveWebAuth(workspaceId: string): Promise<
 export async function GET(req: NextRequest) {
   const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
   if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    return jsonError(400, "workspaceId is required");
   }
 
   const access = await resolveWebAuth(workspaceId);
   if ("error" in access) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+    return jsonError(access.status, access.error);
   }
 
   const ILE_LIST_SELECT_WITH_MODE =
@@ -123,7 +124,7 @@ export async function GET(req: NextRequest) {
         .order("created_at", { ascending: false });
       if (legacy.error) {
         console.error("[workspace/ile-links] List error:", legacy.error);
-        return NextResponse.json({ error: "Failed to list ILE links" }, { status: 500 });
+        return jsonError(500, "Failed to list ILE links");
       }
       links = (legacy.data || []).map((row) => ({
         ...row,
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[workspace/ile-links] List error:", error);
-    return NextResponse.json({ error: "Failed to list ILE links" }, { status: 500 });
+    return jsonError(500, "Failed to list ILE links");
   }
 
   const origin = baseUrl(req);
@@ -180,12 +181,12 @@ export async function POST(req: NextRequest) {
       body.invalidateAll === "true";
 
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     if (invalidateAll) {
@@ -219,7 +220,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!blockId) {
-      return NextResponse.json({ error: "blockId is required for ILE links" }, { status: 400 });
+      return jsonError(400, "blockId is required for ILE links");
     }
 
     const ileLink = await createWorkspaceIleLink({
@@ -235,9 +236,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ile_link: ileLink }, { status: 201 });
   } catch (error) {
     if (error instanceof CreateIleLinkError || error instanceof InvalidateGuestLinkError) {
-      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+      return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/ile-links] Create error:", error);
-    return NextResponse.json({ error: "Failed to create ILE link" }, { status: 500 });
+    return jsonError(500, "Failed to create ILE link");
   }
 }

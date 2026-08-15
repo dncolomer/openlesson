@@ -145,6 +145,7 @@ import {
 } from "@/lib/aycl-shared";
 
 import type { Block, Workspace } from "@/lib/domain/types";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   postWorkspaceGridOp,
   shouldReloadWorkspaceAfterMutate,
@@ -562,12 +563,17 @@ export function WorkspaceView({
   );
 
   const handleCloseEmptyCreate = useCallback(() => {
-    setEmptySurface(clearWorkspaceAddTarget());
-  }, []);
+    applyMapSelectionResult(
+      nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+    );
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const handleCloseCombine = useCallback(() => {
-    setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-  }, []);
+    applyMapSelectionResult(
+      nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+      { pushToGrid: true },
+    );
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const naturalRightPane = resolveWorkspaceRightPane(
     expandedBlockId,
@@ -643,7 +649,7 @@ export function WorkspaceView({
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
-            (errorData as { error?: string }).error || "Failed to clone block",
+            errorMessageFromBody(errorData, "Failed to clone block"),
           );
         }
         const data = await response.json();
@@ -673,11 +679,12 @@ export function WorkspaceView({
     (cells: Array<{ row: number; col: number }> | null) => {
       // Play mode: empty multi-select is visibility-only (no Add / generate panes).
       if (interactionMode === "learner") {
-        setEmptySurface(clearWorkspaceAddTarget());
-        if (cells && cells.length > 0) {
-          setExpandedBlockId(clearWorkspaceBlockSelection());
-          setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        }
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(currentMapSelection(), {
+            type: "set_empty_cells",
+            cells: cells && cells.length > 0 ? cells : [],
+          }),
+        );
         return;
       }
 
@@ -722,19 +729,18 @@ export function WorkspaceView({
         setCloneArm(createDisarmedCloneState());
       }
 
-      const surface = resolveEmptySelectionSurface({
-        selectedEmptyCells: cells || [],
-        unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-      });
-      setEmptySurface(surface);
-      if (surface) {
-        setExpandedBlockId(clearWorkspaceBlockSelection());
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+      applyMapSelectionResult(
+        nextWorkspaceMapSelection(currentMapSelection(), {
+          type: "set_empty_cells",
+          cells: cells || [],
+        }),
+      );
+      if (cells && cells.length > 0) {
         setCloneArm(createDisarmedCloneState());
         setMobileColumn("workspace");
       }
     },
-    [cloneArm, handleClonePaste, interactionMode, unusableCells],
+    [applyMapSelectionResult, cloneArm, currentMapSelection, handleClonePaste, interactionMode, unusableCells],
   );
 
   const handleExpandFromSourceBlock = useCallback(
@@ -831,9 +837,7 @@ export function WorkspaceView({
               });
               if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(
-                  errorData.error ||
-                    `Failed to expand block at (${slot.row}, ${slot.col})`,
+                throw new Error(errorMessageFromBody(errorData, `Failed to expand block at (${slot.row}, ${slot.col})`),
                 );
               }
               const data = await response.json();
@@ -953,7 +957,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to combine blocks");
+          throw new Error(errorMessageFromBody(data, "Failed to combine blocks"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -963,8 +967,10 @@ export function WorkspaceView({
             })),
           );
         }
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        setExpandedBlockId(clearWorkspaceBlockSelection());
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          { pushToGrid: true },
+        );
         if (shouldReloadWorkspaceAfterMutate()) {
           refreshNodes();
           router.refresh();
@@ -995,7 +1001,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to split block");
+          throw new Error(errorMessageFromBody(data, "Failed to split block"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -1005,7 +1011,10 @@ export function WorkspaceView({
             })),
           );
         }
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          { pushToGrid: true },
+        );
         if (shouldReloadWorkspaceAfterMutate()) {
           refreshNodes();
           router.refresh();
@@ -1014,7 +1023,7 @@ export function WorkspaceView({
         setIsAddingBlock(false);
       }
     },
-    [isOwner, locale, refreshNodes, router, workspaceId],
+    [applyMapSelectionResult, currentMapSelection, isOwner, locale, refreshNodes, router, workspaceId],
   );
 
   const handleSubmitAddBlock = useCallback(
@@ -1112,9 +1121,7 @@ export function WorkspaceView({
               });
               if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(
-                  errorData.error ||
-                    `Failed to add block at (${slot.row}, ${slot.col})`,
+                throw new Error(errorMessageFromBody(errorData, `Failed to add block at (${slot.row}, ${slot.col})`),
                 );
               }
               const data = await response.json();
@@ -1220,7 +1227,10 @@ export function WorkspaceView({
         return next;
       });
       // Free multi-select surface; job continues under minimap.
-      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+      applyMapSelectionResult(
+        nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+        { pushToGrid: true },
+      );
 
       void (async () => {
         try {
@@ -1268,9 +1278,7 @@ export function WorkspaceView({
               });
               if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(
-                  errorData.error ||
-                    `Failed to add bridge block at (${slot.row}, ${slot.col})`,
+                throw new Error(errorMessageFromBody(errorData, `Failed to add bridge block at (${slot.row}, ${slot.col})`),
                 );
               }
               const data = await response.json();
@@ -1366,7 +1374,7 @@ export function WorkspaceView({
         });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to generate block");
+          throw new Error(errorMessageFromBody(errorData, "Failed to generate block"));
         }
         const data = await response.json();
         if (data.updatedNodes?.length > 0) {
@@ -1631,7 +1639,7 @@ export function WorkspaceView({
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(data.error || "Map ground update failed");
+          throw new Error(errorMessageFromBody(data, "Map ground update failed"));
         }
         if (Array.isArray(data.unusableCells)) {
           setUnusableCells(normalizeUnusableCells(data.unusableCells));
@@ -1745,7 +1753,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to update block");
+          throw new Error(errorMessageFromBody(data, "Failed to update block"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -1801,7 +1809,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to save block effects");
+          throw new Error(errorMessageFromBody(data, "Failed to save block effects"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -1884,10 +1892,10 @@ export function WorkspaceView({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err =
-          typeof data.error === "string" && data.error.trim()
-            ? data.error.trim()
-            : `Effect generate failed (${res.status})`;
+        const err = errorMessageFromBody(
+          data,
+          `Effect generate failed (${res.status})`,
+        );
         console.warn("[effect-generate]", err);
         return { ok: false, error: err };
       }
@@ -1934,7 +1942,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to delete block");
+          throw new Error(errorMessageFromBody(data, "Failed to delete block"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -1944,8 +1952,10 @@ export function WorkspaceView({
             })),
           );
         }
-        setExpandedBlockId(clearWorkspaceBlockSelection());
-        setEmptySurface(clearWorkspaceAddTarget());
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          { pushToGrid: true },
+        );
         if (shouldReloadWorkspaceAfterMutate()) {
           refreshNodes();
           router.refresh();
@@ -1977,7 +1987,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to delete blocks");
+          throw new Error(errorMessageFromBody(data, "Failed to delete blocks"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -1987,9 +1997,10 @@ export function WorkspaceView({
             })),
           );
         }
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        setExpandedBlockId(clearWorkspaceBlockSelection());
-        setEmptySurface(clearWorkspaceAddTarget());
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          { pushToGrid: true },
+        );
         if (shouldReloadWorkspaceAfterMutate()) {
           refreshNodes();
           router.refresh();
@@ -2043,7 +2054,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to cluster blocks");
+          throw new Error(errorMessageFromBody(data, "Failed to cluster blocks"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -2120,7 +2131,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to apply DAG");
+          throw new Error(errorMessageFromBody(data, "Failed to apply DAG"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -2170,7 +2181,7 @@ export function WorkspaceView({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || "Failed to delete DAG");
+          throw new Error(errorMessageFromBody(data, "Failed to delete DAG"));
         }
         if (Array.isArray(data.updatedNodes)) {
           setNodes(
@@ -2210,7 +2221,7 @@ export function WorkspaceView({
         setPlan({ ...plan, notes: notesContent });
         setIsEditingNotes(false);
       } else {
-        alert(data.error || "Failed to save notes");
+        alert(errorMessageFromBody(data, "Failed to save notes"));
       }
     } catch (err) {
       console.error("Error saving notes:", err);
@@ -2272,7 +2283,7 @@ export function WorkspaceView({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.url) {
-        throw new Error(data.error || "Upgrade checkout failed");
+        throw new Error(errorMessageFromBody(data, "Upgrade checkout failed"));
       }
       // Echo token if server returns it (upgrade reuses same access token).
       if (typeof data.ayclAccessToken === "string" && data.ayclAccessToken) {
@@ -3033,7 +3044,7 @@ export function WorkspaceView({
                           });
                           const launchData = await launchRes.json().catch(() => ({}));
                           if (!launchRes.ok || !launchData.sessionId) {
-                            throw new Error(launchData.error || "Failed to launch ILE");
+                            throw new Error(errorMessageFromBody(launchData, "Failed to launch ILE"));
                           }
                           router.push(`/session?id=${launchData.sessionId}`);
                           return;
@@ -3080,7 +3091,7 @@ export function WorkspaceView({
                     if (!res.ok) {
                       return {
                         powCount: 0,
-                        notes: data.error || "Failed to load PoW stats",
+                        notes: errorMessageFromBody(data, "Failed to load PoW stats"),
                       } satisfies LearnerPowSummary;
                     }
                     return parseLearnerPowSummaryFromApi(data);
@@ -3110,7 +3121,7 @@ export function WorkspaceView({
                   const groundData = await groundRes.json().catch(() => ({}));
                   if (!groundRes.ok) {
                     throw new Error(
-                      groundData.error || "Failed to mark block done",
+                      errorMessageFromBody(groundData, "Failed to mark block done"),
                     );
                   }
 

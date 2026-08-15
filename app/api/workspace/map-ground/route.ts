@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   loadMapGroundRules,
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!workspaceId || !op) {
-      return NextResponse.json({ error: "workspaceId and op are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and op are required");
     }
 
     // Practice-tier AYCL may mark done / read ground; cannot reshape map.
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     if (op === "set_lock_until") {
       if (!blockId) {
-        return NextResponse.json({ error: "blockId is required" }, { status: 400 });
+        return jsonError(400, "blockId is required");
       }
       const lock_until_block_ids = normalizeLockUntilBlockIds(prerequisiteIds || [], blockId);
       const { error } = await supabase
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
         .eq("id", blockId)
         .eq("workspace_id", workspaceId);
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       const { data: blocks } = await supabase
         .from("blocks")
@@ -123,16 +124,13 @@ export async function POST(req: NextRequest) {
 
     if (op === "set_block_status") {
       if (!blockId || typeof statusBody !== "string" || !statusBody.trim()) {
-        return NextResponse.json(
-          { error: "blockId and status are required" },
-          { status: 400 },
-        );
+        return jsonError(400, "blockId and status are required");
       }
       // Learner Done uses completed/done; no "in_progress" product concept here.
       const status = statusBody.trim().toLowerCase();
       const allowed = new Set(["available", "completed", "done", "locked", "skipped"]);
       if (!allowed.has(status)) {
-        return NextResponse.json({ error: "invalid status" }, { status: 400 });
+        return jsonError(400, "invalid status");
       }
       // Learners (incl. non-owners with access) must be able to force Mark Done.
       // Auth already verified via guardWorkspaceRoute; write with admin client.
@@ -143,7 +141,7 @@ export async function POST(req: NextRequest) {
         .eq("id", blockId)
         .eq("workspace_id", workspaceId);
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       const { data: blocks } = await writeDb
         .from("blocks")
@@ -158,7 +156,7 @@ export async function POST(req: NextRequest) {
 
     if (op === "toggle_unusable") {
       if (!Number.isInteger(row) || !Number.isInteger(col)) {
-        return NextResponse.json({ error: "row and col integers required" }, { status: 400 });
+        return jsonError(400, "row and col integers required");
       }
       const { data: plan } = await supabase
         .from("workspaces")
@@ -175,7 +173,7 @@ export async function POST(req: NextRequest) {
         .update({ unusable_cells: next })
         .eq("id", workspaceId);
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       return NextResponse.json({ ok: true, unusableCells: next });
     }
@@ -187,14 +185,14 @@ export async function POST(req: NextRequest) {
         .update({ unusable_cells: next })
         .eq("id", workspaceId);
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       return NextResponse.json({ ok: true, unusableCells: next });
     }
 
     if (op === "set_local_context") {
       if (!blockId) {
-        return NextResponse.json({ error: "blockId is required" }, { status: 400 });
+        return jsonError(400, "blockId is required");
       }
       const normalized = normalizeBlockLocalContext(localContext || null);
       const payload =
@@ -214,7 +212,7 @@ export async function POST(req: NextRequest) {
         .eq("id", blockId)
         .eq("workspace_id", workspaceId);
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       const { data: blocks } = await supabase
         .from("blocks")
@@ -227,9 +225,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: `Unknown op: ${op}` }, { status: 400 });
+    return jsonError(400, `Unknown op: ${op}`);
   } catch (err) {
     console.error("map-ground route error", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }

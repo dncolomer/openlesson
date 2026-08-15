@@ -79,7 +79,7 @@ describe("deferred-after-P10 follow-ups", () => {
     expect(icons).toContain("export function ToolIcon");
     expect(badges).toContain("export function MapCellStatusGlyph");
 
-    expect(sessionChat).toContain('{ error: "Missing problem" }');
+    expect(sessionChat).toContain("jsonError");
     expect(stashAuth).toContain("buildNestedApiErrorEnvelope");
     expect(existsSync(join(ROOT, "openapi.yaml"))).toBe(false);
     expect(existsSync(join(ROOT, "openapi.json"))).toBe(false);

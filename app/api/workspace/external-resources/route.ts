@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ayclTokenFromBody,
   guardWorkspaceRoute,
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   try {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const ayclToken = req.nextUrl.searchParams.get("ayclToken");
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
             warning: "workspace_external_resources table missing — run npm run db:migrate",
           });
         }
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       return NextResponse.json({
         resources: normalizeExternalResourceList(data || []),
@@ -67,10 +68,10 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (!plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
     if (plan.user_id !== user.id && !plan.is_public) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     const { data, error } = await supabase
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
           warning: "workspace_external_resources table missing — run npm run db:migrate",
         });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     return NextResponse.json({
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[external-resources] GET", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }
 
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
           ? body.workspace_id.trim()
           : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
         });
       }
       if (rows.length === 0) {
-        return NextResponse.json({ error: "No valid resources to create" }, { status: 400 });
+        return jsonError(400, "No valid resources to create");
       }
       const { data, error } = await auth.supabase
         .from("workspace_external_resources")
@@ -145,7 +146,7 @@ export async function POST(req: NextRequest) {
         .select("*");
       if (error) {
         console.error("[external-resources] batch insert", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return jsonError(500, error.message);
       }
       return NextResponse.json({
         resources: normalizeExternalResourceList(data || []),
@@ -167,10 +168,7 @@ export async function POST(req: NextRequest) {
       sort_order: body.sort_order as number | undefined,
     });
     if (!normalized) {
-      return NextResponse.json(
-        { error: "Valid https URL is required" },
-        { status: 400 },
-      );
+      return jsonError(400, "Valid https URL is required");
     }
 
     const { data, error } = await auth.supabase
@@ -185,7 +183,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[external-resources] insert", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     return NextResponse.json({
@@ -193,7 +191,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[external-resources] POST", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }
 
@@ -213,10 +211,7 @@ export async function PATCH(req: NextRequest) {
           ? body.workspace_id.trim()
           : "";
     if (!resourceId || !workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId and resourceId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and resourceId are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -231,7 +226,7 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.url === "string") {
       const url = body.url.trim();
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+        return jsonError(400, "Invalid URL");
       }
       patch.url = url.slice(0, 2048);
     }
@@ -257,7 +252,7 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       console.error("[external-resources] update", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     return NextResponse.json({
@@ -265,7 +260,7 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (err) {
     console.error("[external-resources] PATCH", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }
 
@@ -277,10 +272,7 @@ export async function DELETE(req: NextRequest) {
       "";
     const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
     if (!resourceId || !workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId and resourceId are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "workspaceId and resourceId are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -296,12 +288,12 @@ export async function DELETE(req: NextRequest) {
 
     if (error) {
       console.error("[external-resources] delete", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     return NextResponse.json({ ok: true, deletedId: resourceId });
   } catch (err) {
     console.error("[external-resources] DELETE", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return jsonError(500, "Internal error");
   }
 }

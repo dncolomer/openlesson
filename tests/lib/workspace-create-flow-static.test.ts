@@ -130,7 +130,9 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("h-full w-11 shrink-0 flex-col");
     expect(grid).toContain("border-r border-neutral-800");
     expect(grid).not.toMatch(/data-block-map-tool-strip[\s\S]{0,120}absolute left-2 top-2/);
-    expect(grid).toContain("data-block-map-tool={tool}");
+    expect(grid).toContain("MapToolStripButton");
+    const strip = read("components/block-skill-grid/map-tool-strip-button.tsx");
+    expect(strip).toContain("data-block-map-tool={tool}");
     expect(grid).toContain("activeTool");
     expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
     expect(grid).toContain("nextActiveModeTool");

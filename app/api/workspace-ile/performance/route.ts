@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     const ayclToken = ayclTokenFromBody(body);
 
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     let supabase = createAdminClient();
@@ -86,10 +87,10 @@ export async function POST(req: NextRequest) {
     } else if (ayclToken) {
       const aycl = await resolveAyclAccess(ayclToken);
       if ("error" in aycl) {
-        return NextResponse.json({ error: aycl.error }, { status: aycl.status });
+        return jsonError(aycl.status, aycl.error);
       }
       if (aycl.workspaceId !== workspaceId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return jsonError(403, "Forbidden");
       }
       supabase = aycl.supabase as typeof supabase;
       auth = {
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
         data: { user },
       } = await cookieClient.auth.getUser();
       if (!user) {
-        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        return jsonError(401, "Not authenticated");
       }
       auth = {
         user_id: user.id,
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!workspaceRow) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const scored = await runVerticalScore({
@@ -154,10 +155,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (scored.empty) {
-      return NextResponse.json(
-        { error: "No performance proof of work yet for this participant." },
-        { status: 400 },
-      );
+      return jsonError(400, "No performance proof of work yet for this participant.");
     }
 
     return NextResponse.json({
@@ -188,9 +186,6 @@ export async function POST(req: NextRequest) {
         : code === "no_new_pow"
           ? 409
           : 500;
-    return NextResponse.json(
-      { error: message, code: code !== "internal_error" ? code : undefined },
-      { status },
-    );
+    return jsonError(status, message, code !== "internal_error" ? code : undefined);
   }
 }

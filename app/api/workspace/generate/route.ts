@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import type { Message, MessageContent } from "@/lib/xai-client";
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
       const blankOutcome = blankWorkspaceCreateOutcome();
       const billing = await resolveUserBilling(supabase, user.id);
       if ("error" in billing) {
-        return NextResponse.json({ error: billing.error }, { status: 500 });
+        return jsonError(500, billing.error);
       }
       const workspaceCheck = await checkWorkspaceCreation(
         supabase,
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (planError || !plan) {
-        return NextResponse.json({ error: "Failed to create blank workspace" }, { status: 500 });
+        return jsonError(500, "Failed to create blank workspace");
       }
 
       return NextResponse.json({
@@ -158,12 +159,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!topic || typeof topic !== "string") {
-      return NextResponse.json({ error: "Topic is required" }, { status: 400 });
+      return jsonError(400, "Topic is required");
     }
 
     const billing = await resolveUserBilling(supabase, user.id);
     if ("error" in billing) {
-      return NextResponse.json({ error: billing.error }, { status: 500 });
+      return jsonError(500, billing.error);
     }
 
     const workspaceCheck = await checkWorkspaceCreation(
@@ -359,7 +360,7 @@ export async function POST(req: NextRequest) {
       if (!response.success || !response.data) {
         console.error("[generate] Responses API error:", response.error, "text:", response.text?.slice(0, 500));
         await rollbackXaiUploads(processedFiles);
-        return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
+        return jsonError(500, "Failed to generate plan");
       }
 
       planData = response.data;
@@ -394,7 +395,7 @@ export async function POST(req: NextRequest) {
       if (!textResponse.success || !textResponse.data) {
         console.error("[generate] Chat (image) error:", textResponse.error);
         await rollbackXaiUploads(processedFiles);
-        return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
+        return jsonError(500, "Failed to generate plan");
       }
 
       const raw = textResponse.data;
@@ -412,13 +413,13 @@ export async function POST(req: NextRequest) {
           } catch {
             console.error("[generate] Failed to parse JSON from image response:", raw.substring(0, 500));
             await rollbackXaiUploads(processedFiles);
-            return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
+            return jsonError(500, "Failed to generate plan");
           }
         }
       } else {
         console.error("[generate] No JSON in image response:", raw.substring(0, 500));
         await rollbackXaiUploads(processedFiles);
-        return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
+        return jsonError(500, "Failed to generate plan");
       }
     }
     // ─────────────────────────────────────────────────────────────────
@@ -433,7 +434,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.success || !response.data) {
         console.error("[generate] Chat error:", response.error);
-        return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
+        return jsonError(500, "Failed to generate plan");
       }
 
       planData = response.data;
@@ -449,7 +450,7 @@ export async function POST(req: NextRequest) {
         title: (planData as PlanData | null)?.title,
       });
       await rollbackXaiUploads(processedFiles);
-      return NextResponse.json({ error: "Invalid plan data format" }, { status: 500 });
+      return jsonError(500, "Invalid plan data format");
     }
 
     const catchyTitle = (planData as PlanData | null)?.title || `Learning ${topic}`;
@@ -488,7 +489,7 @@ export async function POST(req: NextRequest) {
     if (planError || !plan) {
       console.error("Failed to create plan:", planError);
       await rollbackXaiUploads(processedFiles);
-      return NextResponse.json({ error: "Failed to create plan" }, { status: 500 });
+      return jsonError(500, "Failed to create plan");
     }
 
     try {
@@ -497,14 +498,11 @@ export async function POST(req: NextRequest) {
       console.error("[generate] Block insert failed; rolling back workspace:", insertError);
       await supabase.from("workspaces").delete().eq("id", plan.id);
       await rollbackXaiUploads(processedFiles);
-      return NextResponse.json(
-        {
-          error:
-            insertError instanceof Error
-              ? insertError.message
-              : "Failed to create workspace blocks",
-        },
-        { status: 500 },
+      return jsonError(
+        500,
+        insertError instanceof Error
+          ? insertError.message
+          : "Failed to create workspace blocks",
       );
     }
 
@@ -563,10 +561,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Generate plan error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Internal error");
   }
 }
 

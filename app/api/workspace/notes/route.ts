@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export async function PUT(req: NextRequest) {
     const { workspaceId, notes } = body;
 
     if (!workspaceId || typeof notes !== "string") {
-      return NextResponse.json({ error: "workspaceId and notes are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and notes are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
@@ -25,15 +26,12 @@ export async function PUT(req: NextRequest) {
 
     if (updateError) {
       console.error("[Plan Notes] Update error:", updateError);
-      return NextResponse.json({ error: "Failed to update notes" }, { status: 500 });
+      return jsonError(500, "Failed to update notes");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[Plan Notes] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update notes" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to update notes");
   }
 }

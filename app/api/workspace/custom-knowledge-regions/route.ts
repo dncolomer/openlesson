@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   computeKnowledgeDistanceForSubject,
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const workspaceId = url.searchParams.get("workspaceId") || "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId);
     if (!auth.ok) return auth.response;
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[workspace/custom-knowledge-regions] GET failed:", error);
-    return NextResponse.json({ error: "Failed to load custom knowledge regions" }, { status: 500 });
+    return jsonError(500, "Failed to load custom knowledge regions");
   }
 }
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
               ? body.region_id
               : "";
       if (!modelId) {
-        return NextResponse.json({ error: "modelId / regionId is required" }, { status: 400 });
+        return jsonError(400, "modelId / regionId is required");
       }
       const subject = {
         user_id: typeof body.user_id === "string" ? body.user_id : auth.user.id,
@@ -162,16 +163,10 @@ export async function POST(req: NextRequest) {
           : [];
 
       if (!name.trim()) {
-        return NextResponse.json({ error: "name is required" }, { status: 400 });
+        return jsonError(400, "name is required");
       }
       if (!prompt.trim() && files.length === 0 && fileIds.length === 0) {
-        return NextResponse.json(
-          {
-            error:
-              "prompt or files are required for synthetic knowledge region generation",
-          },
-          { status: 400 },
-        );
+        return jsonError(400, "prompt or files are required for synthetic knowledge region generation",);
       }
 
       const { model, spec } = await createSyntheticCustomVerificationModel(auth.supabase, {
@@ -212,7 +207,7 @@ export async function POST(req: NextRequest) {
                 ? body.model_id
                 : "";
       if (!modelId.trim()) {
-        return NextResponse.json({ error: "modelId / regionId is required" }, { status: 400 });
+        return jsonError(400, "modelId / regionId is required");
       }
 
       const deleted = await deleteCustomVerificationModel(auth.supabase, {
@@ -234,10 +229,10 @@ export async function POST(req: NextRequest) {
     const name = typeof body.name === "string" ? body.name : "";
     const subjects = Array.isArray(body.subjects) ? body.subjects : [];
     if (!name.trim()) {
-      return NextResponse.json({ error: "name is required" }, { status: 400 });
+      return jsonError(400, "name is required");
     }
     if (!subjects.length) {
-      return NextResponse.json({ error: "subjects array is required" }, { status: 400 });
+      return jsonError(400, "subjects array is required");
     }
 
     const { model, spec } = await createCustomVerificationModelFromSubjects(auth.supabase, {
@@ -267,9 +262,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     if (error instanceof CustomVerificationModelError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(400, error.message);
     }
     console.error("[workspace/custom-knowledge-regions] POST failed:", error);
-    return NextResponse.json({ error: "Failed to process custom knowledge region" }, { status: 500 });
+    return jsonError(500, "Failed to process custom knowledge region");
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { buildSuggestFromSimulation } from "@/lib/suggest-from-simulation";
 import { normalizeSimulationCollection } from "@/lib/workspace-simulation-collection";
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = body.workspaceId as string | undefined;
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
       ayclToken: ayclTokenFromBody(body),
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const collection = normalizeSimulationCollection(
@@ -65,9 +66,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("suggest-from-simulation", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Internal error");
   }
 }

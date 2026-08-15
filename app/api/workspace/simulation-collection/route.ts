@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
   appendSimulationCollectionItems,
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   try {
     const workspaceId = req.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {});
     if (!auth.ok) return auth.response;
@@ -37,10 +38,7 @@ export async function GET(req: NextRequest) {
       .eq("id", workspaceId)
       .maybeSingle();
     if (error || !workspace) {
-      return NextResponse.json(
-        { error: error?.message || "Workspace not found" },
-        { status: error ? 500 : 404 },
-      );
+      return jsonError(error ? 500 : 404, error?.message || "Workspace not found");
     }
 
     const collection = normalizeSimulationCollection(
@@ -65,10 +63,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("simulation-collection GET", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Internal error");
   }
 }
 
@@ -77,7 +72,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = body.workspaceId as string | undefined;
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
     const auth = await guardWorkspaceRoute(workspaceId, {
       ayclToken: ayclTokenFromBody(body),
@@ -91,10 +86,7 @@ export async function POST(req: NextRequest) {
       .eq("id", workspaceId)
       .maybeSingle();
     if (error || !workspace) {
-      return NextResponse.json(
-        { error: error?.message || "Workspace not found" },
-        { status: error ? 500 : 404 },
-      );
+      return jsonError(error ? 500 : 404, error?.message || "Workspace not found");
     }
 
     let collection = normalizeSimulationCollection(
@@ -135,7 +127,7 @@ export async function POST(req: NextRequest) {
         body.kind === "exercise" ? "exercise" : "question";
       const text = String(body.text || body.question || "").trim();
       if (text.length < 4) {
-        return NextResponse.json({ error: "text is required" }, { status: 400 });
+        return jsonError(400, "text is required");
       }
       collection = appendSimulationCollectionItems(collection, [
         {
@@ -149,7 +141,7 @@ export async function POST(req: NextRequest) {
     } else if (action === "update") {
       const itemId = String(body.itemId || body.id || "").trim();
       if (!itemId) {
-        return NextResponse.json({ error: "itemId is required" }, { status: 400 });
+        return jsonError(400, "itemId is required");
       }
       const next = updateSimulationCollectionItem(collection, itemId, {
         text: body.text,
@@ -157,31 +149,31 @@ export async function POST(req: NextRequest) {
         coachCue: body.coachCue ?? body.coach_cue,
       });
       if (!next) {
-        return NextResponse.json({ error: "Item not found or invalid text" }, { status: 404 });
+        return jsonError(404, "Item not found or invalid text");
       }
       collection = next;
     } else if (action === "delete" || action === "remove") {
       const itemId = String(body.itemId || body.id || "").trim();
       if (!itemId) {
-        return NextResponse.json({ error: "itemId is required" }, { status: 400 });
+        return jsonError(400, "itemId is required");
       }
       const next = removeSimulationCollectionItem(collection, itemId);
       if (!next) {
-        return NextResponse.json({ error: "Item not found" }, { status: 404 });
+        return jsonError(404, "Item not found");
       }
       collection = next;
     } else if (action === "hard_delete") {
       const itemId = String(body.itemId || body.id || "").trim();
       if (!itemId) {
-        return NextResponse.json({ error: "itemId is required" }, { status: 400 });
+        return jsonError(400, "itemId is required");
       }
       const next = hardDeleteSimulationCollectionItem(collection, itemId);
       if (!next) {
-        return NextResponse.json({ error: "Item not found" }, { status: 404 });
+        return jsonError(404, "Item not found");
       }
       collection = next;
     } else {
-      return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+      return jsonError(400, `Unknown action: ${action}`);
     }
 
     const wire = serializeSimulationCollection(collection);
@@ -191,10 +183,7 @@ export async function POST(req: NextRequest) {
       .eq("id", workspaceId);
     if (upErr) {
       // Column may not exist yet pre-migration — surface clearly.
-      return NextResponse.json(
-        { error: upErr.message || "Failed to persist simulation collection" },
-        { status: 500 },
-      );
+      return jsonError(500, upErr.message || "Failed to persist simulation collection");
     }
 
     return NextResponse.json({
@@ -204,9 +193,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("simulation-collection POST", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
+    return jsonError(500, err instanceof Error ? err.message : "Internal error");
   }
 }

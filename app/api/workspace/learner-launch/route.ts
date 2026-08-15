@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, ileTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { buildLearnerLaunchBody } from "@/lib/workspace-learner-writes";
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     const workspaceId = String(payload.workspaceId || "");
     const blockId = String(payload.blockId || "");
     if (!workspaceId || !blockId) {
-      return NextResponse.json({ error: "workspaceId and blockId are required" }, { status: 400 });
+      return jsonError(400, "workspaceId and blockId are required");
     }
 
     const auth = await guardWorkspaceRoute(workspaceId, {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       .eq("workspace_id", workspaceId)
       .single();
     if (blockError || !block) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return jsonError(404, "Block not found");
     }
 
     const sessionMode = payload.sessionMode === "project" ? "project" : "learning";
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
     if (sessionError || !session) {
-      return NextResponse.json({ error: sessionError?.message || "Failed to create session" }, { status: 500 });
+      return jsonError(500, sessionError?.message || "Failed to create session");
     }
 
     await auth.supabase
@@ -74,6 +75,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to launch";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 }

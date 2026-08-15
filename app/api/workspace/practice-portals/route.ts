@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
@@ -83,12 +84,12 @@ async function resolveWebAuth(workspaceId: string): Promise<
 export async function GET(req: NextRequest) {
   const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim() || "";
   if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    return jsonError(400, "workspaceId is required");
   }
 
   const access = await resolveWebAuth(workspaceId);
   if ("error" in access) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+    return jsonError(access.status, access.error);
   }
 
   const { data: portals, error } = await access.supabase
@@ -101,7 +102,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[workspace/practice-portals] List error:", error);
-    return NextResponse.json({ error: "Failed to list Practice Portals" }, { status: 500 });
+    return jsonError(500, "Failed to list Practice Portals");
   }
 
   const origin = baseUrl(req);
@@ -138,12 +139,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return jsonError(access.status, access.error);
     }
 
     const invalidatePortalId =
@@ -165,10 +166,10 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error("[workspace/practice-portals] Invalidate error:", error);
-        return NextResponse.json({ error: "Failed to invalidate portal" }, { status: 500 });
+        return jsonError(500, "Failed to invalidate portal");
       }
       if (!updated) {
-        return NextResponse.json({ error: "Portal not found or already revoked" }, { status: 404 });
+        return jsonError(404, "Portal not found or already revoked");
       }
       return NextResponse.json({ practice_portal: updated, invalidated: true });
     }
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest) {
     const tokenHash = hashPrivateToken(token);
     const ownerUserId = access.auth.user_id;
     if (!ownerUserId) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      return jsonError(401, "Not authenticated");
     }
 
     // If a fixed block is set, ensure it belongs to this workspace
@@ -195,10 +196,7 @@ export async function POST(req: NextRequest) {
         .eq("workspace_id", workspaceId)
         .maybeSingle();
       if (!block) {
-        return NextResponse.json(
-          { error: "Fixed block not found in this workspace", code: "block_not_found" },
-          { status: 400 },
-        );
+        return jsonError(400, "Fixed block not found in this workspace", "block_not_found");
       }
     }
 
@@ -219,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     if (error || !portal) {
       console.error("[workspace/practice-portals] Create error:", error);
-      return NextResponse.json({ error: "Failed to create Practice Portal" }, { status: 500 });
+      return jsonError(500, "Failed to create Practice Portal");
     }
 
     const origin = baseUrl(req);
@@ -236,6 +234,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[workspace/practice-portals] POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { sessionId, stepId, currentDescription, prompt, locale } = body;
     if (!sessionId || !stepId) {
-      return NextResponse.json({ error: "sessionId and stepId are required" }, { status: 400 });
+      return jsonError(400, "sessionId and stepId are required");
     }
 
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       .eq("id", sessionId)
       .single();
     if (!session || session.user_id !== user.id) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return jsonError(404, "Session not found");
     }
 
     const { data: planRow } = await supabase
@@ -84,12 +85,12 @@ ${languageNote}`),
     );
 
     if (!ai.success || !ai.data?.suggestions?.length) {
-      return NextResponse.json({ error: "Failed to generate suggestions" }, { status: 502 });
+      return jsonError(502, "Failed to generate suggestions");
     }
 
     return NextResponse.json({ suggestions: ai.data.suggestions.slice(0, 3) });
   } catch (error) {
     console.error("[suggest-chapter-edit]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

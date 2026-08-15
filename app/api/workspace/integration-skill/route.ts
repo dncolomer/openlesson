@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   generateWorkspaceProofOfWorkSpec,
@@ -25,12 +26,12 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return jsonError(400, "Invalid JSON body");
     }
 
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const access = await requireWorkspaceOwnerSession(workspaceId);
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!request) {
-      return NextResponse.json({ error: "integration_name is required" }, { status: 400 });
+      return jsonError(400, "integration_name is required");
     }
 
     const blockId = request.block_id ?? null;
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
         .eq("workspace_id", workspaceId)
         .single();
       if (!block) {
-        return NextResponse.json({ error: "Block not found in this workspace" }, { status: 404 });
+        return jsonError(404, "Block not found in this workspace");
       }
     }
 
@@ -157,10 +158,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!skillResult.success || !skillResult.text) {
-      return NextResponse.json(
-        { error: skillResult.error || "Failed to generate integration skill" },
-        { status: 500 }
-      );
+      return jsonError(500, skillResult.error || "Failed to generate integration skill");
     }
 
     return NextResponse.json({
@@ -181,11 +179,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[workspace/integration-skill] Unhandled error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to generate integration skill",
-      },
-      { status: 500 }
+    return jsonError(
+      500,
+      error instanceof Error ? error.message : "Failed to generate integration skill",
     );
   }
 }

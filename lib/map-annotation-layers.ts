@@ -4,6 +4,11 @@
  * learners see layers and may toggle visibility only.
  */
 
+import {
+  mapOverlayPersistTokenFromInput,
+  type MapOverlayPersistInput,
+} from "@/lib/map-overlay-persist";
+
 /** Always-white stroke color — no picker. */
 export const ANNOTATION_STROKE_COLOR = "#ffffff" as const;
 
@@ -86,10 +91,10 @@ export type AnnotationNotesStorage = {
   removeItem?(key: string): void;
 };
 
-export function annotationLayersStorageKey(input: {
-  workspaceId: string;
+export function annotationLayersStorageKey(input: MapOverlayPersistInput & {
+  workspaceId?: string;
 }): string {
-  const ws = String(input.workspaceId || "").trim() || "unknown-workspace";
+  const ws = mapOverlayPersistTokenFromInput(input);
   return `openlesson.mapAnnotationLayers.v1:${ws}`;
 }
 
@@ -129,25 +134,35 @@ export function createAnnotationStrokeId(seed?: string | number): string {
   return `astroke-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 
-/** Creator may delete; learner may not. */
+/** Creator may delete; learner / view-only may not. */
 export function canDeleteAnnotationLayer(ctx: {
   learnerMode?: boolean;
+  viewOnly?: boolean;
 }): boolean {
+  if (ctx.viewOnly) return false;
   return !Boolean(ctx.learnerMode);
 }
 
-/** Creator may draw; learner may not. */
+/** Creator may draw; learner / view-only may not. */
 export function canDrawOnAnnotationLayer(ctx: {
   learnerMode?: boolean;
+  viewOnly?: boolean;
 }): boolean {
+  if (ctx.viewOnly) return false;
   return !Boolean(ctx.learnerMode);
 }
 
-/** Both modes may toggle visibility. */
+/** Both modes may toggle visibility (including public preview). */
 export function canToggleAnnotationLayerVisibility(_ctx?: {
   learnerMode?: boolean;
+  viewOnly?: boolean;
 }): boolean {
   return true;
+}
+
+/** Show handwriting-layer toggles only when layers already exist. */
+export function shouldShowAnnotationLayerToggles(layerCount: number): boolean {
+  return Math.max(0, Math.floor(Number(layerCount) || 0)) > 0;
 }
 
 export function createAnnotationLayer(
@@ -560,8 +575,8 @@ export function defaultAnnotationLayersStorage(): AnnotationNotesStorage | null 
   }
 }
 
-export function loadAnnotationLayers(input: {
-  workspaceId: string;
+export function loadAnnotationLayers(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   storage?: AnnotationNotesStorage | null;
 }): AnnotationLayer[] {
   const storage = input.storage ?? defaultAnnotationLayersStorage();
@@ -576,8 +591,8 @@ export function loadAnnotationLayers(input: {
   }
 }
 
-export function saveAnnotationLayers(input: {
-  workspaceId: string;
+export function saveAnnotationLayers(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   layers: readonly AnnotationLayer[];
   storage?: AnnotationNotesStorage | null;
 }): void {
@@ -613,14 +628,19 @@ export function saveAnnotationLayers(input: {
   }
 }
 
-export function annotationLayersStoreOps(input: {
-  workspaceId: string;
+export function annotationLayersStoreOps(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   storage?: AnnotationNotesStorage | null;
   learnerMode?: boolean;
 }) {
   const storage =
     input.storage ?? defaultAnnotationLayersStorage() ?? memoryStorage();
-  const scope = { workspaceId: input.workspaceId, storage };
+  const scope = {
+    workspaceId: input.workspaceId,
+    sessionId: input.sessionId,
+    mapKind: input.mapKind,
+    storage,
+  };
   const learnerMode = Boolean(input.learnerMode);
 
   return {

@@ -15,6 +15,7 @@ import {
   type SimulationSampleScope,
   type SimulationSampleWorkspaceContext,
 } from "@/lib/workspace-simulation-samples";
+import { applySimulationModifierToPrompt } from "@/lib/workspace-simulation-collection";
 import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
 import {
   normalizeBlockLocalContext,
@@ -52,13 +53,21 @@ export async function POST(req: NextRequest) {
       scope: scopeRaw,
       model: userModel,
       locale,
+      modifierPrompt: modifierPromptRaw,
+      userGuidance: userGuidanceRaw,
     } = body as {
       workspaceId?: string;
       blockId?: string | null;
       scope?: string | null;
       model?: string;
       locale?: string;
+      modifierPrompt?: string | null;
+      userGuidance?: string | null;
     };
+    const modifierPrompt =
+      (typeof modifierPromptRaw === "string" && modifierPromptRaw.trim()) ||
+      (typeof userGuidanceRaw === "string" && userGuidanceRaw.trim()) ||
+      "";
 
     if (!workspaceId) {
       return NextResponse.json(
@@ -196,8 +205,13 @@ export async function POST(req: NextRequest) {
       externalResources: loaded.externalResources,
     };
 
-    const { systemPrompt, userPrompt, focusedBlockId } =
-      buildSimulationSamplePrompts(scope, workspaceCtx);
+    const built = buildSimulationSamplePrompts(scope, workspaceCtx);
+    const systemPrompt = built.systemPrompt;
+    const userPrompt = applySimulationModifierToPrompt(
+      built.userPrompt,
+      modifierPrompt,
+    );
+    const focusedBlockId = built.focusedBlockId;
 
     // Room for 3 questions + 3 exercises + probes; 1400 often truncates mid-JSON.
     const ai = await callXaiJSON<SamplesResponse>(

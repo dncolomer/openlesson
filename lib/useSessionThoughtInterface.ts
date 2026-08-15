@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  buildIleThoughtMemoryRecord,
+  normalizeIleFormingText,
+  type IleThoughtMemoryRecord,
+} from "@/lib/ile-context-auto-stash";
+import { shouldLogIlePowInsideSetState } from "@/lib/ile-keyboard-mode";
 
 export interface SessionThought {
   id: string;
@@ -41,8 +47,6 @@ export type SpeechRecognitionLike = EventTarget & {
   abort: () => void;
 };
 export type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-const CHAIN_GAP_MS = 2600;
 
 /** Test-only override so node vitest can exercise the real start/stop path. */
 let speechRecognitionCtorForTests: SpeechRecognitionConstructor | null | undefined;
@@ -345,6 +349,8 @@ interface UseSessionThoughtInterfaceOptions {
   onSendToProbe: (text: string, thoughtIds: string[]) => Promise<void>;
   onSpeechTranscript?: (text: string) => void;
   onUserActivity?: () => void;
+  /** ILE default: capture Enter/Del. TAP shells keep their own keys. */
+  captureKeys?: boolean;
 }
 
 export function useSessionThoughtInterface({
@@ -355,6 +361,7 @@ export function useSessionThoughtInterface({
   onSendToProbe,
   onSpeechTranscript,
   onUserActivity,
+  captureKeys = true,
 }: UseSessionThoughtInterfaceOptions) {
   const onSpeechTranscriptRef = useRef(onSpeechTranscript);
   const onUserActivityRef = useRef(onUserActivity);
@@ -369,6 +376,7 @@ export function useSessionThoughtInterface({
   const [thoughts, setThoughts] = useState<SessionThought[]>([]);
   const [interimText, setInterimText] = useState("");
   const [crystallizableText, setCrystallizableText] = useState("");
+  const crystallizableTextRef = useRef("");
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -417,26 +425,18 @@ export function useSessionThoughtInterface({
   const latestThoughts = useMemo(() => stashedThoughts.slice(-3).reverse(), [stashedThoughts]);
 
   function buildThoughtRecord(text: string, currentThoughts: SessionThought[]): SessionThought | null {
-    const clean = normalize(text);
-    if (!clean) return null;
-    const last = currentThoughts[currentThoughts.length - 1];
-    const chainId =
-      last && Date.now() - last.timestamp <= CHAIN_GAP_MS
-        ? last.chainId
-        : `chain_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    return {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      text: clean,
-      timestamp: Date.now(),
-      chainId,
-    };
+    return buildIleThoughtMemoryRecord(text, currentThoughts as IleThoughtMemoryRecord[]) as SessionThought | null;
   }
 
   function addThought(text: string, system1Action: SessionSystem1Action = "pause_finalize") {
     onUserActivityRef.current?.();
+    const thought = buildThoughtRecord(text, thoughts);
+    if (!thought) return;
     setThoughts((current) => {
-      const thought = buildThoughtRecord(text, current);
-      if (!thought) return current;
+      if (current.some((t) => t.id === thought.id)) return current;
+      return [...current, thought];
+    });
+    if (!shouldLogIlePowInsideSetState()) {
       onLogTrace({
         traceType: "system1",
         action: system1Action,
@@ -445,8 +445,7 @@ export function useSessionThoughtInterface({
         text: thought.text,
         timestampMs: thought.timestamp,
       });
-      return [...current, thought];
-    });
+    }
   }
 
   function markSpeechConsumed() {
@@ -460,6 +459,7 @@ export function useSessionThoughtInterface({
     }
     finalBufferRef.current = [];
     setInterimText("");
+    crystallizableTextRef.current = "";
     setCrystallizableText("");
   }
 
@@ -483,6 +483,7 @@ export function useSessionThoughtInterface({
         finalBufferRef.current = finals;
         const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
         setInterimText(interim);
+        crystallizableTextRef.current = displayText;
         setCrystallizableText(displayText);
         onSpeechTranscriptRef.current?.(displayText);
       },
@@ -521,17 +522,44 @@ export function useSessionThoughtInterface({
   function flushFinalBuffer() {
     const text = normalize(finalBufferRef.current.join(" "));
     finalBufferRef.current = [];
+    crystallizableTextRef.current = "";
     setCrystallizableText("");
     markSpeechConsumed();
     if (text) addThought(text);
   }
 
-  const stashCurrentTranscription = useCallback(() => {
-    const text = normalize(crystallizableText);
+  const getFormingText = useCallback(() => {
+    return normalizeIleFormingText(crystallizableTextRef.current || crystallizableText);
+  }, [crystallizableText]);
+
+  const stashCurrentTranscription = useCallback((providedText?: string) => {
+    const text = normalizeIleFormingText(
+      providedText ?? (crystallizableTextRef.current || crystallizableText),
+    );
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
-    if (text) addThought(text);
+    if (text) addThought(text, providedText ? "auto_stash" : "pause_finalize");
   }, [crystallizableText, restartSpeechRecognitionSession]);
+
+  const ingestStashedThought = useCallback((thought: SessionThought) => {
+    onUserActivityRef.current?.();
+    let added = false;
+    setThoughts((current) => {
+      if (current.some((t) => t.id === thought.id)) return current;
+      added = true;
+      return [...current, thought];
+    });
+    if (added && !shouldLogIlePowInsideSetState()) {
+      onLogTrace({
+        traceType: "system1",
+        action: "auto_stash",
+        thoughtId: thought.id,
+        chainId: thought.chainId,
+        text: thought.text,
+        timestampMs: thought.timestamp,
+      });
+    }
+  }, [onLogTrace]);
 
   /** Clear live speech bar without stashing or logging (e.g. Project Mode dual-list path). */
   const clearCurrentTranscription = useCallback(() => {
@@ -643,7 +671,7 @@ export function useSessionThoughtInterface({
   }, [enabled, speechBindings, speechLang]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !captureKeys) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -680,6 +708,7 @@ export function useSessionThoughtInterface({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     enabled,
+    captureKeys,
     latestThoughts,
     stashCurrentTranscription,
     sendCurrentTranscription,
@@ -704,6 +733,8 @@ export function useSessionThoughtInterface({
     sentThoughtIds,
     memoryThoughtIds,
     speechSupported,
+    getFormingText,
+    ingestStashedThought,
     stashCurrentTranscription,
     clearCurrentTranscription,
     sendCurrentTranscription,

@@ -7,6 +7,10 @@ import { ayclTokenFromBody,
 import { getLanguageName } from "@/lib/tutoring-languages";
 import { resolveInitialChaptersFromBody } from "@/lib/initial-chapters";
 import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
+import {
+  resolveIleSessionModeFromBody,
+  resolveIleSessionModeFromSession,
+} from "@/lib/ile-mode";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -36,21 +40,38 @@ export async function POST(request: NextRequest) {
 
     const { user, supabase } = auth;
 
-    let tutoringLanguage = bodyLanguage;
-    if (!tutoringLanguage) {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("sessions")
-        .select("metadata")
-        .eq("id", sessionId)
-        .single();
-      if (sessionError) {
-        console.error("[session-plan/create] Failed to load session metadata:", sessionError);
-        return NextResponse.json({ error: `Could not load session metadata: ${sessionError.message}` }, { status: 500 });
-      }
-      if (sessionData?.metadata?.tutoringLanguage) {
-        tutoringLanguage = sessionData.metadata.tutoringLanguage;
-      }
+    const { data: sessionData, error: sessionError } = await supabase
+      .from("sessions")
+      .select("metadata")
+      .eq("id", sessionId)
+      .single();
+    if (sessionError) {
+      console.error("[session-plan/create] Failed to load session metadata:", sessionError);
+      return NextResponse.json({ error: `Could not load session metadata: ${sessionError.message}` }, { status: 500 });
     }
+
+    let tutoringLanguage = bodyLanguage;
+    if (!tutoringLanguage && sessionData?.metadata?.tutoringLanguage) {
+      tutoringLanguage = sessionData.metadata.tutoringLanguage;
+    }
+
+    const bodyHasMode =
+      body &&
+      typeof body === "object" &&
+      ("session_mode" in body ||
+        "sessionMode" in body ||
+        "ile_mode" in body ||
+        "ileMode" in body ||
+        "project_mode" in body ||
+        "projectMode" in body ||
+        "project" in body ||
+        "is_project" in body ||
+        "isProject" in body);
+    const sessionMode = bodyHasMode
+      ? resolveIleSessionModeFromBody(body)
+      : resolveIleSessionModeFromSession({
+          metadata: (sessionData?.metadata as Record<string, unknown> | undefined) ?? null,
+        });
     const languageName = tutoringLanguage ? getLanguageName(tutoringLanguage) : undefined;
 
     // Look up any existing plan up front. When force-replacing, generate the
@@ -84,6 +105,7 @@ export async function POST(request: NextRequest) {
       planningPrompt,
       tutoringLanguage: languageName,
       initialChapters,
+      sessionMode,
     });
 
     if (!result.success || !result.plan) {

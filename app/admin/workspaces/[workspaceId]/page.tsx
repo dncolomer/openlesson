@@ -258,7 +258,7 @@ export default function AdminPlanDetailPage() {
               {ADMIN_SESSION_HORIZON_LABELS.timed} ({tapSessions.length})
             </h2>
             {tapSessions.length === 0 ? (
-              <p className="text-sm text-neutral-500">No timed sessions yet</p>
+              <p className="text-sm text-neutral-500">No Drill sessions yet</p>
             ) : (
               <div className="max-h-[220px] space-y-3 overflow-y-auto">
                 {tapSessions.map((session) => {

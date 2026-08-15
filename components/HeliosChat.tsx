@@ -34,21 +34,12 @@ function processLatexContent(content: string): string {
     .replace(/\\\\\)/g, '\\)'); // \\) -> \)
 }
 
-export type StuckAction = "ask" | "theory" | "practice" | "canvas" | "notebook" | "break";
-
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  imageDataUrl?: string;
-  /** When true, renders as a typing indicator until content is ready. */
-  pending?: boolean;
-}
-
-export interface PendingChatMessage {
-  text: string;
-  imageDataUrl?: string;
-}
+export type {
+  StuckAction,
+  ChatMessage,
+  PendingChatMessage,
+} from "@/lib/session-chat-client";
+import type { ChatMessage, PendingChatMessage } from "@/lib/session-chat-client";
 
 interface HeliosChatProps {
   problem: string;
@@ -334,6 +325,8 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           sessionPlan,
           messages: [...conversationHistory, { role: "user", content: userMsg.content, imageDataUrl: userMsg.imageDataUrl }],
           sessionId,
+          sessionMode: "learning",
+          session_mode: "learning",
         }),
       });
 

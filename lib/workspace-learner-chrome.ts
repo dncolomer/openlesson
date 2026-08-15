@@ -5,8 +5,15 @@
  */
 
 import {
+  MAP_CELL_DONE_CLASS,
+  MAP_CELL_DONE_RING_CLASS,
   MAP_CELL_SELECTED_CLASS,
+  MAP_CELL_SELF_PROGRESS_CLASS,
   mapCellChromeClasses,
+  mapCellFreeformDoneColors,
+  mapCellFreeformSelfProgressColors,
+  resolveMapCellStatusIcon,
+  type MapCellStatusIcon,
 } from "@/lib/map-cell-chrome";
 import { isBlockCompletedStatus } from "@/lib/map-ground-rules";
 
@@ -22,9 +29,11 @@ export const LEARNER_MAP_CELL_LOCKED_CLASS =
 export const LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS =
   "border-white/55 bg-white/12 text-white shadow-[0_0_14px_rgba(255,255,255,0.16)] ring-1 ring-white/30";
 
-/** Done learner tile — only status that leaves the white default. */
-export const LEARNER_MAP_CELL_DONE_CLASS =
-  "border-emerald-600/45 bg-emerald-950/45 text-emerald-50/95 shadow-[0_0_12px_rgba(16,185,129,0.12)]";
+/** Done learner tile — same white + tick language as the ILE chapter map. */
+export const LEARNER_MAP_CELL_DONE_CLASS = MAP_CELL_DONE_CLASS;
+
+/** Self-progress learner tile — fainter white than Done. */
+export const LEARNER_MAP_CELL_PROGRESS_CLASS = MAP_CELL_SELF_PROGRESS_CLASS;
 
 /**
  * Learner-mode occupied tile classes.
@@ -38,19 +47,32 @@ export function learnerMapCellChromeClasses(input: {
   locked?: boolean;
   /** Local-DAG dependency peer of the selected block. */
   depHighlight?: boolean;
+  /** This user has worked on this block at least once. */
+  workedOn?: boolean;
 }): string {
   void input.isStart; // Starter flag badge still shows; tile color stays white.
-  if (input.selected) {
-    return MAP_CELL_SELECTED_CLASS;
-  }
-  if (input.depHighlight) {
+  const done = isBlockCompletedStatus(input.status);
+  const workedOn = Boolean(input.workedOn) && !done;
+  if (input.depHighlight && !done && !workedOn) {
     return LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS;
   }
-  if (input.locked) {
-    return LEARNER_MAP_CELL_LOCKED_CLASS;
+  if (input.locked && !done) {
+    return input.selected
+      ? `${MAP_CELL_SELECTED_CLASS} opacity-80`
+      : LEARNER_MAP_CELL_LOCKED_CLASS;
   }
-  if (isBlockCompletedStatus(input.status)) {
-    return LEARNER_MAP_CELL_DONE_CLASS;
+  if (done) {
+    return input.selected
+      ? `${LEARNER_MAP_CELL_DONE_CLASS} ${MAP_CELL_DONE_RING_CLASS}`
+      : LEARNER_MAP_CELL_DONE_CLASS;
+  }
+  if (workedOn) {
+    return input.selected
+      ? `${LEARNER_MAP_CELL_PROGRESS_CLASS} ${MAP_CELL_DONE_RING_CLASS}`
+      : LEARNER_MAP_CELL_PROGRESS_CLASS;
+  }
+  if (input.selected) {
+    return MAP_CELL_SELECTED_CLASS;
   }
   return LEARNER_MAP_CELL_DEFAULT_CLASS;
 }
@@ -58,13 +80,24 @@ export function learnerMapCellChromeClasses(input: {
 /** Freeform inline fill/border for learner white theme + selection / lock / dep. */
 export function learnerMapFreeformColors(
   selected: boolean,
-  opts?: { locked?: boolean; depHighlight?: boolean },
+  opts?: {
+    locked?: boolean;
+    depHighlight?: boolean;
+    done?: boolean;
+    workedOn?: boolean;
+  },
 ): {
   fill: string;
   border: string;
   text: string;
   shadow?: string;
 } {
+  if (opts?.done) {
+    return mapCellFreeformDoneColors(selected);
+  }
+  if (opts?.workedOn) {
+    return mapCellFreeformSelfProgressColors(selected);
+  }
   if (selected) {
     return {
       fill: "rgba(255, 255, 255, 0.16)",
@@ -97,7 +130,7 @@ export function learnerMapFreeformColors(
   };
 }
 
-/** Creator path unchanged — delegate to neutral map chrome. */
+/** Creator path unchanged — delegate to shared map chrome. */
 export function resolveOccupiedMapChrome(input: {
   learnerMode: boolean;
   status: string;
@@ -107,20 +140,51 @@ export function resolveOccupiedMapChrome(input: {
   locked?: boolean;
   depHighlight?: boolean;
   highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
+  workedOn?: boolean;
 }): string {
   if (input.learnerMode) {
     return learnerMapCellChromeClasses({
-      status: input.locked ? "locked" : input.status,
+      status: input.locked && !isBlockCompletedStatus(input.status)
+        ? "locked"
+        : input.status,
       selected: Boolean(input.selected || input.focused),
       isStart: input.isStart,
       locked: input.locked,
       depHighlight: input.depHighlight,
+      workedOn: input.workedOn,
     });
   }
   return mapCellChromeClasses({
-    status: input.locked ? "locked" : input.status,
+    status: input.locked && !isBlockCompletedStatus(input.status)
+      ? "locked"
+      : input.status,
     selected: input.selected,
     focused: input.focused,
     highlightRole: input.highlightRole,
+    workedOn: input.workedOn,
+    surface: "block",
   });
+}
+
+/** Occupied workspace tile chrome + glyph (tick / gear) from the shared mapper. */
+export function resolveOccupiedMapTileChrome(input: {
+  learnerMode: boolean;
+  status: string;
+  selected: boolean;
+  focused?: boolean;
+  isStart?: boolean;
+  locked?: boolean;
+  depHighlight?: boolean;
+  highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
+  workedOn?: boolean;
+}): { className: string; statusIcon: MapCellStatusIcon } {
+  return {
+    className: resolveOccupiedMapChrome(input),
+    statusIcon: resolveMapCellStatusIcon(
+      input.status,
+      true,
+      "block",
+      Boolean(input.workedOn),
+    ),
+  };
 }

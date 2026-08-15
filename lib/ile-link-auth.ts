@@ -8,7 +8,10 @@ import {
   isGuestLinkRevoked,
 } from "@/lib/pow-api/invalidate-guest-links";
 import { createAnonymousTapGuest } from "@/lib/pow-api/anonymous-tap-guest";
-import { resolveGuestLinkAttribution } from "@/lib/session-participant-identity";
+import {
+  resolveGuestLinkAttribution,
+  resolveIleActingParticipantId,
+} from "@/lib/session-participant-identity";
 import {
   ILE_SESSION_MODE_DEFAULT,
   normalizeIleSessionMode,
@@ -141,7 +144,13 @@ export async function resolveIleLinkAccess(
     accessMode,
     showEndSession,
     sessionMode,
-    actingUser: { id: ownerUserId },
+    actingUser: {
+      id: resolveIleActingParticipantId({
+        ownerUserId,
+        assignedUserId: attribution.userId,
+        guestUserId: attribution.guestUserId,
+      }),
+    },
   };
 }
 

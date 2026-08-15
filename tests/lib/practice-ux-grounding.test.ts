@@ -101,43 +101,47 @@ const sampleBrief: TapScoreBrief = {
   focusSession: null,
 };
 
-describe("Explore/Drill × open/timed → dialogue vs exercise", () => {
-  it("maps four product intents to ILE dialogue / ILE project / TAP conversational / TAP exercise", () => {
-    const openExplore = resolveProductIntent("explore", "open_ended");
-    const openDrill = resolveProductIntent("drill", "open_ended");
-    const timedExplore = resolveProductIntent("explore", "timed");
-    const timedDrill = resolveProductIntent("drill", "timed");
+describe("Explore/Drill × Dialog/Solo → dialogue vs exercise", () => {
+  it("maps four product intents: Explore→ILE, Drill→TAP; Dialog/Solo modes", () => {
+    const exploreDialog = resolveProductIntent("explore", "dialog");
+    const exploreSolo = resolveProductIntent("explore", "solo");
+    const drillDialog = resolveProductIntent("drill", "dialog");
+    const drillSolo = resolveProductIntent("drill", "solo");
 
-    expect(openExplore).toMatchObject({
+    expect(exploreDialog).toMatchObject({
       product: "ile",
       session_mode: "learning",
-      id: "open_ended_explore",
+      id: "explore_dialog",
     });
-    expect(openDrill).toMatchObject({
+    expect(exploreSolo).toMatchObject({
       product: "ile",
       session_mode: "project",
-      id: "open_ended_drill",
+      id: "explore_solo",
     });
-    expect(timedExplore).toMatchObject({
+    expect(drillDialog).toMatchObject({
       product: "tap",
       interaction_kind: "conversational",
-      id: "timed_explore",
+      id: "drill_dialog",
     });
-    expect(timedDrill).toMatchObject({
+    expect(drillSolo).toMatchObject({
       product: "tap",
       interaction_kind: "exercise",
-      id: "timed_drill",
+      id: "drill_solo",
     });
+
+    // Legacy second-arg tokens still resolve (open_ended→dialog, timed→solo)
+    expect(resolveProductIntent("explore", "open_ended").id).toBe("explore_dialog");
+    expect(resolveProductIntent("drill", "timed").id).toBe("drill_solo");
 
     expect(allProductLaunchTargets()).toHaveLength(4);
 
     writeEvidence(
       "ux-generation-grounding.txt",
       [
-        "open_explore=" + openExplore.id,
-        "open_drill=" + openDrill.id,
-        "timed_explore=" + timedExplore.id,
-        "timed_drill=" + timedDrill.id,
+        "explore_dialog=" + exploreDialog.id,
+        "explore_solo=" + exploreSolo.id,
+        "drill_dialog=" + drillDialog.id,
+        "drill_solo=" + drillSolo.id,
       ].join("\n"),
     );
   });
@@ -450,11 +454,11 @@ describe("Simulation shares live practice builders", () => {
     expect(Array.isArray(overview.sampleProbes)).toBe(true);
 
     const tab = read("components/WorkspaceSimulationPanel.tsx");
-    // Tab: xAI generate only — no pure seed display
+    // Tab: xAI generate + durable collection — no pure seed display
     expect(tab).not.toContain("deriveSimulationSamples");
     expect(tab).toContain("data-simulation-generate");
+    expect(tab).toContain("data-simulation-collection");
     expect(tab).toContain("/api/workspace/simulation-samples");
-    expect(tab).toContain("data-simulation-generate-hint");
     expect(tab).not.toContain("data-simulation-seed-hint");
   });
 

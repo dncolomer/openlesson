@@ -35,10 +35,10 @@ interface PracticePortalRow {
 }
 
 const PRODUCT_CREATE_LABELS: Record<PracticePortalProductId, string> = {
-  open_ended_explore: PRODUCT_INTENT_LABELS.openEndedExplore,
-  open_ended_drill: PRODUCT_INTENT_LABELS.openEndedDrill,
-  timed_explore: PRODUCT_INTENT_LABELS.timedExplore,
-  timed_drill: PRODUCT_INTENT_LABELS.timedDrill,
+  explore_dialog: PRODUCT_INTENT_LABELS.exploreDialog,
+  explore_solo: PRODUCT_INTENT_LABELS.exploreSolo,
+  drill_dialog: PRODUCT_INTENT_LABELS.drillDialog,
+  drill_solo: PRODUCT_INTENT_LABELS.drillSolo,
 };
 
 type PortalInnerTab = "create" | "browse";
@@ -169,10 +169,10 @@ export function WorkspaceKnowledgePortalPanel({
 
   const togglePortalProduct = useCallback(
     (id: PracticePortalProductId) => {
-      // Workspace-level portals only support timed products (null block_id).
+      // Workspace-level portals only support Drill (TAP) products (null block_id).
       if (
         portalScopeMode === "workspace" &&
-        (id === "open_ended_explore" || id === "open_ended_drill")
+        (id === "explore_dialog" || id === "explore_solo")
       ) {
         return;
       }
@@ -193,14 +193,14 @@ export function WorkspaceKnowledgePortalPanel({
     setPortalScopeMode(mode);
     if (mode === "workspace") {
       setPortalBlockId("");
-      // Drop open-ended products — ILE requires a block.
+      // Drop Explore products — ILE requires a block.
       setPortalProducts((current) => {
         const next = current.filter(
-          (p) => p !== "open_ended_explore" && p !== "open_ended_drill",
+          (p) => p !== "explore_dialog" && p !== "explore_solo",
         );
         return next.length > 0
           ? next
-          : (["timed_explore", "timed_drill"] as PracticePortalProductId[]);
+          : (["drill_dialog", "drill_solo"] as PracticePortalProductId[]);
       });
     }
     if (mode === "visitor_pick") {
@@ -210,6 +210,7 @@ export function WorkspaceKnowledgePortalPanel({
 
   const togglePortalMinutes = useCallback(
     (kind: "explore" | "drill", mins: number) => {
+      // kind explore → drill_dialog timings; kind drill → drill_solo timings
       const setter = kind === "explore" ? setPortalExploreMinutes : setPortalDrillMinutes;
       setter((current) => {
         if (current.includes(mins)) {
@@ -235,10 +236,15 @@ export function WorkspaceKnowledgePortalPanel({
       const config = {
         allowed_products: portalProducts,
         timings: {
-          timed_explore: portalProducts.includes("timed_explore")
+          drill_dialog: portalProducts.includes("drill_dialog")
             ? portalExploreMinutes
             : [],
-          timed_drill: portalProducts.includes("timed_drill") ? portalDrillMinutes : [],
+          drill_solo: portalProducts.includes("drill_solo") ? portalDrillMinutes : [],
+          // Legacy mirrors for older readers
+          timed_explore: portalProducts.includes("drill_dialog")
+            ? portalExploreMinutes
+            : [],
+          timed_drill: portalProducts.includes("drill_solo") ? portalDrillMinutes : [],
         },
         scope_mode: portalScopeMode,
         block_id:
@@ -506,14 +512,14 @@ export function WorkspaceKnowledgePortalPanel({
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {PRACTICE_PORTAL_PRODUCT_IDS.map((id) => {
                   const checked = portalProducts.includes(id);
-                  const openEndedDisabled =
+                  const exploreDisabled =
                     portalScopeMode === "workspace" &&
-                    (id === "open_ended_explore" || id === "open_ended_drill");
+                    (id === "explore_dialog" || id === "explore_solo");
                   return (
                     <label
                       key={id}
                       className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
-                        openEndedDisabled
+                        exploreDisabled
                           ? "cursor-not-allowed border-neutral-800 bg-neutral-950 text-neutral-600 opacity-60"
                           : checked
                             ? "border-white bg-white/5 text-white"
@@ -521,14 +527,14 @@ export function WorkspaceKnowledgePortalPanel({
                       }`}
                       data-practice-portal-product={id}
                       data-practice-portal-product-disabled={
-                        openEndedDisabled ? "true" : undefined
+                        exploreDisabled ? "true" : undefined
                       }
                     >
                       <input
                         type="checkbox"
                         className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-                        checked={checked && !openEndedDisabled}
-                        disabled={openEndedDisabled}
+                        checked={checked && !exploreDisabled}
+                        disabled={exploreDisabled}
                         onChange={() => togglePortalProduct(id)}
                       />
                       <span className="font-medium">{PRODUCT_CREATE_LABELS[id]}</span>
@@ -538,10 +544,10 @@ export function WorkspaceKnowledgePortalPanel({
               </div>
             </fieldset>
 
-            {portalProducts.includes("timed_explore") ? (
-              <fieldset data-practice-portal-timings-explore>
+            {portalProducts.includes("drill_dialog") ? (
+              <fieldset data-practice-portal-timings-explore data-practice-portal-timings-drill-dialog>
                 <legend className="text-xs text-neutral-400">
-                  {t("planView.practicePortalTimingsExplore")}
+                  {PRODUCT_INTENT_LABELS.drillDialog} durations
                 </legend>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {PRACTICE_PORTAL_TIMED_EXPLORE_OPTIONS.map((mins) => {
@@ -557,6 +563,7 @@ export function WorkspaceKnowledgePortalPanel({
                             : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
                         }`}
                         data-practice-portal-timing-explore={mins}
+                        data-practice-portal-timing-drill-dialog={mins}
                         aria-pressed={checked}
                       >
                         {mins} min
@@ -567,10 +574,10 @@ export function WorkspaceKnowledgePortalPanel({
               </fieldset>
             ) : null}
 
-            {portalProducts.includes("timed_drill") ? (
-              <fieldset data-practice-portal-timings-drill>
+            {portalProducts.includes("drill_solo") ? (
+              <fieldset data-practice-portal-timings-drill data-practice-portal-timings-drill-solo>
                 <legend className="text-xs text-neutral-400">
-                  {t("planView.practicePortalTimingsDrill")}
+                  {PRODUCT_INTENT_LABELS.drillSolo} durations
                 </legend>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {PRACTICE_PORTAL_TIMED_DRILL_OPTIONS.map((mins) => {
@@ -586,6 +593,7 @@ export function WorkspaceKnowledgePortalPanel({
                             : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
                         }`}
                         data-practice-portal-timing-drill={mins}
+                        data-practice-portal-timing-drill-solo={mins}
                         aria-pressed={checked}
                       >
                         {mins} min

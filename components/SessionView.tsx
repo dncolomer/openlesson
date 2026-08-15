@@ -14,6 +14,7 @@ import {
   resumeSession,
   updateSessionStatus,
   getSessionPlan,
+  sessionPlanHasChapters,
   archiveProbe,
   toggleProbeFocused,
   resetSessionProbes,
@@ -45,10 +46,13 @@ import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
-import { type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
+import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat, ILE_SESSION_CHAT_PATH } from "@/lib/session-chat-client";
+import { decideIleKeyboardAction, shouldLogIlePowInsideSetState } from "@/lib/ile-keyboard-mode";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
+import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
+import { IleMiniModeFirstAsk } from "@/components/IleMiniModeFirstAsk";
 import { updateSessionPlan } from "@/lib/storage";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
@@ -121,15 +125,19 @@ import {
   buildIleProjectChapterExercisePrompt,
   emptyIleProjectDualLists,
   frameIleProjectChapterDescription,
+  ileProjectThoughtsStorageKey,
   ILE_SESSION_MODE_DEFAULT,
   isIleChapterThoughtsLocked,
   isIleProjectMode,
   normalizeIleSessionMode,
+  parseIleProjectThoughtsStored,
   resolveIleSessionModeFromSession,
+  serializeIleProjectThoughts,
   shouldShowInterfaceEvaluationOnChapterDone,
   type ExerciseDualLists,
   type IleSessionMode,
 } from "@/lib/ile-mode";
+import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
 import {
   isLowQualityTapbenchExercise,
   looksLikeTopicOverview,
@@ -166,6 +174,7 @@ import {
 } from "@/components/session/sessionViewHelpers";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 import { useSessionPaneLayout } from "@/lib/useSessionPaneLayout";
+import { shouldAllowChapterLoadClick } from "@/lib/chapter-load-control";
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
 const EMPTY_ENTRY_QUERY_PARAMS: Record<string, string | string[]> = Object.freeze({});
@@ -750,6 +759,36 @@ export function SessionView({
   const activeProjectChapterId = activeStep?.id ?? activeChapterKey ?? "default";
   const activeProjectLists =
     projectThoughtsByChapter[activeProjectChapterId] ?? emptyIleProjectDualLists();
+
+  useEffect(() => {
+    if (!isProjectMode || !session?.id) return;
+    const key = ileProjectThoughtsStorageKey(session.id, activeProjectChapterId);
+    try {
+      const stored = parseIleProjectThoughtsStored(
+        typeof window !== "undefined" ? window.localStorage.getItem(key) : null,
+      );
+      if (!stored) return;
+      setProjectThoughtsByChapter((prev) => ({
+        ...prev,
+        [activeProjectChapterId]: stored,
+      }));
+    } catch {
+      /* ignore */
+    }
+  }, [activeProjectChapterId, isProjectMode, session?.id]);
+
+  useEffect(() => {
+    if (!isProjectMode || !session?.id) return;
+    const hasContent =
+      activeProjectLists.stash.length > 0 || activeProjectLists.submitted.length > 0;
+    if (!hasContent) return;
+    const key = ileProjectThoughtsStorageKey(session.id, activeProjectChapterId);
+    try {
+      window.localStorage.setItem(key, serializeIleProjectThoughts(activeProjectLists));
+    } catch {
+      /* ignore */
+    }
+  }, [activeProjectChapterId, activeProjectLists, isProjectMode, session?.id]);
   const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
   const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
   const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
@@ -934,10 +973,9 @@ export function SessionView({
 
     try {
       const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-      const response = await fetch("/api/session-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Live ILE chat + chapter reload share postIleSessionChat (`/api/session-chat`).
+      void ILE_SESSION_CHAT_PATH;
+      const { ok, data } = await postIleSessionChat({
           problem: session.problem,
           activeStepIndex: activeChapterIndex,
           activeStepId: activeStep?.id,
@@ -945,14 +983,21 @@ export function SessionView({
           sessionPlan,
           sessionId: session.id,
           tutoringLanguage,
+          sessionMode: resolvedSessionMode,
           ...guestAccessBody,
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
-        }),
-      });
-      const data = response.ok ? await response.json() : null;
+        });
+      void ok;
       const content = typeof data?.message === "string" && data.message.trim()
         ? data.message.trim()
         : t('heliosChat.errorMessage');
+      const suggestionPayload =
+        data?.chapterSuggestion && typeof data.chapterSuggestion === "object"
+          ? (data.chapterSuggestion as Record<string, unknown>)
+          : null;
+      if (suggestionPayload && typeof suggestionPayload.topic === "string" && suggestionPayload.topic.trim()) {
+        void logToolRef.current?.("session_plan", "chapter_suggest", suggestionPayload);
+      }
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
@@ -1003,7 +1048,7 @@ export function SessionView({
         ),
       }));
     }
-  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace]);
+  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
 
   useEffect(() => {
     if (!pendingChatMessage) return;
@@ -1252,37 +1297,119 @@ export function SessionView({
     });
   }, [persistPlanSteps]);
 
-  const handleLoadChapter = useCallback((index: number) => {
-    if (chapterLoading) return;
-    if (index === activeChapterIndex) return;
+  const [chapterReloadNonce, setChapterReloadNonce] = useState(0);
+
+  const handleLoadChapter = useCallback(async (index: number) => {
+    if (!shouldAllowChapterLoadClick({ chapterLoading })) return;
     const currentPlan = sessionPlanRef.current;
     const step = currentPlan?.steps?.[index];
     if (!currentPlan || !step) return;
 
-    setChapterLoading(true);
-    setChapterLoadingIndex(index);
-    const startedAt = Date.now();
+    const isReload = index === activeChapterIndexRef.current;
+    const toolAction = isReload ? "chapter_reload" : "chapter_load";
+    const toolData = buildIleChapterLoadPowToolData({
+      stepIndex: index,
+      stepId: step.id,
+      stepDescription: step.description,
+      sessionMode: resolvedSessionMode,
+      reload: isReload,
+    });
+
+    const showLoading = isReload || CHAPTER_LOAD_DURATION_MS > 0;
+    if (showLoading) {
+      setChapterLoading(true);
+      setChapterLoadingIndex(index);
+    }
 
     const updatedSteps = currentPlan.steps.map((s, i) => {
       if (i === index && s.status === "pending") return { ...s, status: "in_progress" as const };
       return s;
     });
     const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: index };
-    void persistPlanSteps(updatedPlan);
+    await persistPlanSteps(updatedPlan, { toolAction, toolData });
     handleActiveChapterIndexChange(index);
 
-    const remaining = Math.max(0, CHAPTER_LOAD_DURATION_MS - (Date.now() - startedAt));
-    window.setTimeout(() => {
+    if (isReload) {
+      setChapterReloadNonce((n) => n + 1);
+      if (!isProjectMode && session) {
+        setHeliosTurnMode("responding");
+        const chapterKey = step.id;
+        const placeholderId = `chapter-reload-${Date.now()}`;
+        const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
+        updateChapterWorkspace(chapterKey, (workspace) => ({
+          chatMessages: [
+            ...workspace.chatMessages,
+            { id: placeholderId, role: "assistant", content: "", pending: true },
+          ],
+        }));
+        try {
+          const { ok, data } = await postIleSessionChat({
+              problem: session.problem,
+              activeStepIndex: index,
+              activeStepId: step.id,
+              activeStepDescription: step.description,
+              sessionPlan: updatedPlan,
+              sessionId: session.id,
+              tutoringLanguage,
+              sessionMode: resolvedSessionMode,
+              ...guestAccessBody,
+              messages: [
+                ...existingMessages.map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                  imageDataUrl: m.imageDataUrl,
+                })),
+                {
+                  role: "user",
+                  content: `Reload this chapter and continue coaching from here: ${step.description}`,
+                },
+              ],
+            });
+          void ok;
+          const content =
+            typeof data?.message === "string" && data.message.trim()
+              ? data.message.trim()
+              : t("heliosChat.errorMessage");
+          updateChapterWorkspace(chapterKey, (workspace) => ({
+            chatMessages: workspace.chatMessages.map((message) =>
+              message.id === placeholderId ? { ...message, content, pending: false } : message,
+            ),
+          }));
+        } catch {
+          updateChapterWorkspace(chapterKey, (workspace) => ({
+            chatMessages: workspace.chatMessages.map((message) =>
+              message.id === placeholderId
+                ? { ...message, content: t("heliosChat.errorMessage"), pending: false }
+                : message,
+            ),
+          }));
+        } finally {
+          setHeliosTurnMode("idle");
+        }
+      }
+    } else if (CHAPTER_LOAD_DURATION_MS > 0) {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
+      });
+    }
+
+    if (showLoading) {
       setChapterLoading(false);
       setChapterLoadingIndex(null);
-    }, remaining);
-
-    void logToolRef.current?.("session_plan", "chapter_load", {
-      stepIndex: index,
-      stepId: step.id,
-      stepDescription: step.description?.slice(0, 120),
-    });
-  }, [activeChapterIndex, chapterLoading, handleActiveChapterIndexChange, persistPlanSteps]);
+    }
+  }, [
+    chapterLoading,
+    chapterWorkspaces,
+    guestAccessBody,
+    handleActiveChapterIndexChange,
+    isProjectMode,
+    persistPlanSteps,
+    resolvedSessionMode,
+    session,
+    t,
+    tutoringLanguage,
+    updateChapterWorkspace,
+  ]);
 
   const handleAddChapter = useCallback(async (description: string, position: { row: number; col: number }) => {
     const currentPlan = sessionPlanRef.current;
@@ -1348,14 +1475,15 @@ export function SessionView({
     };
     await persistPlanSteps(updatedPlan, {
       toolAction: "chapter_add",
-      toolData: {
+      toolData: buildIleChapterAddPowToolData({
         stepId: newStep.id,
-        description: framed.slice(0, 120),
+        description: framed,
         position_x: position.col,
         position_y: position.row,
-        session_mode: resolvedSessionMode,
+        sessionMode: resolvedSessionMode,
         exercise: isProjectMode,
-      },
+        sourceTopic: trimmed,
+      }),
     });
   }, [
     persistPlanSteps,
@@ -1506,15 +1634,18 @@ export function SessionView({
         setChapterPlanStatus("unknown");
         setRegenerateChapters(false);
         try {
-          // First try to load existing plan - use it but user will need to confirm language to translate if needed
-          const existingPlan = await getSessionPlan(s.id);
-          // Hydrate any plan that already has chapter steps. Empty shells stay
-          // out of state so confirm can generate a real map.
-          const hasChapters = (existingPlan?.steps?.length ?? 0) > 0;
-          if (hasChapters && existingPlan) {
-            setSessionPlan(existingPlan);
-            sessionPlanRef.current = existingPlan;
-            if (!cancelled) setChapterPlanStatus("exists");
+          // Cheap existence check — do not download full steps JSON just to
+          // set chapterPlanStatus. Hydrate the map only when chapters exist.
+          const hasChapters = await sessionPlanHasChapters(s.id);
+          if (hasChapters) {
+            const existingPlan = await getSessionPlan(s.id);
+            if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
+              setSessionPlan(existingPlan);
+              sessionPlanRef.current = existingPlan;
+              if (!cancelled) setChapterPlanStatus("exists");
+            } else if (!cancelled) {
+              setChapterPlanStatus("empty");
+            }
           } else if (!cancelled) {
             setChapterPlanStatus("empty");
           }
@@ -2154,9 +2285,14 @@ export function SessionView({
     },
   });
 
-  const handleProjectStash = useCallback(() => {
+  const handleProjectStash = useCallback((providedText?: string) => {
     if (chapterThoughtsLocked) return;
-    const text = sessionThoughtInterface.crystallizableText?.trim() || "";
+    const text = (
+      providedText ||
+      sessionThoughtInterface.getFormingText?.() ||
+      sessionThoughtInterface.crystallizableText ||
+      ""
+    ).trim();
     if (!text) return;
     sessionThoughtInterface.clearCurrentTranscription();
     mutateActiveProjectThoughts({ type: "stash", text });
@@ -2168,7 +2304,11 @@ export function SessionView({
 
   const handleProjectSubmitToSolution = useCallback(() => {
     if (chapterThoughtsLocked) return;
-    const text = sessionThoughtInterface.crystallizableText?.trim() || "";
+    const text = (
+      sessionThoughtInterface.getFormingText?.() ||
+      sessionThoughtInterface.crystallizableText ||
+      ""
+    ).trim();
     if (!text) return;
     sessionThoughtInterface.clearCurrentTranscription();
     mutateActiveProjectThoughts({ type: "submit_direct", text });
@@ -2200,7 +2340,11 @@ export function SessionView({
       if (event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === "Delete" || event.key === "Backspace")) {
+      const action = decideIleKeyboardAction({
+        mode: "project",
+        key: event.key,
+      });
+      if (action === "project_stash" && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
         event.preventDefault();
         event.stopPropagation();
         handleProjectStash();
@@ -2209,12 +2353,6 @@ export function SessionView({
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [isProjectMode, powSessionEnabled, handleProjectStash]);
-
-  // Project Mode context-capacity auto-stash → dual list (not Helios memory).
-  useEffect(() => {
-    if (!isProjectMode || !powSessionEnabled || chapterThoughtsLocked) return;
-    // Handled in SessionHeliosPanel via onProjectStash when projectMode is set.
-  }, [isProjectMode, powSessionEnabled, chapterThoughtsLocked]);
 
   const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
     powSessionEnabled,
@@ -2475,8 +2613,31 @@ export function SessionView({
         },
       });
     }
-    await screenCaptureRef.current.start();
+    return screenCaptureRef.current.start();
   }, [uploadScreenshotPow]);
+
+  const {
+    notifyLeaveTab,
+    miniFirstAskVisible,
+    acceptMiniMode,
+    declineMiniMode,
+    openManualPicInPic,
+    showManualPicInPic,
+  } =
+    useIleBlurScreenshare({
+    enabled: Boolean(isRecording && !isPaused),
+    isScreenSharing: isScreenCapturing,
+    startScreenshare: handleStartScreenCapture,
+    captureStream: stream,
+    compact: {
+      chapterLabel: activeStep?.description ?? session?.problem ?? "",
+      formingText: sessionThoughtInterface.crystallizableText,
+      transcriptText: lastDialogueAssistantTurn?.content ?? "",
+      isSending: isHeliosAssistantPending,
+      heliosTurnMode,
+      isScreenSharing: isScreenCapturing,
+    },
+  });
 
   const handleStopScreenCapture = useCallback(() => {
     screenCaptureRef.current?.stop();
@@ -3294,9 +3455,8 @@ export function SessionView({
                             }
                           }
                           
-                          const existingPlan = await getSessionPlan(session.id);
+                          const hasExistingChapters = await sessionPlanHasChapters(session.id);
                           let newPlan: SessionPlan | null = null;
-                          const hasExistingChapters = (existingPlan?.steps?.length ?? 0) > 0;
                           // Keep regenerate checkbox stable even if sessionPlan state lags.
                           if (hasExistingChapters) {
                             setChapterPlanStatus("exists");
@@ -3305,9 +3465,12 @@ export function SessionView({
                           }
                           const shouldReuseExisting = hasExistingChapters && !regenerateChapters;
 
-                          if (shouldReuseExisting && existingPlan) {
+                          if (shouldReuseExisting) {
                             if (tutoringLanguage === "en") {
-                              newPlan = existingPlan;
+                              const existingPlan = await getSessionPlan(session.id);
+                              if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
+                                newPlan = existingPlan;
+                              }
                             } else {
                               const translateRes = await fetch("/api/session-plan/translate", {
                                 method: "POST",
@@ -3350,6 +3513,8 @@ export function SessionView({
                                 force: hasExistingChapters ? regenerateChapters : true,
                                 tutoringLanguage,
                                 initialChapters,
+                                sessionMode: resolvedSessionMode,
+                                session_mode: resolvedSessionMode,
                                 ...guestAccessBody,
                               }),
                             });
@@ -3639,6 +3804,8 @@ export function SessionView({
               museStatus={museStatus}
               museDeviceStatus={museDeviceStatus}
               museChannelData={eegChannelData}
+              showOpenPicInPic={showManualPicInPic}
+              onOpenPicInPic={openManualPicInPic}
             />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -3653,6 +3820,12 @@ export function SessionView({
           <div className="flex shrink-0 justify-end border-b border-neutral-900/80 px-4 py-1.5">
             <SessionIdentityBadge identity={participantIdentity} />
           </div>
+        ) : null}
+        {miniFirstAskVisible ? (
+          <IleMiniModeFirstAsk
+            onAccept={acceptMiniMode}
+            onDecline={declineMiniMode}
+          />
         ) : null}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Tools | Helios */}
@@ -3687,6 +3860,13 @@ export function SessionView({
                           onEnsurePositions={handleEnsureChapterPositions}
                           isSessionActive={isRecording}
                           isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
+                          learnerScopeId={
+                            participantIdentity?.userId ||
+                            participantIdentity?.guestUserId ||
+                            ayclToken ||
+                            ileToken ||
+                            "local"
+                          }
 
                         />
                       </div>
@@ -3837,6 +4017,7 @@ export function SessionView({
                         sessionProblem={session?.problem}
                         activeStepDescription={activeStep?.description}
                         activeProbes={session?.probes?.filter((probe) => !probe.archived).map((probe) => ({ text: probe.text }))}
+                        onLeaveIleTab={notifyLeaveTab}
                       />
                     )}
                   </div>
@@ -3845,6 +4026,7 @@ export function SessionView({
               right={
                     <div className="relative h-full">
                       <SessionHeliosPanel
+                        key={`${activeChapterKey}-${chapterReloadNonce}`}
                         lastUserTurn={isProjectMode ? null : lastDialogueUserTurn}
                         lastAssistantTurn={isProjectMode ? null : lastDialogueAssistantTurn}
                         isAssistantPending={isProjectMode ? false : isHeliosAssistantPending}
@@ -3878,7 +4060,6 @@ export function SessionView({
                         onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
                         onProjectStash={handleProjectStash}
                         onProjectSubmitToSolution={handleProjectSubmitToSolution}
-                        onOpenThoughts={() => setActiveTool("thought-history")}
                       />
                     </div>
               }

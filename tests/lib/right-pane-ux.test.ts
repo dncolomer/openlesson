@@ -40,32 +40,33 @@ function writeEvidence(name: string, body: string) {
   }
 }
 
-describe("Explore|Drill × timebox → four launch targets", () => {
-  it("maps all four combinations via resolveLaunchFromStyleAndTimebox", () => {
+describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
+  it("maps all four combinations via resolveLaunchFromStyleAndTimebox (solo flag)", () => {
+    // soloEnabled false → dialog; true → solo
     expect(resolveLaunchFromStyleAndTimebox("explore", false)).toEqual(
-      resolveProductIntent("explore", "open_ended"),
+      resolveProductIntent("explore", "dialog"),
     );
     expect(resolveLaunchFromStyleAndTimebox("drill", false)).toEqual(
-      resolveProductIntent("drill", "open_ended"),
+      resolveProductIntent("drill", "dialog"),
     );
     expect(resolveLaunchFromStyleAndTimebox("explore", true)).toEqual(
-      resolveProductIntent("explore", "timed"),
+      resolveProductIntent("explore", "solo"),
     );
     expect(resolveLaunchFromStyleAndTimebox("drill", true)).toEqual(
-      resolveProductIntent("drill", "timed"),
+      resolveProductIntent("drill", "solo"),
     );
     expect(resolveLaunchFromStyleAndTimebox("explore", false).id).toBe(
-      "open_ended_explore",
+      "explore_dialog",
     );
-    expect(resolveLaunchFromStyleAndTimebox("drill", true).id).toBe("timed_drill");
+    expect(resolveLaunchFromStyleAndTimebox("drill", true).id).toBe("drill_solo");
 
     writeEvidence(
       "launch-intent-timebox.log",
       [
-        "explore open=" + resolveLaunchFromStyleAndTimebox("explore", false).id,
-        "drill open=" + resolveLaunchFromStyleAndTimebox("drill", false).id,
-        "explore timed=" + resolveLaunchFromStyleAndTimebox("explore", true).id,
-        "drill timed=" + resolveLaunchFromStyleAndTimebox("drill", true).id,
+        "explore dialog=" + resolveLaunchFromStyleAndTimebox("explore", false).id,
+        "drill dialog=" + resolveLaunchFromStyleAndTimebox("drill", false).id,
+        "explore solo=" + resolveLaunchFromStyleAndTimebox("explore", true).id,
+        "drill solo=" + resolveLaunchFromStyleAndTimebox("drill", true).id,
       ].join("\n"),
     );
   });
@@ -81,16 +82,21 @@ describe("desktop layout + block detail chrome", () => {
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS");
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS");
     expect(view).not.toMatch(/md:w-1\/2 md:border-b-0 md:border-r/);
-    expect(aycl).toContain("WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS");
-    expect(aycl).toContain("WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS");
+    // AYCL is a thin access wrapper that mounts WorkspaceView (inherits map split).
+    expect(aycl).toContain("WorkspaceView");
   });
 
-  it("BlockDetailCard is Explore/Drill + timebox; no ? help", () => {
+  it("BlockDetailCard is Explore/Drill + Dialog/Solo; no ? help", () => {
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("resolveLaunchFromStyleAndTimebox");
+    expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "drill"');
+    expect(card).toContain("data-modality-control");
+    expect(card).toContain("data-modality-toggle");
+    expect(card).toContain("data-modality-option");
+    expect(card).toContain("data-product-intent-modality-grid");
+    // Legacy timebox hooks kept as aliases for structural continuity
     expect(card).toContain("data-timebox-control");
     expect(card).toContain("data-timebox-toggle");
     expect(card).toContain('data-style-icon="explore"');
@@ -131,15 +137,21 @@ describe("desktop layout + block detail chrome", () => {
     expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
     expect(detail).toContain("defaultExpanded={false}");
     expect(detail).toContain("hasLocalMaterials");
-    // Edit drawer (update/delete) replaces sidebar pen tool
+    // Edit drawer (update) + peer Danger zone drawer (delete)
     expect(detail).toContain('drawerId="edit"');
     expect(detail).toContain("WorkspaceBlockEditPanel");
     expect(detail).toContain("onUpdateBlock");
+    expect(detail).toContain("WorkspaceBlockDangerPanel");
     expect(detail).toContain("onDeleteBlock");
+    expect(detail).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
     const editPanel = read("components/WorkspaceBlockEditPanel.tsx");
     expect(editPanel).toContain("data-block-edit-panel");
-    expect(editPanel).toContain("data-block-edit-delete");
     expect(editPanel).toContain("data-block-edit-save");
+    expect(editPanel).not.toContain("Danger zone");
+    expect(editPanel).not.toContain("data-block-edit-delete");
+    const dangerPanel = read("components/WorkspaceBlockDangerPanel.tsx");
+    expect(dangerPanel).toContain("data-block-edit-delete");
+    expect(dangerPanel).toContain("data-block-danger-pane");
     const tools = read("lib/block-map-tools.ts");
     expect(tools).not.toMatch(/BLOCK_MAP_TOOL_STRIP[\s\S]*"edit"/);
     expect(tools).toContain("edit is omitted");
@@ -186,9 +198,9 @@ describe("desktop layout + block detail chrome", () => {
       /WorkspaceBlockLocalContextPanel[\s\S]*How context shapes practice/,
     );
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("WorkspaceBlockDetailPane");
+    // AYCL mounts WorkspaceView which owns block detail drawers.
+    expect(aycl).toContain("WorkspaceView");
     expect(aycl).not.toContain("WorkspaceBlockDetailTabs");
-    expect(aycl).toContain("WorkspaceBlockLocalContextPanel");
 
     const cardSrc = read("components/BlockDetailCard.tsx");
     expect(cardSrc).toContain("data-block-detail-no-hero-image");

@@ -7,6 +7,7 @@ import {
   resolveDetailDrawerDefaultOpenId,
 } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
+import { WorkspaceBlockDangerPanel } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockSimulationPanel } from "@/components/WorkspaceBlockSimulationPanel";
 import { WorkspaceSplitBlockPane } from "@/components/WorkspaceSplitBlockPane";
 import {
@@ -20,6 +21,8 @@ import {
 } from "@/components/WorkspaceBlockEffectsPanels";
 import { BlockGoalsPanel } from "@/components/BlockGoalsPanel";
 import {
+  WORKSPACE_EDITOR_DANGER_DRAWER_ID,
+  WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
   blockOffersSplitDrawer,
   type SplitCandidateBlock,
 } from "@/lib/workspace-right-pane";
@@ -35,9 +38,9 @@ import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
 
 /**
  * Block-detail right column (creator mode): peer top-level drawers —
- * Simulation, Split (multi-cell), Expand, Edit, Goals (post-creation),
+ * Simulation, Split (multi-cell), Expand, Edit, Danger zone, Goals (post-creation),
  * Dynamic / Generator effects, Local context.
- * Title/description live in Edit (not a separate Details/Sessions drawer).
+ * Title/description live in Edit; delete lives in the Danger zone drawer.
  * Clone is a left map-strip tool (not a drawer).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
@@ -307,6 +310,29 @@ export function WorkspaceBlockDetailPane({
               canEdit={canEdit}
               busy={editBusy}
               onUpdate={onUpdateBlock}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
+      {canEdit ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
+          title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
+          defaultExpanded={false}
+          bodyClassName="space-y-2"
+          surfaceDataAttr="data-block-danger-drawer"
+        >
+          <div
+            data-block-detail-tab-content="danger"
+            data-block-danger-drawer
+          >
+            <WorkspaceBlockDangerPanel
+              blockId={blockId}
+              title={blockTitle}
+              canEdit={canEdit}
+              busy={editBusy}
               onDelete={onDeleteBlock}
             />
           </div>

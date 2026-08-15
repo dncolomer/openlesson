@@ -32,6 +32,10 @@ import {
   parseProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import { listWorkspaceAvailableSubjectsForUi } from "@/lib/pow-api/workspace-snapshot-subjects";
+import {
+  decideProductWorkspaceAccess,
+  PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+} from "@/lib/product-workspace-auth";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 
 export const runtime = "nodejs";
@@ -96,7 +100,14 @@ async function resolveWebAuth(
     workspaceOwnerId: workspace.user_id,
     isGroup: Boolean(workspace.is_group),
   });
-  if (resolveEvalPersistenceClientMode(access) === "deny") {
+  const decided = decideProductWorkspaceAccess({
+    isOwner: access.isOwner,
+    isOrgAdmin: false,
+    evalAllowed: resolveEvalPersistenceClientMode(access) !== "deny",
+    ayclAccess: false,
+    flags: PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+  });
+  if (!decided.allowed) {
     return {
       ok: false,
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),

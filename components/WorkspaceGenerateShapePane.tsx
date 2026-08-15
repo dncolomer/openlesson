@@ -18,6 +18,10 @@ import {
 } from "@/lib/shape-context-select";
 import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
 import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
+import {
+  WorkspacePromptContextAlternatives,
+  type PromptContextMode,
+} from "@/components/WorkspacePromptContextAlternatives";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -64,6 +68,7 @@ export function WorkspaceGenerateShapePane({
   };
 }) {
   const [prompt, setPrompt] = useState("");
+  const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
@@ -296,6 +301,22 @@ export function WorkspaceGenerateShapePane({
           </div>
         )}
 
+        <div data-generate-shape-context-alternatives data-generative-context-alternatives>
+          <WorkspacePromptContextAlternatives
+            workspaceId={workspaceId}
+            ayclToken={ayclToken}
+            draftPrompt={prompt}
+            surface="generate shape"
+            mode={contextMode}
+            onModeChange={setContextMode}
+            adhocValue={prompt}
+            onAdhocChange={setPrompt}
+            onAccept={setPrompt}
+            disabled={busy || submitting}
+            adhocPlaceholder={labels.addPlaceholder}
+            adhocLabel="Shape prompt"
+          />
+        </div>
         <textarea
           data-generate-shape-prompt
           value={prompt}

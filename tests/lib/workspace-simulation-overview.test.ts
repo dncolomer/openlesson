@@ -112,8 +112,12 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(aycl).toContain("WorkspaceView");
     expect(panel).toContain("data-workspace-simulation-section");
     expect(panel).toContain("data-workspace-simulation-panel");
-    // Redo: scope picker + generate + question/exercise surfaces (not validation-only)
+    // Workspace-only tab: generate + Q/E surfaces (block/multi on map drawers)
     expect(panel).toContain("data-simulation-scope");
+    expect(panel).toContain('data-simulation-scope="workspace"');
+    expect(panel).toContain("data-simulation-scope-workspace");
+    expect(panel).not.toContain("data-simulation-scope-block");
+    expect(panel).not.toContain("data-simulation-block-select");
     expect(panel).toContain("data-simulation-generate");
     expect(panel).toContain("data-simulation-questions");
     expect(panel).toContain("data-simulation-exercises");
@@ -172,8 +176,11 @@ describe("workspace Simulation section helpers + UI structure", () => {
       [
         "scope_control=" + panel.includes("data-simulation-scope-control"),
         "scope_workspace=" + panel.includes("data-simulation-scope-workspace"),
-        "scope_block=" + panel.includes("data-simulation-scope-block"),
-        "block_select=" + panel.includes("data-simulation-block-select"),
+        "scope_workspace_only=" +
+          String(
+            panel.includes('data-simulation-scope="workspace"') &&
+              !panel.includes("data-simulation-scope-block"),
+          ),
         "generate=" + panel.includes("data-simulation-generate"),
         "questions=" + panel.includes("data-simulation-questions"),
         "exercises=" + panel.includes("data-simulation-exercises"),
@@ -184,6 +191,10 @@ describe("workspace Simulation section helpers + UI structure", () => {
           String(!panel.includes("deriveSimulationSamples")),
         "generate_api=" +
           panel.includes("/api/workspace/simulation-samples"),
+        "multi_block_drawer=" +
+          read("components/WorkspaceCombineBlocksPane.tsx").includes(
+            "WorkspaceMultiBlockSimulationPanel",
+          ),
       ].join("\n") + "\n",
       "utf8",
     );

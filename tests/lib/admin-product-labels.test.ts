@@ -34,46 +34,46 @@ function walkFiles(dir: string, out: string[] = []): string[] {
 }
 
 describe("adminSessionProductTarget / Label (shipped helpers)", () => {
-  it("maps ile/learning → Open-ended Exploration", () => {
+  it("maps ile/learning → Explore · Dialog", () => {
     const t = adminSessionProductTarget({
       technicalKind: "ile",
       session_mode: "learning",
     });
-    expect(t.id).toBe("open_ended_explore");
+    expect(t.id).toBe("explore_dialog");
     expect(adminSessionProductLabel({ technicalKind: "ile", session_mode: "learning" })).toBe(
-      PRODUCT_INTENT_LABELS.openEndedExplore,
+      PRODUCT_INTENT_LABELS.exploreDialog,
     );
   });
 
-  it("maps ile/project → Open-ended Drill", () => {
+  it("maps ile/project → Explore · Solo Exercise", () => {
     expect(
       adminSessionProductLabel({ technicalKind: "ile", session_mode: "project" }),
-    ).toBe(PRODUCT_INTENT_LABELS.openEndedDrill);
+    ).toBe(PRODUCT_INTENT_LABELS.exploreSolo);
     expect(
       adminSessionProductTarget({ technicalKind: "tutoring", session_mode: "exercise" }).id,
-    ).toBe("open_ended_drill");
+    ).toBe("explore_solo");
   });
 
-  it("maps tap/conversational → Timed Exploration", () => {
+  it("maps tap/conversational → Drill · Dialog", () => {
     expect(
       adminSessionProductLabel({
         technicalKind: "tap",
         interaction_kind: "conversational",
       }),
-    ).toBe(PRODUCT_INTENT_LABELS.timedExplore);
+    ).toBe(PRODUCT_INTENT_LABELS.drillDialog);
   });
 
-  it("maps tap/exercise → Timed Drill", () => {
+  it("maps tap/exercise → Drill · Solo Exercise", () => {
     expect(
       adminSessionProductLabel({ technicalKind: "tap", interaction_kind: "exercise" }),
-    ).toBe(PRODUCT_INTENT_LABELS.timedDrill);
+    ).toBe(PRODUCT_INTENT_LABELS.drillSolo);
   });
 
   it("sparse missing-subtype cases still yield non-TAP/ILE product labels", () => {
     const ileSparse = adminSessionProductLabel({ technicalKind: "ile" });
     const tapSparse = adminSessionProductLabel({ technicalKind: "tap" });
-    expect(ileSparse).toBe(PRODUCT_INTENT_LABELS.openEndedExplore);
-    expect(tapSparse).toBe(PRODUCT_INTENT_LABELS.timedExplore);
+    expect(ileSparse).toBe(PRODUCT_INTENT_LABELS.exploreDialog);
+    expect(tapSparse).toBe(PRODUCT_INTENT_LABELS.drillDialog);
     for (const label of [ileSparse, tapSparse]) {
       expect(label).not.toMatch(/\bTAP\b|\bILE\b/i);
       expect(label.length).toBeGreaterThan(0);
@@ -82,33 +82,29 @@ describe("adminSessionProductTarget / Label (shipped helpers)", () => {
 
   it("exports the four product-intent display names", () => {
     const labels = adminProductIntentLabels();
-    expect(Object.values(labels).sort()).toEqual(
-      [
-        PRODUCT_INTENT_LABELS.openEndedDrill,
-        PRODUCT_INTENT_LABELS.openEndedExplore,
-        PRODUCT_INTENT_LABELS.timedDrill,
-        PRODUCT_INTENT_LABELS.timedExplore,
-      ].sort(),
-    );
+    expect(labels.exploreDialog).toBe(PRODUCT_INTENT_LABELS.exploreDialog);
+    expect(labels.exploreSolo).toBe(PRODUCT_INTENT_LABELS.exploreSolo);
+    expect(labels.drillDialog).toBe(PRODUCT_INTENT_LABELS.drillDialog);
+    expect(labels.drillSolo).toBe(PRODUCT_INTENT_LABELS.drillSolo);
   });
 });
 
 describe("admin activity type + summary labels", () => {
-  it("horizon rollups when subtype absent; full names when present", () => {
-    expect(adminActivityTypeLabel("ile_session")).toBe("Open-ended session");
-    expect(adminActivityTypeLabel("tap_session")).toBe("Timed session");
+  it("family rollups when subtype absent; full names when present", () => {
+    expect(adminActivityTypeLabel("ile_session")).toBe("Explore session");
+    expect(adminActivityTypeLabel("tap_session")).toBe("Drill session");
     expect(
       adminActivityTypeLabel("ile_session", {
         session_mode: "project",
         preferFullProductName: true,
       }),
-    ).toBe("Open-ended Drill");
+    ).toBe(PRODUCT_INTENT_LABELS.exploreSolo);
     expect(
       adminActivityTypeLabel("tap_session", {
         interaction_kind: "exercise",
         preferFullProductName: true,
       }),
-    ).toBe("Timed Drill");
+    ).toBe(PRODUCT_INTENT_LABELS.drillSolo);
   });
 
   it("activityTypeLabel and activityTypeLabelForEvent use shipped mapping", () => {
@@ -119,18 +115,18 @@ describe("admin activity type + summary labels", () => {
         interaction_kind: "exercise",
         session_mode: null,
       }),
-    ).toBe("Timed Drill");
+    ).toBe(PRODUCT_INTENT_LABELS.drillSolo);
   });
 
-  it("timed session activity summary includes product name and optional score", () => {
+  it("drill session activity summary includes product name and optional score", () => {
     expect(
       adminTimedSessionActivitySummary({
         interaction_kind: "conversational",
         overall_score: 82,
       }),
-    ).toBe("Timed Exploration · score 82");
+    ).toBe(`${PRODUCT_INTENT_LABELS.drillDialog} · score 82`);
     expect(adminTimedSessionActivitySummary({ interaction_kind: "exercise" })).toBe(
-      "Timed Drill",
+      PRODUCT_INTENT_LABELS.drillSolo,
     );
     expect(adminTimedSessionActivitySummary({})).not.toMatch(/\bTAP\b|\bILE\b/);
   });
@@ -142,7 +138,7 @@ describe("admin activity type + summary labels", () => {
       proofOfWork: 3,
       workspacesCreated: 1,
     });
-    expect(label).toBe("2 open-ended · 1 timed · 3 PoW · 1 WS");
+    expect(label).toBe("2 explore · 1 drill · 3 PoW · 1 WS");
     expect(label).not.toMatch(/\bTAP\b|\bILE\b/);
     expect(adminActiveUserActivityLabel({
       ileSessions: 0,
@@ -169,8 +165,8 @@ describe("admin activity type + summary labels", () => {
       10,
     );
     expect(events[0].interaction_kind).toBe("exercise");
-    expect(activityTypeLabelForEvent(events[0])).toBe("Timed Drill");
-    expect(events[0].summary).toBe("Timed Drill");
+    expect(activityTypeLabelForEvent(events[0])).toBe(PRODUCT_INTENT_LABELS.drillSolo);
+    expect(events[0].summary).toBe(PRODUCT_INTENT_LABELS.drillSolo);
   });
 });
 
@@ -212,9 +208,9 @@ describe("admin UI/copy sources avoid TAP/ILE product branding", () => {
     expect(offenders, offenders.join("\n")).toEqual([]);
   });
 
-  it("horizon rollup labels are product-facing", () => {
-    expect(ADMIN_SESSION_HORIZON_LABELS.openEnded).toBe("Open-ended sessions");
-    expect(ADMIN_SESSION_HORIZON_LABELS.timed).toBe("Timed sessions");
+  it("family rollup labels are product-facing (Explore / Drill)", () => {
+    expect(ADMIN_SESSION_HORIZON_LABELS.openEnded).toBe("Explore sessions");
+    expect(ADMIN_SESSION_HORIZON_LABELS.timed).toBe("Drill sessions");
     expect(ADMIN_SESSION_HORIZON_LABELS.openEnded).not.toMatch(/TAP|ILE/);
     expect(ADMIN_SESSION_HORIZON_LABELS.timed).not.toMatch(/TAP|ILE/);
   });

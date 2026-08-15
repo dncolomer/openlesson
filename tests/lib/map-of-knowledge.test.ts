@@ -795,7 +795,6 @@ describe("map-of-knowledge product surfaces", () => {
     const access = readFileSync(join(root, "components/WorkspaceAccessSettings.tsx"), "utf8");
     const identity = readFileSync(join(root, "components/WorkspaceIdentityPanel.tsx"), "utf8");
     const view = readFileSync(join(root, "components/WorkspaceView.tsx"), "utf8");
-    const shell = readFileSync(join(root, "components/WorkspaceBuilderShell.tsx"), "utf8");
     const sessionItem = readFileSync(join(root, "components/SessionItem.tsx"), "utf8");
     const groupRoute = readFileSync(join(root, "app/api/workspaces/[id]/group/route.ts"), "utf8");
     const groupStart = readFileSync(
@@ -813,7 +812,6 @@ describe("map-of-knowledge product surfaces", () => {
     expect(view).not.toContain("makeGroupPlan");
     expect(view).not.toContain("group-workspace/start-session");
     expect(view).not.toContain("PublicWorkspaceFork");
-    expect(shell).not.toContain("PublicWorkspaceForkPanel");
     expect(sessionItem).not.toContain("PublicWorkspaceForkCallout");
     expect(sessionItem).not.toContain("group-workspace/start-session");
     expect(groupRoute).toContain("410");

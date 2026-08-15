@@ -88,11 +88,13 @@ import {
 } from "@/lib/map-ground-rules";
 import { isLearnerMapBlockLocked } from "@/lib/learner-local-dag";
 import {
+  recordMapItemWorkedOn,
+  resolveMapSelfProgressScope,
+} from "@/lib/map-self-progress";
+import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
-  nextMapSelectionClearNonce,
-  nextWorkspaceBlockSelection,
   resolveEmptySelectionSurface,
   resolveWorkspaceRightPane,
   type EmptySelectionSurface,
@@ -142,59 +144,26 @@ import {
   type AyclCapabilities,
 } from "@/lib/aycl-shared";
 
-export interface Block {
-  id: string;
-  title: string;
-  description: string;
-  is_start: boolean;
-  next_block_ids: string[];
-  status: string;
-  planning_prompt?: string;
-  session_id?: string;
-  position_x?: number | null;
-  position_y?: number | null;
-  span_w?: number | null;
-  span_h?: number | null;
-  shape_cells?: Array<{ dr: number; dc: number }> | null;
-  lock_until_block_ids?: string[] | null;
-  local_context?: BlockLocalContextInput | null;
-  /** Author limits on Explore/Drill × open/timed launches (raw JSON or parsed). */
-  practice_options?: unknown;
-  /** Combinable Dynamic / Generator effects. */
-  creator_effects?: unknown;
-}
+import type { Block, Workspace } from "@/lib/domain/types";
+import {
+  postWorkspaceGridOp,
+  shouldReloadWorkspaceAfterMutate,
+} from "@/lib/workspace-grid-ops-client";
+import {
+  emptyWorkspaceMapSelection,
+  mapSelectionToApplyPayload,
+  nextWorkspaceMapSelection,
+  type WorkspaceMapSelection,
+} from "@/lib/workspace-map-selection";
+import {
+  buildLearnerLaunchBody,
+  buildLearnerPromptSaveBody,
+  shouldWriteLearnerBlocksViaBrowserClient,
+  WORKSPACE_LEARNER_LAUNCH_PATH,
+  WORKSPACE_LEARNER_PROMPT_PATH,
+} from "@/lib/workspace-learner-writes";
 
-export interface Workspace {
-  id: string;
-  title: string;
-  root_topic: string;
-  status: string;
-  user_id?: string;
-  description?: string;
-  is_public?: boolean;
-  is_group?: boolean;
-  organization_id?: string | null;
-
-  original_workspace_id?: string;
-  remix_count?: number;
-  source_type?: "topic" | "youtube";
-  source_url?: string;
-  source_summary?: string;
-  notes?: string;
-  workspace_goal?: string | null;
-  cover_image_url?: string;
-  is_all_you_can_learn?: boolean;
-  /** AYCL marketplace listing fields (catalog workspace only). */
-  aycl_category?: string | null;
-  aycl_summary?: string | null;
-  aycl_author_name?: string | null;
-  aycl_author_avatar_url?: string | null;
-  aycl_learner_price_cents?: number | null;
-  aycl_full_price_cents?: number | null;
-  unusable_cells?: UnusableCell[] | null;
-  /** Created multi-block DAGs (Creator DAGs tab). */
-  workspace_dags?: WorkspaceDagRecord[] | null;
-}
+export type { Block, Workspace };
 
 interface WorkspaceViewProps {
   initialPlan?: Workspace;
@@ -316,7 +285,6 @@ export function WorkspaceView({
   );
   const [loading, setLoading] = useState(!initialPlan);
   const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(
     () => ayclOwnerUserId || null,
   );
@@ -346,11 +314,6 @@ export function WorkspaceView({
   const [emptySurface, setEmptySurface] = useState<EmptySelectionSurface | null>(null);
   /** Multi-selected filled blocks (2+) → combine surface. */
   const [selectedFilledBlockIds, setSelectedFilledBlockIds] = useState<string[]>([]);
-  /**
-   * Bumped after ops that must leave no residual map selection (cluster).
-   * BlockSkillGrid clears local multi-block + empty-cell state when this changes.
-   */
-  const [mapSelectionClearNonce, setMapSelectionClearNonce] = useState(0);
   /** Map explore FAB toggle (not the default empty-selection pane). */
   const [mapExploreShell, setMapExploreShell] = useState<MapExploreShellState>(
     () => createMapExploreShellState(),
@@ -422,6 +385,32 @@ export function WorkspaceView({
     [ayclToken],
   );
 
+  const runGridOp = useCallback(
+    async (payload: Record<string, unknown> & { op: string }) => {
+      return postWorkspaceGridOp({
+        workspaceId,
+        ayclToken,
+        locale,
+        ...payload,
+      });
+    },
+    [ayclToken, locale, workspaceId],
+  );
+
+  const gridOpsFetch = useCallback(
+    async (_url: string, init?: RequestInit) => {
+      const parsed = JSON.parse(String(init?.body || "{}")) as Record<string, unknown> & {
+        op: string;
+      };
+      const result = await runGridOp(parsed);
+      return new Response(JSON.stringify(result.data), {
+        status: result.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    [runGridOp],
+  );
+
 
   useEffect(() => {
     if (!isAycl || !ayclCapabilities) return;
@@ -437,28 +426,68 @@ export function WorkspaceView({
     );
   }, []);
 
+  const currentMapSelection = useCallback((): WorkspaceMapSelection => {
+    return {
+      expandedBlockId,
+      selectedFilledBlockIds,
+      emptyCells:
+        emptySurface?.kind === "add_block"
+          ? [emptySurface.cell]
+          : emptySurface?.kind === "generate_shape"
+            ? emptySurface.cells
+            : [],
+    };
+  }, [emptySurface, expandedBlockId, selectedFilledBlockIds]);
+
+  const applyMapSelectionResult = useCallback(
+    (next: WorkspaceMapSelection, opts?: { pushToGrid?: boolean }) => {
+      setExpandedBlockId(next.expandedBlockId);
+      setSelectedFilledBlockIds(next.selectedFilledBlockIds);
+      if (next.emptyCells.length === 0) {
+        setEmptySurface(clearWorkspaceAddTarget());
+      } else if (interactionMode !== "learner") {
+        setEmptySurface(
+          resolveEmptySelectionSurface({
+            selectedEmptyCells: next.emptyCells,
+            unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+          }),
+        );
+      } else {
+        setEmptySurface(clearWorkspaceAddTarget());
+      }
+      if (opts?.pushToGrid) {
+        setApplyMapSelection((prev) =>
+          mapSelectionToApplyPayload(next, (prev?.token || 0) + 1),
+        );
+      }
+    },
+    [interactionMode, unusableCells],
+  );
+
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
-    const next = nextWorkspaceBlockSelection(expandedBlockId, blockId);
-    setExpandedBlockId(next);
-    if (next) {
-      setEmptySurface(clearWorkspaceAddTarget());
-      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+    const next = nextWorkspaceMapSelection(currentMapSelection(), {
+      type: "open_block",
+      blockId,
+    });
+    applyMapSelectionResult(next);
+    if (next.expandedBlockId) {
       setMobileColumn("workspace");
-      // Keep arm only if same source remains selected.
       setCloneArm((prev) =>
-        prev.armed && prev.sourceBlockId === next
+        prev.armed && prev.sourceBlockId === next.expandedBlockId
           ? prev
           : createDisarmedCloneState(),
       );
     } else {
       setCloneArm(createDisarmedCloneState());
     }
-  }, [expandedBlockId]);
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const handleCloseBlockDetail = useCallback(() => {
-    setExpandedBlockId(clearWorkspaceBlockSelection());
+    applyMapSelectionResult(
+      nextWorkspaceMapSelection(currentMapSelection(), { type: "open_block", blockId: null }),
+    );
     setCloneArm(createDisarmedCloneState());
-  }, []);
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const handleCloneArm = useCallback((blockId: string) => {
     setCloneArm(armClone(blockId));
@@ -470,66 +499,40 @@ export function WorkspaceView({
   }, []);
 
   const handleSelectedBlockIdsChange = useCallback((ids: string[] | null) => {
-    const next = (ids || []).map((id) => String(id).trim()).filter(Boolean);
-    setSelectedFilledBlockIds(next);
-    if (next.length >= 2) {
-      setExpandedBlockId(clearWorkspaceBlockSelection());
-      setEmptySurface(clearWorkspaceAddTarget());
+    const next = nextWorkspaceMapSelection(currentMapSelection(), {
+      type: "set_filled_ids",
+      blockIds: ids,
+    });
+    applyMapSelectionResult(next);
+    if (next.selectedFilledBlockIds.length >= 2 || next.expandedBlockId) {
       setCloneArm(createDisarmedCloneState());
       setMobileColumn("workspace");
     }
-  }, []);
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const handleEmptyMapSearchBlocks = useCallback((blockIds: string[]) => {
-    const ids = (blockIds || []).map((id) => String(id).trim()).filter(Boolean);
-    setApplyMapSelection((prev) => ({
-      token: (prev?.token || 0) + 1,
-      blockIds: ids,
-      emptyCells: null,
-    }));
-    if (ids.length >= 1) {
-      setEmptySurface(clearWorkspaceAddTarget());
-      setCloneArm(createDisarmedCloneState());
+    const next = nextWorkspaceMapSelection(currentMapSelection(), {
+      type: "apply_search_blocks",
+      blockIds,
+    });
+    applyMapSelectionResult(next, { pushToGrid: true });
+    setCloneArm(createDisarmedCloneState());
+    if (next.expandedBlockId || next.selectedFilledBlockIds.length > 0) {
       setMobileColumn("workspace");
     }
-    if (ids.length >= 2) {
-      setExpandedBlockId(clearWorkspaceBlockSelection());
-      setSelectedFilledBlockIds(ids);
-    } else if (ids.length === 1) {
-      setSelectedFilledBlockIds([]);
-      setExpandedBlockId(ids[0]);
-    } else {
-      setSelectedFilledBlockIds([]);
-      setExpandedBlockId(clearWorkspaceBlockSelection());
-    }
-  }, []);
+  }, [applyMapSelectionResult, currentMapSelection]);
 
   const handleEmptyMapSuggestCells = useCallback(
     (cells: Array<{ row: number; col: number }>) => {
-      const list = (cells || [])
-        .filter((c) => Number.isFinite(c.row) && Number.isFinite(c.col))
-        .map((c) => ({ row: Math.trunc(c.row), col: Math.trunc(c.col) }));
-      setApplyMapSelection((prev) => ({
-        token: (prev?.token || 0) + 1,
-        blockIds: null,
-        emptyCells: list,
-      }));
-      setExpandedBlockId(clearWorkspaceBlockSelection());
-      setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
+      const next = nextWorkspaceMapSelection(currentMapSelection(), {
+        type: "apply_suggest_cells",
+        cells,
+      });
+      applyMapSelectionResult(next, { pushToGrid: true });
       setCloneArm(createDisarmedCloneState());
       setMobileColumn("workspace");
-      // Play: visibility-only multi empty (no create surface). Build: open generate/add.
-      if (interactionMode !== "learner") {
-        const surface = resolveEmptySelectionSurface({
-          selectedEmptyCells: list,
-          unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-        });
-        setEmptySurface(surface);
-      } else {
-        setEmptySurface(clearWorkspaceAddTarget());
-      }
     },
-    [interactionMode, unusableCells],
+    [applyMapSelectionResult, currentMapSelection],
   );
 
   const handleSelectiveExplanationComplete = useCallback(
@@ -617,14 +620,14 @@ export function WorkspaceView({
   });
 
   const refreshNodes = useCallback(() => {
-    setRefreshKey((k) => k + 1);
+    /* Full-plan load is mount / workspace-id only. */
   }, []);
 
   const handleClonePaste = useCallback(
     async (sourceBlockId: string, target: { row: number; col: number }) => {
       if (!workspaceId || !isOwner) return;
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
@@ -654,8 +657,10 @@ export function WorkspaceView({
         }
         setCloneArm(afterClonePaste());
         setEmptySurface(clearWorkspaceAddTarget());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } catch (err) {
         console.error("[clone_block]", err);
         // Stay armed so user can try another empty cell.
@@ -852,8 +857,10 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          refreshNodes();
-          router.refresh();
+          if (shouldReloadWorkspaceAfterMutate()) {
+            refreshNodes();
+            router.refresh();
+          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to expand block";
@@ -932,7 +939,7 @@ export function WorkspaceView({
       if (!workspaceId || !isOwner) return;
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -958,8 +965,10 @@ export function WorkspaceView({
         }
         setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
         setExpandedBlockId(clearWorkspaceBlockSelection());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -972,7 +981,7 @@ export function WorkspaceView({
       if (!workspaceId || !isOwner) return;
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -997,8 +1006,10 @@ export function WorkspaceView({
           );
         }
         setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1138,8 +1149,10 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          refreshNodes();
-          router.refresh();
+          if (shouldReloadWorkspaceAfterMutate()) {
+            refreshNodes();
+            router.refresh();
+          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to add blocks";
@@ -1281,8 +1294,10 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          refreshNodes();
-          router.refresh();
+          if (shouldReloadWorkspaceAfterMutate()) {
+            refreshNodes();
+            router.refresh();
+          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to generate bridge";
@@ -1331,7 +1346,7 @@ export function WorkspaceView({
       const model = savedModel || DEFAULT_MODEL;
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1363,8 +1378,10 @@ export function WorkspaceView({
           );
         }
         setEmptySurface(clearWorkspaceAddTarget());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1555,7 +1572,7 @@ export function WorkspaceView({
     }
 
     loadPlan();
-  }, [workspaceId, supabase, router, refreshKey, isAycl, ayclToken, ayclOwnerUserId, initialPlan, initialNodes, refreshAyclWorkspace]);
+  }, [workspaceId, supabase, router, isAycl, ayclToken, ayclOwnerUserId, initialPlan, initialNodes, refreshAyclWorkspace]);
 
   useEffect(() => {
     if (plan?.notes !== undefined) {
@@ -1709,7 +1726,7 @@ export function WorkspaceView({
           isStart: input.isStart,
           includeIsStart: input.isStart !== undefined,
         });
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1748,8 +1765,10 @@ export function WorkspaceView({
             ),
           );
         }
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1765,7 +1784,7 @@ export function WorkspaceView({
       if (!block) throw new Error("Block not found");
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1802,8 +1821,10 @@ export function WorkspaceView({
             ),
           );
         }
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1901,7 +1922,7 @@ export function WorkspaceView({
       if (!workspaceId || !isOwner) return;
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1925,8 +1946,10 @@ export function WorkspaceView({
         }
         setExpandedBlockId(clearWorkspaceBlockSelection());
         setEmptySurface(clearWorkspaceAddTarget());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1942,7 +1965,7 @@ export function WorkspaceView({
       if (ids.length === 0) return;
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1967,8 +1990,10 @@ export function WorkspaceView({
         setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
         setExpandedBlockId(clearWorkspaceBlockSelection());
         setEmptySurface(clearWorkspaceAddTarget());
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2005,7 +2030,7 @@ export function WorkspaceView({
         label: "Saving cluster positions…",
       });
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2029,23 +2054,24 @@ export function WorkspaceView({
           );
         }
         // Drop residual multi-select / empty / detail chrome after cluster.
-        // Parent-only clear is insufficient: grid owns local multi + empty ids.
-        setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-        setExpandedBlockId(clearWorkspaceBlockSelection());
-        setEmptySurface(clearWorkspaceAddTarget());
-        setMapSelectionClearNonce((n) => nextMapSelectionClearNonce(n));
+        applyMapSelectionResult(
+          nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), { type: "clear" }),
+          { pushToGrid: true },
+        );
         setClusterMapJob({
           active: true,
           progress: 1,
           label: "Clusters updated",
         });
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
     },
-    [ayclToken, isOwner, refreshNodes, router, workspaceId],
+    [applyMapSelectionResult, ayclToken, isOwner, refreshNodes, router, workspaceId],
   );
 
   const handleClusterProgress = useCallback(
@@ -2080,7 +2106,7 @@ export function WorkspaceView({
       }
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2107,8 +2133,10 @@ export function WorkspaceView({
         if (data.workspaceDags !== undefined) {
           setWorkspaceDags(normalizeWorkspaceDags(data.workspaceDags));
         }
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2130,7 +2158,7 @@ export function WorkspaceView({
       }
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
+        const response = await gridOpsFetch("/api/workspace/grid-ops", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2157,8 +2185,10 @@ export function WorkspaceView({
         } else {
           setWorkspaceDags((prev) => prev.filter((d) => d.id !== input.dagId));
         }
-        refreshNodes();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          refreshNodes();
+          router.refresh();
+        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2309,9 +2339,10 @@ export function WorkspaceView({
     if (next === interactionMode) return;
     setInteractionMode(next);
     // Mode flip always clears active selection (sole block, multi, empty create).
-    setExpandedBlockId(clearWorkspaceBlockSelection());
-    setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection());
-    setEmptySurface(clearWorkspaceAddTarget());
+    applyMapSelectionResult(
+      nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), { type: "clear" }),
+      { pushToGrid: true },
+    );
     setAddExpandPreviewCells(null);
     setGeneratorTargetPreviewCells(null);
     setGeneratorPickActiveSafe(false);
@@ -2424,22 +2455,6 @@ export function WorkspaceView({
         ]
       : []),
   ];
-
-  const inventoryBlocks = nodes.map((n) => ({
-    id: n.id,
-    title: n.title,
-    description: n.description,
-    status: n.status,
-    is_start: n.is_start,
-    position_x: n.position_x,
-    position_y: n.position_y,
-    span_w: n.span_w,
-    span_h: n.span_h,
-    shape_cells: n.shape_cells,
-    next_block_ids: n.next_block_ids,
-    lock_until_block_ids: n.lock_until_block_ids,
-    local_context: n.local_context,
-  }));
 
   const detailLockTitles =
     detailBlock?.lock_until_block_ids
@@ -2818,7 +2833,6 @@ export function WorkspaceView({
             onExpandedNodeIdChange={handleExpandedBlockChange}
             onEmptySelectionChange={handleEmptySelectionChange}
             onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
-            mapSelectionClearNonce={mapSelectionClearNonce}
             applyMapSelection={applyMapSelection}
             selectiveExplanationActive={selectiveExplanationActive}
             selectiveExplanationPolygon={selectiveExplanationPolygon}
@@ -2967,10 +2981,19 @@ export function WorkspaceView({
                   });
                 }}
                 onSavePlanningPrompt={async (prompt) => {
-                  await supabase
-                    .from("blocks")
-                    .update({ planning_prompt: prompt.trim() || null })
-                    .eq("id", detailBlock.id);
+                  void shouldWriteLearnerBlocksViaBrowserClient();
+                  await fetch(WORKSPACE_LEARNER_PROMPT_PATH, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(
+                      buildLearnerPromptSaveBody({
+                        workspaceId,
+                        blockId: detailBlock.id,
+                        planningPrompt: prompt,
+                        ayclToken,
+                      }),
+                    ),
+                  });
                   setNodes((prev) =>
                     prev.map((n) =>
                       n.id === detailBlock.id
@@ -2982,43 +3005,37 @@ export function WorkspaceView({
                 onLaunchIntent={
                   currentUserId
                     ? async (target, options) => {
+                        const progressScope = resolveMapSelfProgressScope({
+                          userId: currentUserId || ayclToken || "local",
+                          kind: "workspace",
+                          scopeId: workspaceId,
+                        });
+                        if (progressScope) {
+                          recordMapItemWorkedOn(progressScope, detailBlock.id);
+                        }
                         // Same product intent map as SessionItem / BlockDetailCard.
                         if (target.product === "ile") {
-                          const { createSession } = await import("@/lib/storage");
                           const ileMode =
                             target.session_mode === "project"
                               ? "project"
                               : "learning";
-                          await supabase
-                            .from("blocks")
-                            .update({ status: "in_progress" })
-                            .eq("id", detailBlock.id);
-                          const prompt =
-                            detailBlock.planning_prompt || undefined;
-                          const session = await createSession(
-                            detailBlock.title,
-                            undefined,
-                            prompt,
-                            undefined,
-                            workspaceId,
-                            {
-                              session_mode: ileMode,
-                              ile_session_mode: ileMode,
-                              block_id: detailBlock.id,
-                              block_title: detailBlock.title,
-                            },
-                          );
-                          await supabase
-                            .from("blocks")
-                            .update({ session_id: session.id })
-                            .eq("id", detailBlock.id);
-                          await supabase.from("block_sessions").insert({
-                            block_id: detailBlock.id,
-                            session_id: session.id,
-                            user_id: currentUserId,
-                            workspace_id: workspaceId,
+                          const launchRes = await fetch(WORKSPACE_LEARNER_LAUNCH_PATH, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(
+                              buildLearnerLaunchBody({
+                                workspaceId,
+                                blockId: detailBlock.id,
+                                sessionMode: ileMode,
+                                ayclToken,
+                              }),
+                            ),
                           });
-                          router.push(`/session?id=${session.id}`);
+                          const launchData = await launchRes.json().catch(() => ({}));
+                          if (!launchRes.ok || !launchData.sessionId) {
+                            throw new Error(launchData.error || "Failed to launch ILE");
+                          }
+                          router.push(`/session?id=${launchData.sessionId}`);
                           return;
                         }
                         // TAP timed explore / drill
@@ -3210,8 +3227,10 @@ export function WorkspaceView({
                     /* snapshot is best-effort after Done */
                   }
 
-                  refreshNodes();
-                  router.refresh();
+                  if (shouldReloadWorkspaceAfterMutate()) {
+                    refreshNodes();
+                    router.refresh();
+                  }
 
                   if (effectErrors.length) {
                     throw new Error(
@@ -3234,6 +3253,8 @@ export function WorkspaceView({
                 nodes={nodes}
                 busy={isAddingBlock}
                 unusableCells={unusableCells}
+                workspaceId={workspaceId}
+                ayclToken={ayclToken || undefined}
                 onCombine={handleCombineBlocks}
                 onGenerateBridge={handleGenerateBridge}
                 onApplyDag={handleApplyDag}

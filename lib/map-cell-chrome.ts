@@ -37,6 +37,38 @@ export const MAP_CELL_TARGET_CLASS = MAP_CELL_SELECTED_CLASS;
 export const MAP_CELL_NEUTRAL_CLASS =
   "border-neutral-700/80 bg-neutral-950/75 text-neutral-100";
 
+/**
+ * Mark-as-Done tile (workspace + ILE chapter): white fill/border plus a tick.
+ * Selection still adds the existing white-ring language on top.
+ */
+export const MAP_CELL_CHAPTER_DONE_CLASS =
+  "border-white/80 bg-white text-neutral-900 shadow-[0_0_12px_rgba(255,255,255,0.2)]";
+
+/** Alias — workspace Done uses the same tokens as the chapter map. */
+export const MAP_CELL_DONE_CLASS = MAP_CELL_CHAPTER_DONE_CLASS;
+
+/**
+ * Self-progress (this user worked on the item at least once, not Done).
+ * Fainter white than Done so the two states stay distinct.
+ */
+export const MAP_CELL_SELF_PROGRESS_CLASS =
+  "border-white/50 bg-white/40 text-neutral-800 shadow-[0_0_8px_rgba(255,255,255,0.1)]";
+
+/** White ring stacked on Done / self-progress when the tile is selected. */
+export const MAP_CELL_DONE_RING_CLASS =
+  "ring-2 ring-white/55 ring-offset-2 ring-offset-[#0b0b0b]";
+
+export type MapCellSurface = "block" | "chapter";
+
+export function isMapCellDoneStatus(status: string): boolean {
+  const s = String(status || "").toLowerCase();
+  return s === "completed" || s === "done";
+}
+
+function isCompletedChapterStatus(status: string): boolean {
+  return isMapCellDoneStatus(status);
+}
+
 /** Locked tiles stay neutral but slightly dimmed — still fully clickable/selectable. */
 export const MAP_CELL_LOCKED_CLASS =
   "border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-80 pointer-events-auto";
@@ -47,13 +79,18 @@ export const MAP_CELL_UNUSABLE_CLASS =
 
 /**
  * Status → icon for occupied map tiles.
- * Map tiles are title-only: never gear/tick — status is not reflected on cells.
- * (showProgress / status retained for API compatibility.)
+ * Done (completed/done) → tick on both workspace and chapter maps.
+ * This-user worked-on (and not Done) → gear. Done wins over progress.
  */
 export function resolveMapCellStatusIcon(
-  _status: string,
+  status: string,
   _showProgress: boolean,
+  surface: MapCellSurface = "block",
+  workedOn = false,
 ): MapCellStatusIcon {
+  void surface;
+  if (isMapCellDoneStatus(status)) return "tick";
+  if (workedOn) return "gear";
   return null;
 }
 
@@ -74,10 +111,16 @@ export function mapCellChromeClasses(input: {
    * "prereq" → mild white; "target" → full select chrome.
    */
   highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
+  /** ILE chapter map vs workspace block map. */
+  surface?: MapCellSurface;
+  /** This user has worked on this tile at least once. */
+  workedOn?: boolean;
 }): string {
   const selected = Boolean(input.selected || input.focused);
   const status = String(input.status || "").toLowerCase();
   const role = input.highlightRole ?? null;
+  const done = isMapCellDoneStatus(status);
+  const workedOn = Boolean(input.workedOn) && !done;
 
   if (input.unusable) {
     return selected
@@ -89,10 +132,22 @@ export function mapCellChromeClasses(input: {
   if (role === "prereq") return MAP_CELL_PREREQ_CLASS;
   if (role === "selected") return MAP_CELL_MULTI_SELECTED_CLASS;
 
-  if (status === "locked" || status === "skipped" || role === "locked") {
+  if (!done && (status === "locked" || status === "skipped" || role === "locked")) {
     return selected
       ? `${MAP_CELL_SELECTED_CLASS} opacity-80`
       : MAP_CELL_LOCKED_CLASS;
+  }
+
+  if (done) {
+    return selected
+      ? `${MAP_CELL_DONE_CLASS} ${MAP_CELL_DONE_RING_CLASS}`
+      : MAP_CELL_DONE_CLASS;
+  }
+
+  if (workedOn) {
+    return selected
+      ? `${MAP_CELL_SELF_PROGRESS_CLASS} ${MAP_CELL_DONE_RING_CLASS}`
+      : MAP_CELL_SELF_PROGRESS_CLASS;
   }
 
   if (selected) {
@@ -100,6 +155,61 @@ export function mapCellChromeClasses(input: {
   }
 
   return MAP_CELL_NEUTRAL_CLASS;
+}
+
+/**
+ * Shipped occupied-tile mapper used by workspace block maps and ILE chapter maps.
+ * Done → white + tick. Self-progress → fainter white + gear. Done wins.
+ */
+export function resolveMapTileChrome(input: {
+  status: string;
+  selected: boolean;
+  focused?: boolean;
+  workedOn?: boolean;
+  showProgress?: boolean;
+  unusable?: boolean;
+  highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
+  surface?: MapCellSurface;
+}): { className: string; statusIcon: MapCellStatusIcon } {
+  const surface = input.surface ?? "block";
+  const workedOn = Boolean(input.workedOn);
+  return {
+    className: mapCellChromeClasses({
+      status: input.status,
+      selected: input.selected,
+      focused: input.focused,
+      showProgress: input.showProgress,
+      unusable: input.unusable,
+      highlightRole: input.highlightRole,
+      surface,
+      workedOn,
+    }),
+    statusIcon: resolveMapCellStatusIcon(
+      input.status,
+      input.showProgress ?? true,
+      surface,
+      workedOn,
+    ),
+  };
+}
+
+/**
+ * ILE chapter-map occupied-cell chrome. Same mapper BlockSkillGrid chapter
+ * mode uses — white + tick when completed; self-progress is gear + fainter white.
+ */
+export function ileChapterCellChrome(input: {
+  status: string;
+  selected: boolean;
+  focused?: boolean;
+  workedOn?: boolean;
+}): { className: string; statusIcon: MapCellStatusIcon } {
+  return resolveMapTileChrome({
+    status: input.status,
+    selected: input.selected,
+    focused: input.focused,
+    workedOn: input.workedOn,
+    surface: "chapter",
+  });
 }
 
 /** Freeform fill/border for mild prereq highlight (pair with dashed borderStyle). */
@@ -129,6 +239,36 @@ export function mapCellChromeIsNeutral(className: string): boolean {
     return false;
   }
   return true;
+}
+
+/** Freeform Done fill — full white, matches MAP_CELL_DONE_CLASS. */
+export function mapCellFreeformDoneColors(selected = false): {
+  fill: string;
+  border: string;
+  text: string;
+  shadow?: string;
+} {
+  return {
+    fill: "rgb(255, 255, 255)",
+    border: selected ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.8)",
+    text: "rgb(23, 23, 23)",
+    shadow: "0 0 12px rgba(255,255,255,0.2)",
+  };
+}
+
+/** Freeform self-progress — fainter white than Done. */
+export function mapCellFreeformSelfProgressColors(selected = false): {
+  fill: string;
+  border: string;
+  text: string;
+  shadow?: string;
+} {
+  return {
+    fill: "rgba(255, 255, 255, 0.38)",
+    border: selected ? "rgba(255, 255, 255, 0.7)" : "rgba(255, 255, 255, 0.5)",
+    text: "rgb(23, 23, 23)",
+    shadow: "0 0 8px rgba(255,255,255,0.1)",
+  };
 }
 
 /** Freeform multi-select fill/border as CSS rgba (inline styles path). */

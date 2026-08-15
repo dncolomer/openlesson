@@ -84,22 +84,22 @@ const PLACEMENT_PRODUCTS: Record<
   }
 > = {
   timed_explore: {
-    label: PRODUCT_INTENT_LABELS.timedExplore,
-    eyebrow: "Interactive LLM-powered Dialog",
+    label: PRODUCT_INTENT_LABELS.drillDialog,
+    eyebrow: "LLM-powered Dialog",
     shortDiff:
-      "A timed exploratory dialog — light and quick. You still think aloud; Helios keeps the conversation going as you show what you know.",
-    mintingLabel: "Minting Timed Exploration…",
-    mintLabel: "Mint Timed Exploration link",
+      "Drill · Dialog — timed dialogue practice. You still think aloud; Helios keeps the conversation going as you show what you know.",
+    mintingLabel: "Minting Drill · Dialog…",
+    mintLabel: "Mint Drill · Dialog link",
     interaction_kind: "conversational",
     accent: "slate",
   },
   timed_drill: {
-    label: PRODUCT_INTENT_LABELS.timedDrill,
-    eyebrow: "Solo monolog",
+    label: PRODUCT_INTENT_LABELS.drillSolo,
+    eyebrow: "Solo Exercise",
     shortDiff:
-      "A timed exercise without dialog — more complex, solo work. You still think aloud as you work through and submit your solution.",
-    mintingLabel: "Minting Timed Drill…",
-    mintLabel: "Mint Timed Drill link",
+      "Drill · Solo Exercise — timed solo work without dialog partner. You still think aloud as you work through and submit your solution.",
+    mintingLabel: "Minting Drill · Solo…",
+    mintLabel: "Mint Drill · Solo Exercise link",
     interaction_kind: "exercise",
     accent: "amber",
   },

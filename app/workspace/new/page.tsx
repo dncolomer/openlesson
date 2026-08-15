@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { trackWorkspaceCreated } from "@/lib/analytics";
@@ -14,7 +13,11 @@ import {
   INITIAL_CHAPTERS_LEVELS,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
-import type { WorkspaceCreateMode } from "@/lib/workspace-create-modes";
+import {
+  UI_WORKSPACE_CREATE_MODES,
+  isUiWorkspaceCreateMode,
+  type WorkspaceCreateMode,
+} from "@/lib/workspace-create-modes";
 import { AYCL_PRICE_LABEL } from "@/lib/aycl-shared";
 
 const BACKGROUND_IMAGES = [
@@ -83,38 +86,31 @@ function totalTopicResources(topic: DantesTopic) {
   );
 }
 
-const MODE_CARDS: Array<{
-  mode: WorkspaceCreateMode;
-  title: string;
-  description: string;
-  badge: string;
-}> = [
-  {
-    mode: "blank",
+const MODE_CARD_COPY: Record<
+  (typeof UI_WORKSPACE_CREATE_MODES)[number],
+  { title: string; description: string; badge: string }
+> = {
+  blank: {
     title: "Blank",
     description: "Empty workspace — no blocks. Creates immediately so you can build the grid yourself.",
     badge: "Start empty",
   },
-  {
-    mode: "template",
+  template: {
     title: "From Template",
     description: "Pick a topic; curated resources become generation context.",
     badge: "Topic + size",
   },
-  {
-    mode: "files_goal",
-    title: "From Files + Goal",
-    description: "Your prompt is stored and shown as the workspace Goal, with optional files.",
-    badge: "Goal + files",
-  },
-];
+};
+
+const MODE_CARDS = UI_WORKSPACE_CREATE_MODES.map((mode) => ({
+  mode,
+  ...MODE_CARD_COPY[mode],
+}));
 
 export default function NewWorkspacePage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [mode, setMode] = useState<WorkspaceCreateMode | null>(null);
-  const [goalPrompt, setGoalPrompt] = useState("");
   const [bgImage, setBgImage] = useState("");
-  const [files, setFiles] = useState<AttachedFile[]>([]);
   const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(
     DEFAULT_INITIAL_CHAPTERS,
   );
@@ -309,6 +305,7 @@ export default function NewWorkspacePage() {
 
   function selectMode(next: WorkspaceCreateMode) {
     setError("");
+    if (!isUiWorkspaceCreateMode(next)) return;
     if (next === "blank") {
       // Blank starts creation immediately — no second confirmation step
       setMode("blank");
@@ -402,41 +399,6 @@ export default function NewWorkspacePage() {
     }
   }
 
-  async function handleCreateFilesGoal(e: React.FormEvent) {
-    e.preventDefault();
-    if (!goalPrompt.trim() || busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (!(await ensureAuthed())) return;
-      const response = await fetch("/api/workspace/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          createMode: "files_goal",
-          topic: goalPrompt.trim(),
-          goal: goalPrompt.trim(),
-          days: 28,
-          initialChapters,
-          ...(files.length > 0
-            ? { files: files.map(({ name, mimeType, data }) => ({ name, mimeType, data })) }
-            : {}),
-        }),
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to generate workspace");
-      }
-      const payload = await response.json();
-      trackWorkspaceCreated({ hasFiles: files.length > 0 });
-      router.push(`/workspace/${payload.workspaceId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <main
       className="relative flex min-h-screen flex-col overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
@@ -481,10 +443,8 @@ export default function NewWorkspacePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               {step === 1
-                ? "Pick a starting path. Blank creates an empty grid right away. Template starts from a topic library; Files + Goal is goal-driven."
-                : mode === "template"
-                  ? "Browse by category, pick a topic, then choose which resources to use as context."
-                  : "Your prompt becomes the workspace Goal. Add files for context and choose a starting size."}
+                ? "Pick a starting path. Blank creates an empty grid right away. Template starts from a topic library."
+                : "Browse by category, pick a topic, then choose which resources to use as context."}
             </p>
           </div>
 
@@ -506,7 +466,7 @@ export default function NewWorkspacePage() {
           </a>
 
           {step === 1 && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-create-mode-cards>
+            <div className="mx-auto grid max-w-[680px] grid-cols-1 gap-3 sm:grid-cols-2" data-create-mode-cards>
               {MODE_CARDS.map((card) => (
                 <button
                   key={card.mode}
@@ -819,62 +779,6 @@ export default function NewWorkspacePage() {
             </div>
           )}
 
-          {step === 2 && mode === "files_goal" && (
-            <form onSubmit={handleCreateFilesGoal} className="rounded-md border border-zinc-800 bg-zinc-950/90 p-4 sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="text-lg font-medium text-white">From Files + Goal Prompt</h2>
-                <button
-                  type="button"
-                  onClick={backToModes}
-                  className="text-sm text-zinc-500 hover:text-white"
-                >
-                  ← Back
-                </button>
-              </div>
-
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-                Goal
-              </label>
-              <p className="mb-2 text-xs text-zinc-500">
-                This prompt is stored and shown as the workspace <strong className="text-zinc-300">Goal</strong>{" "}
-                (conversion goal + notes). The system treats it as the success outcome for the map.
-              </p>
-              <textarea
-                value={goalPrompt}
-                onChange={(e) => setGoalPrompt(e.target.value)}
-                placeholder="Describe the performance goal or skill outcome to verify..."
-                className="min-h-[100px] w-full resize-y rounded-md border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-base text-white outline-none placeholder:text-zinc-600 focus:border-zinc-500"
-                spellCheck={false}
-              />
-
-              <StartingSizePicker
-                initialChapters={initialChapters}
-                onChange={setInitialChapters}
-                busy={busy}
-              />
-
-              <div className="mt-4">
-                <FileDropZone
-                  files={files}
-                  onChange={setFiles}
-                  compact
-                  className="rounded-md bg-zinc-950/70 p-2"
-                />
-              </div>
-
-              {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
-
-              <div className="mt-5 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={!goalPrompt.trim() || busy}
-                  className="rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {busy ? "Creating..." : "Create workspace →"}
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       </section>
 

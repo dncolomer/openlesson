@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
   buildTapSpeechSegmentPayload,
   TAP_SPEECH_TOOL_NAME,
@@ -66,7 +67,6 @@ export async function POST(req: NextRequest) {
 
     const fileName = `tap-speech-${event}-${access.tapSessionId}-${timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
-    const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
     const metadata = stampPoWPracticeFlag(
       stampSourceLinkMetadata(
@@ -81,32 +81,32 @@ export async function POST(req: NextRequest) {
       practice,
     );
 
-    const { data: row, error } = await access.supabase
-      .from("workspace_proof_of_work")
-      .insert({
-        workspace_id: access.workspaceId,
+    const { data: workspace } = await access.supabase
+      .from("workspaces")
+      .select("id, user_id, organization_id")
+      .eq("id", access.workspaceId)
+      .single();
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+    const row = await uploadWorkspaceProofOfWork(
+      access.supabase,
+      authContextFromTapAccess(access, "tap-speech"),
+      workspace,
+      {
+        workspaceId: access.workspaceId,
+        type: "tool",
+        mime_type: "application/json",
+        data: base64,
         block_id: blockId || access.blockId,
         session_id: focusSessionId || access.focusSessionId,
-        proof_of_work_type: "tool",
         file_name: fileName,
-        mime_type: "application/json",
-        file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
-        xai_file_id: uploaded.file_id,
         timestamp_ms: timestampMs,
-        chunk_index: 0,
-        metadata,
         tool_name: TAP_SPEECH_TOOL_NAME,
         tool_action: `speech_${event}`,
-        user_id: access.guestUserId ? null : access.userId,
-        guest_user_id: access.guestUserId,
-        organization_id: access.organizationId,
-      })
-      .select("id, xai_file_id, timestamp_ms, metadata, tool_action")
-      .single();
-
-    if (error || !row) {
-      return NextResponse.json({ error: error?.message || "Failed to store TAP speech segment" }, { status: 500 });
-    }
+        metadata,
+      },
+    );
 
     const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
 

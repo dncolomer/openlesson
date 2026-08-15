@@ -1627,6 +1627,7 @@
     "territory": "Vùng {number}",
     "goal": "Mục tiêu",
     "loadChapter": "Tải chương",
+    "reloadChapter": "Reload Chapter",
     "loadingChapter": "Đang tải chương…",
     "addChapter": "Thêm chương",
     "newChapterPlaceholder": "Chương này nên bao gồm nội dung gì?",

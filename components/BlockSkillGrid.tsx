@@ -53,6 +53,7 @@ import {
   saveLearnerMapNotes,
   shouldMountMapNotes,
   shouldRenderMapNotesOnPlane,
+  shouldShowMapNotesPlaneToggle,
   toggleLearnerMapNoteCollapsed,
   toggleMapNotesPlaneVisible,
   updateLearnerMapNote,
@@ -75,6 +76,7 @@ import {
   eraseAnnotationStrokesAlongPath,
   isAnnotationStrokeKind,
   loadAnnotationLayers,
+  shouldShowAnnotationLayerToggles,
   saveAnnotationLayers,
   toggleAnnotationLayerVisible,
   upsertAnnotationLayer,
@@ -83,6 +85,7 @@ import {
   type AnnotationPoint,
   type AnnotationStrokeThickness,
 } from "@/lib/map-annotation-layers";
+import { resolveMapOverlayPersistScope } from "@/lib/map-overlay-persist";
 import { LearnerMapNotePostIt } from "@/components/LearnerMapNotePostIt";
 import {
   parseBlockPracticeOptions,
@@ -174,21 +177,53 @@ import {
   MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_PREREQ_CLASS,
   MAP_CELL_UNUSABLE_CLASS,
-  mapCellChromeClasses,
+  ileChapterCellChrome,
+  isMapCellDoneStatus,
   mapCellFreeformColors,
+  mapCellFreeformDoneColors,
   mapCellFreeformPrereqColors,
-  resolveMapCellStatusIcon,
+  mapCellFreeformSelfProgressColors,
 } from "@/lib/map-cell-chrome";
 import {
+  LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS,
   learnerMapFreeformColors,
-  resolveOccupiedMapChrome,
+  resolveOccupiedMapTileChrome,
 } from "@/lib/workspace-learner-chrome";
 import {
+  loadMapSelfProgressIds,
+  MAP_SELF_PROGRESS_EVENT,
+  recordMapItemWorkedOn,
+  resolveMapSelfProgressScope,
+  mapSelfProgressStorageKey,
+} from "@/lib/map-self-progress";
+import {
+  chapterHasDagLockChrome,
+  ileChapterUnlockHighlightIds,
   incompleteInboundNextPrerequisites,
+  isChapterMapTileLocked,
   isLearnerMapBlockLocked,
   learnerBlockHasDependencyChrome,
   learnerMapDependencyHighlightIds,
 } from "@/lib/learner-local-dag";
+import { resolveMapOccupiedTileBadges } from "@/lib/map-tile-badges";
+import {
+  LassoShapeIcon,
+  ToolIcon,
+  toolTooltip,
+} from "@/components/block-skill-grid/map-tool-icons";
+import {
+  BlockCreatorEffectsBadge,
+  BlockDependencyLockBadge,
+  BlockGeneratorTargetSparkBadge,
+  BlockLocalContextDocBadge,
+  BlockPracticeOptionsBadge,
+  BlockStarterFlagBadge,
+  MapCellStatusGlyph,
+} from "@/components/block-skill-grid/map-tile-badges";
+import {
+  mapSelectionFromApplyPayload,
+  workspaceMapSelectionHostApply,
+} from "@/lib/workspace-map-selection";
 import {
   isBlockLockedUntilCompleted,
   normalizeLockUntilBlockIds,
@@ -202,7 +237,9 @@ import {
   MINIMAP_FRAME_HEIGHT,
   MINIMAP_FRAME_PADDING,
   MINIMAP_FRAME_WIDTH,
+  panFromMinimapViewportDrag,
   placementsFromOccupiedCells,
+  resolveMinimapViewportWindow,
   projectMinimapTiles,
   type MinimapCluster,
   type MinimapCountLabel,
@@ -289,13 +326,9 @@ interface BlockSkillGridProps {
     label: string;
   } | null;
   /**
-   * When this nonce increases (host-driven), clear local multi-block and
-   * empty-cell selection so residual chrome cannot remain after ops like cluster.
-   */
-  mapSelectionClearNonce?: number;
-  /**
-   * Host-driven multi-select apply (Map Search / Suggest empty spots).
-   * When `token` increases, apply blockIds and/or emptyCells without lasso.
+   * Host-driven multi-select apply (Map Search / Suggest empty spots / clear).
+   * When `token` increases, apply the same nextWorkspaceMapSelection result
+   * the shell used (including explicit empty clear).
    */
   applyMapSelection?: {
     token: number;
@@ -434,520 +467,7 @@ interface BlockSkillGridProps {
   };
 }
 
-function toolTooltip(
-  id: BlockMapToolId,
-  labels: BlockSkillGridProps["labels"],
-  opts?: { cloneArmed?: boolean },
-): string {
-  switch (id) {
-    case "select":
-      return (
-        labels.select ||
-        "Select — click block/empty · drag block to move · drag empty or Space/middle to pan · Shift multi"
-      );
-    case "move":
-      return labels.move || "Move — use Select (click-and-drag)";
-    case "lasso":
-      return "Lasso — region select (choose rect / circle / freehand in submenu)";
-    case "lasso_circle":
-      return "Circle lasso — drag from center to select blocks or empty cells";
-    case "lasso_freehand":
-      return "Freehand lasso — draw a path to select blocks or empty cells";
-    case "merge":
-      return labels.merge || "Merge";
-    case "split":
-      return labels.split || "Split";
-    case "clone":
-      return opts?.cloneArmed
-        ? "Clone armed — click an empty cell to paste (click again to cancel)"
-        : "Clone — select one block, then click empty cell to paste a copy";
-    case "generate_shape":
-      return labels.generateShape || "Generate in shape";
-    case "lock_until":
-      return (
-        labels.lockUntil ||
-        "Lock until — select target, enter prereq mode, multi-select prereqs, confirm"
-      );
-    case "mark_unusable":
-      return (
-        labels.markUnusable ||
-        "Unusable ground — multi-select empty cells, then click to mark/clear"
-      );
-    case "clear_selection":
-      return labels.clearSelection || "Clear selection";
-    case "zoom_in":
-      return labels.zoomIn;
-    case "zoom_out":
-      return labels.zoomOut;
-    case "recenter":
-      return labels.recenter;
-    default:
-      return id;
-  }
-}
-
-/** Lasso shape icons — marquee / ellipse / classic rope-loop freehand. */
-function LassoShapeIcon({
-  shape,
-  className = "h-4 w-4",
-}: {
-  shape: LassoShapeKind;
-  className?: string;
-}) {
-  if (shape === "circle") {
-    return (
-      <svg
-        className={className}
-        data-tool-icon="lasso-circle"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeDasharray="3 2"
-        aria-hidden
-      >
-        <circle cx="12" cy="12" r="7" />
-      </svg>
-    );
-  }
-  if (shape === "freehand") {
-    // Freehand lasso: irregular dashed selection outline (reads as free-form marquee).
-    return (
-      <svg
-        className={className}
-        data-tool-icon="lasso-freehand"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeDasharray="2.6 2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M8 7.5c1.2-1.8 3.2-2.6 5.2-2.3 2.1.3 3.6 1.6 4.3 3.4.6 1.6.3 3.4-.8 4.7-1 1.1-2.5 1.7-4 1.6-1.2-.1-2.3-.7-3.1-1.6-.7-.8-1.1-1.8-1.2-2.9-.1-1.3.3-2.6 1.2-3.5" />
-        <path d="M8.6 15.2c-1.1.9-1.7 2.2-1.6 3.5.1 1.4 1 2.6 2.3 3.2 1.2.6 2.6.5 3.7-.2 1.1-.7 1.8-1.9 1.9-3.2.1-1.1-.3-2.2-1.1-3" />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      className={className}
-      data-tool-icon="lasso"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeDasharray="3.5 2.5"
-      aria-hidden
-    >
-      <rect x="4.5" y="5.5" width="15" height="13" rx="1.5" />
-    </svg>
-  );
-}
-
-function ToolIcon({
-  id,
-  lassoShape = DEFAULT_LASSO_SHAPE,
-}: {
-  id: BlockMapToolId;
-  lassoShape?: LassoShapeKind;
-}) {
-  const common = "h-4 w-4";
-  switch (id) {
-    case "select":
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <path d="M4.5 3.5l13 6.2-5.4 2.1-2.1 5.4L4.5 3.5z" />
-        </svg>
-      );
-    case "move":
-      return (
-        <svg
-          className={common}
-          data-tool-icon="move-hand"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.5 11V7.5a1.5 1.5 0 113 0V11m0 0V6.75a1.5 1.5 0 113 0V11m0 0V7.5a1.5 1.5 0 113 0V11m0 0v-1.25a1.5 1.5 0 113 0V14a5 5 0 01-5 5H11a5 5 0 01-5-5v-2.5a1.5 1.5 0 113 0V11"
-          />
-        </svg>
-      );
-    case "lasso":
-      return <LassoShapeIcon shape={lassoShape} className={common} />;
-    case "lasso_circle":
-      return <LassoShapeIcon shape="circle" className={common} />;
-    case "lasso_freehand":
-      return <LassoShapeIcon shape="freehand" className={common} />;
-    case "merge":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v8a2 2 0 002 2h3m8-12h3a2 2 0 012 2v8a2 2 0 01-2 2h-3m-6-4h6" />
-        </svg>
-      );
-    case "split":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v8a2 2 0 002 2h3m8-12h3a2 2 0 012 2v8a2 2 0 01-2 2h-3M12 3v18" />
-        </svg>
-      );
-    case "clone":
-      return (
-        <svg
-          className={common}
-          data-tool-icon="clone"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2M16 3H10a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7l-4-4z"
-          />
-        </svg>
-      );
-    case "generate_shape":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h6v6H4V6zm10 0h6v6h-6V6zM4 16h6v4H4v-4zm10-2h6v6h-6v-6z" />
-        </svg>
-      );
-    case "lock_until":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M6.75 10.5h10.5a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5v-7.5a1.5 1.5 0 011.5-1.5z"
-          />
-        </svg>
-      );
-    case "mark_unusable":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l16 16M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
-        </svg>
-      );
-    case "clear_selection":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      );
-    case "zoom_in":
-      return <span className="text-base leading-none">+</span>;
-    case "zoom_out":
-      return <span className="text-base leading-none">−</span>;
-    case "recenter":
-      return (
-        <svg className={common} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m-4-4h8M4 12a8 8 0 1016 0 8 8 0 00-16 0z" />
-        </svg>
-      );
-    default:
-      return null;
-  }
-}
-
 const PAN_CLICK_THRESHOLD = 6;
-
-/** Occupied map tiles always show title only — no gear/tick status glyphs. */
-function MapCellStatusGlyph({
-  status,
-  showProgress,
-  title,
-}: {
-  status: string;
-  showProgress: boolean;
-  title: string;
-}) {
-  // resolveMapCellStatusIcon is always null (title-only policy); keep call for tests.
-  void resolveMapCellStatusIcon(status, showProgress);
-  return (
-    <span className="line-clamp-3 text-[11px] font-medium leading-tight" data-map-cell-status="title">
-      {title}
-    </span>
-  );
-}
-
-/** Small lock badge for blocks with dependencies (lock-until and/or inbound DAG). */
-function BlockDependencyLockBadge({
-  dependencyCount,
-  currentlyLocked,
-  learnerSpottable = false,
-}: {
-  dependencyCount: number;
-  currentlyLocked: boolean;
-  /** Learner: small red lock when currently locked (spottable DAG gate). */
-  learnerSpottable?: boolean;
-}) {
-  if (dependencyCount <= 0) return null;
-  const redLocked = learnerSpottable && currentlyLocked;
-  return (
-    <span
-      // Bottom-left so it does not collide with starter flag (bottom-right).
-      className={`absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
-        redLocked
-          ? "text-rose-400"
-          : currentlyLocked
-            ? "text-neutral-300"
-            : "text-neutral-400"
-      }`}
-      data-block-dependency-lock
-      data-block-dependency-count={dependencyCount}
-      data-block-dependency-locked={currentlyLocked ? "true" : "false"}
-      data-learner-locked-icon={redLocked ? "true" : undefined}
-      title={
-        currentlyLocked
-          ? `Locked until ${dependencyCount} prerequisite${dependencyCount === 1 ? "" : "s"} complete`
-          : `Depends on ${dependencyCount} block${dependencyCount === 1 ? "" : "s"}`
-      }
-      aria-hidden
-    >
-      <svg
-        className="h-3 w-3"
-        fill={redLocked ? "currentColor" : "none"}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        data-learner-lock-svg={redLocked ? "true" : undefined}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16.5 10.5V7.5a4.5 4.5 0 10-9 0v3m-.75 0h10.5a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5v-7.5a1.5 1.5 0 011.5-1.5z"
-        />
-      </svg>
-    </span>
-  );
-}
-
-/** Small document badge for blocks with attached local context materials. */
-function BlockLocalContextDocBadge() {
-  return (
-    <span
-      className="absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-400"
-      data-block-local-context-badge
-      title="Has attached local context"
-      aria-hidden
-    >
-      <svg
-        className="h-3 w-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        data-block-local-context-icon
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M7 3.75h6.75L19 9v11.25A1.5 1.5 0 0117.5 21.75h-10.5A1.5 1.5 0 015.5 20.25V5.25A1.5 1.5 0 017 3.75z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 3.75V9H19" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5h6M9 17h4.5" />
-      </svg>
-    </span>
-  );
-}
-
-/** Flag badge for author starter blocks (`is_start`) — map-visible without Edit. */
-function BlockStarterFlagBadge() {
-  return (
-    <span
-      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-300/95"
-      data-block-starter-flag
-      data-block-starter-badge
-      title="Starter block"
-      aria-label="Starter block"
-    >
-      <svg
-        className="h-3 w-3"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-        data-block-starter-icon
-        aria-hidden
-      >
-        {/* Flag on pole */}
-        <path d="M6 3.75v16.5a.75.75 0 01-1.5 0V3.75a.75.75 0 011.5 0z" />
-        <path d="M6.75 4.5h8.1c.9 0 1.4.95.9 1.65L14.4 8.4l1.35 2.25c.5.7 0 1.65-.9 1.65H6.75V4.5z" />
-      </svg>
-    </span>
-  );
-}
-
-/**
- * Combinable creator-effect icons (Dynamic ?, Generator spark).
- * Shown in creator + learner; learner also uses them for behavior cues.
- */
-function BlockCreatorEffectsBadge({
-  keys,
-  /** Learner dynamic shows "?" as primary map label elsewhere; icon still marks effect. */
-  learnerMode = false,
-}: {
-  keys: BlockCreatorEffectKey[];
-  learnerMode?: boolean;
-}) {
-  if (keys.length === 0) return null;
-  const title = keys
-    .map((k) => (k === "dynamic" ? "Dynamic" : "Generator"))
-    .join(" · ");
-  return (
-    <span
-      className="absolute bottom-1 left-1/2 z-[1] flex -translate-x-1/2 max-w-[calc(100%-8px)] flex-wrap items-center justify-center gap-0.5 rounded bg-black/50 px-0.5 py-px"
-      data-block-creator-effect-icons
-      data-creator-effect-icon-keys={keys.join(",")}
-      data-learner-mode={learnerMode ? "true" : undefined}
-      title={title}
-      aria-label={`Effects: ${title}`}
-    >
-      {keys.includes("dynamic") ? (
-        <span
-          className="inline-flex h-3 min-w-[0.75rem] items-center justify-center text-[10px] font-bold leading-none text-white/90"
-          data-creator-effect-icon="dynamic"
-          aria-hidden
-        >
-          ?
-        </span>
-      ) : null}
-      {keys.includes("generator") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white/90"
-          data-creator-effect-icon="generator"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden
-        >
-          {/* Spark */}
-          <path d="M12 2.5l1.2 5.1 3.6-3.9-1.1 5.4 5.3-.4-4.2 3.3 4.2 3.3-5.3-.4 1.1 5.4-3.6-3.9L12 21.5l-1.2-5.1-3.6 3.9 1.1-5.4-5.3.4 4.2-3.3-4.2-3.3 5.3.4-1.1-5.4 3.6 3.9L12 2.5z" />
-        </svg>
-      ) : null}
-    </span>
-  );
-}
-
-/** Spark badge on generator target blocks (learner select / creator preview). */
-function BlockGeneratorTargetSparkBadge() {
-  return (
-    <span
-      className="absolute right-1 top-1 z-[2] inline-flex items-center justify-center rounded bg-white/20 p-0.5 text-white shadow ring-1 ring-white/40"
-      data-block-generator-target-spark
-      title="Will be generated"
-      aria-label="Generator target"
-    >
-      <svg
-        className="h-3 w-3"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden
-      >
-        <path d="M12 2.5l1.2 5.1 3.6-3.9-1.1 5.4 5.3-.4-4.2 3.3 4.2 3.3-5.3-.4 1.1 5.4-3.6-3.9L12 21.5l-1.2-5.1-3.6 3.9 1.1-5.4-5.3.4 4.2-3.3-4.2-3.3 5.3.4-1.1-5.4 3.6 3.9L12 2.5z" />
-      </svg>
-    </span>
-  );
-}
-
-/**
- * Micro icons for author practice limits (Explore/Drill × open/timed).
- * Always shown so enabled combos are visible on the map.
- */
-function BlockPracticeOptionsBadge({
-  keys,
-}: {
-  keys: Array<"explore" | "drill" | "open" | "timed">;
-}) {
-  if (keys.length === 0) return null;
-  const title = keys
-    .map((k) =>
-      k === "explore"
-        ? "Explore"
-        : k === "drill"
-          ? "Drill"
-          : k === "open"
-            ? "Open-ended"
-            : "Timed",
-    )
-    .join(" · ");
-  return (
-    <span
-      className="absolute left-1 top-1 z-[1] inline-flex max-w-[calc(100%-8px)] flex-wrap items-center gap-0.5 rounded bg-black/45 px-0.5 py-px"
-      data-block-practice-icons
-      data-practice-icon-keys={keys.join(",")}
-      title={title}
-      aria-label={`Practice: ${title}`}
-    >
-      {keys.includes("explore") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="explore"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <circle cx="12" cy="12" r="8" />
-          <path strokeLinecap="round" d="M14 10l-2 5-5 2 2-5 5-2z" />
-        </svg>
-      ) : null}
-      {keys.includes("drill") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="drill"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <circle cx="12" cy="12" r="7" />
-          <circle cx="12" cy="12" r="3.5" />
-          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      ) : null}
-      {keys.includes("open") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="open"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          {/* Infinity-ish open-ended mark */}
-          <path
-            strokeLinecap="round"
-            d="M8 12c0-1.5 1.2-2.5 2.5-2.5S13 10.5 13 12s-1.2 2.5-2.5 2.5S8 13.5 8 12zm5.5 0c0-1.5 1.2-2.5 2.5-2.5s2.5 1 2.5 2.5-1.2 2.5-2.5 2.5-2.5-1-2.5-2.5z"
-          />
-        </svg>
-      ) : null}
-      {keys.includes("timed") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="timed"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <circle cx="12" cy="13" r="7" />
-          <path strokeLinecap="round" d="M12 10v3.5l2 1.5M9 4h6" />
-        </svg>
-      ) : null}
-    </span>
-  );
-}
 
 function cellKey(cell: GridCell) {
   return `${cell.row}:${cell.col}`;
@@ -972,7 +492,6 @@ export function BlockSkillGrid({
   expandJobs = null,
   onAbortExpandJob,
   clusterMapJob = null,
-  mapSelectionClearNonce = 0,
   applyMapSelection = null,
   selectiveExplanationActive = false,
   selectiveExplanationPolygon = null,
@@ -1019,12 +538,62 @@ export function BlockSkillGrid({
    * Map post-it notes (continuous plane):
    * - Creator notes: workspace-scoped, always visible in learner mode, not deletable by learners
    * - Learner notes: personal, learner mode only
-   * - Hidden on public view-only snapshots.
+   * - ILE chapter maps: session-scoped (no workspace store)
+   * - Public view-only snapshots: existing notes/layers are shown (no authoring).
    */
+  const overlayPersist = useMemo(
+    () =>
+      resolveMapOverlayPersistScope({
+        workspaceId,
+        sessionId,
+        mapKind: suggestMode === "chapter" ? "chapter" : "workspace",
+      }),
+    [workspaceId, sessionId, suggestMode],
+  );
   const mountMapNotes =
-    !viewOnly && shouldMountMapNotes({ workspaceId, learnerMode });
+    shouldMountMapNotes({
+      workspaceId,
+      sessionId,
+      mapKind: suggestMode === "chapter" ? "chapter" : "workspace",
+      learnerMode,
+    }) && Boolean(overlayPersist);
   const resolvedLearnerScope =
     String(learnerScopeId || ayclToken || "local").trim() || "local";
+  const selfProgressScope = useMemo(
+    () =>
+      resolveMapSelfProgressScope({
+        userId: resolvedLearnerScope,
+        kind: suggestMode === "chapter" ? "chapter" : "workspace",
+        scopeId: suggestMode === "chapter" ? sessionId : workspaceId,
+      }),
+    [resolvedLearnerScope, suggestMode, sessionId, workspaceId],
+  );
+  const [workedOnIds, setWorkedOnIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!selfProgressScope) {
+      setWorkedOnIds(new Set());
+      return;
+    }
+    setWorkedOnIds(new Set(loadMapSelfProgressIds(selfProgressScope)));
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string; ids?: string[] }>).detail;
+      if (!detail || detail.key !== mapSelfProgressStorageKey(selfProgressScope)) {
+        return;
+      }
+      setWorkedOnIds(new Set(Array.isArray(detail.ids) ? detail.ids : []));
+    };
+    window.addEventListener(MAP_SELF_PROGRESS_EVENT, onChange);
+    return () => window.removeEventListener(MAP_SELF_PROGRESS_EVENT, onChange);
+  }, [selfProgressScope]);
+
+  useEffect(() => {
+    if (suggestMode !== "chapter" || !selfProgressScope) return;
+    const chapterId = String(focusedNodeId || "").trim();
+    if (!chapterId) return;
+    setWorkedOnIds(new Set(recordMapItemWorkedOn(selfProgressScope, chapterId)));
+  }, [suggestMode, focusedNodeId, selfProgressScope]);
+
   const [creatorNotes, setCreatorNotes] = useState<LearnerMapNote[]>([]);
   const [learnerNotes, setLearnerNotes] = useState<LearnerMapNote[]>([]);
   /** Session UI: hide all post-its without clearing storage (like annotation layer eyes). */
@@ -1033,23 +602,28 @@ export function BlockSkillGrid({
   );
 
   useEffect(() => {
-    if (!mountMapNotes || !workspaceId) {
+    if (!mountMapNotes || !overlayPersist) {
       setCreatorNotes([]);
       setLearnerNotes([]);
       return;
     }
-    setCreatorNotes(loadCreatorMapNotes({ workspaceId }));
+    const persist = {
+      workspaceId: overlayPersist.kind === "workspace" ? overlayPersist.id : undefined,
+      sessionId: overlayPersist.kind === "chapter" ? overlayPersist.id : undefined,
+      mapKind: overlayPersist.kind,
+    };
+    setCreatorNotes(loadCreatorMapNotes(persist));
     if (learnerMode) {
       setLearnerNotes(
         loadLearnerMapNotes({
-          workspaceId,
+          ...persist,
           learnerScopeId: resolvedLearnerScope,
         }),
       );
     } else {
       setLearnerNotes([]);
     }
-  }, [mountMapNotes, workspaceId, resolvedLearnerScope, learnerMode]);
+  }, [mountMapNotes, overlayPersist, resolvedLearnerScope, learnerMode]);
 
   const mapNotes = useMemo(() => {
     if (!mountMapNotes) return [] as LearnerMapNote[];
@@ -1073,23 +647,30 @@ export function BlockSkillGrid({
   const persistCreatorNotes = useCallback(
     (next: LearnerMapNote[]) => {
       setCreatorNotes(next);
-      if (!workspaceId) return;
-      saveCreatorMapNotes({ workspaceId, notes: next });
+      if (viewOnly || !overlayPersist) return;
+      saveCreatorMapNotes({
+        workspaceId: overlayPersist.kind === "workspace" ? overlayPersist.id : undefined,
+        sessionId: overlayPersist.kind === "chapter" ? overlayPersist.id : undefined,
+        mapKind: overlayPersist.kind,
+        notes: next,
+      });
     },
-    [workspaceId],
+    [overlayPersist, viewOnly],
   );
 
   const persistLearnerNotes = useCallback(
     (next: LearnerMapNote[]) => {
       setLearnerNotes(next);
-      if (!workspaceId) return;
+      if (viewOnly || !overlayPersist) return;
       saveLearnerMapNotes({
-        workspaceId,
+        workspaceId: overlayPersist.kind === "workspace" ? overlayPersist.id : undefined,
+        sessionId: overlayPersist.kind === "chapter" ? overlayPersist.id : undefined,
+        mapKind: overlayPersist.kind,
         learnerScopeId: resolvedLearnerScope,
         notes: next,
       });
     },
-    [resolvedLearnerScope, workspaceId],
+    [overlayPersist, resolvedLearnerScope, viewOnly],
   );
 
   const findMapNote = useCallback(
@@ -1132,17 +713,17 @@ export function BlockSkillGrid({
     (noteId: string, body: string) => {
       const existing = findMapNote(noteId);
       if (!existing) return;
-      if (!canEditMapNoteContent(existing, { learnerMode })) return;
+      if (!canEditMapNoteContent(existing, { learnerMode, viewOnly })) return;
       patchMapNote(noteId, (n) => updateLearnerMapNote(n, { body }));
     },
-    [findMapNote, learnerMode, patchMapNote],
+    [findMapNote, learnerMode, patchMapNote, viewOnly],
   );
 
   const handleLearnerNoteDelete = useCallback(
     (noteId: string) => {
       const existing = findMapNote(noteId);
       if (!existing) return;
-      if (!canDeleteMapNote(existing, { learnerMode })) return;
+      if (!canDeleteMapNote(existing, { learnerMode, viewOnly })) return;
       if (mapNoteSourceOf(existing) === "creator") {
         persistCreatorNotes(deleteLearnerMapNote(creatorNotes, noteId));
       } else {
@@ -1156,6 +737,7 @@ export function BlockSkillGrid({
       learnerNotes,
       persistCreatorNotes,
       persistLearnerNotes,
+      viewOnly,
     ],
   );
 
@@ -1163,19 +745,19 @@ export function BlockSkillGrid({
     (noteId: string, next: { x: number; y: number }) => {
       const existing = findMapNote(noteId);
       if (!existing) return;
-      if (!canMutateMapNoteGeometry(existing, { learnerMode })) return;
+      if (!canMutateMapNoteGeometry(existing, { learnerMode, viewOnly })) return;
       patchMapNote(noteId, (n) =>
         updateLearnerMapNote(n, { x: next.x, y: next.y }),
       );
     },
-    [findMapNote, learnerMode, patchMapNote],
+    [findMapNote, learnerMode, patchMapNote, viewOnly],
   );
 
   const handleLearnerNoteResizeEnd = useCallback(
     (noteId: string, next: { width: number; height: number }) => {
       const existing = findMapNote(noteId);
       if (!existing) return;
-      if (!canMutateMapNoteGeometry(existing, { learnerMode })) return;
+      if (!canMutateMapNoteGeometry(existing, { learnerMode, viewOnly })) return;
       patchMapNote(noteId, (n) =>
         applyLearnerNoteResize(n, {
           width: next.width,
@@ -1183,7 +765,7 @@ export function BlockSkillGrid({
         }),
       );
     },
-    [findMapNote, learnerMode, patchMapNote],
+    [findMapNote, learnerMode, patchMapNote, viewOnly],
   );
 
   // ── Annotation layers (stacked freehand; white-only; creator draws/deletes) ──
@@ -1221,13 +803,19 @@ export function BlockSkillGrid({
   const [minimapStackHeight, setMinimapStackHeight] = useState(0);
 
   useEffect(() => {
-    if (!workspaceId) {
+    if (!overlayPersist) {
       setAnnotationLayers([]);
       setActiveAnnotationLayerId(null);
       return;
     }
-    setAnnotationLayers(loadAnnotationLayers({ workspaceId }));
-  }, [workspaceId]);
+    setAnnotationLayers(
+      loadAnnotationLayers({
+        workspaceId: overlayPersist.kind === "workspace" ? overlayPersist.id : undefined,
+        sessionId: overlayPersist.kind === "chapter" ? overlayPersist.id : undefined,
+        mapKind: overlayPersist.kind,
+      }),
+    );
+  }, [overlayPersist]);
 
   useEffect(() => {
     const el = minimapStackRef.current;
@@ -1256,20 +844,25 @@ export function BlockSkillGrid({
   const persistAnnotationLayers = useCallback(
     (next: AnnotationLayer[]) => {
       setAnnotationLayers(next);
-      if (!workspaceId) return;
-      saveAnnotationLayers({ workspaceId, layers: next });
+      if (viewOnly || !overlayPersist) return;
+      saveAnnotationLayers({
+        workspaceId: overlayPersist.kind === "workspace" ? overlayPersist.id : undefined,
+        sessionId: overlayPersist.kind === "chapter" ? overlayPersist.id : undefined,
+        mapKind: overlayPersist.kind,
+        layers: next,
+      });
     },
-    [workspaceId],
+    [overlayPersist, viewOnly],
   );
 
   const annotationDrawingActive =
     !viewOnly &&
     !learnerMode &&
-    canDrawOnAnnotationLayer({ learnerMode }) &&
+    canDrawOnAnnotationLayer({ learnerMode, viewOnly }) &&
     Boolean(activeAnnotationLayerId);
 
   const handleAnnotationLayerAdd = useCallback(() => {
-    if (learnerMode || !workspaceId) return;
+    if (viewOnly || learnerMode || !overlayPersist) return;
     const name =
       annotationNameDraft.trim() ||
       `Layer ${annotationLayers.length + 1}`;
@@ -1286,24 +879,26 @@ export function BlockSkillGrid({
     annotationNameDraft,
     learnerMode,
     persistAnnotationLayers,
-    workspaceId,
+    overlayPersist,
+    viewOnly,
   ]);
 
   const handleAnnotationLayerSelect = useCallback(
     (layerId: string) => {
-      if (learnerMode) return;
+      if (viewOnly || learnerMode) return;
       setActiveAnnotationLayerId((prev) =>
         prev === layerId ? null : layerId,
       );
     },
-    [learnerMode],
+    [learnerMode, viewOnly],
   );
 
   const handleAnnotationLayerDelete = useCallback(
     (layerId: string) => {
-      if (!canDeleteAnnotationLayer({ learnerMode })) return;
+      if (!canDeleteAnnotationLayer({ learnerMode, viewOnly })) return;
       const next = deleteAnnotationLayer(annotationLayers, layerId, {
         learnerMode,
+        viewOnly,
       });
       persistAnnotationLayers(next);
       if (activeAnnotationLayerId === layerId) {
@@ -1315,6 +910,7 @@ export function BlockSkillGrid({
       annotationLayers,
       learnerMode,
       persistAnnotationLayers,
+      viewOnly,
     ],
   );
 
@@ -1409,7 +1005,7 @@ export function BlockSkillGrid({
 
   /** One-shot: drop a note at the center of the current viewport (continuous plane). */
   const handleMapNoteAddAtCenter = useCallback(() => {
-    if (!mountMapNotes || !workspaceId) return;
+    if (viewOnly || !mountMapNotes || !overlayPersist) return;
     const el = viewportRef.current;
     const vw = el?.clientWidth || viewportSize.width || 640;
     const vh = el?.clientHeight || viewportSize.height || 480;
@@ -1447,7 +1043,8 @@ export function BlockSkillGrid({
     persistLearnerNotes,
     viewportSize.height,
     viewportSize.width,
-    workspaceId,
+    overlayPersist,
+    viewOnly,
     zoom,
   ]);
   // Alias for any residual call sites / structural tests.
@@ -1560,78 +1157,33 @@ export function BlockSkillGrid({
     stretchDragRef.current = null;
   }, [learnerMode]);
 
-  // Host-driven full selection clear (e.g. post-cluster). Skip nonce 0 (initial).
-  const mapSelectionClearNonceRef = useRef(mapSelectionClearNonce);
-  useEffect(() => {
-    if (mapSelectionClearNonce === mapSelectionClearNonceRef.current) return;
-    mapSelectionClearNonceRef.current = mapSelectionClearNonce;
-    if (!mapSelectionClearNonce) return;
-    selectedEmptyCellsRef.current = [];
-    selectedBlockIdsRef.current = [];
-    setSelectedEmptyCells([]);
-    setSelectedBlockIds([]);
-    setShapePromptOpen(false);
-    setMergePromptOpen(false);
-    setPrompt("");
-    setLocalPendingCell(null);
-    onEmptySelectionChange?.(null);
-    onAddTargetChange?.(null);
-    onSelectedBlockIdsChange?.(null);
-  }, [
-    mapSelectionClearNonce,
-    onAddTargetChange,
-    onEmptySelectionChange,
-    onSelectedBlockIdsChange,
-  ]);
-
-  // Host-driven multi-select apply (Map Search / Suggest empty spots).
+  // Host-driven apply / clear — same nextWorkspaceMapSelection result as the shell.
   const applyMapSelectionTokenRef = useRef(0);
   useEffect(() => {
     if (!applyMapSelection || !applyMapSelection.token) return;
     if (applyMapSelection.token === applyMapSelectionTokenRef.current) return;
     applyMapSelectionTokenRef.current = applyMapSelection.token;
-    const blockIds = (applyMapSelection.blockIds || [])
-      .map((id) => String(id || "").trim())
-      .filter(Boolean);
-    const emptyCells = (applyMapSelection.emptyCells || [])
-      .filter(
-        (c) =>
-          c &&
-          Number.isFinite(c.row) &&
-          Number.isFinite(c.col),
-      )
-      .map((c) => ({ row: Math.trunc(c.row), col: Math.trunc(c.col) }));
+    const next = mapSelectionFromApplyPayload({
+      blockIds: applyMapSelection.blockIds,
+      emptyCells: applyMapSelection.emptyCells,
+    });
+    const applied = workspaceMapSelectionHostApply(next);
 
-    if (blockIds.length > 0) {
-      selectedBlockIdsRef.current = blockIds;
-      setSelectedBlockIds(blockIds);
-      selectedEmptyCellsRef.current = [];
-      setSelectedEmptyCells([]);
-      onEmptySelectionChange?.(null);
+    selectedBlockIdsRef.current = applied.selectedBlockIds;
+    setSelectedBlockIds(applied.selectedBlockIds);
+    selectedEmptyCellsRef.current = applied.selectedEmptyCells;
+    setSelectedEmptyCells(applied.selectedEmptyCells);
+    setShapePromptOpen(false);
+    setMergePromptOpen(false);
+    setPrompt("");
+    setLocalPendingCell(null);
+
+    onEmptySelectionChange?.(applied.emitEmpty);
+    onSelectedBlockIdsChange?.(applied.emitFilled);
+    if (applied.selectNodeId || (applied.emitFilled && applied.emitFilled.length > 0)) {
       onAddTargetChange?.(null);
-      onSelectedBlockIdsChange?.(blockIds);
-      if (blockIds.length === 1) onSelectNode(blockIds[0]);
-      else onSelectNode(null);
-      return;
     }
-    if (emptyCells.length > 0) {
-      selectedEmptyCellsRef.current = emptyCells;
-      setSelectedEmptyCells(emptyCells);
-      selectedBlockIdsRef.current = [];
-      setSelectedBlockIds([]);
-      onSelectedBlockIdsChange?.(null);
-      onSelectNode(null);
-      onEmptySelectionChange?.(emptyCells);
-      return;
-    }
-    // Explicit empty apply: clear
-    selectedEmptyCellsRef.current = [];
-    selectedBlockIdsRef.current = [];
-    setSelectedEmptyCells([]);
-    setSelectedBlockIds([]);
-    onEmptySelectionChange?.(null);
-    onSelectedBlockIdsChange?.(null);
-    onSelectNode(null);
+    onSelectNode(applied.selectNodeId);
   }, [
     applyMapSelection,
     onAddTargetChange,
@@ -1658,7 +1210,7 @@ export function BlockSkillGrid({
     if (!injectMapNote || !injectMapNote.token) return;
     if (injectMapNote.token === injectMapNoteTokenRef.current) return;
     injectMapNoteTokenRef.current = injectMapNote.token;
-    if (!mountMapNotes || !workspaceId) return;
+    if (!mountMapNotes || !overlayPersist) return;
     const body = String(injectMapNote.body || "").trim();
     const source =
       injectMapNote.source === "learner" || injectMapNote.source === "creator"
@@ -1685,7 +1237,7 @@ export function BlockSkillGrid({
     mountMapNotes,
     persistCreatorNotes,
     persistLearnerNotes,
-    workspaceId,
+    overlayPersist,
   ]);
 
   // Drop optimistic rows once parent nodes catch up from the server.
@@ -1761,6 +1313,25 @@ export function BlockSkillGrid({
       ),
     );
   }, [learnerMode, selectedNodeId, selectedBlockIds, displayNodes]);
+
+  /** ILE chapter: selecting a locked chapter highlights only direct blocking prereqs. */
+  const chapterUnlockHighlightIds = useMemo(() => {
+    if (suggestMode !== "chapter") return new Set<string>();
+    const focus = selectedNodeId || selectedBlockIds[0] || null;
+    if (!focus) return new Set<string>();
+    return new Set(
+      ileChapterUnlockHighlightIds(
+        focus,
+        displayNodes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          status: n.status,
+          lock_until_block_ids: n.lock_until_block_ids,
+          next_block_ids: n.next_block_ids,
+        })),
+      ),
+    );
+  }, [suggestMode, selectedNodeId, selectedBlockIds, displayNodes]);
 
   /** Generator spark on empty cells: host preview, or learner select on a generator. */
   const generatorSparkEmptyKeys = useMemo(() => {
@@ -1972,6 +1543,99 @@ export function BlockSkillGrid({
         clusters: minimapGraph.clusters,
       }),
     [minimapGraph.clusters, minimapPlacements],
+  );
+
+  /** Main-map camera projected onto the minimap frame (viewport indicator). */
+  const minimapViewportRect = useMemo(() => {
+    return resolveMinimapViewportWindow({
+      tileCount: minimapTileView.tiles.length,
+      pan,
+      zoom,
+      viewportWidth: viewportSize.width,
+      viewportHeight: viewportSize.height,
+      bounds: minimapTileView.bounds,
+      cellSize: minimapTileView.cellSize,
+      width: MINIMAP_FRAME_WIDTH,
+      height: MINIMAP_FRAME_HEIGHT,
+      padding: MINIMAP_FRAME_PADDING,
+      pitch: SKILL_GRID_PITCH,
+    });
+  }, [
+    minimapTileView.bounds,
+    minimapTileView.cellSize,
+    minimapTileView.tiles.length,
+    pan,
+    viewportSize.height,
+    viewportSize.width,
+    zoom,
+  ]);
+
+  /** Drag state for the minimap viewport rect → main-map pan. */
+  const minimapViewportDragRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    panStartX: number;
+    panStartY: number;
+  } | null>(null);
+
+  const onMinimapViewportPointerDown = useCallback(
+    (event: React.PointerEvent<SVGRectElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      const target = event.currentTarget;
+      try {
+        target.setPointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
+      minimapViewportDragRef.current = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        panStartX: pan.x,
+        panStartY: pan.y,
+      };
+    },
+    [pan.x, pan.y],
+  );
+
+  const onMinimapViewportPointerMove = useCallback(
+    (event: React.PointerEvent<SVGRectElement>) => {
+      const drag = minimapViewportDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      event.stopPropagation();
+      event.preventDefault();
+      const cellSize = minimapTileView.cellSize;
+      if (!(cellSize > 0)) return;
+      const deltaX = event.clientX - drag.startClientX;
+      const deltaY = event.clientY - drag.startClientY;
+      const next = panFromMinimapViewportDrag({
+        pan: { x: drag.panStartX, y: drag.panStartY },
+        zoom,
+        deltaX,
+        deltaY,
+        cellSize,
+        pitch: SKILL_GRID_PITCH,
+      });
+      setPan(next);
+    },
+    [minimapTileView.cellSize, zoom],
+  );
+
+  const onMinimapViewportPointerUp = useCallback(
+    (event: React.PointerEvent<SVGRectElement>) => {
+      const drag = minimapViewportDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      event.stopPropagation();
+      minimapViewportDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
   );
 
   const panToMinimapCell = useCallback(
@@ -4229,7 +3893,7 @@ export function BlockSkillGrid({
           ? "true"
           : "false"
       }
-      data-annotation-layers={String(viewOnly ? 0 : annotationLayers.length)}
+      data-annotation-layers={String(annotationLayers.length)}
       data-annotation-drawing={annotationDrawingActive ? "true" : "false"}
       data-clone-armed={cloneArmed ? "true" : "false"}
       data-map-minimap="true"
@@ -4799,16 +4463,42 @@ export function BlockSkillGrid({
                 data-minimap-total-blocks={minimapTileView.totalBlocks}
                 data-minimap-counts-hidden="true"
               />
+              {/* Main-map viewport indicator — drag pans the real map */}
+              {minimapViewportRect ? (
+                <rect
+                  data-minimap-viewport-rect
+                  data-minimap-viewport-window
+                  x={minimapViewportRect.x}
+                  y={minimapViewportRect.y}
+                  width={minimapViewportRect.w}
+                  height={minimapViewportRect.h}
+                  fill="rgba(96, 165, 250, 0.18)"
+                  stroke="rgba(147, 197, 253, 0.95)"
+                  strokeWidth={1.5}
+                  rx={2}
+                  className="cursor-grab active:cursor-grabbing"
+                  style={{ pointerEvents: "all" }}
+                  onPointerDown={onMinimapViewportPointerDown}
+                  onPointerMove={onMinimapViewportPointerMove}
+                  onPointerUp={onMinimapViewportPointerUp}
+                  onPointerCancel={onMinimapViewportPointerUp}
+                />
+              ) : null}
             </svg>
           )}
         </div>
 
-        {/* Right stack under minimap: Build/Play, Explore Map, Add note, layers */}
-        {!viewOnly &&
-        (mountMapNotes ||
-          workspaceId ||
-          onMapExploreToggle ||
-          onInteractionModeChange) ? (
+        {/* Right stack under minimap: Build/Play, Explore Map, Add note, layers.
+            View-only preview: only existing notes + handwriting toggles (no authoring). */}
+        {(!viewOnly &&
+          (mountMapNotes ||
+            overlayPersist ||
+            workspaceId ||
+            onMapExploreToggle ||
+            onInteractionModeChange)) ||
+        (viewOnly &&
+          (shouldShowMapNotesPlaneToggle(mapNotes.length) ||
+            shouldShowAnnotationLayerToggles(annotationLayers.length))) ? (
           <div
             ref={minimapStackRef}
             data-map-minimap-stack
@@ -4822,7 +4512,7 @@ export function BlockSkillGrid({
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {typeof onInteractionModeChange === "function" ? (
+            {!viewOnly && typeof onInteractionModeChange === "function" ? (
               <div
                 className="flex w-full shrink-0 items-center gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
                 data-workspace-mode-toggle
@@ -4861,20 +4551,23 @@ export function BlockSkillGrid({
                 })}
               </div>
             ) : null}
-            {typeof onMapExploreToggle === "function" ? (
+            {!viewOnly && typeof onMapExploreToggle === "function" ? (
               <button
                 type="button"
                 data-map-explore-toggle
                 data-map-explore-under-minimap
+                data-map-explore-expand-toggle
                 data-map-explore-open={mapExploreOpen ? "true" : "false"}
                 aria-label={
-                  mapExploreOpen ? "Close Explore Map" : "Open Explore Map"
+                  mapExploreOpen
+                    ? "Close Explore / Expand Map"
+                    : "Open Explore / Expand Map"
                 }
                 aria-pressed={mapExploreOpen}
                 title={
                   mapExploreOpen
-                    ? "Close Explore Map drawers"
-                    : "Explore Map: search, spots, overview, selective summary"
+                    ? "Close Expand Map drawers"
+                    : "Explore / Expand Map: search, spots, overview, selective summary"
                 }
                 onClick={() => onMapExploreToggle()}
                 className={`w-full rounded-md border px-2.5 py-1.5 text-left text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
@@ -4883,10 +4576,11 @@ export function BlockSkillGrid({
                     : "border-neutral-700/90 bg-neutral-950/90 text-neutral-200 hover:text-white"
                 }`}
               >
-                Explore Map
+                Explore / Expand Map
               </button>
             ) : null}
-            {mountMapNotes ? (
+            {mountMapNotes &&
+            (!viewOnly || shouldShowMapNotesPlaneToggle(mapNotes.length)) ? (
               <div
                 className="flex items-stretch gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
                 data-map-notes-visibility-row
@@ -4894,6 +4588,7 @@ export function BlockSkillGrid({
                   mapNotesPlaneVisible ? "visible" : "hidden"
                 }
               >
+                {!viewOnly ? (
                 <button
                   type="button"
                   data-learner-note-add
@@ -4908,6 +4603,11 @@ export function BlockSkillGrid({
                 >
                   Add note
                 </button>
+                ) : (
+                <span className="min-w-0 flex-1 truncate px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200">
+                  Notes
+                </span>
+                )}
                 <button
                   type="button"
                   data-map-notes-visibility-toggle
@@ -4982,7 +4682,11 @@ export function BlockSkillGrid({
             ) : null}
 
             {/* Small separator between Add note and annotation layers */}
-            {mountMapNotes && workspaceId ? (
+            {mountMapNotes &&
+            overlayPersist &&
+            (!viewOnly ||
+              (shouldShowMapNotesPlaneToggle(mapNotes.length) &&
+                shouldShowAnnotationLayerToggles(annotationLayers.length))) ? (
               <div
                 data-map-notes-layers-separator
                 role="separator"
@@ -4992,14 +4696,16 @@ export function BlockSkillGrid({
             ) : null}
 
             {/* Annotation layers: creator add/select/delete; learner toggle under Add note */}
-            {workspaceId ? (
+            {overlayPersist &&
+            (!viewOnly ||
+              shouldShowAnnotationLayerToggles(annotationLayers.length)) ? (
               <div
                 data-annotation-layers-stack
                 data-annotation-layers-under-notes="true"
                 data-annotation-layer-count={annotationLayers.length}
                 className="flex flex-col gap-1"
               >
-                {!learnerMode ? (
+                {!viewOnly && !learnerMode ? (
                   annotationNameOpen ? (
                     <div
                       className="rounded-md border border-neutral-700/90 bg-neutral-950/95 p-1.5 shadow-lg"
@@ -5059,8 +4765,13 @@ export function BlockSkillGrid({
 
                 {annotationLayers.map((layer) => {
                   const selected =
-                    !learnerMode && activeAnnotationLayerId === layer.id;
-                  const canDelete = canDeleteAnnotationLayer({ learnerMode });
+                    !viewOnly &&
+                    !learnerMode &&
+                    activeAnnotationLayerId === layer.id;
+                  const canDelete = canDeleteAnnotationLayer({
+                    learnerMode,
+                    viewOnly,
+                  });
                   return (
                     <div
                       key={layer.id}
@@ -5074,7 +4785,7 @@ export function BlockSkillGrid({
                           : "border-neutral-700/90"
                       }`}
                     >
-                      {!learnerMode ? (
+                      {!viewOnly && !learnerMode ? (
                         <button
                           type="button"
                           data-annotation-layer-select={layer.id}
@@ -5189,7 +4900,7 @@ export function BlockSkillGrid({
           <div
             data-map-geometry-saves
             data-map-geometry-save-count={mapSaveJobs.length}
-            className="pointer-events-none absolute right-2 z-20 flex w-[220px] flex-col gap-1"
+            className="pointer-events-none absolute right-2 z-20 flex flex-col gap-1"
             style={{
               top:
                 8 +
@@ -5261,7 +4972,7 @@ export function BlockSkillGrid({
           <div
             data-map-cluster-job
             data-map-cluster-job-active="true"
-            className="pointer-events-none absolute right-2 z-20 flex w-[220px] flex-col gap-1"
+            className="pointer-events-none absolute right-2 z-20 flex flex-col gap-1"
             style={{
               top:
                 8 +
@@ -5319,7 +5030,7 @@ export function BlockSkillGrid({
           <div
             data-map-expand-jobs
             data-map-expand-job-count={expandJobs.length}
-            className="pointer-events-auto absolute right-2 z-20 flex max-h-[min(40vh,16rem)] w-[220px] flex-col gap-1.5 overflow-y-auto"
+            className="pointer-events-auto absolute right-2 z-20 flex max-h-[min(40vh,16rem)] flex-col gap-1.5 overflow-y-auto"
             style={{
               top:
                 8 +
@@ -5553,7 +5264,7 @@ export function BlockSkillGrid({
           {mountMapNotes
             ? mapNotesOnPlane.map((note) => {
                 const layer = learnerNoteLayerStyle(note);
-                const permCtx = { learnerMode };
+                const permCtx = { learnerMode, viewOnly };
                 return (
                   <LearnerMapNotePostIt
                     key={note.id}
@@ -5660,9 +5371,12 @@ export function BlockSkillGrid({
             }));
             // Both modes: lock_until + inbound next (DAG leads-to) + Dynamic unlock-after.
             // Locked state: learner uses status-aware gate; creator uses lock_until complete.
-            const lockedByPrereq = learnerMode
-              ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
-              : isBlockLockedUntilCompleted(node, nodesById);
+            const lockedByPrereq =
+              suggestMode === "chapter"
+                ? isChapterMapTileLocked(learnerNodeRef, learnerBlocksRef)
+                : learnerMode
+                  ? isLearnerMapBlockLocked(learnerNodeRef, learnerBlocksRef)
+                  : isBlockLockedUntilCompleted(node, nodesById);
             const inboundNextIncomplete = incompleteInboundNextPrerequisites(
               learnerNodeRef,
               learnerBlocksRef,
@@ -5671,11 +5385,14 @@ export function BlockSkillGrid({
               ...lockUntilIds,
               ...inboundNextIncomplete.map((b) => b.id),
             ].filter((id, i, arr) => arr.indexOf(id) === i);
-            // Show lock icon whenever there are deps (creator + learner).
-            const hasDependencies = learnerBlockHasDependencyChrome(
-              learnerNodeRef,
-              learnerBlocksRef,
-            );
+            // Chapter tiles: DAG lock only. Workspace: lock_until + inbound next + Dynamic.
+            const hasDependencies =
+              suggestMode === "chapter"
+                ? chapterHasDagLockChrome(learnerNodeRef, learnerBlocksRef)
+                : learnerBlockHasDependencyChrome(
+                    learnerNodeRef,
+                    learnerBlocksRef,
+                  );
             const displayStatus = lockedByPrereq ? "locked" : node.status;
             // Prereq dashed preview only for sole map selection that is also the
             // detail focus — not while multi-selecting (avoids "extra selected").
@@ -5695,19 +5412,41 @@ export function BlockSkillGrid({
             });
             const isPrereqHighlight = highlightRole === "prereq";
             const isLearnerDepHighlight =
-              learnerMode &&
-              !isBlockHighlighted &&
-              learnerDepHighlightIds.has(node.id);
-            const baseChrome = resolveOccupiedMapChrome({
-              learnerMode,
-              status: displayStatus,
-              selected: isBlockHighlighted,
-              focused: chapterFocusOnly || isBlockHighlighted,
-              isStart: Boolean(node.is_start),
-              locked: lockedByPrereq && !isBlockHighlighted && !isLearnerDepHighlight,
-              depHighlight: isLearnerDepHighlight,
-              highlightRole: learnerMode ? null : highlightRole,
-            });
+              suggestMode === "chapter"
+                ? !isBlockHighlighted &&
+                  chapterUnlockHighlightIds.has(node.id)
+                : learnerMode &&
+                  !isBlockHighlighted &&
+                  learnerDepHighlightIds.has(node.id);
+            const itemWorkedOn = workedOnIds.has(node.id);
+            const itemDone = isMapCellDoneStatus(displayStatus);
+            const chapterChrome =
+              suggestMode === "chapter"
+                ? ileChapterCellChrome({
+                    status: displayStatus,
+                    selected: isBlockHighlighted,
+                    focused: chapterFocusOnly || isBlockHighlighted,
+                    workedOn: itemWorkedOn,
+                  })
+                : null;
+            const occupiedChrome =
+              chapterChrome ??
+              resolveOccupiedMapTileChrome({
+                learnerMode,
+                status: displayStatus,
+                selected: isBlockHighlighted,
+                focused: chapterFocusOnly || isBlockHighlighted,
+                isStart: Boolean(node.is_start),
+                locked: lockedByPrereq && !isBlockHighlighted && !isLearnerDepHighlight,
+                depHighlight: isLearnerDepHighlight,
+                highlightRole: learnerMode ? null : highlightRole,
+                workedOn: itemWorkedOn,
+              });
+            const baseChrome =
+              suggestMode === "chapter" && isLearnerDepHighlight
+                ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
+                : occupiedChrome.className;
+            const chapterStatusIcon = occupiedChrome.statusIcon;
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
             const nodeEffects = parseBlockCreatorEffects(
@@ -5752,21 +5491,35 @@ export function BlockSkillGrid({
                   ? "none"
                   : undefined,
             } as const;
-            const lockBadge =
-              hasDependencies || lockedByPrereq ? (
+            const hasLocalContext = blockHasAttachedLocalContext(node);
+            const isStarter = Boolean(node.is_start);
+            const tileBadges = resolveMapOccupiedTileBadges({
+              surface: suggestMode === "chapter" ? "chapter" : "block",
+              hasDagLock: hasDependencies || lockedByPrereq,
+              isStart: isStarter,
+              hasPractice:
+                practiceOptionsIconKeys(
+                  parseBlockPracticeOptions(
+                    (node as { practice_options?: unknown }).practice_options,
+                  ),
+                ).length > 0,
+              hasLocalContext,
+              hasEffects: creatorEffectIconKeys(nodeEffects).length > 0,
+              generatorBusy,
+            });
+            const lockBadge = tileBadges.showLock ? (
                 <BlockDependencyLockBadge
                   dependencyCount={Math.max(
                     dependencyIds.length,
                     lockedByPrereq ? 1 : 0,
                   )}
                   currentlyLocked={lockedByPrereq}
-                  // Red filled lock only in learner when currently locked;
-                  // creator still gets the outline lock for any dependency.
-                  learnerSpottable={learnerMode}
+                  // Red lock when currently locked (learner workspace or ILE chapter).
+                  learnerSpottable={learnerMode || suggestMode === "chapter"}
                 />
               ) : null;
             const learnerLockedLabel =
-              learnerMode && lockedByPrereq ? (
+              tileBadges.showLock && learnerMode && lockedByPrereq ? (
                 <span
                   className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-rose-300/95"
                   data-learner-locked-label
@@ -5774,24 +5527,24 @@ export function BlockSkillGrid({
                   Locked
                 </span>
               ) : null;
-            const hasLocalContext = blockHasAttachedLocalContext(node);
-            const localContextBadge = hasLocalContext ? (
+            const localContextBadge = tileBadges.showLocalContext ? (
               <BlockLocalContextDocBadge />
             ) : null;
-            const isStarter = Boolean(node.is_start);
-            const starterBadge = isStarter ? <BlockStarterFlagBadge /> : null;
+            const starterBadge = tileBadges.showStarter ? (
+              <BlockStarterFlagBadge />
+            ) : null;
             const practiceKeys = practiceOptionsIconKeys(
               parseBlockPracticeOptions(
                 (node as { practice_options?: unknown }).practice_options,
               ),
             );
             const practiceBadge =
-              practiceKeys.length > 0 ? (
+              tileBadges.showPractice && practiceKeys.length > 0 ? (
                 <BlockPracticeOptionsBadge keys={practiceKeys} />
               ) : null;
             const effectKeys = creatorEffectIconKeys(nodeEffects);
             const effectBadge =
-              effectKeys.length > 0 ? (
+              tileBadges.showEffects && effectKeys.length > 0 ? (
                 <BlockCreatorEffectsBadge
                   keys={effectKeys}
                   learnerMode={learnerMode}
@@ -5799,14 +5552,6 @@ export function BlockSkillGrid({
               ) : null;
             // Generator targets are empty cells (not filled blocks).
             const generatorSparkBadge = null;
-            const generatorBusyLabel = generatorBusy ? (
-              <span
-                className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/80"
-                data-generator-busy-label
-              >
-                Busy
-              </span>
-            ) : null;
             // Dynamic “?” once configured (creator + learner) until generated.
             const mapTitle = learnerDynamicMapLabel({
               effects: nodeEffects,
@@ -5821,12 +5566,22 @@ export function BlockSkillGrid({
               const freeformColors =
                 isPrereqHighlight && !learnerMode
                   ? mapCellFreeformPrereqColors()
-                  : learnerMode
+                  : itemDone
+                    ? mapCellFreeformDoneColors(
+                        isBlockHighlighted || highlightRole === "target",
+                      )
+                    : itemWorkedOn
+                      ? mapCellFreeformSelfProgressColors(
+                          isBlockHighlighted || highlightRole === "target",
+                        )
+                    : learnerMode
                     ? learnerMapFreeformColors(
                         isBlockHighlighted || highlightRole === "target",
                         {
                           locked: lockedByPrereq && !isBlockHighlighted,
                           depHighlight: isLearnerDepHighlight,
+                          done: itemDone,
+                          workedOn: itemWorkedOn,
                         },
                       )
                     : highlightRole === "target" || isBlockHighlighted
@@ -5875,9 +5630,18 @@ export function BlockSkillGrid({
                         <button
                           type="button"
                           data-block-id={node.id}
+                          data-map-cell-done={itemDone ? "true" : undefined}
+                          data-map-cell-self-progress={
+                            itemWorkedOn && !itemDone ? "true" : undefined
+                          }
                           data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
                           data-block-has-dependencies={hasDependencies ? "true" : "false"}
+                          data-ile-chapter-unlock-highlight={
+                            suggestMode === "chapter" && isLearnerDepHighlight
+                              ? "true"
+                              : undefined
+                          }
                           data-block-has-local-context={hasLocalContext ? "true" : "false"}
                           data-block-is-start={isStarter ? "true" : "false"}
                           data-block-generation-locked={generationLocked ? "true" : "false"}
@@ -5982,9 +5746,9 @@ export function BlockSkillGrid({
                                 status={node.status}
                                 showProgress={showProgress}
                                 title={mapTitle}
+                                statusIcon={chapterStatusIcon}
                               />
                               {learnerLockedLabel}
-                              {generatorBusyLabel}
                               {practiceBadge}
                               {effectBadge}
                               {generatorSparkBadge}
@@ -6047,6 +5811,15 @@ export function BlockSkillGrid({
                 <button
                   type="button"
                   data-block-id={node.id}
+                  data-map-cell-done={itemDone ? "true" : undefined}
+                  data-map-cell-self-progress={
+                    itemWorkedOn && !itemDone ? "true" : undefined
+                  }
+                  data-ile-chapter-unlock-highlight={
+                    suggestMode === "chapter" && isLearnerDepHighlight
+                      ? "true"
+                      : undefined
+                  }
                   data-block-selected={isBlockHighlighted ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
@@ -6113,9 +5886,9 @@ export function BlockSkillGrid({
                     status={node.status}
                     showProgress={showProgress}
                     title={mapTitle}
+                    statusIcon={chapterStatusIcon}
                   />
                   {learnerLockedLabel}
-                  {generatorBusyLabel}
                   {practiceBadge}
                   {effectBadge}
                   {generatorSparkBadge}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { openIleExternalLeaveTab, type IleExternalLeaveReason } from "@/lib/ile-blur-screenshare";
 
 const GROKIPEDIA_HOME = "https://grokipedia.com";
 const GROK_HOME = "https://grok.com";
@@ -16,20 +17,19 @@ function grokSearchUrl(query: string) {
   return trimmed ? `${GROK_HOME}/?q=${encodeURIComponent(trimmed)}` : GROK_HOME;
 }
 
-function openExternal(url: string) {
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 interface GrokGrokipediaToolProps {
   sessionProblem?: string;
   activeStepDescription?: string;
   activeProbes?: { text: string }[];
+  /** ILE leave-tab: start screenshare + compact stash (user-gesture path). */
+  onLeaveIleTab?: (reason: IleExternalLeaveReason) => void;
 }
 
 export function GrokGrokipediaTool({
   sessionProblem = "",
   activeStepDescription,
   activeProbes = [],
+  onLeaveIleTab,
 }: GrokGrokipediaToolProps) {
   const { t } = useI18n();
   const [grokipediaQuery, setGrokipediaQuery] = useState(sessionProblem);
@@ -66,13 +66,21 @@ export function GrokGrokipediaTool({
   };
 
   const openGrokipedia = (query: string) => {
-    openExternal(grokipediaSearchUrl(query));
+    openIleExternalLeaveTab({
+      url: grokipediaSearchUrl(query),
+      reason: "grokipedia",
+      onLeave: onLeaveIleTab,
+    });
   };
 
   const openGrok = (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
-    openExternal(grokSearchUrl(trimmed));
+    openIleExternalLeaveTab({
+      url: grokSearchUrl(trimmed),
+      reason: "grok",
+      onLeave: onLeaveIleTab,
+    });
   };
 
   return (

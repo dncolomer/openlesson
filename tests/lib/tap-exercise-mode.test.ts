@@ -340,24 +340,24 @@ describe("resolveExercisePromptAfterIntro", () => {
 });
 
 describe("structural: Settings, block tools, separate Exercise UI", () => {
-  it("Settings guest-link create wires timed drill style into interaction_kind payload", () => {
+  it("Settings guest-link create wires drill solo style into interaction_kind payload", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("data-guest-link-exercise-tap");
-    expect(panel).toContain("timedStyle");
+    expect(panel).toContain("drillModalitySolo");
     expect(panel).toContain("interaction_kind");
     expect(panel).toContain("resolveProductIntent");
     expect(panel).toContain("productIntent");
   });
 
-  it("block detail exposes Explore/Drill × Open-ended/Timed intent tools", () => {
+  it("block detail exposes Explore/Drill × Dialog/Solo intent tools", () => {
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("onStartExercise");
     expect(card).toContain("onStartIleProject");
     expect(card).toContain("product-intent");
-    expect(card).toContain("open_ended_explore");
-    expect(card).toContain("open_ended_drill");
-    expect(card).toContain("timed_explore");
-    expect(card).toContain("timed_drill");
+    expect(card).toContain("explore_dialog");
+    expect(card).toContain("explore_solo");
+    expect(card).toContain("drill_dialog");
+    expect(card).toContain("drill_solo");
     expect(card).toContain("onLaunchIntent");
     expect(card).toContain("data-launch-start");
     expect(card).toContain("data-launch-duration-picker");

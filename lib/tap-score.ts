@@ -465,6 +465,14 @@ export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartin
   return [...nodeTopics, ...fillers].slice(0, TAP_STARTING_TOPIC_COUNT);
 }
 
+/** LLM miss → existing fallback. Drive this; do not re-implement fallback text in tests. */
+export function resolveTapStartingTopicsFromLlm(
+  rawTopics: unknown,
+  brief: TapScoreBrief,
+): TapStartingTopic[] {
+  return normalizeTapStartingTopics(rawTopics) ?? buildTapStartingTopicsFallback(brief);
+}
+
 export async function generateTapStartingTopics(
   brief: TapScoreBrief,
   minutes: number,
@@ -486,14 +494,10 @@ export async function generateTapStartingTopics(
     { maxTokens: 900, temperature: 0.45, fetchTimeout: 45000 },
   );
 
-  if (response.success && response.data) {
-    const parsed =
-      normalizeTapStartingTopics(response.data.topics) ??
-      normalizeTapStartingTopics((response.data as { topics?: unknown }).topics);
-    if (parsed) return parsed;
-  }
-
-  throw new Error("Failed to generate practice content");
+  return resolveTapStartingTopicsFromLlm(
+    response.success ? response.data?.topics : null,
+    brief,
+  );
 }
 
 /** Offline practice warm-up when xAI fails — no block-title shell. */
@@ -510,6 +514,19 @@ export function buildTapPracticeOpeningQuestionFallback(_brief: TapScoreBrief): 
 export function buildTapExerciseFallbackFromBrief(_brief: TapScoreBrief): string {
   void _brief;
   return "Exercise: Work one fully specified problem from this domain. Show intermediate steps and box a single final answer.";
+}
+
+/** LLM miss → existing fallback. Drive this; do not hardcode fallback copy in tests. */
+export function resolveTapOpeningQuestionFromLlm(
+  llmText: string | null | undefined,
+  brief: TapScoreBrief,
+  practice: boolean,
+): string {
+  const trimmed = typeof llmText === "string" ? llmText.trim() : "";
+  if (trimmed) return trimmed;
+  return practice
+    ? buildTapPracticeOpeningQuestionFallback(brief)
+    : buildTapOpeningQuestionFallback(brief);
 }
 
 export async function generateTapOpeningQuestion(
@@ -535,9 +552,9 @@ export async function generateTapOpeningQuestion(
     { maxTokens: 120, temperature: practice ? 0.4 : 0.55, fetchTimeout: 30000 },
   );
 
-  if (response.success && response.data?.trim()) {
-    return response.data.trim();
-  }
-
-  throw new Error("Failed to generate practice content");
+  return resolveTapOpeningQuestionFromLlm(
+    response.success ? response.data : null,
+    brief,
+    practice,
+  );
 }

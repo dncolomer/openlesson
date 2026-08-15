@@ -7,37 +7,15 @@ import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill
 import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
-import { nextWorkspaceBlockSelection } from "@/lib/workspace-right-pane";
+import { nextWorkspaceMapSelection, emptyWorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import type { Block } from "@/lib/domain/types";
+import {
+  postWorkspaceGridOp,
+  shouldReloadWorkspaceAfterMutate,
+} from "@/lib/workspace-grid-ops-client";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
-
-interface Block {
-  id: string;
-  title: string;
-  description: string;
-  is_start: boolean;
-  next_block_ids: string[];
-  status: string;
-  position_x?: number | null;
-  position_y?: number | null;
-  span_w?: number | null;
-  span_h?: number | null;
-  shape_cells?: Array<{ dr: number; dc: number }> | null;
-  planning_prompt?: string;
-  session_id?: string;
-  lock_until_block_ids?: string[] | null;
-  local_context?: {
-    notes?: string | null;
-    local_files?: Array<{ name: string; excerpt?: string | null }> | null;
-    global_file_refs?: string[] | null;
-    external_resource_ids?: string[] | null;
-  } | null;
-  /** Author practice launch limits (parsed by parseBlockPracticeOptions). */
-  practice_options?: unknown;
-  /** Combinable Dynamic / Generator effects. */
-  creator_effects?: unknown;
-}
 
 interface SessionListProps {
   nodes: Block[];
@@ -156,11 +134,6 @@ interface SessionListProps {
     progress: number;
     label: string;
   } | null;
-  /**
-   * When this nonce increases, the map clears local multi-block + empty-cell
-   * selection (parent-driven post-op clear, e.g. after cluster).
-   */
-  mapSelectionClearNonce?: number;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -250,7 +223,6 @@ export function SessionList({
   dynamicUnlockPreviewIds = null,
   dynamicContentGeneratedIds = null,
   expandJobs = null,
-  mapSelectionClearNonce = 0,
   onAbortExpandJob,
   clusterMapJob = null,
 }: SessionListProps) {
@@ -261,11 +233,14 @@ export function SessionList({
   const expandedNodeId = isExpandedControlled ? expandedNodeIdProp : internalExpandedNodeId;
   const setExpandedNodeId = useCallback(
     (blockId: string | null) => {
-      const next = nextWorkspaceBlockSelection(expandedNodeId, blockId);
+      const next = nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), {
+        type: "open_block",
+        blockId,
+      });
       if (isExpandedControlled) {
-        onExpandedNodeIdChange?.(next);
+        onExpandedNodeIdChange?.(next.expandedBlockId);
       } else {
-        setInternalExpandedNodeId(next);
+        setInternalExpandedNodeId(next.expandedBlockId);
       }
     },
     [expandedNodeId, isExpandedControlled, onExpandedNodeIdChange],
@@ -395,8 +370,10 @@ export function SessionList({
           // Don't open detail overlay for owners (blocks map multi-select).
           if (placedNode && !isOwner) setExpandedNodeId(placedNode.id);
         }
-        if (onRefresh) onRefresh();
-        router.refresh();
+        if (shouldReloadWorkspaceAfterMutate()) {
+          if (onRefresh) onRefresh();
+          router.refresh();
+        }
       } catch (err) {
         console.error("Failed to add block:", err);
         throw err;
@@ -448,38 +425,36 @@ export function SessionList({
       const silentGeometry = payload.op === "move" || payload.op === "resize";
       if (!silentGeometry) setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/workspace/grid-ops", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            ...payload,
-            weightedNeighbors,
-            model,
-            locale,
-            ...(ayclToken ? { ayclToken } : {}),
-          }),
+        const { ok, data } = await postWorkspaceGridOp({
+          workspaceId,
+          ...payload,
+          weightedNeighbors,
+          model,
+          locale,
+          ayclToken,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Grid operation failed");
+        if (!ok) {
+          throw new Error((data.error as string) || "Grid operation failed");
         }
-
-        const data = await response.json();
-        if (data.updatedNodes?.length > 0) {
-          if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
+        const updatedNodes = Array.isArray(data.updatedNodes)
+          ? (data.updatedNodes as Block[])
+          : [];
+        if (updatedNodes.length > 0) {
+          if (onNodesUpdate) onNodesUpdate(updatedNodes);
           // Owners multi-select on the map — do not open the full-screen detail
           // overlay after grid ops (it blocks further multi-select).
-          if (data.placedNodeId && !isOwner) {
-            setExpandedNodeId(data.placedNodeId);
+          const placedNodeId =
+            typeof data.placedNodeId === "string" ? data.placedNodeId : "";
+          if (placedNodeId && !isOwner) {
+            setExpandedNodeId(placedNodeId);
           }
           if (data.appearSequentially) {
-            if (data.placedNodeId) {
-              setAppearingNodeIds([data.placedNodeId]);
+            if (placedNodeId) {
+              setAppearingNodeIds([placedNodeId]);
             } else {
               const prev = prevNodeIdsRef.current;
-              const added = (data.updatedNodes as Block[])
+              const added = updatedNodes
                 .filter((n) => !prev.has(n.id))
                 .map((n) => n.id);
               if (added.length) setAppearingNodeIds(added);
@@ -488,7 +463,7 @@ export function SessionList({
         }
         // Geometry already settled optimistically via onNodesUpdate — do not
         // router.refresh / full plan reload (that felt like a freeze).
-        if (!silentGeometry) {
+        if (!silentGeometry && shouldReloadWorkspaceAfterMutate()) {
           if (onRefresh) onRefresh();
           router.refresh();
         }
@@ -577,7 +552,6 @@ export function SessionList({
             expandJobs={expandJobs}
             onAbortExpandJob={onAbortExpandJob}
             clusterMapJob={clusterMapJob}
-            mapSelectionClearNonce={mapSelectionClearNonce}
             applyMapSelection={applyMapSelection}
             selectiveExplanationActive={selectiveExplanationActive}
             selectiveExplanationPolygon={selectiveExplanationPolygon}

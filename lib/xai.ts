@@ -30,6 +30,13 @@ import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
 } from "./session-plan-create";
+import { composeSessionPlanUpdatePrompt } from "./session-plan-update";
+import { shouldOfferIleChapterDone } from "./ile-chapter-depth";
+import {
+  ILE_SESSION_MODE_DEFAULT,
+  normalizeIleSessionMode,
+  type IleSessionMode,
+} from "./ile-mode";
 
 const MODEL = DEFAULT_MODEL;
 
@@ -469,6 +476,8 @@ export async function createSessionPlanLLM(options: {
   initialChapters?: string | null;
   /** @deprecated Prefer initialChapters */
   mapSize?: string | null;
+  /** Dialog (learning) vs Project (solo exercise) grain. */
+  sessionMode?: IleSessionMode | string | null;
 }): Promise<{ success: boolean; plan?: CreateSessionPlanResult; error?: string }> {
   const initialChapters = options.initialChapters ?? options.mapSize;
   let prompt = composeSessionPlanCreatePrompt(
@@ -478,6 +487,7 @@ export async function createSessionPlanLLM(options: {
       objectives: options.objectives,
       calibration: options.calibration,
       initialChapters,
+      sessionMode: options.sessionMode,
     },
   );
 
@@ -624,42 +634,27 @@ export async function updateSessionPlanLLM(options: {
   /** xAI file IDs for recent session artifacts (transcripts, eeg, facial,
    *  tool, screens). Grok reads them agentically via attachment_search. */
   sessionFileIds: string[];
+  /** Dialog vs Project closure / expansion fill. */
+  sessionMode?: IleSessionMode | string | null;
+  /** Learner turns so far on this chapter (Dialog Done gate). */
+  substantiveLearnerTurns?: number;
 }): Promise<{ success: boolean; result?: SessionPlanUpdateResult; error?: string }> {
-  const stepsText = options.steps.map((s, i) =>
-    `${i + 1}. [${s.type}] ${s.description} (status: ${s.status || "pending"})`
-  ).join("\n");
-
-  const focusedProbesText = options.focusedProbes && options.focusedProbes.length > 0
-    ? options.focusedProbes.map(p => `- [${p.id}]: "${p.text}"`).join("\n")
-    : "None";
-
-  const secondsSinceLastProbe = options.lastProbeTimestamp
-    ? Math.floor((Date.now() - options.lastProbeTimestamp) / 1000)
-    : 0;
-
-  const contextText = options.contextDescription
-    || "See attached session artifacts (transcripts, EEG, facial, tool events, screenshots) for recent activity.";
-
-  const prompt = getPrompt("session_plan_update", options.promptOverrides)
-    .replace("{goal}", options.goal)
-    .replace("{strategy}", options.strategy)
-    .replace("{steps}", stepsText)
-    .replace("{current_step}", options.currentStepIndex.toString())
-    .replace("{context_description}", contextText)
-    .replace("{transcript}", "See the attached transcript chunks (search them via attachment_search).")
-    .replace("{previous_probes}", options.previousProbes.length > 0
-      ? options.previousProbes.map((p, i) => `${i + 1}. ${p}`).join("\n")
-      : "None yet")
-    // IMPORTANT: include each probe's real UUID in the rendering. The
-    // model is instructed to echo these verbatim in probes_to_archive; if
-    // we only show ordinals the model hallucinates "1", "2" which then
-    // explodes against the probes.id UUID column (Postgres 22P02).
-    .replace("{active_probes}", options.activeProbes && options.activeProbes.length > 0
-      ? options.activeProbes.map(p => `- [${p.id}]: "${p.text}"`).join("\n")
-      : "None")
-    .replace("{open_probe_count}", (options.openProbeCount ?? 0).toString())
-    .replace("{focused_probes}", focusedProbesText)
-    .replace("{secondsSinceLastProbe}", secondsSinceLastProbe.toString());
+  const prompt = composeSessionPlanUpdatePrompt(
+    getPrompt("session_plan_update", options.promptOverrides),
+    {
+      goal: options.goal,
+      strategy: options.strategy,
+      steps: options.steps,
+      currentStepIndex: options.currentStepIndex,
+      contextDescription: options.contextDescription,
+      previousProbes: options.previousProbes,
+      activeProbes: options.activeProbes,
+      focusedProbes: options.focusedProbes,
+      openProbeCount: options.openProbeCount,
+      lastProbeTimestamp: options.lastProbeTimestamp,
+      sessionMode: options.sessionMode,
+    },
+  );
 
   interface RawPlanUpdate {
     plan_changed?: boolean;
@@ -722,7 +717,18 @@ export async function updateSessionPlanLLM(options: {
     }
   }
 
-  const canAutoAdvance = parsed.can_auto_advance ?? false;
+  const sessionMode = normalizeIleSessionMode(
+    options.sessionMode,
+    ILE_SESSION_MODE_DEFAULT,
+  );
+  const rawCanAutoAdvance = parsed.can_auto_advance ?? false;
+  const substantiveLearnerTurns =
+    options.substantiveLearnerTurns ?? options.previousProbes.length;
+  const canAutoAdvance = shouldOfferIleChapterDone({
+    sessionMode,
+    canAutoAdvance: rawCanAutoAdvance,
+    substantiveLearnerTurns,
+  });
   const readyToMoveOnRequest: SessionPlanUpdateRequest = {
     type: "feedback",
     text: "That is enough to move on. Click Mark as Done when you're ready.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   deriveBlockSimulation,
   normalizeSimulationPayload,
@@ -83,7 +83,7 @@ function ProbeList({
 
 /**
  * Simulation drawer: exactly 3 questions + 3 exercises.
- * Compact context-influence chips when known; omitted when sparse.
+ * Auto-generates on open; deposits results into the workspace Simulation collection.
  */
 export function WorkspaceBlockSimulationPanel({
   workspaceId,
@@ -115,7 +115,6 @@ export function WorkspaceBlockSimulationPanel({
   canEdit?: boolean;
   ayclToken?: string;
   locale?: string;
-  /** Workspace goal — same grounding live Explore/Drill use. */
   workspaceGoal?: string | null;
   workspaceTitle?: string | null;
   rootTopic?: string | null;
@@ -126,8 +125,6 @@ export function WorkspaceBlockSimulationPanel({
   void isStart;
 
   const localNorm = normalizeBlockLocalContext(localContext);
-  // normalizeBlockLocalContext returns fresh arrays every call — depend on
-  // content fingerprints, not array identity, or useEffect loops forever.
   const localFileNamesKey = [
     ...localNorm.globalFileRefs,
     ...localNorm.localFiles.map((f) => f.name),
@@ -169,21 +166,42 @@ export function WorkspaceBlockSimulationPanel({
     ],
   );
 
-  // Empty Q/E until xAI regenerate — no pure-template seed list.
   const [sim, setSim] = useState<BlockSimulationResult>(() =>
     deriveBlockSimulation(seedInput),
   );
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modifierPrompt, setModifierPrompt] = useState("");
+  const autoRanForBlock = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (regenerating) return;
-    // Reset chrome/readiness from block fields; keep probes empty (no pure shells).
-    setSim(deriveBlockSimulation(seedInput));
-    setError(null);
-  }, [blockId, seedInput, regenerating]);
+  const depositToCollection = useCallback(
+    async (result: BlockSimulationResult) => {
+      if (!workspaceId || !result.probes.length) return;
+      try {
+        await fetch("/api/workspace/simulation-collection", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            action: "deposit",
+            probes: result.probes,
+            origin: {
+              kind: "block",
+              blockId,
+              blockTitle,
+            },
+            modifierPrompt: modifierPrompt.trim() || null,
+            ...(ayclToken ? { ayclToken } : {}),
+          }),
+        });
+      } catch {
+        /* non-fatal — generation still shows in drawer */
+      }
+    },
+    [ayclToken, blockId, blockTitle, modifierPrompt, workspaceId],
+  );
 
-  const regenerate = async () => {
+  const regenerate = useCallback(async () => {
     if (!workspaceId || regenerating) return;
     setRegenerating(true);
     setError(null);
@@ -206,6 +224,7 @@ export function WorkspaceBlockSimulationPanel({
           model,
           locale,
           mode: "simulation",
+          modifierPrompt: modifierPrompt.trim() || undefined,
           ...(ayclToken ? { ayclToken } : {}),
         }),
       });
@@ -220,12 +239,40 @@ export function WorkspaceBlockSimulationPanel({
         throw new Error("No simulation content returned");
       }
       setSim(next);
+      void depositToCollection(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Regenerate failed");
     } finally {
       setRegenerating(false);
     }
-  };
+  }, [
+    ayclToken,
+    blockDescription,
+    blockId,
+    blockTitle,
+    depositToCollection,
+    locale,
+    localContext,
+    modifierPrompt,
+    planningPrompt,
+    regenerating,
+    seedInput,
+    workspaceId,
+  ]);
+
+  // Reset chrome when block identity changes; auto-generate once per open.
+  useEffect(() => {
+    setSim(deriveBlockSimulation(seedInput));
+    setError(null);
+    autoRanForBlock.current = null;
+  }, [blockId]); // eslint-disable-line react-hooks/exhaustive-deps -- only reseed on block change
+
+  useEffect(() => {
+    if (!workspaceId || regenerating) return;
+    if (autoRanForBlock.current === blockId) return;
+    autoRanForBlock.current = blockId;
+    void regenerate();
+  }, [blockId, workspaceId, regenerate, regenerating]);
 
   const { questions, exercises } = partitionSimulationProbes(sim.probes);
 
@@ -235,12 +282,13 @@ export function WorkspaceBlockSimulationPanel({
       data-block-id={blockId}
       data-simulation-question-count={questions.length}
       data-simulation-exercise-count={exercises.length}
+      data-simulation-auto-generate="true"
       className="space-y-3"
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] leading-snug text-neutral-600">
           {SIMULATION_QUESTION_COUNT} questions · {SIMULATION_EXERCISE_COUNT}{" "}
-          exercises · chips show influencing context when known
+          exercises · auto-generates on open · deposits to Sim tab
         </p>
         <button
           type="button"
@@ -250,9 +298,24 @@ export function WorkspaceBlockSimulationPanel({
           onClick={() => void regenerate()}
           className="shrink-0 rounded-md border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {regenerating ? "Regenerating…" : "Regenerate"}
+          {regenerating ? "Generating…" : "Regenerate"}
         </button>
       </div>
+
+      <label className="block space-y-1" data-simulation-modifier>
+        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+          Modifier prompt
+        </span>
+        <textarea
+          value={modifierPrompt}
+          onChange={(e) => setModifierPrompt(e.target.value)}
+          rows={2}
+          disabled={regenerating}
+          placeholder="Optional: influence generation (e.g. focus on edge cases, medical examples)…"
+          data-simulation-modifier-input
+          className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+        />
+      </label>
 
       {error ? (
         <p className="text-[11px] text-neutral-300/90" data-simulation-error>
@@ -270,7 +333,11 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={questions}
           kind="question"
-          empty="No sample questions yet — click Regenerate."
+          empty={
+            regenerating
+              ? "Generating questions…"
+              : "No sample questions yet — click Regenerate."
+          }
         />
       </div>
 
@@ -284,7 +351,11 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={exercises}
           kind="exercise"
-          empty="No sample exercises yet."
+          empty={
+            regenerating
+              ? "Generating exercises…"
+              : "No sample exercises yet."
+          }
         />
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
+import { resolveIleActingParticipantId } from "@/lib/session-participant-identity";
 
 export const runtime = "nodejs";
 
@@ -87,7 +88,11 @@ export async function POST(request: NextRequest) {
           plan_step_id: probe.plan_step_id,
           archived: probe.archived ?? false,
           focused: probe.focused ?? false,
-          user_id: ctx.ownerUserId,
+          user_id: resolveIleActingParticipantId({
+            ownerUserId: ctx.ownerUserId,
+            assignedUserId: ctx.assignedUserId,
+            guestUserId: ctx.guestUserId,
+          }),
         });
       }
 

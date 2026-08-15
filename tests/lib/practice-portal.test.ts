@@ -48,10 +48,10 @@ describe("normalizePracticePortalConfig", () => {
   it("defaults empty/invalid input to all four products with map-aligned timings", () => {
     const cfg = normalizePracticePortalConfig(undefined);
     expect(cfg.allowed_products).toEqual([...PRACTICE_PORTAL_PRODUCT_IDS]);
-    expect(cfg.timings.timed_explore).toEqual([
+    expect(cfg.timings.drill_dialog).toEqual([
       ...PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES,
     ]);
-    expect(cfg.timings.timed_drill).toEqual([
+    expect(cfg.timings.drill_solo).toEqual([
       ...PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
     ]);
 
@@ -64,42 +64,42 @@ describe("normalizePracticePortalConfig", () => {
     expect(junk.allowed_products).toEqual([...PRACTICE_PORTAL_PRODUCT_IDS]);
   });
 
-  it("keeps only valid products and fills timings for enabled timed products", () => {
+  it("keeps only valid products and fills timings for enabled drill products", () => {
     const cfg = normalizePracticePortalConfig({
-      allowed_products: ["timed_explore", "open_ended_drill", "timed_explore", "bogus"],
+      allowed_products: ["drill_dialog", "explore_solo", "drill_dialog", "bogus"],
       timings: { timed_explore: [10, 5, 10, 999], timed_drill: [30] },
     });
-    expect(cfg.allowed_products).toEqual(["open_ended_drill", "timed_explore"]);
+    expect(cfg.allowed_products).toEqual(["explore_solo", "drill_dialog"]);
     // sorted unique, clamped to max 120
-    expect(cfg.timings.timed_explore).toEqual([5, 10, 120]);
+    expect(cfg.timings.drill_dialog).toEqual([5, 10, 120]);
     // timed_drill not allowed → empty timings
-    expect(cfg.timings.timed_drill).toEqual([]);
+    expect(cfg.timings.drill_solo).toEqual([]);
   });
 
-  it("uses default timings when timed product enabled without timings list", () => {
+  it("uses default timings when drill product enabled without timings list", () => {
     const cfg = normalizePracticePortalConfig({
-      allowed_products: ["timed_drill"],
+      allowed_products: ["drill_solo"],
       timings: {},
     });
-    expect(cfg.allowed_products).toEqual(["timed_drill"]);
-    expect(cfg.timings.timed_drill).toEqual([
+    expect(cfg.allowed_products).toEqual(["drill_solo"]);
+    expect(cfg.timings.drill_solo).toEqual([
       ...PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
     ]);
-    expect(cfg.timings.timed_explore).toEqual([]);
+    expect(cfg.timings.drill_dialog).toEqual([]);
   });
 
   it("persists optional fixed block_id (and defaults null)", () => {
     expect(normalizePracticePortalConfig({}).block_id).toBeNull();
     expect(normalizePracticePortalConfig({}).scope_mode).toBe("visitor_pick");
     const withBlock = normalizePracticePortalConfig({
-      allowed_products: ["open_ended_explore"],
+      allowed_products: ["explore_dialog"],
       block_id: "  block-fixed-1  ",
     });
     expect(withBlock.block_id).toBe("block-fixed-1");
     expect(withBlock.scope_mode).toBe("fixed_block");
     expect(
       normalizePracticePortalConfig({
-        allowed_products: ["timed_explore"],
+        allowed_products: ["drill_dialog"],
         fixedBlockId: "camel-block",
       }).block_id,
     ).toBe("camel-block");
@@ -107,7 +107,7 @@ describe("normalizePracticePortalConfig", () => {
 
   it("workspace scope is distinct from visitor_pick and fixed_block; clears block_id", () => {
     const ws = normalizePracticePortalConfig({
-      allowed_products: ["timed_explore", "open_ended_explore"],
+      allowed_products: ["drill_dialog", "explore_dialog"],
       scope_mode: "workspace",
       block_id: "should-be-cleared",
     });
@@ -116,7 +116,7 @@ describe("normalizePracticePortalConfig", () => {
     expect(isPracticePortalWorkspaceScope(ws)).toBe(true);
 
     const visitor = normalizePracticePortalConfig({
-      allowed_products: ["timed_explore"],
+      allowed_products: ["drill_dialog"],
       scope_mode: "visitor_pick",
     });
     expect(visitor.scope_mode).toBe("visitor_pick");
@@ -124,7 +124,7 @@ describe("normalizePracticePortalConfig", () => {
     expect(isPracticePortalWorkspaceScope(visitor)).toBe(false);
 
     const fixed = normalizePracticePortalConfig({
-      allowed_products: ["open_ended_explore"],
+      allowed_products: ["explore_dialog"],
       scope_mode: "fixed_block",
       block_id: "b-fixed",
     });
@@ -140,36 +140,36 @@ describe("normalizePracticePortalConfig", () => {
 
 describe("allowance helpers", () => {
   const cfg = normalizePracticePortalConfig({
-    allowed_products: ["timed_explore", "open_ended_explore"],
+    allowed_products: ["drill_dialog", "explore_dialog"],
     timings: { timed_explore: [5, 10], timed_drill: [30] },
   });
 
   it("isPracticePortalProductAllowed respects config", () => {
-    expect(isPracticePortalProductAllowed(cfg, "timed_explore")).toBe(true);
-    expect(isPracticePortalProductAllowed(cfg, "open_ended_explore")).toBe(true);
-    expect(isPracticePortalProductAllowed(cfg, "timed_drill")).toBe(false);
-    expect(isPracticePortalProductAllowed(cfg, "open_ended_drill")).toBe(false);
+    expect(isPracticePortalProductAllowed(cfg, "drill_dialog")).toBe(true);
+    expect(isPracticePortalProductAllowed(cfg, "explore_dialog")).toBe(true);
+    expect(isPracticePortalProductAllowed(cfg, "drill_solo")).toBe(false);
+    expect(isPracticePortalProductAllowed(cfg, "explore_solo")).toBe(false);
     expect(isPracticePortalProductAllowed(cfg, "nope")).toBe(false);
   });
 
-  it("isPracticePortalTimingAllowed for timed and open-ended", () => {
-    expect(isPracticePortalTimingAllowed(cfg, "timed_explore", 5)).toBe(true);
-    expect(isPracticePortalTimingAllowed(cfg, "timed_explore", 10)).toBe(true);
-    expect(isPracticePortalTimingAllowed(cfg, "timed_explore", 30)).toBe(false);
-    // open-ended ignores minutes
-    expect(isPracticePortalTimingAllowed(cfg, "open_ended_explore", 999)).toBe(true);
+  it("isPracticePortalTimingAllowed for timed and explore", () => {
+    expect(isPracticePortalTimingAllowed(cfg, "drill_dialog", 5)).toBe(true);
+    expect(isPracticePortalTimingAllowed(cfg, "drill_dialog", 10)).toBe(true);
+    expect(isPracticePortalTimingAllowed(cfg, "drill_dialog", 30)).toBe(false);
+    // explore ignores minutes
+    expect(isPracticePortalTimingAllowed(cfg, "explore_dialog", 999)).toBe(true);
     // disallowed product
-    expect(isPracticePortalTimingAllowed(cfg, "timed_drill", 30)).toBe(false);
+    expect(isPracticePortalTimingAllowed(cfg, "drill_solo", 30)).toBe(false);
   });
 });
 
 describe("validatePracticePortalMintRequest", () => {
   const cfg = normalizePracticePortalConfig({
     allowed_products: [
-      "open_ended_explore",
-      "open_ended_drill",
-      "timed_explore",
-      "timed_drill",
+      "explore_dialog",
+      "explore_solo",
+      "drill_dialog",
+      "drill_solo",
     ],
     timings: {
       timed_explore: [5, 10, 30],
@@ -177,35 +177,35 @@ describe("validatePracticePortalMintRequest", () => {
     },
   });
 
-  it("accepts allowed open-ended with block_id", () => {
+  it("accepts allowed explore with block_id", () => {
     const v = validatePracticePortalMintRequest(cfg, {
-      product_id: "open_ended_explore",
+      product_id: "explore_dialog",
       block_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     });
     expect(v.ok).toBe(true);
     if (!v.ok) return;
-    expect(v.product_id).toBe("open_ended_explore");
+    expect(v.product_id).toBe("explore_dialog");
     expect(v.minutes).toBeNull();
-    expect(v.launch).toEqual(resolveProductIntent("explore", "open_ended"));
+    expect(v.launch).toEqual(resolveProductIntent("explore", "dialog"));
     expect(v.block_id).toBe("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
   });
 
-  it("refuses open-ended without block_id when portal has no fixed block", () => {
+  it("refuses explore without block_id when portal has no fixed block", () => {
     const v = validatePracticePortalMintRequest(cfg, {
-      product_id: "open_ended_drill",
+      product_id: "explore_solo",
     });
     expect(v.ok).toBe(false);
     if (v.ok) return;
     expect(v.code).toBe("block_required");
   });
 
-  it("accepts open-ended without visitor block_id when portal config has fixed block", () => {
+  it("accepts explore without visitor block_id when portal config has fixed block", () => {
     const fixed = normalizePracticePortalConfig({
-      allowed_products: ["open_ended_explore"],
+      allowed_products: ["explore_dialog"],
       block_id: "fixed-block-uuid",
     });
     const v = validatePracticePortalMintRequest(fixed, {
-      product_id: "open_ended_explore",
+      product_id: "explore_dialog",
     });
     expect(v.ok).toBe(true);
     if (!v.ok) return;
@@ -213,7 +213,7 @@ describe("validatePracticePortalMintRequest", () => {
 
     // Fixed scope ignores visitor override (forced block holds)
     const override = validatePracticePortalMintRequest(fixed, {
-      product_id: "open_ended_explore",
+      product_id: "explore_dialog",
       block_id: "visitor-block",
     });
     expect(override.ok).toBe(true);
@@ -223,7 +223,7 @@ describe("validatePracticePortalMintRequest", () => {
 
   it("workspace scope: timed mint yields null block_id; visitor block_id ignored", () => {
     const ws = normalizePracticePortalConfig({
-      allowed_products: ["timed_explore", "timed_drill", "open_ended_explore"],
+      allowed_products: ["drill_dialog", "drill_solo", "explore_dialog"],
       timings: { timed_explore: [10, 30], timed_drill: [15, 45] },
       scope_mode: "workspace",
     });
@@ -231,7 +231,7 @@ describe("validatePracticePortalMintRequest", () => {
     expect(ws.block_id).toBeNull();
 
     const timed = validatePracticePortalMintRequest(ws, {
-      product_id: "timed_explore",
+      product_id: "drill_dialog",
       minutes: 10,
       block_id: "visitor-should-not-win",
     });
@@ -242,16 +242,16 @@ describe("validatePracticePortalMintRequest", () => {
     expect(timed.launch.product).toBe("tap");
 
     const timedDrill = validatePracticePortalMintRequest(ws, {
-      product_id: "timed_drill",
+      product_id: "drill_solo",
       minutes: 15,
     });
     expect(timedDrill.ok).toBe(true);
     if (!timedDrill.ok) return;
     expect(timedDrill.block_id).toBeNull();
 
-    // Open-ended not mintable under workspace force (ILE requires a block)
+    // Explore not mintable under workspace force (ILE requires a block)
     const openEnded = validatePracticePortalMintRequest(ws, {
-      product_id: "open_ended_explore",
+      product_id: "explore_dialog",
       block_id: "b1",
     });
     expect(openEnded.ok).toBe(false);
@@ -285,9 +285,9 @@ describe("validatePracticePortalMintRequest", () => {
     );
   });
 
-  it("accepts allowed timed product + timing; defaults minutes when omitted", () => {
+  it("accepts allowed drill product + timing; defaults minutes when omitted", () => {
     const explicit = validatePracticePortalMintRequest(cfg, {
-      product_id: "timed_explore",
+      product_id: "drill_dialog",
       minutes: 10,
     });
     expect(explicit.ok).toBe(true);
@@ -296,7 +296,7 @@ describe("validatePracticePortalMintRequest", () => {
     expect(explicit.launch.product).toBe("tap");
 
     const def = validatePracticePortalMintRequest(cfg, {
-      product_id: "timed_drill",
+      product_id: "drill_solo",
     });
     expect(def.ok).toBe(true);
     if (!def.ok) return;
@@ -305,19 +305,19 @@ describe("validatePracticePortalMintRequest", () => {
 
   it("refuses disallowed product and disallowed timing", () => {
     const narrow = normalizePracticePortalConfig({
-      allowed_products: ["timed_explore"],
+      allowed_products: ["drill_dialog"],
       timings: { timed_explore: [10] },
     });
 
     const badProduct = validatePracticePortalMintRequest(narrow, {
-      product_id: "timed_drill",
+      product_id: "drill_solo",
       minutes: 30,
     });
     expect(badProduct.ok).toBe(false);
     if (!badProduct.ok) expect(badProduct.code).toBe("product_not_allowed");
 
     const badTiming = validatePracticePortalMintRequest(narrow, {
-      product_id: "timed_explore",
+      product_id: "drill_dialog",
       minutes: 5,
     });
     expect(badTiming.ok).toBe(false);
@@ -332,13 +332,13 @@ describe("validatePracticePortalMintRequest", () => {
 });
 
 describe("practicePortalMintToCreateFields (create → mint shape)", () => {
-  it("maps timed explore/drill to TAP create body and open-ended to ILE", () => {
+  it("maps timed explore/drill to TAP create body and explore to ILE", () => {
     const timedExplore = validatePracticePortalMintRequest(
       normalizePracticePortalConfig({
-        allowed_products: ["timed_explore"],
+        allowed_products: ["drill_dialog"],
         timings: { timed_explore: [10] },
       }),
-      { product_id: "timed_explore", minutes: 10 },
+      { product_id: "drill_dialog", minutes: 10 },
     );
     expect(timedExplore.ok).toBe(true);
     if (!timedExplore.ok) return;
@@ -347,15 +347,15 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(tap.body.minutes).toBe(10);
     expect(tap.body.participant_type).toBe("anonymous");
     expect(tap.body.interaction_kind).toBe(
-      productIntentToCreateFields(resolveProductIntent("explore", "timed")).interaction_kind,
+      productIntentToCreateFields(resolveProductIntent("drill", "dialog")).interaction_kind,
     );
 
     const timedDrill = validatePracticePortalMintRequest(
       normalizePracticePortalConfig({
-        allowed_products: ["timed_drill"],
+        allowed_products: ["drill_solo"],
         timings: { timed_drill: [30] },
       }),
-      { product_id: "timed_drill", minutes: 30 },
+      { product_id: "drill_solo", minutes: 30 },
     );
     expect(timedDrill.ok).toBe(true);
     if (!timedDrill.ok) return;
@@ -365,10 +365,10 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
 
     const openEnded = validatePracticePortalMintRequest(
       normalizePracticePortalConfig({
-        allowed_products: ["open_ended_drill"],
+        allowed_products: ["explore_solo"],
       }),
       {
-        product_id: "open_ended_drill",
+        product_id: "explore_solo",
         block_id: "block-1",
       },
     );
@@ -384,7 +384,7 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
   it("buildPracticePortalLandingView only lists configured products/timings", () => {
     const view = buildPracticePortalLandingView({
       config: {
-        allowed_products: ["timed_explore", "open_ended_explore"],
+        allowed_products: ["drill_dialog", "explore_dialog"],
         timings: { timed_explore: [5, 10], timed_drill: [45] },
         block_id: null,
       },
@@ -393,13 +393,13 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
       portal_id: "portal-1",
     });
     expect(view.products.map((p) => p.id)).toEqual([
-      "open_ended_explore",
-      "timed_explore",
+      "explore_dialog",
+      "drill_dialog",
     ]);
-    const timed = view.products.find((p) => p.id === "timed_explore");
+    const timed = view.products.find((p) => p.id === "drill_dialog");
     expect(timed?.timings).toEqual([5, 10]);
     // drill timings not exposed when product disabled
-    expect(view.products.some((p) => p.id === "timed_drill")).toBe(false);
+    expect(view.products.some((p) => p.id === "drill_solo")).toBe(false);
     expect(view.workspace.title).toBe("Algebra");
     expect(view.blocks[0].is_start).toBe(true);
     expect(view.fixed_block_id).toBeNull();
@@ -408,7 +408,7 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
   it("landing view surfaces fixed block and filters blocks list", () => {
     const view = buildPracticePortalLandingView({
       config: {
-        allowed_products: ["open_ended_explore"],
+        allowed_products: ["explore_dialog"],
         timings: { timed_explore: [], timed_drill: [] },
         block_id: "b2",
       },
@@ -424,14 +424,14 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(view.blocks.map((b) => b.id)).toEqual(["b2"]);
   });
 
-  it("landing view workspace scope: empty blocks, no fixed block, timed products only", () => {
+  it("landing view workspace scope: empty blocks, no fixed block, drill products only", () => {
     const view = buildPracticePortalLandingView({
       config: {
         allowed_products: [
-          "open_ended_explore",
-          "open_ended_drill",
-          "timed_explore",
-          "timed_drill",
+          "explore_dialog",
+          "explore_solo",
+          "drill_dialog",
+          "drill_solo",
         ],
         timings: { timed_explore: [10], timed_drill: [30] },
         scope_mode: "workspace",
@@ -448,8 +448,8 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(view.fixed_block_id).toBeNull();
     expect(view.blocks).toEqual([]);
     expect(view.products.map((p) => p.id)).toEqual([
-      "timed_explore",
-      "timed_drill",
+      "drill_dialog",
+      "drill_solo",
     ]);
     expect(view.config.block_id).toBeNull();
   });
@@ -462,11 +462,11 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(buildPracticePortalUrl("https://app.example.com/", "tok123")).not.toContain(
       "practice-portal",
     );
-    expect(parsePracticePortalProductId("TIMED_DRILL")).toBe("timed_drill");
-    expect(launchTargetForPracticePortalProduct("open_ended_explore").product).toBe(
+    expect(parsePracticePortalProductId("TIMED_DRILL")).toBe("drill_solo");
+    expect(launchTargetForPracticePortalProduct("explore_dialog").product).toBe(
       "ile",
     );
-    expect(launchTargetForPracticePortalProduct("timed_drill").interaction_kind).toBe(
+    expect(launchTargetForPracticePortalProduct("drill_solo").interaction_kind).toBe(
       "exercise",
     );
   });
@@ -680,13 +680,14 @@ describe("Practice Portal structural wiring", () => {
     expect(simulationPanel).not.toMatch(/via xAI/i);
     expect(simulationPanel).not.toMatch(/xAI output/i);
     expect(simulationPanel).not.toMatch(/xAI questions and exercises/i);
-    expect(simulationPanel).toContain("Click Generate samples for questions and exercises.");
-    expect(simulationPanel).toContain("Lists stay empty");
-    expect(simulationPanel).not.toMatch(/Lists stay empty until you generate — no /i);
+    expect(simulationPanel).toContain("data-simulation-generate");
+    expect(simulationPanel).toContain("data-simulation-collection");
+    expect(simulationPanel).toContain("Generate samples");
     const blockSimPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
     expect(blockSimPanel).not.toMatch(/for xAI samples/i);
     expect(blockSimPanel).not.toMatch(/via xAI/i);
     expect(blockSimPanel).not.toMatch(/offline template/i);
+    expect(blockSimPanel).toContain("data-simulation-auto-generate");
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 

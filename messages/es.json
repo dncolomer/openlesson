@@ -1688,6 +1688,7 @@
     "territory": "Territorio {number}",
     "goal": "Objetivo",
     "loadChapter": "Cargar capítulo",
+    "reloadChapter": "Reload Chapter",
     "loadingChapter": "Cargando capítulo…",
     "addChapter": "Añadir capítulo",
     "newChapterPlaceholder": "¿Qué debería cubrir este capítulo?",

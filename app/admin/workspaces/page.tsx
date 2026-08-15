@@ -189,7 +189,7 @@ export default function AdminPlansPage() {
           <div className="text-2xl font-semibold text-white">
             {kpiPlans.reduce((sum, p) => sum + (p.tap_session_count || 0), 0)}
           </div>
-          <div className={`mt-1 ${adminLabelClass}`}>Timed sessions (this page)</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Drill sessions (this page)</div>
           <div className="mt-2 flex gap-2 text-[11px]">
             <span className="text-white">Agent-created: {agentCount}</span>
           </div>

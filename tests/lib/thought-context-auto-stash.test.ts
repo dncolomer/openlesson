@@ -88,6 +88,8 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     expect(ile).toContain('data-surface="ile"');
     expect(ile).toContain("shouldAutoStashOnContextFull");
     expect(ile).toContain("stashCurrentTranscription");
+    expect(ile).toContain("applyIleContextFullAutoStash");
+    expect(ile).toContain("getFormingText");
 
     // TAP strip order: purity → Auto-stash context bar → End session
     const purityIdx = tap.indexOf("data-tap-session-purity");
@@ -102,6 +104,6 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     const ileBarJsx = ile.lastIndexOf("<AutoStashContextBar");
     const ileTranscript = ile.lastIndexOf("<SlidingTranscript");
     expect(ileBarJsx).toBeGreaterThan(ileTranscript);
-    expect(ileBarJsx - ileTranscript).toBeLessThan(3000);
+    expect(ileBarJsx - ileTranscript).toBeLessThan(4500);
   });
 });

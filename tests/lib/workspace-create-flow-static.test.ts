@@ -9,21 +9,23 @@ function read(rel: string) {
 }
 
 describe("workspace create + builder static wiring", () => {
-  it("workspace new UI has three option cards, AYCL banner, and no Login control", () => {
+  it("workspace new UI has blank + template cards, AYCL banner, and no Login control", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain('mode: "blank"');
-    expect(page).toContain('mode: "template"');
-    expect(page).toContain('mode: "files_goal"');
+    expect(page).toContain("UI_WORKSPACE_CREATE_MODES");
+    expect(page).toContain("isUiWorkspaceCreateMode");
+    expect(page).toContain("Blank");
+    expect(page).toContain("From Template");
+    expect(page).not.toContain("From Files + Goal");
+    expect(page).not.toContain("files_goal");
+    expect(page).not.toContain("handleCreateFilesGoal");
     expect(page).toContain("data-create-mode-cards");
     expect(page).toContain("data-aycl-banner");
     expect(page).toContain("/all-you-can-learn");
     // Login control removed from header (auth redirect on submit remains)
     expect(page).not.toMatch(/href=["']\/login["']/);
     expect(page).toMatch(/Login removed from workspace new screen/);
-    expect(page).toContain("Goal");
     expect(page).toContain("createMode: \"blank\"");
     expect(page).toContain("createMode: \"template\"");
-    expect(page).toContain("createMode: \"files_goal\"");
   });
 
   it("builder tab label is Builder in English messages", () => {

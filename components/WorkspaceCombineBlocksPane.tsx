@@ -26,6 +26,10 @@ import {
 } from "@/lib/bridge-blocks";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
 import {
+  WORKSPACE_EDITOR_DANGER_DRAWER_ID,
+  WORKSPACE_EDITOR_DANGER_DRAWER_TITLE,
+} from "@/lib/workspace-right-pane";
+import {
   draftMultiBlockDag,
   MULTI_BLOCK_DAG_MAX_BLOCKS,
   multiBlockDagEdgeCounts,
@@ -34,6 +38,11 @@ import {
   setMultiBlockDagEdge,
   type MultiBlockDagDraft,
 } from "@/lib/multi-block-dag";
+import {
+  WorkspacePromptContextAlternatives,
+  type PromptContextMode,
+} from "@/components/WorkspacePromptContextAlternatives";
+import { WorkspaceMultiBlockSimulationPanel } from "@/components/WorkspaceMultiBlockSimulationPanel";
 import {
   CLUSTER_SEPARATION_DEFAULT,
   CLUSTER_SEPARATION_MAX,
@@ -67,6 +76,8 @@ export function WorkspaceCombineBlocksPane({
   nodes,
   busy = false,
   unusableCells = null,
+  workspaceId,
+  ayclToken,
   onCombine,
   onGenerateBridge,
   onApplyDag,
@@ -81,6 +92,8 @@ export function WorkspaceCombineBlocksPane({
   nodes: CombineBlockRef[];
   busy?: boolean;
   unusableCells?: Array<{ row: number; col: number }> | null;
+  workspaceId?: string;
+  ayclToken?: string;
   onCombine: (input: {
     blockIds: string[];
     prompt?: string;
@@ -149,6 +162,8 @@ export function WorkspaceCombineBlocksPane({
   const [bridgeWidth, setBridgeWidth] = useState(BRIDGE_WIDTH_MIN);
   const [bridgeDensity, setBridgeDensity] = useState(BRIDGE_DENSITY_MAX);
   const [bridgePrompt, setBridgePrompt] = useState("");
+  const [bridgeContextMode, setBridgeContextMode] =
+    useState<PromptContextMode>("adhoc");
   const [bridgeSubmitting, setBridgeSubmitting] = useState(false);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
   const [dagDraft, setDagDraft] = useState<MultiBlockDagDraft>(() =>
@@ -741,20 +756,30 @@ export function WorkspaceCombineBlocksPane({
             </p>
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              Bridging prompt
-            </span>
+          <div data-bridge-context-alternatives data-generative-context-alternatives>
+            <WorkspacePromptContextAlternatives
+              workspaceId={workspaceId}
+              ayclToken={ayclToken}
+              draftPrompt={bridgePrompt}
+              surface="bridge blocks"
+              mode={bridgeContextMode}
+              onModeChange={setBridgeContextMode}
+              adhocValue={bridgePrompt}
+              onAdhocChange={setBridgePrompt}
+              onAccept={setBridgePrompt}
+              disabled={busy || bridgeSubmitting}
+              adhocPlaceholder="Optional guidance for the bridge (e.g. emphasize causality, shared vocabulary, or a transition exercise)…"
+              adhocLabel="Bridging prompt"
+            />
             <textarea
               data-bridge-prompt
               value={bridgePrompt}
               onChange={(e) => setBridgePrompt(e.target.value)}
-              rows={3}
+              rows={2}
               disabled={busy || bridgeSubmitting}
-              placeholder="Optional guidance for the bridge (e.g. emphasize causality, shared vocabulary, or a transition exercise)…"
-              className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              className="mt-1 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
-          </label>
+          </div>
 
           {bridgeAnchors.length < 2 ? (
             <p
@@ -1032,16 +1057,37 @@ export function WorkspaceCombineBlocksPane({
         </div>
       </WorkspaceRightPaneDrawer>
 
-      {/* Delete multi-selected blocks */}
+      {/* Multi-block Simulation — deposits to Sim tab collection */}
       <WorkspaceRightPaneDrawer
         variant="section"
-        drawerId="delete"
-        title="Delete"
+        drawerId="simulation"
+        title="Simulation"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-multi-block-simulation-drawer"
+      >
+        <WorkspaceMultiBlockSimulationPanel
+          workspaceId={workspaceId}
+          ayclToken={ayclToken}
+          blockIds={selected.map((b) => b.id)}
+          blockTitles={selected.map((b) => b.title || "Untitled")}
+        />
+      </WorkspaceRightPaneDrawer>
+
+      {/* Danger zone — batch delete for the multi-selected blocks */}
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
+        title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
         defaultExpanded={false}
         bodyClassName="space-y-3"
         surfaceDataAttr="data-multi-block-delete-drawer"
       >
-        <div data-multi-block-delete-pane className="space-y-3">
+        <div
+          data-multi-block-delete-pane
+          data-block-danger-drawer
+          className="space-y-3"
+        >
           <p className="text-[11px] leading-relaxed text-neutral-400">
             Permanently remove all{" "}
             <span className="text-neutral-200">{selected.length}</span> selected

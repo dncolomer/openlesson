@@ -53,7 +53,7 @@ const SECTION_LINKS = [
   {
     href: "/admin/sessions",
     label: "Sessions",
-    description: "Open-ended and timed product runs",
+    description: "Explore and Drill product runs",
   },
   {
     href: "/admin/data-studio",

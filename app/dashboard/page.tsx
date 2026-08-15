@@ -1463,7 +1463,7 @@ export default function DashboardPage() {
                                 <p className="mt-1 text-xs text-neutral-500">0.05¢ each</p>
                               </div>
                               <div>
-                                <p className="text-xs text-neutral-500">Timed sessions</p>
+                                <p className="text-xs text-neutral-500">Drill sessions</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   {usageData.tapSessionsUsed ??
                                     usageData.apiMeteredInvoice.tapSessionCount ??
@@ -1472,7 +1472,7 @@ export default function DashboardPage() {
                                 <p className="mt-1 text-xs text-neutral-500">$1 each</p>
                               </div>
                               <div>
-                                <p className="text-xs text-neutral-500">Open-ended sessions</p>
+                                <p className="text-xs text-neutral-500">Explore sessions</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   {usageData.ileSessionsUsed ??
                                     usageData.apiMeteredInvoice.ileSessionCount ??

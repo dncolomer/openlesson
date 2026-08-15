@@ -53,7 +53,8 @@ export async function readErrorResponse(response: Response, fallback: string) {
   return `${fallback} (HTTP ${response.status}): ${text.slice(0, 300)}`;
 }
 
-export const CHAPTER_LOAD_DURATION_MS = 900;
+/** Brief chapter switch fade. 0 = no artificial stall. Must stay ≤ 200ms. */
+export const CHAPTER_LOAD_DURATION_MS = 0;
 export const EEG_SAMPLE_RATE_HZ = 256;
 export const EEG_DISPLAY_MAX_SAMPLES = 512;
 export const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;

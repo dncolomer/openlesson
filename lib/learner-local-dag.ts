@@ -168,6 +168,69 @@ export function learnerLocalDagBlockIds(
 }
 
 /**
+ * Incomplete lock_until + inbound-next ids that currently block `block`.
+ * Direct relationship only — not downstream unlocks or completed prereqs.
+ */
+export function directBlockingPrerequisiteIds(
+  block: LearnerLocalDagBlock,
+  blocks: readonly LearnerLocalDagBlock[],
+): string[] {
+  const id = cleanId(block.id);
+  if (!id) return [];
+  const byId = new Map(blocks.map((b) => [cleanId(b.id), b] as const));
+  const ids: string[] = [];
+  for (const pid of normalizeLockUntilBlockIds(block.lock_until_block_ids, id)) {
+    const p = byId.get(pid);
+    if (!p || !isBlockCompletedStatus(p.status)) ids.push(pid);
+  }
+  for (const inbound of incompleteInboundNextPrerequisites(block, blocks)) {
+    ids.push(cleanId(inbound.id));
+  }
+  return uniqIds(ids);
+}
+
+/** ILE chapter is locked when it has any incomplete direct DAG prereq. */
+export function isChapterMapTileLocked(
+  chapter: LearnerLocalDagBlock,
+  chapters: readonly LearnerLocalDagBlock[],
+): boolean {
+  return directBlockingPrerequisiteIds(chapter, chapters).length > 0;
+}
+
+/** Lock badge on a chapter when a DAG edge (lock_until or inbound next) exists. */
+export function chapterHasDagLockChrome(
+  chapter: LearnerLocalDagBlock,
+  chapters: readonly LearnerLocalDagBlock[],
+): boolean {
+  const id = cleanId(chapter.id);
+  if (!id) return false;
+  if (normalizeLockUntilBlockIds(chapter.lock_until_block_ids, id).length > 0) {
+    return true;
+  }
+  for (const b of chapters) {
+    const bid = cleanId(b.id);
+    if (!bid || bid === id) continue;
+    if ((b.next_block_ids || []).map(cleanId).includes(id)) return true;
+  }
+  return false;
+}
+
+/**
+ * Selecting a locked ILE chapter highlights only the incomplete direct prereqs
+ * that unblock it. Unlocked / available selection → empty set.
+ */
+export function ileChapterUnlockHighlightIds(
+  selectedId: string,
+  chapters: readonly LearnerLocalDagBlock[],
+): string[] {
+  const focus = cleanId(selectedId);
+  if (!focus) return [];
+  const self = chapters.find((c) => cleanId(c.id) === focus);
+  if (!self || !isChapterMapTileLocked(self, chapters)) return [];
+  return directBlockingPrerequisiteIds(self, chapters);
+}
+
+/**
  * Map highlight set when a block is selected in Learner mode:
  * other members of the local DAG (prereqs, unlocks, next peers) — not self.
  */

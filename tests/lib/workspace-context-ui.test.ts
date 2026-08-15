@@ -230,11 +230,14 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
 
   it("AyclWorkspaceView shares Context + map authoring path", () => {
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("mountsContextPanel");
-    expect(aycl).toContain("WorkspaceMapAuthoringPane");
-    expect(aycl).toContain("WorkspaceBlockLocalContextPanel");
-    expect(aycl).toContain('t("planView.sectionContext")');
-    expect(aycl).toContain("data-workspace-context-section");
+    const view = read("components/WorkspaceView.tsx");
+    expect(aycl).toContain("<WorkspaceView");
+    expect(aycl).toContain("ayclToken={accessToken}");
+    expect(view).toContain("mountsContextPanel");
+    expect(view).toContain("WorkspaceMapAuthoringPane");
+    expect(view).toContain("WorkspaceBlockLocalContextPanel");
+    expect(view).toContain('t("planView.sectionContext")');
+    expect(view).toContain("data-workspace-context-section");
   });
 
   it("i18n has sectionContext key", () => {

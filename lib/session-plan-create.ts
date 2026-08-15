@@ -9,6 +9,8 @@ import {
   SPATIAL_MAP_LAYOUT_RULES,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import { applyIleChapterModeInstructions } from "@/lib/ile-chapter-depth";
+import type { IleSessionMode } from "@/lib/ile-mode";
 import type { RequestType, SessionPlanStep } from "@/lib/domain/types";
 
 const VALID_STEP_TYPES = new Set<RequestType>([
@@ -30,6 +32,8 @@ export interface SessionPlanCreatePromptVars {
   initialChapters?: InitialChaptersLevel | string | null;
   /** @deprecated alias for initialChapters */
   mapSize?: InitialChaptersLevel | string | null;
+  /** Dialog (learning) vs Project (solo exercise) grain. */
+  sessionMode?: IleSessionMode | string | null;
 }
 
 export interface RawSessionPlanStep {
@@ -56,7 +60,8 @@ function formatObjectives(objectives?: string[]): string {
 
 /**
  * Fill the session_plan_create template with problem context, initial-chapters
- * band, and spatial instructions. Does not call the model.
+ * band, spatial instructions, and Dialog vs Project chapter grain.
+ * Does not call the model.
  */
 export function composeSessionPlanCreatePrompt(
   template: string,
@@ -65,7 +70,7 @@ export function composeSessionPlanCreatePrompt(
   const level = vars.initialChapters ?? vars.mapSize;
   const mapInfo = formatInitialChaptersForPrompt(level);
 
-  return template
+  const filled = template
     .replace("{problem}", vars.problem || "Untitled topic")
     .replace("{objectives}", formatObjectives(vars.objectives))
     .replace("{calibration}", vars.calibration || "No prior learning data available")
@@ -81,6 +86,8 @@ export function composeSessionPlanCreatePrompt(
     .replaceAll("{min_steps}", String(mapInfo.band.min))
     .replaceAll("{max_steps}", String(mapInfo.band.max))
     .replaceAll("{spatial_map_layout_rules}", SPATIAL_MAP_LAYOUT_RULES);
+
+  return applyIleChapterModeInstructions(filled, vars.sessionMode);
 }
 
 function parseGridCoord(value: unknown): number | undefined {

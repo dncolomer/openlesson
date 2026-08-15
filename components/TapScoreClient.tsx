@@ -37,6 +37,7 @@ import {
   restartLiveSpeechRecognition,
   startLiveSpeechRecognition,
   stopLiveSpeechRecognition,
+  useSessionThoughtInterface,
   useSpeechSupported,
   type LiveSpeechRecognitionBindings,
   type SpeechRecognitionEventLike,
@@ -67,6 +68,13 @@ import {
   type ThoughtButtonSize,
   type ThoughtButtonVariant,
 } from "@/lib/tap-score-client-helpers";
+import {
+  tapTracePayload,
+  TAP_SESSION_RUNTIME_PATHS,
+  isTapLiveThoughtSpeechEnabled,
+  shouldRestartLocalTapSpeechBindings,
+  tapLiveSpeechFlushText,
+} from "@/lib/tap-session-runtime";
 import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
@@ -391,7 +399,7 @@ export function TapScoreClient({
       void fetch("/api/workspace-tap-score/trace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(tapTracePayload({
           workspaceId,
           blockId,
           sessionId,
@@ -400,7 +408,7 @@ export function TapScoreClient({
           entryQueryParams: entryQueryParamsRef.current,
           practice: isPracticeModeRef.current,
           ...input,
-        }),
+        })),
       })
         .then(async (response) => {
           const payload = await response.json();
@@ -411,6 +419,21 @@ export function TapScoreClient({
     },
     [workspaceId, blockId, sessionId, privateToken, handlePowInterruption],
   );
+
+  const tapThoughtSpeech = useSessionThoughtInterface({
+    enabled: isTapLiveThoughtSpeechEnabled(phase),
+    speechLang,
+    sessionId: tapSessionId || sessionId || undefined,
+    captureKeys: false,
+    onLogTrace: () => {},
+    onSendToProbe: async () => {},
+    onSpeechTranscript: (text) => {
+      lastSpeechActivityAtRef.current = Date.now();
+      crystallizableTextRef.current = text;
+      setCrystallizableText(text);
+      setInterimText(text);
+    },
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -607,6 +630,7 @@ export function TapScoreClient({
     acceptEmptyTranscriptRef.current = true;
     lastSpeechActivityAtRef.current = Date.now();
     setTranscriptSilenceMs(0);
+    tapThoughtSpeech.clearCurrentTranscription();
   }
 
   const applyPurityHit = useCallback(() => {
@@ -670,8 +694,9 @@ export function TapScoreClient({
   const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
+    if (!shouldRestartLocalTapSpeechBindings(phase)) return;
     restartLiveSpeechRecognition(speechBindings);
-  }, [speechBindings]);
+  }, [phase, speechBindings]);
 
   function clearTranscriptionBuffers() {
     clearTranscriptionDisplay();
@@ -679,7 +704,11 @@ export function TapScoreClient({
   }
 
   function flushFinalBuffer() {
-    const text = normalize(finalBufferRef.current.join(" "));
+    const text = tapLiveSpeechFlushText({
+      hookFormingText: tapThoughtSpeech.getFormingText(),
+      crystallizableText: crystallizableTextRef.current || crystallizableText,
+      localFinalBuffer: finalBufferRef.current,
+    });
     clearTranscriptionBuffers();
     if (text) addThought(text);
   }
@@ -813,6 +842,9 @@ export function TapScoreClient({
     }
     // Always (re)arm recognition when entering/staying live so a dead mic
     // after pause-like transitions does not leave TAP stuck idle.
+    if (isTapLiveThoughtSpeechEnabled(phase)) {
+      return;
+    }
     startLiveSpeechRecognition(speechBindings, speechLang);
   }, [phase, speechBindings, speechLang]);
 
@@ -919,8 +951,7 @@ export function TapScoreClient({
   function retryMicrophone() {
     if (phase !== "live") return;
     setSpeechError(null);
-    stopLiveSpeechRecognition(speechBindings);
-    startLiveSpeechRecognition(speechBindings, speechLang);
+    tapThoughtSpeech.retryMicrophone();
   }
 
   async function startSession(topicOrOptions?: TapStartingTopic | { practice?: boolean; topic?: TapStartingTopic }) {
@@ -957,10 +988,12 @@ export function TapScoreClient({
     setSessionEndedImpure(false);
     autoStashInFlightRef.current = false;
     clearDialogueMessages(dialogueStorageKey);
-    startLiveSpeechRecognition(speechBindings, speechLang);
+    if (!isTapLiveThoughtSpeechEnabled("live")) {
+      startLiveSpeechRecognition(speechBindings, speechLang);
+    }
 
     try {
-      const response = await fetch("/api/workspace-tap-score/start", {
+      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.start, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1069,7 +1102,7 @@ export function TapScoreClient({
         transcript.length > 0
           ? transcript
           : [{ role: "assistant", text: "Practice session", at: new Date().toISOString() }];
-      const response = await fetch("/api/workspace-tap-score/complete", {
+      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.complete, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

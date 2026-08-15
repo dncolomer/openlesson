@@ -6,13 +6,19 @@ import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   ayclLandingCheckoutBody,
+  ayclMapPreviewFullscreenActive,
+  toggleAyclMapPreviewFullscreen,
   type AyclLandingSummary,
 } from "@/lib/aycl-landing";
 import {
   AYCL_TOKEN_STORAGE_KEY,
+  ayclBuildTooltip,
   ayclLifetimeSystemUpdatesClaim,
   ayclLifetimeSystemUpdatesFootnote,
   ayclLifetimeSystemUpdatesHeroLine,
+  ayclOfferCheckoutCta,
+  ayclOfferTooltip,
+  ayclPlayTooltip,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
 import type { SkillGridNode } from "@/lib/block-skill-grid";
@@ -32,6 +38,7 @@ export function AyclLandingClient({
   const [error, setError] = useState("");
   const [samples, setSamples] = useState<ExploreSamples | null>(null);
   const [samplesLoading, setSamplesLoading] = useState(true);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +99,16 @@ export function AyclLandingClient({
   const learnerBusy = checkoutKey === `${landing.workspaceId}:learner`;
   const fullBusy = checkoutKey === `${landing.workspaceId}:full`;
   const anyBusy = learnerBusy || fullBusy;
+  const mapIsFullscreen = ayclMapPreviewFullscreenActive(mapFullscreen);
+
+  useEffect(() => {
+    if (!mapIsFullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMapFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mapIsFullscreen]);
 
   return (
     <div className="space-y-10" data-aycl-landing>
@@ -203,8 +220,14 @@ export function AyclLandingClient({
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-medium text-white">
-                  {landing.offers.learner.label}
+                <p
+                  className="text-sm font-medium text-white"
+                  title={ayclOfferTooltip("learner")}
+                  data-aycl-offer-tooltip="learner"
+                >
+                  <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
+                    {landing.offers.learner.label}
+                  </span>
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
                   {landing.offers.learner.description}
@@ -221,14 +244,24 @@ export function AyclLandingClient({
               onClick={() => void startCheckout("learner")}
               className="mt-3 w-full rounded-sm border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
             >
-              {learnerBusy ? "Redirecting…" : "Get practice access"}
+              {learnerBusy ? "Redirecting…" : ayclOfferCheckoutCta("learner")}
             </button>
           </div>
           <div className="rounded-lg border border-zinc-700 bg-zinc-900/80 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-medium text-white">
-                  {landing.offers.full.label}
+                <p
+                  className="text-sm font-medium text-white"
+                  title={ayclOfferTooltip("full")}
+                  data-aycl-offer-tooltip="full"
+                >
+                  <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
+                    Play
+                  </span>
+                  {" + "}
+                  <span title={ayclBuildTooltip()} data-aycl-build-tooltip>
+                    Build
+                  </span>
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
                   {landing.offers.full.description}
@@ -245,7 +278,7 @@ export function AyclLandingClient({
               onClick={() => void startCheckout("full")}
               className="mt-3 w-full rounded-sm bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
             >
-              {fullBusy ? "Redirecting…" : "Get full access"}
+              {fullBusy ? "Redirecting…" : ayclOfferCheckoutCta("full")}
             </button>
           </div>
           <p
@@ -267,10 +300,29 @@ export function AyclLandingClient({
           editing and practice open after you get access.
         </p>
         <div
-          className="h-[min(28rem,55vh)] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/90"
+          className={
+            mapIsFullscreen
+              ? "fixed inset-0 z-50 h-screen w-screen overflow-hidden rounded-none border-0 bg-zinc-950"
+              : "relative h-[min(28rem,55vh)] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/90"
+          }
           data-aycl-map-snapshot
           data-map-view-only="true"
+          data-aycl-map-fullscreen={mapIsFullscreen ? "true" : "false"}
+          data-aycl-map-viewport-window={nodes.length > 0 ? "live" : "none"}
         >
+          <button
+            type="button"
+            data-aycl-map-fullscreen-toggle
+            title={mapIsFullscreen ? "Exit full screen" : "Full screen"}
+            aria-label={mapIsFullscreen ? "Exit full screen" : "Full screen"}
+            aria-pressed={mapIsFullscreen}
+            onClick={() =>
+              setMapFullscreen((open) => toggleAyclMapPreviewFullscreen(open))
+            }
+            className="absolute left-2 top-2 z-30 rounded-md border border-zinc-700/90 bg-zinc-950/90 px-2 py-1 text-[11px] font-medium text-zinc-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm hover:text-white"
+          >
+            {mapIsFullscreen ? "Exit" : "Full screen"}
+          </button>
           {nodes.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-zinc-600">
               Map content will appear here when chapters are published.
@@ -282,6 +334,7 @@ export function AyclLandingClient({
               onSelectNode={() => {}}
               canEdit={false}
               viewOnly
+              workspaceId={landing.workspaceId}
               showProgress={false}
               onAddBlock={async () => {}}
               labels={{

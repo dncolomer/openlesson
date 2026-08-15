@@ -8,8 +8,8 @@ import {
   ILE_SPEECH_TOOL_NAME,
   type IleSpeechSegmentEvent,
 } from "@/lib/ile-thought-traces";
-import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
 
     const fileName = `ile-speech-${event}-${sessionId}-${timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
-    const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
     const baseMetadata = {
       session_id: sessionId,
@@ -65,31 +64,23 @@ export async function POST(req: NextRequest) {
       ? stampSourceLinkMetadata(baseMetadata, { kind: "ile", linkId: access.ileLinkId })
       : baseMetadata;
 
-    const { data: row, error } = await access.supabase
-      .from("workspace_proof_of_work")
-      .insert({
-        workspace_id: workspaceId,
-        session_id: sessionId,
-        proof_of_work_type: "tool",
-        file_name: fileName,
+    const row = await uploadWorkspaceProofOfWork(
+      access.supabase,
+      access.auth,
+      access.workspace,
+      {
+        workspaceId,
+        type: "tool",
         mime_type: "application/json",
-        file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
-        xai_file_id: uploaded.file_id,
+        data: base64,
+        session_id: sessionId,
+        file_name: fileName,
         timestamp_ms: timestampMs,
-        chunk_index: 0,
-        metadata,
         tool_name: ILE_SPEECH_TOOL_NAME,
         tool_action: `speech_${event}`,
-        user_id: access.auth.guest_user_id ? null : access.auth.user_id,
-        guest_user_id: access.auth.guest_user_id,
-        organization_id: access.workspace.organization_id,
-      })
-      .select("id, xai_file_id, timestamp_ms, metadata, tool_action")
-      .single();
-
-    if (error || !row) {
-      return NextResponse.json({ error: error?.message || "Failed to store ILE speech segment" }, { status: 500 });
-    }
+        metadata,
+      },
+    );
 
     const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, workspaceId);
 

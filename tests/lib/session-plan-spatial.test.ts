@@ -302,6 +302,8 @@ describe("create surface wiring (structural)", () => {
     expect(routeSrc).toContain("initialChapters");
     expect(routeSrc).toContain("resolveInitialChaptersFromBody");
     expect(routeSrc).toContain("toPersistedCreatePlanSteps");
+    expect(routeSrc).toContain("sessionMode");
+    expect(routeSrc).toContain("createSessionPlanLLM");
   });
 
   it("welcome UI labels initial chapters and sends initialChapters", () => {
@@ -318,6 +320,7 @@ describe("create surface wiring (structural)", () => {
     expect(viewSrc).toContain("chapterPlanStatus");
     expect(viewSrc).toContain("hasExistingChapters");
     expect(viewSrc).toContain("shouldReuseExisting");
+    expect(viewSrc).toContain("sessionPlanHasChapters");
   });
 
   it("force create generates before deleting so regenerate failure keeps chapters", () => {

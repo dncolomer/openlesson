@@ -1,5 +1,5 @@
 /**
- * Neutral map cell chrome: white selection, title-only labels (no gear/tick).
+ * Neutral map cell chrome: white selection; Done = tick; self-progress = gear.
  * Drives shipped helpers used by workspace block maps and ILE chapter maps.
  */
 import { describe, expect, it } from "vitest";
@@ -40,12 +40,15 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("resolveMapCellStatusIcon", () => {
-  it("always returns null (title-only — no gear/tick for any status)", () => {
-    expect(resolveMapCellStatusIcon("completed", false)).toBeNull();
+  it("Done is a tick; self-progress is a gear; untouched has no icon", () => {
+    expect(resolveMapCellStatusIcon("completed", false)).toBe("tick");
+    expect(resolveMapCellStatusIcon("done", true, "block")).toBe("tick");
+    expect(resolveMapCellStatusIcon("completed", true, "chapter")).toBe("tick");
+    expect(resolveMapCellStatusIcon("completed", true, "block", true)).toBe("tick");
+    expect(resolveMapCellStatusIcon("in_progress", true, "block", true)).toBe("gear");
+    expect(resolveMapCellStatusIcon("available", true, "chapter", true)).toBe("gear");
     expect(resolveMapCellStatusIcon("in_progress", false)).toBeNull();
     expect(resolveMapCellStatusIcon("in_progress", true)).toBeNull();
-    expect(resolveMapCellStatusIcon("completed", true)).toBeNull();
-    expect(resolveMapCellStatusIcon("done", true)).toBeNull();
     expect(resolveMapCellStatusIcon("active", true)).toBeNull();
     expect(resolveMapCellStatusIcon("available", true)).toBeNull();
 
@@ -55,6 +58,7 @@ describe("resolveMapCellStatusIcon", () => {
         "in_progress=" + String(resolveMapCellStatusIcon("in_progress", true)),
         "completed=" + String(resolveMapCellStatusIcon("completed", true)),
         "available=" + String(resolveMapCellStatusIcon("available", true)),
+        "workedOn=" + String(resolveMapCellStatusIcon("available", true, "block", true)),
       ].join("\n"),
     );
   });
@@ -84,7 +88,7 @@ describe("mapCellChromeClasses", () => {
     expect(MAP_CELL_SELECTED_CLASS).toMatch(/white/);
   });
 
-  it("in_progress and completed stay neutral (no status color fills)", () => {
+  it("in_progress without workedOn stays neutral; completed is white Done (no status tints)", () => {
     const progress = mapCellChromeClasses({
       status: "in_progress",
       selected: false,
@@ -96,7 +100,9 @@ describe("mapCellChromeClasses", () => {
       showProgress: true,
     });
     expect(progress).toBe(MAP_CELL_NEUTRAL_CLASS);
-    expect(done).toBe(MAP_CELL_NEUTRAL_CLASS);
+    expect(done).toMatch(/bg-white/);
+    expect(done).toMatch(/border-white/);
+    expect(done).not.toMatch(/emerald|amber|cyan|yellow|green-/i);
     expect(mapCellChromeIsNeutral(progress)).toBe(true);
     expect(mapCellChromeIsNeutral(done)).toBe(true);
   });
@@ -130,12 +136,16 @@ describe("multi-select / empty selection tokens", () => {
 });
 
 describe("structural: BlockSkillGrid title-only map tiles", () => {
-  it("BlockSkillGrid uses title path; no gear/tick chrome", () => {
+  it("BlockSkillGrid uses title path plus tick/gear from the chrome mapper", () => {
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain("mapCellChromeClasses");
-    expect(grid).toContain("resolveMapCellStatusIcon");
+    expect(grid).toContain("resolveOccupiedMapTileChrome");
+    expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("MapCellStatusGlyph");
-    expect(grid).toContain('data-map-cell-status="title"');
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(badges).toContain("resolveMapCellStatusIcon");
+    expect(badges).toContain('data-map-cell-status="title"');
+    expect(badges).toContain("data-ile-chapter-done-tick");
+    expect(grid).toContain('suggestMode === "chapter"');
     expect(grid).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("MAP_CELL_EMPTY_SELECTED_CLASS");
     expect(grid).toContain("MAP_CELL_GENERATION_PENDING_CLASS");
@@ -145,9 +155,14 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(grid).toMatch(/bg-white[\s\S]{0,80}?data-map-expand-progress-fill/);
     expect(grid).toMatch(/data-map-expand-stop[\s\S]{0,220}?bg-white/);
     expect(grid).toContain("highlightRole");
-    expect(grid).toContain("data-block-dependency-lock");
     expect(grid).toContain("BlockDependencyLockBadge");
-    // No gear/tick icon components
+    expect(badges).toContain("data-block-dependency-lock");
+    expect(badges).toContain("data-map-cell-self-progress-gear");
+    expect(badges).toContain("data-map-cell-done-tick");
+    expect(grid).not.toContain("M8 2.4v1.5M8 12.1v1.5");
+    expect(badges).toContain('fillRule="evenodd"');
+    expect(grid).not.toMatch(/>\s*Busy\s*</);
+    expect(grid).not.toContain("data-generator-busy-label");
     expect(grid).not.toMatch(/from "lucide-react"/);
     expect(grid).not.toContain("data-map-cell-status=\"in_progress\"");
     expect(grid).not.toContain("data-map-cell-status=\"completed\"");

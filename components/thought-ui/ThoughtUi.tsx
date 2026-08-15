@@ -1,8 +1,15 @@
 "use client";
 
-import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ILE_DIALOGUE_AVATAR_SIZE_CLASS,
+  ILE_HELIOS_THINKING_ROTATE_MS,
+  TAP_DIALOGUE_AVATAR_SIZE_CLASS,
+  ileHeliosThinkingLine,
+  resolveIleDialogueTurn,
+} from "@/lib/ile-dialogue-turn";
 
 export type HeliosTurnMode = "idle" | "responding" | "interruption";
 
@@ -146,9 +153,14 @@ export function ThoughtButtonLabel({
   );
 }
 
-function dialogueAvatarClasses(isActiveTurn: boolean, turnMode: HeliosTurnMode = "idle") {
+function dialogueAvatarClasses(
+  isActiveTurn: boolean,
+  turnMode: HeliosTurnMode = "idle",
+  size: "tap" | "ile" = "tap",
+) {
   return cn(
-    "grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
+    "grid shrink-0 place-items-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
+    size === "ile" ? ILE_DIALOGUE_AVATAR_SIZE_CLASS : TAP_DIALOGUE_AVATAR_SIZE_CLASS,
     turnMode === "interruption"
       ? "animate-dialogue-interruption-pulse border-neutral-600/70 from-neutral-800/15 ring-neutral-600/40"
       : isActiveTurn
@@ -181,18 +193,23 @@ function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string, turnM
 export function HeliosProbeAvatar({
   isActiveTurn = false,
   turnMode = "idle",
+  size = "tap",
 }: {
   isActiveTurn?: boolean;
   turnMode?: HeliosTurnMode;
+  size?: "tap" | "ile";
 }) {
   const isInterruption = turnMode === "interruption";
+  const frame = size === "ile" ? ILE_DIALOGUE_AVATAR_SIZE_CLASS : TAP_DIALOGUE_AVATAR_SIZE_CLASS;
   return (
-    <div className="relative h-28 w-28 shrink-0">
-      <div className={dialogueAvatarClasses(isActiveTurn, turnMode)}>
+    <div className={cn("relative shrink-0", frame)} data-dialogue-avatar="helios" data-dialogue-avatar-size={size}>
+      <div className={dialogueAvatarClasses(isActiveTurn, turnMode, size)}>
         {isInterruption ? (
-          <Zap className="size-8 text-neutral-300" strokeWidth={2.25} aria-hidden />
+          <Zap className={size === "ile" ? "size-5 text-neutral-300" : "size-8 text-neutral-300"} strokeWidth={2.25} aria-hidden />
         ) : (
-          <span className="font-serif text-3xl leading-none text-neutral-200">H</span>
+          <span className={cn("font-serif leading-none text-neutral-200", size === "ile" ? "text-xl" : "text-3xl")}>
+            H
+          </span>
         )}
       </div>
       <div className={dialogueAvatarGlowClass(isActiveTurn, turnMode)} />
@@ -203,14 +220,19 @@ export function HeliosProbeAvatar({
 export function LearnerThoughtAvatar({
   initial,
   isActiveTurn = false,
+  size = "tap",
 }: {
   initial: string;
   isActiveTurn?: boolean;
+  size?: "tap" | "ile";
 }) {
+  const frame = size === "ile" ? ILE_DIALOGUE_AVATAR_SIZE_CLASS : TAP_DIALOGUE_AVATAR_SIZE_CLASS;
   return (
-    <div className="relative h-28 w-28 shrink-0">
-      <div className={dialogueAvatarClasses(isActiveTurn)}>
-        <span className="font-serif text-3xl leading-none text-neutral-100">{initial}</span>
+    <div className={cn("relative shrink-0", frame)} data-dialogue-avatar="learner" data-dialogue-avatar-size={size}>
+      <div className={dialogueAvatarClasses(isActiveTurn, "idle", size)}>
+        <span className={cn("font-serif leading-none text-neutral-100", size === "ile" ? "text-xl" : "text-3xl")}>
+          {initial}
+        </span>
       </div>
       <div className={dialogueAvatarGlowClass(isActiveTurn)} />
     </div>
@@ -332,7 +354,92 @@ function DialogueSplitComic({
 function DialogueSplitIle(
   props: Omit<Parameters<typeof DialogueSplitComic>[0], "variant">,
 ) {
-  return <DialogueSplitComic {...props} variant="ile" />;
+  const {
+    lastAssistantTurn,
+    promptText,
+    isSending,
+    heliosTurnMode = "idle",
+    error,
+  } = props;
+  const turn = resolveIleDialogueTurn({
+    isSending,
+    heliosTurnMode,
+  });
+  const isHeliosInterruption = heliosTurnMode === "interruption";
+  const heliosVisualMode: HeliosTurnMode = isHeliosInterruption
+    ? "interruption"
+    : isSending
+      ? "responding"
+      : "idle";
+  const textClass = ILE_DIALOGUE_TEXT_CLASS;
+  const [thinkTick, setThinkTick] = useState(0);
+
+  useEffect(() => {
+    if (turn.kind !== "waiting") {
+      setThinkTick(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setThinkTick((n) => n + 1);
+    }, ILE_HELIOS_THINKING_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [turn.kind]);
+
+  const thinkingLine = ileHeliosThinkingLine(thinkTick);
+
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6"
+      data-ile-dialogue-compact
+      data-ile-dialogue-speaker="helios"
+      data-ile-dialogue-kind={turn.kind}
+    >
+      {turn.showHeliosAvatar ? (
+        <div className="flex w-full justify-center" data-ile-helios-avatar-top>
+          <HeliosProbeAvatar
+            size="ile"
+            isActiveTurn={turn.kind === "waiting"}
+            turnMode={heliosVisualMode}
+          />
+        </div>
+      ) : null}
+
+      {turn.kind === "waiting" ? (
+        <div
+          className="mt-4 flex w-full max-w-[min(100%,22rem)] flex-col items-center text-center"
+          data-ile-helios-waiting
+        >
+          <div className="flex justify-center gap-1.5 py-1" data-ile-helios-waiting-ellipsis>
+            <div className="size-2 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "0ms" }} />
+            <div className="size-2 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "150ms" }} />
+            <div className="size-2 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "300ms" }} />
+          </div>
+          <p
+            className="mt-3 text-sm text-neutral-300"
+            data-ile-helios-thinking-copy
+          >
+            {thinkingLine}
+          </p>
+          {error ? (
+            <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-4 w-full max-w-[min(100%,34rem)]">
+          <div className={dialogueBubbleClasses(false, "rounded-md text-center", heliosVisualMode)}>
+            {lastAssistantTurn ? (
+              <p className={`${textClass} text-center text-neutral-100`}>{lastAssistantTurn.content}</p>
+            ) : (
+              <p className={`${textClass} text-center text-neutral-300`}>{promptText}</p>
+            )}
+            {error ? (
+              <p className="mt-2 text-center text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function DialogueSplitFramed(
@@ -401,14 +508,45 @@ export function ThoughtBackgroundLayers({
         ? "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.16),transparent_33%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.45),transparent_32%)]"
         : "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]";
 
+  const dimOverlay =
+    dimStrength === "light"
+      ? "rgba(10,10,10,0.48)"
+      : dimStrength === "medium"
+        ? "rgba(10,10,10,0.72)"
+        : "rgba(10,10,10,0.86)";
+  const gradientOverlay =
+    dimStrength === "light"
+      ? "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.12), transparent 36%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.28), transparent 34%)"
+      : dimStrength === "medium"
+        ? "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.16), transparent 33%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.45), transparent 32%)"
+        : "radial-gradient(circle at 72% 8%, rgba(14,116,144,0.18), transparent 31%), radial-gradient(circle at 12% 18%, rgba(39,39,42,0.55), transparent 32%)";
+
   return (
     <>
-      <div className="absolute inset-0 bg-[#0a0a0a]" />
+      <div
+        className="absolute inset-0 bg-[#0a0a0a]"
+        style={{ position: "absolute", inset: 0, background: "#0a0a0a" }}
+      />
       {bgImage && (
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
       )}
-      <div className={`absolute inset-0 ${dimClass}`} />
-      <div className={`absolute inset-0 ${gradientClass}`} />
+      <div
+        className={`absolute inset-0 ${dimClass}`}
+        style={{ position: "absolute", inset: 0, background: dimOverlay }}
+      />
+      <div
+        className={`absolute inset-0 ${gradientClass}`}
+        style={{ position: "absolute", inset: 0, backgroundImage: gradientOverlay }}
+      />
     </>
   );
 }

@@ -5,13 +5,21 @@
  * may offer; visitors open the portal URL and mint a one-shot TAP/ILE
  * guest link without needing the map catalog or public workspace.
  *
+ * Product axes: Explore|Drill × Dialog|Solo
+ * - Explore → always ILE (dialog = learning, solo = project)
+ * - Drill → always TAP (dialog = conversational, solo = exercise)
+ *
  * Pure helpers live here so unit tests do not need Supabase/API I/O.
+ * Legacy open_ended_* / timed_* ids are accepted on read and canonicalized.
  */
 
 import {
   allProductLaunchTargets,
+  canonicalizeProductIntentId,
   productIntentToCreateFields,
   resolveProductIntent,
+  resolveProductIntentFromId,
+  type ProductIntentId,
   type ProductLaunchTarget,
 } from "@/lib/product-intent";
 import {
@@ -21,30 +29,60 @@ import {
   normalizeTapLinkMinutes,
 } from "@/lib/pow-api/tap-link-config";
 
-/** Product intents a portal may enable (Explore/Drill × Open-ended/Timed). */
+/** Canonical product intents a portal may enable (Explore/Drill × Dialog/Solo). */
 export const PRACTICE_PORTAL_PRODUCT_IDS = [
+  "explore_dialog",
+  "explore_solo",
+  "drill_dialog",
+  "drill_solo",
+] as const;
+
+export type PracticePortalProductId = (typeof PRACTICE_PORTAL_PRODUCT_IDS)[number];
+
+/** @deprecated Legacy ids still accepted via parsePracticePortalProductId. */
+export const PRACTICE_PORTAL_LEGACY_PRODUCT_IDS = [
   "open_ended_explore",
   "open_ended_drill",
   "timed_explore",
   "timed_drill",
 ] as const;
 
-export type PracticePortalProductId = (typeof PRACTICE_PORTAL_PRODUCT_IDS)[number];
+/** Duration choices offered when configuring Drill · Dialog (minutes). */
+export const PRACTICE_PORTAL_DRILL_DIALOG_OPTIONS = [5, 10, 15, 30, 45, 60] as const;
 
-/** Duration choices offered when configuring Timed Exploration (minutes). */
-export const PRACTICE_PORTAL_TIMED_EXPLORE_OPTIONS = [5, 10, 15, 30, 45, 60] as const;
+/** Duration choices offered when configuring Drill · Solo (minutes). */
+export const PRACTICE_PORTAL_DRILL_SOLO_OPTIONS = [15, 30, 45, 60, 90] as const;
 
-/** Duration choices offered when configuring Timed Drill (minutes). */
-export const PRACTICE_PORTAL_TIMED_DRILL_OPTIONS = [15, 30, 45, 60, 90] as const;
+/** @deprecated Prefer PRACTICE_PORTAL_DRILL_DIALOG_OPTIONS */
+export const PRACTICE_PORTAL_TIMED_EXPLORE_OPTIONS = PRACTICE_PORTAL_DRILL_DIALOG_OPTIONS;
 
-/** Default Timed Exploration minutes when a portal enables that product without timings. */
-export const PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES: readonly number[] = [5, 10, 30];
+/** @deprecated Prefer PRACTICE_PORTAL_DRILL_SOLO_OPTIONS */
+export const PRACTICE_PORTAL_TIMED_DRILL_OPTIONS = PRACTICE_PORTAL_DRILL_SOLO_OPTIONS;
 
-/** Default Timed Drill minutes when a portal enables that product without timings. */
-export const PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES: readonly number[] = [15, 30, 45];
+/** Default Drill · Dialog minutes when a portal enables that product without timings. */
+export const PRACTICE_PORTAL_DEFAULT_DRILL_DIALOG_MINUTES: readonly number[] = [5, 10, 30];
 
+/** Default Drill · Solo minutes when a portal enables that product without timings. */
+export const PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES: readonly number[] = [15, 30, 45];
+
+/** @deprecated Prefer PRACTICE_PORTAL_DEFAULT_DRILL_DIALOG_MINUTES */
+export const PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES =
+  PRACTICE_PORTAL_DEFAULT_DRILL_DIALOG_MINUTES;
+
+/** @deprecated Prefer PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES */
+export const PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES =
+  PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES;
+
+/**
+ * Timings for Drill (TAP) products. Explore (ILE) products have no duration list.
+ * Keys use both canonical and legacy aliases for storage compatibility.
+ */
 export type PracticePortalTimings = {
+  drill_dialog: number[];
+  drill_solo: number[];
+  /** Legacy alias of drill_dialog (stored configs). */
   timed_explore: number[];
+  /** Legacy alias of drill_solo (stored configs). */
   timed_drill: number[];
 };
 
@@ -67,8 +105,8 @@ export type PracticePortalConfig = {
   timings: PracticePortalTimings;
   /**
    * Optional fixed workspace block for this portal.
-   * When set (and scope_mode is fixed_block), open-ended mints use it without
-   * a visitor block pick; timed mints also default to this block when provided.
+   * When set (and scope_mode is fixed_block), Explore (ILE) mints use it without
+   * a visitor block pick; Drill (TAP) mints also default to this block when provided.
    * Always null when scope_mode is workspace.
    */
   block_id: string | null;
@@ -104,37 +142,46 @@ export type PracticePortalMintValidation =
     };
 
 const PRODUCT_ID_SET = new Set<string>(PRACTICE_PORTAL_PRODUCT_IDS);
+const LEGACY_ID_SET = new Set<string>(PRACTICE_PORTAL_LEGACY_PRODUCT_IDS);
 
-function isTimedProduct(id: PracticePortalProductId): boolean {
-  return id === "timed_explore" || id === "timed_drill";
+function isDrillProduct(id: PracticePortalProductId): boolean {
+  return id === "drill_dialog" || id === "drill_solo";
 }
 
+function isExploreProduct(id: PracticePortalProductId): boolean {
+  return id === "explore_dialog" || id === "explore_solo";
+}
+
+/** @deprecated Prefer isExploreProduct — Explore = ILE (no duration). */
 function isOpenEndedProduct(id: PracticePortalProductId): boolean {
-  return id === "open_ended_explore" || id === "open_ended_drill";
+  return isExploreProduct(id);
+}
+
+/** @deprecated Prefer isDrillProduct — Drill = TAP (duration). */
+function isTimedProduct(id: PracticePortalProductId): boolean {
+  return isDrillProduct(id);
 }
 
 /** Map product intent id → ProductLaunchTarget via shipped resolveProductIntent. */
 export function launchTargetForPracticePortalProduct(
-  productId: PracticePortalProductId,
+  productId: PracticePortalProductId | string,
 ): ProductLaunchTarget {
-  switch (productId) {
-    case "open_ended_explore":
-      return resolveProductIntent("explore", "open_ended");
-    case "open_ended_drill":
-      return resolveProductIntent("drill", "open_ended");
-    case "timed_explore":
-      return resolveProductIntent("explore", "timed");
-    case "timed_drill":
-      return resolveProductIntent("drill", "timed");
-    default:
-      return resolveProductIntent("explore", "open_ended");
-  }
+  return resolveProductIntentFromId(productId);
 }
 
-export function parsePracticePortalProductId(value: unknown): PracticePortalProductId | null {
+/**
+ * Parse product id (canonical or legacy) → canonical PracticePortalProductId.
+ * Unknown → null (never invent a default product from garbage ids).
+ */
+export function parsePracticePortalProductId(
+  value: unknown,
+): PracticePortalProductId | null {
   if (typeof value !== "string") return null;
   const raw = value.trim().toLowerCase();
   if (PRODUCT_ID_SET.has(raw)) return raw as PracticePortalProductId;
+  if (LEGACY_ID_SET.has(raw)) {
+    return canonicalizeProductIntentId(raw) as PracticePortalProductId;
+  }
   return null;
 }
 
@@ -167,12 +214,21 @@ function clampMinutesList(
   return out;
 }
 
+function emptyTimings(): PracticePortalTimings {
+  return {
+    drill_dialog: [],
+    drill_solo: [],
+    timed_explore: [],
+    timed_drill: [],
+  };
+}
+
 /**
  * Normalize raw create/config JSON into a durable portal config.
- * - Invalid product ids are dropped.
+ * - Invalid product ids are dropped; legacy ids are canonicalized.
  * - Empty/missing allowed_products → all four products.
- * - Timed products without timings get map-aligned defaults.
- * - Timings for disabled timed products are cleared.
+ * - Drill products without timings get map-aligned defaults.
+ * - Timings for disabled Drill products are cleared.
  */
 export function normalizePracticePortalConfig(input: unknown): PracticePortalConfig {
   const record =
@@ -207,20 +263,26 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
       ? (record.timings as Record<string, unknown>)
       : {};
 
-  const timedExploreAllowed = allowed.includes("timed_explore");
-  const timedDrillAllowed = allowed.includes("timed_drill");
+  const drillDialogAllowed = allowed.includes("drill_dialog");
+  const drillSoloAllowed = allowed.includes("drill_solo");
 
-  const timed_explore = timedExploreAllowed
+  const drill_dialog = drillDialogAllowed
     ? clampMinutesList(
-        timingsRaw.timed_explore ?? timingsRaw.timedExplore,
-        PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES,
+        timingsRaw.drill_dialog ??
+          timingsRaw.drillDialog ??
+          timingsRaw.timed_explore ??
+          timingsRaw.timedExplore,
+        PRACTICE_PORTAL_DEFAULT_DRILL_DIALOG_MINUTES,
       )
     : [];
 
-  const timed_drill = timedDrillAllowed
+  const drill_solo = drillSoloAllowed
     ? clampMinutesList(
-        timingsRaw.timed_drill ?? timingsRaw.timedDrill,
-        PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
+        timingsRaw.drill_solo ??
+          timingsRaw.drillSolo ??
+          timingsRaw.timed_drill ??
+          timingsRaw.timedDrill,
+        PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES,
       )
     : [];
 
@@ -274,21 +336,24 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
     scopeNormalized === "pick"
   ) {
     scope_mode = "visitor_pick";
-    // visitor pick does not pin a block
     block_id = null;
   } else {
-    // Infer from legacy configs: block_id set → fixed; else visitor pick
     scope_mode = block_id ? "fixed_block" : "visitor_pick";
   }
 
-  // fixed_block without a concrete id falls back to visitor pick
   if (scope_mode === "fixed_block" && !block_id) {
     scope_mode = "visitor_pick";
   }
 
   return {
     allowed_products: allowed,
-    timings: { timed_explore, timed_drill },
+    timings: {
+      drill_dialog,
+      drill_solo,
+      // Legacy mirrors so older UI/tests that read timed_* still work.
+      timed_explore: drill_dialog,
+      timed_drill: drill_solo,
+    },
     block_id: scope_mode === "workspace" ? null : block_id,
     scope_mode,
   };
@@ -303,15 +368,15 @@ export function isPracticePortalWorkspaceScope(
 
 /**
  * Products that can actually mint under the portal's scope.
- * Workspace-level force only supports products that allow null block_id (timed TAP);
- * open-ended ILE requires a concrete block and is excluded from the public desk.
+ * Workspace-level force only supports Drill (TAP) products that allow null block_id;
+ * Explore (ILE) requires a concrete block and is excluded from the public desk.
  */
 export function practicePortalProductsForScope(
   config: PracticePortalConfig,
 ): PracticePortalProductId[] {
   const cfg = normalizePracticePortalConfig(config);
   if (cfg.scope_mode !== "workspace") return cfg.allowed_products;
-  return cfg.allowed_products.filter((id) => !isOpenEndedProduct(id));
+  return cfg.allowed_products.filter((id) => !isExploreProduct(id));
 }
 
 /**
@@ -350,8 +415,8 @@ export function isPracticePortalProductAllowed(
 
 /**
  * Whether a duration is allowed for a product.
- * Open-ended products always pass (minutes ignored).
- * Timed products require minutes to be in the configured list.
+ * Explore (ILE) products always pass (minutes ignored).
+ * Drill (TAP) products require minutes to be in the configured list.
  */
 export function isPracticePortalTimingAllowed(
   config: PracticePortalConfig,
@@ -361,10 +426,10 @@ export function isPracticePortalTimingAllowed(
   const id = parsePracticePortalProductId(productId);
   if (!id) return false;
   if (!isPracticePortalProductAllowed(config, id)) return false;
-  if (isOpenEndedProduct(id)) return true;
+  if (isExploreProduct(id)) return true;
 
   const list =
-    id === "timed_drill" ? config.timings.timed_drill : config.timings.timed_explore;
+    id === "drill_solo" ? config.timings.drill_solo : config.timings.drill_dialog;
   if (list.length === 0) return false;
   const n = typeof minutes === "number" ? minutes : Number(minutes);
   if (!Number.isFinite(n)) return false;
@@ -399,22 +464,22 @@ export function validatePracticePortalMintRequest(
   const launch = launchTargetForPracticePortalProduct(productId);
   const block_id = resolvePracticePortalMintBlockId(config, body?.block_id);
 
-  // Workspace-forced portals cannot mint open-ended (ILE requires a block).
-  if (config.scope_mode === "workspace" && isOpenEndedProduct(productId)) {
+  // Workspace-forced portals cannot mint Explore (ILE requires a block).
+  if (config.scope_mode === "workspace" && isExploreProduct(productId)) {
     return {
       ok: false,
       error:
-        "Open-ended products are not available on workspace-level Knowledge Portals (they require a practice block). Enable a timed product or switch the portal off workspace scope.",
+        "Explore products are not available on workspace-level Knowledge Portals (they require a practice block). Enable a Drill product or switch the portal off workspace scope.",
       code: "product_not_allowed",
     };
   }
 
-  if (isOpenEndedProduct(productId)) {
+  if (isExploreProduct(productId)) {
     if (!block_id) {
       return {
         ok: false,
         error:
-          "block_id is required for open-ended products (set a fixed block on the portal or pass block_id)",
+          "block_id is required for Explore products (set a fixed block on the portal or pass block_id)",
         code: "block_required",
       };
     }
@@ -427,14 +492,14 @@ export function validatePracticePortalMintRequest(
     };
   }
 
-  // Timed products — workspace scope always yields block_id null (enforced above).
+  // Drill (TAP) products — workspace scope always yields block_id null (enforced above).
   const timingList =
-    productId === "timed_drill"
-      ? config.timings.timed_drill
-      : config.timings.timed_explore;
+    productId === "drill_solo"
+      ? config.timings.drill_solo
+      : config.timings.drill_dialog;
   const defaultMinutes =
     timingList[0] ??
-    (productId === "timed_drill" ? 30 : TAP_LINK_DEFAULT_MINUTES);
+    (productId === "drill_solo" ? 30 : TAP_LINK_DEFAULT_MINUTES);
 
   let minutes: number;
   if (body?.minutes === undefined || body?.minutes === null || body?.minutes === "") {
@@ -444,7 +509,6 @@ export function validatePracticePortalMintRequest(
   }
 
   if (!isPracticePortalTimingAllowed(config, productId, minutes)) {
-    // If caller sent an explicit value not in list, refuse; if list empty, refuse.
     if (
       body?.minutes !== undefined &&
       body?.minutes !== null &&
@@ -457,7 +521,6 @@ export function validatePracticePortalMintRequest(
         code: "timing_not_allowed",
       };
     }
-    // No explicit minutes and empty timing list
     if (timingList.length === 0) {
       return {
         ok: false,
@@ -465,7 +528,6 @@ export function validatePracticePortalMintRequest(
         code: "timing_not_allowed",
       };
     }
-    // normalize may have drifted outside list — refuse
     return {
       ok: false,
       error: `Duration ${minutes} min is not enabled for ${productId}`,
@@ -606,10 +668,10 @@ export function buildPracticePortalLandingView(input: {
   const products = productIds.map((id) => {
     const launch = launchTargetForPracticePortalProduct(id);
     const timings =
-      id === "timed_explore"
-        ? config.timings.timed_explore
-        : id === "timed_drill"
-          ? config.timings.timed_drill
+      id === "drill_dialog"
+        ? config.timings.drill_dialog
+        : id === "drill_solo"
+          ? config.timings.drill_solo
           : [];
     return { id, launch, timings };
   });
@@ -620,8 +682,6 @@ export function buildPracticePortalLandingView(input: {
     is_start: b.is_start === true,
   }));
 
-  // Workspace force: no block list (hides picker). Fixed: only that block.
-  // Visitor pick: full inventory.
   let blocks: Array<{ id: string; title: string | null; is_start: boolean }>;
   if (config.scope_mode === "workspace") {
     blocks = [];
@@ -648,21 +708,5 @@ export function buildPracticePortalLandingView(input: {
   };
 }
 
-/** All product launch targets that a portal can expose (UI order). */
-export function practicePortalAllLaunchTargets(): ProductLaunchTarget[] {
-  return allProductLaunchTargets();
-}
-
-export function isPracticePortalTimedProduct(
-  productId: PracticePortalProductId | string | null | undefined,
-): boolean {
-  const id = parsePracticePortalProductId(productId);
-  return id ? isTimedProduct(id) : false;
-}
-
-export function isPracticePortalOpenEndedProduct(
-  productId: PracticePortalProductId | string | null | undefined,
-): boolean {
-  const id = parsePracticePortalProductId(productId);
-  return id ? isOpenEndedProduct(id) : false;
-}
+/** Re-export for callers that list all launch targets. */
+export { allProductLaunchTargets, resolveProductIntent };

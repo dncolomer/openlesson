@@ -25,11 +25,16 @@ import {
   WorkspaceRightPaneDrawer,
   WorkspaceRightPaneDrawerGroup,
 } from "@/components/WorkspaceRightPaneDrawer";
+import {
+  WorkspacePromptContextAlternatives,
+  type PromptContextMode,
+} from "@/components/WorkspacePromptContextAlternatives";
 
 /**
- * Map explore right-column UI as accordion drawers (overview, search, suggest
- * spot, selective description). Mounted only while the floating search FAB is
- * open — not the default empty-selection pane. Powered by /api/workspace/map-explore.
+ * Expand Map right-column UI as accordion drawers (overview, search, suggest
+ * spot, selective description). Mounted only while the Explore / Expand Map
+ * control is open — not the default empty-selection pane.
+ * Powered by /api/workspace/map-explore.
  */
 export function WorkspaceEmptyMapPane({
   canEdit = false,
@@ -75,6 +80,8 @@ export function WorkspaceEmptyMapPane({
   const [searchQuery, setSearchQuery] = useState("");
   const [spotTopic, setSpotTopic] = useState("");
   const [spotLimit, setSpotLimit] = useState(SUGGEST_SPOT_LIMIT_DEFAULT);
+  const [spotContextMode, setSpotContextMode] =
+    useState<PromptContextMode>("adhoc");
   const [searchStatus, setSearchStatus] = useState<string | null>(null);
   const [spotStatus, setSpotStatus] = useState<string | null>(null);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -367,8 +374,12 @@ export function WorkspaceEmptyMapPane({
         data-map-explore-header
         className="shrink-0 border-b border-neutral-800/80 px-3 py-2"
       >
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-          Map explore · {modeLabel}
+        <p
+          className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500"
+          data-expand-map-title
+          data-map-explore-drawer-title
+        >
+          Expand Map · {modeLabel}
         </p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-neutral-500">
           Open a drawer: overview, search, empty spots, or selective summary.
@@ -466,6 +477,22 @@ export function WorkspaceEmptyMapPane({
             (not filled blocks).
             {!canEdit ? " Visibility only in Play." : ""}
           </p>
+          <div data-expand-map-suggest-context data-suggest-best-spot-context>
+            <WorkspacePromptContextAlternatives
+              workspaceId={workspaceId || undefined}
+              ayclToken={ayclToken || undefined}
+              draftPrompt={spotTopic}
+              surface="expand map suggest spot"
+              mode={spotContextMode}
+              onModeChange={setSpotContextMode}
+              adhocValue={spotTopic}
+              onAdhocChange={setSpotTopic}
+              onAccept={(prompt) => setSpotTopic(prompt)}
+              disabled={disabled || spotBusy}
+              adhocPlaceholder="Best spot for… (or use Suggest from Knowledge / Simulation)"
+              adhocLabel="Topic for empty spot"
+            />
+          </div>
           <label className="block space-y-1.5">
             <span className="sr-only">Topic for empty spot</span>
             <input

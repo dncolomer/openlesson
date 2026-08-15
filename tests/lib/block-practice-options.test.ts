@@ -80,13 +80,17 @@ describe("normalize + allow rules", () => {
     expect(both.allowDrill).toBe(true);
 
     const combos = enabledPracticeLaunchCombos(limited);
-    expect(combos).toEqual(["timed_drill"]);
-    expect(practiceOptionsIconKeys(limited)).toEqual(["drill", "timed"]);
+    // drill + solo only (allow_open_ended=false → no dialog; allow_timed=true → solo)
+    expect(combos).toEqual(["drill_solo"]);
+    expect(practiceOptionsIconKeys(limited)).toEqual(
+      expect.arrayContaining(["drill", "solo", "timed"]),
+    );
     expect(practiceOptionsIsRestricted(limited)).toBe(true);
     expect(practiceOptionsIsRestricted(def)).toBe(false);
 
     const ui = resolveDefaultPracticeLaunchUi(limited);
     expect(ui.style).toBe("drill");
+    expect(ui.solo).toBe(true);
     expect(ui.timebox).toBe(true);
     expect(ui.durationMinutes).toBe(10);
 
@@ -137,21 +141,26 @@ describe("structural: Edit drawer + launch + map icons", () => {
     expect(card).toContain("data-practice-allow-explore");
 
     expect(grid).toContain("BlockPracticeOptionsBadge");
-    expect(grid).toContain("data-block-practice-icons");
-    expect(grid).toContain("data-practice-icon");
     expect(grid).toContain("practiceOptionsIconKeys");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(badges).toContain("data-block-practice-icons");
+    expect(badges).toContain("data-practice-icon");
     // Top-left map decorator icons: monochrome white (not per-kind tints).
-    const practiceBadge = grid.slice(
-      grid.indexOf("function BlockPracticeOptionsBadge"),
-      grid.indexOf("function cellKey"),
+    const practiceBadge = badges.slice(
+      badges.indexOf("export function BlockPracticeOptionsBadge"),
     );
-    for (const key of ["explore", "drill", "open", "timed"] as const) {
+    for (const key of ["explore", "drill", "dialog", "solo"] as const) {
       expect(practiceBadge).toMatch(
         new RegExp(
           `className="[^"]*text-white[^"]*"[\\s\\S]{0,60}data-practice-icon="${key}"`,
         ),
       );
     }
+    // Tooltips use With AI / Solo (not Open-ended / Timed)
+    expect(practiceBadge).toContain('"With AI"');
+    expect(practiceBadge).toContain('"Solo"');
+    expect(practiceBadge).not.toContain('"Open-ended"');
+    expect(practiceBadge).not.toMatch(/:\s*"Timed"/);
     expect(practiceBadge).not.toMatch(/text-(?:sky|violet|emerald|amber)-/);
 
     expect(learner).toContain("parseBlockPracticeOptions");

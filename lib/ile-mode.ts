@@ -339,3 +339,25 @@ export function buildIleChapterDonePowToolData(input: {
 export function ileProjectThoughtsStorageKey(sessionId: string, chapterId: string): string {
   return `uncertain-systems:${sessionId}:project-thoughts:${chapterId}`;
 }
+
+export function serializeIleProjectThoughts(lists: ExerciseDualLists): string {
+  return JSON.stringify(lists);
+}
+
+export function parseIleProjectThoughtsStored(
+  raw: string | null | undefined,
+): ExerciseDualLists | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ExerciseDualLists>;
+    if (!parsed || !Array.isArray(parsed.stash) || !Array.isArray(parsed.submitted)) {
+      return null;
+    }
+    return {
+      stash: parsed.stash,
+      submitted: parsed.submitted,
+    };
+  } catch {
+    return null;
+  }
+}

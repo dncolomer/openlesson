@@ -24,10 +24,18 @@ import { useI18n } from "@/lib/i18n";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import {
+  tapTracePayload,
+  TAP_SESSION_RUNTIME_PATHS,
+  isTapLiveThoughtSpeechEnabled,
+  shouldRestartLocalTapSpeechBindings,
+  tapLiveSpeechFlushText,
+} from "@/lib/tap-session-runtime";
+import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
   startLiveSpeechRecognition,
   stopLiveSpeechRecognition,
+  useSessionThoughtInterface,
   useSpeechSupported,
   type LiveSpeechRecognitionBindings,
   type SpeechRecognitionEventLike,
@@ -303,19 +311,34 @@ export function ExerciseTapClient({
       void fetch("/api/workspace-tap-score/trace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(tapTracePayload({
           workspaceId,
           blockId,
           sessionId,
           privateToken,
           tapSessionId: activeTapSessionId,
           entryQueryParams: entryQueryParamsRef.current,
+          practice: isPracticeModeRef.current,
           ...input,
-        }),
+        })),
       }).catch(() => {});
     },
     [workspaceId, blockId, sessionId, privateToken],
   );
+
+  const tapThoughtSpeech = useSessionThoughtInterface({
+    enabled: isTapLiveThoughtSpeechEnabled(phase),
+    speechLang,
+    sessionId: tapSessionId || sessionId || undefined,
+    captureKeys: false,
+    onLogTrace: () => {},
+    onSendToProbe: async () => {},
+    onSpeechTranscript: (text) => {
+      lastSpeechActivityAtRef.current = Date.now();
+      crystallizableTextRef.current = text;
+      setCrystallizableText(text);
+    },
+  });
 
   function clearTranscriptionDisplay() {
     finalBufferRef.current = [];
@@ -324,6 +347,7 @@ export function ExerciseTapClient({
     acceptEmptyTranscriptRef.current = true;
     lastSpeechActivityAtRef.current = Date.now();
     setTranscriptSilenceMs(0);
+    tapThoughtSpeech.clearCurrentTranscription();
   }
 
   const applyPurityHit = useCallback(() => {
@@ -382,8 +406,9 @@ export function ExerciseTapClient({
   const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
+    if (!shouldRestartLocalTapSpeechBindings(phase)) return;
     restartLiveSpeechRecognition(speechBindings);
-  }, [speechBindings]);
+  }, [phase, speechBindings]);
 
   /** System 1: Del / silence — stash live speech into stash history. */
   const stashCurrentTranscription = useCallback(
@@ -553,10 +578,12 @@ export function ExerciseTapClient({
     setSessionPurity(TAP_SESSION_PURITY_MAX);
     setSessionEndedImpure(false);
     setTranscriptSilenceMs(0);
-    startLiveSpeechRecognition(speechBindings, speechLang);
+    if (!isTapLiveThoughtSpeechEnabled("live")) {
+      startLiveSpeechRecognition(speechBindings, speechLang);
+    }
 
     try {
-      const response = await fetch("/api/workspace-tap-score/start", {
+      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.start, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -614,7 +641,11 @@ export function ExerciseTapClient({
     setSessionEndedImpure(impure);
     let finalLists = listsRef.current;
     if (!impure) {
-      const text = normalize(crystallizableTextRef.current || crystallizableText);
+      const text = tapLiveSpeechFlushText({
+        hookFormingText: tapThoughtSpeech.getFormingText(),
+        crystallizableText: crystallizableTextRef.current || crystallizableText,
+        localFinalBuffer: finalBufferRef.current,
+      });
       if (text) {
         // Flush remaining live speech into stash (sys1), then promote to submission (sys2).
         const stashed = stashExerciseSpeech(finalLists, text);
@@ -672,7 +703,7 @@ export function ExerciseTapClient({
           ? transcript
           : [{ role: "assistant", text: exerciseText || "Exercise TAP", at: new Date().toISOString() }];
 
-      const response = await fetch("/api/workspace-tap-score/complete", {
+      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.complete, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -786,8 +817,7 @@ export function ExerciseTapClient({
 
   function retryMicrophone() {
     setSpeechError(null);
-    stopLiveSpeechRecognition(speechBindings);
-    startLiveSpeechRecognition(speechBindings, speechLang);
+    tapThoughtSpeech.retryMicrophone();
   }
 
   if (isMobile) {

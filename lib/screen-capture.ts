@@ -19,6 +19,75 @@ export interface ScreenCaptureInstance {
   getStream: () => MediaStream | null;
 }
 
+/** User closed the picker or denied display-media — not an application failure. */
+export function isScreenCaptureUserDenied(error: unknown): boolean {
+  const err = error instanceof Error ? error : null;
+  const name = err?.name || "";
+  const message = String(err?.message || error || "").toLowerCase();
+  if (name === "NotAllowedError" || name === "AbortError") return true;
+  return (
+    message.includes("permission denied") ||
+    message.includes("notallowederror") ||
+    message.includes("not allowed")
+  );
+}
+
+/** Hidden / inactive document — getDisplayMedia throws InvalidStateError (spec). */
+export function isScreenCaptureInvalidState(error: unknown): boolean {
+  const err = error instanceof Error ? error : null;
+  if (err?.name === "InvalidStateError") return true;
+  return String(err?.message || error || "").toLowerCase().includes("invalid state");
+}
+
+export function isScreenCaptureStartQuietFailure(error: unknown): boolean {
+  return isScreenCaptureUserDenied(error) || isScreenCaptureInvalidState(error);
+}
+
+export type ScreenCaptureMediaDevices = {
+  getDisplayMedia: (constraints?: DisplayMediaStreamOptions) => Promise<MediaStream>;
+};
+
+export type ScreenCaptureMediaHost = {
+  closed?: boolean;
+  document?: { visibilityState?: string };
+  navigator?: { mediaDevices?: Partial<ScreenCaptureMediaDevices> | null };
+  documentPictureInPicture?: { window?: ScreenCaptureMediaHost | null };
+};
+
+export type ScreenCaptureMediaSource = "pip" | "opener" | "none";
+
+function hostHasGetDisplayMedia(
+  host: ScreenCaptureMediaHost | null | undefined,
+): host is ScreenCaptureMediaHost & { navigator: { mediaDevices: ScreenCaptureMediaDevices } } {
+  return typeof host?.navigator?.mediaDevices?.getDisplayMedia === "function";
+}
+
+function hostIsUsableForDisplayMedia(host: ScreenCaptureMediaHost | null | undefined): boolean {
+  if (!host || host.closed === true) return false;
+  if (!hostHasGetDisplayMedia(host)) return false;
+  return host.document?.visibilityState !== "hidden";
+}
+
+/**
+ * getDisplayMedia must run on a visible, fully-active document.
+ * Mini-mode Document PiP is visible while the ILE tab is hidden — use the PiP window.
+ */
+export function resolveScreenCaptureMediaDevices(
+  opener: ScreenCaptureMediaHost | null | undefined = typeof window === "undefined" ? null : window,
+): { mediaDevices: ScreenCaptureMediaDevices | null; source: ScreenCaptureMediaSource } {
+  const pip = opener?.documentPictureInPicture?.window ?? null;
+  if (hostIsUsableForDisplayMedia(pip)) {
+    return { mediaDevices: pip.navigator.mediaDevices, source: "pip" };
+  }
+  if (hostIsUsableForDisplayMedia(opener)) {
+    return { mediaDevices: opener.navigator.mediaDevices, source: "opener" };
+  }
+  if (hostHasGetDisplayMedia(opener)) {
+    return { mediaDevices: opener.navigator.mediaDevices, source: "opener" };
+  }
+  return { mediaDevices: null, source: "none" };
+}
+
 // Create a screen capture instance
 export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenCaptureInstance {
   const {
@@ -102,9 +171,13 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
     }
 
     try {
-      console.log("[ScreenCapture] Requesting getDisplayMedia...");
-      // Request screen capture permission
-      stream = await navigator.mediaDevices.getDisplayMedia({
+      const resolved = resolveScreenCaptureMediaDevices();
+      if (!resolved.mediaDevices) {
+        return false;
+      }
+      console.log("[ScreenCapture] Requesting getDisplayMedia...", resolved.source);
+      // Request screen capture permission from a visible document (PiP when the ILE tab is hidden).
+      stream = await resolved.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: "monitor", // Prefer full screen
           frameRate: 1, // Low framerate since we only need screenshots
@@ -143,15 +216,12 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
 
       return true;
     } catch (error) {
-      // User cancelled or error occurred
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error("[ScreenCapture] Error starting capture:", err.name, err.message);
-      
-      // Don't report "Permission denied" as error - user just cancelled
-      if (err.name !== "NotAllowedError") {
-        onError?.(err);
+      if (isScreenCaptureStartQuietFailure(err)) {
+        return false;
       }
-      
+      console.error("[ScreenCapture] Error starting capture:", err.name, err.message);
+      onError?.(err);
       return false;
     }
   };

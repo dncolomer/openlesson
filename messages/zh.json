@@ -1627,6 +1627,7 @@
     "territory": "区域 {number}",
     "goal": "目标",
     "loadChapter": "加载章节",
+    "reloadChapter": "Reload Chapter",
     "loadingChapter": "正在加载章节…",
     "addChapter": "添加章节",
     "newChapterPlaceholder": "这一章应该涵盖什么？",

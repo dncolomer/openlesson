@@ -22,6 +22,7 @@ import {
   shouldAutoStashOnContextFull,
   thoughtContextFillRatio,
 } from "@/lib/thought-context-auto-stash";
+import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 
@@ -64,10 +65,8 @@ interface SessionHeliosPanelProps {
   chapterFollowUpsLoading?: boolean;
   chapterFollowUpsError?: string | null;
   onSelectChapterFollowUp?: (suggestion: ChapterFollowUpSuggestion) => void;
-  onProjectStash?: () => void;
+  onProjectStash?: (text?: string) => void;
   onProjectSubmitToSolution?: () => void;
-  /** Open the Thoughts tool (dual stack in Project Mode / memory in Learning Mode). */
-  onOpenThoughts?: () => void;
 }
 
 export function SessionHeliosPanel({
@@ -103,7 +102,6 @@ export function SessionHeliosPanel({
   onSelectChapterFollowUp,
   onProjectStash,
   onProjectSubmitToSolution,
-  onOpenThoughts,
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
@@ -116,37 +114,64 @@ export function SessionHeliosPanel({
   }, [aestheticImages, sessionId]);
 
   // Thought context capacity auto-stash (ILE has no purity clock).
+  // Reads live forming text (ref) so a full bar actually persists.
   useEffect(() => {
     if (!isSessionActive || !thought.speechEnabled || chapterThoughtsLocked) {
       contextStashInFlightRef.current = false;
       return;
     }
-    const text = thought.crystallizableText || "";
-    const ratio = thoughtContextFillRatio(text, THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
+    const live =
+      typeof thought.getFormingText === "function"
+        ? thought.getFormingText()
+        : thought.crystallizableText || "";
+    const ratio = thoughtContextFillRatio(live, THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
     if (
-      shouldAutoStashOnContextFull(ratio) &&
-      !contextStashInFlightRef.current &&
-      text.trim()
+      !shouldAutoStashOnContextFull(ratio) ||
+      contextStashInFlightRef.current ||
+      !live.trim()
     ) {
-      contextStashInFlightRef.current = true;
-      if (projectMode && onProjectStash) {
-        onProjectStash();
-      } else {
-        thought.stashCurrentTranscription();
-      }
-      // Allow next fill cycle after stash clears the forming text.
-      window.setTimeout(() => {
-        contextStashInFlightRef.current = false;
-      }, 300);
+      return;
     }
+
+    const result = applyIleContextFullAutoStash({
+      formingText: live,
+      sessionMode: projectMode ? "project" : "learning",
+      chapterStatus: chapterThoughtsLocked ? "completed" : "in_progress",
+      thoughtMemory: thought.thoughts,
+      projectLists: {
+        stash: projectStash,
+        submitted: projectSolution,
+      },
+    });
+    if (!result.didStash || !result.thought) return;
+
+    contextStashInFlightRef.current = true;
+    if (projectMode && onProjectStash) {
+      thought.clearCurrentTranscription();
+      onProjectStash(result.thought.text);
+    } else if (typeof thought.ingestStashedThought === "function") {
+      thought.ingestStashedThought(result.thought);
+      thought.clearCurrentTranscription();
+    } else {
+      thought.stashCurrentTranscription(result.thought.text);
+    }
+    window.setTimeout(() => {
+      contextStashInFlightRef.current = false;
+    }, 300);
   }, [
     isSessionActive,
     thought.crystallizableText,
     thought.speechEnabled,
     thought.stashCurrentTranscription,
+    thought.getFormingText,
+    thought.ingestStashedThought,
+    thought.clearCurrentTranscription,
+    thought.thoughts,
     projectMode,
     chapterThoughtsLocked,
     onProjectStash,
+    projectStash,
+    projectSolution,
   ]);
 
   if (showWelcome) {
@@ -456,19 +481,6 @@ export function SessionHeliosPanel({
                 </div>
                 <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
-
-              {onOpenThoughts ? (
-                <div className="mt-2.5 flex justify-end">
-                  <button
-                    type="button"
-                    data-open-thoughts
-                    onClick={onOpenThoughts}
-                    className="rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-500 hover:text-white"
-                  >
-                    Open Thoughts
-                  </button>
-                </div>
-              ) : null}
 
               {!projectMode ? (
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">

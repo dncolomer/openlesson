@@ -301,11 +301,15 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{target_step_count}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{min_steps}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{max_steps}");
+    expect(DEFAULT_PROMPTS.session_plan_create).toContain("{chapter_grain_rules}");
+    expect(DEFAULT_PROMPTS.session_plan_create).toContain("{session_mode}");
     expect(DEFAULT_PROMPTS.session_plan_create).not.toMatch(/ILE session planner for Uncertain Systems/);
 
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/practice coach|Optimize|good enough|Mark as Done/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/next or adjacent chapter|adjacent chapter|next chapter/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/not TAP System 1|not TAP dual-stream/i);
+    expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_closure_rules}");
+    expect(DEFAULT_PROMPTS.session_plan_update).toContain("{chapter_expansion_rules}");
     expect(DEFAULT_PROMPTS.opening_probe).toMatch(/practice coach|Canvas|task|deeper work|chapter/i);
     expect(DEFAULT_PROMPTS.probe_generation).toMatch(/practice coach|tool|Optimize|chapter/i);
     expect(DEFAULT_PROMPTS).not.toHaveProperty("stuck_policy_recommendation");

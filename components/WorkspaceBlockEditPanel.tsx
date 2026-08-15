@@ -21,8 +21,8 @@ function practiceOptionsEqual(a: BlockPracticeOptions, b: BlockPracticeOptions):
 }
 
 /**
- * Owner-facing block update/delete form for the block-detail Edit drawer.
- * Replaces the map sidebar pen tool + overlay modal.
+ * Owner-facing block update form for the block-detail Edit drawer.
+ * Destructive delete is a sibling drawer, not part of this form.
  */
 export function WorkspaceBlockEditPanel({
   blockId,
@@ -33,7 +33,6 @@ export function WorkspaceBlockEditPanel({
   canEdit,
   busy = false,
   onUpdate,
-  onDelete,
 }: {
   blockId: string;
   title: string;
@@ -51,7 +50,6 @@ export function WorkspaceBlockEditPanel({
     isStart: boolean;
     practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
-  onDelete?: (blockId: string) => Promise<void> | void;
 }) {
   const savedPractice = useMemo(
     () => normalizeBlockPracticeOptions(practiceOptionsProp ?? null),
@@ -62,8 +60,6 @@ export function WorkspaceBlockEditPanel({
   const [editIsStart, setEditIsStart] = useState(Boolean(isStart));
   const [editPractice, setEditPractice] = useState<BlockPracticeOptions>(savedPractice);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset draft when switching blocks or when saved values change externally.
@@ -72,7 +68,6 @@ export function WorkspaceBlockEditPanel({
     setEditDescription(description || "");
     setEditIsStart(Boolean(isStart));
     setEditPractice(normalizeBlockPracticeOptions(practiceOptionsProp ?? null));
-    setConfirmDelete(false);
     setError(null);
   }, [blockId, title, description, isStart, practiceOptionsProp]);
 
@@ -80,7 +75,7 @@ export function WorkspaceBlockEditPanel({
     return (
       <div data-block-edit-readonly className="space-y-1.5">
         <p className="text-[11px] text-neutral-500">
-          Only the workspace owner can update or delete this block.
+          Only the workspace owner can update this block.
         </p>
         <p className="text-xs font-medium text-neutral-200">{title}</p>
         {description ? (
@@ -99,9 +94,10 @@ export function WorkspaceBlockEditPanel({
           {[
             savedPractice.allowExplore ? "Explore" : null,
             savedPractice.allowDrill ? "Drill" : null,
-            savedPractice.allowOpenEnded ? "Open-ended" : null,
-            savedPractice.allowTimed
-              ? `Timed (${savedPractice.allowedDurationsMinutes.join("/")}m)`
+            savedPractice.allowDialog ? "With AI" : null,
+            savedPractice.allowSolo ? "Solo" : null,
+            savedPractice.allowDrill && savedPractice.allowedDurationsMinutes.length
+              ? `Durations (${savedPractice.allowedDurationsMinutes.join("/")}m)`
               : null,
           ]
             .filter(Boolean)
@@ -125,7 +121,7 @@ export function WorkspaceBlockEditPanel({
 
   const toggleDuration = (mins: number) => {
     setEditPractice((prev) => {
-      if (!prev.allowTimed) return prev;
+      if (!prev.allowDrill) return prev;
       const has = prev.allowedDurationsMinutes.includes(mins);
       const next = has
         ? prev.allowedDurationsMinutes.filter((m) => m !== mins)
@@ -156,21 +152,7 @@ export function WorkspaceBlockEditPanel({
     }
   };
 
-  const remove = async () => {
-    if (!onDelete) return;
-    setDeleting(true);
-    setError(null);
-    try {
-      await onDelete(blockId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete block");
-      setConfirmDelete(false);
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const disabled = busy || saving || deleting;
+  const disabled = busy || saving;
 
   return (
     <div data-block-edit-panel data-block-id={blockId} className="space-y-3">
@@ -223,7 +205,7 @@ export function WorkspaceBlockEditPanel({
         </span>
       </label>
 
-      {/* Practice launch limits — granular Explore/Drill × open/timed + durations */}
+      {/* Practice launch limits — Explore/Drill × Dialog/Solo + Drill durations */}
       <div
         className="space-y-2.5 rounded-md border border-neutral-800 bg-neutral-950/50 p-2.5"
         data-block-edit-practice-options
@@ -231,8 +213,8 @@ export function WorkspaceBlockEditPanel({
         <div>
           <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
           <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
-            Limit what learners can launch from this block. Map icons show the
-            enabled combo.
+            Explore launches ILE; Drill launches TAP. Second choice for both:
+            With AI vs Solo. Durations apply to Drill (TAP) only.
           </p>
         </div>
 
@@ -259,32 +241,46 @@ export function WorkspaceBlockEditPanel({
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-horizons>
+        <div
+          className="grid grid-cols-2 gap-1.5"
+          data-block-edit-practice-modalities
+          data-block-edit-practice-horizons
+        >
           <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
+              data-block-edit-allow-dialog
               data-block-edit-allow-open-ended
-              checked={editPractice.allowOpenEnded}
+              checked={editPractice.allowDialog}
               disabled={disabled}
               onChange={(e) =>
-                patchPractice({ allowOpenEnded: e.target.checked })
+                patchPractice({
+                  allowDialog: e.target.checked,
+                  allowOpenEnded: e.target.checked,
+                })
               }
             />
-            <span className="text-[11px] text-neutral-200">Open-ended</span>
+            <span className="text-[11px] text-neutral-200">With AI</span>
           </label>
           <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
+              data-block-edit-allow-solo
               data-block-edit-allow-timed
-              checked={editPractice.allowTimed}
+              checked={editPractice.allowSolo}
               disabled={disabled}
-              onChange={(e) => patchPractice({ allowTimed: e.target.checked })}
+              onChange={(e) =>
+                patchPractice({
+                  allowSolo: e.target.checked,
+                  allowTimed: e.target.checked,
+                })
+              }
             />
-            <span className="text-[11px] text-neutral-200">Timed</span>
+            <span className="text-[11px] text-neutral-200">Solo</span>
           </label>
         </div>
 
-        {editPractice.allowTimed ? (
+        {editPractice.allowDrill ? (
           <div data-block-edit-practice-durations>
             <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
               Allowed timed lengths
@@ -335,53 +331,6 @@ export function WorkspaceBlockEditPanel({
       >
         {saving ? "Saving…" : "Save changes"}
       </button>
-
-      <div
-        className="border-t border-neutral-800/80 pt-3"
-        data-block-edit-delete-section
-      >
-        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-          Danger zone
-        </p>
-        {!confirmDelete ? (
-          <button
-            type="button"
-            data-block-edit-delete
-            disabled={disabled || !onDelete}
-            onClick={() => setConfirmDelete(true)}
-            className="mt-2 w-full rounded-md border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs font-medium text-red-200 transition hover:border-red-400/60 hover:bg-red-950/50 disabled:opacity-40"
-          >
-            Delete block
-          </button>
-        ) : (
-          <div className="mt-2 space-y-2" data-block-edit-delete-confirm>
-            <p className="text-[11px] leading-snug text-neutral-400">
-              Delete <span className="text-neutral-200">“{title}”</span>? This removes
-              the block from the map. This cannot be undone.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                data-block-edit-delete-cancel
-                disabled={disabled}
-                onClick={() => setConfirmDelete(false)}
-                className="flex-1 rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-300 hover:border-neutral-500 hover:text-white disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-block-edit-delete-confirm-btn
-                disabled={disabled}
-                onClick={() => void remove()}
-                className="flex-1 rounded-md border border-red-500/50 bg-red-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-40"
-              >
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

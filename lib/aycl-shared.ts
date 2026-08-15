@@ -72,13 +72,35 @@ export function formatAyclPriceCentsLabel(cents: number): string {
 
 /** Short offer labels — never "rent" / "buy" movie metaphors. */
 export function ayclOfferLabel(tier: AyclAccessTier): string {
-  return tier === "learner" ? "Practice access" : "Full access";
+  return tier === "learner" ? "play mode only" : "Play + Build";
+}
+
+/** What Play means on AYCL offers (tooltip). */
+export function ayclPlayTooltip(): string {
+  return "Play is practice: explore the map and train on existing content at your pace.";
+}
+
+/** What Build means on AYCL offers (tooltip). */
+export function ayclBuildTooltip(): string {
+  return "Build is authoring: add blocks, reshape the map, and grow your private copy.";
+}
+
+/** Tooltip attached to an offer title / checkout CTA. */
+export function ayclOfferTooltip(tier: AyclAccessTier): string {
+  return tier === "learner"
+    ? ayclPlayTooltip()
+    : `${ayclPlayTooltip()} ${ayclBuildTooltip()}`;
+}
+
+/** Checkout button label — follows the same offer names. */
+export function ayclOfferCheckoutCta(tier: AyclAccessTier): string {
+  return tier === "learner" ? "Get play mode only" : "Get Play + Build";
 }
 
 export function ayclOfferDescription(tier: AyclAccessTier): string {
   return tier === "learner"
-    ? "Your private copy for practice. Fixed content — explore and train at your pace."
-    : "Practice plus creation tools so you can grow and reshape your private copy.";
+    ? "Your private copy for Play. Fixed content — explore and train at your pace."
+    : "Play plus Build tools so you can grow and reshape your private copy.";
 }
 
 export function ayclUpgradeOfferLabel(): string {

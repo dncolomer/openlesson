@@ -14,6 +14,10 @@ import {
 } from "@/lib/pow-api/evaluation-subject";
 import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
 import type { AuthContext } from "@/lib/pow-api/types";
+import {
+  decideProductWorkspaceAccess,
+  PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+} from "@/lib/product-workspace-auth";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -89,7 +93,14 @@ async function resolveWebAuth(
     workspaceOwnerId: workspace.user_id,
     isGroup: Boolean(workspace.is_group),
   });
-  if (resolveEvalPersistenceClientMode(access) === "deny") {
+  const decided = decideProductWorkspaceAccess({
+    isOwner: access.isOwner,
+    isOrgAdmin: false,
+    evalAllowed: resolveEvalPersistenceClientMode(access) !== "deny",
+    ayclAccess: false,
+    flags: PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+  });
+  if (!decided.allowed) {
     return {
       ok: false,
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),

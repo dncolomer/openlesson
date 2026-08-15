@@ -47,21 +47,25 @@ type MintResult = {
   minutes: number | null;
 };
 
-/** MoK-aligned accents: slate for explore, amber for drill. */
+/** MoK-aligned accents: slate for explore (ILE), amber for drill (TAP). */
 function productAccent(id: PracticePortalProductId): "slate" | "amber" {
-  return id.endsWith("_drill") ? "amber" : "slate";
+  return id.startsWith("drill_") || id.endsWith("_drill") ? "amber" : "slate";
 }
 
 function productEyebrow(id: PracticePortalProductId): string {
   switch (id) {
-    case "timed_explore":
-      return "Interactive LLM-powered Dialog";
-    case "timed_drill":
-      return "Solo monolog";
-    case "open_ended_explore":
-      return "Open dialogue";
-    case "open_ended_drill":
-      return "Open solo practice";
+    case "drill_dialog":
+    case "timed_explore" as PracticePortalProductId:
+      return "LLM-powered Dialog";
+    case "drill_solo":
+    case "timed_drill" as PracticePortalProductId:
+      return "Solo Exercise";
+    case "explore_dialog":
+    case "open_ended_explore" as PracticePortalProductId:
+      return "LLM-powered Dialog";
+    case "explore_solo":
+    case "open_ended_drill" as PracticePortalProductId:
+      return "Solo Exercise";
     default:
       return "Practice";
   }
@@ -142,8 +146,11 @@ export function PracticePortalLandingClient({
           body.minutes = selectedMinutes[productId] ?? product.timings[0];
         }
         // Workspace-forced: never send block_id (server also ignores overrides).
+        // Explore (ILE) always needs a block; Drill (TAP) may use full workspace.
         if (!forceWorkspaceScope) {
-          if (productId.startsWith("open_ended_")) {
+          const isExplore =
+            productId.startsWith("explore_") || productId.startsWith("open_ended_");
+          if (isExplore) {
             if (!selectedBlockId) throw new Error("Select a practice block first");
             body.block_id = selectedBlockId;
           } else if (selectedBlockId) {
@@ -278,7 +285,7 @@ export function PracticePortalLandingClient({
               </select>
             </label>
             <p className="text-[11px] leading-relaxed text-zinc-600">
-              Open-ended sessions require a block. Timed sessions may use a block or the full
+              Explore sessions require a block. Drill sessions may use a block or the full
               workspace.
             </p>
           </div>
@@ -297,7 +304,9 @@ export function PracticePortalLandingClient({
               const isTimed = product.timings.length > 0;
               const mins = selectedMinutes[product.id] ?? product.timings[0];
               const needsBlock =
-                !forceWorkspaceScope && product.id.startsWith("open_ended_");
+                !forceWorkspaceScope &&
+                (product.id.startsWith("explore_") ||
+                  product.id.startsWith("open_ended_"));
               const disabled =
                 minting !== null ||
                 (needsBlock && !selectedBlockId);

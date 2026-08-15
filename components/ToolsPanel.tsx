@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
+import { ILE_OPEN_PIC_IN_PIC_LABEL } from "@/lib/ile-compact-window";
 import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
 
 const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
@@ -30,6 +31,9 @@ interface ToolsPanelProps {
   museStatus?: MuseAthenaStatus;
   museDeviceStatus?: DeviceStatus | null;
   museChannelData?: Map<string, number[]>;
+  /** No Meet-style Document PiP: show the manual popup control above Help. */
+  showOpenPicInPic?: boolean;
+  onOpenPicInPic?: () => void;
 }
 
 function ToolIcon({ id }: { id: Tool }) {
@@ -111,6 +115,7 @@ export function ToolsPanel({
   workspaceId, disabledTools = [], onBackToDashboard,
   isRecording = false, isPaused = false, isWebcamEnabled = false,
   museStatus = "disconnected", museDeviceStatus = null, museChannelData,
+  showOpenPicInPic = false, onOpenPicInPic,
 }: ToolsPanelProps) {
   const { t } = useI18n();
   // Practice (exercise) and Theory (reading) used to live here as their
@@ -176,6 +181,19 @@ export function ToolsPanel({
       />
 
       <div className="flex flex-col gap-1 pt-3 border-t border-neutral-800">
+        {showOpenPicInPic && onOpenPicInPic ? (
+          <button
+            type="button"
+            data-ile-open-pic-in-pic
+            onClick={onOpenPicInPic}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
+            </svg>
+            <span>{ILE_OPEN_PIC_IN_PIC_LABEL}</span>
+          </button>
+        ) : null}
         {bottomTools.map((toolId) => (
           <button
             key={toolId}

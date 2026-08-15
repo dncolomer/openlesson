@@ -5,15 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse, getServiceClient } from "@/lib/pow-api/auth";
+import { errorResponse } from "@/lib/pow-api/auth";
 import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import {
   bufferSubjectId,
   stashExerciseResponseFields,
   submitBufferedProofOfWork,
 } from "@/lib/pow-api/stash-api";
-import { resolveStashTapbenchFromRequest } from "@/lib/pow-api/stash-tapbench-auth";
-import type { AuthContext } from "@/lib/pow-api/types";
+import { authenticateStashRequest } from "@/lib/pow-api/authenticate-stash-request";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -33,58 +32,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     body = {};
   }
 
-  const apiAuth = await authenticateRequest(req, "workspaces:write");
-  let auth: AuthContext;
-  let supabase;
-  let tapbenchCtx = null as import("@/lib/pow-api/stash-api").StashTapbenchContext | null;
-
-  if (apiAuth instanceof NextResponse) {
-    supabase = await getServiceClient();
-    const tb = await resolveStashTapbenchFromRequest(req, supabase, {
-      body,
-      workspaceId,
-      requireToken: true,
-    });
-    if (tb.mode === "error") {
-      return NextResponse.json(
-        { error: { code: tb.code, message: tb.message, ...(tb.body || {}) } },
-        { status: tb.status },
-      );
-    }
-    if (tb.mode !== "ok") return apiAuth;
-    tapbenchCtx = tb.tapbench;
-    auth = {
-      user_id: null as string | null,
-      guest_user_id: tb.tapbench.guest_user_id,
-      organization_id: null as string | null,
-      is_org_admin: false,
-      key_id: `tapbench:${tb.tapbench.linkId}`,
-      scopes: ["workspaces:write" as const],
-    };
-  } else {
-    auth = apiAuth.auth;
-    supabase = apiAuth.supabase;
-    const tb = await resolveStashTapbenchFromRequest(req, supabase, {
-      body,
-      workspaceId,
-    });
-    if (tb.mode === "error") {
-      return NextResponse.json(
-        { error: { code: tb.code, message: tb.message, ...(tb.body || {}) } },
-        { status: tb.status },
-      );
-    }
-    if (tb.mode === "ok") {
-      tapbenchCtx = tb.tapbench;
-      if (tb.tapbench.guest_user_id) {
-        auth = {
-          ...auth,
-          user_id: null,
-          guest_user_id: tb.tapbench.guest_user_id,
-        };
-      }
-    }
-  }
+  const stashAuth = await authenticateStashRequest(req, workspaceId, body);
+  if (!stashAuth.ok) return stashAuth.response;
+  let { auth, supabase, tapbenchCtx } = stashAuth;
 
   const { data: workspace } = await supabase
     .from("workspaces")

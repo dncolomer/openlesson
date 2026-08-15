@@ -32,6 +32,22 @@ function shortId(id: string | null): string | null {
  * Guest-link attribution: assigned member XOR anonymous/named guest.
  * Never falls back to the workspace owner.
  */
+/**
+ * ILE guest acting participant — assigned member or guest, never the owner
+ * unless that is the only remaining identity (cookie owner path).
+ */
+export function resolveIleActingParticipantId(input: {
+  ownerUserId: string;
+  assignedUserId?: string | null;
+  guestUserId?: string | null;
+}): string {
+  const assigned = cleanId(input.assignedUserId);
+  if (assigned) return assigned;
+  const guest = cleanId(input.guestUserId);
+  if (guest) return guest;
+  return cleanId(input.ownerUserId) || input.ownerUserId;
+}
+
 export function resolveGuestLinkAttribution(input: {
   guestUserId?: string | null;
   assignedUserId?: string | null;

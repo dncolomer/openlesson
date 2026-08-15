@@ -1627,6 +1627,7 @@
     "territory": "Terytorium {number}",
     "goal": "Cel",
     "loadChapter": "Załaduj rozdział",
+    "reloadChapter": "Reload Chapter",
     "loadingChapter": "Ładowanie rozdziału…",
     "addChapter": "Dodaj rozdział",
     "newChapterPlaceholder": "Czego powinien dotyczyć ten rozdział?",

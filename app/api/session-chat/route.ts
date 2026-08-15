@@ -4,8 +4,18 @@ import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
-
-const BASE_SYSTEM_PROMPT = buildIleHeliosChatSystemPrompt();
+import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
+import {
+  resolveIleSessionModeFromBody,
+  resolveIleSessionModeFromSession,
+} from "@/lib/ile-mode";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
+import {
+  buildIleSessionChatPowFile,
+  ILE_SESSION_CHAT_POW_TOOL_ACTION,
+  ILE_SESSION_CHAT_POW_TOOL_NAME,
+  resolveIleSessionChatPowUpload,
+} from "@/lib/ile-session-chat-pow";
 
 function sanitizeAssistantText(text: string) {
   return text
@@ -39,22 +49,36 @@ export async function POST(request: NextRequest) {
       requireSessionId: !ayclToken && !ileToken,
     });
     if (!auth.ok) return auth.response;
-    const { supabase } = auth;
+    const { supabase, user } = auth;
 
-    // Get tutoring language from body or session metadata
+    // Get tutoring language + ILE mode from body or session metadata
     let tutoringLanguage = bodyLanguage;
-    if (!tutoringLanguage && sessionId) {
+    let sessionMeta: Record<string, unknown> | null = null;
+    if (sessionId) {
       const { data: sessionData } = await supabase
         .from("sessions")
         .select("metadata")
         .eq("id", sessionId)
         .single();
-      if (sessionData?.metadata?.tutoringLanguage) {
-        tutoringLanguage = sessionData.metadata.tutoringLanguage;
+      sessionMeta = (sessionData?.metadata as Record<string, unknown> | undefined) ?? null;
+      if (!tutoringLanguage && sessionMeta?.tutoringLanguage) {
+        tutoringLanguage = sessionMeta.tutoringLanguage;
       }
     }
+    const bodyHasMode =
+      body &&
+      typeof body === "object" &&
+      ("session_mode" in body ||
+        "sessionMode" in body ||
+        "ile_mode" in body ||
+        "ileMode" in body ||
+        "project_mode" in body ||
+        "projectMode" in body);
+    const sessionMode = bodyHasMode
+      ? resolveIleSessionModeFromBody(body)
+      : resolveIleSessionModeFromSession({ metadata: sessionMeta });
     const systemPrompt = withConversationLanguageInstruction(
-      BASE_SYSTEM_PROMPT,
+      buildIleHeliosChatSystemPrompt(sessionMode),
       tutoringLanguage,
     );
 
@@ -96,7 +120,78 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `API error: ${response.error}` }, { status: 500 });
     }
 
-    return NextResponse.json({ message: sanitizeAssistantText(response.data) });
+    const lastLearner =
+      [...inputMessages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const extracted = ileChapterSuggestionPowFromCoachText({
+      coachText: sanitizeAssistantText(response.data),
+      learnerText: lastLearner,
+      sessionMode,
+      currentChapterId: typeof activeStepId === "string" ? activeStepId : null,
+      currentChapterDescription:
+        typeof activeStepDescription === "string" ? activeStepDescription : null,
+      via: "helios_dialog",
+    });
+
+    const metaWorkspaceId =
+      typeof sessionMeta?.workspace_id === "string" ? sessionMeta.workspace_id : "";
+    const powTarget = resolveIleSessionChatPowUpload({
+      sessionId,
+      workspaceId: metaWorkspaceId,
+    });
+    if (powTarget.persist) {
+      try {
+        const { data: workspace } = await supabase
+          .from("workspaces")
+          .select("id, user_id, organization_id")
+          .eq("id", powTarget.workspaceId)
+          .maybeSingle();
+        if (workspace) {
+          const file = buildIleSessionChatPowFile({
+            sessionId: powTarget.sessionId,
+            workspaceId: powTarget.workspaceId,
+            learnerText: lastLearner,
+            assistantText: extracted.visibleText,
+          });
+          await uploadWorkspaceProofOfWork(
+            supabase,
+            {
+              user_id: user.id,
+              guest_user_id: null,
+              organization_id:
+                typeof workspace.organization_id === "string"
+                  ? workspace.organization_id
+                  : null,
+              is_org_admin: false,
+              key_id: "ile-session-chat",
+              scopes: ["workspaces:write"],
+            },
+            workspace,
+            {
+              workspaceId: powTarget.workspaceId,
+              type: "tool",
+              mime_type: "application/json",
+              data: file.base64,
+              session_id: powTarget.sessionId,
+              file_name: file.fileName,
+              timestamp_ms: file.timestampMs,
+              tool_name: ILE_SESSION_CHAT_POW_TOOL_NAME,
+              tool_action: ILE_SESSION_CHAT_POW_TOOL_ACTION,
+              metadata: {
+                session_id: powTarget.sessionId,
+                via: "helios_dialog",
+              },
+            },
+          );
+        }
+      } catch (err) {
+        console.error("[session-chat] PoW upload failed:", err);
+      }
+    }
+
+    return NextResponse.json({
+      message: extracted.visibleText,
+      chapterSuggestion: extracted.toolData,
+    });
   } catch (error) {
     console.error("Session chat error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -10,8 +10,13 @@ import { aestheticImageForId } from "@/lib/aesthetics";
 import { ayclLandingPath } from "@/lib/aycl-landing";
 import {
   AYCL_TOKEN_STORAGE_KEY,
+  ayclBuildTooltip,
   ayclCatalogKeyPoints,
   ayclLifetimeSystemUpdatesFootnote,
+  ayclOfferCheckoutCta,
+  ayclOfferLabel,
+  ayclOfferTooltip,
+  ayclPlayTooltip,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
 import {
@@ -370,14 +375,28 @@ export default function AllYouCanLearnPage() {
                         <span
                           className="rounded-md border border-zinc-700 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-300"
                           data-aycl-card-price-learner
+                          title={ayclOfferTooltip("learner")}
+                          data-aycl-offer-tooltip="learner"
                         >
-                          Practice {learnerOffer.priceLabel}
+                          <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
+                            {ayclOfferLabel("learner")}
+                          </span>{" "}
+                          {learnerOffer.priceLabel}
                         </span>
                         <span
                           className="rounded-md border border-zinc-600 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-white"
                           data-aycl-card-price-full
+                          title={ayclOfferTooltip("full")}
+                          data-aycl-offer-tooltip="full"
                         >
-                          Full {fullOffer.priceLabel}
+                          <span title={ayclPlayTooltip()} data-aycl-play-tooltip>
+                            Play
+                          </span>
+                          {" + "}
+                          <span title={ayclBuildTooltip()} data-aycl-build-tooltip>
+                            Build
+                          </span>{" "}
+                          {fullOffer.priceLabel}
                         </span>
                       </div>
 
@@ -396,10 +415,11 @@ export default function AllYouCanLearnPage() {
                         onClick={() => startCheckout(workspace.id, "learner")}
                         disabled={anyBusy}
                         className="w-full rounded-sm border border-zinc-600 bg-transparent px-3 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
+                        title={ayclOfferTooltip("learner")}
                       >
                         {learnerBusy
                           ? "Redirecting…"
-                          : `Practice · ${learnerOffer.priceLabel}`}
+                          : `${ayclOfferCheckoutCta("learner")} · ${learnerOffer.priceLabel}`}
                       </button>
                       <button
                         type="button"
@@ -407,10 +427,11 @@ export default function AllYouCanLearnPage() {
                         onClick={() => startCheckout(workspace.id, "full")}
                         disabled={anyBusy}
                         className="w-full rounded-sm bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
+                        title={ayclOfferTooltip("full")}
                       >
                         {fullBusy
                           ? "Redirecting…"
-                          : `Full access · ${fullOffer.priceLabel}`}
+                          : `${ayclOfferCheckoutCta("full")} · ${fullOffer.priceLabel}`}
                       </button>
                     </div>
 

@@ -13,15 +13,17 @@ function read(rel: string) {
 describe("starter map chrome", () => {
   it("map mounts flag badge when is_start; hooks stable", () => {
     const grid = read("components/BlockSkillGrid.tsx");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(grid).toContain("BlockStarterFlagBadge");
-    expect(grid).toContain("data-block-starter-flag");
-    expect(grid).toContain("data-block-starter-badge");
-    expect(grid).toContain("data-block-starter-icon");
+    expect(badges).toContain("data-block-starter-flag");
+    expect(badges).toContain("data-block-starter-badge");
+    expect(badges).toContain("data-block-starter-icon");
     expect(grid).toContain("data-block-is-start");
     // Conditional on is_start
     expect(grid).toMatch(/isStarter|is_start/);
     expect(grid).toContain("const isStarter = Boolean(node.is_start)");
-    expect(grid).toContain("starterBadge = isStarter ? <BlockStarterFlagBadge");
+    expect(grid).toContain("starterBadge = tileBadges.showStarter");
+    expect(grid).toContain("<BlockStarterFlagBadge");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
@@ -29,7 +31,7 @@ describe("starter map chrome", () => {
       [
         "starter-map-chrome",
         "badge_component=" + grid.includes("BlockStarterFlagBadge"),
-        "data_flag=" + grid.includes("data-block-starter-flag"),
+        "data_flag=" + badges.includes("data-block-starter-flag"),
         "data_is_start=" + grid.includes("data-block-is-start"),
         "gated_on_is_start=" + grid.includes("Boolean(node.is_start)"),
       ].join("\n") + "\n",

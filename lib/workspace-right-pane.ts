@@ -36,6 +36,55 @@ export type EmptySelectionSurface =
 export const WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS = "md:w-3/4";
 export const WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS = "md:w-1/4";
 
+/** Shared Danger zone drawer — peer of Edit / Combine, never nested in them. */
+export const WORKSPACE_EDITOR_DANGER_DRAWER_ID = "danger";
+export const WORKSPACE_EDITOR_DANGER_DRAWER_TITLE = "Danger zone";
+
+/**
+ * Drawer ids on the 1-block editor surface (creator block detail).
+ * Danger zone is a peer of Edit, not a section inside it.
+ */
+export function workspaceBlockDetailDrawerIds(input: {
+  canEdit?: boolean;
+  showSplit?: boolean;
+  showExpand?: boolean;
+  hasGoals?: boolean;
+  showEffects?: boolean;
+} = {}): string[] {
+  const ids: string[] = ["simulation"];
+  if (input.showSplit) ids.push("split");
+  if (input.showExpand) ids.push("expand_block");
+  if (input.canEdit) {
+    ids.push("edit");
+    ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+  }
+  if (input.hasGoals) ids.push("goals");
+  if (input.showEffects ?? Boolean(input.canEdit)) {
+    ids.push("effect_dynamic", "effect_generator");
+  }
+  ids.push("local");
+  return ids;
+}
+
+/**
+ * Drawer ids on the 2+-block editor surface (combine pane).
+ * Danger zone is its own drawer, not mixed into Combine/Bridge/Edit.
+ */
+export function workspaceMultiSelectDrawerIds(): string[] {
+  return [
+    "combine",
+    "bridge",
+    "cluster",
+    "dag",
+    "simulation",
+    WORKSPACE_EDITOR_DANGER_DRAWER_ID,
+  ];
+}
+
+export function isWorkspaceEditorDangerDrawer(id: string | null | undefined): boolean {
+  return String(id || "").trim() === WORKSPACE_EDITOR_DANGER_DRAWER_ID;
+}
+
 /**
  * Block-detail drawers (Photoshop-style exclusive panels).
  * Prompt tab removed — local context + simulation only.
@@ -213,15 +262,7 @@ export function clearWorkspaceFilledBlockSelection(): string[] {
   return [];
 }
 
-/**
- * Bump the map selection-clear nonce so BlockSkillGrid drops local multi-block
- * and empty-cell selection (parent-only clear cannot reach grid-owned state).
- * Used after ops that must leave no residual map selection (e.g. cluster).
- */
-export function nextMapSelectionClearNonce(prev: number): number {
-  const n = Number.isFinite(prev) ? Math.floor(prev) : 0;
-  return Math.max(0, n) + 1;
-}
+
 
 /**
  * Footprint fields needed to decide Split eligibility (merged / multi-cell block).

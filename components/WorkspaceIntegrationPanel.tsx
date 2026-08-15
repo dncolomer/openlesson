@@ -278,8 +278,8 @@ export function WorkspaceIntegrationPanel({
                 {t("planView.performanceSubTabTap")}
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Create shareable practice links for this workspace (open-ended or timed, explore or
-                drill) and TAPBench links for agent Stash/Submit sessions.
+                Create shareable practice links for this workspace (Explore or Drill × With AI or
+                Solo) and TAPBench links for agent Stash/Submit sessions.
               </p>
             </div>
             <WorkspaceGuestLinksPanel

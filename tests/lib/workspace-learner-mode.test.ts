@@ -246,13 +246,16 @@ describe("learner map chrome + DAG view", () => {
       status: "completed",
       selected: false,
     });
-    expect(done).toMatch(/emerald/);
+    expect(done).toMatch(/bg-white/);
+    expect(done).toMatch(/border-white/);
+    expect(done).not.toMatch(/emerald/);
 
     const creator = resolveOccupiedMapChrome({
       learnerMode: false,
       status: "completed",
       selected: false,
     });
+    expect(creator).toMatch(/bg-white/);
     expect(creator).not.toMatch(/emerald/);
   });
 
@@ -402,13 +405,10 @@ describe("learner mode UI structural", () => {
     expect(view).toContain("selectInteractionMode");
     // Mode flip clears sole / multi / empty selection (both directions)
     expect(view).toMatch(
-      /selectInteractionMode[\s\S]*?clearWorkspaceBlockSelection\(\)/,
+      /selectInteractionMode[\s\S]*?nextWorkspaceMapSelection/,
     );
     expect(view).toMatch(
-      /selectInteractionMode[\s\S]*?clearWorkspaceFilledBlockSelection\(\)/,
-    );
-    expect(view).toMatch(
-      /selectInteractionMode[\s\S]*?clearWorkspaceAddTarget\(\)/,
+      /selectInteractionMode[\s\S]*?type: "clear"/,
     );
     expect(view).toContain("if (next === interactionMode) return");
     expect(view).toContain("showLearnerDrawer");
@@ -438,7 +438,7 @@ describe("learner mode UI structural", () => {
     expect(view).not.toContain('quality: "practice"');
     // Real Explore / Drill entry points via product intent
     expect(view).toContain("onLaunchIntent");
-    expect(view).toContain("createSession");
+    expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).toContain("/session?id=");
     expect(view).toContain("/workspace/${workspaceId}/tap?");
     expect(view).toContain('params.set("interactionKind", "exercise")');

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
-import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
+import {
+  callXaiJSON,
+  systemMessage,
+  userMessage,
+  DEFAULT_MODEL,
+  parseJsonLoose,
+} from "@/lib/xai-client";
 import { normalizeContentSamplesPayload } from "@/lib/block-example-topics";
 import {
   normalizeSimulationPayload,
+  partitionSimulationProbes,
   type BlockSimulationResult,
 } from "@/lib/block-simulation";
 import {
@@ -16,6 +23,7 @@ import {
   buildSimulationSamplesSystemPrompt,
   buildSimulationSamplesUserPrompt,
 } from "@/lib/practice-item-builders";
+import { applySimulationModifierToPrompt } from "@/lib/workspace-simulation-collection";
 
 type SamplesResponse = {
   topics?: string[];
@@ -49,6 +57,8 @@ export async function POST(req: NextRequest) {
       localContext: localContextBody,
       model: userModel,
       locale,
+      modifierPrompt: modifierPromptRaw,
+      userGuidance: userGuidanceRaw,
     } = body as {
       workspaceId?: string;
       blockId?: string;
@@ -58,7 +68,13 @@ export async function POST(req: NextRequest) {
       localContext?: BlockLocalContextInput | null;
       model?: string;
       locale?: string;
+      modifierPrompt?: string | null;
+      userGuidance?: string | null;
     };
+    const modifierPrompt =
+      (typeof modifierPromptRaw === "string" && modifierPromptRaw.trim()) ||
+      (typeof userGuidanceRaw === "string" && userGuidanceRaw.trim()) ||
+      "";
 
     if (!workspaceId || !blockId) {
       return NextResponse.json(
@@ -229,7 +245,7 @@ export async function POST(req: NextRequest) {
     ];
 
     const system = buildSimulationSamplesSystemPrompt();
-    const userPrompt = buildSimulationSamplesUserPrompt({
+    const baseUserPrompt = buildSimulationSamplesUserPrompt({
       workspaceTitle: workspace?.title || workspace?.root_topic || "Workspace",
       rootTopic: workspace?.root_topic,
       workspaceGoal:
@@ -252,33 +268,40 @@ export async function POST(req: NextRequest) {
       },
       locale,
     });
+    const userPrompt = applySimulationModifierToPrompt(baseUserPrompt, modifierPrompt);
 
     const ai = await callXaiJSON<SamplesResponse>(
       [systemMessage(system), userMessage(userPrompt)],
       {
         model: userModel || DEFAULT_MODEL,
-        maxTokens: 1400,
+        maxTokens: 2800,
         temperature: 0.55,
+        retries: 2,
       },
     );
 
-    if (!ai.success || !ai.data) {
+    let modelPayload: SamplesResponse | null =
+      ai.success && ai.data ? ai.data : null;
+    if (!modelPayload && ai.rawContent) {
+      const recovered = parseJsonLoose<SamplesResponse>(ai.rawContent);
+      if (recovered.ok) modelPayload = recovered.data;
+    }
+
+    if (!modelPayload) {
       return NextResponse.json(
         { error: ai.error || "Failed to generate simulation" },
         { status: 502 },
       );
     }
 
-    const samples = normalizeContentSamplesPayload(ai.data);
-    const simulation: BlockSimulationResult = normalizeSimulationPayload(ai.data, {
+    const samples = normalizeContentSamplesPayload(modelPayload);
+    const simulation: BlockSimulationResult = normalizeSimulationPayload(modelPayload, {
       title,
       description,
       planningPrompt,
       localNotes: local.notes,
       hasLocalContext: local.hasLocalMaterials,
       hasPlanningPrompt: Boolean(planningPrompt.trim()),
-      // Full material rows (excerpts + link bodies) for pure pad/sanitize path —
-      // not chip labels only.
       files,
       externalLinks,
       localFileNames: files.map((f) => f.name).filter(Boolean),
@@ -302,18 +325,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { questions: qProbes, exercises: eProbes } = partitionSimulationProbes(
+      simulation.probes,
+    );
+    const questions =
+      qProbes.length > 0
+        ? qProbes.map((p) => p.question)
+        : samples.questions;
+    const exercises =
+      eProbes.length > 0
+        ? eProbes.map((p) => p.question)
+        : Array.isArray((modelPayload as { exercises?: unknown }).exercises)
+          ? ((modelPayload as { exercises: unknown[] }).exercises || [])
+              .map((ex) =>
+                typeof ex === "string"
+                  ? ex.trim()
+                  : ex && typeof ex === "object"
+                    ? String(
+                        (ex as { question?: string; text?: string }).question ||
+                          (ex as { text?: string }).text ||
+                          "",
+                      ).trim()
+                    : "",
+              )
+              .filter((t) => t.length >= 4)
+          : [];
+
     return NextResponse.json({
       ok: true,
-      // Legacy shape (Content Samples)
       topics: simulation.topics.length ? simulation.topics : samples.topics,
-      questions:
-        simulation.probes.length > 0
-          ? simulation.probes.map((p) => p.question)
-          : samples.questions,
-      // Simulation shape
+      questions,
+      exercises,
       intent: simulation.intent,
       outcome: simulation.outcome,
       probes: simulation.probes,
+      modifierPrompt: modifierPrompt || null,
     });
   } catch (error) {
     console.error("block-content-samples error:", error);

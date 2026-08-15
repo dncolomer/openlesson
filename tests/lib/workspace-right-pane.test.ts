@@ -10,7 +10,6 @@ import {
   clearWorkspaceAddTarget,
   clearWorkspaceBlockSelection,
   clearWorkspaceFilledBlockSelection,
-  nextMapSelectionClearNonce,
   nextRightPaneDrawerExpanded,
   nextAccordionOpenDrawerId,
   initialAccordionOpenDrawerId,
@@ -96,11 +95,6 @@ describe("resolveWorkspaceRightPane", () => {
     });
     expect(resolveFilledBlockSelectionSurface([])).toBeNull();
     expect(clearWorkspaceFilledBlockSelection()).toEqual([]);
-    // Nonce bump drives BlockSkillGrid local clear after cluster (and similar).
-    expect(nextMapSelectionClearNonce(0)).toBe(1);
-    expect(nextMapSelectionClearNonce(1)).toBe(2);
-    expect(nextMapSelectionClearNonce(-3)).toBe(1);
-    expect(nextMapSelectionClearNonce(Number.NaN)).toBe(1);
 
     expect(resolveWorkspaceRightPane(null, null, ["b1", "b2"])).toBe(
       "combine_blocks",
@@ -234,7 +228,7 @@ describe("structural: right pane not map modal", () => {
     expect(list).not.toContain("BlockDetailDrawer");
     expect(list).not.toContain("aria-modal");
     expect(list).toContain("onExpandedNodeIdChange");
-    expect(list).toContain("nextWorkspaceBlockSelection");
+    expect(list).toContain("nextWorkspaceMapSelection");
     expect(list).toContain("data-session-list");
   });
 
@@ -264,7 +258,8 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("handleSubmitGenerateShape");
     expect(view).toContain("clearWorkspaceBlockSelection");
     expect(view).toContain("onEmptySelectionChange");
-    expect(view).toContain('data-workspace-right-pane={rightPane}');
+    expect(view).toContain("data-workspace-right-pane=");
+    expect(view).toContain('showMapExplore ? "map_explore" : rightPane');
     expect(view).toContain("onExpandedNodeIdChange");
     expect(view).toContain('rightPane === "add_block"');
     expect(view).toContain('rightPane === "generate_shape"');
@@ -278,19 +273,23 @@ describe("structural: right pane not map modal", () => {
 
   it("AyclWorkspaceView shares the same right-pane open/close path including add + shape", () => {
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("resolveWorkspaceRightPane");
-    expect(aycl).toContain("WorkspaceBlockDetailPane");
-    expect(aycl).toContain("WorkspaceMapAuthoringPane");
-    expect(aycl).toContain("WorkspaceAddBlockPane");
-    expect(aycl).toContain("WorkspaceGenerateShapePane");
-    expect(aycl).toContain("handleCloseBlockDetail");
-    expect(aycl).toContain("handleCloseEmptyCreate");
-    expect(aycl).toContain("clearWorkspaceBlockSelection");
-    expect(aycl).toContain("onExpandedNodeIdChange");
-    expect(aycl).toContain("onEmptySelectionChange");
-    expect(aycl).toContain('rightPane === "add_block"');
-    expect(aycl).toContain('rightPane === "generate_shape"');
+    const view = read("components/WorkspaceView.tsx");
+    // AYCL is a token/access wrapper — right pane lives on WorkspaceView.
+    expect(aycl).toContain("<WorkspaceView");
+    expect(aycl).toContain("ayclToken={accessToken}");
+    expect(view).toContain("resolveWorkspaceRightPane");
+    expect(view).toContain("WorkspaceBlockDetailPane");
+    expect(view).toContain("WorkspaceMapAuthoringPane");
+    expect(view).toContain("WorkspaceAddBlockPane");
+    expect(view).toContain("WorkspaceGenerateShapePane");
+    expect(view).toContain("handleCloseBlockDetail");
+    expect(view).toContain("handleCloseEmptyCreate");
+    expect(view).toContain("onExpandedNodeIdChange");
+    expect(view).toContain("onEmptySelectionChange");
+    expect(view).toContain('rightPane === "add_block"');
+    expect(view).toContain('rightPane === "generate_shape"');
     expect(aycl).not.toContain("BlockDetailDrawer");
+    expect(view).not.toContain("BlockDetailDrawer");
   });
 
   it("sole multi-cell block offers Split drawer; 1×1 and multi-select do not", () => {
@@ -383,8 +382,9 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("onSplitBlock={isOwner ? handleSplitBlock");
 
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("handleSplitBlock");
-    expect(aycl).toContain('op: "split"');
+    expect(aycl).toContain("<WorkspaceView");
+    expect(view).toContain("handleSplitBlock");
+    expect(view).toContain('op: "split"');
 
     const ops = read("app/api/workspace/grid-ops/route.ts");
     expect(ops).toContain("userGuidance:");
@@ -461,12 +461,14 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain('drawerId="local"');
     expect(pane).toContain('drawerId="simulation"');
     expect(pane).toContain('drawerId="edit"');
+    expect(pane).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(pane).toContain("WorkspaceBlockDangerPanel");
     expect(pane).toContain('title="Local context"');
     expect(pane).toContain('title="Block Simulation"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
-    // Order: simulation → … → edit → … → local
+    // Order: simulation → … → edit → danger → … → local
     expect(pane).toMatch(
-      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"/,
+      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?WORKSPACE_EDITOR_DANGER_DRAWER_ID[\s\S]*?drawerId="local"/,
     );
     // Simulation collapsed; local opens when materials exist
     expect(pane).toMatch(
@@ -491,6 +493,7 @@ describe("structural: right pane not map modal", () => {
       [
         "detailDrawer=" + pane.includes('drawerId="detail"'),
         "editDrawer=" + pane.includes('drawerId="edit"'),
+        "dangerDrawer=" + pane.includes("WORKSPACE_EDITOR_DANGER_DRAWER_ID"),
         "localDrawer=" + pane.includes('drawerId="local"'),
         "simulationDrawer=" + pane.includes('drawerId="simulation"'),
         "simulationCollapsedDefault=" +
@@ -590,7 +593,8 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).not.toContain("WorkspaceBlockDetailTabs");
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("overflow-hidden p-0");
+    expect(aycl).toContain("<WorkspaceView");
+    expect(view).toContain("overflow-hidden p-0");
     expect(aycl).not.toContain("WorkspaceBlockDetailTabs");
 
     writeEvidence(

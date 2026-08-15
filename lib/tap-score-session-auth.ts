@@ -43,6 +43,24 @@ export const TAP_SESSION_SELECT =
 const TAP_SESSION_SELECT_NO_JOIN =
   "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind";
 
+export function authContextFromTapAccess(
+  access: {
+    userId: string | null;
+    guestUserId: string | null;
+    organizationId: string | null;
+  },
+  keyId: string,
+): import("@/lib/pow-api/types").AuthContext {
+  return {
+    user_id: access.guestUserId ? null : access.userId,
+    guest_user_id: access.guestUserId,
+    organization_id: access.organizationId,
+    is_org_admin: false,
+    key_id: keyId,
+    scopes: ["workspaces:write"],
+  };
+}
+
 export function workspaceOwnerFromSession(session: {
   user_id?: string | null;
   workspaces?: { user_id?: string } | Array<{ user_id?: string }> | null;
@@ -296,14 +314,20 @@ export async function resolveTapSessionAccess(input: {
     existingSession = session;
   }
 
+  const { data: workspaceRow } = await supabase
+    .from("workspaces")
+    .select("user_id, organization_id")
+    .eq("id", workspaceId)
+    .maybeSingle();
+
   return {
     supabase,
     workspaceId,
     userId: user.id,
     guestUserId: null,
     assignedUserId: existingSession?.assigned_user_id?.toString() || null,
-    workspaceOwnerUserId: user.id,
-    organizationId: null,
+    workspaceOwnerUserId: workspaceRow?.user_id || user.id,
+    organizationId: workspaceRow?.organization_id || null,
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     tapSessionId: tapSessionId || "",

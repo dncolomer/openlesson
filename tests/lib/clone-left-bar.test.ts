@@ -136,7 +136,9 @@ describe("clone left-bar UI wiring", () => {
 
     // Left strip
     expect(grid).toContain('case "clone"');
-    expect(grid).toContain("data-tool-icon=\"clone\"");
+    expect(grid).toContain("ToolIcon");
+    const icons = read("components/block-skill-grid/map-tool-icons.tsx");
+    expect(icons).toContain("data-tool-icon=\"clone\"");
     expect(grid).toContain("onCloneArm");
     expect(grid).toContain("cloneArmed");
     expect(grid).toContain("data-clone-armed");

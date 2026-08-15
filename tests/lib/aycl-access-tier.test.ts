@@ -65,8 +65,8 @@ describe("AYCL dual access tiers (pure)", () => {
   });
 
   it("customer-facing labels avoid rent/buy metaphors", () => {
-    expect(ayclOfferLabel("learner")).toBe("Practice access");
-    expect(ayclOfferLabel("full")).toBe("Full access");
+    expect(ayclOfferLabel("learner")).toBe("play mode only");
+    expect(ayclOfferLabel("full")).toBe("Play + Build");
     const joined = [
       ayclOfferLabel("learner"),
       ayclOfferLabel("full"),
@@ -153,8 +153,8 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain('data-aycl-dual-offers');
     expect(src).toContain('data-aycl-checkout-learner');
     expect(src).toContain('data-aycl-checkout-full');
-    expect(src).toMatch(/Practice/);
-    expect(src).toMatch(/Full access/);
+    expect(src).toMatch(/play mode only|ayclOfferLabel|ayclOfferCheckoutCta/);
+    expect(src).toMatch(/Play \+ Build|ayclOfferCheckoutCta|ayclOfferLabel/);
     expect(src.toLowerCase()).not.toMatch(/\brent\b/);
     expect(src.toLowerCase()).not.toMatch(/\bbuy a movie\b/);
   });

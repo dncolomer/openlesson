@@ -11,13 +11,18 @@ import {
   goalFieldsFromPrompt,
   isApiAllowedCreateMode,
   parseWorkspaceCreateMode,
+  isUiWorkspaceCreateMode,
   UI_WORKSPACE_CREATE_MODES,
 } from "@/lib/workspace-create-modes";
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
 
 describe("workspace create modes", () => {
-  it("exposes three UI modes and API-only files_goal", () => {
-    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template", "files_goal"]);
+  it("exposes blank + template as UI modes; files_goal stays API-only", () => {
+    expect(UI_WORKSPACE_CREATE_MODES).toEqual(["blank", "template"]);
+    expect(UI_WORKSPACE_CREATE_MODES).not.toContain("files_goal");
+    expect(isUiWorkspaceCreateMode("blank")).toBe(true);
+    expect(isUiWorkspaceCreateMode("template")).toBe(true);
+    expect(isUiWorkspaceCreateMode("files_goal")).toBe(false);
     expect(API_WORKSPACE_CREATE_MODES).toEqual(["files_goal"]);
     expect(isApiAllowedCreateMode("files_goal")).toBe(true);
     expect(isApiAllowedCreateMode("blank")).toBe(false);

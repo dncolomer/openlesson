@@ -34,7 +34,9 @@ export type ToolAction =
   | "cancel_advance"
   | "chapter_focus"
   | "chapter_load"
+  | "chapter_reload"
   | "chapter_add"
+  | "chapter_suggest"
   | "chapter_edit"
   | "chapter_position"
   | "chapter_done"
@@ -346,37 +348,68 @@ export interface UserCalibration {
   commonGaps: string[];
 }
 
+export type WorkspaceLifecycleStatus =
+  | "active"
+  | "completed"
+  | "paused"
+  | "archived"
+  | string;
+
 export interface Workspace {
   id: string;
   title: string;
   root_topic: string;
-  status: "active" | "completed" | "paused" | "archived";
-  created_at: string;
+  status: WorkspaceLifecycleStatus;
+  created_at?: string;
+  user_id?: string;
+  description?: string;
   is_public?: boolean;
+  is_group?: boolean;
+  organization_id?: string | null;
   author_id?: string;
-
   remix_count?: number;
   original_workspace_id?: string;
-  // YouTube/source fields
   source_type?: "topic" | "youtube";
   source_url?: string;
   source_summary?: string;
-  // Plan notes (README-like)
   notes?: string;
-  // AI-generated cover image
+  workspace_goal?: string | null;
   cover_image_url?: string;
-  // Group plan (collaborative, no-fork direct participation)
-  is_group?: boolean;
+  is_all_you_can_learn?: boolean;
+  aycl_category?: string | null;
+  aycl_summary?: string | null;
+  aycl_author_name?: string | null;
+  aycl_author_avatar_url?: string | null;
+  aycl_learner_price_cents?: number | null;
+  aycl_full_price_cents?: number | null;
+  unusable_cells?: Array<{ row: number; col: number }> | null;
+  workspace_dags?: unknown[] | null;
 }
 
 export interface Block {
   id: string;
-  workspace_id: string;
+  workspace_id?: string;
   title: string;
   description: string;
   is_start: boolean;
   next_block_ids: string[];
-  status: "not_started" | "in_progress" | "completed";
+  status: string;
+  planning_prompt?: string;
+  session_id?: string;
+  position_x?: number | null;
+  position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
+  shape_cells?: Array<{ dr: number; dc: number }> | null;
+  lock_until_block_ids?: string[] | null;
+  local_context?: {
+    notes?: string | null;
+    local_files?: Array<{ name: string; excerpt?: string | null }> | null;
+    global_file_refs?: string[] | null;
+    external_resource_ids?: string[] | null;
+  } | null;
+  practice_options?: unknown;
+  creator_effects?: unknown;
 }
 
 export interface DeduplicatedSaveResult {

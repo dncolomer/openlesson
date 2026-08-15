@@ -10,6 +10,11 @@
  */
 
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
+import {
+  mapOverlayPersistTokenFromInput,
+  resolveMapOverlayPersistScope,
+  type MapOverlayPersistInput,
+} from "@/lib/map-overlay-persist";
 
 /** Max short body length for a map post-it. */
 export const LEARNER_NOTE_BODY_MAX = 280;
@@ -83,8 +88,9 @@ export function mapNoteSourceOf(
  */
 export function canDeleteMapNote(
   note: Pick<LearnerMapNote, "source"> | { source?: MapNoteSource },
-  ctx: { learnerMode: boolean },
+  ctx: { learnerMode: boolean; viewOnly?: boolean },
 ): boolean {
+  if (ctx.viewOnly) return false;
   if (mapNoteSourceOf(note) === "creator" && ctx.learnerMode) return false;
   return true;
 }
@@ -95,45 +101,51 @@ export function canDeleteMapNote(
  */
 export function canEditMapNoteContent(
   note: Pick<LearnerMapNote, "source"> | { source?: MapNoteSource },
-  ctx: { learnerMode: boolean },
+  ctx: { learnerMode: boolean; viewOnly?: boolean },
 ): boolean {
+  if (ctx.viewOnly) return false;
   if (mapNoteSourceOf(note) === "creator" && ctx.learnerMode) return false;
   return true;
 }
 
 export function canMutateMapNoteGeometry(
   note: Pick<LearnerMapNote, "source"> | { source?: MapNoteSource },
-  ctx: { learnerMode: boolean },
+  ctx: { learnerMode: boolean; viewOnly?: boolean },
 ): boolean {
   return canEditMapNoteContent(note, ctx);
 }
 
-/** Personal learner notes: workspace + learner identity. */
-export function learnerMapNotesStorageKey(input: {
-  workspaceId: string;
+/** Show a notes-plane eye toggle only when notes already exist (do not invent). */
+export function shouldShowMapNotesPlaneToggle(noteCount: number): boolean {
+  return Math.max(0, Math.floor(Number(noteCount) || 0)) > 0;
+}
+
+/** Personal learner notes: workspace + learner identity (or ILE chapter session). */
+export function learnerMapNotesStorageKey(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   learnerScopeId: string;
 }): string {
-  const ws = String(input.workspaceId || "").trim() || "unknown-workspace";
+  const ws = mapOverlayPersistTokenFromInput(input);
   const who = String(input.learnerScopeId || "").trim() || "anonymous";
   // v2: continuous plane x/y/width/height
   return `openlesson.learnerMapNotes.v2:${ws}:${who}`;
 }
 
 /** Also try v1 key when loading (migrate col/row → world x/y). */
-export function learnerMapNotesStorageKeyV1(input: {
-  workspaceId: string;
+export function learnerMapNotesStorageKeyV1(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   learnerScopeId: string;
 }): string {
-  const ws = String(input.workspaceId || "").trim() || "unknown-workspace";
+  const ws = mapOverlayPersistTokenFromInput(input);
   const who = String(input.learnerScopeId || "").trim() || "anonymous";
   return `openlesson.learnerMapNotes.v1:${ws}:${who}`;
 }
 
-/** Creator-authored notes: workspace-scoped (visible to all learners). */
-export function creatorMapNotesStorageKey(input: {
-  workspaceId: string;
+/** Creator-authored notes: workspace-scoped (or ILE chapter-session scoped). */
+export function creatorMapNotesStorageKey(input: MapOverlayPersistInput & {
+  workspaceId?: string;
 }): string {
-  const ws = String(input.workspaceId || "").trim() || "unknown-workspace";
+  const ws = mapOverlayPersistTokenFromInput(input);
   return `openlesson.creatorMapNotes.v2:${ws}`;
 }
 
@@ -594,8 +606,8 @@ function serializeMapNotesPayload(
 }
 
 /** Load personal learner notes for a workspace + learner scope. */
-export function loadLearnerMapNotes(input: {
-  workspaceId: string;
+export function loadLearnerMapNotes(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   learnerScopeId: string;
   storage?: LearnerNotesStorage | null;
 }): LearnerMapNote[] {
@@ -628,8 +640,8 @@ export function loadLearnerMapNotes(input: {
   }
 }
 
-export function saveLearnerMapNotes(input: {
-  workspaceId: string;
+export function saveLearnerMapNotes(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   learnerScopeId: string;
   notes: readonly LearnerMapNote[];
   storage?: LearnerNotesStorage | null;
@@ -650,8 +662,8 @@ export function saveLearnerMapNotes(input: {
 }
 
 /** Load workspace creator notes (shared, visible in learner mode). */
-export function loadCreatorMapNotes(input: {
-  workspaceId: string;
+export function loadCreatorMapNotes(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   storage?: LearnerNotesStorage | null;
 }): LearnerMapNote[] {
   const storage = input.storage ?? defaultLearnerNotesStorage();
@@ -669,8 +681,8 @@ export function loadCreatorMapNotes(input: {
   }
 }
 
-export function saveCreatorMapNotes(input: {
-  workspaceId: string;
+export function saveCreatorMapNotes(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   notes: readonly LearnerMapNote[];
   storage?: LearnerNotesStorage | null;
 }): void {
@@ -693,8 +705,8 @@ export function saveCreatorMapNotes(input: {
  * - Creator mode: creator notes only
  * - Learner mode: creator notes + personal learner notes (creator first)
  */
-export function listVisibleMapNotes(input: {
-  workspaceId: string;
+export function listVisibleMapNotes(input: MapOverlayPersistInput & {
+  workspaceId?: string;
   learnerMode: boolean;
   learnerScopeId?: string | null;
   storage?: LearnerNotesStorage | null;
@@ -883,10 +895,13 @@ export function creatorMapNotesStoreOps(input: {
  * Prefer passing workspaceId; `learnerMode` alone is accepted for older callers
  * and still mounts (both modes support notes).
  */
-export function shouldMountMapNotes(input: {
+export function shouldMountMapNotes(input: MapOverlayPersistInput & {
   workspaceId?: string | null;
   learnerMode?: boolean;
 }): boolean {
+  if (resolveMapOverlayPersistScope(input)) return true;
+  // Chapter maps must have a session key — never invent a workspace store.
+  if (input.mapKind === "chapter") return false;
   if (input.workspaceId !== undefined && input.workspaceId !== null) {
     return Boolean(String(input.workspaceId).trim());
   }

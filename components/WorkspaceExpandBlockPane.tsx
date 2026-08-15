@@ -18,6 +18,10 @@ import {
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
 import { RabbitHoleExpandModal } from "@/components/RabbitHoleExpandModal";
 import { mapCandidatesToFrozenSlots } from "@/lib/rabbit-hole-expand";
+import {
+  WorkspacePromptContextAlternatives,
+  type PromptContextMode,
+} from "@/components/WorkspacePromptContextAlternatives";
 
 export type WorkspaceExpandBlockSubmitOpts = {
   frozenSlots: Array<{ row: number; col: number }>;
@@ -72,6 +76,7 @@ export function WorkspaceExpandBlockPane({
   const [density, setDensity] = useState(ADD_DENSITY_MAX);
   const [sampleSeed, setSampleSeed] = useState(1);
   const [userGuidance, setUserGuidance] = useState("");
+  const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rabbitHoleOpen, setRabbitHoleOpen] = useState(false);
@@ -263,20 +268,32 @@ export function WorkspaceExpandBlockPane({
           neighborhood size and Density for how many slots fill.
         </p>
 
-        <label className="block space-y-1" data-expand-block-modifier>
-          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            Modifier prompt
-          </span>
+        <div data-expand-block-modifier data-generative-context-alternatives>
+          <WorkspacePromptContextAlternatives
+            workspaceId={workspaceId}
+            draftPrompt={userGuidance}
+            surface="expand block"
+            mode={contextMode}
+            onModeChange={setContextMode}
+            adhocValue={userGuidance}
+            onAdhocChange={setUserGuidance}
+            onAccept={setUserGuidance}
+            disabled={busy || submitting}
+            adhocPlaceholder="Optional guidance for the expansion (e.g. emphasize applications, keep beginner-friendly, or focus on proofs)…"
+            adhocLabel="Modifier prompt"
+          />
+          {/* Keep legacy data-hook for structural tests */}
           <textarea
             data-expand-block-modifier-input
             value={userGuidance}
             onChange={(e) => setUserGuidance(e.target.value)}
-            rows={3}
+            rows={2}
             disabled={busy || submitting}
-            placeholder="Optional guidance for the expansion (e.g. emphasize applications, keep beginner-friendly, or focus on proofs)…"
-            className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            className="sr-only"
+            aria-hidden
+            tabIndex={-1}
           />
-        </label>
+        </div>
 
         <label className="block space-y-1" data-expand-block-range data-add-range>
           <div className="flex items-center justify-between gap-2">

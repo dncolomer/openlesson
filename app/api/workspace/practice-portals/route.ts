@@ -7,6 +7,10 @@ import {
   normalizePracticePortalConfig,
 } from "@/lib/practice-portal";
 import type { AuthContext } from "@/lib/pow-api/types";
+import {
+  decideProductWorkspaceAccess,
+  PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
+} from "@/lib/product-workspace-auth";
 
 export const runtime = "nodejs";
 
@@ -47,7 +51,14 @@ async function resolveWebAuth(workspaceId: string): Promise<
     !!profile.organization_id &&
     profile.organization_id === workspace.organization_id;
 
-  if (!isOwner && !isOrgAdmin) {
+  const decided = decideProductWorkspaceAccess({
+    isOwner,
+    isOrgAdmin,
+    evalAllowed: false,
+    ayclAccess: false,
+    flags: PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
+  });
+  if (!decided.allowed) {
     return { error: "Not authorized", status: 403 };
   }
 

@@ -82,11 +82,16 @@ type GuestLinksInnerTab = "create" | "browse";
 
 /** Single create surface product kind (portal-style compact selector). */
 type CreateProductKind =
+  | "drill_dialog"
+  | "drill_solo"
+  | "explore_dialog"
+  | "explore_solo"
+  | "tapbench"
+  /** @deprecated legacy aliases accepted during transition */
   | "timed_explore"
   | "timed_drill"
   | "open_ended_explore"
-  | "open_ended_drill"
-  | "tapbench";
+  | "open_ended_drill";
 
 function participantLabel(
   link: {
@@ -130,15 +135,15 @@ export function WorkspaceGuestLinksPanel({
   const [ileLinks, setIleLinks] = useState<IleLinkRow[]>([]);
   const [tapbenchLinks, setTapbenchLinks] = useState<TapbenchLinkRow[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
-  /** Shared scope block (optional for timed/TAPBench; required for open-ended). */
+  /** Shared scope block (optional for Drill/TAPBench; required for Explore). */
   const [selectedBlockId, setSelectedBlockId] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
-  /** Compact product selector (replaces dual timed + dual open-ended + TAPBench stacks). */
+  /** Compact product selector: Explore/Drill × Dialog/Solo + TAPBench. */
   const [createProduct, setCreateProduct] =
-    useState<CreateProductKind>("timed_explore");
+    useState<CreateProductKind>("drill_dialog");
   /** anonymous (default) or assigned org member */
   const [participantMode, setParticipantMode] = useState<"anonymous" | "user">(
     "anonymous",
@@ -156,18 +161,27 @@ export function WorkspaceGuestLinksPanel({
   const [browseKind, setBrowseKind] = useState<GuestLinkBrowseKindFilter>("all");
   const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
-  const isTimedProduct =
-    createProduct === "timed_explore" || createProduct === "timed_drill";
-  const isOpenEndedProduct =
-    createProduct === "open_ended_explore" || createProduct === "open_ended_drill";
+  /** Drill = TAP (needs duration); Explore = ILE (needs block). */
+  const isDrillProduct =
+    createProduct === "drill_dialog" ||
+    createProduct === "drill_solo" ||
+    createProduct === "timed_explore" ||
+    createProduct === "timed_drill";
+  const isExploreProduct =
+    createProduct === "explore_dialog" ||
+    createProduct === "explore_solo" ||
+    createProduct === "open_ended_explore" ||
+    createProduct === "open_ended_drill";
+  const isTimedProduct = isDrillProduct;
+  const isOpenEndedProduct = isExploreProduct;
   const isTapbenchProduct = createProduct === "tapbench";
-  const timedStyle =
-    createProduct === "timed_drill" ? ("drill" as const) : ("explore" as const);
-  const openEndedStyle =
-    createProduct === "open_ended_drill" ? ("drill" as const) : ("explore" as const);
+  const drillModalitySolo =
+    createProduct === "drill_solo" || createProduct === "timed_drill";
+  const exploreModalitySolo =
+    createProduct === "explore_solo" || createProduct === "open_ended_drill";
   // Back-compat data hooks for exercise / project mode markers
-  const exerciseTap = timedStyle === "drill";
-  const ileProjectMode = openEndedStyle === "drill";
+  const exerciseTap = drillModalitySolo;
+  const ileProjectMode = exploreModalitySolo;
   const creatingBusy = creatingLink || creatingIleLink || mintingTapbench;
 
   const fieldClass =
@@ -282,7 +296,11 @@ export function WorkspaceGuestLinksPanel({
       setCreatingLink(true);
       setCreateError(null);
       try {
-        // Session links always end with thank-you (no after-session redirect/results choices).
+        // Drill always → TAP. Dialog → conversational; Solo → exercise.
+        const launch = resolveProductIntent(
+          "drill",
+          drillModalitySolo ? "solo" : "dialog",
+        );
         const body: Record<string, unknown> = {
           workspaceId,
           minutes,
@@ -290,8 +308,8 @@ export function WorkspaceGuestLinksPanel({
           post_session: "show_results",
           show_end_session: showEndSession,
           access_mode: "private",
-          interaction_kind: resolveProductIntent(timedStyle, "timed").interaction_kind,
-          exercise: timedStyle === "drill",
+          interaction_kind: launch.interaction_kind,
+          exercise: launch.interaction_kind === "exercise",
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
@@ -324,7 +342,7 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [
-      timedStyle,
+      drillModalitySolo,
       loadTapResources,
       minutes,
       selectedBlockId,
@@ -467,8 +485,12 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           show_end_session: showEndSession,
           access_mode: "private",
-          session_mode: resolveProductIntent(openEndedStyle, "open_ended").session_mode,
-          project: openEndedStyle === "drill",
+          // Explore always → ILE. Dialog → learning; Solo → project.
+          session_mode: resolveProductIntent(
+            "explore",
+            exploreModalitySolo ? "solo" : "dialog",
+          ).session_mode,
+          project: exploreModalitySolo,
         };
         if (participantType === "user") {
           if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -500,11 +522,11 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [
+      exploreModalitySolo,
       loadTapResources,
       selectedBlockId,
       selectedMemberId,
       showEndSession,
-      openEndedStyle,
       t,
       workspaceId,
     ],
@@ -870,24 +892,24 @@ export function WorkspaceGuestLinksPanel({
     hint: string;
   }> = [
     {
-      id: "timed_explore",
-      label: PRODUCT_INTENT_LABELS.timedExplore,
-      hint: PRODUCT_INTENT_LABELS.timedExploreHint,
+      id: "explore_dialog",
+      label: PRODUCT_INTENT_LABELS.exploreDialog,
+      hint: PRODUCT_INTENT_LABELS.exploreDialogHint,
     },
     {
-      id: "timed_drill",
-      label: PRODUCT_INTENT_LABELS.timedDrill,
-      hint: PRODUCT_INTENT_LABELS.timedDrillHint,
+      id: "explore_solo",
+      label: PRODUCT_INTENT_LABELS.exploreSolo,
+      hint: PRODUCT_INTENT_LABELS.exploreSoloHint,
     },
     {
-      id: "open_ended_explore",
-      label: PRODUCT_INTENT_LABELS.openEndedExplore,
-      hint: PRODUCT_INTENT_LABELS.openEndedExploreHint,
+      id: "drill_dialog",
+      label: PRODUCT_INTENT_LABELS.drillDialog,
+      hint: PRODUCT_INTENT_LABELS.drillDialogHint,
     },
     {
-      id: "open_ended_drill",
-      label: PRODUCT_INTENT_LABELS.openEndedDrill,
-      hint: PRODUCT_INTENT_LABELS.openEndedDrillHint,
+      id: "drill_solo",
+      label: PRODUCT_INTENT_LABELS.drillSolo,
+      hint: PRODUCT_INTENT_LABELS.drillSoloHint,
     },
     {
       id: "tapbench",
@@ -964,15 +986,17 @@ export function WorkspaceGuestLinksPanel({
                   );
                 })}
               </div>
-              {/* Structural hooks for timed/open-ended styles (selection via product radios). */}
+              {/* Structural hooks for drill/explore styles (selection via product radios). */}
               <span
                 className="hidden"
-                data-product-intent="timed-style"
+                data-product-intent="drill-style"
+                data-product-intent-legacy="timed-style"
                 data-guest-link-exercise-tap={exerciseTap ? "true" : "false"}
               />
               <span
                 className="hidden"
-                data-product-intent="open-ended-style"
+                data-product-intent="explore-style"
+                data-product-intent-legacy="open-ended-style"
                 data-guest-link-ile-project-mode={ileProjectMode ? "true" : "false"}
                 data-ile-session-mode={ileProjectMode ? "project" : "learning"}
               />

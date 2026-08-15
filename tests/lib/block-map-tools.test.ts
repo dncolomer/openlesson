@@ -1173,6 +1173,7 @@ describe("block-map-tools", () => {
     expect(src).toContain("prevSelectedBlockIds: pending.prevSelectedBlockIds");
     expect(src).toContain("isMapPanGesture");
     expect(src).toContain("emptyCellDragIsPan");
+    expect(src).toContain("const PAN_CLICK_THRESHOLD = 6");
     expect(src).toContain("spaceHeldRef");
     expect(src).toContain("handleEmptyCellPointerDown");
     expect(src).toContain("beginViewportPan");
@@ -1186,9 +1187,14 @@ describe("block-map-tools", () => {
     expect(src).toContain("resolveActiveLassoShape");
     expect(src).toContain("LASSO_SHAPE_ORDER");
     expect(src).toContain("LassoShapeIcon");
-    expect(src).toContain('data-tool-icon="lasso"');
-    expect(src).toContain('data-tool-icon="lasso-circle"');
-    expect(src).toContain('data-tool-icon="lasso-freehand"');
+    const icons = require("node:fs").readFileSync(
+      require("node:path").join(process.cwd(), "components/block-skill-grid/map-tool-icons.tsx"),
+      "utf8",
+    );
+    expect(icons).toContain("LassoShapeIcon");
+    expect(icons).toContain('data-tool-icon="lasso"');
+    expect(icons).toContain('data-tool-icon="lasso-circle"');
+    expect(icons).toContain('data-tool-icon="lasso-freehand"');
     expect(src).toContain("data-map-lasso-circle");
     expect(src).toContain("data-map-lasso-freehand");
     expect(src).toContain("blocksIntersectingCircle");
@@ -1542,7 +1548,11 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(grid).toContain("allowsBlockDragInMode");
     expect(grid).toContain("isMapPanGesture");
     expect(grid).toContain("spaceHeldRef");
-    expect(grid).toContain("click-and-drag");
+    const icons = require("node:fs").readFileSync(
+      require("node:path").join(process.cwd(), "components/block-skill-grid/map-tool-icons.tsx"),
+      "utf8",
+    );
+    expect(icons).toContain("click-and-drag");
     expect(grid).not.toContain("Pan: drag to move the map");
   });
 
@@ -1571,9 +1581,13 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(grid).toContain('case "mark_unusable"');
     expect(grid).toContain("onMapGround");
     expect(grid).toContain('data-block-locked={lockedByPrereq ? "true" : "false"}');
-    expect(grid).toContain("data-block-dependency-lock");
-    expect(grid).toContain("data-block-has-dependencies");
     expect(grid).toContain("BlockDependencyLockBadge");
+    const badges = require("node:fs").readFileSync(
+      require("node:path").join(process.cwd(), "components/block-skill-grid/map-tile-badges.tsx"),
+      "utf8",
+    );
+    expect(badges).toContain("data-block-dependency-lock");
+    expect(grid).toContain("data-block-has-dependencies");
     expect(grid).toContain("normalizeLockUntilBlockIds");
     // Selected target previews deps with dashed prereq chrome
     expect(grid).toContain("previewPrereqIds");

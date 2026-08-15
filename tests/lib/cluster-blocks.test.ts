@@ -460,22 +460,16 @@ describe("Cluster blocks structural wiring", () => {
     const handler = view.slice(start, start + 2800);
     expect(handler).toContain('op: "relocate"');
     // Parent selection stores cleared only after successful relocate (not only on cancel).
-    expect(handler).toContain(
-      "setSelectedFilledBlockIds(clearWorkspaceFilledBlockSelection())",
-    );
-    expect(handler).toContain(
-      "setExpandedBlockId(clearWorkspaceBlockSelection())",
-    );
-    expect(handler).toContain("setEmptySurface(clearWorkspaceAddTarget())");
-    expect(handler).toContain("nextMapSelectionClearNonce");
-    expect(handler).toContain("setMapSelectionClearNonce");
-    // Grid-local multi + empty clear is host-driven via nonce (parent cannot set grid state).
-    expect(view).toContain("mapSelectionClearNonce={mapSelectionClearNonce}");
-    expect(sessionList).toContain("mapSelectionClearNonce");
-    expect(grid).toContain("mapSelectionClearNonce");
-    expect(grid).toMatch(
-      /mapSelectionClearNonce[\s\S]*?setSelectedBlockIds\(\[\]\)[\s\S]*?setSelectedEmptyCells\(\[\]\)|mapSelectionClearNonce[\s\S]*?setSelectedEmptyCells\(\[\]\)[\s\S]*?setSelectedBlockIds\(\[\]\)/,
-    );
+    expect(handler).toContain("applyMapSelectionResult");
+    expect(handler).toContain("emptyWorkspaceMapSelection");
+    expect(handler).toContain("nextWorkspaceMapSelection");
+    expect(handler).toContain('type: "clear"');
+    expect(handler).toContain("applyMapSelectionResult");
+    expect(view).not.toContain("mapSelectionClearNonce");
+    expect(sessionList).not.toContain("mapSelectionClearNonce");
+    expect(grid).not.toContain("mapSelectionClearNonce");
+    expect(grid).toContain("mapSelectionFromApplyPayload");
+    expect(grid).toContain("workspaceMapSelectionHostApply");
   });
 
   it("BlockSkillGrid shows cluster progress bar under minimap", () => {

@@ -11,6 +11,7 @@ import {
   ensureChapterGridPositions,
   sessionStepsToSkillGridNodes,
 } from "@/lib/chapter-skill-grid";
+import { resolveChapterLoadControl } from "@/lib/chapter-load-control";
 
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
@@ -28,6 +29,8 @@ interface ChapterMapPanelProps {
   onEnsurePositions?: (plan: SessionPlan) => void;
   isSessionActive: boolean;
   isCurrentStepCompleted?: boolean;
+  /** Per-user key for self-progress persist (signed-in / guest / token). */
+  learnerScopeId?: string | null;
 }
 
 export function ChapterMapPanel({
@@ -46,6 +49,7 @@ export function ChapterMapPanel({
   onEnsurePositions,
   isSessionActive,
   isCurrentStepCompleted = false,
+  learnerScopeId = null,
 }: ChapterMapPanelProps) {
   const guestAccessBody = ayclToken
     ? { ayclToken }
@@ -71,6 +75,11 @@ export function ChapterMapPanel({
 
   const selectedStep = selectedStepId ? steps.find((s) => s.id === selectedStepId) : null;
   const selectedIndex = selectedStep ? steps.findIndex((s) => s.id === selectedStep.id) : -1;
+  const loadControl = resolveChapterLoadControl({
+    selectedIndex,
+    activeChapterIndex,
+    loadingChapterIndex,
+  });
 
   useEffect(() => {
     if (!plan?.steps.length) return;
@@ -185,6 +194,7 @@ export function ChapterMapPanel({
         sessionId={sessionId}
         ayclToken={ayclToken}
         ileToken={ileToken}
+        learnerScopeId={learnerScopeId}
         locale={locale}
         suggestMode="chapter"
         recenterCell={activeCell}
@@ -289,10 +299,14 @@ export function ChapterMapPanel({
                   <ThoughtButton
                     size="sm"
                     className="w-full"
-                    disabled={selectedIndex === activeChapterIndex || loadingChapterIndex === selectedIndex}
+                    disabled={loadControl.disabled}
                     onClick={() => onLoadChapter(selectedIndex)}
                   >
-                    {loadingChapterIndex === selectedIndex ? "…" : t("chapterMap.loadChapter")}
+                    {loadingChapterIndex === selectedIndex
+                      ? "…"
+                      : loadControl.isActiveChapter
+                        ? t("chapterMap.reloadChapter")
+                        : t("chapterMap.loadChapter")}
                   </ThoughtButton>
                   <ThoughtButton
                     size="sm"

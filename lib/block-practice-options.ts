@@ -1,27 +1,42 @@
 /**
  * Author limits on which practice launches a block allows:
- * Explore/Drill × Open-ended/Timed, plus allowed timed durations.
+ * Explore/Drill × Dialog/Solo, plus allowed Drill (TAP) durations.
  * Pure helpers — unit-tested without React/DB.
+ *
+ * Serialization keeps legacy snake_case keys (allow_open_ended / allow_timed)
+ * for DB compatibility: open_ended → dialog, timed → solo.
  */
 
 import { DURATIONS } from "@/lib/tap-score-client-helpers";
-import type { LearningStyle, SessionHorizon } from "@/lib/product-intent";
+import type { LearningStyle, PracticeModality, SessionHorizon } from "@/lib/product-intent";
 import {
-  resolveLaunchFromStyleAndTimebox,
+  resolveLaunchFromStyleAndModality,
   type ProductLaunchTarget,
 } from "@/lib/product-intent";
 
-/** Canonical duration palette for timed practice (same as launch card). */
+/** Canonical duration palette for Drill/TAP practice (same as launch card). */
 export const BLOCK_PRACTICE_DURATION_OPTIONS: readonly number[] = DURATIONS;
 
 export type BlockPracticeOptions = {
   allowExplore: boolean;
   allowDrill: boolean;
+  /** Dialog modality (LLM-powered conversation). */
+  allowDialog: boolean;
+  /** Solo Exercise modality. */
+  allowSolo: boolean;
+  /**
+   * @deprecated Prefer allowDialog. Mirrored for older readers.
+   * open_ended historically meant ILE path; now maps to dialog.
+   */
   allowOpenEnded: boolean;
+  /**
+   * @deprecated Prefer allowSolo. Mirrored for older readers.
+   * timed historically meant TAP path; now maps to solo.
+   */
   allowTimed: boolean;
   /**
-   * Allowed timed lengths in minutes (subset of BLOCK_PRACTICE_DURATION_OPTIONS).
-   * Empty when timed is off; when timed is on, at least one duration after normalize.
+   * Allowed Drill (TAP) lengths in minutes (subset of BLOCK_PRACTICE_DURATION_OPTIONS).
+   * Empty when drill is off; when drill is on, at least one duration after normalize.
    */
   allowedDurationsMinutes: number[];
 };
@@ -29,22 +44,28 @@ export type BlockPracticeOptions = {
 export type BlockPracticeOptionsInput = Partial<{
   allowExplore: unknown;
   allowDrill: unknown;
+  allowDialog: unknown;
+  allowSolo: unknown;
   allowOpenEnded: unknown;
   allowTimed: unknown;
   allowedDurationsMinutes: unknown;
   /** snake_case aliases from DB/JSON */
   allow_explore: unknown;
   allow_drill: unknown;
+  allow_dialog: unknown;
+  allow_solo: unknown;
   allow_open_ended: unknown;
   allow_timed: unknown;
   allowed_durations_minutes: unknown;
 }> | null;
 
-/** Full open product surface (both styles, both horizons, all durations). */
+/** Full open product surface (both styles, both modalities, all durations). */
 export function defaultBlockPracticeOptions(): BlockPracticeOptions {
   return {
     allowExplore: true,
     allowDrill: true,
+    allowDialog: true,
+    allowSolo: true,
     allowOpenEnded: true,
     allowTimed: true,
     allowedDurationsMinutes: [...BLOCK_PRACTICE_DURATION_OPTIONS],
@@ -76,7 +97,8 @@ function parseDurationList(raw: unknown): number[] {
 
 /**
  * Normalize author/DB payload into a valid practice options object.
- * Ensures at least one style and one horizon; timed always has ≥1 duration when on.
+ * Ensures at least one style and one modality; drill always has ≥1 duration when on.
+ * Legacy allow_open_ended → allowDialog; allow_timed → allowSolo.
  */
 export function normalizeBlockPracticeOptions(
   raw?: BlockPracticeOptionsInput,
@@ -89,27 +111,38 @@ export function normalizeBlockPracticeOptions(
     def.allowExplore,
   );
   let allowDrill = asBool(raw.allowDrill ?? raw.allow_drill, def.allowDrill);
-  let allowOpenEnded = asBool(
-    raw.allowOpenEnded ?? raw.allow_open_ended,
-    def.allowOpenEnded,
-  );
-  let allowTimed = asBool(raw.allowTimed ?? raw.allow_timed, def.allowTimed);
+
+  // Prefer explicit dialog/solo; fall back to open_ended/timed legacy keys.
+  const dialogRaw = raw.allowDialog ?? raw.allow_dialog;
+  const soloRaw = raw.allowSolo ?? raw.allow_solo;
+  const openRaw = raw.allowOpenEnded ?? raw.allow_open_ended;
+  const timedRaw = raw.allowTimed ?? raw.allow_timed;
+
+  let allowDialog =
+    dialogRaw !== undefined
+      ? asBool(dialogRaw, def.allowDialog)
+      : asBool(openRaw, def.allowDialog);
+  let allowSolo =
+    soloRaw !== undefined
+      ? asBool(soloRaw, def.allowSolo)
+      : asBool(timedRaw, def.allowSolo);
 
   // At least one style
   if (!allowExplore && !allowDrill) {
     allowExplore = true;
     allowDrill = true;
   }
-  // At least one horizon
-  if (!allowOpenEnded && !allowTimed) {
-    allowOpenEnded = true;
-    allowTimed = true;
+  // At least one modality
+  if (!allowDialog && !allowSolo) {
+    allowDialog = true;
+    allowSolo = true;
   }
 
   let durations = parseDurationList(
     raw.allowedDurationsMinutes ?? raw.allowed_durations_minutes,
   );
-  if (allowTimed) {
+  // Durations apply to Drill (TAP) launches
+  if (allowDrill) {
     if (durations.length === 0) {
       durations = [...BLOCK_PRACTICE_DURATION_OPTIONS];
     }
@@ -120,8 +153,10 @@ export function normalizeBlockPracticeOptions(
   return {
     allowExplore,
     allowDrill,
-    allowOpenEnded,
-    allowTimed,
+    allowDialog,
+    allowSolo,
+    allowOpenEnded: allowDialog,
+    allowTimed: allowSolo,
     allowedDurationsMinutes: durations,
   };
 }
@@ -142,7 +177,7 @@ export function parseBlockPracticeOptions(raw: unknown): BlockPracticeOptions {
   return defaultBlockPracticeOptions();
 }
 
-/** Wire shape for DB / API (snake_case). */
+/** Wire shape for DB / API (snake_case). Writes both new + legacy keys. */
 export function serializeBlockPracticeOptions(
   opts: BlockPracticeOptions,
 ): Record<string, unknown> {
@@ -150,8 +185,11 @@ export function serializeBlockPracticeOptions(
   return {
     allow_explore: n.allowExplore,
     allow_drill: n.allowDrill,
-    allow_open_ended: n.allowOpenEnded,
-    allow_timed: n.allowTimed,
+    allow_dialog: n.allowDialog,
+    allow_solo: n.allowSolo,
+    // Legacy mirrors
+    allow_open_ended: n.allowDialog,
+    allow_timed: n.allowSolo,
     allowed_durations_minutes: n.allowedDurationsMinutes,
   };
 }
@@ -165,58 +203,79 @@ export function blockAllowsPracticeStyle(
   return style === "drill" ? n.allowDrill : n.allowExplore;
 }
 
-/** Whether open-ended or timed horizon is offered. */
+/** Whether Dialog or Solo modality is offered. */
+export function blockAllowsPracticeModality(
+  opts: BlockPracticeOptions | null | undefined,
+  modality: PracticeModality,
+): boolean {
+  const n = normalizeBlockPracticeOptions(opts ?? null);
+  return modality === "solo" ? n.allowSolo : n.allowDialog;
+}
+
+/**
+ * @deprecated Prefer blockAllowsPracticeModality.
+ * open_ended → dialog; timed → solo.
+ */
 export function blockAllowsPracticeHorizon(
   opts: BlockPracticeOptions | null | undefined,
   horizon: SessionHorizon,
 ): boolean {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
-  return horizon === "timed" ? n.allowTimed : n.allowOpenEnded;
+  return blockAllowsPracticeModality(
+    opts,
+    horizon === "timed" ? "solo" : "dialog",
+  );
 }
 
-/** Allowed timed durations (empty if timed disabled). */
+/** Allowed Drill (TAP) durations (empty if drill disabled). */
 export function blockAllowedDurations(
   opts: BlockPracticeOptions | null | undefined,
 ): number[] {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  if (!n.allowTimed) return [];
+  if (!n.allowDrill) return [];
   return n.allowedDurationsMinutes.length
     ? n.allowedDurationsMinutes
     : [...BLOCK_PRACTICE_DURATION_OPTIONS];
 }
 
 /**
- * Whether a launch target (style × timebox) is allowed by author limits.
+ * Whether a launch target (style × solo flag) is allowed by author limits.
+ * soloEnabled true → solo modality; false → dialog.
  */
 export function blockAllowsLaunchTarget(
   opts: BlockPracticeOptions | null | undefined,
   style: LearningStyle,
-  timeboxEnabled: boolean,
+  soloEnabled: boolean,
 ): boolean {
   const n = normalizeBlockPracticeOptions(opts ?? null);
   if (!blockAllowsPracticeStyle(n, style)) return false;
-  if (timeboxEnabled) return n.allowTimed;
-  return n.allowOpenEnded;
+  if (soloEnabled) return n.allowSolo;
+  return n.allowDialog;
 }
 
 /**
- * Default style/timebox for the launch card given limits.
+ * Default style/modality for the launch card given limits.
  */
 export function resolveDefaultPracticeLaunchUi(
   opts: BlockPracticeOptions | null | undefined,
-): { style: LearningStyle; timebox: boolean; durationMinutes: number } {
+): { style: LearningStyle; solo: boolean; timebox: boolean; durationMinutes: number } {
   const n = normalizeBlockPracticeOptions(opts ?? null);
   const style: LearningStyle = n.allowExplore
     ? "explore"
     : n.allowDrill
       ? "drill"
       : "explore";
-  // Prefer open-ended when available; else timed.
-  const timebox = n.allowOpenEnded ? false : Boolean(n.allowTimed);
+  // Prefer dialog when available; else solo.
+  const solo = n.allowDialog ? false : Boolean(n.allowSolo);
   const durations = blockAllowedDurations(n);
   const durationMinutes =
     durations.includes(15) ? 15 : durations[0] ?? 15;
-  return { style, timebox, durationMinutes };
+  return {
+    style,
+    solo,
+    /** @deprecated alias of solo for older UI that still reads timebox */
+    timebox: solo,
+    durationMinutes,
+  };
 }
 
 /** Clamp chosen duration into allowed set. */
@@ -241,11 +300,11 @@ export function enabledPracticeLaunchCombos(
   const out: ProductLaunchTarget["id"][] = [];
   for (const style of ["explore", "drill"] as const) {
     if (!blockAllowsPracticeStyle(n, style)) continue;
-    if (n.allowOpenEnded) {
-      out.push(resolveLaunchFromStyleAndTimebox(style, false).id);
+    if (n.allowDialog) {
+      out.push(resolveLaunchFromStyleAndModality(style, false).id);
     }
-    if (n.allowTimed) {
-      out.push(resolveLaunchFromStyleAndTimebox(style, true).id);
+    if (n.allowSolo) {
+      out.push(resolveLaunchFromStyleAndModality(style, true).id);
     }
   }
   return out;
@@ -254,17 +313,24 @@ export function enabledPracticeLaunchCombos(
 /**
  * Compact icon keys for map badges (stable for tests/data attrs).
  * - explore / drill: style allowed
- * - open / timed: horizon allowed
+ * - dialog / solo: modality allowed
+ * - open / timed: legacy aliases of dialog / solo
  */
 export function practiceOptionsIconKeys(
   opts: BlockPracticeOptions | null | undefined,
-): Array<"explore" | "drill" | "open" | "timed"> {
+): Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed"> {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  const keys: Array<"explore" | "drill" | "open" | "timed"> = [];
+  const keys: Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed"> = [];
   if (n.allowExplore) keys.push("explore");
   if (n.allowDrill) keys.push("drill");
-  if (n.allowOpenEnded) keys.push("open");
-  if (n.allowTimed) keys.push("timed");
+  if (n.allowDialog) {
+    keys.push("dialog");
+    keys.push("open");
+  }
+  if (n.allowSolo) {
+    keys.push("solo");
+    keys.push("timed");
+  }
   return keys;
 }
 
@@ -276,9 +342,9 @@ export function practiceOptionsIsRestricted(
   const d = defaultBlockPracticeOptions();
   if (n.allowExplore !== d.allowExplore) return true;
   if (n.allowDrill !== d.allowDrill) return true;
-  if (n.allowOpenEnded !== d.allowOpenEnded) return true;
-  if (n.allowTimed !== d.allowTimed) return true;
-  if (n.allowTimed) {
+  if (n.allowDialog !== d.allowDialog) return true;
+  if (n.allowSolo !== d.allowSolo) return true;
+  if (n.allowDrill) {
     if (n.allowedDurationsMinutes.length !== d.allowedDurationsMinutes.length) {
       return true;
     }

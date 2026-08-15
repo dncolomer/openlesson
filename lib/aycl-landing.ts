@@ -8,6 +8,8 @@ import {
   ayclOfferLabel,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
+import { shouldShowMapNotesPlaneToggle } from "@/lib/learner-map-notes";
+import { shouldShowAnnotationLayerToggles } from "@/lib/map-annotation-layers";
 import {
   formatAyclPriceCents,
   normalizeAyclListingFields,
@@ -200,6 +202,35 @@ export function assembleAyclLandingSummary(input: {
       ogImagePath: ayclLandingOgImagePath(id),
     },
   };
+}
+
+/**
+ * Public map preview overlay chrome: toggles only for overlays that exist.
+ * Does not invent notes or handwriting layers.
+ */
+export function resolveAyclPreviewOverlayChrome(input: {
+  noteCount: number;
+  layerCount: number;
+}): {
+  showNotesToggle: boolean;
+  showLayerToggles: boolean;
+  showStack: boolean;
+} {
+  const showNotesToggle = shouldShowMapNotesPlaneToggle(input.noteCount);
+  const showLayerToggles = shouldShowAnnotationLayerToggles(input.layerCount);
+  return {
+    showNotesToggle,
+    showLayerToggles,
+    showStack: showNotesToggle || showLayerToggles,
+  };
+}
+
+export function ayclMapPreviewFullscreenActive(open: unknown): boolean {
+  return open === true || open === "true" || open === 1;
+}
+
+export function toggleAyclMapPreviewFullscreen(open: unknown): boolean {
+  return !ayclMapPreviewFullscreenActive(open);
 }
 
 /** Stripe checkout body for AYCL purchase from the landing CTA. */

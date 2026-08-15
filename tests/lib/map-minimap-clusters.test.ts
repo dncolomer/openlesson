@@ -8,18 +8,23 @@ import { join } from "node:path";
 import {
   MINIMAP_FRAME_HEIGHT,
   MINIMAP_FRAME_HEIGHT_LEGACY,
+  MINIMAP_FRAME_HEIGHT_PREV,
   MINIMAP_FRAME_PADDING,
   MINIMAP_FRAME_WIDTH,
   MINIMAP_FRAME_WIDTH_LEGACY,
+  MINIMAP_FRAME_WIDTH_PREV,
   MINIMAP_ISOLATION_GAP_CELLS,
   blocksAreClusterNeighbors,
   buildClusterMstEdges,
   buildMinimapClusterGraph,
   isMinimapTileViewEmpty,
   minChebyshevBetweenBlocks,
+  panFromMinimapViewportDrag,
   placementsFromOccupiedCells,
   cellsForMinimapCluster,
+  getMinimapFrameOrigin,
   getPanZoomToOneToOneClusterView,
+  projectMainViewportToMinimapRect,
   projectMinimapClusters,
   projectMinimapTiles,
 } from "@/lib/map-minimap-clusters";
@@ -33,7 +38,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.MINIMAP_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-4f895189cf6b/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-33455485d280/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -168,8 +173,12 @@ describe("buildMinimapClusterGraph", () => {
   it("frame size is strictly larger than legacy 148×108", () => {
     expect(MINIMAP_FRAME_WIDTH).toBeGreaterThan(MINIMAP_FRAME_WIDTH_LEGACY);
     expect(MINIMAP_FRAME_HEIGHT).toBeGreaterThan(MINIMAP_FRAME_HEIGHT_LEGACY);
+    expect(MINIMAP_FRAME_WIDTH).toBeLessThan(MINIMAP_FRAME_WIDTH_PREV);
+    expect(MINIMAP_FRAME_HEIGHT).toBeLessThan(MINIMAP_FRAME_HEIGHT_PREV);
     expect(MINIMAP_FRAME_WIDTH_LEGACY).toBe(148);
     expect(MINIMAP_FRAME_HEIGHT_LEGACY).toBe(108);
+    expect(MINIMAP_FRAME_WIDTH_PREV).toBe(220);
+    expect(MINIMAP_FRAME_HEIGHT_PREV).toBe(168);
 
     writeEvidence(
       "minimap-size.log",
@@ -470,6 +479,221 @@ describe("structural: minimap on BlockSkillGrid", () => {
         "usesClusterGraph=" + grid.includes("buildMinimapClusterGraph"),
         "usesTiles=" + grid.includes("projectMinimapTiles"),
         "noEdgeLines=" + !grid.includes("data-minimap-edge"),
+      ].join("\n"),
+    );
+  });
+});
+
+describe("minimap viewport rectangle (camera projection + drag→pan)", () => {
+  const placements = [
+    { id: "a", cells: [cell(0, 0), cell(0, 1), cell(1, 0), cell(1, 1)] },
+    { id: "b", cells: [cell(0, 8), cell(0, 9), cell(1, 8), cell(1, 9)] },
+    { id: "c", cells: [cell(10, 0), cell(10, 1), cell(11, 0), cell(11, 1)] },
+  ];
+
+  function tileView() {
+    return projectMinimapTiles({
+      placements,
+      width: MINIMAP_FRAME_WIDTH,
+      height: MINIMAP_FRAME_HEIGHT,
+      padding: MINIMAP_FRAME_PADDING,
+    });
+  }
+
+  it("projects main camera to a rect that moves with pan and shrinks with zoom", () => {
+    const view = tileView();
+    expect(view.tiles.length).toBeGreaterThan(0);
+    expect(view.cellSize).toBeGreaterThan(0);
+
+    const base = {
+      viewportWidth: 800,
+      viewportHeight: 600,
+      bounds: view.bounds,
+      cellSize: view.cellSize,
+      width: MINIMAP_FRAME_WIDTH,
+      height: MINIMAP_FRAME_HEIGHT,
+      padding: MINIMAP_FRAME_PADDING,
+      pitch: SKILL_GRID_PITCH,
+    };
+
+    // Center-ish camera over mid map
+    const pan0 = getPanToCenterCell(800, 600, { row: 5, col: 5 }, 1);
+    const r0 = projectMainViewportToMinimapRect({
+      ...base,
+      pan: pan0,
+      zoom: 1,
+    });
+    expect(r0).not.toBeNull();
+    if (!r0) return;
+
+    // Pan right (increase world view → higher col) decreases pan.x
+    const panRight = { x: pan0.x - 200, y: pan0.y };
+    const rRight = projectMainViewportToMinimapRect({
+      ...base,
+      pan: panRight,
+      zoom: 1,
+    });
+    expect(rRight).not.toBeNull();
+    if (!rRight) return;
+    expect(rRight.x).toBeGreaterThan(r0.x);
+
+    // Pan down → rect moves down
+    const panDown = { x: pan0.x, y: pan0.y - 200 };
+    const rDown = projectMainViewportToMinimapRect({
+      ...base,
+      pan: panDown,
+      zoom: 1,
+    });
+    expect(rDown).not.toBeNull();
+    if (!rDown) return;
+    expect(rDown.y).toBeGreaterThan(r0.y);
+
+    // Zoom in → smaller rect
+    const rZoom = projectMainViewportToMinimapRect({
+      ...base,
+      pan: pan0,
+      zoom: 2,
+    });
+    expect(rZoom).not.toBeNull();
+    if (!rZoom) return;
+    expect(rZoom.w).toBeLessThan(r0.w);
+    expect(rZoom.h).toBeLessThan(r0.h);
+
+    // Zoom out → larger rect
+    const rOut = projectMainViewportToMinimapRect({
+      ...base,
+      pan: pan0,
+      zoom: 0.5,
+    });
+    expect(rOut).not.toBeNull();
+    if (!rOut) return;
+    expect(rOut.w).toBeGreaterThan(r0.w);
+    expect(rOut.h).toBeGreaterThan(r0.h);
+
+    // Frame origin matches tile projection
+    const origin = getMinimapFrameOrigin({
+      bounds: view.bounds,
+      cellSize: view.cellSize,
+      width: MINIMAP_FRAME_WIDTH,
+      height: MINIMAP_FRAME_HEIGHT,
+      padding: MINIMAP_FRAME_PADDING,
+    });
+    expect(origin).not.toBeNull();
+
+    writeEvidence(
+      "minimap-viewport-rect-logic.log",
+      [
+        "hasRect=" + Boolean(r0),
+        "panRightMovesX=" + (rRight.x > r0.x),
+        "panDownMovesY=" + (rDown.y > r0.y),
+        "zoomInShrinks=" + (rZoom.w < r0.w && rZoom.h < r0.h),
+        "zoomOutGrows=" + (rOut.w > r0.w && rOut.h > r0.h),
+        "hasOrigin=" + Boolean(origin),
+        `r0=${JSON.stringify(r0)}`,
+        `rRight.x=${rRight.x}`,
+        `rZoom.w=${rZoom.w}`,
+      ].join("\n"),
+    );
+  });
+
+  it("drag→pan moves map and re-projection tracks the drag target", () => {
+    const view = tileView();
+    const base = {
+      viewportWidth: 800,
+      viewportHeight: 600,
+      bounds: view.bounds,
+      cellSize: view.cellSize,
+      width: MINIMAP_FRAME_WIDTH,
+      height: MINIMAP_FRAME_HEIGHT,
+      padding: MINIMAP_FRAME_PADDING,
+      pitch: SKILL_GRID_PITCH,
+    };
+    const pan0 = getPanToCenterCell(800, 600, { row: 5, col: 5 }, 1);
+    const r0 = projectMainViewportToMinimapRect({
+      ...base,
+      pan: pan0,
+      zoom: 1,
+    });
+    expect(r0).not.toBeNull();
+    if (!r0) return;
+
+    const dragDx = 24;
+    const dragDy = 12;
+    const pan1 = panFromMinimapViewportDrag({
+      pan: pan0,
+      zoom: 1,
+      deltaX: dragDx,
+      deltaY: dragDy,
+      cellSize: view.cellSize,
+      pitch: SKILL_GRID_PITCH,
+    });
+    // Dragging rect right/down → looking further right/down → pan decreases
+    expect(pan1.x).toBeLessThan(pan0.x);
+    expect(pan1.y).toBeLessThan(pan0.y);
+
+    const r1 = projectMainViewportToMinimapRect({
+      ...base,
+      pan: pan1,
+      zoom: 1,
+    });
+    expect(r1).not.toBeNull();
+    if (!r1) return;
+    // Re-projected rect should sit near the drag target (within 1px float error)
+    expect(r1.x).toBeCloseTo(r0.x + dragDx, 5);
+    expect(r1.y).toBeCloseTo(r0.y + dragDy, 5);
+    expect(r1.w).toBeCloseTo(r0.w, 5);
+    expect(r1.h).toBeCloseTo(r0.h, 5);
+
+    writeEvidence(
+      "minimap-viewport-drag-logic.log",
+      [
+        "panX_decreases=" + (pan1.x < pan0.x),
+        "panY_decreases=" + (pan1.y < pan0.y),
+        "reproject_x_tracks=" +
+          String(Math.abs(r1.x - (r0.x + dragDx)) < 0.01),
+        "reproject_y_tracks=" +
+          String(Math.abs(r1.y - (r0.y + dragDy)) < 0.01),
+        `pan0=${JSON.stringify(pan0)}`,
+        `pan1=${JSON.stringify(pan1)}`,
+        `r0=${JSON.stringify(r0)}`,
+        `r1=${JSON.stringify(r1)}`,
+        `drag=${dragDx},${dragDy}`,
+      ].join("\n"),
+    );
+  });
+
+  it("structural: viewport rect element + drag wires panFromMinimapViewportDrag/setPan", () => {
+    const grid = read("components/BlockSkillGrid.tsx");
+    const lib = read("lib/map-minimap-clusters.ts");
+
+    expect(lib).toContain("export function projectMainViewportToMinimapRect");
+    expect(lib).toContain("export function panFromMinimapViewportDrag");
+    expect(lib).toContain("export function getMinimapFrameOrigin");
+
+    expect(grid).toContain("data-minimap-viewport-rect");
+    expect(grid).toContain("data-minimap-viewport-window");
+    expect(grid).toContain("resolveMinimapViewportWindow");
+    expect(grid).toContain("panFromMinimapViewportDrag");
+    expect(grid).toContain("minimapViewportRect");
+    expect(grid).toContain("onMinimapViewportPointerDown");
+    expect(grid).toContain("onMinimapViewportPointerMove");
+    // Drag path must update main pan (not cosmetic-only)
+    expect(grid).toMatch(/panFromMinimapViewportDrag\s*\(/);
+    expect(grid).toMatch(/setPan\(next\)|setPan\(\s*next\s*\)/);
+
+    writeEvidence(
+      "minimap-viewport-rect-structural.log",
+      [
+        "hasViewportRectAttr=" + grid.includes("data-minimap-viewport-rect"),
+        "usesProjectHelper=" + grid.includes("resolveMinimapViewportWindow"),
+        "usesDragHelper=" + grid.includes("panFromMinimapViewportDrag"),
+        "hasPointerDown=" + grid.includes("onMinimapViewportPointerDown"),
+        "hasPointerMove=" + grid.includes("onMinimapViewportPointerMove"),
+        "setPanWired=" + /setPan\(next\)/.test(grid),
+        "libExportsProject=" +
+          lib.includes("export function projectMainViewportToMinimapRect"),
+        "libExportsDrag=" +
+          lib.includes("export function panFromMinimapViewportDrag"),
       ].join("\n"),
     );
   });

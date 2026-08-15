@@ -3,14 +3,15 @@ import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
 import { buildTapScoreInstructions, TapScoreMode } from "@/lib/tap-score";
 import { buildTapSelectiveThoughtSystemPrompt } from "@/lib/prompt-kernel/surfaces/tap";
 import {
+  authContextFromTapAccess,
   loadTapScoreBriefForAccess,
   resolveTapSessionAccess,
 } from "@/lib/tap-score-session-auth";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
   buildTapChatExchangePayload,
   TAP_CHAT_TOOL_NAME,
 } from "@/lib/tap-score-traces";
-import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
@@ -144,17 +145,6 @@ export async function POST(req: NextRequest) {
 
       const fileName = `tap-chat-${access.tapSessionId}-${timestampMs}.json`;
       const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
-      let uploaded: { file_id: string };
-      try {
-        uploaded = await uploadFileToXAI(fileName, "application/json", base64);
-      } catch (err) {
-        console.error("[workspace-tap-score/chat] PoW upload failed:", err);
-        return NextResponse.json(
-          { error: err instanceof Error ? err.message : "Failed to store proof of work" },
-          { status: 502 }
-        );
-      }
-
       const chatMetadata = stampPoWPracticeFlag(
         stampSourceLinkMetadata(
           {
@@ -167,28 +157,39 @@ export async function POST(req: NextRequest) {
         practice,
       );
 
-      const { error: insertError } = await access.supabase.from("workspace_proof_of_work").insert({
-        workspace_id: access.workspaceId,
-        block_id: blockId || access.blockId,
-        session_id: focusSessionId || access.focusSessionId,
-        proof_of_work_type: "tool",
-        file_name: fileName,
-        mime_type: "application/json",
-        file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
-        xai_file_id: uploaded.file_id,
-        timestamp_ms: timestampMs,
-        chunk_index: 0,
-        metadata: chatMetadata,
-        tool_name: TAP_CHAT_TOOL_NAME,
-        tool_action: "chat_exchange",
-        user_id: access.guestUserId ? null : access.userId,
-        guest_user_id: access.guestUserId,
-        organization_id: access.organizationId,
-      });
-
-      if (insertError) {
-        console.error("[workspace-tap-score/chat] PoW insert failed:", insertError);
-        return NextResponse.json({ error: "Failed to store proof of work" }, { status: 500 });
+      const { data: workspace } = await access.supabase
+        .from("workspaces")
+        .select("id, user_id, organization_id")
+        .eq("id", access.workspaceId)
+        .single();
+      if (!workspace) {
+        return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      }
+      try {
+        await uploadWorkspaceProofOfWork(
+          access.supabase,
+          authContextFromTapAccess(access, "tap-chat"),
+          workspace,
+          {
+            workspaceId: access.workspaceId,
+            type: "tool",
+            mime_type: "application/json",
+            data: base64,
+            block_id: blockId || access.blockId,
+            session_id: focusSessionId || access.focusSessionId,
+            file_name: fileName,
+            timestamp_ms: timestampMs,
+            tool_name: TAP_CHAT_TOOL_NAME,
+            tool_action: "chat_exchange",
+            metadata: chatMetadata,
+          },
+        );
+      } catch (err) {
+        console.error("[workspace-tap-score/chat] PoW upload failed:", err);
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Failed to store proof of work" },
+          { status: 502 },
+        );
       }
 
       proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);

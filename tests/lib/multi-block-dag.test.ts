@@ -168,8 +168,10 @@ describe("multi-select DAG + Delete UI / API structural", () => {
     expect(pane).toContain("You can only have");
     expect(pane).toContain("MULTI_BLOCK_DAG_MAX_BLOCKS");
     expect(canvas).toContain("h-[min(52vh,360px)]");
-    expect(pane).toContain('drawerId="delete"');
-    expect(pane).toContain('title="Delete"');
+    expect(pane).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(pane).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_TITLE");
+    expect(pane).not.toContain('drawerId="delete"');
+    expect(pane).not.toContain('title="Delete"');
     expect(pane).toContain("data-multi-block-delete");
     expect(pane).toContain("onApplyDag");
     expect(pane).toContain("onDeleteBlocks");
@@ -205,7 +207,7 @@ describe("multi-select DAG + Delete UI / API structural", () => {
         "dag_apply=" + pane.includes("data-dag-apply"),
         "visual_canvas=" + canvas.includes("data-multi-block-dag-canvas"),
         "leads_to_only=" + String(!canvas.includes("Depends on")),
-        "delete_drawer=" + pane.includes('drawerId="delete"'),
+        "delete_drawer=" + pane.includes("WORKSPACE_EDITOR_DANGER_DRAWER_ID"),
         "apply_dag_api=" + gridOps.includes('op === "apply_dag"'),
         "delete_blocks_api=" + gridOps.includes('op === "delete_blocks"'),
         "helper=" + mod.includes("buildMultiBlockDagApplyUpdates"),

@@ -1,6 +1,6 @@
 /**
  * Admin-facing product tool labels.
- * Technical kinds remain ile/tap in data; operators see Explore/Drill × Open-ended/Timed.
+ * Technical kinds remain ile/tap in data; operators see Explore/Drill × Dialog/Solo.
  */
 
 import {
@@ -17,14 +17,19 @@ export type AdminActivityType =
   | "proof_of_work"
   | "workspace_created";
 
-/** Horizon rollups when only ile vs tap aggregates exist (no per-variant stats). */
+/** Family rollups when only ile vs tap aggregates exist (no per-variant stats). */
 export const ADMIN_SESSION_HORIZON_LABELS = {
-  /** ILE aggregate → open-ended product family */
-  openEnded: "Open-ended sessions",
-  openEndedShort: "open-ended",
-  /** TAP aggregate → timed product family */
-  timed: "Timed sessions",
-  timedShort: "timed",
+  /** ILE aggregate → Explore product family */
+  openEnded: "Explore sessions",
+  openEndedShort: "explore",
+  /** TAP aggregate → Drill product family */
+  timed: "Drill sessions",
+  timedShort: "drill",
+  /** Explicit Explore / Drill rollups */
+  explore: "Explore sessions",
+  exploreShort: "explore",
+  drill: "Drill sessions",
+  drillShort: "drill",
 } as const;
 
 export type AdminSessionTechKind = "ile" | "tap" | "tutoring" | "ile_session" | "tap_session" | string;
@@ -32,7 +37,7 @@ export type AdminSessionTechKind = "ile" | "tap" | "tutoring" | "ile_session" | 
 /**
  * Map technical session fields → product launch target (four variants).
  * Sparse/missing subtype falls back via productIntentFromGuestLink defaults
- * (ile→open-ended explore, tap→timed explore) — never TAP/ILE product names.
+ * (ile→explore dialog, tap→drill dialog) — never TAP/ILE product names.
  */
 export function adminSessionProductTarget(input: {
   technicalKind?: AdminSessionTechKind | null;
@@ -45,7 +50,8 @@ export function adminSessionProductTarget(input: {
     raw === "tutoring" ||
     raw === "ile_session" ||
     raw === "open_ended" ||
-    raw === "open-ended"
+    raw === "open-ended" ||
+    raw === "explore"
       ? "ile"
       : "tap";
 
@@ -56,7 +62,7 @@ export function adminSessionProductTarget(input: {
   });
 }
 
-/** Full product tool name, e.g. "Timed Exploration". */
+/** Full product tool name, e.g. "Drill · Dialog". */
 export function adminSessionProductLabel(input: {
   technicalKind?: AdminSessionTechKind | null;
   session_mode?: string | null;
@@ -68,7 +74,7 @@ export function adminSessionProductLabel(input: {
 /**
  * Activity feed type badge.
  * When subtype fields are present, show the specific four-variant name;
- * otherwise show the honest horizon rollup (open-ended / timed).
+ * otherwise show the honest family rollup (Explore / Drill).
  */
 export function adminActivityTypeLabel(
   type: AdminActivityType | string,
@@ -87,7 +93,7 @@ export function adminActivityTypeLabel(
           session_mode: meta.session_mode,
         });
       }
-      return "Open-ended session";
+      return "Explore session";
     }
     case "tap_session": {
       if (meta?.interaction_kind || meta?.preferFullProductName) {
@@ -96,7 +102,7 @@ export function adminActivityTypeLabel(
           interaction_kind: meta.interaction_kind,
         });
       }
-      return "Timed session";
+      return "Drill session";
     }
     case "proof_of_work":
       return "Proof of work";
@@ -116,17 +122,17 @@ export function adminActiveUserActivityLabel(user: {
 }): string {
   const parts: string[] = [];
   if (user.ileSessions) {
-    parts.push(`${user.ileSessions} ${ADMIN_SESSION_HORIZON_LABELS.openEndedShort}`);
+    parts.push(`${user.ileSessions} ${ADMIN_SESSION_HORIZON_LABELS.exploreShort}`);
   }
   if (user.tapSessions) {
-    parts.push(`${user.tapSessions} ${ADMIN_SESSION_HORIZON_LABELS.timedShort}`);
+    parts.push(`${user.tapSessions} ${ADMIN_SESSION_HORIZON_LABELS.drillShort}`);
   }
   if (user.proofOfWork) parts.push(`${user.proofOfWork} PoW`);
   if (user.workspacesCreated) parts.push(`${user.workspacesCreated} WS`);
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
-/** Activity feed summary line for a timed (TAP) session row. */
+/** Activity feed summary line for a Drill (TAP) session row. */
 export function adminTimedSessionActivitySummary(input: {
   interaction_kind?: string | null;
   overall_score?: number | null;
@@ -142,9 +148,14 @@ export function adminTimedSessionActivitySummary(input: {
 
 export function adminProductIntentLabels() {
   return {
-    openEndedExplore: PRODUCT_INTENT_LABELS.openEndedExplore,
-    openEndedDrill: PRODUCT_INTENT_LABELS.openEndedDrill,
-    timedExplore: PRODUCT_INTENT_LABELS.timedExplore,
-    timedDrill: PRODUCT_INTENT_LABELS.timedDrill,
+    exploreDialog: PRODUCT_INTENT_LABELS.exploreDialog,
+    exploreSolo: PRODUCT_INTENT_LABELS.exploreSolo,
+    drillDialog: PRODUCT_INTENT_LABELS.drillDialog,
+    drillSolo: PRODUCT_INTENT_LABELS.drillSolo,
+    // Legacy key aliases
+    openEndedExplore: PRODUCT_INTENT_LABELS.exploreDialog,
+    openEndedDrill: PRODUCT_INTENT_LABELS.exploreSolo,
+    timedExplore: PRODUCT_INTENT_LABELS.drillDialog,
+    timedDrill: PRODUCT_INTENT_LABELS.drillSolo,
   };
 }

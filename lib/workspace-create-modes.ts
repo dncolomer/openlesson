@@ -1,6 +1,6 @@
 /**
- * Pure helpers for workspace create modes (Blank / Template / Files+Goal)
- * and shared AI context assembly (files + notes + goal).
+ * Pure helpers for workspace create modes (Blank / Template on the UI;
+ * Files+Goal remains API-only) and shared AI context assembly.
  */
 
 import {
@@ -11,11 +11,17 @@ import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 
 export type WorkspaceCreateMode = "blank" | "template" | "files_goal";
 
+/** Modes shown as option cards on `/workspace/new`. Files+Goal is not a UI option. */
 export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = [
   "blank",
   "template",
-  "files_goal",
 ];
+
+export function isUiWorkspaceCreateMode(
+  mode: unknown,
+): mode is Exclude<WorkspaceCreateMode, "files_goal"> {
+  return mode === "blank" || mode === "template";
+}
 
 /** API / agent semantic create only supports Files + Goal Prompt. */
 export const API_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = ["files_goal"];

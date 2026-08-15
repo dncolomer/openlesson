@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -81,7 +82,7 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated", code: "auth_required" }, { status: 401 });
+    return jsonError(401, "Not authenticated", "auth_required");
   }
 
   const { data: profile } = await supabase
@@ -93,13 +94,11 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
   const hasApiAccess = await profileHasApiAccess(profile);
 
   if (!hasApiAccess) {
-    return NextResponse.json(
-      {
-        error: "The Proof-of-Work API requires Pro / Teams or API Metered.",
-        code: "api_plan_required",
-        renew_url: "/pricing",
-      },
-      { status: 403 }
+    return jsonError(
+      403,
+      "The Proof-of-Work API requires Pro / Teams or API Metered.",
+      "api_plan_required",
+      { renew_url: "/pricing" },
     );
   }
 
@@ -130,7 +129,7 @@ export async function requireWorkspaceOwnerSession(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return jsonError(401, "Not authenticated");
   }
 
   const [{ data: profile }, { data: plan }] = await Promise.all([
@@ -147,26 +146,21 @@ export async function requireWorkspaceOwnerSession(
   ]);
 
   if (!plan) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return jsonError(404, "Workspace not found");
   }
 
   if (plan.user_id !== user.id) {
-    return NextResponse.json(
-      { error: "Only the workspace owner can access integration tools", code: "forbidden" },
-      { status: 403 }
-    );
+    return jsonError(403, "Only the workspace owner can access integration tools", "forbidden");
   }
 
   const hasApiAccess = await profileHasApiAccess(profile);
 
   if (!hasApiAccess) {
-    return NextResponse.json(
-      {
-        error: "The Proof-of-Work API requires Pro / Teams or API Metered.",
-        code: "api_plan_required",
-        renew_url: "/pricing",
-      },
-      { status: 403 }
+    return jsonError(
+      403,
+      "The Proof-of-Work API requires Pro / Teams or API Metered.",
+      "api_plan_required",
+      { renew_url: "/pricing" },
     );
   }
 
@@ -215,7 +209,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
 ): Promise<SessionWorkspaceProofOfWorkAccess | NextResponse> {
   const normalizedWorkspaceId = workspaceId.trim();
   if (!normalizedWorkspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    return jsonError(400, "workspaceId is required");
   }
 
   const ileToken = options?.ileToken?.trim() || "";
@@ -225,10 +219,10 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       ? await resolveIleLinkSessionAccess(ileToken, sessionId, entryQueryParams)
       : await resolveIleLinkAccess(ileToken, entryQueryParams);
     if ("error" in ile) {
-      return NextResponse.json({ error: ile.error }, { status: ile.status });
+      return jsonError(ile.status, ile.error);
     }
     if (ile.workspaceId !== normalizedWorkspaceId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     const { data: workspace } = await ile.supabase
@@ -238,17 +232,14 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       .single();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     // Guest-link PoW is attributed to guest (or assigned member), never the owner.
     const participantUserId = ile.assignedUserId;
     const participantGuestUserId = ile.assignedUserId ? null : ile.guestUserId;
     if (!participantUserId && !participantGuestUserId) {
-      return NextResponse.json(
-        { error: "ILE guest participant is not provisioned", code: "guest_missing" },
-        { status: 500 },
-      );
+      return jsonError(500, "ILE guest participant is not provisioned", "guest_missing");
     }
 
     const auth: AuthContext = {
@@ -276,7 +267,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return jsonError(401, "Not authenticated");
   }
 
   const [{ data: profile }, { data: workspace }] = await Promise.all([
@@ -295,7 +286,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
   ]);
 
   if (!workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return jsonError(404, "Workspace not found");
   }
 
   const isOwner = workspace.user_id === user.id;
@@ -313,7 +304,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       .single();
 
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return jsonError(404, "Session not found");
     }
     sessionRow = session;
 
@@ -325,21 +316,16 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
         : null;
 
     if (linkedWorkspaceId && linkedWorkspaceId !== normalizedWorkspaceId) {
-      return NextResponse.json(
-        { error: "session_id does not belong to this workspace", code: "forbidden" },
-        { status: 403 },
-      );
+      return jsonError(403, "session_id does not belong to this workspace", "forbidden");
     }
   }
 
   const isSessionParticipant = Boolean(sessionRow && sessionRow.user_id === user.id);
   if (!isOwner && !isSessionParticipant && !isOrgMemberOfGroup) {
-    return NextResponse.json(
-      {
-        error: "Only the workspace owner, session participant, or group org member can upload proof of work",
-        code: "forbidden",
-      },
-      { status: 403 },
+    return jsonError(
+      403,
+      "Only the workspace owner, session participant, or group org member can upload proof of work",
+      "forbidden",
     );
   }
 

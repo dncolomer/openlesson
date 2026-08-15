@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const getUser = vi.fn();
 const from = vi.fn();
@@ -38,6 +38,10 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/api/require-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
+import {
+  requireSessionWorkspaceProofOfWorkAccess,
+  requireWorkspaceOwnerSession,
+} from "@/lib/pow-api/workspace-session-access";
 import { POST as workspaceNewsPost } from "@/app/api/workspace/news/route";
 
 const ROOT = join(__dirname, "../..");
@@ -115,6 +119,42 @@ describe("quality-next shipped helpers", () => {
     const profileBody = await profileDenied.response.json();
     expect(classifyApiErrorEnvelope(profileBody)).toBe("nested_code");
     expect(errorMessageFromBody(profileBody, "x")).toBe("Profile not found");
+
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    const powUnauth = await requireSessionWorkspaceProofOfWorkAccess("ws-1");
+    expect(powUnauth instanceof NextResponse).toBe(true);
+    if (!(powUnauth instanceof NextResponse)) throw new Error("expected PoW 401");
+    expect(powUnauth.status).toBe(401);
+    const powUnauthBody = await powUnauth.json();
+    expect(classifyApiErrorEnvelope(powUnauthBody)).toBe("nested_code");
+    expect(errorMessageFromBody(powUnauthBody, "x")).toBe("Not authenticated");
+
+    const ownerUnauth = await requireWorkspaceOwnerSession("ws-1");
+    expect(ownerUnauth instanceof NextResponse).toBe(true);
+    if (!(ownerUnauth instanceof NextResponse)) throw new Error("expected owner 401");
+    expect(ownerUnauth.status).toBe(401);
+    const ownerUnauthBody = await ownerUnauth.json();
+    expect(classifyApiErrorEnvelope(ownerUnauthBody)).toBe("nested_code");
+    expect(errorMessageFromBody(ownerUnauthBody, "x")).toBe("Not authenticated");
+
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({
+            data: { id: "ws-1", user_id: "other", is_group: false, organization_id: null },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    const powForbidden = await requireSessionWorkspaceProofOfWorkAccess("ws-1");
+    expect(powForbidden instanceof NextResponse).toBe(true);
+    if (!(powForbidden instanceof NextResponse)) throw new Error("expected PoW 403");
+    expect(powForbidden.status).toBe(403);
+    const powForbiddenBody = await powForbidden.json();
+    expect(classifyApiErrorEnvelope(powForbiddenBody)).toBe("nested_code");
+    expect(errorMessageFromBody(powForbiddenBody, "")).not.toBe("");
 
     const newsRes = await workspaceNewsPost(
       new NextRequest("http://local/api/workspace/news", {
@@ -200,6 +240,10 @@ describe("quality-next shipped helpers", () => {
         `guard400=${classifyApiErrorEnvelope(missingWsBody)}`,
         `guard403=${classifyApiErrorEnvelope(forbiddenBody)}`,
         `product403=${classifyApiErrorEnvelope(profileBody)}`,
+        `pow401=${classifyApiErrorEnvelope(powUnauthBody)}`,
+        `pow401msg=${errorMessageFromBody(powUnauthBody, "x")}`,
+        `owner401=${classifyApiErrorEnvelope(ownerUnauthBody)}`,
+        `pow403=${classifyApiErrorEnvelope(powForbiddenBody)}`,
         `newsStatus=${newsRes.status}`,
         `newsEnvelope=${classifyApiErrorEnvelope(newsBody)}`,
         `emptyClickCells=${cells.emptyCells.length}`,

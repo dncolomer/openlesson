@@ -19,7 +19,7 @@ import {
   resolveIleSessionModeFromBody,
   resolveIleSessionModeFromSession,
   resolveIleShellFromSession,
-  shouldShowInterfaceEvaluationOnChapterDone,
+
 } from "@/lib/ile-mode";
 import {
   demoteExerciseSubmissionToStash,
@@ -190,8 +190,6 @@ describe("chapter Done locks further thought mutations; Done still builds PoW", 
     expect(toolData.evaluation).toBeNull();
     expect(toolData.score).toBeNull();
     expect(toolData.interface_evaluation).toBe(false);
-    expect(shouldShowInterfaceEvaluationOnChapterDone("project")).toBe(false);
-    expect(shouldShowInterfaceEvaluationOnChapterDone("learning")).toBe(false);
   });
 });
 
@@ -264,7 +262,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(view).toContain("handleProjectDemote");
     expect(view).toContain("buildIleChapterDonePowToolData");
     expect(view).toContain("frameIleProjectChapterDescription");
-    expect(view).toContain("shouldShowInterfaceEvaluationOnChapterDone");
+    expect(view).toContain("buildIleChapterDonePowToolData");
 
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).toContain("projectMode");

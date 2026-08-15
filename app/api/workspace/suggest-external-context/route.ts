@@ -82,14 +82,13 @@ export async function POST(req: NextRequest) {
 
     if (!response.success) {
       console.error("[suggest-external-context] xAI error", response.error);
-      return jsonError(502, response.error || "Failed to suggest external sources",
-          suggestions: [],);
+      return jsonError(502, response.error || "Failed to suggest external sources");
     }
 
     const suggestions = normalizeExternalContextSuggestions(response.data);
     return NextResponse.json({ suggestions });
   } catch (err) {
     console.error("[suggest-external-context]", err);
-    return jsonError(500, "Internal error", suggestions: []);
+    return jsonError(500, "Internal error");
   }
 }

@@ -6,7 +6,7 @@ import {
   normalizeIleFormingText,
   type IleThoughtMemoryRecord,
 } from "@/lib/ile-context-auto-stash";
-import { shouldLogIlePowInsideSetState } from "@/lib/ile-keyboard-mode";
+
 
 export interface SessionThought {
   id: string;
@@ -432,20 +432,20 @@ export function useSessionThoughtInterface({
     onUserActivityRef.current?.();
     const thought = buildThoughtRecord(text, thoughts);
     if (!thought) return;
+    const already = thoughts.some((t) => t.id === thought.id);
+    if (already) return;
     setThoughts((current) => {
       if (current.some((t) => t.id === thought.id)) return current;
       return [...current, thought];
     });
-    if (!shouldLogIlePowInsideSetState()) {
-      onLogTrace({
-        traceType: "system1",
-        action: system1Action,
-        thoughtId: thought.id,
-        chainId: thought.chainId,
-        text: thought.text,
-        timestampMs: thought.timestamp,
-      });
-    }
+    onLogTrace({
+      traceType: "system1",
+      action: system1Action,
+      thoughtId: thought.id,
+      chainId: thought.chainId,
+      text: thought.text,
+      timestampMs: thought.timestamp,
+    });
   }
 
   function markSpeechConsumed() {
@@ -543,22 +543,23 @@ export function useSessionThoughtInterface({
 
   const ingestStashedThought = useCallback((thought: SessionThought) => {
     onUserActivityRef.current?.();
-    let added = false;
+    let alreadyPresent = false;
     setThoughts((current) => {
-      if (current.some((t) => t.id === thought.id)) return current;
-      added = true;
+      if (current.some((t) => t.id === thought.id)) {
+        alreadyPresent = true;
+        return current;
+      }
       return [...current, thought];
     });
-    if (added && !shouldLogIlePowInsideSetState()) {
-      onLogTrace({
-        traceType: "system1",
-        action: "auto_stash",
-        thoughtId: thought.id,
-        chainId: thought.chainId,
-        text: thought.text,
-        timestampMs: thought.timestamp,
-      });
-    }
+    if (alreadyPresent) return;
+    onLogTrace({
+      traceType: "system1",
+      action: "auto_stash",
+      thoughtId: thought.id,
+      chainId: thought.chainId,
+      text: thought.text,
+      timestampMs: thought.timestamp,
+    });
   }, [onLogTrace]);
 
   /** Clear live speech bar without stashing or logging (e.g. Project Mode dual-list path). */

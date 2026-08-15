@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashApiKey } from "@/lib/x402";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
-import { buildNestedApiErrorEnvelope } from "@/lib/api-error-envelope";
+import { jsonError } from "@/lib/api-error-envelope";
 import { checkRateLimitAsync } from "./rate-limit";
 import { hasScope } from "./scopes";
 
@@ -171,9 +171,7 @@ export function errorResponse(
   message: string,
   details?: Record<string, unknown>
 ): NextResponse {
-  return NextResponse.json(buildNestedApiErrorEnvelope(code, message, details), {
-    status,
-  });
+  return jsonError(status, message, code, details);
 }
 
 /**

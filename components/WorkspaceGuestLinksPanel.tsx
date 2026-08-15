@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { useI18n } from "@/lib/i18n";
 import {
   TAP_LINK_DEFAULT_MINUTES,
@@ -325,7 +326,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify(body),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.tapLinksCreateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.tapLinksCreateError")));
 
         const linkUrl =
           (data.tap_link?.url as string | undefined) ||
@@ -367,7 +368,7 @@ export function WorkspaceGuestLinksPanel({
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to create TAPBench link");
+      if (!response.ok) throw new Error(errorMessageFromBody(data, "Failed to create TAPBench link"));
       await loadTapResources();
       setInnerTab("browse");
     } catch (error) {
@@ -391,7 +392,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify({ workspaceId, reissue_link_id: linkId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.tapLinksCreateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.tapLinksCreateError")));
 
         const linkUrl =
           (data.tap_link?.url as string | undefined) ||
@@ -421,7 +422,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify({ workspaceId, invalidate_link_id: linkId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.tapLinksInvalidateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.tapLinksInvalidateError")));
         setCreatedLinks((current) => {
           const next = { ...current };
           delete next[linkId];
@@ -450,7 +451,7 @@ export function WorkspaceGuestLinksPanel({
         body: JSON.stringify({ workspaceId, invalidate_all: true }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || t("planView.tapLinksInvalidateError"));
+      if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.tapLinksInvalidateError")));
       const ids = Array.isArray(data.invalidated?.ids) ? (data.invalidated.ids as string[]) : [];
       setCreatedLinks((current) => {
         const next = { ...current };
@@ -503,7 +504,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify(body),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.ileLinksCreateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.ileLinksCreateError")));
 
         const linkUrl =
           (data.ile_link?.url as string | undefined) ||
@@ -567,7 +568,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify({ workspaceId, reissue_link_id: linkId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.ileLinksCreateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.ileLinksCreateError")));
 
         const linkUrl =
           (data.ile_link?.url as string | undefined) ||
@@ -599,7 +600,7 @@ export function WorkspaceGuestLinksPanel({
           body: JSON.stringify({ workspaceId, invalidate_link_id: linkId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || t("planView.ileLinksInvalidateError"));
+        if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.ileLinksInvalidateError")));
         setCreatedLinks((current) => {
           const next = { ...current };
           delete next[linkId];
@@ -628,7 +629,7 @@ export function WorkspaceGuestLinksPanel({
         body: JSON.stringify({ workspaceId, invalidate_all: true }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || t("planView.ileLinksInvalidateError"));
+      if (!response.ok) throw new Error(errorMessageFromBody(data, t("planView.ileLinksInvalidateError")));
       const ids = Array.isArray(data.invalidated?.ids) ? (data.invalidated.ids as string[]) : [];
       setCreatedLinks((current) => {
         const next = { ...current };

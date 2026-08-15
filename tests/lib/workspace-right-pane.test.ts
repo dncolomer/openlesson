@@ -257,7 +257,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("handleSubmitAddBlock");
     expect(view).toContain("handleSubmitGenerateShape");
     expect(view).toContain("clearWorkspaceBlockSelection");
-    expect(view).toContain("onEmptySelectionChange");
+    expect(view).toContain("onMapSelectionChange");
     expect(view).toContain("data-workspace-right-pane=");
     expect(view).toContain('showMapExplore ? "map_explore" : rightPane');
     expect(view).toContain("onExpandedNodeIdChange");
@@ -285,7 +285,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("handleCloseBlockDetail");
     expect(view).toContain("handleCloseEmptyCreate");
     expect(view).toContain("onExpandedNodeIdChange");
-    expect(view).toContain("onEmptySelectionChange");
+    expect(view).toContain("onMapSelectionChange");
     expect(view).toContain('rightPane === "add_block"');
     expect(view).toContain('rightPane === "generate_shape"');
     expect(aycl).not.toContain("BlockDetailDrawer");
@@ -423,14 +423,15 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain('rightPane === "combine_blocks"');
     expect(view).toContain("handleCombineBlocks");
     expect(view).toContain('op: "merge"');
-    expect(view).toContain("onSelectedBlockIdsChange");
+    expect(view).toContain("onMapSelectionChange");
 
     const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain("onSelectedBlockIdsChange");
-    expect(grid).toContain("emitFilledBlockSelection");
+    expect(grid).toContain("onMapSelectionChange");
+    expect(grid).toContain("notifyMapHostCommit");
+    expect(grid).not.toContain("emitFilledBlockSelection");
 
     const list = read("components/SessionList.tsx");
-    expect(list).toContain("onSelectedBlockIdsChange");
+    expect(list).toContain("onMapSelectionChange");
 
     writeEvidence(
       "combine-blocks-ui.log",
@@ -439,7 +440,7 @@ describe("structural: right pane not map modal", () => {
         "plus=" + pane.includes("data-combine-plus"),
         "prompt=" + pane.includes("data-combine-prompt"),
         "viewMerge=" + view.includes('op: "merge"'),
-        "gridEmit=" + grid.includes("emitFilledBlockSelection"),
+        "gridEmit=" + grid.includes("notifyMapHostCommit"),
       ].join("\n"),
     );
   });
@@ -631,8 +632,8 @@ describe("structural: right pane not map modal", () => {
     const list = read("components/SessionList.tsx");
     const tools = read("lib/block-map-tools.ts");
 
-    expect(grid).toContain("onEmptySelectionChange");
-    expect(grid).toContain("emitEmptySelection");
+    expect(grid).toContain("onMapSelectionChange");
+    expect(grid).toContain("applyStandaloneEmptyChrome");
     expect(grid).toContain("resolveEmptySelectionSurface");
     expect(grid).not.toContain("handleEmptyCellDoubleClick");
     expect(grid).not.toContain("double-click empty to add");
@@ -652,15 +653,15 @@ describe("structural: right pane not map modal", () => {
     });
     expect(stripVisible).not.toContain("generate_shape");
 
-    expect(list).toContain("onEmptySelectionChange");
+    expect(list).toContain("onMapSelectionChange");
     expect(list).toMatch(
-      /onEmptySelectionChange=\{\s*onEmptySelectionChange\s*\?/,
+      /onEmptySelectionChange=\{\s*onMapSelectionChange \? undefined : onEmptySelectionChange/,
     );
 
     writeEvidence(
       "multi-empty-right-pane-tests.log",
       [
-        "gridOnEmptySelection=" + grid.includes("onEmptySelectionChange"),
+        "gridOnEmptySelection=" + grid.includes("onMapSelectionChange"),
         "shapePane=" + shapePane.includes("data-workspace-generate-shape-pane"),
         "shapeSubmit=" + shapePane.includes("data-generate-shape-submit"),
         "stripHasGenerateShape=" + BLOCK_MAP_TOOL_STRIP.includes("generate_shape"),

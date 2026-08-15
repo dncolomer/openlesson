@@ -148,10 +148,11 @@ import type { Block, Workspace } from "@/lib/domain/types";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   postWorkspaceGridOp,
-  shouldReloadWorkspaceAfterMutate,
 } from "@/lib/workspace-grid-ops-client";
 import {
-  emptyWorkspaceMapSelection,
+  mapSelectionEmptyCells,
+  mapSelectionExpandedId,
+  mapSelectionFilledIds,
   mapSelectionToApplyPayload,
   nextWorkspaceMapSelection,
   type WorkspaceMapSelection,
@@ -159,7 +160,6 @@ import {
 import {
   buildLearnerLaunchBody,
   buildLearnerPromptSaveBody,
-  shouldWriteLearnerBlocksViaBrowserClient,
   WORKSPACE_LEARNER_LAUNCH_PATH,
   WORKSPACE_LEARNER_PROMPT_PATH,
 } from "@/lib/workspace-learner-writes";
@@ -322,8 +322,7 @@ export function WorkspaceView({
   /** Host-driven multi-select apply from empty-map Search / Suggest spot. */
   const [applyMapSelection, setApplyMapSelection] = useState<{
     token: number;
-    blockIds?: string[] | null;
-    emptyCells?: Array<{ row: number; col: number }> | null;
+    selection: WorkspaceMapSelection;
   } | null>(null);
   /** Selective Explanation free-shape overlay (independent of selection). */
   const [selectiveExplanationActive, setSelectiveExplanationActive] =
@@ -427,34 +426,20 @@ export function WorkspaceView({
     );
   }, []);
 
-  const currentMapSelection = useCallback((): WorkspaceMapSelection => {
-    return {
-      expandedBlockId,
-      selectedFilledBlockIds,
-      emptyCells:
-        emptySurface?.kind === "add_block"
-          ? [emptySurface.cell]
-          : emptySurface?.kind === "generate_shape"
-            ? emptySurface.cells
-            : [],
-    };
-  }, [emptySurface, expandedBlockId, selectedFilledBlockIds]);
-
   const applyMapSelectionResult = useCallback(
     (next: WorkspaceMapSelection, opts?: { pushToGrid?: boolean }) => {
-      setExpandedBlockId(next.expandedBlockId);
-      setSelectedFilledBlockIds(next.selectedFilledBlockIds);
-      if (next.emptyCells.length === 0) {
+      setExpandedBlockId(mapSelectionExpandedId(next));
+      setSelectedFilledBlockIds(mapSelectionFilledIds(next));
+      const emptyCells = mapSelectionEmptyCells(next);
+      if (emptyCells.length === 0 || interactionMode === "learner") {
         setEmptySurface(clearWorkspaceAddTarget());
-      } else if (interactionMode !== "learner") {
+      } else {
         setEmptySurface(
           resolveEmptySelectionSurface({
-            selectedEmptyCells: next.emptyCells,
+            selectedEmptyCells: emptyCells,
             unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
           }),
         );
-      } else {
-        setEmptySurface(clearWorkspaceAddTarget());
       }
       if (opts?.pushToGrid) {
         setApplyMapSelection((prev) =>
@@ -466,29 +451,29 @@ export function WorkspaceView({
   );
 
   const handleExpandedBlockChange = useCallback((blockId: string | null) => {
-    const next = nextWorkspaceMapSelection(currentMapSelection(), {
+    const next = nextWorkspaceMapSelection({
       type: "open_block",
       blockId,
     });
     applyMapSelectionResult(next);
-    if (next.expandedBlockId) {
+    if (mapSelectionExpandedId(next)) {
       setMobileColumn("workspace");
       setCloneArm((prev) =>
-        prev.armed && prev.sourceBlockId === next.expandedBlockId
+        prev.armed && prev.sourceBlockId === mapSelectionExpandedId(next)
           ? prev
           : createDisarmedCloneState(),
       );
     } else {
       setCloneArm(createDisarmedCloneState());
     }
-  }, [applyMapSelectionResult, currentMapSelection]);
+  }, [applyMapSelectionResult]);
 
   const handleCloseBlockDetail = useCallback(() => {
     applyMapSelectionResult(
-      nextWorkspaceMapSelection(currentMapSelection(), { type: "open_block", blockId: null }),
+      nextWorkspaceMapSelection({ type: "open_block", blockId: null }),
     );
     setCloneArm(createDisarmedCloneState());
-  }, [applyMapSelectionResult, currentMapSelection]);
+  }, [applyMapSelectionResult]);
 
   const handleCloneArm = useCallback((blockId: string) => {
     setCloneArm(armClone(blockId));
@@ -499,41 +484,29 @@ export function WorkspaceView({
     setCloneArm(cancelCloneArm());
   }, []);
 
-  const handleSelectedBlockIdsChange = useCallback((ids: string[] | null) => {
-    const next = nextWorkspaceMapSelection(currentMapSelection(), {
-      type: "set_filled_ids",
-      blockIds: ids,
-    });
-    applyMapSelectionResult(next);
-    if (next.selectedFilledBlockIds.length >= 2 || next.expandedBlockId) {
-      setCloneArm(createDisarmedCloneState());
-      setMobileColumn("workspace");
-    }
-  }, [applyMapSelectionResult, currentMapSelection]);
-
   const handleEmptyMapSearchBlocks = useCallback((blockIds: string[]) => {
-    const next = nextWorkspaceMapSelection(currentMapSelection(), {
-      type: "apply_search_blocks",
+    const next = nextWorkspaceMapSelection({
+      type: "set_filled_ids",
       blockIds,
     });
     applyMapSelectionResult(next, { pushToGrid: true });
     setCloneArm(createDisarmedCloneState());
-    if (next.expandedBlockId || next.selectedFilledBlockIds.length > 0) {
+    if (mapSelectionExpandedId(next) || mapSelectionFilledIds(next).length > 0) {
       setMobileColumn("workspace");
     }
-  }, [applyMapSelectionResult, currentMapSelection]);
+  }, [applyMapSelectionResult]);
 
   const handleEmptyMapSuggestCells = useCallback(
     (cells: Array<{ row: number; col: number }>) => {
-      const next = nextWorkspaceMapSelection(currentMapSelection(), {
-        type: "apply_suggest_cells",
+      const next = nextWorkspaceMapSelection({
+        type: "set_empty_cells",
         cells,
       });
       applyMapSelectionResult(next, { pushToGrid: true });
       setCloneArm(createDisarmedCloneState());
       setMobileColumn("workspace");
     },
-    [applyMapSelectionResult, currentMapSelection],
+    [applyMapSelectionResult],
   );
 
   const handleSelectiveExplanationComplete = useCallback(
@@ -564,16 +537,16 @@ export function WorkspaceView({
 
   const handleCloseEmptyCreate = useCallback(() => {
     applyMapSelectionResult(
-      nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+      nextWorkspaceMapSelection({ type: "clear" }),
     );
-  }, [applyMapSelectionResult, currentMapSelection]);
+  }, [applyMapSelectionResult]);
 
   const handleCloseCombine = useCallback(() => {
     applyMapSelectionResult(
-      nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+      nextWorkspaceMapSelection({ type: "clear" }),
       { pushToGrid: true },
     );
-  }, [applyMapSelectionResult, currentMapSelection]);
+  }, [applyMapSelectionResult]);
 
   const naturalRightPane = resolveWorkspaceRightPane(
     expandedBlockId,
@@ -663,10 +636,6 @@ export function WorkspaceView({
         }
         setCloneArm(afterClonePaste());
         setEmptySurface(clearWorkspaceAddTarget());
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } catch (err) {
         console.error("[clone_block]", err);
         // Stay armed so user can try another empty cell.
@@ -675,72 +644,76 @@ export function WorkspaceView({
     [isOwner, refreshNodes, router, withAycl, workspaceId],
   );
 
-  const handleEmptySelectionChange = useCallback(
-    (cells: Array<{ row: number; col: number }> | null) => {
-      // Play mode: empty multi-select is visibility-only (no Add / generate panes).
-      if (interactionMode === "learner") {
-        applyMapSelectionResult(
-          nextWorkspaceMapSelection(currentMapSelection(), {
-            type: "set_empty_cells",
-            cells: cells && cells.length > 0 ? cells : [],
-          }),
+  const handleMapSelectionChange = useCallback(
+    (selection: WorkspaceMapSelection) => {
+      if (selection.kind === "empties") {
+        const cells = selection.cells;
+
+        if (interactionMode === "learner") {
+          applyMapSelectionResult(selection);
+          return;
+        }
+
+        if (generatorPickActiveRef.current && generatorEmptyToggleRef.current) {
+          const placeable = cells.filter((c) => {
+            const k = `${c.row}:${c.col}`;
+            return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
+          });
+          if (placeable.length === 1) {
+            generatorEmptyToggleRef.current(placeable[0]!);
+          }
+          return;
+        }
+
+        if (shouldInterceptEmptyClickForClone(cloneArm)) {
+          const placeable = cells.filter((c) => {
+            const k = `${c.row}:${c.col}`;
+            return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
+          });
+          if (placeable.length === 1) {
+            const { occupancy } = buildSkillGridLayout(nodesRef.current);
+            const occupiedKeys = [...occupancy.keys()];
+            const resolved = resolveClonePasteTarget({
+              state: cloneArm,
+              target: placeable[0],
+              occupiedKeys,
+              unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
+            });
+            if (resolved.ok) {
+              void handleClonePaste(resolved.sourceBlockId, resolved.target);
+              return;
+            }
+            return;
+          }
+          setCloneArm(createDisarmedCloneState());
+        }
+
+        applyMapSelectionResult(selection);
+        if (cells.length > 0) {
+          setCloneArm(createDisarmedCloneState());
+          setMobileColumn("workspace");
+        }
+        return;
+      }
+
+      applyMapSelectionResult(selection);
+      if (selection.kind === "block") {
+        setMobileColumn("workspace");
+        setCloneArm((prev) =>
+          prev.armed && prev.sourceBlockId === selection.id
+            ? prev
+            : createDisarmedCloneState(),
         );
         return;
       }
-
-      // Generator pick: toggle empty cells into generator targets (no Add pane).
-      // Use ref so the first click after enabling is not lost to a stale render.
-      if (generatorPickActiveRef.current && generatorEmptyToggleRef.current) {
-        const placeable = (cells || []).filter((c) => {
-          const k = `${c.row}:${c.col}`;
-          return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
-        });
-        // Only act on a sole newly clicked empty cell.
-        if (placeable.length === 1) {
-          generatorEmptyToggleRef.current(placeable[0]!);
-        }
-        // Keep current block/add surface; do not open multi-create.
-        return;
-      }
-
-      // Clone paste: intercept single empty click while armed (no Add pane).
-      if (shouldInterceptEmptyClickForClone(cloneArm)) {
-        const placeable = (cells || []).filter((c) => {
-          const k = `${c.row}:${c.col}`;
-          return !unusableCells.some((u) => `${u.row}:${u.col}` === k);
-        });
-        if (placeable.length === 1) {
-          const { occupancy } = buildSkillGridLayout(nodesRef.current);
-          const occupiedKeys = [...occupancy.keys()];
-          const resolved = resolveClonePasteTarget({
-            state: cloneArm,
-            target: placeable[0],
-            occupiedKeys,
-            unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),
-          });
-          if (resolved.ok) {
-            void handleClonePaste(resolved.sourceBlockId, resolved.target);
-            return;
-          }
-          // Occupied/unusable: ignore, keep arm, do not open Add.
-          return;
-        }
-        // Multi empty or clear while armed: disarm and fall through.
-        setCloneArm(createDisarmedCloneState());
-      }
-
-      applyMapSelectionResult(
-        nextWorkspaceMapSelection(currentMapSelection(), {
-          type: "set_empty_cells",
-          cells: cells || [],
-        }),
-      );
-      if (cells && cells.length > 0) {
+      if (selection.kind === "blocks") {
         setCloneArm(createDisarmedCloneState());
         setMobileColumn("workspace");
+        return;
       }
+      setCloneArm(createDisarmedCloneState());
     },
-    [applyMapSelectionResult, cloneArm, currentMapSelection, handleClonePaste, interactionMode, unusableCells],
+    [applyMapSelectionResult, cloneArm, handleClonePaste, interactionMode, unusableCells],
   );
 
   const handleExpandFromSourceBlock = useCallback(
@@ -861,10 +834,6 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          if (shouldReloadWorkspaceAfterMutate()) {
-            refreshNodes();
-            router.refresh();
-          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to expand block";
@@ -968,13 +937,9 @@ export function WorkspaceView({
           );
         }
         applyMapSelectionResult(
-          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          nextWorkspaceMapSelection({ type: "clear" }),
           { pushToGrid: true },
         );
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1012,18 +977,14 @@ export function WorkspaceView({
           );
         }
         applyMapSelectionResult(
-          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          nextWorkspaceMapSelection({ type: "clear" }),
           { pushToGrid: true },
         );
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
     },
-    [applyMapSelectionResult, currentMapSelection, isOwner, locale, refreshNodes, router, workspaceId],
+    [applyMapSelectionResult, isOwner, locale, refreshNodes, router, workspaceId],
   );
 
   const handleSubmitAddBlock = useCallback(
@@ -1156,10 +1117,6 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          if (shouldReloadWorkspaceAfterMutate()) {
-            refreshNodes();
-            router.refresh();
-          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to add blocks";
@@ -1228,7 +1185,7 @@ export function WorkspaceView({
       });
       // Free multi-select surface; job continues under minimap.
       applyMapSelectionResult(
-        nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+        nextWorkspaceMapSelection({ type: "clear" }),
         { pushToGrid: true },
       );
 
@@ -1302,10 +1259,6 @@ export function WorkspaceView({
               { stopped: result.stopped },
             ),
           );
-          if (shouldReloadWorkspaceAfterMutate()) {
-            refreshNodes();
-            router.refresh();
-          }
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Failed to generate bridge";
@@ -1386,10 +1339,6 @@ export function WorkspaceView({
           );
         }
         setEmptySurface(clearWorkspaceAddTarget());
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1773,10 +1722,6 @@ export function WorkspaceView({
             ),
           );
         }
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1828,10 +1773,6 @@ export function WorkspaceView({
               }),
             ),
           );
-        }
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
         }
       } finally {
         setIsAddingBlock(false);
@@ -1953,13 +1894,9 @@ export function WorkspaceView({
           );
         }
         applyMapSelectionResult(
-          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          nextWorkspaceMapSelection({ type: "clear" }),
           { pushToGrid: true },
         );
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -1998,13 +1935,9 @@ export function WorkspaceView({
           );
         }
         applyMapSelectionResult(
-          nextWorkspaceMapSelection(currentMapSelection(), { type: "clear" }),
+          nextWorkspaceMapSelection({ type: "clear" }),
           { pushToGrid: true },
         );
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2066,7 +1999,7 @@ export function WorkspaceView({
         }
         // Drop residual multi-select / empty / detail chrome after cluster.
         applyMapSelectionResult(
-          nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), { type: "clear" }),
+          nextWorkspaceMapSelection({ type: "clear" }),
           { pushToGrid: true },
         );
         setClusterMapJob({
@@ -2074,10 +2007,6 @@ export function WorkspaceView({
           progress: 1,
           label: "Clusters updated",
         });
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2144,10 +2073,6 @@ export function WorkspaceView({
         if (data.workspaceDags !== undefined) {
           setWorkspaceDags(normalizeWorkspaceDags(data.workspaceDags));
         }
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
-        }
       } finally {
         setIsAddingBlock(false);
       }
@@ -2195,10 +2120,6 @@ export function WorkspaceView({
           setWorkspaceDags(normalizeWorkspaceDags(data.workspaceDags));
         } else {
           setWorkspaceDags((prev) => prev.filter((d) => d.id !== input.dagId));
-        }
-        if (shouldReloadWorkspaceAfterMutate()) {
-          refreshNodes();
-          router.refresh();
         }
       } finally {
         setIsAddingBlock(false);
@@ -2351,7 +2272,7 @@ export function WorkspaceView({
     setInteractionMode(next);
     // Mode flip always clears active selection (sole block, multi, empty create).
     applyMapSelectionResult(
-      nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), { type: "clear" }),
+      nextWorkspaceMapSelection({ type: "clear" }),
       { pushToGrid: true },
     );
     setAddExpandPreviewCells(null);
@@ -2842,8 +2763,7 @@ export function WorkspaceView({
             ayclToken={ayclToken}
             expandedNodeId={expandedBlockId}
             onExpandedNodeIdChange={handleExpandedBlockChange}
-            onEmptySelectionChange={handleEmptySelectionChange}
-            onSelectedBlockIdsChange={handleSelectedBlockIdsChange}
+            onMapSelectionChange={handleMapSelectionChange}
             applyMapSelection={applyMapSelection}
             selectiveExplanationActive={selectiveExplanationActive}
             selectiveExplanationPolygon={selectiveExplanationPolygon}
@@ -2992,7 +2912,6 @@ export function WorkspaceView({
                   });
                 }}
                 onSavePlanningPrompt={async (prompt) => {
-                  void shouldWriteLearnerBlocksViaBrowserClient();
                   await fetch(WORKSPACE_LEARNER_PROMPT_PATH, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -3238,10 +3157,6 @@ export function WorkspaceView({
                     /* snapshot is best-effort after Done */
                   }
 
-                  if (shouldReloadWorkspaceAfterMutate()) {
-                    refreshNodes();
-                    router.refresh();
-                  }
 
                   if (effectErrors.length) {
                     throw new Error(

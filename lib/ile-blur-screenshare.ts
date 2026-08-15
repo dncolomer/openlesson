@@ -24,8 +24,6 @@ export type IleLeaveFocusPolicyInput = {
   isScreenSharing: boolean;
   /** In-flight getDisplayMedia so we do not re-prompt. */
   shareRequestInFlight?: boolean;
-  /** User already dismissed the picker this session — do not re-prompt. */
-  shareDeclined?: boolean;
   leaveReason?: IleLeaveFocusReason | null;
 };
 
@@ -65,8 +63,7 @@ export function decideIleLeaveFocusScreenshare(
   if (!input.isIleSession || !input.sessionActive) return "skip";
   if (!isIleAwayFromTab(input)) return "skip";
   if (input.isScreenSharing || input.shareRequestInFlight) return "already_on";
-  // Leave-focus never auto-opens getDisplayMedia. Mini mode can recommend share.
-  void input.shareDeclined;
+  // Leave-focus never auto-opens getDisplayMedia.
   return "skip";
 }
 
@@ -87,105 +84,31 @@ export function decideIleCompactWindow(
   return "show";
 }
 
-/** First-time mini-mode consent. `never` = not asked yet. */
-export type IleMiniModeConsent = "never" | "accepted" | "declined";
-
-/** Compact window vs first-time prompt on a leave/focus event. */
-export type IleMiniModeFirstAskDecision = "ask" | "open" | "hide";
-
-export const ILE_MINI_MODE_CONSENT_STORAGE_KEY = "openlesson.ile.miniMode.consent.v1";
-
-export function parseIleMiniModeConsent(raw: unknown): IleMiniModeConsent {
-  if (raw === "accepted" || raw === "declined") return raw;
-  return "never";
-}
-
-export type IleMiniModeConsentStorage = {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-};
-
-function defaultConsentStorage(): IleMiniModeConsentStorage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-export function loadIleMiniModeConsent(
-  storage?: IleMiniModeConsentStorage | null,
-): IleMiniModeConsent {
-  const store = storage === undefined ? defaultConsentStorage() : storage;
-  if (!store) return "never";
-  try {
-    return parseIleMiniModeConsent(store.getItem(ILE_MINI_MODE_CONSENT_STORAGE_KEY));
-  } catch {
-    return "never";
-  }
-}
-
-export function saveIleMiniModeConsent(
-  consent: IleMiniModeConsent,
-  storage?: IleMiniModeConsentStorage | null,
-): IleMiniModeConsent {
-  const next = parseIleMiniModeConsent(consent);
-  const store = storage === undefined ? defaultConsentStorage() : storage;
-  if (store && next !== "never") {
-    try {
-      store.setItem(ILE_MINI_MODE_CONSENT_STORAGE_KEY, next);
-    } catch {
-      /* quota / private mode */
-    }
-  }
-  return next;
-}
+/** Compact window on leave: open Document PiP or stay hidden. */
+export type IleMiniAutoOpenDecision = "open" | "hide";
 
 /**
- * When Document PiP exists, Chrome owns first-time permission
- * (this time / every visit / don’t allow) via enterpictureinpicture.
- * In-app ask is only for browsers with no Document PiP API.
+ * When Document PiP exists, Chrome owns permission via enterpictureinpicture.
+ * Without it, leave must not auto-open a popup.
  */
-export function decideIleMiniModeFirstAsk(input: {
+export function decideIleMiniAutoOpen(input: {
   sessionActive: boolean;
   tabFocused: boolean;
   leaveReason?: IleLeaveFocusReason | null;
-  consent: IleMiniModeConsent;
   documentPipSupported?: boolean;
-}): IleMiniModeFirstAskDecision {
+}): IleMiniAutoOpenDecision {
   if (!input.sessionActive) return "hide";
   if (!isIleAwayFromTab(input)) return "hide";
   if (input.documentPipSupported) return "open";
-  // No Document PiP: never first-ask or auto-open on leave. Button only.
-  void input.consent;
   return "hide";
 }
 
-/**
- * Declined (first==="hide") while away must not open or re-ask the popup.
- * Focused first==="hide" is the on-tab default — do not honor-hide that,
- * or an in-progress first-ask would be cleared on return/focus.
- */
-export function shouldHonorIleMiniModeHide(input: {
-  first: IleMiniModeFirstAskDecision;
+/** Hide while away when auto-open said hide. Focused hide is the on-tab default. */
+export function shouldHonorIleMiniHide(input: {
+  decision: IleMiniAutoOpenDecision;
   away: boolean;
 }): boolean {
-  return input.first === "hide" && input.away;
-}
-
-export function ileMiniModeFirstAskCopy(): {
-  title: string;
-  body: string;
-  accept: string;
-  decline: string;
-} {
-  return {
-    title: "Enable mini mode",
-    body: "When you leave this tab, ILE can stay in a small always-on-top mini window. Browsers block that unless you allow it once — enable mini mode so you don't miss it.",
-    accept: "Enable mini mode",
-    decline: "Not now",
-  };
+  return input.decision === "hide" && input.away;
 }
 
 /** Single helper SessionView and leave-tab tools call. */
@@ -226,58 +149,6 @@ export function applyIleCompactWindowAfterShareAwait(input: {
     leaveReason: null,
     shareRequestInFlight: false,
   });
-}
-
-/**
- * Full leave-focus sequence the ILE hook runs: decide compact show/hide
- * (no auto share request) → re-apply with live focus. Tests drive this.
- */
-export async function runIleLeaveFocusSequence(input: {
-  isIleSession: boolean;
-  sessionActive: boolean;
-  tabFocused: boolean;
-  isScreenSharing: boolean;
-  shareRequestInFlight?: boolean;
-  shareDeclined?: boolean;
-  leaveReason?: IleLeaveFocusReason | null;
-  startScreenshare?: () => Promise<boolean | void>;
-  readLiveTabFocused: () => boolean;
-}): Promise<{
-  pre: IleLeaveFocusPolicy;
-  post: IleLeaveFocusPolicy;
-  requestedShare: boolean;
-}> {
-  const pre = applyIleLeaveFocusPolicy({
-    isIleSession: input.isIleSession,
-    sessionActive: input.sessionActive,
-    tabFocused: input.tabFocused,
-    isScreenSharing: input.isScreenSharing,
-    shareRequestInFlight: input.shareRequestInFlight,
-    shareDeclined: input.shareDeclined,
-    leaveReason: input.leaveReason,
-  });
-
-  let requestedShare = false;
-  let sharing = input.isScreenSharing;
-  if (pre.screenshare === "request" && input.startScreenshare) {
-    requestedShare = true;
-    try {
-      const started = await input.startScreenshare();
-      if (started !== false) sharing = true;
-    } catch {
-      // Permission denied / unsupported — session continues.
-    }
-  }
-
-  const liveFocused = input.readLiveTabFocused();
-  const post = applyIleCompactWindowAfterShareAwait({
-    isIleSession: input.isIleSession,
-    sessionActive: input.sessionActive,
-    tabFocused: liveFocused,
-    isScreenSharing: sharing,
-  });
-
-  return { pre, post, requestedShare };
 }
 
 export type IleExternalLeaveReason = "grok" | "grokipedia";

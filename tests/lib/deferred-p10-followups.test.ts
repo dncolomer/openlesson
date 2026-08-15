@@ -13,10 +13,8 @@ import {
 import { errorResponse } from "@/lib/pow-api/auth";
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
 import {
-  mapSelectionFromApplyPayload,
   mapSelectionToApplyPayload,
   nextWorkspaceMapSelection,
-  emptyWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import { toolTooltip } from "@/components/block-skill-grid/map-tool-icons";
 
@@ -41,12 +39,12 @@ describe("deferred-after-P10 follow-ups", () => {
     expect(toolTooltip("select", labels).length).toBeGreaterThan(0);
     expect(toolTooltip("clone", labels, { cloneArmed: true })).toMatch(/armed/i);
 
-    const opened = nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), {
-      type: "apply_search_blocks",
+    const opened = nextWorkspaceMapSelection({
+      type: "set_filled_ids",
       blockIds: ["b1"],
     });
     const payload = mapSelectionToApplyPayload(opened, 1);
-    expect(mapSelectionFromApplyPayload(payload).expandedBlockId).toBe("b1");
+    expect(payload.selection).toEqual({ kind: "block", id: "b1" });
 
     const posted: string[] = [];
     await postWorkspaceGridOp(
@@ -85,7 +83,7 @@ describe("deferred-after-P10 follow-ups", () => {
     expect(badges).toContain("export function MapCellStatusGlyph");
 
     expect(sessionChat).toContain("jsonError");
-    expect(stashAuth).toContain("buildNestedApiErrorEnvelope");
+    expect(stashAuth).toContain("jsonError");
     expect(existsSync(join(ROOT, "openapi.yaml"))).toBe(false);
     expect(existsSync(join(ROOT, "openapi.json"))).toBe(false);
 
@@ -94,7 +92,7 @@ describe("deferred-after-P10 follow-ups", () => {
       join(SCRATCH, "deferred-p10-followups.txt"),
       [
         `gridContractOps=${posted[0]}`,
-        `oneBlockSearch=${mapSelectionFromApplyPayload(payload).expandedBlockId}`,
+        `oneBlockSearch=${payload.selection.kind === "block" ? payload.selection.id : ""}`,
         `productEnvelope=${classifyApiErrorEnvelope(productBody)}`,
         `agentEnvelope=${classifyApiErrorEnvelope(agentBody)}`,
         `nestedKind=${classifyApiErrorEnvelope(nested)}`,

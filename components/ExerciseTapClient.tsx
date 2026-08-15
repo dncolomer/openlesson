@@ -35,7 +35,6 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
-  startLiveSpeechRecognition,
   stopLiveSpeechRecognition,
   useSessionThoughtInterface,
   useSpeechSupported,
@@ -581,7 +580,7 @@ export function ExerciseTapClient({
     setSessionEndedImpure(false);
     setTranscriptSilenceMs(0);
     if (!isTapLiveThoughtSpeechEnabled("live")) {
-      startLiveSpeechRecognition(speechBindings, speechLang);
+      stopLiveSpeechRecognition(speechBindings);
     }
 
     try {

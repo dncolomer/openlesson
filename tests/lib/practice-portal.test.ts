@@ -682,7 +682,7 @@ describe("Practice Portal structural wiring", () => {
     expect(simulationPanel).not.toMatch(/xAI questions and exercises/i);
     expect(simulationPanel).toContain("data-simulation-generate");
     expect(simulationPanel).toContain("data-simulation-collection");
-    expect(simulationPanel).toContain("Generate samples");
+    expect(simulationPanel).toContain("Generate workspace samples");
     const blockSimPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
     expect(blockSimPanel).not.toMatch(/for xAI samples/i);
     expect(blockSimPanel).not.toMatch(/via xAI/i);

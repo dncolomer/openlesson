@@ -95,10 +95,9 @@ describe("product access + ownership helpers", () => {
     const body = await result.response.json();
     expect(classifyApiErrorEnvelope(body)).toBe("nested_code");
     expect(errorMessageFromBody(body, "")).toBe("Active subscription required");
-    expect(
-      (body as { error?: { details?: { product_code?: string } } }).error?.details
-        ?.product_code,
-    ).toBe("product_access_required");
+    expect((body as { error?: { code?: string } }).error?.code).toBe(
+      "product_access_required",
+    );
   });
 
   it("requireProductAccess allows admins", async () => {

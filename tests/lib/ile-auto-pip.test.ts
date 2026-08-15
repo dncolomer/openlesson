@@ -15,7 +15,6 @@ import {
   openIleDocumentPictureInPictureWindow,
   registerIleEnterPictureInPictureHandler,
   resolveIleMediaSession,
-  shouldGateIleMiniModeWithInAppAsk,
   decideIlePipStayVsHide,
   shouldDestroyIlePipOnHide,
   interpretIlePipPagehide,
@@ -26,9 +25,9 @@ import {
   type IleMediaSessionLike,
 } from "@/lib/ile-auto-pip";
 import {
-  decideIleMiniModeFirstAsk,
+  decideIleMiniAutoOpen,
   isIleAwayFromTab,
-  shouldHonorIleMiniModeHide,
+  shouldHonorIleMiniHide,
 } from "@/lib/ile-blur-screenshare";
 import {
   decideIleMiniWindowKind,
@@ -45,8 +44,6 @@ import {
   shouldAutoOpenIleMiniOnLeave,
   shouldKeepIleManualPopupOnReturn,
   shouldOpenIlePopupFromButton,
-  shouldReaskIleMiniModeForPopup,
-  shouldRequestIlePopupOnLeave,
   shouldShowIleOpenPicInPicButton,
 } from "@/lib/ile-compact-window";
 
@@ -288,18 +285,15 @@ describe("openIleDocumentPictureInPictureWindow (shipped)", () => {
       true,
     );
     expect(shouldUseIleDocumentPipOnly({})).toBe(false);
-    expect(shouldGateIleMiniModeWithInAppAsk(true)).toBe(false);
-    expect(shouldGateIleMiniModeWithInAppAsk(false)).toBe(false);
 
-    const chromeFirst = decideIleMiniModeFirstAsk({
+    const chromeOpen = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: false,
       leaveReason: "tab_hidden",
-      consent: "never",
       documentPipSupported: true,
     });
-    expect(chromeFirst).toBe("open");
-    expect(chromeFirst).not.toBe("ask");
+    expect(chromeOpen).toBe("open");
+    expect(chromeOpen).not.toBe("ask");
 
     writeScratch(
       "ile-auto-pip-helper.txt",
@@ -308,7 +302,7 @@ describe("openIleDocumentPictureInPictureWindow (shipped)", () => {
         `pipKind=${pip?.kind}`,
         `denied=${denied}`,
         `popupCalls=${popups.length}`,
-        `chromeFirst=${chromeFirst}`,
+        `chromeOpen=${chromeOpen}`,
       ].join("\n"),
     );
   });
@@ -583,22 +577,6 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     expect(isIlePopupReusable({ window: fakePipWindow(), userDismissed: true })).toBe(false);
 
     expect(
-      shouldRequestIlePopupOnLeave({
-        sessionActive: true,
-        away: true,
-        documentPipSupported: false,
-        reusable: false,
-      }),
-    ).toBe(false);
-    expect(
-      shouldRequestIlePopupOnLeave({
-        sessionActive: true,
-        away: true,
-        documentPipSupported: true,
-        reusable: false,
-      }),
-    ).toBe(false);
-    expect(
       shouldOpenIlePopupFromButton({
         sessionActive: true,
         documentPipSupported: false,
@@ -612,38 +590,29 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
         reusable: false,
       }),
     ).toBe(false);
-    expect(shouldReaskIleMiniModeForPopup({ documentPipSupported: false, popupBlocked: true })).toBe(
-      false,
-    );
-    expect(shouldReaskIleMiniModeForPopup({ documentPipSupported: true, popupBlocked: true })).toBe(
-      false,
-    );
-
-    const declinedFirst = decideIleMiniModeFirstAsk({
+    const declinedOpen = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: false,
       leaveReason: "tab_blur",
-      consent: "declined",
     });
     const declinedAway = isIleAwayFromTab({
       tabFocused: false,
       leaveReason: "tab_blur",
     });
-    const focusedFirst = decideIleMiniModeFirstAsk({
+    const focusedOpen = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: true,
       leaveReason: null,
-      consent: "accepted",
     });
     const focusedAway = isIleAwayFromTab({
       tabFocused: true,
       leaveReason: null,
     });
-    expect(declinedFirst).toBe("hide");
-    expect(shouldHonorIleMiniModeHide({ first: declinedFirst, away: declinedAway })).toBe(
+    expect(declinedOpen).toBe("hide");
+    expect(shouldHonorIleMiniHide({ decision: declinedOpen, away: declinedAway })).toBe(
       true,
     );
-    expect(shouldHonorIleMiniModeHide({ first: focusedFirst, away: focusedAway })).toBe(
+    expect(shouldHonorIleMiniHide({ decision: focusedOpen, away: focusedAway })).toBe(
       false,
     );
 
@@ -683,13 +652,6 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     expect(blocked).toBeNull();
     expect(interpretIlePopupOpenResult(null)).toBe("blocked");
 
-    const afterDismiss = shouldRequestIlePopupOnLeave({
-      sessionActive: true,
-      away: true,
-      documentPipSupported: false,
-      reusable: isIlePopupReusable({ window: { closed: true }, userDismissed: true }),
-    });
-    expect(afterDismiss).toBe(false);
     expect(
       shouldOpenIlePopupFromButton({
         sessionActive: true,
@@ -720,9 +682,9 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     const applyStart = hook.indexOf("const applyDecision");
     const applyEnd = hook.indexOf("const openCompactFromGesture");
     const applyBody = hook.slice(applyStart, applyEnd);
-    expect(applyBody.indexOf("shouldAutoOpenIleMiniOnLeave")).toBeLessThan(
-      applyBody.indexOf("openIleCompactPopupWindow"),
-    );
+    expect(applyBody).toContain("shouldAutoOpenIleMiniOnLeave");
+    expect(applyBody).not.toContain("openIleCompactPopupWindow");
+    expect(applyBody).not.toContain("shouldRequestIlePopupOnLeave");
 
     const tools = read("components/ToolsPanel.tsx");
     const view = read("components/SessionView.tsx");
@@ -739,12 +701,6 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
         `kindWithPip=${decideIleMiniWindowKind(true)}`,
         `autoLeaveWithoutPip=${shouldAutoOpenIleMiniOnLeave({ documentPipSupported: false })}`,
         `autoLeaveWithPip=${shouldAutoOpenIleMiniOnLeave({ documentPipSupported: true })}`,
-        `leaveRequestsPopup=${shouldRequestIlePopupOnLeave({
-          sessionActive: true,
-          away: true,
-          documentPipSupported: false,
-          reusable: false,
-        })}`,
         `buttonOpensPopup=${shouldOpenIlePopupFromButton({
           sessionActive: true,
           documentPipSupported: false,
@@ -808,7 +764,7 @@ describe("auto-PiP wiring (shipped source)", () => {
     const auto = read("lib/ile-auto-pip.ts");
     const compact = read("lib/ile-compact-window.ts");
     const view = read("components/SessionView.tsx");
-    const ask = read("components/IleMiniModeFirstAsk.tsx");
+    expect(existsSync(join(ROOT, "components/IleMiniModeFirstAsk.tsx"))).toBe(false);
 
     expect(hook).toContain("registerIleEnterPictureInPictureHandler");
     expect(hook).toContain("clearIleEnterPictureInPictureHandler");
@@ -850,8 +806,8 @@ describe("auto-PiP wiring (shipped source)", () => {
     expect(view).toContain("useIleBlurScreenshare");
     expect(view).toContain("captureStream: stream");
 
-    expect(ask).not.toContain("Allow this time");
-    expect(ask).not.toContain("Allow on every visit");
+    expect(view).not.toContain("IleMiniModeFirstAsk");
+    expect(view).not.toContain("ileMiniModeFirstAskCopy");
 
     writeScratch(
       "ile-auto-pip-excerpts.txt",

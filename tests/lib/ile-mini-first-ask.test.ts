@@ -1,23 +1,19 @@
 /**
- * First-time ILE mini mode: ask before opening so browsers do not silently block.
+ * ILE mini auto-open: leave decision is only open | hide. First-ask is gone.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  decideIleMiniModeFirstAsk,
-  ileMiniModeFirstAskCopy,
+  decideIleMiniAutoOpen,
   isIleAwayFromTab,
-  loadIleMiniModeConsent,
-  parseIleMiniModeConsent,
-  saveIleMiniModeConsent,
-  shouldHonorIleMiniModeHide,
+  shouldHonorIleMiniHide,
 } from "@/lib/ile-blur-screenshare";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-e3f085facba9/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-605d3ab12c6a/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -30,128 +26,93 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-function memoryStorage() {
-  const store = new Map<string, string>();
-  return {
-    getItem(key: string) {
-      return store.has(key) ? store.get(key)! : null;
-    },
-    setItem(key: string, value: string) {
-      store.set(key, value);
-    },
-  };
-}
-
-describe("decideIleMiniModeFirstAsk (shipped helper)", () => {
-  it("never-asked away without Document PiP → hide (button only); Chrome still opens", () => {
-    const awayNever = decideIleMiniModeFirstAsk({
+describe("decideIleMiniAutoOpen (shipped helper)", () => {
+  it("Document PiP missing/chrome-owned/focused/away stay open|hide; first-ask surface is gone", () => {
+    const missingPip = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: false,
       leaveReason: "tab_blur",
-      consent: "never",
     });
-    expect(awayNever).toBe("hide");
+    expect(missingPip).toBe("hide");
 
-    const chromeOwns = decideIleMiniModeFirstAsk({
+    const chromeOwns = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: false,
       leaveReason: "tab_blur",
-      consent: "never",
       documentPipSupported: true,
     });
     expect(chromeOwns).toBe("open");
 
-    const grokNever = decideIleMiniModeFirstAsk({
+    const grokAway = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: true,
       leaveReason: "grok",
-      consent: "never",
+      documentPipSupported: true,
     });
-    expect(grokNever).toBe("hide");
+    expect(grokAway).toBe("open");
 
-    const awayAccepted = decideIleMiniModeFirstAsk({
-      sessionActive: true,
-      tabFocused: false,
-      leaveReason: "tab_hidden",
-      consent: "accepted",
-    });
-    expect(awayAccepted).toBe("hide");
-
-    const awayDeclined = decideIleMiniModeFirstAsk({
-      sessionActive: true,
-      tabFocused: false,
-      leaveReason: "tab_blur",
-      consent: "declined",
-    });
-    expect(awayDeclined).toBe("hide");
-
-    const focused = decideIleMiniModeFirstAsk({
+    const focused = decideIleMiniAutoOpen({
       sessionActive: true,
       tabFocused: true,
       leaveReason: null,
-      consent: "accepted",
+      documentPipSupported: true,
     });
     expect(focused).toBe("hide");
 
-    const inactive = decideIleMiniModeFirstAsk({
+    const inactive = decideIleMiniAutoOpen({
       sessionActive: false,
       tabFocused: false,
-      consent: "never",
+      documentPipSupported: true,
     });
     expect(inactive).toBe("hide");
 
-    const declinedAway = isIleAwayFromTab({
+    const away = isIleAwayFromTab({
       tabFocused: false,
       leaveReason: "tab_blur",
     });
-    const focusedAway = isIleAwayFromTab({
+    const onTab = isIleAwayFromTab({
       tabFocused: true,
       leaveReason: null,
     });
-    expect(
-      shouldHonorIleMiniModeHide({ first: awayDeclined, away: declinedAway }),
-    ).toBe(true);
-    expect(shouldHonorIleMiniModeHide({ first: focused, away: focusedAway })).toBe(
-      false,
-    );
-    expect(shouldHonorIleMiniModeHide({ first: awayNever, away: declinedAway })).toBe(
-      true,
-    );
-    expect(
-      shouldHonorIleMiniModeHide({ first: awayAccepted, away: declinedAway }),
-    ).toBe(true);
+    expect(shouldHonorIleMiniHide({ decision: missingPip, away })).toBe(true);
+    expect(shouldHonorIleMiniHide({ decision: focused, away: onTab })).toBe(false);
+    expect(shouldHonorIleMiniHide({ decision: chromeOwns, away })).toBe(false);
 
-    expect(parseIleMiniModeConsent(null)).toBe("never");
-    expect(parseIleMiniModeConsent("accepted")).toBe("accepted");
-    const storage = memoryStorage();
-    expect(loadIleMiniModeConsent(storage)).toBe("never");
-    expect(saveIleMiniModeConsent("accepted", storage)).toBe("accepted");
-    expect(loadIleMiniModeConsent(storage)).toBe("accepted");
-
-    const copy = ileMiniModeFirstAskCopy();
-    expect(copy.title.toLowerCase()).toMatch(/mini mode/);
-    expect(copy.body.toLowerCase()).toMatch(/mini window|always-on-top|mini mode/);
-    expect(copy.accept.toLowerCase()).toMatch(/enable/);
+    const blur = read("lib/ile-blur-screenshare.ts");
+    const hook = read("lib/useIleBlurScreenshare.tsx");
+    const view = read("components/SessionView.tsx");
+    expect(blur).toContain("decideIleMiniAutoOpen");
+    expect(blur).not.toContain("IleMiniModeFirstAsk");
+    expect(blur).not.toContain("ileMiniModeFirstAskCopy");
+    expect(blur).not.toContain("ILE_MINI_MODE_CONSENT_STORAGE_KEY");
+    expect(blur).not.toContain("loadIleMiniModeConsent");
+    expect(blur).not.toContain("saveIleMiniModeConsent");
+    expect(blur).not.toContain("runIleLeaveFocusSequence");
+    expect(hook).toContain("decideIleMiniAutoOpen");
+    expect(hook).not.toContain("decideIleMiniModeFirstAsk");
+    expect(hook).not.toContain("miniFirstAskVisible");
+    expect(hook).not.toContain("runIleLeaveFocusSequence");
+    expect(view).not.toContain("IleMiniModeFirstAsk");
+    expect(view).not.toContain("miniFirstAskVisible");
+    expect(view).not.toContain("uploadThoughtChatExchange");
+    expect(existsSync(join(ROOT, "components/IleMiniModeFirstAsk.tsx"))).toBe(false);
 
     writeScratch(
-      "ile-mini-first-ask.txt",
+      "ile-dead-surface-tests.log",
       [
-        `never_away=${awayNever}`,
-        `chrome_pip_never_away=${chromeOwns}`,
-        `grok_never=${grokNever}`,
-        `accepted_away=${awayAccepted}`,
-        `declined_away=${awayDeclined}`,
+        `missingPip=${missingPip}`,
+        `chromeOwns=${chromeOwns}`,
+        `grokAway=${grokAway}`,
         `focused=${focused}`,
         `inactive=${inactive}`,
-        `honor_declined_away=${shouldHonorIleMiniModeHide({ first: awayDeclined, away: declinedAway })}`,
-        `honor_focused_hide=${shouldHonorIleMiniModeHide({ first: focused, away: focusedAway })}`,
-        `copy_title=${copy.title}`,
+        "first-ask component/consent/copy/sequence absent",
+        "SessionView has no thought-chat-exchange persist option",
       ].join("\n"),
     );
   });
 });
 
-describe("first-time ask wiring", () => {
+describe("mini auto-open wiring", () => {
   it("no-PiP leave does not first-ask; button is the only popup trigger", () => {
     const hook = read("lib/useIleBlurScreenshare.tsx");
     const view = read("components/SessionView.tsx");
@@ -169,23 +130,25 @@ describe("first-time ask wiring", () => {
     expect(applyEnd).toBeGreaterThan(applyStart);
     const applyBody = hook.slice(applyStart, applyEnd);
     const autoIdx = applyBody.indexOf("shouldAutoOpenIleMiniOnLeave");
-    const popupOpenIdx = applyBody.indexOf("openIleCompactPopupWindow");
     expect(autoIdx).toBeGreaterThan(-1);
-    expect(autoIdx).toBeLessThan(popupOpenIdx);
+    expect(applyBody).not.toContain("openIleCompactPopupWindow");
+    expect(applyBody).not.toContain("shouldRequestIlePopupOnLeave");
     expect(applyBody).toMatch(/shouldAutoOpenIleMiniOnLeave[\s\S]*return;/);
 
     expect(view).toContain("showOpenPicInPic={showManualPicInPic}");
     expect(view).toContain("onOpenPicInPic={openManualPicInPic}");
+    expect(view).not.toContain("IleMiniModeFirstAsk");
+    expect(view).not.toContain("miniFirstAskVisible");
 
     const labelIdx = tools.indexOf("ILE_OPEN_PIC_IN_PIC_LABEL");
-    const helpIdx = tools.indexOf('bottomTools.map');
+    const helpIdx = tools.indexOf("bottomTools.map");
     expect(labelIdx).toBeGreaterThan(-1);
     expect(labelIdx).toBeLessThan(helpIdx);
 
     writeScratch(
       "ile-mini-first-ask-excerpts.txt",
       [
-        "decideIleMiniModeFirstAsk: no Document PiP → hide (no first-leave ask)",
+        "decideIleMiniAutoOpen: no Document PiP → hide (no first-leave ask)",
         "useIleBlurScreenshare: leave skips auto-open; openManualPicInPic is the gesture",
         "ToolsPanel: open pic-in-pic sits above Help",
       ].join("\n"),

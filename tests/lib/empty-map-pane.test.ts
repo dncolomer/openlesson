@@ -532,9 +532,12 @@ describe("empty-map-pane structural + wiring", () => {
     expect(sessionList).toContain("mapExploreOpen");
     // Selection callbacks wired in both modes (not creator-only)
     expect(view).toMatch(
+      /onMapSelectionChange=\{handleMapSelectionChange\}/,
+    );
+    expect(view).not.toMatch(
       /onEmptySelectionChange=\{handleEmptySelectionChange\}/,
     );
-    expect(view).toMatch(
+    expect(view).not.toMatch(
       /onSelectedBlockIdsChange=\{handleSelectedBlockIdsChange\}/,
     );
     // Learner empty selection does not open create panes

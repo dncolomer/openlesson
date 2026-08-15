@@ -1201,7 +1201,7 @@ describe("block-map-tools", () => {
     expect(src).toContain("emptyCellsIntersectingPolygon");
     expect(src).toContain("isLassoModeTool");
     expect(src).toContain("includeUnusable: true");
-    expect(src).toContain("emitEmptySelectionRef");
+    expect(src).toContain("commitSelectionRef");
     expect(src).toMatch(
       /resolved\.mode === "blocks"[\s\S]*?setLocalPendingCell\(null\)[\s\S]*?setShapePromptOpen\(false\)/,
     );
@@ -1209,7 +1209,7 @@ describe("block-map-tools", () => {
     expect(src).toContain("data-map-lasso-mode");
     expect(src).not.toContain("double-click empty to add");
     expect(src).not.toContain("handleEmptyCellDoubleClick");
-    expect(src).toContain("onEmptySelectionChange");
+    expect(src).toContain("onMapSelectionChange");
     expect(src).toContain("resolveEmptySelectionSurface");
     // Must NOT mirror state→ref in useEffect (wipes multi-select on parent re-render)
     expect(src).not.toMatch(
@@ -1223,7 +1223,7 @@ describe("block-map-tools", () => {
         [
           "emptyCellsHelper=" + src.includes("emptyCellsIntersectingGridRect"),
           "resolveLasso=" + src.includes("resolveLassoSelection"),
-          "emitEmpty=" + src.includes("emitEmptySelectionRef"),
+          "emitEmpty=" + src.includes("commitSelectionRef"),
           "oneLassoStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("lasso_circle")),
           "noMoveStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("move")),
           "submenu=" + src.includes("data-lasso-shape-submenu"),

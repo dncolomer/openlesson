@@ -155,7 +155,7 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("isBlockMapManipulationMode");
     expect(grid).toContain("handleBlockPointerDown");
     expect(grid).toContain("data-block-map-draggable");
-    expect(grid).toContain("onSelectNode(null)");
+    expect(grid).toContain("notifyMapHostCommit");
     expect(grid).toContain("handleBlockDoubleClick");
     expect(grid).not.toContain("data-block-map-move");
     expect(grid).not.toContain("showMovePad");

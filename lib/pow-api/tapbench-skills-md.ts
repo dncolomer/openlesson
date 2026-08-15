@@ -102,7 +102,7 @@ export function buildTapbenchSkillsMarkdown(input: TapbenchSkillsMdInput): strin
     "```",
     ``,
     `You may also pass \`"session_token": "${sessionToken || "<session_token>"}"\` in the JSON body.`,
-    `When the token expires, the API returns **401** with \`session_expired\` — **stop sending** proof of work.`,
+    `When the token expires, the API returns **401** with \`session_expired\` on \`error.code\` plus \`error.expires_at\`, \`error.remaining_ms\`, and \`error.tapbench\` — **stop sending** proof of work.`,
     ``,
     `## Exercise`,
     ``,

@@ -13,7 +13,6 @@ import {
   ileMiniModeShareScreenNote,
   ileTabIsFocused,
   openIleExternalLeaveTab,
-  runIleLeaveFocusSequence,
   shouldShowIleMiniShareScreenNote,
 } from "@/lib/ile-blur-screenshare";
 import { isScreenCaptureUserDenied } from "@/lib/screen-capture";
@@ -107,7 +106,6 @@ describe("applyIleLeaveFocusPolicy (shipped ILE leave-focus helper)", () => {
       decideIleLeaveFocusScreenshare({
         ...ileActive,
         tabFocused: false,
-        shareDeclined: true,
         leaveReason: "tab_blur",
       }),
     ).toBe("skip");
@@ -115,24 +113,23 @@ describe("applyIleLeaveFocusPolicy (shipped ILE leave-focus helper)", () => {
       decideIleCompactWindow({
         ...ileActive,
         tabFocused: false,
-        shareDeclined: true,
         leaveReason: "tab_blur",
       }),
     ).toBe("show");
 
-    const afterDeny = await runIleLeaveFocusSequence({
+    const afterDenyPre = applyIleLeaveFocusPolicy({
       ...ileActive,
       tabFocused: false,
-      shareDeclined: true,
       leaveReason: "tab_hidden",
-      startScreenshare: async () => {
-        throw new Error("should not request after decline");
-      },
-      readLiveTabFocused: () => false,
     });
-    expect(afterDeny.requestedShare).toBe(false);
-    expect(afterDeny.pre.screenshare).toBe("skip");
-    expect(afterDeny.post.compactWindow).toBe("show");
+    const afterDenyPost = applyIleCompactWindowAfterShareAwait({
+      isIleSession: true,
+      sessionActive: true,
+      tabFocused: false,
+      isScreenSharing: false,
+    });
+    expect(afterDenyPre.screenshare).toBe("skip");
+    expect(afterDenyPost.compactWindow).toBe("show");
 
     const capture = read("lib/screen-capture.ts");
     expect(capture).toContain("isScreenCaptureUserDenied");
@@ -196,45 +193,43 @@ describe("applyIleLeaveFocusPolicy (shipped ILE leave-focus helper)", () => {
   });
 
   it("after getDisplayMedia, compact window follows live focus not the stale leave reason", async () => {
-    const grokThenFocus = await runIleLeaveFocusSequence({
+    const grokPre = applyIleLeaveFocusPolicy({
       ...ileActive,
       tabFocused: true,
       leaveReason: "grok",
-      startScreenshare: async () => {
-        throw new Error("leave must not auto-request share");
-      },
-      readLiveTabFocused: () => true,
     });
-    expect(grokThenFocus.pre.screenshare).toBe("skip");
-    expect(grokThenFocus.pre.compactWindow).toBe("show");
-    expect(grokThenFocus.requestedShare).toBe(false);
-    expect(grokThenFocus.post.compactWindow).toBe("hide");
-    expect(grokThenFocus.post.screenshare).toBe("skip");
+    const grokPost = applyIleCompactWindowAfterShareAwait({
+      isIleSession: true,
+      sessionActive: true,
+      tabFocused: true,
+      isScreenSharing: false,
+    });
+    expect(grokPre.screenshare).toBe("skip");
+    expect(grokPre.compactWindow).toBe("show");
+    expect(grokPost.compactWindow).toBe("hide");
+    expect(grokPost.screenshare).toBe("skip");
 
-    const stillAway = await runIleLeaveFocusSequence({
+    const stillAwayPre = applyIleLeaveFocusPolicy({
       ...ileActive,
       tabFocused: false,
       leaveReason: "grokipedia",
-      startScreenshare: async () => {
-        throw new Error("leave must not auto-request share");
-      },
-      readLiveTabFocused: () => false,
     });
-    expect(stillAway.pre.screenshare).toBe("skip");
-    expect(stillAway.requestedShare).toBe(false);
-    expect(stillAway.post.compactWindow).toBe("show");
-
-    const returnedDuringPicker = await runIleLeaveFocusSequence({
-      ...ileActive,
+    const stillAwayPost = applyIleCompactWindowAfterShareAwait({
+      isIleSession: true,
+      sessionActive: true,
       tabFocused: false,
-      leaveReason: "tab_blur",
-      startScreenshare: async () => {
-        throw new Error("leave must not auto-request share");
-      },
-      readLiveTabFocused: () => true,
+      isScreenSharing: false,
     });
-    expect(returnedDuringPicker.requestedShare).toBe(false);
-    expect(returnedDuringPicker.post.compactWindow).toBe("hide");
+    expect(stillAwayPre.screenshare).toBe("skip");
+    expect(stillAwayPost.compactWindow).toBe("show");
+
+    const returnedDuringPicker = applyIleCompactWindowAfterShareAwait({
+      isIleSession: true,
+      sessionActive: true,
+      tabFocused: true,
+      isScreenSharing: false,
+    });
+    expect(returnedDuringPicker.compactWindow).toBe("hide");
 
     const afterAwaitFocused = applyIleCompactWindowAfterShareAwait({
       isIleSession: true,
@@ -364,14 +359,14 @@ describe("ILE leave-focus wiring (shipped source)", () => {
     expect(view).toContain("onLeaveIleTab={notifyLeaveTab}");
 
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    expect(hook).toContain("runIleLeaveFocusSequence");
     expect(hook).toContain("readIleTabFocusedFromDocument");
-    expect(hook).toContain("result.post.compactWindow");
     expect(hook).toContain("openIleCompactPopupWindow");
     expect(hook).toContain("IleCompactStashWindow");
     expect(hook).toContain("visibilitychange");
     expect(hook).toContain("startScreenshare");
-    expect(hook).toContain("shareDeclined");
+    expect(hook).not.toContain("shouldRequestIlePopupOnLeave");
+    expect(hook).not.toContain("result.post.compactWindow");
+    expect(hook).not.toContain("shareDeclined");
 
     const grok = read("components/GrokGrokipediaTool.tsx");
     expect(grok).toContain("openIleExternalLeaveTab");
@@ -416,7 +411,7 @@ describe("ILE leave-focus wiring (shipped source)", () => {
       "ile-leave-share-excerpts.txt",
       [
         "leave policy: screenshare=skip + compact=show",
-        "sequence only calls startScreenshare if pre.screenshare===request (never on leave)",
+        "leave sequence never auto-requests screenshare",
         "SessionView: handleStartScreenCapture remains for manual share",
         "IleCompactStashWindow: ileMiniModeShareCtaLabel",
       ].join("\n"),

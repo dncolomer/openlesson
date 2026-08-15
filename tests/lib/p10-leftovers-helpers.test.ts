@@ -7,10 +7,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   emptyWorkspaceMapSelection,
-  mapSelectionFromApplyPayload,
+  mapSelectionEmptyCells,
+  mapSelectionExpandedId,
+  mapSelectionFilledIds,
   mapSelectionToApplyPayload,
   nextWorkspaceMapSelection,
-  workspaceMapSelectionHostApply,
 } from "@/lib/workspace-map-selection";
 import {
   isTapLiveThoughtSpeechEnabled,
@@ -46,50 +47,43 @@ function writeScratch(name: string, body: string) {
 
 describe("P10 leftovers shipped helpers", () => {
   it("selection, TAP hook, session-chat PoW, persist, dead leftovers", () => {
-    const empty = emptyWorkspaceMapSelection();
-    const opened = nextWorkspaceMapSelection(empty, {
+    const opened = nextWorkspaceMapSelection({
       type: "open_block",
       blockId: "b1",
     });
-    expect(opened.expandedBlockId).toBe("b1");
-    expect(opened.selectedFilledBlockIds).toEqual([]);
-    expect(opened.emptyCells).toEqual([]);
+    expect(opened).toEqual({ kind: "block", id: "b1" });
+    expect(mapSelectionExpandedId(opened)).toBe("b1");
+    expect(mapSelectionFilledIds(opened)).toEqual([]);
+    expect(mapSelectionEmptyCells(opened)).toEqual([]);
 
-    const multi = nextWorkspaceMapSelection(opened, {
+    const multi = nextWorkspaceMapSelection({
       type: "set_filled_ids",
       blockIds: ["a", "b"],
     });
-    expect(multi.expandedBlockId).toBeNull();
-    expect(multi.selectedFilledBlockIds).toEqual(["a", "b"]);
+    expect(multi).toEqual({ kind: "blocks", ids: ["a", "b"] });
+    expect(mapSelectionExpandedId(multi)).toBeNull();
+    expect(mapSelectionFilledIds(multi)).toEqual(["a", "b"]);
 
-    const search = nextWorkspaceMapSelection(multi, {
-      type: "apply_search_blocks",
+    const search = nextWorkspaceMapSelection({
+      type: "set_filled_ids",
       blockIds: ["only"],
     });
-    expect(search.expandedBlockId).toBe("only");
-    expect(search.selectedFilledBlockIds).toEqual([]);
+    expect(search).toEqual({ kind: "block", id: "only" });
     const searchApply = mapSelectionToApplyPayload(search, 2);
-    expect(searchApply.blockIds).toEqual(["only"]);
-    const searchRebuilt = mapSelectionFromApplyPayload(searchApply);
-    expect(searchRebuilt.expandedBlockId).toBe("only");
-    expect(searchRebuilt.selectedFilledBlockIds).toEqual([]);
-    const searchHost = workspaceMapSelectionHostApply(searchRebuilt);
-    expect(searchHost.selectNodeId).toBe("only");
-    expect(searchHost.emitFilled).toBeNull();
+    expect(searchApply.selection).toEqual({ kind: "block", id: "only" });
+    expect(searchApply.token).toBe(2);
 
-    const suggest = nextWorkspaceMapSelection(search, {
-      type: "apply_suggest_cells",
+    const suggest = nextWorkspaceMapSelection({
+      type: "set_empty_cells",
       cells: [{ row: 2, col: 3 }],
     });
-    expect(suggest.expandedBlockId).toBeNull();
-    expect(suggest.emptyCells).toEqual([{ row: 2, col: 3 }]);
+    expect(suggest).toEqual({ kind: "empties", cells: [{ row: 2, col: 3 }] });
 
-    const cleared = nextWorkspaceMapSelection(suggest, { type: "clear" });
+    const cleared = nextWorkspaceMapSelection({ type: "clear" });
     expect(cleared).toEqual(emptyWorkspaceMapSelection());
     const apply = mapSelectionToApplyPayload(cleared, 4);
     expect(apply.token).toBe(4);
-    expect(apply.blockIds).toEqual([]);
-    expect(apply.emptyCells).toEqual([]);
+    expect(apply.selection).toEqual({ kind: "none" });
 
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
     expect(isTapLiveThoughtSpeechEnabled("briefing")).toBe(false);
@@ -156,8 +150,7 @@ describe("P10 leftovers shipped helpers", () => {
 
     expect(view).toContain("nextWorkspaceMapSelection");
     expect(list).toContain("nextWorkspaceMapSelection");
-    expect(grid).toContain("mapSelectionFromApplyPayload");
-    expect(grid).toContain("workspaceMapSelectionHostApply");
+    expect(grid).toContain("commitSelection");
     expect(view).not.toContain("mapSelectionClearNonce");
     expect(list).not.toContain("mapSelectionClearNonce");
     expect(grid).not.toContain("mapSelectionClearNonce");
@@ -188,7 +181,7 @@ describe("P10 leftovers shipped helpers", () => {
         `selectionClear=${JSON.stringify(cleared)}`,
         `applyClearToken=${apply.token}`,
         `tapLiveHook=${isTapLiveThoughtSpeechEnabled("live")}`,
-        `searchOneBlock=${searchHost.selectNodeId}`,
+        `searchOneBlock=${search.kind === "block" ? search.id : ""}`,
         `localRestartLive=${shouldRestartLocalTapSpeechBindings("live")}`,
         `flushPrefersHook=${tapLiveSpeechFlushText({ hookFormingText: "hook", crystallizableText: "bar" })}`,
         `powPersist=${persistPow.persist}`,

@@ -7,6 +7,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
 import {
+  learnerNoteCommitFromGestureBox,
+  learnerNoteLiveBoxFromPointerMove,
+} from "@/lib/learner-map-note-gestures";
+import {
   applyLearnerNoteDragDelta,
   applyLearnerNoteResize,
   canDeleteMapNote,
@@ -24,9 +28,7 @@ import {
   learnerMapNoteIsBlockAgnostic,
   learnerMapNotesStorageKey,
   learnerMapNotesStoreOps,
-  learnerNoteCommitFromGestureBox,
   learnerNoteLayerStyle,
-  learnerNoteLiveBoxFromPointerMove,
   learnerNotePointerAllowsDragStart,
   learnerNoteScreenPosition,
   defaultMapNotesPlaneVisible,

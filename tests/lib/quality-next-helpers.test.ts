@@ -29,10 +29,14 @@ import {
   nextWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import {
+  isTapLiveThoughtSpeechEnabled,
   tapHookFormingText,
   tapLiveSpeechFlushText,
 } from "@/lib/tap-session-runtime";
-import { shouldWriteLearnerBlocksViaBrowserClient } from "@/lib/workspace-learner-writes";
+import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
+import { emptySimulationCollection } from "@/lib/workspace-simulation-collection";
+import { decideIleLeaveFocusScreenshare, decideIleMiniAutoOpen } from "@/lib/ile-blur-screenshare";
+
 import {
   guardWorkspaceRoute,
   requireAuthenticatedUser,
@@ -167,21 +171,23 @@ describe("quality-next shipped helpers", () => {
     expect(classifyApiErrorEnvelope(newsBody)).toBe("nested_code");
     expect(errorMessageFromBody(newsBody, "")).not.toBe("");
 
-    const empty = emptyWorkspaceMapSelection();
-    const cells = nextWorkspaceMapSelection(empty, {
+    const cells = nextWorkspaceMapSelection({
       type: "set_empty_cells",
       cells: [{ row: 2, col: 3 }],
     });
-    expect(cells.emptyCells).toEqual([{ row: 2, col: 3 }]);
-    expect(cells.expandedBlockId).toBeNull();
-    const oneBlock = nextWorkspaceMapSelection(cells, {
+    expect(cells).toEqual({ kind: "empties", cells: [{ row: 2, col: 3 }] });
+    const oneBlock = nextWorkspaceMapSelection({
       type: "set_filled_ids",
       blockIds: ["block-1"],
     });
-    expect(oneBlock.expandedBlockId).toBe("block-1");
-    expect(oneBlock.selectedFilledBlockIds).toEqual([]);
-    expect(oneBlock.emptyCells).toEqual([]);
-    const cleared = nextWorkspaceMapSelection(oneBlock, { type: "clear" });
+    expect(oneBlock).toEqual({ kind: "block", id: "block-1" });
+    const multi = nextWorkspaceMapSelection({
+      type: "set_filled_ids",
+      blockIds: ["a", "b"],
+    });
+    expect(multi).toEqual({ kind: "blocks", ids: ["a", "b"] });
+    expect(multi.kind === "blocks" && oneBlock.kind === "block").toBe(true);
+    const cleared = nextWorkspaceMapSelection({ type: "clear" });
     expect(cleared).toEqual(emptyWorkspaceMapSelection());
 
     expect(tapHookFormingText({ getFormingText: () => "  live  " })).toBe("live");
@@ -193,8 +199,23 @@ describe("quality-next shipped helpers", () => {
         localFinalBuffer: ["dead buffer"],
       }),
     ).toBe("hook first");
-    expect(shouldWriteLearnerBlocksViaBrowserClient()).toBe(false);
-
+    expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
+    expect(
+      decideIleLeaveFocusScreenshare({
+        isIleSession: true,
+        sessionActive: true,
+        tabFocused: false,
+        isScreenSharing: false,
+      }),
+    ).toBe("skip");
+    expect(
+      decideIleMiniAutoOpen({
+        sessionActive: true,
+        tabFocused: false,
+        leaveReason: "tab_blur",
+      }),
+    ).not.toBe("ask");
+    expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual([]);
     const sessionChat = read("app/api/session-chat/route.ts");
     const tapChat = read("app/api/workspace-tap-score/chat/route.ts");
     const ileSpeech = read("app/api/workspace-ile/speech/route.ts");
@@ -206,6 +227,10 @@ describe("quality-next shipped helpers", () => {
     const host = read("components/BlockSkillGrid.tsx");
 
     expect(sessionChat).toContain("jsonError");
+    expect(sessionChat).toContain("extracted.visibleText");
+    expect(sessionChat).toContain("[session-chat] PoW upload failed");
+    expect(sessionChat).not.toContain("Failed to persist proof of work");
+    expect(sessionChat).not.toMatch(/if \(!workspace\) \{\s*return jsonError\(404/);
     expect(tapChat).toContain("jsonError");
     expect(ileSpeech).toContain("jsonError");
     expect(gridOps).toContain("jsonError");
@@ -246,10 +271,9 @@ describe("quality-next shipped helpers", () => {
         `pow403=${classifyApiErrorEnvelope(powForbiddenBody)}`,
         `newsStatus=${newsRes.status}`,
         `newsEnvelope=${classifyApiErrorEnvelope(newsBody)}`,
-        `emptyClickCells=${cells.emptyCells.length}`,
-        `oneBlockId=${oneBlock.expandedBlockId}`,
+        `emptyClickCells=${cells.kind === "empties" ? cells.cells.length : 0}`,
+        `oneBlockId=${oneBlock.kind === "block" ? oneBlock.id : ""}`,
         `hookText=${tapHookFormingText({ getFormingText: () => "live" })}`,
-        `browserBlockWrite=${shouldWriteLearnerBlocksViaBrowserClient()}`,
         "jsonError on session-chat / tap / ile / grid-ops",
         "WorkspaceView selection via nextWorkspaceMapSelection",
         "TAP stash/send/purity/end use tapHookFormingText",

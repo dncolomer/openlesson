@@ -3,6 +3,8 @@
  * WorkspaceView and SessionList/map host both go through here.
  */
 
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
+
 export const WORKSPACE_GRID_OPS_PATH = "/api/workspace/grid-ops";
 
 export type WorkspaceGridOp =
@@ -16,8 +18,7 @@ export type WorkspaceGridOp =
   | "delete_block"
   | "delete_blocks"
   | "apply_dag"
-  | "delete_dag"
-  | string;
+  | "delete_dag";
 
 export type WorkspaceGridOpsRequestInput = {
   workspaceId: string;
@@ -25,7 +26,8 @@ export type WorkspaceGridOpsRequestInput = {
   ayclToken?: string | null;
   model?: string;
   locale?: string;
-} & Record<string, unknown>;
+  [key: string]: unknown;
+};
 
 export function withAyclToken<T extends Record<string, unknown>>(
   body: T,
@@ -48,11 +50,6 @@ export function buildWorkspaceGridOpsBody(input: WorkspaceGridOpsRequestInput): 
   );
 }
 
-/** Happy-path mutate must not reload the whole workspace. */
-export function shouldReloadWorkspaceAfterMutate(): boolean {
-  return false;
-}
-
 export function applyWorkspaceGridOpsUpdatedNodes<T extends { id: string }>(
   current: T[],
   updated: T[] | null | undefined,
@@ -73,7 +70,12 @@ export function applyWorkspaceGridOpsUpdatedNodes<T extends { id: string }>(
 export async function postWorkspaceGridOp(
   input: WorkspaceGridOpsRequestInput,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+): Promise<{
+  ok: boolean;
+  status: number;
+  data: Record<string, unknown>;
+  errorMessage: string;
+}> {
   const body = buildWorkspaceGridOpsBody(input);
   const response = await fetchImpl(WORKSPACE_GRID_OPS_PATH, {
     method: "POST",
@@ -81,5 +83,10 @@ export async function postWorkspaceGridOp(
     body: JSON.stringify(body),
   });
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: response.ok, status: response.status, data };
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    errorMessage: errorMessageFromBody(data, "Grid operation failed"),
+  };
 }

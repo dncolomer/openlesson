@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { BlockSkillGrid } from "./BlockSkillGrid";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
-import { nextWorkspaceMapSelection, emptyWorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import {
+  mapSelectionExpandedId,
+  nextWorkspaceMapSelection,
+  type WorkspaceMapSelection,
+} from "@/lib/workspace-map-selection";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { Block } from "@/lib/domain/types";
-import {
-  postWorkspaceGridOp,
-  shouldReloadWorkspaceAfterMutate,
-} from "@/lib/workspace-grid-ops-client";
+import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -54,6 +54,8 @@ interface SessionListProps {
    */
   expandedNodeId?: string | null;
   onExpandedNodeIdChange?: (blockId: string | null) => void;
+  /** Exclusive map selection. Preferred over the three-channel callbacks. */
+  onMapSelectionChange?: (selection: WorkspaceMapSelection) => void;
   /**
    * Empty-cell selection for the right pane (1 → Add, 2+ → generate shape).
    * Null/[] clears.
@@ -67,8 +69,7 @@ interface SessionListProps {
   /** Host-driven multi-select apply (Map Search / Suggest empty spots). */
   applyMapSelection?: {
     token: number;
-    blockIds?: string[] | null;
-    emptyCells?: Array<{ row: number; col: number }> | null;
+    selection: WorkspaceMapSelection;
   } | null;
   selectiveExplanationActive?: boolean;
   selectiveExplanationPolygon?: Array<{ x: number; y: number }> | null;
@@ -200,6 +201,7 @@ export function SessionList({
   onCloneCancel,
   expandedNodeId: expandedNodeIdProp,
   onExpandedNodeIdChange,
+  onMapSelectionChange,
   onEmptySelectionChange,
   onSelectedBlockIdsChange,
   applyMapSelection = null,
@@ -227,21 +229,21 @@ export function SessionList({
   onAbortExpandJob,
   clusterMapJob = null,
 }: SessionListProps) {
-  const router = useRouter();
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
   const isExpandedControlled =
     expandedNodeIdProp !== undefined && typeof onExpandedNodeIdChange === "function";
   const expandedNodeId = isExpandedControlled ? expandedNodeIdProp : internalExpandedNodeId;
   const setExpandedNodeId = useCallback(
     (blockId: string | null) => {
-      const next = nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), {
+      const next = nextWorkspaceMapSelection({
         type: "open_block",
         blockId,
       });
+      const id = mapSelectionExpandedId(next);
       if (isExpandedControlled) {
-        onExpandedNodeIdChange?.(next.expandedBlockId);
+        onExpandedNodeIdChange?.(id);
       } else {
-        setInternalExpandedNodeId(next.expandedBlockId);
+        setInternalExpandedNodeId(id);
       }
     },
     [expandedNodeId, isExpandedControlled, onExpandedNodeIdChange],
@@ -371,10 +373,6 @@ export function SessionList({
           // Don't open detail overlay for owners (blocks map multi-select).
           if (placedNode && !isOwner) setExpandedNodeId(placedNode.id);
         }
-        if (shouldReloadWorkspaceAfterMutate()) {
-          if (onRefresh) onRefresh();
-          router.refresh();
-        }
       } catch (err) {
         console.error("Failed to add block:", err);
         throw err;
@@ -382,7 +380,7 @@ export function SessionList({
         setIsAddingBlock(false);
       }
     },
-    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
+    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId],
   );
 
   const handleGridOp = useCallback(
@@ -426,7 +424,7 @@ export function SessionList({
       const silentGeometry = payload.op === "move" || payload.op === "resize";
       if (!silentGeometry) setIsAddingBlock(true);
       try {
-        const { ok, data } = await postWorkspaceGridOp({
+        const { ok, data, errorMessage } = await postWorkspaceGridOp({
           workspaceId,
           ...payload,
           weightedNeighbors,
@@ -436,7 +434,7 @@ export function SessionList({
         });
 
         if (!ok) {
-          throw new Error((data.error as string) || "Grid operation failed");
+          throw new Error(errorMessage);
         }
         const updatedNodes = Array.isArray(data.updatedNodes)
           ? (data.updatedNodes as Block[])
@@ -462,18 +460,12 @@ export function SessionList({
             }
           }
         }
-        // Geometry already settled optimistically via onNodesUpdate — do not
-        // router.refresh / full plan reload (that felt like a freeze).
-        if (!silentGeometry && shouldReloadWorkspaceAfterMutate()) {
-          if (onRefresh) onRefresh();
-          router.refresh();
-        }
         return data;
       } finally {
         if (!silentGeometry) setIsAddingBlock(false);
       }
     },
-    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
+    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId],
   );
 
   // Block detail opens in the workspace right pane (parent). Map stays free of
@@ -486,37 +478,22 @@ export function SessionList({
             nodes={nodes}
             selectedNodeId={expandedNodeId}
             onSelectNode={(blockId) => {
-              // Opening a block clears empty create surfaces (right-pane hosts only).
-              if (blockId && onEmptySelectionChange) onEmptySelectionChange(null);
-              if (blockId && onAddTargetChange) onAddTargetChange(null);
-              if (blockId && onSelectedBlockIdsChange) onSelectedBlockIdsChange(null);
+              if (onMapSelectionChange) {
+                if (blockId) {
+                  onMapSelectionChange(
+                    nextWorkspaceMapSelection({ type: "open_block", blockId }),
+                  );
+                }
+                return;
+              }
               setExpandedNodeId(blockId);
             }}
+            onMapSelectionChange={onMapSelectionChange}
             onSelectedBlockIdsChange={
-              onSelectedBlockIdsChange
-                ? (ids) => {
-                    if (ids && ids.length >= 2) {
-                      setExpandedNodeId(null);
-                      if (onEmptySelectionChange) onEmptySelectionChange(null);
-                      if (onAddTargetChange) onAddTargetChange(null);
-                    }
-                    onSelectedBlockIdsChange(ids);
-                  }
-                : undefined
+              onMapSelectionChange ? undefined : onSelectedBlockIdsChange
             }
-            // Only wire when parent hosts right-pane empty create. A always-defined
-            // wrapper would force useRightPaneEmpty and break local fallback
-            // (e.g. WorkspaceChat SessionList without these props).
             onEmptySelectionChange={
-              onEmptySelectionChange
-                ? (cells) => {
-                    if (cells && cells.length > 0) {
-                      setExpandedNodeId(null);
-                      if (onSelectedBlockIdsChange) onSelectedBlockIdsChange(null);
-                    }
-                    onEmptySelectionChange(cells);
-                  }
-                : undefined
+              onMapSelectionChange ? undefined : onEmptySelectionChange
             }
             onAddTargetChange={
               onAddTargetChange

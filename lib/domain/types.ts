@@ -1,6 +1,8 @@
 // Domain types and pure helpers (no I/O).
 // Import from here when you need types without pulling persistence modules.
 
+import type { BlockPracticeOptions } from "@/lib/block-practice-options";
+import type { SimulationCollection } from "@/lib/workspace-simulation-collection";
 
 export type ToolName = "chat" | "chapters" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan" | "thought-trace";
 
@@ -352,8 +354,7 @@ export type WorkspaceLifecycleStatus =
   | "active"
   | "completed"
   | "paused"
-  | "archived"
-  | string;
+  | "archived";
 
 export interface Workspace {
   id: string;
@@ -384,6 +385,7 @@ export interface Workspace {
   aycl_full_price_cents?: number | null;
   unusable_cells?: Array<{ row: number; col: number }> | null;
   workspace_dags?: unknown[] | null;
+  simulation_collection?: SimulationCollection | null;
 }
 
 export interface Block {
@@ -408,7 +410,7 @@ export interface Block {
     global_file_refs?: string[] | null;
     external_resource_ids?: string[] | null;
   } | null;
-  practice_options?: unknown;
+  practice_options?: BlockPracticeOptions | null;
   creator_effects?: unknown;
 }
 

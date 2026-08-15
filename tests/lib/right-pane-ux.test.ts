@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  resolveLaunchFromStyleAndTimebox,
+  resolveLaunchFromStyleAndModality,
   resolveProductIntent,
 } from "@/lib/product-intent";
 import {
@@ -41,32 +41,32 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
-  it("maps all four combinations via resolveLaunchFromStyleAndTimebox (solo flag)", () => {
+  it("maps all four combinations via resolveLaunchFromStyleAndModality (solo flag)", () => {
     // soloEnabled false → dialog; true → solo
-    expect(resolveLaunchFromStyleAndTimebox("explore", false)).toEqual(
+    expect(resolveLaunchFromStyleAndModality("explore", false)).toEqual(
       resolveProductIntent("explore", "dialog"),
     );
-    expect(resolveLaunchFromStyleAndTimebox("drill", false)).toEqual(
+    expect(resolveLaunchFromStyleAndModality("drill", false)).toEqual(
       resolveProductIntent("drill", "dialog"),
     );
-    expect(resolveLaunchFromStyleAndTimebox("explore", true)).toEqual(
+    expect(resolveLaunchFromStyleAndModality("explore", true)).toEqual(
       resolveProductIntent("explore", "solo"),
     );
-    expect(resolveLaunchFromStyleAndTimebox("drill", true)).toEqual(
+    expect(resolveLaunchFromStyleAndModality("drill", true)).toEqual(
       resolveProductIntent("drill", "solo"),
     );
-    expect(resolveLaunchFromStyleAndTimebox("explore", false).id).toBe(
+    expect(resolveLaunchFromStyleAndModality("explore", false).id).toBe(
       "explore_dialog",
     );
-    expect(resolveLaunchFromStyleAndTimebox("drill", true).id).toBe("drill_solo");
+    expect(resolveLaunchFromStyleAndModality("drill", true).id).toBe("drill_solo");
 
     writeEvidence(
       "launch-intent-timebox.log",
       [
-        "explore dialog=" + resolveLaunchFromStyleAndTimebox("explore", false).id,
-        "drill dialog=" + resolveLaunchFromStyleAndTimebox("drill", false).id,
-        "explore solo=" + resolveLaunchFromStyleAndTimebox("explore", true).id,
-        "drill solo=" + resolveLaunchFromStyleAndTimebox("drill", true).id,
+        "explore dialog=" + resolveLaunchFromStyleAndModality("explore", false).id,
+        "drill dialog=" + resolveLaunchFromStyleAndModality("drill", false).id,
+        "explore solo=" + resolveLaunchFromStyleAndModality("explore", true).id,
+        "drill solo=" + resolveLaunchFromStyleAndModality("drill", true).id,
       ].join("\n"),
     );
   });

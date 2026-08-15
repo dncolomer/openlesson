@@ -46,13 +46,13 @@ import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
-import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat, ILE_SESSION_CHAT_PATH } from "@/lib/session-chat-client";
-import { decideIleKeyboardAction, shouldLogIlePowInsideSetState } from "@/lib/ile-keyboard-mode";
+import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat } from "@/lib/session-chat-client";
+import { decideIleKeyboardAction } from "@/lib/ile-keyboard-mode";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
 import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
-import { IleMiniModeFirstAsk } from "@/components/IleMiniModeFirstAsk";
+
 import { updateSessionPlan } from "@/lib/storage";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
@@ -88,9 +88,7 @@ import {
   textToBase64,
 } from "@/lib/ile-proof-of-work-client";
 import {
-  buildIleChatExchangePayload,
   buildIleThoughtTracePayload,
-  ILE_CHAT_TOOL_NAME,
   ILE_TRACE_TOOL_NAME,
   type IleSystem1Action,
   type IleSystem2Action,
@@ -133,7 +131,6 @@ import {
   parseIleProjectThoughtsStored,
   resolveIleSessionModeFromSession,
   serializeIleProjectThoughts,
-  shouldShowInterfaceEvaluationOnChapterDone,
   type ExerciseDualLists,
   type IleSessionMode,
 } from "@/lib/ile-mode";
@@ -950,7 +947,6 @@ export function SessionView({
   const submitHeliosChatMessageNow = useCallback(async (
     message: string,
     imageDataUrl?: string,
-    options?: { uploadThoughtChatExchange?: boolean },
   ) => {
     const text = message.trim();
     if (!text || !session) return;
@@ -973,9 +969,7 @@ export function SessionView({
 
     try {
       const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-      // Live ILE chat + chapter reload share postIleSessionChat (`/api/session-chat`).
-      void ILE_SESSION_CHAT_PATH;
-      const { ok, data } = await postIleSessionChat({
+      const { ok, data, errorMessage } = await postIleSessionChat({
           problem: session.problem,
           activeStepIndex: activeChapterIndex,
           activeStepId: activeStep?.id,
@@ -983,21 +977,12 @@ export function SessionView({
           sessionPlan,
           sessionId: session.id,
           tutoringLanguage,
-          sessionMode: resolvedSessionMode,
           ...guestAccessBody,
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
         });
-      void ok;
-      const content = typeof data?.message === "string" && data.message.trim()
+      const content = ok && typeof data?.message === "string" && data.message.trim()
         ? data.message.trim()
-        : t('heliosChat.errorMessage');
-      const suggestionPayload =
-        data?.chapterSuggestion && typeof data.chapterSuggestion === "object"
-          ? (data.chapterSuggestion as Record<string, unknown>)
-          : null;
-      if (suggestionPayload && typeof suggestionPayload.topic === "string" && suggestionPayload.topic.trim()) {
-        void logToolRef.current?.("session_plan", "chapter_suggest", suggestionPayload);
-      }
+        : errorMessage || t('heliosChat.errorMessage');
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
@@ -1005,39 +990,6 @@ export function SessionView({
             : message
         ),
       }));
-
-      if (options?.uploadThoughtChatExchange) {
-        const workspaceId = session.metadata?.workspace_id as string | undefined;
-        if (workspaceId && content) {
-          const chatPayload = buildIleChatExchangePayload({
-            sessionId: session.id,
-            workspaceId,
-            learnerThought: text,
-            heliosReply: content,
-          });
-          const chatPow = await uploadIleProofOfWork({
-            workspaceId,
-            sessionId: session.id,
-            type: "tool",
-            mime_type: "application/json",
-            data: textToBase64(JSON.stringify(chatPayload, null, 2)),
-            file_name: `ile-chat-${session.id}-${Date.now()}.json`,
-            tool_name: ILE_CHAT_TOOL_NAME,
-            tool_action: "chat_exchange",
-            metadata: {
-              learner_thought: text,
-              helios_reply: content,
-            },
-            ...(ileToken ? { ileToken } : {}),
-            ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
-              ? { entryQueryParams }
-              : {}),
-          });
-          if (chatPow.ok) {
-            handlePowInterruptionRef.current(chatPow.interruption);
-          }
-        }
-      }
     } catch (error) {
       console.error("Helios direct chat error:", error);
       updateChapterWorkspace(chapterKey, workspace => ({
@@ -1343,7 +1295,7 @@ export function SessionView({
           ],
         }));
         try {
-          const { ok, data } = await postIleSessionChat({
+          const { ok, data, errorMessage } = await postIleSessionChat({
               problem: session.problem,
               activeStepIndex: index,
               activeStepId: step.id,
@@ -1351,7 +1303,6 @@ export function SessionView({
               sessionPlan: updatedPlan,
               sessionId: session.id,
               tutoringLanguage,
-              sessionMode: resolvedSessionMode,
               ...guestAccessBody,
               messages: [
                 ...existingMessages.map((m) => ({
@@ -1365,11 +1316,10 @@ export function SessionView({
                 },
               ],
             });
-          void ok;
           const content =
-            typeof data?.message === "string" && data.message.trim()
+            ok && typeof data?.message === "string" && data.message.trim()
               ? data.message.trim()
-              : t("heliosChat.errorMessage");
+              : errorMessage || t("heliosChat.errorMessage");
           updateChapterWorkspace(chapterKey, (workspace) => ({
             chatMessages: workspace.chatMessages.map((message) =>
               message.id === placeholderId ? { ...message, content, pending: false } : message,
@@ -2281,7 +2231,7 @@ export function SessionView({
       }
       setHeliosTurnMode("idle");
       await flushRemainingIlePow();
-      await submitHeliosChatMessageNow(text, undefined, { uploadThoughtChatExchange: true });
+      await submitHeliosChatMessageNow(text);
     },
   });
 
@@ -2618,9 +2568,6 @@ export function SessionView({
 
   const {
     notifyLeaveTab,
-    miniFirstAskVisible,
-    acceptMiniMode,
-    declineMiniMode,
     openManualPicInPic,
     showManualPicInPic,
   } =
@@ -3075,11 +3022,6 @@ export function SessionView({
           stepDescription: step.description?.slice(0, 120),
           via: "chapter_map_mark_done",
         };
-
-    // Guard: Project Mode must not open eval UI on Done.
-    if (isProjectMode && shouldShowInterfaceEvaluationOnChapterDone(resolvedSessionMode)) {
-      // Unreachable by contract; keep as defensive no-op for eval paths.
-    }
 
     await persistPlanSteps(updatedPlan, {
       toolAction: "chapter_done",
@@ -3821,12 +3763,7 @@ export function SessionView({
             <SessionIdentityBadge identity={participantIdentity} />
           </div>
         ) : null}
-        {miniFirstAskVisible ? (
-          <IleMiniModeFirstAsk
-            onAccept={acceptMiniMode}
-            onDecline={declineMiniMode}
-          />
-        ) : null}
+
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Tools | Helios */}
           <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">

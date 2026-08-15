@@ -304,8 +304,4 @@ export function shouldUseIleDocumentPipOnly(
   return isIleDocumentPipSupported(host);
 }
 
-/** In-app first-ask is not used — no-PiP browsers get a manual button instead. */
-export function shouldGateIleMiniModeWithInAppAsk(documentPipSupported: boolean): boolean {
-  void documentPipSupported;
-  return false;
-}
+

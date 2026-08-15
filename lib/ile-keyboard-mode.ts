@@ -21,8 +21,3 @@ export function decideIleKeyboardAction(input: {
   if (key === "Delete" || key === "Backspace") return "helios_stash";
   return "ignore";
 }
-
-/** PoW / traces must be logged after state commits, not inside a setState updater. */
-export function shouldLogIlePowInsideSetState(): boolean {
-  return false;
-}

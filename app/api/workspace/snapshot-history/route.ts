@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { resolveAyclAccess } from "@/lib/aycl-session-auth";
+import { ayclTokenFromBody } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   listEvalRunHistory,
   resolveHistorySubjectScope,
 } from "@/lib/pow-api/eval-run-history-store";
 import { getAllEvalPowGateStatuses } from "@/lib/pow-api/eval-pow-gate";
-import {
-  canAccessWorkspaceEval,
-  resolveEvalPersistenceClientMode,
-  resolveEvaluationSubject,
-} from "@/lib/pow-api/evaluation-subject";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
-import type { AuthContext } from "@/lib/pow-api/types";
-import {
-  decideProductWorkspaceAccess,
-  PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
-} from "@/lib/product-workspace-auth";
-import type { User } from "@supabase/supabase-js";
+import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -42,79 +32,7 @@ function parseVertical(value: unknown): ScoreVertical | null {
  * Session auth first, then privileged client for history reads (owner cohort /
  * group self) after canAccessWorkspaceEval — mirrors performance-report.
  */
-async function resolveWebAuth(
-  workspaceId: string,
-  ayclToken?: string | null,
-): Promise<
-  | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean; isOwner: boolean }
-  | { ok: false; response: NextResponse }
-> {
-  if (ayclToken) {
-    const aycl = await resolveAyclAccess(ayclToken);
-    if ("error" in aycl) {
-      return {
-        ok: false,
-        response: jsonError(aycl.status, aycl.error),
-      };
-    }
-    if (aycl.workspaceId !== workspaceId) {
-      return {
-        ok: false,
-        response: jsonError(403, "Forbidden"),
-      };
-    }
-    return {
-      ok: true,
-      user: aycl.actingUser as User,
-      supabase: aycl.supabase,
-      ayclAccess: true,
-      isOwner: true,
-    };
-  }
 
-  const session = await requireAuthenticatedUser();
-  if (!session.ok) return session;
-
-  const admin = createAdminClient();
-  const { data: workspace } = await admin
-    .from("workspaces")
-    .select("id, user_id, is_group")
-    .eq("id", workspaceId)
-    .single();
-
-  if (!workspace) {
-    return {
-      ok: false,
-      response: jsonError(404, "Workspace not found"),
-    };
-  }
-
-  const access = canAccessWorkspaceEval({
-    callerUserId: session.user.id,
-    workspaceOwnerId: workspace.user_id,
-    isGroup: Boolean(workspace.is_group),
-  });
-  const decided = decideProductWorkspaceAccess({
-    isOwner: access.isOwner,
-    isOrgAdmin: false,
-    evalAllowed: resolveEvalPersistenceClientMode(access) !== "deny",
-    ayclAccess: false,
-    flags: PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
-  });
-  if (!decided.allowed) {
-    return {
-      ok: false,
-      response: jsonError(403, "Forbidden"),
-    };
-  }
-
-  return {
-    ok: true,
-    user: session.user,
-    supabase: admin,
-    isOwner: access.isOwner,
-  };
-}
 
 async function handle(
   workspaceId: string,
@@ -263,7 +181,10 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await resolveWebAuth(workspaceId, url.searchParams.get("ayclToken"));
+    const auth = await requireProductWorkspaceEvalAuth(
+      workspaceId,
+      url.searchParams.get("ayclToken"),
+    );
     if (!auth.ok) return auth.response;
     const result = await handle(
       workspaceId,
@@ -303,7 +224,10 @@ export async function POST(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await resolveWebAuth(workspaceId, ayclTokenFromBody(body));
+    const auth = await requireProductWorkspaceEvalAuth(
+      workspaceId,
+      ayclTokenFromBody(body),
+    );
     if (!auth.ok) return auth.response;
     const result = await handle(
       workspaceId,

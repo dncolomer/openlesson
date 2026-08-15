@@ -1,18 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { IleCompactStashWindow } from "@/components/IleCompactStashWindow";
 import {
-  decideIleMiniModeFirstAsk,
+  decideIleMiniAutoOpen,
   isIleAwayFromTab,
-  loadIleMiniModeConsent,
   readIleTabFocusedFromDocument,
-  runIleLeaveFocusSequence,
-  saveIleMiniModeConsent,
-  shouldHonorIleMiniModeHide,
+  shouldHonorIleMiniHide,
   type IleLeaveFocusReason,
-  type IleMiniModeConsent,
 } from "@/lib/ile-blur-screenshare";
 import {
   attachIleAutoPipCaptureElement,
@@ -33,13 +29,10 @@ import {
   closeIleAlwaysOnTopWindow,
   decideIleMiniWindowKind,
   isIleCompactWindowLive,
-  isIlePopupReusable,
   openIleCompactPopupWindow,
   shouldAutoOpenIleMiniOnLeave,
   shouldKeepIleManualPopupOnReturn,
   shouldOpenIlePopupFromButton,
-  shouldReaskIleMiniModeForPopup,
-  shouldRequestIlePopupOnLeave,
   shouldShowIleOpenPicInPicButton,
   type IleCompactWindowHandle,
 } from "@/lib/ile-compact-window";
@@ -62,16 +55,9 @@ export function useIleBlurScreenshare(input: {
   compact: IleBlurScreenshareCompactProps;
 }): {
   notifyLeaveTab: (reason: IleLeaveFocusReason) => void;
-  miniFirstAskVisible: boolean;
-  acceptMiniMode: () => void;
-  declineMiniMode: () => void;
   openManualPicInPic: () => void;
   showManualPicInPic: boolean;
 } {
-  const shareInFlightRef = useRef(false);
-  const shareDeclinedRef = useRef(false);
-  const consentRef = useRef<IleMiniModeConsent>(loadIleMiniModeConsent());
-  const [miniFirstAskVisible, setMiniFirstAskVisible] = useState(false);
   const compactRef = useRef<IleCompactWindowHandle | null>(null);
   const compactRootRef = useRef<Root | null>(null);
   const compactPropsRef = useRef(input.compact);
@@ -173,31 +159,8 @@ export function useIleBlurScreenshare(input: {
   const applyDecision = useCallback(async (leaveReason: IleLeaveFocusReason | null, tabFocused: boolean) => {
     if (!enabledRef.current) {
       hideCompact();
-      setMiniFirstAskVisible(false);
       return;
     }
-
-    const result = await runIleLeaveFocusSequence({
-      isIleSession: true,
-      sessionActive: enabledRef.current,
-      tabFocused,
-      isScreenSharing: sharingRef.current,
-      shareRequestInFlight: shareInFlightRef.current,
-      shareDeclined: shareDeclinedRef.current,
-      leaveReason,
-      startScreenshare: async () => {
-        shareInFlightRef.current = true;
-        try {
-          const started = await startRef.current();
-          if (started === false) shareDeclinedRef.current = true;
-          if (started === true) shareDeclinedRef.current = false;
-          return started;
-        } finally {
-          shareInFlightRef.current = false;
-        }
-      },
-      readLiveTabFocused: () => readIleTabFocusedFromDocument(),
-    });
 
     const liveFocused = readIleTabFocusedFromDocument();
     const openerHidden = typeof document !== "undefined" ? document.hidden : undefined;
@@ -209,24 +172,15 @@ export function useIleBlurScreenshare(input: {
       }
       return;
     }
-    const first = decideIleMiniModeFirstAsk({
+    const auto = decideIleMiniAutoOpen({
       sessionActive: enabledRef.current,
       tabFocused: liveFocused,
       leaveReason,
-      consent: consentRef.current,
       documentPipSupported: pipOnly,
     });
 
-    if (first === "ask") {
-      // Unreachable for no-PiP (button only). Chrome owns auto-PiP.
-      hideCompact();
-      setMiniFirstAskVisible(true);
-      return;
-    }
-
     const away = isIleAwayFromTab({ tabFocused: liveFocused, leaveReason });
-    if (shouldHonorIleMiniModeHide({ first, away })) {
-      // Not now / declined: stay-on-leave would still open or re-ask.
+    if (shouldHonorIleMiniHide({ decision: auto, away })) {
       hideCompact();
       return;
     }
@@ -246,8 +200,6 @@ export function useIleBlurScreenshare(input: {
       justOpened: justOpenedRef.current,
       kind: compactRef.current?.kind,
     });
-    // Do not use post-await “opener still focused/visible” to kill a leave-open.
-    void result.post.compactWindow;
 
     if (stay === "hide") {
       hideCompact();
@@ -278,33 +230,6 @@ export function useIleBlurScreenshare(input: {
         handle = await openIleDocumentPictureInPictureWindow({
           userDismissed: userDismissedRef.current,
         });
-      }
-    } else if (
-      shouldOpenIlePopupFromButton({
-        sessionActive: enabledRef.current,
-        documentPipSupported: false,
-        reusable: isIlePopupReusable({
-          window: compactRef.current?.window,
-          userDismissed: userDismissedRef.current,
-        }),
-      }) &&
-      shouldRequestIlePopupOnLeave({
-        sessionActive: enabledRef.current,
-        away: true,
-        documentPipSupported: false,
-        reusable: false,
-      })
-    ) {
-      // Leave never requests a popup (shouldRequestIlePopupOnLeave is false).
-      handle = await openIleCompactPopupWindow();
-      if (
-        shouldReaskIleMiniModeForPopup({
-          documentPipSupported: false,
-          popupBlocked: handle == null,
-        })
-      ) {
-        setMiniFirstAskVisible(true);
-        return;
       }
     }
     if (!handle) return;
@@ -338,18 +263,6 @@ export function useIleBlurScreenshare(input: {
     userDismissedRef.current = false;
     adoptOpenedCompact(handle);
   }, [adoptOpenedCompact, hideCompact, paintCompact]);
-
-  const acceptMiniMode = useCallback(() => {
-    consentRef.current = saveIleMiniModeConsent("accepted");
-    setMiniFirstAskVisible(false);
-    void openCompactFromGesture();
-  }, [openCompactFromGesture]);
-
-  const declineMiniMode = useCallback(() => {
-    consentRef.current = saveIleMiniModeConsent("declined");
-    setMiniFirstAskVisible(false);
-    hideCompact();
-  }, [hideCompact]);
 
   const notifyLeaveTab = useCallback(
     (reason: IleLeaveFocusReason) => {
@@ -426,9 +339,6 @@ export function useIleBlurScreenshare(input: {
 
   return {
     notifyLeaveTab,
-    miniFirstAskVisible,
-    acceptMiniMode,
-    declineMiniMode,
     openManualPicInPic: openCompactFromGesture,
     showManualPicInPic,
   };

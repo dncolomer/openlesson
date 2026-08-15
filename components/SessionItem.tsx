@@ -137,23 +137,6 @@ export function SessionItem({
       if (!workspaceId) {
         throw new Error("workspaceId is required to launch");
       }
-      if (editedPlanningPrompt !== (node.planning_prompt || "")) {
-        const promptRes = await fetch(WORKSPACE_LEARNER_PROMPT_PATH, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            buildLearnerPromptSaveBody({
-              workspaceId,
-              blockId: node.id,
-              planningPrompt: editedPlanningPrompt,
-            }),
-          ),
-        });
-        const promptData = await promptRes.json().catch(() => ({}));
-        if (!promptRes.ok) {
-          throw new Error(errorMessageFromBody(promptData, "Failed to save prompt"));
-        }
-      }
       const launchRes = await fetch(WORKSPACE_LEARNER_LAUNCH_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +145,10 @@ export function SessionItem({
             workspaceId,
             blockId: node.id,
             sessionMode: ileMode,
+            planningPrompt:
+              editedPlanningPrompt !== (node.planning_prompt || "")
+                ? editedPlanningPrompt
+                : undefined,
           }),
         ),
       });

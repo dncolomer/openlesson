@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { useI18n } from "@/lib/i18n";
 import {
   PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
@@ -263,7 +264,7 @@ export function WorkspaceKnowledgePortalPanel({
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || t("planView.practicePortalCreateError"));
+        throw new Error(errorMessageFromBody(data, t("planView.practicePortalCreateError")));
       }
       setPortalLabel("");
       await loadPortals();
@@ -300,7 +301,7 @@ export function WorkspaceKnowledgePortalPanel({
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error || t("planView.practicePortalInvalidateError"));
+          throw new Error(errorMessageFromBody(data, t("planView.practicePortalInvalidateError")));
         }
         await loadPortals();
       } catch (error) {

@@ -35,7 +35,6 @@ import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
-  startLiveSpeechRecognition,
   stopLiveSpeechRecognition,
   useSessionThoughtInterface,
   useSpeechSupported,
@@ -842,9 +841,9 @@ export function TapScoreClient({
     // Always (re)arm recognition when entering/staying live so a dead mic
     // after pause-like transitions does not leave TAP stuck idle.
     if (isTapLiveThoughtSpeechEnabled(phase)) {
+      stopLiveSpeechRecognition(speechBindings);
       return;
     }
-    startLiveSpeechRecognition(speechBindings, speechLang);
   }, [phase, speechBindings, speechLang]);
 
   useEffect(() => {
@@ -987,9 +986,6 @@ export function TapScoreClient({
     setSessionEndedImpure(false);
     autoStashInFlightRef.current = false;
     clearDialogueMessages(dialogueStorageKey);
-    if (!isTapLiveThoughtSpeechEnabled("live")) {
-      startLiveSpeechRecognition(speechBindings, speechLang);
-    }
 
     try {
       const response = await fetch(TAP_SESSION_RUNTIME_PATHS.start, {

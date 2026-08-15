@@ -16,6 +16,7 @@ export type AuthenticatedRequest =
       ayclAccess?: boolean;
       ileAccess?: boolean;
       ayclCapabilities?: AyclCapabilities;
+      guestUserId?: string | null;
     }
   | { ok: false; response: NextResponse };
 
@@ -151,6 +152,7 @@ export async function guardWorkspaceRoute(
       user: ile.actingUser as User,
       supabase: ile.supabase,
       ileAccess: true,
+      guestUserId: ile.assignedUserId ? null : ile.guestUserId,
     };
   }
 
@@ -233,6 +235,7 @@ export async function guardSessionRoute(
       user: ile.actingUser as User,
       supabase: ile.supabase,
       ileAccess: true,
+      guestUserId: ile.assignedUserId ? null : ile.guestUserId,
     };
   }
 

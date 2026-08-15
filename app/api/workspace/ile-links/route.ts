@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   CreateIleLinkError,
@@ -14,73 +13,12 @@ import {
 } from "@/lib/pow-api/invalidate-guest-links";
 import type { AuthContext } from "@/lib/pow-api/types";
 import { guestLinkUrlFromPublicToken } from "@/lib/guest-link-access";
-import {
-  decideProductWorkspaceAccess,
-  PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
-} from "@/lib/product-workspace-auth";
+import { requireProductWorkspaceLinkAuth } from "@/lib/product-workspace-auth";
 
 export const runtime = "nodejs";
 
 function baseUrl(req: NextRequest) {
   return process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-}
-
-async function resolveWebAuth(workspaceId: string): Promise<
-  | { error: string; status: number }
-  | { auth: AuthContext; supabase: ReturnType<typeof createAdminClient>; isOwner: boolean }
-> {
-  const auth = await requireAuthenticatedUser();
-  if (!auth.ok) {
-    return { error: "Not authenticated", status: 401 };
-  }
-  const { user, supabase } = auth;
-
-  const admin = createAdminClient();
-  const { data: workspace } = await admin
-    .from("workspaces")
-    .select("id, user_id, organization_id")
-    .eq("id", workspaceId)
-    .single();
-
-  if (!workspace) {
-    return { error: "Workspace not found", status: 404 };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("organization_id, is_org_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const isOwner = workspace.user_id === user.id;
-  const isOrgAdmin =
-    !!profile?.is_org_admin &&
-    !!profile.organization_id &&
-    profile.organization_id === workspace.organization_id;
-
-  const decided = decideProductWorkspaceAccess({
-    isOwner,
-    isOrgAdmin,
-    evalAllowed: false,
-    ayclAccess: false,
-    flags: PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
-  });
-  if (!decided.allowed) {
-    return { error: "Not authorized", status: 403 };
-  }
-
-  return {
-    auth: {
-      user_id: user.id,
-      guest_user_id: null,
-      organization_id: profile?.organization_id || workspace.organization_id,
-      is_org_admin: isOrgAdmin,
-      key_id: "web",
-      scopes: ["workspaces:read", "workspaces:write"],
-    },
-    supabase: admin,
-    isOwner,
-  };
 }
 
 export async function GET(req: NextRequest) {
@@ -89,10 +27,11 @@ export async function GET(req: NextRequest) {
     return jsonError(400, "workspaceId is required");
   }
 
-  const access = await resolveWebAuth(workspaceId);
-  if ("error" in access) {
-    return jsonError(access.status, access.error);
-  }
+  const access = await requireProductWorkspaceLinkAuth(workspaceId, [
+    "workspaces:read",
+    "workspaces:write",
+  ]);
+  if (!access.ok) return access.response;
 
   const ILE_LIST_SELECT_WITH_MODE =
     "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, session_mode";
@@ -184,10 +123,11 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
 
-    const access = await resolveWebAuth(workspaceId);
-    if ("error" in access) {
-      return jsonError(access.status, access.error);
-    }
+    const access = await requireProductWorkspaceLinkAuth(workspaceId, [
+      "workspaces:read",
+      "workspaces:write",
+    ]);
+    if (!access.ok) return access.response;
 
     if (invalidateAll) {
       const result = await invalidateIleLinksAll({

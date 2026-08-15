@@ -665,7 +665,7 @@ describe("minimap viewport rectangle (camera projection + drag→pan)", () => {
   it("structural: viewport rect element + drag wires panFromMinimapViewportDrag/setPan", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
-    const lib = read("lib/map-minimap-clusters.ts");
+    const lib = read("lib/map-minimap-camera.ts");
 
     expect(lib).toContain("export function projectMainViewportToMinimapRect");
     expect(lib).toContain("export function panFromMinimapViewportDrag");

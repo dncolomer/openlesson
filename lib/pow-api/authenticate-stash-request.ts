@@ -3,6 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { authenticateRequest, getServiceClient } from "@/lib/pow-api/auth";
 import { resolveStashTapbenchFromRequest } from "@/lib/pow-api/stash-tapbench-auth";
 import type { AuthContext } from "@/lib/pow-api/types";
@@ -38,10 +39,7 @@ export async function authenticateStashRequest(
     if (tb.mode === "error") {
       return {
         ok: false,
-        response: NextResponse.json(
-          { error: { code: tb.code, message: tb.message, ...(tb.body || {}) } },
-          { status: tb.status },
-        ),
+        response: jsonError(tb.status, tb.message, tb.code, tb.body),
       };
     }
     if (tb.mode !== "ok") {
@@ -68,10 +66,7 @@ export async function authenticateStashRequest(
   if (tb.mode === "error") {
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: { code: tb.code, message: tb.message, ...(tb.body || {}) } },
-        { status: tb.status },
-      ),
+      response: jsonError(tb.status, tb.message, tb.code, tb.body),
     };
   }
   if (tb.mode === "ok") {

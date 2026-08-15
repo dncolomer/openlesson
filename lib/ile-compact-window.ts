@@ -99,32 +99,12 @@ export function shouldShowIleOpenPicInPicButton(documentPipSupported: boolean): 
   return !documentPipSupported;
 }
 
-export function shouldRequestIlePopupOnLeave(input: {
-  sessionActive: boolean;
-  away: boolean;
-  documentPipSupported: boolean;
-  reusable: boolean;
-}): boolean {
-  // Leave/visibility must not auto-open a popup. The tools button is the trigger.
-  void input;
-  return false;
-}
-
 export function shouldOpenIlePopupFromButton(input: {
   sessionActive: boolean;
   documentPipSupported: boolean;
   reusable: boolean;
 }): boolean {
   return Boolean(input.sessionActive && !input.documentPipSupported && !input.reusable);
-}
-
-export function shouldReaskIleMiniModeForPopup(input: {
-  documentPipSupported: boolean;
-  popupBlocked: boolean;
-}): boolean {
-  // No first-leave enable card. A blocked button open is not an in-tab ask.
-  void input;
-  return false;
 }
 
 /**

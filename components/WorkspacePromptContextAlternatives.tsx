@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 export type PromptContextMode = "adhoc" | "knowledge" | "simulation";
 
@@ -70,11 +71,13 @@ export function WorkspacePromptContextAlternatives({
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
+          error?: unknown;
           suggestions?: PromptSuggestion[];
         };
         if (!res.ok) {
-          throw new Error(data.error || `Failed to suggest from ${kind}`);
+          throw new Error(
+            errorMessageFromBody(data, `Failed to suggest from ${kind}`),
+          );
         }
         const list = Array.isArray(data.suggestions) ? data.suggestions : [];
         setSuggestions(list);

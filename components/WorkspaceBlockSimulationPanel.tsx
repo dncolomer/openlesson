@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   deriveBlockSimulation,
   normalizeSimulationPayload,
@@ -232,7 +233,7 @@ export function WorkspaceBlockSimulationPanel({
         error?: string;
       };
       if (!res.ok) {
-        throw new Error(data.error || "Failed to regenerate simulation");
+        throw new Error(errorMessageFromBody(data, "Failed to regenerate simulation"));
       }
       const next = normalizeSimulationPayload(data, seedInput);
       if (!next.probes.length && !next.topics.length) {

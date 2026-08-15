@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { POST as suggestFromKnowledgePost } from "@/app/api/workspace/suggest-from-knowledge/route";
 import {
   assembleSuggestFromKnowledgeXaiMessages,
   buildSuggestFromKnowledge,
@@ -16,12 +17,19 @@ import {
   serializeKnowledgeSnapshotsForContext,
   surfaceFramingForSuggestKnowledge,
 } from "@/lib/suggest-from-knowledge";
+import { runSuggestFromKnowledgeModel } from "@/lib/run-suggest-from-knowledge-model";
+import {
+  emptySimulationCollection,
+  depositSimulationGeneration,
+} from "@/lib/workspace-simulation-collection";
+import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-4451f0deb835/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-605d3ab12c6a/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -287,11 +295,15 @@ describe("VerticalScoreReport → context (shipped mapper)", () => {
 });
 
 describe("structural: xAI route + UI control", () => {
-  it("route loads history + blocks, calls callXaiJSON, uses report mapper", () => {
+  it("route loads history + blocks, calls shared model helper, uses report mapper", () => {
     const route = read("app/api/workspace/suggest-from-knowledge/route.ts");
-    expect(route).toContain("callXaiJSON");
-    expect(route).toContain("systemMessage");
-    expect(route).toContain("userMessage");
+    const sim = read("app/api/workspace/suggest-from-simulation/route.ts");
+    const helper = read("lib/run-suggest-from-knowledge-model.ts");
+    expect(route).toContain("runSuggestFromKnowledgeModel");
+    expect(sim).toContain("runSuggestFromKnowledgeModel");
+    expect(helper).toContain("callXaiJSON");
+    expect(helper).toContain("systemMessage");
+    expect(helper).toContain("userMessage");
     expect(route).toContain("listEvalRunHistory");
     expect(route).toContain('from("blocks")');
     expect(route).toContain("assembleSuggestFromKnowledgeXaiMessages");
@@ -300,6 +312,8 @@ describe("structural: xAI route + UI control", () => {
     expect(route).toContain("report: r.report");
     expect(route).toContain("suggestions");
     expect(route).not.toContain("buildSuggestFromKnowledge(");
+    expect(route).not.toContain("callXaiJSON");
+    expect(sim).not.toContain("callXaiJSON");
     // Old wrong fields must not be the primary extract path
     expect(route).not.toMatch(/report\?\.gap_themes/);
     expect(route).not.toMatch(/report\?\.themes\?\.gaps/);
@@ -308,11 +322,12 @@ describe("structural: xAI route + UI control", () => {
     expect(alt).toContain("data-suggest-from-knowledge");
     expect(alt).toContain("/api/workspace/suggest-from-knowledge");
     expect(alt).toContain("onAccept(s.prompt)");
+    expect(typeof suggestFromKnowledgePost).toBe("function");
 
     writeLog(
       "suggest-knowledge-xai-route.log",
       [
-        "callXaiJSON=true",
+        "runSuggestFromKnowledgeModel=true",
         "listEvalRunHistory=true",
         "blocks_select=true",
         "assemble=true",
@@ -325,3 +340,65 @@ describe("structural: xAI route + UI control", () => {
     );
   });
 });
+
+describe("shared suggest model + simulation corpus adapter", () => {
+  it("empty corpus stays empty; non-empty is not stubbed; both routes share the helper", async () => {
+    expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual(
+      [],
+    );
+
+    let col = emptySimulationCollection();
+    col = depositSimulationGeneration(col, {
+      questions: ["What fails in CAP theorem tradeoffs?"],
+      exercises: ["Design a partition-tolerant store."],
+      origin: { kind: "workspace" },
+    });
+    const snapshots = simulationCollectionToSuggestSnapshots(col);
+    expect(snapshots.length).toBeGreaterThan(0);
+    expect(snapshots.some((s) => String(s.excerpts?.[0] || "").match(/CAP|partition/i))).toBe(
+      true,
+    );
+
+    const recovered = await runSuggestFromKnowledgeModel(
+      { systemPrompt: "sys", userPrompt: "user" },
+      {
+        callModel: async () => ({
+          success: false,
+          rawContent: JSON.stringify({
+            suggestions: [
+              {
+                id: "s1",
+                prompt: "Write a partition-tolerant store design prompt",
+                label: "Partition store",
+              },
+            ],
+          }),
+        }),
+      },
+    );
+    expect(recovered.ok).toBe(true);
+    if (recovered.ok) {
+      expect(recovered.data.suggestions?.[0]?.prompt).toMatch(/partition/i);
+    }
+
+    const failed = await runSuggestFromKnowledgeModel(
+      { systemPrompt: "sys", userPrompt: "user" },
+      {
+        callModel: async () => ({ success: false, error: "xAI down" }),
+      },
+    );
+    expect(failed).toEqual({ ok: false, error: "xAI down" });
+
+    writeLog(
+      "suggest-tests.log",
+      [
+        `emptySnapshots=${simulationCollectionToSuggestSnapshots(emptySimulationCollection()).length}`,
+        `nonEmptySnapshots=${snapshots.length}`,
+        `recoveredOk=${recovered.ok}`,
+        `failed=${failed.ok}`,
+        "both routes call runSuggestFromKnowledgeModel",
+      ].join("\n"),
+    );
+  });
+});
+

@@ -24,7 +24,6 @@ export function MapToolStripButton({
 }) {
   return (
     <button
-      key={tool}
       type="button"
       data-block-map-tool={tool}
       data-active={isActiveMode ? "true" : "false"}

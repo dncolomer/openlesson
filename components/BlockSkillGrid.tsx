@@ -166,11 +166,7 @@ import {
   type BlockMapToolEnablementInput,
   type BlockMapToolId,
 } from "@/lib/block-map-tools";
-import {
-  filterPlaceableEmptyCells,
-  resolveEmptyAddTarget,
-  resolveEmptySelectionSurface,
-} from "@/lib/workspace-right-pane";
+import { resolveEmptySelectionSurface } from "@/lib/workspace-right-pane";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
@@ -222,8 +218,12 @@ import {
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
 import {
-  mapSelectionFromApplyPayload,
-  workspaceMapSelectionHostApply,
+  mapSelectionEmptyCells,
+  mapSelectionExpandedId,
+  mapSelectionFilledIds,
+  nextWorkspaceMapSelection,
+  notifyMapHostCommit,
+  type WorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import {
   isBlockLockedUntilCompleted,
@@ -270,6 +270,11 @@ interface BlockSkillGridProps {
   focusedNodeId?: string | null;
   /** Focus / open block detail. Null clears focus (e.g. Select mode closes practice drawer). */
   onSelectNode: (blockId: string | null) => void;
+  /**
+   * Exclusive workspace map selection. When set, commit writes this once
+   * and does not also call onSelectNode / filled-ids / empty-cells.
+   */
+  onMapSelectionChange?: (selection: WorkspaceMapSelection) => void;
   /**
    * Filled-block multi-select for the right pane:
    * 2+ ids → combine surface; 0/1 → clear combine (single still uses onSelectNode).
@@ -333,8 +338,7 @@ interface BlockSkillGridProps {
    */
   applyMapSelection?: {
     token: number;
-    blockIds?: string[] | null;
-    emptyCells?: Array<{ row: number; col: number }> | null;
+    selection: WorkspaceMapSelection;
   } | null;
   /**
    * Selective Explanation: free-shape draw mode independent of lasso multi-select.
@@ -479,6 +483,7 @@ export function BlockSkillGrid({
   selectedNodeId,
   focusedNodeId = null,
   onSelectNode,
+  onMapSelectionChange,
   onSelectedBlockIdsChange,
   onEmptySelectionChange,
   onAddTargetChange,
@@ -929,14 +934,15 @@ export function BlockSkillGrid({
     [annotationLayers, persistAnnotationLayers],
   );
 
-  /** Right-pane hosts empty create when either callback is wired. */
+  /** Right-pane hosts empty create when exclusive selection or a legacy empty callback is wired. */
   const useRightPaneEmpty =
+    typeof onMapSelectionChange === "function" ||
     typeof onEmptySelectionChange === "function" ||
     typeof onAddTargetChange === "function";
   const [localPendingCell, setLocalPendingCell] = useState<GridCell | null>(null);
-  /** Ref so lasso endDrag (defined earlier) can call the latest emit helper. */
-  const emitEmptySelectionRef = useRef<(cells: readonly GridCell[]) => void>(() => {});
-  const emitFilledBlockSelectionRef = useRef<(ids: readonly string[]) => void>(() => {});
+  const commitSelectionRef = useRef<
+    (selection: WorkspaceMapSelection, opts?: { resetChrome?: boolean }) => void
+  >(() => {});
   const viewportRef = useRef<HTMLDivElement>(null);
   const hasInitialCenterRef = useRef(false);
   const panMovedRef = useRef(false);
@@ -1158,40 +1164,7 @@ export function BlockSkillGrid({
     stretchDragRef.current = null;
   }, [learnerMode]);
 
-  // Host-driven apply / clear — same nextWorkspaceMapSelection result as the shell.
   const applyMapSelectionTokenRef = useRef(0);
-  useEffect(() => {
-    if (!applyMapSelection || !applyMapSelection.token) return;
-    if (applyMapSelection.token === applyMapSelectionTokenRef.current) return;
-    applyMapSelectionTokenRef.current = applyMapSelection.token;
-    const next = mapSelectionFromApplyPayload({
-      blockIds: applyMapSelection.blockIds,
-      emptyCells: applyMapSelection.emptyCells,
-    });
-    const applied = workspaceMapSelectionHostApply(next);
-
-    selectedBlockIdsRef.current = applied.selectedBlockIds;
-    setSelectedBlockIds(applied.selectedBlockIds);
-    selectedEmptyCellsRef.current = applied.selectedEmptyCells;
-    setSelectedEmptyCells(applied.selectedEmptyCells);
-    setShapePromptOpen(false);
-    setMergePromptOpen(false);
-    setPrompt("");
-    setLocalPendingCell(null);
-
-    onEmptySelectionChange?.(applied.emitEmpty);
-    onSelectedBlockIdsChange?.(applied.emitFilled);
-    if (applied.selectNodeId || (applied.emitFilled && applied.emitFilled.length > 0)) {
-      onAddTargetChange?.(null);
-    }
-    onSelectNode(applied.selectNodeId);
-  }, [
-    applyMapSelection,
-    onAddTargetChange,
-    onEmptySelectionChange,
-    onSelectNode,
-    onSelectedBlockIdsChange,
-  ]);
 
   // Selective Explanation free-shape draw (independent of lasso selection).
   const selectiveDragRef = useRef<{
@@ -2358,37 +2331,14 @@ export function BlockSkillGrid({
           emptyHits,
         });
 
-        selectedBlockIdsRef.current = resolved.selectedBlockIds;
-        setSelectedBlockIds(resolved.selectedBlockIds);
-        selectedEmptyCellsRef.current = resolved.selectedEmptyCells;
-        setSelectedEmptyCells(resolved.selectedEmptyCells);
-
-        if (resolved.mode === "empty") {
-          // Drive right-pane single Add / multi generate-shape from empty hits.
-          emitFilledBlockSelectionRef.current([]);
-          emitEmptySelectionRef.current(resolved.selectedEmptyCells);
-          if (selectedNodeId) onSelectNode(null);
-        } else if (resolved.mode === "blocks") {
-          // Clear empty create surfaces (right-pane host + local Add/shape modal).
-          setLocalPendingCell(null);
-          setShapePromptOpen(false);
-          onEmptySelectionChange?.(null);
-          onAddTargetChange?.(null);
-          emitFilledBlockSelectionRef.current(resolved.selectedBlockIds);
-          // Side panel: one block → detail; 2+ → combine (parent via multi ids).
-          if (resolved.selectedBlockIds.length === 1) {
-            onSelectNode(resolved.selectedBlockIds[0]);
-          } else {
-            onSelectNode(null);
-          }
-        } else {
-          setLocalPendingCell(null);
-          setShapePromptOpen(false);
-          onEmptySelectionChange?.(null);
-          onAddTargetChange?.(null);
-          emitFilledBlockSelectionRef.current([]);
-          if (selectedNodeId) onSelectNode(null);
-        }
+        const selection = nextWorkspaceMapSelection(
+          resolved.mode === "empty"
+            ? { type: "set_empty_cells", cells: resolved.selectedEmptyCells }
+            : resolved.mode === "blocks"
+              ? { type: "set_filled_ids", blockIds: resolved.selectedBlockIds }
+              : { type: "clear" },
+        );
+        commitSelectionRef.current(selection, { resetChrome: selection.kind !== "empties" });
         return;
       }
 
@@ -2420,77 +2370,81 @@ export function BlockSkillGrid({
     ],
   );
 
-  const emitEmptySelection = useCallback(
+  const applyStandaloneEmptyChrome = useCallback(
     (cells: readonly GridCell[]) => {
-      const placeable = filterPlaceableEmptyCells({
-        selectedEmptyCells: cells,
-        unusableKeys,
-      });
       const surface = resolveEmptySelectionSurface({
         selectedEmptyCells: cells,
         unusableKeys,
       });
-      if (useRightPaneEmpty) {
-        onEmptySelectionChange?.(placeable.length ? placeable : null);
-        // Legacy single-cell callback for hosts that only know Add.
-        onAddTargetChange?.(
-          surface?.kind === "add_block" ? surface.cell : null,
-        );
-        setLocalPendingCell(null);
-        // Multi create lives in the right pane — do not open map modal.
-        if (surface?.kind === "generate_shape") {
-          setShapePromptOpen(false);
-        }
-        return;
-      }
-      // Standalone maps (chapter): local single-add or local multi modal.
       if (surface?.kind === "add_block") {
         setLocalPendingCell(surface.cell);
         setShapePromptOpen(false);
+        onAddTargetChange?.(surface.cell);
       } else if (surface?.kind === "generate_shape" && onGridOp) {
         setLocalPendingCell(null);
         setShapePromptOpen(true);
+        onAddTargetChange?.(null);
       } else {
         setLocalPendingCell(null);
         setShapePromptOpen(false);
+        onAddTargetChange?.(null);
       }
     },
-    [onAddTargetChange, onEmptySelectionChange, onGridOp, unusableKeys, useRightPaneEmpty],
+    [onAddTargetChange, onGridOp, unusableKeys],
   );
-  emitEmptySelectionRef.current = emitEmptySelection;
+
+  const commitSelection = useCallback(
+    (selection: WorkspaceMapSelection, opts?: { resetChrome?: boolean }) => {
+      const filled = mapSelectionFilledIds(selection);
+      const empties = mapSelectionEmptyCells(selection);
+      const expanded = mapSelectionExpandedId(selection);
+      const localFilled = expanded ? [expanded] : filled;
+
+      selectedBlockIdsRef.current = localFilled;
+      setSelectedBlockIds(localFilled);
+      selectedEmptyCellsRef.current = empties;
+      setSelectedEmptyCells(empties);
+
+      if (opts?.resetChrome !== false) {
+        setShapePromptOpen(false);
+        setMergePromptOpen(false);
+        setPrompt("");
+        setLocalPendingCell(null);
+      }
+
+      if (!onMapSelectionChange && selection.kind === "empties") {
+        applyStandaloneEmptyChrome(empties);
+        onEmptySelectionChange?.(empties.length ? empties : null);
+        onSelectedBlockIdsChange?.(null);
+      } else if (!onMapSelectionChange) {
+        onEmptySelectionChange?.(null);
+        if (expanded || filled.length > 0) onAddTargetChange?.(null);
+        onSelectedBlockIdsChange?.(filled.length >= 2 ? filled : null);
+      }
+
+      notifyMapHostCommit(selection, onMapSelectionChange, onSelectNode);
+    },
+    [
+      applyStandaloneEmptyChrome,
+      onAddTargetChange,
+      onEmptySelectionChange,
+      onMapSelectionChange,
+      onSelectNode,
+      onSelectedBlockIdsChange,
+    ],
+  );
+  commitSelectionRef.current = commitSelection;
+
+  useEffect(() => {
+    if (!applyMapSelection || !applyMapSelection.token) return;
+    if (applyMapSelection.token === applyMapSelectionTokenRef.current) return;
+    applyMapSelectionTokenRef.current = applyMapSelection.token;
+    commitSelection(applyMapSelection.selection);
+  }, [applyMapSelection, commitSelection]);
 
   const clearSelection = useCallback(() => {
-    selectedEmptyCellsRef.current = [];
-    selectedBlockIdsRef.current = [];
-    setSelectedEmptyCells([]);
-    setSelectedBlockIds([]);
-    setShapePromptOpen(false);
-    setMergePromptOpen(false);
-    setPrompt("");
-    setLocalPendingCell(null);
-    onEmptySelectionChange?.(null);
-    onAddTargetChange?.(null);
-    onSelectedBlockIdsChange?.(null);
-  }, [onAddTargetChange, onEmptySelectionChange, onSelectedBlockIdsChange]);
-
-  /**
-   * Sole writer for filled-block multi-select.
-   * Ref is source of truth (never overwritten by a state-mirroring useEffect).
-   * multi=true → toggle membership; multi=false → replace with [blockId].
-   */
-  const emitFilledBlockSelection = useCallback(
-    (ids: readonly string[]) => {
-      if (!onSelectedBlockIdsChange) return;
-      if (ids.length >= 2) {
-        onSelectedBlockIdsChange([...ids]);
-      } else {
-        // Single/zero: combine surface clears; single detail still via onSelectNode.
-        onSelectedBlockIdsChange(null);
-      }
-    },
-    [onSelectedBlockIdsChange],
-  );
-  emitFilledBlockSelectionRef.current = emitFilledBlockSelection;
+    commitSelection(nextWorkspaceMapSelection({ type: "clear" }));
+  }, [commitSelection]);
 
   const applyBlockSelection = useCallback((blockId: string, multi: boolean): string[] => {
     const prev = selectedBlockIdsRef.current;
@@ -2499,20 +2453,11 @@ export function BlockSkillGrid({
       multi,
       prevSelectedBlockIds: prev,
     });
-    selectedBlockIdsRef.current = nextIds;
-    setSelectedBlockIds(nextIds);
-    emitFilledBlockSelection(nextIds);
-    if (selectedEmptyCellsRef.current.length > 0) {
-      selectedEmptyCellsRef.current = [];
-      setSelectedEmptyCells([]);
-    }
-    // Block selection closes empty create surfaces (right pane or local).
-    setLocalPendingCell(null);
-    setShapePromptOpen(false);
-    onEmptySelectionChange?.(null);
-    onAddTargetChange?.(null);
+    commitSelection(
+      nextWorkspaceMapSelection({ type: "set_filled_ids", blockIds: nextIds }),
+    );
     return nextIds;
-  }, [emitFilledBlockSelection, onAddTargetChange, onEmptySelectionChange]);
+  }, [commitSelection]);
 
   const manipulationMode = isBlockMapManipulationMode(activeTool, {
     canEdit,
@@ -2555,15 +2500,9 @@ export function BlockSkillGrid({
       }
 
       if (!canEdit) {
-        // Learner / read-only: sole-select for map highlight + open detail.
-        // Map chrome keys off selectedBlockIds (not only selectedNodeId prop).
-        selectedBlockIdsRef.current = [blockId];
-        setSelectedBlockIds([blockId]);
-        if (selectedEmptyCellsRef.current.length > 0) {
-          selectedEmptyCellsRef.current = [];
-          setSelectedEmptyCells([]);
-        }
-        onSelectNode(blockId);
+        commitSelection(
+          nextWorkspaceMapSelection({ type: "open_block", blockId }),
+        );
         return;
       }
 
@@ -2577,16 +2516,7 @@ export function BlockSkillGrid({
       }
 
       // Fallback when pointerdown path didn't run (e.g. chapter map).
-      // Plain click = single-select replace (or clear if already sole); Shift multi-toggle.
-      const nextIds = applyBlockSelection(blockId, multiModifier);
-      if (nextIds.length === 0) {
-        onSelectNode(null);
-      } else if (nextIds.length === 1) {
-        onSelectNode(nextIds[0]);
-      } else {
-        // Multi filled → combine surface; clear single-block detail focus.
-        onSelectNode(null);
-      }
+      applyBlockSelection(blockId, multiModifier);
     },
     [
       activeTool,
@@ -2595,7 +2525,6 @@ export function BlockSkillGrid({
       dynamicPickActive,
       manipulationMode,
       onDynamicBlockToggle,
-      onSelectNode,
       selectedNodeId,
       viewOnly,
     ],
@@ -2604,10 +2533,11 @@ export function BlockSkillGrid({
   const handleBlockDoubleClick = useCallback(
     (blockId: string) => {
       if (generationLockedBlockIdsRef.current.has(blockId)) return;
-      // Explicit open for practice detail (only path that opens the overlay)
-      onSelectNode(blockId);
+      commitSelection(
+        nextWorkspaceMapSelection({ type: "open_block", blockId }),
+      );
     },
-    [onSelectNode],
+    [commitSelection],
   );
 
   const resolveCellFromClient = useCallback(
@@ -2710,23 +2640,12 @@ export function BlockSkillGrid({
           moved: false,
           prevSelectedBlockIds: prev,
         });
-        selectedBlockIdsRef.current = resolved.selectedBlockIds;
-        setSelectedBlockIds(resolved.selectedBlockIds);
-        emitFilledBlockSelection(resolved.selectedBlockIds);
-        if (selectedEmptyCellsRef.current.length > 0) {
-          selectedEmptyCellsRef.current = [];
-          setSelectedEmptyCells([]);
-        }
-        setLocalPendingCell(null);
-        setShapePromptOpen(false);
-        onEmptySelectionChange?.(null);
-        onAddTargetChange?.(null);
-        if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
-        else if (resolved.selectedBlockIds.length === 1) {
-          onSelectNode(resolved.selectedBlockIds[0]);
-        } else {
-          onSelectNode(null);
-        }
+        commitSelection(
+          nextWorkspaceMapSelection({
+            type: "set_filled_ids",
+            blockIds: resolved.selectedBlockIds,
+          }),
+        );
         suppressBlockClickRef.current = true;
         pendingSelectClickRef.current = null;
         return;
@@ -2743,15 +2662,12 @@ export function BlockSkillGrid({
           moved: false,
           prevSelectedBlockIds: prev,
         });
-        selectedBlockIdsRef.current = resolved.selectedBlockIds;
-        setSelectedBlockIds(resolved.selectedBlockIds);
-        emitFilledBlockSelection(resolved.selectedBlockIds);
-        if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
-        else if (resolved.selectedBlockIds.length === 1) {
-          onSelectNode(resolved.selectedBlockIds[0]);
-        } else {
-          onSelectNode(null);
-        }
+        commitSelection(
+          nextWorkspaceMapSelection({
+            type: "set_filled_ids",
+            blockIds: resolved.selectedBlockIds,
+          }),
+        );
         suppressBlockClickRef.current = true;
         return;
       }
@@ -2776,14 +2692,6 @@ export function BlockSkillGrid({
       }
       setLocalPendingCell(null);
       setShapePromptOpen(false);
-      onEmptySelectionChange?.(null);
-      onAddTargetChange?.(null);
-      // Detail: open when preview is a new sole focus; multi → combine (null).
-      if (dragIds.length === 1 && !(prev.length === 1 && prev[0] === blockId)) {
-        onSelectNode(dragIds[0]);
-      } else if (dragIds.length > 1) {
-        onSelectNode(null);
-      }
 
       if (dragIds.length === 0) return;
 
@@ -2802,14 +2710,11 @@ export function BlockSkillGrid({
     [
       beginViewportPan,
       canEdit,
+      commitSelection,
       dynamicPickActive,
-      emitFilledBlockSelection,
       manipulationMode,
-      onAddTargetChange,
       onDynamicBlockToggle,
-      onEmptySelectionChange,
       onGridOp,
-      onSelectNode,
       selectedNodeId,
       viewOnly,
     ],
@@ -2837,7 +2742,6 @@ export function BlockSkillGrid({
   /**
    * Sole writer for empty-cell selection (mirrors applyBlockSelection).
    * multi=true → toggle membership; multi=false → replace with [cell].
-   * Always clears filled-block selection when selecting empties.
    */
   const applyEmptyCellSelection = useCallback((cell: GridCell, multi: boolean): GridCell[] => {
     const next = toggleOrReplaceEmptyCellSelectionPure({
@@ -2845,16 +2749,11 @@ export function BlockSkillGrid({
       multi,
       prevSelectedEmptyCells: selectedEmptyCellsRef.current,
     });
-    selectedEmptyCellsRef.current = next;
-    setSelectedEmptyCells(next);
-    if (selectedBlockIdsRef.current.length > 0) {
-      selectedBlockIdsRef.current = [];
-      setSelectedBlockIds([]);
-    }
-    // Empty selection → right-pane Add (1) or generate-shape (2+); unusable-only clears.
-    emitEmptySelection(next);
+    commitSelection(
+      nextWorkspaceMapSelection({ type: "set_empty_cells", cells: next }),
+    );
     return next;
-  }, [emitEmptySelection]);
+  }, [commitSelection]);
 
   const handleEmptyCellClick = useCallback(
     (cell: GridCell, event: React.MouseEvent | React.PointerEvent) => {
@@ -2893,14 +2792,12 @@ export function BlockSkillGrid({
       if (selectsEmpty) {
         if (multiModifier) event.preventDefault();
         applyEmptyCellSelection(cell, multiModifier);
-        if (selectedNodeId) onSelectNode(null);
         return;
       }
 
       // Legacy path (no select mode): single empty still drives right-pane add.
       if (isUnusable) return;
       applyEmptyCellSelection(cell, false);
-      if (selectedNodeId) onSelectNode(null);
     },
     [
       applyEmptyCellSelection,
@@ -2909,8 +2806,6 @@ export function BlockSkillGrid({
       generatorPickActive,
       occupancy,
       onGeneratorEmptyToggle,
-      onSelectNode,
-      selectedNodeId,
       unusableKeys,
     ],
   );
@@ -3230,15 +3125,12 @@ export function BlockSkillGrid({
             moved: false,
             prevSelectedBlockIds: pending.prevSelectedBlockIds,
           });
-          selectedBlockIdsRef.current = resolved.selectedBlockIds;
-          setSelectedBlockIds(resolved.selectedBlockIds);
-          emitFilledBlockSelection(resolved.selectedBlockIds);
-          if (resolved.selectedBlockIds.length === 0) onSelectNode(null);
-          else if (resolved.selectedBlockIds.length === 1) {
-            onSelectNode(resolved.selectedBlockIds[0]);
-          } else {
-            onSelectNode(null);
-          }
+          commitSelection(
+            nextWorkspaceMapSelection({
+              type: "set_filled_ids",
+              blockIds: resolved.selectedBlockIds,
+            }),
+          );
           suppressBlockClickRef.current = true;
         }
         return;
@@ -3252,14 +3144,12 @@ export function BlockSkillGrid({
           moved: true,
           prevSelectedBlockIds: pending.prevSelectedBlockIds,
         });
-        selectedBlockIdsRef.current = resolved.selectedBlockIds;
-        setSelectedBlockIds(resolved.selectedBlockIds);
-        emitFilledBlockSelection(resolved.selectedBlockIds);
-        if (resolved.selectedBlockIds.length === 1) {
-          onSelectNode(resolved.selectedBlockIds[0]);
-        } else {
-          onSelectNode(null);
-        }
+        commitSelection(
+          nextWorkspaceMapSelection({
+            type: "set_filled_ids",
+            blockIds: resolved.selectedBlockIds,
+          }),
+        );
       }
       const cell = resolveCellFromClient(event.clientX, event.clientY);
       if (!cell) return;
@@ -3277,8 +3167,7 @@ export function BlockSkillGrid({
       });
     },
     [
-      emitFilledBlockSelection,
-      onSelectNode,
+      commitSelection,
       resolveCellFromClient,
       runGridOp,
     ],
@@ -3841,6 +3730,7 @@ export function BlockSkillGrid({
           : toolTooltip(tool, labels, { cloneArmed });
     return (
       <MapToolStripButton
+        key={tool}
         tool={tool}
         enabled={enabled}
         isActiveMode={isActiveMode}
@@ -5172,13 +5062,10 @@ export function BlockSkillGrid({
                 ? blockDragOffset.dRow * SKILL_GRID_PITCH
                 : 0;
 
-            // Sole focus from selectedNodeId when multi list empty or learner mode
-            // (read-only click only set selectedNodeId historically).
-            const chapterFocusOnly =
-              (selectedBlockIds.length === 0 || learnerMode) &&
-              !multiSelected &&
-              (focusedNodeId === node.id || selectedNodeId === node.id);
-            const isBlockHighlighted = multiSelected || chapterFocusOnly;
+            const isBlockHighlighted =
+              multiSelected ||
+              selectedNodeId === node.id ||
+              focusedNodeId === node.id;
             const lockUntilIds = normalizeLockUntilBlockIds(
               node.lock_until_block_ids,
               node.id,
@@ -5259,7 +5146,7 @@ export function BlockSkillGrid({
                 ? ileChapterCellChrome({
                     status: displayStatus,
                     selected: isBlockHighlighted,
-                    focused: chapterFocusOnly || isBlockHighlighted,
+                    focused: isBlockHighlighted,
                     workedOn: itemWorkedOn,
                   })
                 : null;
@@ -5269,7 +5156,7 @@ export function BlockSkillGrid({
                 learnerMode,
                 status: displayStatus,
                 selected: isBlockHighlighted,
-                focused: chapterFocusOnly || isBlockHighlighted,
+                focused: isBlockHighlighted,
                 isStart: Boolean(node.is_start),
                 locked: lockedByPrereq && !isBlockHighlighted && !isLearnerDepHighlight,
                 depHighlight: isLearnerDepHighlight,

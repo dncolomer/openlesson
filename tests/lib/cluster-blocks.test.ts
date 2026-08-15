@@ -461,15 +461,13 @@ describe("Cluster blocks structural wiring", () => {
     expect(handler).toContain('op: "relocate"');
     // Parent selection stores cleared only after successful relocate (not only on cancel).
     expect(handler).toContain("applyMapSelectionResult");
-    expect(handler).toContain("emptyWorkspaceMapSelection");
     expect(handler).toContain("nextWorkspaceMapSelection");
     expect(handler).toContain('type: "clear"');
     expect(handler).toContain("applyMapSelectionResult");
     expect(view).not.toContain("mapSelectionClearNonce");
     expect(sessionList).not.toContain("mapSelectionClearNonce");
     expect(grid).not.toContain("mapSelectionClearNonce");
-    expect(grid).toContain("mapSelectionFromApplyPayload");
-    expect(grid).toContain("workspaceMapSelectionHostApply");
+    expect(grid).toContain("commitSelection");
   });
 
   it("BlockSkillGrid shows cluster progress bar under minimap", () => {

@@ -384,7 +384,7 @@ describe("Stash API entry paths (handlers + routes)", () => {
     expect(submitRoute).toContain('decision: "submit"');
     expect(submitRoute).toContain("System 2");
     expect(ingestRoute).toContain("ingestStashUnit");
-    expect(ingestRoute).toContain("authenticateRequest");
+    expect(ingestRoute).toContain("authenticateStashRequest");
   });
 });
 

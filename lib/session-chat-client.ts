@@ -2,6 +2,8 @@
  * One ILE session-chat POST used by send, canvas/notebook submit, and chapter reload.
  */
 
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
+
 export type StuckAction = "ask" | "theory" | "practice" | "canvas" | "notebook" | "break";
 
 export interface ChatMessage {
@@ -55,12 +57,22 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
 export async function postIleSessionChat(
   input: IleSessionChatRequestInput,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+): Promise<{
+  ok: boolean;
+  status: number;
+  data: Record<string, unknown>;
+  errorMessage: string;
+}> {
   const response = await fetchImpl(ILE_SESSION_CHAT_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(buildIleSessionChatBody(input)),
   });
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: response.ok, status: response.status, data };
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    errorMessage: errorMessageFromBody(data, "Session chat failed"),
+  };
 }

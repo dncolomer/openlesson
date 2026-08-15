@@ -316,10 +316,11 @@ describe("ILE + TAP speech wiring (structural)", () => {
       path.join(process.cwd(), "components/TapScoreClient.tsx"),
       "utf8",
     );
-    expect(tapSrc).toContain("startLiveSpeechRecognition");
+    expect(tapSrc).toContain("isTapLiveThoughtSpeechEnabled");
+    expect(tapSrc).toContain("tapHookFormingText");
     expect(tapSrc).toContain("stopLiveSpeechRecognition");
     expect(tapSrc).toContain('phase === "live"');
-    expect(tapSrc).toContain('enabled: phase === "live"');
+    expect(tapSrc).toContain("isTapLiveThoughtSpeechEnabled(phase)");
     expect(tapSrc).toContain("retryMicrophone");
   });
 });

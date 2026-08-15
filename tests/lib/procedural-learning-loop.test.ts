@@ -31,7 +31,7 @@ import {
   normalizeSuggestFromKnowledgeResponse,
   rankKnowledgeSnapshotsForSuggest,
 } from "@/lib/suggest-from-knowledge";
-import { buildSuggestFromSimulation } from "@/lib/suggest-from-simulation";
+import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -144,11 +144,11 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
     expect(sessionItem).not.toMatch(/>\s*Timed\s*</);
 
     // Map practice badges: With AI / Solo, not Open-ended / Timed
-    const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain('? "With AI"');
-    expect(grid).toContain(': "Solo"');
-    expect(grid).not.toContain('? "Open-ended"');
-    expect(grid).not.toContain(': "Timed"');
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(badges).toContain('? "With AI"');
+    expect(badges).toContain(': "Solo"');
+    expect(badges).not.toContain('? "Open-ended"');
+    expect(badges).not.toContain(': "Timed"');
 
     // Guest-link settings shell
     const integration = read("components/WorkspaceIntegrationPanel.tsx");
@@ -459,14 +459,9 @@ describe("suggest from knowledge + simulation", () => {
       exercises: ["Design a partition-tolerant store."],
       origin: { kind: "workspace" },
     });
-    const suggestions = buildSuggestFromSimulation(col, {
-      surface: "expand block",
-      draftPrompt: "distributed systems",
-      workspaceTitle: "DS map",
-      limit: 4,
-    });
-    expect(suggestions.length).toBeGreaterThan(0);
-    expect(suggestions[0]?.prompt).toMatch(/CAP|partition|simulation|probes/i);
+    const snapshots = simulationCollectionToSuggestSnapshots(col);
+    expect(snapshots.length).toBeGreaterThan(0);
+    expect(snapshots.some((s) => String(s.excerpts?.[0] || "").match(/CAP|partition/i))).toBe(true);
 
     writeLog(
       "suggest-knowledge-simulation.log",
@@ -474,7 +469,7 @@ describe("suggest from knowledge + simulation", () => {
         ? readFileSync(join(SCRATCH, "suggest-knowledge-simulation.log"), "utf8")
         : "") +
         "simulation_count=" +
-        suggestions.length +
+        snapshots.length +
         "\n",
     );
   });
@@ -502,7 +497,7 @@ describe("suggest from knowledge + simulation", () => {
     expect(alt).toContain('data-prompt-context-mode="adhoc"');
 
     const route = read("app/api/workspace/suggest-from-knowledge/route.ts");
-    expect(route).toContain("callXaiJSON");
+    expect(route).toContain("runSuggestFromKnowledgeModel");
     expect(route).toContain("assembleSuggestFromKnowledgeXaiMessages");
     expect(route).toContain("normalizeSuggestFromKnowledgeResponse");
     expect(route).toContain("listEvalRunHistory");

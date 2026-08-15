@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import type { WorkspaceSimulationBlockRef } from "@/lib/workspace-simulation-overview";
 import type { SimulationCollectionItem } from "@/lib/workspace-simulation-collection";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
@@ -143,7 +144,7 @@ export function WorkspaceSimulationPanel({
         exercises?: string[];
       };
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate samples");
+        throw new Error(errorMessageFromBody(data, "Failed to generate samples"));
       }
       const nextQ = Array.isArray(data.questions)
         ? data.questions.filter((q) => typeof q === "string" && q.trim())

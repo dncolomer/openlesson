@@ -303,17 +303,6 @@ export function buildIleProjectChapterExercisePrompt(input: {
   return buildExercisePromptText(shared);
 }
 
-/**
- * Project Mode Mark as Done must not trigger interface evaluation / score UI.
- * Learning Mode is unchanged by this helper (returns true only for project → false).
- */
-export function shouldShowInterfaceEvaluationOnChapterDone(mode: IleSessionMode): boolean {
-  // Project Mode: PoW only, no score/eval surface on Done.
-  if (mode === "project") return false;
-  // Learning Mode has no separate Done evaluation UI today either.
-  return false;
-}
-
 /** Tool-event payload for chapter_done — PoW path, no eval fields. */
 export function buildIleChapterDonePowToolData(input: {
   stepIndex: number;

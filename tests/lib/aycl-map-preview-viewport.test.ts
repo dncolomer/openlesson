@@ -197,10 +197,11 @@ describe("AYCL landing preview mounts the viewport window", () => {
     expect(landing).toContain('data-aycl-map-viewport-window={nodes.length > 0 ? "live" : "none"}');
 
     expect(grid).toContain("resolveMinimapViewportWindow");
-    expect(grid).toContain("data-minimap-viewport-window");
-    expect(grid).toContain("data-minimap-viewport-rect");
     expect(grid).toContain("minimapViewportRect");
     expect(grid).toContain("data-map-view-only");
+    const chrome = read("components/block-skill-grid/map-minimap-chrome.tsx");
+    expect(chrome).toContain("data-minimap-viewport-window");
+    expect(chrome).toContain("data-minimap-viewport-rect");
 
     writeScratch(
       "aycl-map-preview-excerpts.txt",

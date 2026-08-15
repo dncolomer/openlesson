@@ -8,14 +8,12 @@ import {
   applyWorkspaceGridOpsUpdatedNodes,
   buildWorkspaceGridOpsBody,
   postWorkspaceGridOp,
-  shouldReloadWorkspaceAfterMutate,
   WORKSPACE_GRID_OPS_PATH,
   withAyclToken,
 } from "@/lib/workspace-grid-ops-client";
 import {
   buildLearnerLaunchBody,
   buildLearnerPromptSaveBody,
-  shouldWriteLearnerBlocksViaBrowserClient,
   WORKSPACE_LEARNER_LAUNCH_PATH,
 } from "@/lib/workspace-learner-writes";
 import {
@@ -42,7 +40,6 @@ import {
 } from "@/lib/session-chat-client";
 import {
   decideIleKeyboardAction,
-  shouldLogIlePowInsideSetState,
 } from "@/lib/ile-keyboard-mode";
 import {
   decideProductWorkspaceAccess,
@@ -79,8 +76,6 @@ describe("P1–P10 shipped helpers", () => {
     expect(body.op).toBe("merge");
     expect(body.ayclToken).toBe("tok");
     expect(withAyclToken({ workspaceId: "ws-1" }, null).ayclToken).toBeUndefined();
-    expect(shouldReloadWorkspaceAfterMutate()).toBe(false);
-
     const merged = applyWorkspaceGridOpsUpdatedNodes(
       [{ id: "a", title: "old" }],
       [{ id: "a", title: "new" }, { id: "b", title: "added" }],
@@ -101,7 +96,6 @@ describe("P1–P10 shipped helpers", () => {
     expect(posted[0]?.raw).toContain("split");
     expect(result.ok).toBe(true);
 
-    expect(shouldWriteLearnerBlocksViaBrowserClient()).toBe(false);
     const launch = buildLearnerLaunchBody({
       workspaceId: "ws-1",
       blockId: "b1",
@@ -187,7 +181,6 @@ describe("P1–P10 shipped helpers", () => {
 
     expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("project_stash");
     expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("helios_send");
-    expect(shouldLogIlePowInsideSetState()).toBe(false);
 
     expect(
       decideProductWorkspaceAccess({
@@ -258,12 +251,9 @@ describe("P1–P10 shipped helpers", () => {
     expect(view).toContain("postWorkspaceGridOp");
     expect(view).toContain("WORKSPACE_LEARNER_LAUNCH_PATH");
     expect(view).not.toMatch(/from\("blocks"\)\s*\n\s*\.update/);
-    expect(view).toMatch(
-      /if \(shouldReloadWorkspaceAfterMutate\(\)\) \{\s*refreshNodes\(\);\s*router\.refresh\(\);/,
-    );
-    expect(view).not.toMatch(/shouldReloadWorkspaceAfterMutate\(\)\) refreshNodes\(\);\s*router\.refresh\(\);/);
+    expect(view).not.toContain("router.refresh()");
     expect(list).toContain("postWorkspaceGridOp");
-    expect(list).toContain("shouldReloadWorkspaceAfterMutate");
+    expect(list).not.toContain("router.refresh()");
     expect(list).not.toContain("interface Block");
     expect(exercise).toContain("TAP_SESSION_RUNTIME_PATHS.start");
     expect(exercise).toContain("TAP_SESSION_RUNTIME_PATHS.complete");
@@ -286,7 +276,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(sessionView).toContain("decideIleKeyboardAction");
     expect(sessionView).not.toContain('from "./HeliosChat"');
     expect(stash).toContain("authenticateStashRequest");
-    expect(tapLinks).toContain("decideProductWorkspaceAccess");
+    expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");
     expect(domain).toContain("span_w");
     expect(domain).toContain("aycl_category");
 
@@ -294,21 +284,18 @@ describe("P1–P10 shipped helpers", () => {
       "p1-p10-excerpts.txt",
       [
         `gridOpsPath=${WORKSPACE_GRID_OPS_PATH}`,
-        `reloadHammer=${shouldReloadWorkspaceAfterMutate()}`,
-        `browserBlockWrite=${shouldWriteLearnerBlocksViaBrowserClient()}`,
         `learnerLaunch=${WORKSPACE_LEARNER_LAUNCH_PATH}`,
         `ileGuestActing=${guest}`,
         `ileAssignedActing=${assigned}`,
         `tapOrg=${tapAuth.organization_id}`,
         `practiceTrace=${shouldIncludePracticeOnTapTrace({ practice: true })}`,
         `sessionChat=${ILE_SESSION_CHAT_PATH}`,
-        `logInsideSetState=${shouldLogIlePowInsideSetState()}`,
         `tapStart=${TAP_SESSION_RUNTIME_PATHS.start}`,
         `tapComplete=${TAP_SESSION_RUNTIME_PATHS.complete}`,
         "one grid-ops client: WorkspaceView + SessionList",
         "domain types: shell re-exports lib/domain/types",
         "learner launch/prompt via token-aware APIs",
-        "happy-path mutate: router.refresh gated by shouldReloadWorkspaceAfterMutate",
+        "happy-path mutate: no router.refresh",
         "ILE guest acting participant, TAP cookie org from workspace",
         "TAP/ILE speech/idle/chat: uploadWorkspaceProofOfWork",
         "TAP shells: TAP_SESSION_RUNTIME_PATHS start/complete + tapTracePayload",

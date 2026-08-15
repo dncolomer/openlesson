@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
-import { buildSuggestFromSimulation } from "@/lib/suggest-from-simulation";
+import {
+  assembleSuggestFromSimulationXaiMessages,
+  normalizeSuggestFromSimulationResponse,
+  simulationCollectionToSuggestSnapshots,
+} from "@/lib/suggest-from-simulation";
+import { runSuggestFromKnowledgeModel } from "@/lib/run-suggest-from-knowledge-model";
 import { normalizeSimulationCollection } from "@/lib/workspace-simulation-collection";
 
 /**
- * POST — suggest generative guidance from the curated simulation collection.
+ * POST — suggest author prompts from the curated simulation collection
+ * through the same xAI assembler as Suggest from Knowledge.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, title, root_topic, workspace_goal, description, simulation_collection")
+      .select("id, title, root_topic, workspace_goal, description, notes, simulation_collection")
       .eq("id", workspaceId)
       .maybeSingle();
 
@@ -33,36 +39,51 @@ export async function POST(req: NextRequest) {
     const collection = normalizeSimulationCollection(
       (workspace as { simulation_collection?: unknown }).simulation_collection,
     );
-
-    // Allow client to pass a provisional collection (e.g. just-generated, not yet saved)
-    if (body.collection) {
-      const merged = normalizeSimulationCollection(body.collection);
-      if (merged.items.length) {
-        // Prefer durable collection; if empty fall through already handled
-      }
+    const snapshots = simulationCollectionToSuggestSnapshots(collection);
+    if (snapshots.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        suggestions: [],
+        itemCount: 0,
+      });
     }
 
-    const suggestions = buildSuggestFromSimulation(
-      body.collection
-        ? normalizeSimulationCollection(body.collection)
-        : collection,
-      {
-        surface: body.surface,
-        draftPrompt: body.draftPrompt ?? body.topic ?? body.prompt,
-        workspaceTitle:
-          workspace.title || workspace.root_topic || body.workspaceTitle,
-        workspaceGoal:
-          (workspace as { workspace_goal?: string | null }).workspace_goal ||
-          workspace.description ||
-          body.workspaceGoal,
-        limit: typeof body.limit === "number" ? body.limit : 5,
-      },
-    );
+    const limit =
+      typeof body.limit === "number" && Number.isFinite(body.limit)
+        ? Math.max(1, Math.min(Math.trunc(body.limit), 8))
+        : 4;
+
+    const assembled = assembleSuggestFromSimulationXaiMessages(collection, {
+      surface: body.surface,
+      draftPrompt: body.draftPrompt ?? body.topic ?? body.prompt,
+      workspaceTitle: workspace.title || workspace.root_topic,
+      workspaceGoal:
+        (workspace as { workspace_goal?: string | null }).workspace_goal ||
+        workspace.description,
+      workspaceNotes: (workspace as { notes?: string | null }).notes,
+      limit,
+    });
+
+    const modelResult = await runSuggestFromKnowledgeModel(assembled, {
+      model: typeof body.model === "string" ? body.model : undefined,
+    });
+    if (!modelResult.ok) {
+      return jsonError(
+        502,
+        modelResult.error ||
+          "Failed to generate simulation suggestions (xAI unavailable or empty response)",
+      );
+    }
+
+    const suggestions = normalizeSuggestFromSimulationResponse(modelResult.data, {
+      sourceSnapshotIds: assembled.sourceSnapshotIds,
+      limit,
+    });
 
     return NextResponse.json({
       ok: true,
       suggestions,
-      itemCount: collection.items.filter((i) => !i.removed).length,
+      itemCount: snapshots.length,
     });
   } catch (err) {
     console.error("suggest-from-simulation", err);

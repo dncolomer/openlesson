@@ -354,8 +354,8 @@ describe("shipped ILE planner / Helios text names the user's anti-patterns", () 
 
     const view = read("components/SessionView.tsx");
     expect(view).toContain("buildIleChapterAddPowToolData");
-    expect(view).toContain("chapter_suggest");
-    expect(view).toContain("sessionMode: resolvedSessionMode");
+    expect(chatRoute).toContain("chapter_suggest");
+    expect(view).toContain("postIleSessionChat");
 
     const types = read("lib/domain/types.ts");
     expect(types).toContain("chapter_suggest");

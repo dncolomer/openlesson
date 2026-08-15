@@ -6,10 +6,8 @@ import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
-import {
-  resolveIleSessionModeFromBody,
-  resolveIleSessionModeFromSession,
-} from "@/lib/ile-mode";
+import { resolveIleSessionModeFromSession } from "@/lib/ile-mode";
+import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
   buildIleSessionChatPowFile,
@@ -66,18 +64,7 @@ export async function POST(request: NextRequest) {
         tutoringLanguage = sessionMeta.tutoringLanguage;
       }
     }
-    const bodyHasMode =
-      body &&
-      typeof body === "object" &&
-      ("session_mode" in body ||
-        "sessionMode" in body ||
-        "ile_mode" in body ||
-        "ileMode" in body ||
-        "project_mode" in body ||
-        "projectMode" in body);
-    const sessionMode = bodyHasMode
-      ? resolveIleSessionModeFromBody(body)
-      : resolveIleSessionModeFromSession({ metadata: sessionMeta });
+    const sessionMode = resolveIleSessionModeFromSession({ metadata: sessionMeta });
     const systemPrompt = withConversationLanguageInstruction(
       buildIleHeliosChatSystemPrompt(sessionMode),
       tutoringLanguage,
@@ -146,7 +133,13 @@ export async function POST(request: NextRequest) {
           .select("id, user_id, organization_id")
           .eq("id", powTarget.workspaceId)
           .maybeSingle();
-        if (workspace) {
+        if (!workspace) {
+          console.error("[session-chat] PoW workspace missing; returning coach reply");
+        } else {
+          const attribution = powAttributionColumnsFromIds({
+            userId: user.id,
+            guestUserId: auth.guestUserId,
+          });
           const file = buildIleSessionChatPowFile({
             sessionId: powTarget.sessionId,
             workspaceId: powTarget.workspaceId,
@@ -156,8 +149,8 @@ export async function POST(request: NextRequest) {
           await uploadWorkspaceProofOfWork(
             supabase,
             {
-              user_id: user.id,
-              guest_user_id: null,
+              user_id: attribution.user_id,
+              guest_user_id: attribution.guest_user_id,
               organization_id:
                 typeof workspace.organization_id === "string"
                   ? workspace.organization_id
@@ -180,6 +173,7 @@ export async function POST(request: NextRequest) {
               metadata: {
                 session_id: powTarget.sessionId,
                 via: "helios_dialog",
+                chapter_suggest: extracted.toolData ?? null,
               },
             },
           );

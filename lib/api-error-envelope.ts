@@ -4,7 +4,15 @@
  */
 
 import { NextResponse } from "next/server";
-import { toErrorCode, type ApiError, type ErrorCode } from "@/lib/pow-api/types";
+import {
+  statusToErrorCode,
+  toErrorCode,
+  type ApiError,
+  type ErrorCode,
+} from "@/lib/api/error-codes";
+
+export type { ApiError, ErrorCode };
+export { statusToErrorCode, toErrorCode };
 
 export type ApiErrorEnvelopeKind = "nested_code" | "string_error" | "unknown";
 
@@ -23,25 +31,17 @@ export function classifyApiErrorEnvelope(body: unknown): ApiErrorEnvelopeKind {
   return "unknown";
 }
 
-export function statusToErrorCode(status: number): ErrorCode {
-  if (status === 401) return "unauthorized";
-  if (status === 403) return "forbidden";
-  if (status === 404) return "not_found";
-  if (status === 429) return "rate_limit_exceeded";
-  if (status >= 500) return "internal_error";
-  return "validation_error";
-}
-
 export function buildNestedApiErrorEnvelope(
   code: ErrorCode,
   message: string,
-  details?: Record<string, unknown>,
+  extras?: Record<string, unknown>,
 ): { error: ApiError } {
+  const extraFields = extras && Object.keys(extras).length > 0 ? extras : null;
   return {
     error: {
       code,
       message,
-      ...(details ? { details } : {}),
+      ...(extraFields || {}),
     },
   };
 }
@@ -61,17 +61,12 @@ export function errorMessageFromBody(body: unknown, fallback: string): string {
 export function jsonError(
   status: number,
   message: string,
-  code?: ErrorCode | string,
+  code?: ErrorCode,
   details?: Record<string, unknown>,
 ): NextResponse {
   const text = String(message || "").trim() || "Request failed";
-  const fallback = statusToErrorCode(status);
-  const typed = toErrorCode(code, fallback);
-  const extra =
-    typeof code === "string" && code && code !== typed
-      ? { ...(details || {}), product_code: code }
-      : details;
-  return NextResponse.json(buildNestedApiErrorEnvelope(typed, text, extra), {
+  const typed = toErrorCode(code, statusToErrorCode(status));
+  return NextResponse.json(buildNestedApiErrorEnvelope(typed, text, details), {
     status,
   });
 }

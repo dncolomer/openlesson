@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 /**
@@ -70,7 +71,7 @@ export function WorkspaceMultiBlockSimulationPanel({
           exercises?: string[];
         };
         if (!res.ok) {
-          throw new Error(data.error || "Multi-block generate failed");
+          throw new Error(errorMessageFromBody(data, "Multi-block generate failed"));
         }
         for (const q of data.questions || []) {
           if (typeof q === "string" && q.trim()) allQ.push(q.trim());

@@ -1,35 +1,27 @@
 /**
- * One owned workspace map selection decision.
- * Shell and map host both apply this result — no nonce side channel.
+ * One exclusive workspace map selection.
+ * Shell and map host share this union — no encode/decode, no nonce side channel.
  */
 
 import {
-  clearWorkspaceBlockSelection,
-  clearWorkspaceFilledBlockSelection,
   nextWorkspaceBlockSelection,
   type WorkspaceAddTargetCell,
 } from "@/lib/workspace-right-pane";
 
-export type WorkspaceMapSelection = {
-  expandedBlockId: string | null;
-  selectedFilledBlockIds: string[];
-  emptyCells: WorkspaceAddTargetCell[];
-};
+export type WorkspaceMapSelection =
+  | { kind: "none" }
+  | { kind: "block"; id: string }
+  | { kind: "blocks"; ids: string[] }
+  | { kind: "empties"; cells: WorkspaceAddTargetCell[] };
 
 export type WorkspaceMapSelectionAction =
   | { type: "clear" }
   | { type: "open_block"; blockId: string | null | undefined }
   | { type: "set_filled_ids"; blockIds: readonly string[] | null | undefined }
-  | { type: "set_empty_cells"; cells: readonly WorkspaceAddTargetCell[] | null | undefined }
-  | { type: "apply_search_blocks"; blockIds: readonly string[] }
-  | { type: "apply_suggest_cells"; cells: readonly WorkspaceAddTargetCell[] };
+  | { type: "set_empty_cells"; cells: readonly WorkspaceAddTargetCell[] | null | undefined };
 
 export function emptyWorkspaceMapSelection(): WorkspaceMapSelection {
-  return {
-    expandedBlockId: clearWorkspaceBlockSelection(),
-    selectedFilledBlockIds: clearWorkspaceFilledBlockSelection(),
-    emptyCells: [],
-  };
+  return { kind: "none" };
 }
 
 function cleanIds(ids: readonly string[] | null | undefined): string[] {
@@ -60,150 +52,68 @@ function cleanCells(
   return out;
 }
 
+export function mapSelectionExpandedId(selection: WorkspaceMapSelection): string | null {
+  return selection.kind === "block" ? selection.id : null;
+}
+
+export function mapSelectionFilledIds(selection: WorkspaceMapSelection): string[] {
+  return selection.kind === "blocks" ? selection.ids : [];
+}
+
+export function mapSelectionEmptyCells(
+  selection: WorkspaceMapSelection,
+): WorkspaceAddTargetCell[] {
+  return selection.kind === "empties" ? selection.cells : [];
+}
+
 export function nextWorkspaceMapSelection(
-  _current: WorkspaceMapSelection,
   action: WorkspaceMapSelectionAction,
 ): WorkspaceMapSelection {
-  if (action.type === "clear") {
-    return emptyWorkspaceMapSelection();
-  }
+  if (action.type === "clear") return emptyWorkspaceMapSelection();
 
   if (action.type === "open_block") {
-    const expandedBlockId = nextWorkspaceBlockSelection(null, action.blockId);
-    if (!expandedBlockId) return emptyWorkspaceMapSelection();
-    return {
-      expandedBlockId,
-      selectedFilledBlockIds: clearWorkspaceFilledBlockSelection(),
-      emptyCells: [],
-    };
+    const id = nextWorkspaceBlockSelection(null, action.blockId);
+    return id ? { kind: "block", id } : emptyWorkspaceMapSelection();
   }
 
-  if (action.type === "set_filled_ids" || action.type === "apply_search_blocks") {
+  if (action.type === "set_filled_ids") {
     const ids = cleanIds(action.blockIds);
-    if (ids.length >= 2) {
-      return {
-        expandedBlockId: clearWorkspaceBlockSelection(),
-        selectedFilledBlockIds: ids,
-        emptyCells: [],
-      };
-    }
-    if (ids.length === 1) {
-      return {
-        expandedBlockId: nextWorkspaceBlockSelection(null, ids[0]),
-        selectedFilledBlockIds: clearWorkspaceFilledBlockSelection(),
-        emptyCells: [],
-      };
-    }
+    if (ids.length >= 2) return { kind: "blocks", ids };
+    if (ids.length === 1) return { kind: "block", id: ids[0]! };
     return emptyWorkspaceMapSelection();
   }
 
   const cells = cleanCells(action.cells);
   if (cells.length === 0) return emptyWorkspaceMapSelection();
-  return {
-    expandedBlockId: clearWorkspaceBlockSelection(),
-    selectedFilledBlockIds: clearWorkspaceFilledBlockSelection(),
-    emptyCells: cells,
-  };
+  return { kind: "empties", cells };
 }
 
 export type WorkspaceMapApplyPayload = {
   token: number;
-  blockIds: string[] | null;
-  emptyCells: WorkspaceAddTargetCell[] | null;
+  selection: WorkspaceMapSelection;
 };
 
-/** Host → grid apply payload for the same selection result (including explicit clear). */
 export function mapSelectionToApplyPayload(
   selection: WorkspaceMapSelection,
   token: number,
 ): WorkspaceMapApplyPayload {
-  if (selection.selectedFilledBlockIds.length > 0) {
-    return {
-      token,
-      blockIds: selection.selectedFilledBlockIds,
-      emptyCells: null,
-    };
-  }
-  // 1-block open is encoded as blockIds:[id] — never as empty arrays (that is clear).
-  if (selection.expandedBlockId) {
-    return {
-      token,
-      blockIds: [selection.expandedBlockId],
-      emptyCells: null,
-    };
-  }
-  if (selection.emptyCells.length > 0) {
-    return {
-      token,
-      blockIds: null,
-      emptyCells: selection.emptyCells,
-    };
-  }
-  return { token, blockIds: [], emptyCells: [] };
+  return { token, selection };
 }
 
-/** Reconstruct the same selection the grid applies from a host payload. */
-export function mapSelectionFromApplyPayload(payload: {
-  blockIds?: string[] | null;
-  emptyCells?: WorkspaceAddTargetCell[] | null;
-}): WorkspaceMapSelection {
-  const blockIds = cleanIds(payload.blockIds);
-  if (blockIds.length > 0) {
-    return nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), {
-      type: "apply_search_blocks",
-      blockIds,
-    });
+/**
+ * Map host → shell after a commit. Exclusive hosts get the committed
+ * selection as-is. Never follow blocks/empties with open_block(null) —
+ * that action is a full clear.
+ */
+export function notifyMapHostCommit(
+  selection: WorkspaceMapSelection,
+  exclusive: ((next: WorkspaceMapSelection) => void) | undefined,
+  legacySelect: (blockId: string | null) => void,
+): WorkspaceMapSelection {
+  if (exclusive) {
+    exclusive(selection);
+    return selection;
   }
-  const emptyCells = cleanCells(payload.emptyCells);
-  if (emptyCells.length > 0) {
-    return nextWorkspaceMapSelection(emptyWorkspaceMapSelection(), {
-      type: "apply_suggest_cells",
-      cells: emptyCells,
-    });
-  }
-  return emptyWorkspaceMapSelection();
-}
-
-/** How the map host should apply a next-selection result (including 1-block open). */
-export function workspaceMapSelectionHostApply(next: WorkspaceMapSelection): {
-  selectedBlockIds: string[];
-  selectedEmptyCells: WorkspaceAddTargetCell[];
-  selectNodeId: string | null;
-  emitFilled: string[] | null;
-  emitEmpty: WorkspaceAddTargetCell[] | null;
-} {
-  if (next.selectedFilledBlockIds.length > 0) {
-    return {
-      selectedBlockIds: next.selectedFilledBlockIds,
-      selectedEmptyCells: [],
-      selectNodeId: next.expandedBlockId,
-      emitFilled: next.selectedFilledBlockIds,
-      emitEmpty: null,
-    };
-  }
-  if (next.expandedBlockId) {
-    return {
-      selectedBlockIds: [],
-      selectedEmptyCells: [],
-      selectNodeId: next.expandedBlockId,
-      emitFilled: null,
-      emitEmpty: null,
-    };
-  }
-  if (next.emptyCells.length > 0) {
-    return {
-      selectedBlockIds: [],
-      selectedEmptyCells: next.emptyCells,
-      selectNodeId: null,
-      emitFilled: null,
-      emitEmpty: next.emptyCells,
-    };
-  }
-  return {
-    selectedBlockIds: [],
-    selectedEmptyCells: [],
-    selectNodeId: null,
-    emitFilled: null,
-    emitEmpty: null,
-  };
+  legacySelect(mapSelectionExpandedId(selection));
+  return selection;
 }

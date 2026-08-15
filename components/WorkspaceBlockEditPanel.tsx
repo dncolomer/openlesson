@@ -256,7 +256,6 @@ export function WorkspaceBlockEditPanel({
               onChange={(e) =>
                 patchPractice({
                   allowDialog: e.target.checked,
-                  allowOpenEnded: e.target.checked,
                 })
               }
             />
@@ -272,7 +271,6 @@ export function WorkspaceBlockEditPanel({
               onChange={(e) =>
                 patchPractice({
                   allowSolo: e.target.checked,
-                  allowTimed: e.target.checked,
                 })
               }
             />

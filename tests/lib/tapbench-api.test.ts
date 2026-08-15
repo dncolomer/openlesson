@@ -361,7 +361,7 @@ describe("TAPBench surface contracts (routes + UI)", () => {
     ]) {
       const src = readFileSync(join(ROOT, rel), "utf8");
       expect(src).toContain("stashExerciseResponseFields");
-      expect(src).toContain("resolveStashTapbenchFromRequest");
+      expect(src).toContain("authenticateStashRequest");
       expect(src).not.toMatch(/alatap|alaTAP/i);
     }
   });

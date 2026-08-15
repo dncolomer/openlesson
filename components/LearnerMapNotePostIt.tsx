@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { LearnerMapNote } from "@/lib/learner-map-notes";
 import {
   LEARNER_NOTE_BODY_MAX,
+  learnerNotePointerAllowsDragStart,
+} from "@/lib/learner-map-notes";
+import {
   learnerNoteCommitFromGestureBox,
   learnerNoteLiveBoxFromPointerMove,
-  learnerNotePointerAllowsDragStart,
   type LearnerNoteGestureBox,
-} from "@/lib/learner-map-notes";
+} from "@/lib/learner-map-note-gestures";
 
 type DragSession = {
   kind: "move" | "resize";

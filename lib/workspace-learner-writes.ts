@@ -6,14 +6,11 @@
 export const WORKSPACE_LEARNER_LAUNCH_PATH = "/api/workspace/learner-launch";
 export const WORKSPACE_LEARNER_PROMPT_PATH = "/api/workspace/learner-prompt";
 
-export function shouldWriteLearnerBlocksViaBrowserClient(): boolean {
-  return false;
-}
-
 export function buildLearnerLaunchBody(input: {
   workspaceId: string;
   blockId: string;
   sessionMode?: "learning" | "project" | string;
+  planningPrompt?: string | null;
   ayclToken?: string | null;
   ileToken?: string | null;
 }): Record<string, unknown> {
@@ -22,6 +19,7 @@ export function buildLearnerLaunchBody(input: {
     blockId: String(input.blockId || "").trim(),
     sessionMode: input.sessionMode === "project" ? "project" : "learning",
   };
+  if (input.planningPrompt != null) body.planningPrompt = input.planningPrompt;
   if (input.ayclToken) body.ayclToken = input.ayclToken;
   if (input.ileToken) body.ileToken = input.ileToken;
   return body;

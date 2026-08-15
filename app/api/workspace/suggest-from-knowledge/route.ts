@@ -8,24 +8,8 @@ import {
   type KnowledgeMapBlockRef,
   type KnowledgeSnapshotSuggestInput,
 } from "@/lib/suggest-from-knowledge";
+import { runSuggestFromKnowledgeModel } from "@/lib/run-suggest-from-knowledge-model";
 import { listEvalRunHistory } from "@/lib/pow-api/eval-run-history-store";
-import {
-  callXaiJSON,
-  systemMessage,
-  userMessage,
-  DEFAULT_MODEL,
-  parseJsonLoose,
-} from "@/lib/xai-client";
-
-type ModelSuggestResponse = {
-  suggestions?: Array<{
-    id?: string;
-    label?: string;
-    prompt?: string;
-    rationale?: string;
-  }>;
-  prompts?: string[];
-};
 
 /**
  * POST — Suggest from Knowledge: xAI-backed author prompts grounded in
@@ -85,14 +69,6 @@ export async function POST(req: NextRequest) {
       snapshots = [];
     }
 
-    if (Array.isArray(body.snapshots)) {
-      for (const s of body.snapshots) {
-        if (s && typeof s === "object") {
-          snapshots.push(s as KnowledgeSnapshotSuggestInput);
-        }
-      }
-    }
-
     // --- Map / block inventory (context) ---
     let blocks: KnowledgeMapBlockRef[] = [];
     try {
@@ -121,14 +97,6 @@ export async function POST(req: NextRequest) {
       blocks = [];
     }
 
-    if (Array.isArray(body.blocks)) {
-      for (const b of body.blocks) {
-        if (b && typeof b === "object") {
-          blocks.push(b as KnowledgeMapBlockRef);
-        }
-      }
-    }
-
     const assembled = assembleSuggestFromKnowledgeXaiMessages(snapshots, {
       surface: body.surface,
       draftPrompt: body.draftPrompt ?? body.topic ?? body.prompt,
@@ -146,46 +114,27 @@ export async function POST(req: NextRequest) {
       limit,
     });
 
-    const userModel =
-      typeof body.model === "string" && body.model.trim()
-        ? body.model.replace(/^x-ai\//, "").trim()
-        : DEFAULT_MODEL;
-
-    const ai = await callXaiJSON<ModelSuggestResponse>(
-      [
-        systemMessage(assembled.systemPrompt),
-        userMessage(assembled.userPrompt),
-      ],
-      {
-        model: userModel,
-        maxTokens: 1400,
-        temperature: 0.55,
-        retries: 2,
-      },
-    );
-
-    let modelPayload: ModelSuggestResponse | null =
-      ai.success && ai.data ? ai.data : null;
-    if (!modelPayload && ai.rawContent) {
-      const recovered = parseJsonLoose<ModelSuggestResponse>(ai.rawContent);
-      if (recovered.ok) modelPayload = recovered.data;
+    const modelResult = await runSuggestFromKnowledgeModel(assembled, {
+      model: typeof body.model === "string" ? body.model : undefined,
+    });
+    if (!modelResult.ok) {
+      return jsonError(
+        502,
+        modelResult.error ||
+          "Failed to generate knowledge suggestions (xAI unavailable or empty response)",
+      );
     }
 
-    if (!modelPayload) {
-      return jsonError(502, ai.error ||
-            "Failed to generate knowledge suggestions (xAI unavailable or empty response)",);
-    }
-
-    const suggestions = normalizeSuggestFromKnowledgeResponse(modelPayload, {
+    const suggestions = normalizeSuggestFromKnowledgeResponse(modelResult.data, {
       sourceSnapshotIds: assembled.sourceSnapshotIds,
       limit,
     });
 
     if (suggestions.length === 0) {
-      return jsonError(502, "Model returned no usable author prompts",
-          suggestions: [],
-          snapshotCount: assembled.snapshotCount,
-          blockCount: assembled.blockCount,);
+      return jsonError(502, "Model returned no usable author prompts", undefined, {
+        snapshotCount: assembled.snapshotCount,
+        blockCount: assembled.blockCount,
+      });
     }
 
     return NextResponse.json({

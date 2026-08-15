@@ -664,14 +664,15 @@ describe("minimap viewport rectangle (camera projection + drag→pan)", () => {
 
   it("structural: viewport rect element + drag wires panFromMinimapViewportDrag/setPan", () => {
     const grid = read("components/BlockSkillGrid.tsx");
+    const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
     const lib = read("lib/map-minimap-clusters.ts");
 
     expect(lib).toContain("export function projectMainViewportToMinimapRect");
     expect(lib).toContain("export function panFromMinimapViewportDrag");
     expect(lib).toContain("export function getMinimapFrameOrigin");
 
-    expect(grid).toContain("data-minimap-viewport-rect");
-    expect(grid).toContain("data-minimap-viewport-window");
+    expect(mini).toContain("data-minimap-viewport-rect");
+    expect(mini).toContain("data-minimap-viewport-window");
     expect(grid).toContain("resolveMinimapViewportWindow");
     expect(grid).toContain("panFromMinimapViewportDrag");
     expect(grid).toContain("minimapViewportRect");
@@ -684,7 +685,7 @@ describe("minimap viewport rectangle (camera projection + drag→pan)", () => {
     writeEvidence(
       "minimap-viewport-rect-structural.log",
       [
-        "hasViewportRectAttr=" + grid.includes("data-minimap-viewport-rect"),
+        "hasViewportRectAttr=" + mini.includes("data-minimap-viewport-rect"),
         "usesProjectHelper=" + grid.includes("resolveMinimapViewportWindow"),
         "usesDragHelper=" + grid.includes("panFromMinimapViewportDrag"),
         "hasPointerDown=" + grid.includes("onMinimapViewportPointerDown"),

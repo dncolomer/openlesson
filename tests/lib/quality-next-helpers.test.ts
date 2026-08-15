@@ -16,7 +16,10 @@ import {
   emptyWorkspaceMapSelection,
   nextWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
-import { tapHookFormingText } from "@/lib/tap-session-runtime";
+import {
+  tapHookFormingText,
+  tapLiveSpeechFlushText,
+} from "@/lib/tap-session-runtime";
 import { shouldWriteLearnerBlocksViaBrowserClient } from "@/lib/workspace-learner-writes";
 
 const ROOT = join(__dirname, "../..");
@@ -31,7 +34,7 @@ function read(rel: string) {
 }
 
 describe("quality-next shipped helpers", () => {
-  it("envelopes, selection, TAP hook text, learner writes, extracted chrome", () => {
+  it("envelopes, selection, TAP hook text, learner writes, extracted chrome", async () => {
     const nested = buildNestedApiErrorEnvelope("forbidden", "nope");
     expect(classifyApiErrorEnvelope(nested)).toBe("nested_code");
     expect(errorMessageFromBody(nested, "x")).toBe("nope");
@@ -40,6 +43,9 @@ describe("quality-next shipped helpers", () => {
     expect(statusToErrorCode(401)).toBe("unauthorized");
     const res = jsonError(400, "workspaceId is required");
     expect(res.status).toBe(400);
+    const productBody = await res.json();
+    expect(classifyApiErrorEnvelope(productBody)).toBe("nested_code");
+    expect(errorMessageFromBody(productBody, "x")).toBe("workspaceId is required");
 
     const empty = emptyWorkspaceMapSelection();
     const cells = nextWorkspaceMapSelection(empty, {
@@ -48,11 +54,25 @@ describe("quality-next shipped helpers", () => {
     });
     expect(cells.emptyCells).toEqual([{ row: 2, col: 3 }]);
     expect(cells.expandedBlockId).toBeNull();
-    const cleared = nextWorkspaceMapSelection(cells, { type: "clear" });
+    const oneBlock = nextWorkspaceMapSelection(cells, {
+      type: "set_filled_ids",
+      blockIds: ["block-1"],
+    });
+    expect(oneBlock.expandedBlockId).toBe("block-1");
+    expect(oneBlock.selectedFilledBlockIds).toEqual([]);
+    expect(oneBlock.emptyCells).toEqual([]);
+    const cleared = nextWorkspaceMapSelection(oneBlock, { type: "clear" });
     expect(cleared).toEqual(emptyWorkspaceMapSelection());
 
     expect(tapHookFormingText({ getFormingText: () => "  live  " })).toBe("live");
     expect(tapHookFormingText({ getFormingText: () => "" })).toBe("");
+    expect(
+      tapLiveSpeechFlushText({
+        hookFormingText: tapHookFormingText({ getFormingText: () => "hook first" }),
+        crystallizableText: "stale crystallize",
+        localFinalBuffer: ["dead buffer"],
+      }),
+    ).toBe("hook first");
     expect(shouldWriteLearnerBlocksViaBrowserClient()).toBe(false);
 
     const sessionChat = read("app/api/session-chat/route.ts");
@@ -93,9 +113,10 @@ describe("quality-next shipped helpers", () => {
     writeFileSync(
       join(SCRATCH, "quality-next-excerpts.txt"),
       [
-        `envelopeKind=${classifyApiErrorEnvelope(nested)}`,
-        `msg=${errorMessageFromBody(nested, "x")}`,
+        `envelopeKind=${classifyApiErrorEnvelope(productBody)}`,
+        `msg=${errorMessageFromBody(productBody, "x")}`,
         `emptyClickCells=${cells.emptyCells.length}`,
+        `oneBlockId=${oneBlock.expandedBlockId}`,
         `hookText=${tapHookFormingText({ getFormingText: () => "live" })}`,
         `browserBlockWrite=${shouldWriteLearnerBlocksViaBrowserClient()}`,
         "jsonError on session-chat / tap / ile / grid-ops",

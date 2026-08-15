@@ -1,14 +1,14 @@
 /**
  * Deferred-after-P10 items: first grid chrome split (contract exists),
- * OpenAPI blocked (envelopes not unified), source-string tests follow extractions.
+ * product errors share the nested envelope, OpenAPI still not generated.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  apiErrorEnvelopesAreUnified,
   buildNestedApiErrorEnvelope,
   classifyApiErrorEnvelope,
+  jsonError,
 } from "@/lib/api-error-envelope";
 import { errorResponse } from "@/lib/pow-api/auth";
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
@@ -32,7 +32,7 @@ function read(rel: string) {
 }
 
 describe("deferred-after-P10 follow-ups", () => {
-  it("grid contract exists; chrome extracted; envelopes not unified", async () => {
+  it("grid contract exists; chrome extracted; product envelopes are nested", async () => {
     const labels = {
       zoomIn: "In",
       zoomOut: "Out",
@@ -61,9 +61,14 @@ describe("deferred-after-P10 follow-ups", () => {
     const nested = buildNestedApiErrorEnvelope("forbidden", "nope");
     expect(classifyApiErrorEnvelope(nested)).toBe("nested_code");
     expect(classifyApiErrorEnvelope({ error: "Not authenticated" })).toBe("string_error");
-    expect(apiErrorEnvelopesAreUnified()).toBe(false);
+    const product = jsonError(400, "workspaceId is required");
+    expect(product.status).toBe(400);
+    const productBody = await product.json();
+    expect(classifyApiErrorEnvelope(productBody)).toBe("nested_code");
     const res = errorResponse(403, "forbidden", "nope");
     expect(res.status).toBe(403);
+    const agentBody = await res.json();
+    expect(classifyApiErrorEnvelope(agentBody)).toBe("nested_code");
 
     const grid = read("components/BlockSkillGrid.tsx");
     const icons = read("components/block-skill-grid/map-tool-icons.tsx");
@@ -90,11 +95,12 @@ describe("deferred-after-P10 follow-ups", () => {
       [
         `gridContractOps=${posted[0]}`,
         `oneBlockSearch=${mapSelectionFromApplyPayload(payload).expandedBlockId}`,
-        `envelopesUnified=${apiErrorEnvelopesAreUnified()}`,
+        `productEnvelope=${classifyApiErrorEnvelope(productBody)}`,
+        `agentEnvelope=${classifyApiErrorEnvelope(agentBody)}`,
         `nestedKind=${classifyApiErrorEnvelope(nested)}`,
         `stringKind=${classifyApiErrorEnvelope({ error: "Not authenticated" })}`,
         "chrome split: map-tool-icons + map-tile-badges",
-        "OpenAPI blocked: product string errors vs v3 nested code envelope",
+        "product jsonError + agent errorResponse share nested envelope",
         "source-string tests retargeted to extracted chrome files",
       ].join("\n"),
       "utf8",

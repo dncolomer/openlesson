@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -26,7 +27,7 @@ describe("TAP session link post-session thank-you", () => {
   });
 
   it("TapScoreClient privateToken path shows thank-you + explore landing CTA", () => {
-    const client = read("components/TapScoreClient.tsx");
+    const client = readTapScoreSurface();
     expect(client).toContain("privateToken");
     expect(client).toContain("data-tap-session-thank-you");
     expect(client).toContain("data-tap-explore-uncertain-systems");
@@ -35,11 +36,13 @@ describe("TAP session link post-session thank-you", () => {
     expect(client).toContain("thankYouBody");
     expect(client).toContain("exploreUncertainSystems");
     // Link sessions short-circuit before workspace redirect.
-    expect(client).toMatch(/if \(privateToken\)[\s\S]{0,200}setPhase\("results"\)/);
+    expect(client).toMatch(
+      /if \((?:[sh]\.)?privateToken\)[\s\S]{0,280}(?:phase:\s*"results"|setPhase\("results"\))/,
+    );
   });
 
   it("ExerciseTapClient privateToken path matches conversational thank-you + Explore Uncertain Systems", () => {
-    const client = read("components/ExerciseTapClient.tsx");
+    const client = readExerciseTapSurface();
     expect(client).toContain("privateToken");
     expect(client).toContain("data-tap-session-thank-you");
     expect(client).toContain("data-tap-explore-uncertain-systems");

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { getSessionPlan, updateSessionPlan } from "@/lib/storage";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { ayclTokenFromBody,
@@ -22,10 +23,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, tutoringLanguage: bodyLanguage, objectives } = body;
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: "Missing sessionId" },
-        { status: 400 }
-      );
+      return jsonError(400, "Missing sessionId");
     }
 
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
@@ -46,20 +44,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!tutoringLanguage) {
-      return NextResponse.json(
-        { error: "Missing tutoringLanguage" },
-        { status: 400 }
-      );
+      return jsonError(400, "Missing tutoringLanguage");
     }
 
     const languageName = getLanguageName(tutoringLanguage);
     const existingPlan = await getSessionPlan(sessionId, supabase);
 
     if (!existingPlan) {
-      return NextResponse.json(
-        { error: "No existing plan to translate" },
-        { status: 400 }
-      );
+      return jsonError(400, "No existing plan to translate");
     }
 
     const stepsJson = JSON.stringify(
@@ -115,19 +107,13 @@ Return ONLY valid JSON (no markdown, no explanation):
 
     if (!response.success || !response.data) {
       console.error("[Translate] LLM call failed:", response.error);
-      return NextResponse.json(
-        { error: response.error || "Translation failed" },
-        { status: 500 }
-      );
+      return jsonError(500, response.error || "Translation failed");
     }
 
     const translatedSteps = response.data.steps || [];
     if (translatedSteps.length === 0) {
       console.error("[Translate] No steps in response:", response.data);
-      return NextResponse.json(
-        { error: "Translation produced no steps" },
-        { status: 500 }
-      );
+      return jsonError(500, "Translation produced no steps");
     }
 
     const finalSteps = translatedSteps.map((translatedStep: SessionPlanStep, idx: number) => {
@@ -155,9 +141,6 @@ Return ONLY valid JSON (no markdown, no explanation):
   } catch (error) {
     console.error("Translate session plan error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: `Internal server error: ${errorMessage}` },
-      { status: 500 }
-    );
+    return jsonError(500, `Internal server error: ${errorMessage}`);
   }
 }

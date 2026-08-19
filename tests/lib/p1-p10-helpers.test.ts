@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 /**
  * P1–P10 shipped helpers — drive real policy functions, not remounted shells.
  */
@@ -42,9 +43,8 @@ import {
   decideIleKeyboardAction,
 } from "@/lib/ile-keyboard-mode";
 import {
-  decideProductWorkspaceAccess,
-  PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
-  PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+  allowProductWorkspaceEvalAccess,
+  allowProductWorkspaceLinkAccess,
 } from "@/lib/product-workspace-auth";
 import type { Block, Workspace } from "@/lib/domain/types";
 
@@ -183,31 +183,40 @@ describe("P1–P10 shipped helpers", () => {
     expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("helios_send");
 
     expect(
-      decideProductWorkspaceAccess({
+      allowProductWorkspaceLinkAccess({
+        isOwner: true,
+        isOrgAdmin: false,
+      }),
+    ).toBe(true);
+    expect(
+      allowProductWorkspaceEvalAccess({
+        isOwner: true,
+        evalAllowed: false,
+      }),
+    ).toBe(true);
+    expect(
+      allowProductWorkspaceLinkAccess({
         isOwner: false,
         isOrgAdmin: true,
-        evalAllowed: false,
-        ayclAccess: false,
-        flags: PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
-      }).allowed,
+      }),
     ).toBe(true);
     expect(
-      decideProductWorkspaceAccess({
+      allowProductWorkspaceEvalAccess({
         isOwner: false,
-        isOrgAdmin: false,
         evalAllowed: true,
-        ayclAccess: false,
-        flags: PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
-      }).allowed,
+      }),
     ).toBe(true);
     expect(
-      decideProductWorkspaceAccess({
+      allowProductWorkspaceEvalAccess({
+        isOwner: false,
+        evalAllowed: false,
+      }),
+    ).toBe(false);
+    expect(
+      allowProductWorkspaceLinkAccess({
         isOwner: false,
         isOrgAdmin: false,
-        evalAllowed: false,
-        ayclAccess: false,
-        flags: PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
-      }).allowed,
+      }),
     ).toBe(false);
 
     const sampleBlock: Block = {
@@ -229,7 +238,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(sampleBlock.span_w).toBe(2);
     expect(sampleWs.aycl_category).toBe("math");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const list = read("components/SessionList.tsx");
     const launchRoute = read("app/api/workspace/learner-launch/route.ts");
     const ileAuth = read("lib/ile-link-auth.ts");
@@ -242,7 +251,7 @@ describe("P1–P10 shipped helpers", () => {
     const tapScore = read("lib/tap-score.ts");
     const exercise = read("components/ExerciseTapClient.tsx");
     const tapClient = read("components/TapScoreClient.tsx");
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = readSessionViewSurface();
     const stash = read("app/api/v3/stash/workspaces/[id]/stash/route.ts");
     const tapLinks = read("app/api/workspace/tap-links/route.ts");
     const domain = read("lib/domain/types.ts");
@@ -255,11 +264,17 @@ describe("P1–P10 shipped helpers", () => {
     expect(list).toContain("postWorkspaceGridOp");
     expect(list).not.toContain("router.refresh()");
     expect(list).not.toContain("interface Block");
-    expect(exercise).toContain("TAP_SESSION_RUNTIME_PATHS.start");
-    expect(exercise).toContain("TAP_SESSION_RUNTIME_PATHS.complete");
-    expect(tapClient).toContain("TAP_SESSION_RUNTIME_PATHS.start");
-    expect(tapClient).toContain("TAP_SESSION_RUNTIME_PATHS.complete");
+    expect(exercise).toContain("postTutoringSessionStart");
+    expect(exercise).toContain("postTutoringSessionComplete");
+    const tapFlow = read("components/tap-score/use-tap-score-flow.ts");
+    expect(tapFlow).toContain("postTutoringSessionStart");
+    expect(tapFlow).toContain("postTutoringSessionComplete");
+    expect(read("lib/useTapSpeechProofOfWork.ts")).toContain("postTutoringSpeech");
+    expect(read("lib/useTapIdleProofOfWork.ts")).toContain("postTutoringIdle");
     expect(launchRoute).toContain("guardWorkspaceRoute");
+    expect(launchRoute).toContain("auth.persistUserId");
+    expect(launchRoute).not.toContain("persistableOwnerUserId");
+    expect(launchRoute).not.toMatch(/user_id:\s*auth\.subjectId/);
     expect(ileAuth).toContain("resolveIleActingParticipantId");
     expect(tapAuthSrc).toContain("workspaceRow?.organization_id");
     expect(tapChat).toContain("uploadWorkspaceProofOfWork");
@@ -277,6 +292,11 @@ describe("P1–P10 shipped helpers", () => {
     expect(sessionView).not.toContain('from "./HeliosChat"');
     expect(stash).toContain("authenticateStashRequest");
     expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");
+    const productAuth = read("lib/product-workspace-auth.ts");
+    expect(productAuth).toContain("assertWorkspacePolicy");
+    expect(productAuth).toContain("allowProductWorkspaceLinkAccess");
+    expect(productAuth).toContain("allowProductWorkspaceEvalAccess");
+    expect(productAuth).not.toContain("ProductWorkspaceAuthFlags");
     expect(domain).toContain("span_w");
     expect(domain).toContain("aycl_category");
 
@@ -301,7 +321,7 @@ describe("P1–P10 shipped helpers", () => {
         "TAP shells: TAP_SESSION_RUNTIME_PATHS start/complete + tapTracePayload",
         "TAP LLM miss uses resolveTap*FromLlm fallbacks",
         "ILE: postIleSessionChat + decideIleKeyboardAction",
-        "product-auth decideProductWorkspaceAccess; stash authenticateStashRequest",
+        "product-auth allowProductWorkspaceLinkAccess/EvalAccess; stash authenticateStashRequest",
       ].join("\n"),
     );
   });

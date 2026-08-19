@@ -2,6 +2,7 @@
  * Chapter-map load control: active chapter stays enabled and reads re-load.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -94,7 +95,7 @@ describe("resolveChapterLoadControl (shipped helper)", () => {
 describe("chapter-map load control wiring (shipped source)", () => {
   it("panel keeps the load button enabled on the active chapter and still calls onLoadChapter", () => {
     const panel = read("components/ChapterMapPanel.tsx");
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
 
     expect(panel).toContain("resolveChapterLoadControl");
     expect(panel).toContain("loadControl.disabled");
@@ -110,7 +111,7 @@ describe("chapter-map load control wiring (shipped source)", () => {
     expect(view).toContain('toolAction = isReload ? "chapter_reload" : "chapter_load"');
     expect(view).toContain("persistPlanSteps(updatedPlan, { toolAction, toolData })");
     expect(view).toContain("setChapterReloadNonce");
-    expect(view).toContain("/api/session-chat");
+    expect(view).toContain("postIleSessionChat");
 
     writeScratch(
       "reload-chapter-excerpts.txt",

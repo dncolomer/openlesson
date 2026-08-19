@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import {
   AYCL_FULL_PRICE_CENTS,
   AYCL_LEARNER_PRICE_CENTS,
@@ -340,10 +341,7 @@ describe("AYCL marketplace structure (settings + catalog + checkout)", () => {
     expect(route).toContain("resolveAyclUpgradeCents");
     expect(route).toContain("upgradePriceCents");
     expect(route).toContain("upgradePriceLabel");
-    const view = fs.readFileSync(
-      path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("data-aycl-upgrade-price");
     expect(view).toContain("ayclUpgradePriceLabel");
   });

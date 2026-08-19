@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -39,14 +40,9 @@ describe("workspace create + builder static wiring", () => {
     expect(dash).not.toMatch(/id:\s*"insights"/);
     expect(dash).not.toContain('activeTab === "insights"');
 
-    const knowledge = read("components/WorkspacePerformancePanel.tsx");
-    expect(knowledge).toContain("InsightsDashboardTab");
-    expect(knowledge).toContain('id: "insights"');
-    expect(knowledge).toContain("workspaceId={workspaceId}");
-    expect(knowledge).toContain("<InsightsDashboardTab");
-
     // Workspace-scoped list UI; not Performance chat
     const insightsTab = read("components/InsightsDashboardTab.tsx");
+    expect(insightsTab).toContain("export function InsightsDashboardTab");
     expect(insightsTab).toContain("workspaceId");
     expect(insightsTab).toContain("insightsListUrl(workspaceId)");
     expect(insightsTab).toMatch(/workspace/i);
@@ -65,7 +61,7 @@ describe("workspace create + builder static wiring", () => {
     expect(add).toContain("composeBlockGenerationContext");
     expect(add).toContain("notes");
     expect(add).toContain("workspace_files");
-    const gridOps = read("app/api/workspace/grid-ops/route.ts");
+    const gridOps = read("lib/workspace-grid-ops/generate_shape.ts");
     expect(gridOps).toContain("composeBlockGenerationContext");
     expect(gridOps).toContain("fileNames");
     expect(gridOps).toContain("notes");
@@ -89,7 +85,7 @@ describe("workspace create + builder static wiring", () => {
   });
 
   it("sequential appear animation is wired for AI-added blocks", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("appearingNodeIds");
     expect(grid).toContain("APPEAR_STAGGER_MS");
     expect(grid).toMatch(/opacity|fade|shadow/);
@@ -105,7 +101,7 @@ describe("workspace create + builder static wiring", () => {
   });
 
   it("multi-select grid ops are exposed (merge, split, move op, generate_shape)", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("generate_shape");
     expect(grid).toContain("merge");
     expect(grid).toContain("split");
@@ -113,19 +109,21 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain('op: "move"');
     expect(grid).toContain("selectedEmptyCells");
     expect(grid).toContain("selectedBlockIds");
-    const ops = read("app/api/workspace/grid-ops/route.ts");
-    expect(ops).toContain('op === "merge"');
-    expect(ops).toContain('op === "split"');
-    expect(ops).toContain('op === "move"');
-    expect(ops).toContain('op === "generate_shape"');
-    expect(ops).toContain("composeMergeBlockUserPrompt");
-    expect(ops).toContain("composeSplitBlockUserPrompt");
-    expect(ops).toContain("composeGenerateShapeBlockUserPrompt");
-    expect(ops).toContain("block-footprint-prompt");
+    const dispatch = read("lib/workspace-grid-ops/dispatch.ts");
+    expect(dispatch).toContain("handle_merge");
+    expect(dispatch).toContain("handle_split");
+    expect(dispatch).toContain("handle_move");
+    expect(dispatch).toContain("handle_generate_shape");
+    expect(read("lib/workspace-grid-ops/merge.ts")).toContain("composeMergeBlockUserPrompt");
+    expect(read("lib/workspace-grid-ops/split.ts")).toContain("composeSplitBlockUserPrompt");
+    expect(read("lib/workspace-grid-ops/generate_shape.ts")).toContain(
+      "composeGenerateShapeBlockUserPrompt",
+    );
+    expect(read("lib/workspace-grid-ops/shared.ts")).toContain("block-footprint-prompt");
   });
 
   it("block map exposes a full-height icon tool column with Select + Lasso and wired grid ops", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("data-block-map-tool-strip");
     expect(grid).toContain("h-full w-11 shrink-0 flex-col");
     expect(grid).toContain("border-r border-neutral-800");
@@ -155,7 +153,7 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("isBlockMapManipulationMode");
     expect(grid).toContain("handleBlockPointerDown");
     expect(grid).toContain("data-block-map-draggable");
-    expect(grid).toContain("notifyMapHostCommit");
+    expect(grid).toContain("onMapSelectionChange(selection)");
     expect(grid).toContain("handleBlockDoubleClick");
     expect(grid).not.toContain("data-block-map-move");
     expect(grid).not.toContain("showMovePad");
@@ -189,7 +187,7 @@ describe("workspace create + builder static wiring", () => {
     const catalog = read("lib/pow-api/mcp-proof-of-work-catalog.ts");
     expect(catalog).not.toMatch(/name:\s*"create_workspace"/);
 
-    const mcp = read("lib/pow-api/mcp-proof-of-work-server.ts");
+    const mcp = read("lib/pow-api/mcp-tools/dispatch.ts");
     expect(mcp).toContain("rejectProgrammaticWorkspaceCreate");
     // create_workspace must hard-fail, not call createAgentWorkspace
     expect(mcp).not.toMatch(/await createAgentWorkspace/);

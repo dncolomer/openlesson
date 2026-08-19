@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { generateFollowUpSessions } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import { ayclTokenFromBody,
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, problem, duration, gapsSummary, reportSummary } = body;
 
     if (!problem) {
-      return NextResponse.json({ error: "Missing problem" }, { status: 400 });
+      return jsonError(400, "Missing problem");
     }
 
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
@@ -67,12 +68,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Failed to generate suggestions" }, { status: 500 });
+      return jsonError(500, result.error || "Failed to generate suggestions");
     }
 
     return NextResponse.json({ suggestions: result.suggestions });
   } catch (error) {
     console.error("Generate follow-ups error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

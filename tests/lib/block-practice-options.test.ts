@@ -1,3 +1,8 @@
+import {
+  readGridOpsSurface,
+  readMapGridSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Block practice launch limits: pure normalize/allow rules + structural Edit/map wiring.
  */
@@ -119,10 +124,10 @@ describe("structural: Edit drawer + launch + map icons", () => {
   it("Edit panel limits + card respects + map icons + API persist", () => {
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     const card = read("components/BlockDetailCard.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const api = read("app/api/workspace/grid-ops/route.ts");
+    const view = readWorkspaceViewSurface();
+    const api = readGridOpsSurface();
     const mig = read(
       "supabase/migrations/20260804120000_blocks_practice_options.sql",
     );

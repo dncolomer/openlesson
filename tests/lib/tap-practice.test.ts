@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -102,7 +103,7 @@ describe("tap-practice pure helpers", () => {
 
 describe("TAP client practice surface (not ILE)", () => {
   it("exposes Practice First as first 2×2 card, practice banner, done+restart, and live mechanics", () => {
-    const client = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const client = readTapScoreSurface();
     const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
     expect(cards).toContain("data-tap-practice-first");
     expect(cards).toContain('data-tap-topic-grid={showPractice ? "2x2-practice"');
@@ -120,8 +121,8 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(client).toContain("data-tap-session-purity");
     expect(client).toContain("data-tap-transcript-fade");
-    expect(client).toContain('setPhase("live")');
-    expect(client).toContain('setPhase("practice_done")');
+    expect(client).toMatch(/phase:\s*"live"|setPhase\("live"\)/);
+    expect(client).toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
 
     const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
       tap: { practice: Record<string, string> };
@@ -133,7 +134,7 @@ describe("TAP client practice surface (not ILE)", () => {
     // Early stop / impure still practice
     expect(client).toContain("practice: isPracticeModeRef.current");
     expect(client).toContain("sessionQuality: impure ? \"impure\" : \"pure\"");
-    expect(client).toContain('setPhase("practice_done")');
+    expect(client).toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
   });
 
   it("keeps Practice start label width stable while loading (no card reflow)", () => {
@@ -166,14 +167,14 @@ describe("TAP client practice surface (not ILE)", () => {
   });
 
   it("ILE SessionView does not gain Practice First", () => {
-    const ile = fs.readFileSync(path.join(ROOT, "components/SessionView.tsx"), "utf8");
+    const ile = readSessionViewSurface();
     expect(ile).not.toContain("data-tap-practice-first");
     expect(ile).not.toContain("Practice First");
     expect(ile).not.toContain("tap-practice");
   });
 
   it("keeps practice cue on banner only — stash/submit box stays neutral", () => {
-    const client = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const client = readTapScoreSurface();
     expect(client).toContain("data-tap-practice-banner");
     // Stash/submit panel is always neutral (no practice cyan on that box)
     expect(client).toContain(

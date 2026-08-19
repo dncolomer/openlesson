@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { generateReport } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!problem) {
-      return NextResponse.json({ error: "Missing problem" }, { status: 400 });
+      return jsonError(400, "Missing problem");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -48,12 +49,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Report generation failed" }, { status: 500 });
+      return jsonError(500, result.error || "Report generation failed");
     }
 
     return NextResponse.json({ report: result.report });
   } catch (error) {
     console.error("Generate report error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

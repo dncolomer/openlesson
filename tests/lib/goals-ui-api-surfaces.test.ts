@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Static/structural checks for Goals tab, Settings without goal field,
  * block goals drawer, LWM goal selection UI.
@@ -5,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   availableWorkspaceSections,
   resolveWorkspaceSectionLayout,
@@ -51,7 +53,7 @@ describe("Goals tab + block goals drawer", () => {
   });
 
   it("WorkspaceView mounts Goals tab panel", () => {
-    const view = readFileSync(join(ROOT, "components/WorkspaceView.tsx"), "utf8");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceGoalsPanel");
     expect(view).toContain("mountsGoalsPanel");
     expect(view).toContain('key: "goals"');
@@ -78,10 +80,7 @@ describe("Goals tab + block goals drawer", () => {
 
 describe("LWM UI goal selection", () => {
   it("KnowledgeConfigTrajectoryPanel exposes default/adhoc/custom controls in generate modal", () => {
-    const src = readFileSync(
-      join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const src = readKnowledgePanelSurface();
     expect(src).toContain("data-lwm-snapshot-modal");
     expect(src).toContain("data-lwm-goal-selection");
     expect(src).toContain("data-lwm-goal-mode");

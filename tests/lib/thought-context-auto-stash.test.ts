@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -66,7 +67,7 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     expect(bar).toContain("h-7");
     expect(bar).not.toContain("mb-1 flex items-center justify-between");
 
-    const tap = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const tap = readTapScoreSurface();
     expect(tap).toContain("AutoStashContextBar");
     expect(tap).toContain('data-surface="tap"');
     expect(tap).toContain("fromContext");

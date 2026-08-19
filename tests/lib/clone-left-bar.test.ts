@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Clone as left map tool-strip control (not block-detail drawer).
  * Pure enablement + structural wiring for strip → arm → paste path.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -125,9 +127,9 @@ describe("clone left-bar enablement", () => {
 describe("clone left-bar UI wiring", () => {
   it("strip mounts Clone; detail has no Clone drawer; host keeps paste path", () => {
     const tools = read("lib/block-map-tools.ts");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const sessions = read("components/SessionList.tsx");
 
     expect(tools).toContain('"clone"');

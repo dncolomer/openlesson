@@ -15,6 +15,7 @@ import {
   stashExerciseSpeech,
   submitExerciseSpeechDirect,
 } from "@/lib/exercise-tap";
+import { readExerciseTapSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -84,7 +85,7 @@ describe("trace payload contracts", () => {
 
 describe("structural dual history + wider shell", () => {
   it("Exercise live UI has stash + submission sections and sys1/sys2 actions", () => {
-    const client = read("components/ExerciseTapClient.tsx");
+    const client = readExerciseTapSurface();
     expect(client).toContain("stashCurrentTranscription");
     expect(client).toContain("submitCurrentOrLatestStash");
     expect(client).toContain("handleUndoSubmissionToStash");

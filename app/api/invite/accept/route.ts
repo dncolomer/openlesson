@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -20,14 +21,14 @@ export async function GET(request: Request) {
     const token = searchParams.get("token");
 
     if (!token) {
-      return NextResponse.json({ error: "Token required" }, { status: 400 });
+      return jsonError(400, "Token required");
     }
 
     const adminClient = getAdminClient();
     const invite = await findInviteByToken(adminClient, token);
 
     if (!invite) {
-      return NextResponse.json({ error: "Invalid invite token" }, { status: 404 });
+      return jsonError(404, "Invalid invite token");
     }
 
     const org = inviteOrganization(invite);
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Get invite error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     const { token } = await request.json();
 
     if (!token || typeof token !== "string") {
-      return NextResponse.json({ error: "Token required" }, { status: 400 });
+      return jsonError(400, "Token required");
     }
 
     const adminClient = getAdminClient();
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+      return jsonError(result.status, result.error);
     }
 
     return NextResponse.json({
@@ -82,6 +83,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Accept invite error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

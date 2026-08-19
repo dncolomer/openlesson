@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Shared workspace-context assembly for TAP / ILE / TAPBench.
  * Drives the real assembler + call-chain wiring (not a reimplementation).
@@ -432,7 +433,7 @@ describe("structural artifacts", () => {
     ).toBe(true);
     expect(existsSync(join(ROOT, "app/api/workspace/map-ground/route.ts"))).toBe(true);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("data-workspace-context-section");
     expect(view).toContain("WorkspaceMapAuthoringPane");
     expect(view).toContain("WorkspaceBlockLocalContextPanel");
@@ -468,7 +469,7 @@ describe("structural artifacts", () => {
     expect(mint).toContain("focusedBlockId: promptCtx.focusedBlockId");
 
     // ILE SessionView pure framer + generate-exercise body pass layers.
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = readSessionViewSurface();
     expect(sessionView).toContain("buildIleProjectChapterExercisePrompt");
     expect(sessionView).toContain("blocks: ilePromptMaterials?.blocks");
     expect(sessionView).toContain("blockLocalContext: ilePromptMaterials?.blockLocalContext");

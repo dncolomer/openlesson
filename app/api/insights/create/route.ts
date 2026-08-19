@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { INSIGHT_AESTHETIC_IMAGES } from "@/lib/insights-server";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       ? thoughts.filter((t: { text?: string }) => t?.text?.trim())
       : [];
     if (sourceThoughts.length === 0) {
-      return NextResponse.json({ error: "At least one thought is required" }, { status: 400 });
+      return jsonError(400, "At least one thought is required");
     }
 
     const thoughtBlock = sourceThoughts
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!ai.success || !ai.data?.title?.trim() || !ai.data?.summary?.trim()) {
-      return NextResponse.json({ error: "Failed to synthesize insight" }, { status: 502 });
+      return jsonError(502, "Failed to synthesize insight");
     }
 
     const aestheticImage =
@@ -61,12 +62,12 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !insight) {
-      return NextResponse.json({ error: error?.message || "Failed to save insight" }, { status: 500 });
+      return jsonError(500, error?.message || "Failed to save insight");
     }
 
     return NextResponse.json({ insight });
   } catch (error) {
     console.error("[insights/create]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

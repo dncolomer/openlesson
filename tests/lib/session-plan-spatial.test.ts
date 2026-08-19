@@ -1,3 +1,4 @@
+import { readMcpSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "fs";
 import path from "path";
@@ -307,10 +308,7 @@ describe("create surface wiring (structural)", () => {
   });
 
   it("welcome UI labels initial chapters and sends initialChapters", () => {
-    const viewSrc = readFileSync(
-      path.join(process.cwd(), "components/SessionView.tsx"),
-      "utf8",
-    );
+    const viewSrc = readSessionViewSurface();
     expect(viewSrc).toContain("INITIAL_CHAPTERS_LEVELS");
     expect(viewSrc).toContain("session.initialChapters");
     expect(viewSrc).toMatch(/initialChapters,/);
@@ -384,10 +382,7 @@ describe("create surface wiring (structural)", () => {
     expect(newWorkspaceSrc).toMatch(/Starting size|Initial chapters/i);
 
     // Public MCP surface no longer offers create_workspace / initial_chapters on create
-    const mcpSrc = readFileSync(
-      path.join(process.cwd(), "lib/pow-api/mcp-proof-of-work-server.ts"),
-      "utf8",
-    );
+    const mcpSrc = readMcpSurface();
     expect(mcpSrc).toContain("rejectProgrammaticWorkspaceCreate");
     expect(mcpSrc).not.toMatch(/name:\s*"create_workspace"/);
 

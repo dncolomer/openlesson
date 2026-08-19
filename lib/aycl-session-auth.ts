@@ -1,4 +1,3 @@
-import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getAyclPurchaseByToken,
@@ -10,14 +9,15 @@ import {
   resolveAyclCapabilities,
   type AyclCapabilities,
 } from "@/lib/aycl-shared";
+import { ayclSubjectId } from "@/lib/workspace-access-policy";
 
 export interface ResolvedAyclContext {
   supabase: ReturnType<typeof createAdminClient>;
   purchase: AyclPurchase;
   workspaceId: string;
   ownerUserId: string;
-  /** Synthetic user for routes that expect a user id (workspace owner). */
-  actingUser: Pick<User, "id">;
+  /** Purchase subject — never the workspace owner User. */
+  subjectId: string;
   accessTier: ReturnType<typeof normalizeAyclAccessTier>;
   capabilities: AyclCapabilities;
 }
@@ -47,13 +47,14 @@ export async function resolveAyclAccess(
 
   const accessTier = normalizeAyclAccessTier(purchase.access_tier);
   const capabilities = resolveAyclCapabilities(accessTier);
+  const subjectId = ayclSubjectId(purchase.id);
 
   return {
     supabase,
     purchase,
     workspaceId: workspace.id,
     ownerUserId: workspace.user_id,
-    actingUser: { id: workspace.user_id },
+    subjectId,
     accessTier,
     capabilities,
   };

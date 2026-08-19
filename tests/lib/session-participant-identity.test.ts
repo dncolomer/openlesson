@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -82,8 +83,8 @@ describe("guest-link + map attribution wiring", () => {
   });
 
   it("TAP and ILE UIs render identity badge", () => {
-    const tap = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
-    const ile = fs.readFileSync(path.join(ROOT, "components/SessionView.tsx"), "utf8");
+    const tap = readTapScoreSurface();
+    const ile = readSessionViewSurface();
     const badge = fs.readFileSync(path.join(ROOT, "components/SessionIdentityBadge.tsx"), "utf8");
     expect(badge).toContain("data-session-identity-badge");
     expect(tap).toContain("SessionIdentityBadge");

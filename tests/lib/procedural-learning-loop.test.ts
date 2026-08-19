@@ -3,6 +3,7 @@
  * simulation generate/CRUD, suggest helpers, Expand Map labels.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -245,9 +246,14 @@ describe("block simulation generate path", () => {
 
   it("block panel auto-generates and deposits to collection", () => {
     const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
+    const addUi = read("components/SimulationCollectionAddButton.tsx");
     expect(panel).toContain("data-simulation-auto-generate");
     expect(panel).toContain("simulation-collection");
-    expect(panel).toContain("action: \"deposit\"");
+    expect(panel).toContain("SimulationCollectionAddButton");
+    expect(panel).toContain("addMany");
+    expect(addUi).toContain("data-simulation-add-to-collection");
+    expect(addUi).toContain('action: "deposit"');
+    expect(addUi).toContain('action: "create"');
     expect(panel).toContain("modifierPrompt");
   });
 });
@@ -299,6 +305,18 @@ describe("simulation collection CRUD + modifier", () => {
       "multi_block",
     );
 
+    const once = depositSimulationGeneration(emptySimulationCollection(), {
+      questions: ["What is entropy?"],
+      exercises: [],
+      origin: { kind: "workspace" },
+    });
+    const twice = depositSimulationGeneration(once, {
+      questions: ["What is entropy?"],
+      exercises: [],
+      origin: { kind: "workspace" },
+    });
+    expect(listSimulationCollectionItems(twice)).toHaveLength(1);
+
     const mod = applySimulationModifierToPrompt("Base prompt", "Be concrete");
     expect(mod).toContain("Base prompt");
     expect(mod).toContain("Be concrete");
@@ -326,7 +344,8 @@ describe("simulation collection CRUD + modifier", () => {
     expect(panel).toContain("data-simulation-modifier");
     expect(panel).toContain('data-simulation-scope="workspace"');
     expect(panel).toContain('scope: "workspace"');
-    expect(panel).toContain("action: \"deposit\"");
+    expect(panel).toContain("SimulationCollectionAddButton");
+    expect(panel).toContain("addMany");
     // Block / multi-block pickers removed from the tab
     expect(panel).not.toContain("data-simulation-scope-block");
     expect(panel).not.toContain("data-simulation-multi-block");
@@ -335,7 +354,8 @@ describe("simulation collection CRUD + modifier", () => {
     const multi = read("components/WorkspaceMultiBlockSimulationPanel.tsx");
     expect(multi).toContain("data-multi-block-simulation");
     expect(multi).toContain("data-simulation-multi-block");
-    expect(multi).toContain("action: \"deposit\"");
+    expect(multi).toContain("SimulationCollectionAddButton");
+    expect(multi).toContain("addMany");
     expect(multi).toContain("multi_block");
 
     const combine = read("components/WorkspaceCombineBlocksPane.tsx");
@@ -509,9 +529,10 @@ describe("suggest from knowledge + simulation", () => {
 
 describe("Expand Map rename + suggest UI", () => {
   it("button and drawer use Explore / Expand Map naming", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
-    expect(grid).toContain("Explore / Expand Map");
-    expect(grid).toContain("data-map-explore-expand-toggle");
+    const grid = readMapGridSurface();
+    expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
+    expect(grid).toContain('data-workspace-mode-toggle-states="build,play,explore"');
+    expect(grid).not.toContain("data-map-explore-expand-toggle");
 
     const pane = read("components/WorkspaceEmptyMapPane.tsx");
     expect(pane).toContain("Expand Map");
@@ -526,7 +547,7 @@ describe("Expand Map rename + suggest UI", () => {
     writeLog(
       "expand-map-ui.log",
       [
-        "button=Explore / Expand Map",
+        "button=Explore (3-state toggle)",
         "drawer_title=Expand Map",
         "suggest_context=knowledge+simulation",
       ].join("\n") + "\n",

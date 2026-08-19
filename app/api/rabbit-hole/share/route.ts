@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export async function POST(request: NextRequest) {
@@ -6,7 +7,7 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
   const { playId } = await request.json();
-  if (typeof playId !== "string") return NextResponse.json({ error: "Invalid play" }, { status: 400 });
+  if (typeof playId !== "string") return jsonError(400, "Invalid play");
 
   const { data: play } = await supabase
     .from("rabbit_hole_plays")
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     .not("completed_at", "is", null)
     .is("shared_at", null)
     .single();
-  if (!play) return NextResponse.json({ error: "Play already shared or not found" }, { status: 400 });
+  if (!play) return jsonError(400, "Play already shared or not found");
 
   const { data: updatedPlay, error: shareError } = await supabase
     .from("rabbit_hole_plays")
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     .is("shared_at", null)
     .select("id")
     .single();
-  if (shareError || !updatedPlay) return NextResponse.json({ error: "Play already shared or not found" }, { status: 400 });
+  if (shareError || !updatedPlay) return jsonError(400, "Play already shared or not found");
 
   const { data: profile } = await supabase.from("profiles").select("rabbit_hole_bonus_plays, rabbit_hole_bonus_points").eq("id", user.id).single();
   const bonusPlays = (profile?.rabbit_hole_bonus_plays ?? 0) + 1;

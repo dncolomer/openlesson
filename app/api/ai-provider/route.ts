@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { getProviderInfo, AVAILABLE_MODELS } from "@/lib/xai-client";
 
 /**
@@ -16,9 +17,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching AI provider info:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch provider info" },
-      { status: 500 }
-    );
+    return jsonError(500, "Failed to fetch provider info");
   }
 }

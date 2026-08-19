@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/private-token";
 import {
@@ -21,7 +22,7 @@ export async function GET(
     const { token: rawToken } = await context.params;
     const token = typeof rawToken === "string" ? rawToken.trim() : "";
     if (!token) {
-      return NextResponse.json({ error: "Token required", code: "validation_error" }, { status: 400 });
+      return jsonError(400, "Token required", "validation_error");
     }
 
     const supabase = createAdminClient();
@@ -35,13 +36,13 @@ export async function GET(
 
     if (error) {
       console.error("[practice-portal] Resolve error:", error);
-      return NextResponse.json({ error: "Failed to resolve portal", code: "internal_error" }, { status: 500 });
+      return jsonError(500, "Failed to resolve portal", "internal_error");
     }
     if (!portal) {
-      return NextResponse.json({ error: "Portal not found", code: "not_found" }, { status: 404 });
+      return jsonError(404, "Portal not found", "not_found");
     }
     if (portal.status !== "active") {
-      return NextResponse.json({ error: "Portal is no longer active", code: "revoked" }, { status: 410 });
+      return jsonError(410, "Portal is no longer active", "revoked");
     }
 
     const { data: workspace } = await supabase
@@ -51,10 +52,10 @@ export async function GET(
       .maybeSingle();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found", code: "not_found" }, { status: 404 });
+      return jsonError(404, "Workspace not found", "not_found");
     }
     if (workspace.archived_at != null) {
-      return NextResponse.json({ error: "Workspace is archived", code: "archived" }, { status: 410 });
+      return jsonError(410, "Workspace is archived", "archived");
     }
 
     const { data: blocks } = await supabase
@@ -82,6 +83,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("[practice-portal] GET error:", error);
-    return NextResponse.json({ error: "Internal server error", code: "internal_error" }, { status: 500 });
+    return jsonError(500, "Internal server error", "internal_error");
   }
 }

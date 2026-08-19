@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -12,7 +13,7 @@ function read(rel: string) {
 
 describe("starter map chrome", () => {
   it("map mounts flag badge when is_start; hooks stable", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(grid).toContain("BlockStarterFlagBadge");
     expect(badges).toContain("data-block-starter-flag");

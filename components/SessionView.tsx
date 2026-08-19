@@ -2,176 +2,44 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FacialDataPoint } from "./FaceTracker";
-import {
-  getSession,
-  addProbe,
-  addProbeToSession,
-  endSession,
-  getIlePostSessionPath,
-  saveSession,
-  pauseSession,
-  resumeSession,
-  updateSessionStatus,
-  getSessionPlan,
-  sessionPlanHasChapters,
-  archiveProbe,
-  toggleProbeFocused,
-  resetSessionProbes,
-  type Session,
-  type SessionPlan,
-  type SessionPlanStep,
-  type Probe,
-  type ToolName,
-  type ToolAction,
-  type RequestType,
-} from "@/lib/storage";
-import { playArchiveSound, playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
-import { formatTime } from "@/lib/utils";
-import { SessionHeliosPanel } from "./SessionHeliosPanel";
-import { ChapterMapPanel } from "./ChapterMapPanel";
+import { pauseSession, type Session, type SessionPlan, type Probe, type ToolName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
-import { useSessionThoughtInterface, type SessionThoughtTracePayload } from "@/lib/useSessionThoughtInterface";
-import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
-import { ProjectThoughtsDualStack } from "@/components/thought-ui/ProjectThoughtsDualStack";
-import { GrokGrokipediaTool } from "./GrokGrokipediaTool";
-import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
-import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
-import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { MobileBlockScreen } from "./MobileBlockScreen";
-import { isSmartphoneClient } from "@/lib/is-smartphone";
+import { useSessionChrome } from "@/components/session-view/use-session-chrome";
+import { useSessionRuntime } from "@/components/session-view/use-session-runtime";
+import { useSessionMutate } from "@/components/session-view/use-session-mutate";
+import { useSessionSpeech } from "@/components/session-view/use-session-speech";
+import { useSessionIdle } from "@/components/session-view/use-session-idle";
+import { useSessionPhase } from "@/components/session-view/use-session-phase";
+import { useSessionHeliosPrep } from "@/components/session-view/use-session-helios-prep";
 import { LoadingStatusMessage } from "./LoadingStatusMessage";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
 import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat } from "@/lib/session-chat-client";
-import { decideIleKeyboardAction } from "@/lib/ile-keyboard-mode";
-import { DataInputTool } from "./DataInputTool";
-import { LogsTool, type LogEntry } from "./LogsTool";
-import { createScreenCapture } from "@/lib/screen-capture";
 import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
-
-import { updateSessionPlan } from "@/lib/storage";
-import type { DeviceStatus } from "@/lib/muse-athena";
-import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
+import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
-// ModelLoadingModal no longer used -- loading UI is inline in welcome modal
-
-import { WorkspaceResourcesPanel } from "./WorkspaceResourcesPanel";
-import { ConfirmDialog } from "./ui/ConfirmDialog";
-import type { TransferHealth } from "@/components/LogsTool";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
-import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
-import {
-  buildIleCanvasUploadItem,
-  buildIleEegUploadItem,
-  buildIleFacialUploadItem,
-  buildIleNotebookUploadItem,
-  buildIleToolEventUploadItem,
-  hashIlePowContent,
-  ILE_EVIDENCE_THRESHOLDS,
-  ILE_POW_DEBOUNCE_MS,
-  meetsCanvasUploadThreshold,
-  meetsEegUploadThreshold,
-  meetsFacialUploadThreshold,
-  meetsNotebookUploadThreshold,
-  totalIleEegSamples,
-} from "@/lib/ile-realtime-pow";
-import {
-  uploadIleEvidenceItem,
-  uploadIleProofOfWork,
-  uploadIleScreenshot,
-  textToBase64,
-} from "@/lib/ile-proof-of-work-client";
-import {
-  buildIleThoughtTracePayload,
-  ILE_TRACE_TOOL_NAME,
-  type IleSystem1Action,
-  type IleSystem2Action,
-} from "@/lib/ile-thought-traces";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
-import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
-import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
-import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
-import { ILE_POW_API_PATHS } from "@/lib/session-pow-api-paths";
-import { isChapterSlotAvailable } from "@/lib/chapter-skill-grid";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
+import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
+import { DEFAULT_INITIAL_CHAPTERS, type InitialChaptersLevel } from "@/lib/initial-chapters";
+import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
+import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
+import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
+import { SessionChrome } from "@/components/session-view/session-chrome";
 import {
-  coerceSpokenLocale,
-  spokenLanguageNames,
-  spokenLocales,
-  toSpeechBcp47,
-  type SpokenLocale,
-} from "@/lib/tutoring-languages";
-import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
-import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
-import {
-  DEFAULT_INITIAL_CHAPTERS,
-  INITIAL_CHAPTERS_LEVELS,
-  type InitialChaptersLevel,
-} from "@/lib/initial-chapters";
-import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
-import { AestheticPicker } from "./AestheticPicker";
-import {
-  applyIleProjectThoughtMutation,
-  buildIleChapterDonePowToolData,
-  buildIleProjectChapterExercisePrompt,
-  emptyIleProjectDualLists,
-  frameIleProjectChapterDescription,
-  ileProjectThoughtsStorageKey,
-  ILE_SESSION_MODE_DEFAULT,
   isIleChapterThoughtsLocked,
   isIleProjectMode,
-  normalizeIleSessionMode,
-  parseIleProjectThoughtsStored,
-  resolveIleSessionModeFromSession,
-  serializeIleProjectThoughts,
-  type ExerciseDualLists,
+  resolveIleDurableSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
-import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
-import {
-  isLowQualityTapbenchExercise,
-  looksLikeTopicOverview,
-} from "@/lib/pow-api/tapbench-exercise-quality";
-import {
-  parseBlockLocalContext,
-  type BlockLocalContextInput,
-  type PromptBlockInventoryItem,
-  type WorkspaceFileContextItem,
-} from "@/lib/prompt-workspace-context";
-import { normalizeUnusableCells } from "@/lib/map-ground-rules";
-import {
-  buildFollowUpChapterDescription,
-  findAdjacentFreeChapterSlot,
-  type ChapterFollowUpSuggestion,
-} from "@/lib/ile-chapter-follow-ups";
-
-
-import { DantesTool } from "./DantesTool";
-
-
-import { NotebookSubmitButton } from "@/components/session/NotebookSubmitButton";
-import {
-  isDuplicateProbe,
-  readErrorResponse,
-  createEmptyTransferHealth,
-  computeBandPowers,
-  CHAPTER_LOAD_DURATION_MS,
-  EEG_SAMPLE_RATE_HZ,
-  EEG_DISPLAY_MAX_SAMPLES,
-  EEG_PERSIST_MAX_SAMPLES,
-  createChapterWorkspace,
-  type ChapterWorkspace,
-} from "@/components/session/sessionViewHelpers";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
-import { useSessionPaneLayout } from "@/lib/useSessionPaneLayout";
-import { shouldAllowChapterLoadClick } from "@/lib/chapter-load-control";
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
 const EMPTY_ENTRY_QUERY_PARAMS: Record<string, string | string[]> = Object.freeze({});
@@ -331,7 +199,46 @@ export function SessionView({
 
   const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
 
+  const [objectives, setObjectives] = useState<string[]>([]);
+  const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
+
+  // Archive/Focus probe state
+  const [archivingProbeId, setArchivingProbeId] = useState<string | null>(null);
+  
+  // Plan complete modal (shown when all steps are done)
+  const [showPlanCompleteModal, setShowPlanCompleteModal] = useState(false);
+
+  // Local inference
+  const [localInferenceEnabled, setLocalInferenceEnabled] = useState(false);
+  const localInferenceEnabledRef = useRef(false);
+  const localContextRef = useRef<LocalContextBuffer | null>(null);
+  const [modelLoadProgress, setModelLoadProgress] = useState<InitProgress | null>(null);
+  const [modelLoadError, setModelLoadError] = useState<string | null>(null);
+  const [webGPUAvailable, setWebGPUAvailable] = useState(false);
+  const [prepStage, setPrepStage] = useState<"plan" | "model" | "done">("plan");
+
+  useEffect(() => {
+    setWebGPUAvailable(LocalInferenceManager.isWebGPUAvailable());
+  }, []);
+
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const handlePauseRef = useRef<() => Promise<void>>(async () => {});
   const {
+    isMobile,
+    userInitial,
+    showTutorialBanner,
+    setShowTutorialBanner,
+    showWelcomePanel,
+    setShowWelcomePanel,
+    isStartingSession,
+    setIsStartingSession,
+    welcomeOpenNonce,
+    helpPreviousLayoutRef,
+    aestheticPackages,
+    aestheticsLoading,
+    selectedAestheticId,
+    setSelectedAestheticId,
+    selectedAesthetic: chromeSelectedAesthetic,
     activeTool,
     setActiveTool,
     prevToolRef,
@@ -341,95 +248,17 @@ export function SessionView({
     applyPaneVisibility,
     ensureVisible,
     applyIleChapterGridStartup,
-  } = useSessionPaneLayout();
-
-  const [userInitial, setUserInitial] = useState("Y");
-  const [objectives, setObjectives] = useState<string[]>([]);
-  const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
-
-  // Archive/Focus probe state
-  const [archivingProbeId, setArchivingProbeId] = useState<string | null>(null);
-  
-  // Plan complete modal (shown when all steps are done)
-  const [showPlanCompleteModal, setShowPlanCompleteModal] = useState(false);
-  // Stop-button confirmation — ending is irreversible so we gate the Stop
-  // click through an explicit warning that also nudges users toward the
-  // non-destructive "pause + back to dashboard" alternative.
-
-
-  // Smartphone / narrow viewport → desktop-only gate (ILE + full sessions)
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(isSmartphoneClient());
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  // Local inference
-  const [localInferenceEnabled, setLocalInferenceEnabled] = useState(false);
-  const localInferenceEnabledRef = useRef(false);
-  const localContextRef = useRef<LocalContextBuffer | null>(null);
-  const [modelLoadProgress, setModelLoadProgress] = useState<InitProgress | null>(null);
-  const [modelLoadError, setModelLoadError] = useState<string | null>(null);
-  const [webGPUAvailable, setWebGPUAvailable] = useState(false);
-  // Combined session prep modal (plan + optional model loading)
-  const [prepStage, setPrepStage] = useState<"plan" | "model" | "done">("plan");
-
-  // Detect WebGPU on mount
-  useEffect(() => {
-    setWebGPUAvailable(LocalInferenceManager.isWebGPUAvailable());
-  }, []);
-
-  // Welcome modal
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
-  const [showTutorialBanner, setShowTutorialBanner] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return localStorage.getItem("tutorial-banner-dismissed") !== "true";
+    shouldBlockTools,
+    handleToolChange,
+  } = useSessionChrome({
+    sessionId: session?.id,
+    showWelcomeModal,
+    isRecording,
+    isPaused,
+    onHelpPauseRef: handlePauseRef,
   });
 
-  // In-panel onboarding guide (3 slides + Start block). Shown the first time
-  // a user lands on a fresh session (no existing probes AND welcome not yet
-  // acknowledged). Clicking Start inside the panel fetches the opening probe.
-  const [showWelcomePanel, setShowWelcomePanel] = useState(false);
-  const [isStartingSession, setIsStartingSession] = useState(false);
-  // Bumped every time we open the welcome panel so the collapse effect
-  // re-fires even if `showWelcomePanel` was already true (e.g. clicking
-  // Help twice in a row without closing in between).
-  const [welcomeOpenNonce, setWelcomeOpenNonce] = useState(0);
-  // Layout snapshot captured on Help click so clicking Play restores
-  // the user's previous pane sizes instead of leaving the tools hidden.
-  const helpPreviousLayoutRef = useRef<{
-    outer: { leftWidth?: number; collapsedSide: null | "left" | "right" };
-    inner: { leftWidth?: number; collapsedSide: null | "left" | "right" };
-  } | null>(null);
-
-  // ILE always opens with the chapter grid tool selected and the tools pane expanded.
-  useEffect(() => {
-    if (!session?.id || showWelcomeModal) return;
-    const id = window.setTimeout(() => {
-      applyIleChapterGridStartup();
-    }, 100);
-    return () => window.clearTimeout(id);
-  }, [session?.id, showWelcomeModal, applyIleChapterGridStartup]);
-
-  // Block ILE tools when not actively monitoring. Also allow interaction
-  // during the in-panel onboarding guide — the user needs to click Start and
-  // optionally Open Session Plan from the welcome surface before recording
-  // has actually started.
-  const shouldBlockTools =
-    session &&
-    !showWelcomeModal &&
-    !showWelcomePanel &&
-    (!isRecording || isPaused);
-
-  // Mobile detection
-
-
   const [isPreparing, setIsPreparing] = useState(false);
-  const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
-  const [aestheticsLoading, setAestheticsLoading] = useState(true);
-  const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
   const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
   /**
    * Whether a persisted chapter map already exists for this session.
@@ -477,350 +306,14 @@ export function SessionView({
 
   /** Durable Learning vs Project mode — prop wins, then session metadata, else learning. */
   const resolvedSessionMode: IleSessionMode = useMemo(() => {
-    if (sessionModeProp !== undefined && sessionModeProp !== null && sessionModeProp !== "") {
-      return normalizeIleSessionMode(sessionModeProp, ILE_SESSION_MODE_DEFAULT);
-    }
-    return resolveIleSessionModeFromSession({
+    return resolveIleDurableSessionMode({
+      sessionModeProp,
       metadata: (session?.metadata as Record<string, unknown> | undefined) ?? null,
     });
   }, [sessionModeProp, session?.metadata]);
   const isProjectMode = isIleProjectMode(resolvedSessionMode);
   const chapterThoughtsLocked =
     isProjectMode && isIleChapterThoughtsLocked(activeStep?.status);
-
-  /** Workspace materials for ILE Project framer + generate-exercise (notes/files/blocks/local). */
-  type IlePromptMaterials = {
-    workspaceId: string | null;
-    workspaceTitle: string | null;
-    workspaceGoal: string | null;
-    rootTopic: string | null;
-    notes: string | null;
-    files: WorkspaceFileContextItem[];
-    blocks: PromptBlockInventoryItem[];
-    unusableCells: Array<{ row: number; col: number }>;
-    focusedBlockId: string | null;
-    blockTitle: string | null;
-    blockDescription: string | null;
-    blockLocalContext: BlockLocalContextInput | null;
-  };
-  const [ilePromptMaterials, setIlePromptMaterials] = useState<IlePromptMaterials | null>(null);
-
-  useEffect(() => {
-    if (!isProjectMode || !session) return;
-    const meta = (session.metadata || {}) as Record<string, unknown>;
-    const workspaceId =
-      typeof meta.workspace_id === "string" && meta.workspace_id.trim()
-        ? meta.workspace_id.trim()
-        : null;
-    if (!workspaceId) return;
-    const focusedBlockId =
-      typeof meta.block_id === "string" && meta.block_id.trim()
-        ? meta.block_id.trim()
-        : typeof meta.focus_block_id === "string" && meta.focus_block_id.trim()
-          ? meta.focus_block_id.trim()
-          : null;
-    let cancelled = false;
-    const supabase = createClient();
-    void (async () => {
-      try {
-        const { data: workspace } = await supabase
-          .from("workspaces")
-          .select("id, title, root_topic, workspace_goal, description, notes, unusable_cells")
-          .eq("id", workspaceId)
-          .maybeSingle();
-        if (cancelled || !workspace) return;
-        const { data: blockRows } = await supabase
-          .from("blocks")
-          .select(
-            "id, title, description, status, is_start, position_x, position_y, span_w, span_h, shape_cells, next_block_ids, lock_until_block_ids, local_context",
-          )
-          .eq("workspace_id", workspaceId)
-          .order("created_at", { ascending: true });
-        const blocks: PromptBlockInventoryItem[] = (blockRows || []).map((n) => ({
-          id: n.id,
-          title: String(n.title || ""),
-          description: (n as { description?: string | null }).description ?? null,
-          status: (n as { status?: string | null }).status ?? null,
-          is_start: (n as { is_start?: boolean | null }).is_start ?? null,
-          position_x: (n as { position_x?: number | null }).position_x ?? null,
-          position_y: (n as { position_y?: number | null }).position_y ?? null,
-          span_w: (n as { span_w?: number | null }).span_w ?? null,
-          span_h: (n as { span_h?: number | null }).span_h ?? null,
-          shape_cells:
-            (n as { shape_cells?: Array<{ dr: number; dc: number }> | null }).shape_cells ??
-            null,
-          next_block_ids: (n as { next_block_ids?: string[] | null }).next_block_ids ?? null,
-          lock_until_block_ids:
-            (n as { lock_until_block_ids?: string[] | null }).lock_until_block_ids ?? null,
-          local_context: parseBlockLocalContext(
-            (n as { local_context?: unknown }).local_context,
-          ),
-        }));
-        const focused =
-          (focusedBlockId && blocks.find((b) => b.id === focusedBlockId)) || null;
-        let files: WorkspaceFileContextItem[] = [];
-        try {
-          const { data: fileRows } = await supabase
-            .from("workspace_files")
-            .select("file_name, mime_type")
-            .eq("workspace_id", workspaceId)
-            .order("created_at", { ascending: false })
-            .limit(12);
-          files = (fileRows || [])
-            .map((f: { file_name?: string | null; mime_type?: string | null }) => ({
-              name: typeof f.file_name === "string" ? f.file_name.trim() : "",
-              mime_type: f.mime_type ?? null,
-            }))
-            .filter((f) => f.name);
-        } catch {
-          files = [];
-        }
-        if (cancelled) return;
-        setIlePromptMaterials({
-          workspaceId,
-          workspaceTitle: workspace.title ?? session.problem ?? null,
-          workspaceGoal:
-            (workspace as { workspace_goal?: string | null }).workspace_goal ?? null,
-          rootTopic: workspace.root_topic ?? null,
-          notes: (workspace as { notes?: string | null }).notes ?? null,
-          files,
-          blocks,
-          unusableCells: normalizeUnusableCells(
-            (workspace as { unusable_cells?: unknown }).unusable_cells,
-          ),
-          focusedBlockId: focused?.id ?? focusedBlockId,
-          blockTitle:
-            focused?.title ||
-            (typeof meta.block_title === "string" ? meta.block_title : null) ||
-            session.problem ||
-            null,
-          blockDescription: focused?.description ?? null,
-          blockLocalContext: focused?.local_context ?? null,
-        });
-      } catch {
-        /* best-effort — pure framer still works with thinner input */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isProjectMode, session]);
-
-  const projectChapterExercisePrompt = useMemo(() => {
-    if (!isProjectMode) return chapterDialoguePrompt;
-    // Prefer the stored chapter text when it is already a real exercise (LLM-authored).
-    // Thin topic wraps still go through the pure framer until upgraded async below.
-    // Pass notes/files/blocks/local/unusable when loaded so ILE uses the shared assembler layers.
-    return buildIleProjectChapterExercisePrompt({
-      chapterDescription: activeStep?.description,
-      blockTitle:
-        ilePromptMaterials?.blockTitle ||
-        (session?.metadata as { block_title?: string } | undefined)?.block_title ||
-        session?.problem,
-      blockDescription: ilePromptMaterials?.blockDescription,
-      workspaceTitle:
-        ilePromptMaterials?.workspaceTitle || session?.problem,
-      workspaceGoal: ilePromptMaterials?.workspaceGoal,
-      notes: ilePromptMaterials?.notes,
-      files: ilePromptMaterials?.files,
-      blocks: ilePromptMaterials?.blocks,
-      focusedBlockId: ilePromptMaterials?.focusedBlockId,
-      blockLocalContext: ilePromptMaterials?.blockLocalContext,
-      unusableCells: ilePromptMaterials?.unusableCells,
-    });
-  }, [
-    isProjectMode,
-    chapterDialoguePrompt,
-    activeStep?.description,
-    session?.metadata,
-    session?.problem,
-    ilePromptMaterials,
-  ]);
-
-  /** LLM-authored exercise override for the active Project Mode chapter (when seed was thin). */
-  const [llmChapterExerciseById, setLlmChapterExerciseById] = useState<
-    Record<string, string>
-  >({});
-  const llmChapterInflightRef = useRef<Set<string>>(new Set());
-
-  const displayProjectChapterExercise =
-    (activeStep?.id && llmChapterExerciseById[activeStep.id]) ||
-    projectChapterExercisePrompt;
-
-  /** When Project Mode chapter text is still a topic catalog / thin wrap, author a real exercise via LLM. */
-  useEffect(() => {
-    if (!isProjectMode || !session?.id || !activeStep?.id) return;
-    const seed = String(activeStep.description || "").trim();
-    if (!seed) return;
-    if (llmChapterExerciseById[activeStep.id]) return;
-    if (llmChapterInflightRef.current.has(activeStep.id)) return;
-    const thin =
-      looksLikeTopicOverview(seed) ||
-      isLowQualityTapbenchExercise(seed, {
-        blockTitle:
-          (session?.metadata as { block_title?: string } | undefined)?.block_title ||
-          session?.problem,
-        blockDescription: seed,
-        workspaceTitle: session?.problem,
-      });
-    // Already a solid exercise — keep as-is (session-plan LLM / prior generate).
-    if (!thin && seed.length > 80) return;
-
-    const stepId = activeStep.id;
-    llmChapterInflightRef.current.add(stepId);
-    void (async () => {
-      try {
-        const res = await fetch("/api/generate-exercise", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: session.id,
-            workspaceId: ilePromptMaterials?.workspaceId || undefined,
-            surface: "ile_project",
-            chapterDescription: seed,
-            blockTitle:
-              ilePromptMaterials?.blockTitle ||
-              (session?.metadata as { block_title?: string } | undefined)?.block_title ||
-              session?.problem,
-            blockDescription: ilePromptMaterials?.blockDescription || undefined,
-            workspaceTitle:
-              ilePromptMaterials?.workspaceTitle || session?.problem,
-            workspaceGoal: ilePromptMaterials?.workspaceGoal || undefined,
-            notes: ilePromptMaterials?.notes || undefined,
-            files: ilePromptMaterials?.files || undefined,
-            blocks: ilePromptMaterials?.blocks || undefined,
-            focusedBlockId: ilePromptMaterials?.focusedBlockId || undefined,
-            blockLocalContext: ilePromptMaterials?.blockLocalContext || undefined,
-            unusableCells: ilePromptMaterials?.unusableCells || undefined,
-            ...guestAccessBody,
-          }),
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as { exercise?: string };
-        const exercise = String(data.exercise || "").trim();
-        if (!exercise) return;
-        setLlmChapterExerciseById((prev) =>
-          prev[stepId] ? prev : { ...prev, [stepId]: exercise },
-        );
-        // Persist upgraded exercise onto the chapter so reloads stay high quality.
-        const plan = sessionPlanRef.current;
-        if (plan) {
-          const nextSteps = plan.steps.map((s) =>
-            s.id === stepId ? { ...s, description: exercise } : s,
-          );
-          void persistPlanSteps(
-            { ...plan, steps: nextSteps },
-            {
-              toolAction: "chapter_exercise_upgrade",
-              toolData: { stepId, source: "generate-exercise" },
-            },
-          );
-        }
-      } catch {
-        /* keep pure framer */
-      } finally {
-        llmChapterInflightRef.current.delete(stepId);
-      }
-    })();
-  }, [
-    isProjectMode,
-    session?.id,
-    session?.problem,
-    session?.metadata,
-    activeStep?.id,
-    activeStep?.description,
-    llmChapterExerciseById,
-    guestAccessBody,
-    ilePromptMaterials,
-  ]);
-
-  // Project Mode dual-list thoughts keyed by chapter id (stash + solution).
-  const [projectThoughtsByChapter, setProjectThoughtsByChapter] = useState<
-    Record<string, ExerciseDualLists>
-  >({});
-  const projectThoughtsByChapterRef = useRef(projectThoughtsByChapter);
-  useEffect(() => {
-    projectThoughtsByChapterRef.current = projectThoughtsByChapter;
-  }, [projectThoughtsByChapter]);
-
-  /** After Done: follow-up topics keyed by completed chapter id. */
-  const [chapterFollowUpsById, setChapterFollowUpsById] = useState<
-    Record<string, ChapterFollowUpSuggestion[]>
-  >({});
-  const [chapterFollowUpsLoadingId, setChapterFollowUpsLoadingId] = useState<string | null>(null);
-  const [chapterFollowUpsErrorById, setChapterFollowUpsErrorById] = useState<
-    Record<string, string>
-  >({});
-  const followUpsFetchedRef = useRef<Set<string>>(new Set());
-
-  const activeProjectChapterId = activeStep?.id ?? activeChapterKey ?? "default";
-  const activeProjectLists =
-    projectThoughtsByChapter[activeProjectChapterId] ?? emptyIleProjectDualLists();
-
-  useEffect(() => {
-    if (!isProjectMode || !session?.id) return;
-    const key = ileProjectThoughtsStorageKey(session.id, activeProjectChapterId);
-    try {
-      const stored = parseIleProjectThoughtsStored(
-        typeof window !== "undefined" ? window.localStorage.getItem(key) : null,
-      );
-      if (!stored) return;
-      setProjectThoughtsByChapter((prev) => ({
-        ...prev,
-        [activeProjectChapterId]: stored,
-      }));
-    } catch {
-      /* ignore */
-    }
-  }, [activeProjectChapterId, isProjectMode, session?.id]);
-
-  useEffect(() => {
-    if (!isProjectMode || !session?.id) return;
-    const hasContent =
-      activeProjectLists.stash.length > 0 || activeProjectLists.submitted.length > 0;
-    if (!hasContent) return;
-    const key = ileProjectThoughtsStorageKey(session.id, activeProjectChapterId);
-    try {
-      window.localStorage.setItem(key, serializeIleProjectThoughts(activeProjectLists));
-    } catch {
-      /* ignore */
-    }
-  }, [activeProjectChapterId, activeProjectLists, isProjectMode, session?.id]);
-  const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
-  const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
-  const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string | null; user_metadata?: Record<string, unknown> } | null } }) => {
-      const user = data.user;
-      if (!user) return;
-      const name =
-        (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
-        (typeof user.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
-        user.email?.split("@")[0] ||
-        "";
-      const initial = name.charAt(0).toUpperCase();
-      if (initial) setUserInitial(initial);
-    });
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAestheticsLoading(true);
-    fetchAestheticPackages()
-      .then((packages) => {
-        if (cancelled) return;
-        setAestheticPackages(packages);
-        setSelectedAestheticId((current) => current ?? packages[0]?.id ?? null);
-      })
-      .finally(() => {
-        if (!cancelled) setAestheticsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // (Prep material state used to live here for the now-removed
   // Practice/Theory side panels. That content has been merged into
@@ -851,98 +344,142 @@ export function SessionView({
     prevToolRef.current = activeTool;
   }, [activeTool, session?.id, session?.startedAt]);
 
-  // Step action handlers — Resources (Theory), Practice, Ask Helios.
-  const fetchAndInjectPrepIntoChat = async (
-    type: "reading" | "exercise",
-    stepDescription: string,
-    userStub: string,
-    fallbackTitle: string,
-  ) => {
-    if (!session?.problem) return;
-    const targetChapterKey = activeChapterKey;
-    ensureVisible("tools");
-    setActiveTool("notebook");
-
-    const userMsg: ChatMessage = {
-      id: `${Date.now()}-u`,
-      role: "user",
-      content: userStub,
-    };
-    const placeholderId = `${Date.now()}-a`;
-    const placeholder: ChatMessage = {
-      id: placeholderId,
-      role: "assistant",
-      content: "",
-      pending: true,
-    };
-
-    updateChapterWorkspace(targetChapterKey, workspace => ({
-      chatMessages: [...workspace.chatMessages, userMsg, placeholder],
-    }));
-
-    try {
-      const url =
-        `/api/prep-material?topic=${encodeURIComponent(session.problem)}` +
-        `&type=${type}` +
-        `&step=${encodeURIComponent(stepDescription)}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`prep-material ${response.status}`);
-      const data = (await response.json()) as { title?: string; content?: string };
-
-      const title = (data.title ?? fallbackTitle).trim();
-      const body = (data.content ?? "").trim();
-      const content = body ? `${title}\n\n${body}` : title;
-
-      updateChapterWorkspace(targetChapterKey, workspace => ({
-        chatMessages: workspace.chatMessages.map(m =>
-          m.id === placeholderId
-            ? { ...m, content, pending: false }
-            : m,
-        ),
-      }));
-    } catch (err) {
-      console.error("Prep material → chat error:", err);
-      updateChapterWorkspace(targetChapterKey, workspace => ({
-        chatMessages: workspace.chatMessages.map(m =>
-          m.id === placeholderId
-            ? {
-                ...m,
-                content:
-                  type === "exercise"
-                    ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
-                    : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
-                pending: false,
-              }
-            : m,
-        ),
-      }));
-    }
-  };
-
-  const handleStepResources = (stepDescription: string) => {
-    void fetchAndInjectPrepIntoChat(
-      "reading",
-      stepDescription,
-      `Give me the theory for this step: "${stepDescription}"`,
-      "Theory",
-    );
-  };
-
-  const handleStepPractice = (stepDescription: string) => {
-    void fetchAndInjectPrepIntoChat(
-      "exercise",
-      stepDescription,
-      `Give me practice tasks for this step: "${stepDescription}"`,
-      "Practice",
-    );
-  };
-
-  const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
-    const targetChapterKey = activeChapterKey;
-    updateChapterWorkspace(targetChapterKey, { pendingChatMessage: message });
-  }, [activeChapterKey, updateChapterWorkspace]);
-
   const handlePowInterruptionRef = useRef<(interruption: ProofOfWorkApiInterruption | undefined) => void>(() => {});
+
+  const sessionRef = useRef<Session | null>(null);
+  useSessionHeliosPrep({
+    session,
+    sessionRef,
+    sessionPlanRef,
+    activeChapterKey,
+    activeChapterIndexRef,
+    ensureVisible,
+    setActiveTool,
+    updateChapterWorkspace,
+    setChatMessages,
+    tutoringLanguage,
+    isPaused,
+    isRecording,
+    setIsPaused,
+  });
+  const {
+    museStatus,
+    museError,
+    museDeviceStatus,
+    eegChannelData,
+    bandPowers,
+    isWebcamEnabled,
+    setIsWebcamEnabled,
+    webcamError,
+    latestFacialData,
+    logs,
+    setLogs,
+    logsRef,
+    transferHealth,
+    isScreenCapturing,
+    setIsScreenCapturing,
+    screenshotCount,
+    screenCaptureRef,
+    museStatusRef,
+    isWebcamEnabledRef,
+    whiteboardDataRef,
+    notebookContentRef,
+    handleFacialData,
+    handleFaceError,
+    handleConnectMuse,
+    handleDisconnectMuse,
+    addSessionLog,
+    recordTransferEvent,
+    getWorkspaceId,
+    logTool,
+    logToolRef,
+    flushRemainingIlePow,
+    powSessionEnabled,
+    powSessionEnabledRef,
+    ilePowContext,
+    handleStartScreenCapture,
+    handleStopScreenCapture,
+  } = useSessionRuntime({
+    sessionRef,
+    sessionId: session?.id,
+    sessionBlockId:
+      typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
+    ileToken,
+    entryQueryParams,
+    localInferenceEnabledRef,
+    localContextRef,
+    whiteboardData,
+    notebookContent,
+    activeChapterKey,
+    isRecording,
+    isPaused,
+    showWelcomePanel,
+    handlePowInterruptionRef,
+  });
+
+  const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
+  const {
+    persistPlanSteps,
+    handleActiveChapterIndexChange,
+    handleEnsureChapterPositions,
+    handleLoadChapter,
+    handleAddChapter,
+    handleUpdateChapter,
+    chapterReloadNonce,
+    fetchChapterFollowUps,
+    handleSelectChapterFollowUp,
+    handleMarkChapterDone,
+    chapterFollowUpsById,
+    chapterFollowUpsLoadingId,
+    chapterFollowUpsErrorById,
+    ilePromptMaterials,
+    displayProjectChapterExercise,
+    projectThoughtsByChapter,
+    setProjectThoughtsByChapter,
+    projectThoughtsByChapterRef,
+    activeProjectChapterId,
+    activeProjectLists,
+  } = useSessionMutate({
+    session,
+    sessionRef,
+    sessionPlanRef,
+    setSessionPlan,
+    resolvedSessionMode,
+    isProjectMode,
+    chapterThoughtsLocked,
+    activeStep,
+    activeChapterKey,
+    activeChapterIndexRef,
+    setActiveChapterIndex,
+    chapterFocusSinceRef,
+    chapterLoading,
+    setChapterLoading,
+    setChapterLoadingIndex,
+    chapterWorkspaces,
+    updateChapterWorkspace,
+    guestAccessBody,
+    logToolRef,
+    t,
+    tutoringLanguage,
+    locale,
+    setHeliosTurnMode,
+    isRecording,
+    isPaused,
+    setIsPaused,
+    setShowPlanCompleteModal,
+    chapterDialoguePrompt,
+  });
+  const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
+  const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
+  const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
+
+  const bumpUserActivityRef = useRef<() => void>(() => {});
+  const { handlePowInterruption, clearPendingInterruption } = useSessionIdle({
+    activeChapterKey,
+    updateChapterWorkspace,
+    setHeliosTurnMode,
+    handlePowInterruptionRef,
+  });
 
   const submitHeliosChatMessageNow = useCallback(async (
     message: string,
@@ -1017,137 +554,55 @@ export function SessionView({
     void submitHeliosChatMessageNow(text, imageDataUrl).finally(() => setPendingChatMessage(null));
   }, [pendingChatMessage, setPendingChatMessage, submitHeliosChatMessageNow]);
 
-  const addProbeToHeliosChat = useCallback((text: string) => {
-    const content = text.trim();
-    if (!content) return;
-    const prefix = translateWithLocale(tutoringLanguage, "heliosChat.probeLeadIn");
-    const conversationalContent = `${prefix}\n\n${content}`;
-    setChatMessages(prev => [
-      ...prev,
-      {
-        id: `probe_chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        role: "assistant",
-        content: conversationalContent,
-      },
-    ]);
-  }, []);
+  const {
+    sessionThoughtInterface,
+    sessionThoughtHistory,
+    handleProjectStash,
+    handleProjectSubmitToSolution,
+    handleProjectPromote,
+    handleProjectDemote,
+    mutateActiveProjectThoughts,
+    handleSubmitToHelios,
+  } = useSessionSpeech({
+    powSessionEnabled,
+    ilePowContext,
+    handlePowInterruption,
+    getWorkspaceId,
+    sessionRef,
+    sessionId: session?.id,
+    ileToken,
+    entryQueryParams,
+    recordTransferEvent,
+    tutoringLanguage,
+    isProjectMode,
+    chapterThoughtsLocked,
+    activeStep,
+    activeChapterKey,
+    projectThoughtsByChapterRef,
+    setProjectThoughtsByChapter,
+    setHeliosTurnMode,
+    flushRemainingIlePow,
+    submitHeliosChatMessageNow,
+    bumpUserActivityRef,
+    clearPendingInterruption,
+    chapterWorkspaces,
+    activeWorkspace,
+    updateChapterWorkspace,
+    whiteboardDataRef,
+    notebookContentRef,
+    logTool,
+  });
 
-  const handleStepAskHelios = (stepDescription: string) => {
-    // Make sure the tools pane is visible. The `activeTool` effect only
-    // reopens the pane when the value actually changes, so if "chat" was
-    // already the active tool before the user closed the tools pane,
-    // calling setActiveTool("chat") here is a no-op and wouldn't reopen it.
-    openHeliosChatWithMessage(`Help me understand and work through this step: "${stepDescription}"`);
-  };
-
-  const handleStuckAction = useCallback((action: StuckAction) => {
-    const currentStep =
-      sessionPlanRef.current?.steps?.[activeChapterIndexRef.current]?.description
-      || sessionRef.current?.problem
-      || "this step";
-
-    if (action === "theory") {
-      handleStepResources(currentStep);
-      return;
-    }
-
-    if (action === "practice") {
-      handleStepPractice(currentStep);
-      return;
-    }
-
-    if (action === "canvas") {
-      ensureVisible("tools");
-      setActiveTool("canvas");
-      return;
-    }
-
-    if (action === "notebook") {
-      ensureVisible("tools");
-      setActiveTool("notebook");
-      return;
-    }
-
-    if (action === "break") {
-      if (isRecordingRef.current && !isPaused) {
-        setIsPaused(true);
-        const currentSession = sessionRef.current;
-        if (currentSession) {
-          pauseSession(currentSession.id).catch(err => console.error("Failed to pause for stuck break:", err));
-        }
-      }
-      setChatMessages(prev => [...prev, {
-        id: `stuck_break_${Date.now()}`,
-        role: "assistant",
-        content: "Take two minutes away from the problem. When you come back, write the single smallest thing you know for sure, then we will restart from there.",
-      }]);
-      return;
-    }
-
-    openHeliosChatWithMessage(`I'm stuck on this step: "${currentStep}". Help me identify the next small move without giving away the answer.`);
-  }, [ensureVisible, handleStepPractice, handleStepResources, isPaused, openHeliosChatWithMessage]);
-
-  // Muse EEG
-  const [museStatus, setMuseStatus] = useState<"disconnected" | "connecting" | "connected" | "streaming">("disconnected");
-  const [museError, setMuseError] = useState<string | null>(null);
-  const [museDeviceStatus, setMuseDeviceStatus] = useState<DeviceStatus | null>(null);
-  const [eegChannelData, setEegChannelData] = useState<Map<string, number[]>>(new Map());
-  const [bandPowers, setBandPowers] = useState<{ delta: number; theta: number; alpha: number; beta: number; gamma: number } | null>(null);
-   
-  const museClientRef = useRef<any>(null);
-  const eegIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const bandIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const eegBufferRef = useRef<Map<string, number[]>>(new Map());
-  const eegPendingBufferRef = useRef<Map<string, number[]>>(new Map());
-  const eegPendingStartMsRef = useRef<number | null>(null);
-  const eegLastSampleMsRef = useRef<number | null>(null);
-  const museDeviceStatusRef = useRef<DeviceStatus | null>(null);
-
-  // Webcam
-  const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
-  const [webcamError, setWebcamError] = useState<string | null>(null);
-  const [latestFacialData, setLatestFacialData] = useState<FacialDataPoint | null>(null);
-
-  // Facial Data Tracking
-  const [facialDataBuffer, setFacialDataBuffer] = useState<FacialDataPoint[]>([]);
-  const facialBufferRef = useRef<FacialDataPoint[]>([]);
-
-  // Logs
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const logsRef = useRef<LogEntry[]>([]);
-
-  // Refs for interval callbacks
-  const sessionRef = useRef<Session | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedSecondsRef = useRef(0);
   const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
   const consumeSpeechTranscriptEntriesRef = useRef<() => SpeechTranscriptEntry[]>(() => []);
   const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
-  const eegChunkIndexRef = useRef(0);
-  const facialChunkIndexRef = useRef(0);
-  const powSessionEnabledRef = useRef(false);
-  const lastUploadedCanvasHashRef = useRef<string | null>(null);
-  const lastUploadedNotebookHashRef = useRef<string | null>(null);
-  const canvasPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notebookPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bandPowersRef = useRef(bandPowers);
-  const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
-  const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
-  const whiteboardDataRef = useRef(whiteboardData);
-  const notebookContentRef = useRef(notebookContent);
   const activeToolRef = useRef(activeTool);
   const objectivesRef = useRef(objectives);
   const isRecordingRef = useRef(isRecording);
   const autoAdvanceRef = useRef(autoAdvance);
-  const museStatusRef = useRef(museStatus);
-  const isWebcamEnabledRef = useRef(isWebcamEnabled);
 
-  // Screen capture
-  const screenCaptureRef = useRef<{ captureNow: () => Promise<Blob | null>; start: () => Promise<boolean>; stop: () => void; isCapturing: () => boolean; getStream: () => MediaStream | null } | null>(null);
-  const [isScreenCapturing, setIsScreenCapturing] = useState(false);
-  const [screenshotCount, setScreenshotCount] = useState(0);
-
-  // Pause/Resume state tracking
   const wasRecordingRef = useRef(false);
   const wasScreenCapturingRef = useRef(false);
   const wasWebcamEnabledRef = useRef(false);
@@ -1156,1415 +611,122 @@ export function SessionView({
   const pausedScreenStreamRef = useRef<MediaStream | null>(null);
   const pausedWebcamStreamRef = useRef<MediaStream | null>(null);
 
-  const tryUploadFacialBatchRef = useRef<(force?: boolean) => void>(() => {});
-
-  const handleFacialData = useCallback((data: FacialDataPoint) => {
-    setLatestFacialData(data);
-    facialBufferRef.current.push(data);
-    if (facialBufferRef.current.length > 120) {
-      facialBufferRef.current = facialBufferRef.current.slice(-120);
-    }
-    if (meetsFacialUploadThreshold(facialBufferRef.current.length)) {
-      tryUploadFacialBatchRef.current();
-    }
-    // Feed into local context buffer if local inference is active
-    if (localInferenceEnabledRef.current && localContextRef.current) {
-      localContextRef.current.addFacialData({
-        confusionScore: data.confusionScore ?? 0,
-        frustrationScore: data.frustrationScore ?? 0,
-        emotion: data.emotion === "confused" ? 0.8 : data.emotion === "frustrated" ? 0.7 : 0.2,
-        attention: data.attentionLevel === "high" ? 0.9 : data.attentionLevel === "medium" ? 0.5 : 0.2,
-      });
-    }
-  }, []);
-
-  const handleFaceError = useCallback((error: string) => {
-    setWebcamError(error);
-    const entry: LogEntry = {
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      level: "error",
-      message: error,
-      source: "Face Tracker"
-    };
-    logsRef.current.push(entry);
-    setLogs(prev => [...prev, entry]);
-  }, []);
-
-  // Keep refs in sync
-  useEffect(() => { whiteboardDataRef.current = whiteboardData; }, [whiteboardData]);
-  useEffect(() => { notebookContentRef.current = notebookContent; }, [notebookContent]);
-  useEffect(() => { bandPowersRef.current = bandPowers; }, [bandPowers]);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { objectivesRef.current = objectives; }, [objectives]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
   useEffect(() => { localInferenceEnabledRef.current = localInferenceEnabled; }, [localInferenceEnabled]);
-  useEffect(() => { museStatusRef.current = museStatus; }, [museStatus]);
-  useEffect(() => { museDeviceStatusRef.current = museDeviceStatus; }, [museDeviceStatus]);
-  useEffect(() => { isWebcamEnabledRef.current = isWebcamEnabled; }, [isWebcamEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
 
-  const handleActiveChapterIndexChange = useCallback((index: number) => {
-    const now = Date.now();
-    chapterFocusSinceRef.current[index] = now;
-    setActiveChapterIndex(index);
-    activeChapterIndexRef.current = index;
-    const step = sessionPlanRef.current?.steps?.[index];
-    void logToolRef.current?.("session_plan", "chapter_focus", {
-      stepIndex: index,
-      stepId: step?.id,
-      stepDescription: step?.description?.slice(0, 120),
-    });
-  }, []);
-
-  const persistPlanSteps = useCallback(async (
-    updatedPlan: SessionPlan,
-    options?: { toolAction?: ToolAction; toolData?: Record<string, unknown> },
-  ) => {
-    setSessionPlan(updatedPlan);
-    sessionPlanRef.current = updatedPlan;
-    try {
-      await updateSessionPlan(updatedPlan.id, {
-        steps: updatedPlan.steps,
-        currentStepIndex: updatedPlan.currentStepIndex,
-      });
-    } catch (err) {
-      console.warn("[SessionView] Failed to sync plan:", err);
-    }
-    if (options?.toolAction) {
-      void logToolRef.current?.("session_plan", options.toolAction, options.toolData ?? {});
-    }
-  }, []);
-
-  const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
-    void persistPlanSteps(plan, {
-      toolAction: "chapter_position",
-      toolData: {
-        via: "auto_grid_placement",
-        stepCount: plan.steps.length,
-      },
-    });
-  }, [persistPlanSteps]);
-
-  const [chapterReloadNonce, setChapterReloadNonce] = useState(0);
-
-  const handleLoadChapter = useCallback(async (index: number) => {
-    if (!shouldAllowChapterLoadClick({ chapterLoading })) return;
-    const currentPlan = sessionPlanRef.current;
-    const step = currentPlan?.steps?.[index];
-    if (!currentPlan || !step) return;
-
-    const isReload = index === activeChapterIndexRef.current;
-    const toolAction = isReload ? "chapter_reload" : "chapter_load";
-    const toolData = buildIleChapterLoadPowToolData({
-      stepIndex: index,
-      stepId: step.id,
-      stepDescription: step.description,
-      sessionMode: resolvedSessionMode,
-      reload: isReload,
-    });
-
-    const showLoading = isReload || CHAPTER_LOAD_DURATION_MS > 0;
-    if (showLoading) {
-      setChapterLoading(true);
-      setChapterLoadingIndex(index);
-    }
-
-    const updatedSteps = currentPlan.steps.map((s, i) => {
-      if (i === index && s.status === "pending") return { ...s, status: "in_progress" as const };
-      return s;
-    });
-    const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: index };
-    await persistPlanSteps(updatedPlan, { toolAction, toolData });
-    handleActiveChapterIndexChange(index);
-
-    if (isReload) {
-      setChapterReloadNonce((n) => n + 1);
-      if (!isProjectMode && session) {
-        setHeliosTurnMode("responding");
-        const chapterKey = step.id;
-        const placeholderId = `chapter-reload-${Date.now()}`;
-        const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-        updateChapterWorkspace(chapterKey, (workspace) => ({
-          chatMessages: [
-            ...workspace.chatMessages,
-            { id: placeholderId, role: "assistant", content: "", pending: true },
-          ],
-        }));
-        try {
-          const { ok, data, errorMessage } = await postIleSessionChat({
-              problem: session.problem,
-              activeStepIndex: index,
-              activeStepId: step.id,
-              activeStepDescription: step.description,
-              sessionPlan: updatedPlan,
-              sessionId: session.id,
-              tutoringLanguage,
-              ...guestAccessBody,
-              messages: [
-                ...existingMessages.map((m) => ({
-                  role: m.role,
-                  content: m.content,
-                  imageDataUrl: m.imageDataUrl,
-                })),
-                {
-                  role: "user",
-                  content: `Reload this chapter and continue coaching from here: ${step.description}`,
-                },
-              ],
-            });
-          const content =
-            ok && typeof data?.message === "string" && data.message.trim()
-              ? data.message.trim()
-              : errorMessage || t("heliosChat.errorMessage");
-          updateChapterWorkspace(chapterKey, (workspace) => ({
-            chatMessages: workspace.chatMessages.map((message) =>
-              message.id === placeholderId ? { ...message, content, pending: false } : message,
-            ),
-          }));
-        } catch {
-          updateChapterWorkspace(chapterKey, (workspace) => ({
-            chatMessages: workspace.chatMessages.map((message) =>
-              message.id === placeholderId
-                ? { ...message, content: t("heliosChat.errorMessage"), pending: false }
-                : message,
-            ),
-          }));
-        } finally {
-          setHeliosTurnMode("idle");
-        }
-      }
-    } else if (CHAPTER_LOAD_DURATION_MS > 0) {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
-      });
-    }
-
-    if (showLoading) {
-      setChapterLoading(false);
-      setChapterLoadingIndex(null);
-    }
-  }, [
-    chapterLoading,
-    chapterWorkspaces,
-    guestAccessBody,
-    handleActiveChapterIndexChange,
-    isProjectMode,
-    persistPlanSteps,
-    resolvedSessionMode,
+  const {
+    checkMicrophone,
+    startRecording,
+    stopRecording,
+    handlePause,
+    handleResume,
+    handleMute,
+    handleReset,
+    pauseAndGoToDashboard,
+    handleClose,
+    handleWelcomePlay,
+    handleArchiveProbe,
+    handleToggleFocus,
+    handleConfirmEnd,
+    handleConfirmSettings,
+    handleContinueWithoutInference,
+    handleWelcomeReadyStart,
+  } = useSessionPhase({
     session,
-    t,
-    tutoringLanguage,
-    updateChapterWorkspace,
-  ]);
-
-  const handleAddChapter = useCallback(async (description: string, position: { row: number; col: number }) => {
-    const currentPlan = sessionPlanRef.current;
-    if (!currentPlan) return;
-    const trimmed = description.trim();
-    if (!trimmed) return;
-    // Project Mode: LLM-author a real longer-horizon exercise (not a topic-list wrap).
-    let framed = trimmed;
-    if (isProjectMode) {
-      try {
-        const res = await fetch("/api/generate-exercise", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: sessionRef.current?.id || session?.id,
-            workspaceId: ilePromptMaterials?.workspaceId || undefined,
-            surface: "ile_project",
-            chapterDescription: trimmed,
-            seed: trimmed,
-            blockTitle:
-              ilePromptMaterials?.blockTitle ||
-              (session?.metadata as { block_title?: string } | undefined)?.block_title ||
-              session?.problem,
-            blockDescription: ilePromptMaterials?.blockDescription || undefined,
-            workspaceTitle:
-              ilePromptMaterials?.workspaceTitle || session?.problem,
-            workspaceGoal: ilePromptMaterials?.workspaceGoal || undefined,
-            notes: ilePromptMaterials?.notes || undefined,
-            files: ilePromptMaterials?.files || undefined,
-            blocks: ilePromptMaterials?.blocks || undefined,
-            focusedBlockId: ilePromptMaterials?.focusedBlockId || undefined,
-            blockLocalContext: ilePromptMaterials?.blockLocalContext || undefined,
-            unusableCells: ilePromptMaterials?.unusableCells || undefined,
-            ...guestAccessBody,
-          }),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { exercise?: string };
-          if (data.exercise?.trim()) framed = data.exercise.trim();
-          else framed = frameIleProjectChapterDescription(trimmed);
-        } else {
-          framed = frameIleProjectChapterDescription(trimmed);
-        }
-      } catch {
-        framed = frameIleProjectChapterDescription(trimmed);
-      }
-    }
-    if (!isChapterSlotAvailable(currentPlan, position.row, position.col)) {
-      throw new Error("That grid slot is already occupied.");
-    }
-    const newStep: SessionPlanStep = {
-      id: crypto.randomUUID(),
-      description: framed,
-      status: "pending",
-      type: "task",
-      order: currentPlan.steps.length,
-      position_x: position.col,
-      position_y: position.row,
-    };
-    const updatedPlan = {
-      ...currentPlan,
-      steps: [...currentPlan.steps, newStep],
-    };
-    await persistPlanSteps(updatedPlan, {
-      toolAction: "chapter_add",
-      toolData: buildIleChapterAddPowToolData({
-        stepId: newStep.id,
-        description: framed,
-        position_x: position.col,
-        position_y: position.row,
-        sessionMode: resolvedSessionMode,
-        exercise: isProjectMode,
-        sourceTopic: trimmed,
-      }),
-    });
-  }, [
-    persistPlanSteps,
-    isProjectMode,
-    resolvedSessionMode,
-    session?.id,
-    session?.problem,
-    session?.metadata,
+    setSession,
+    sessionRef,
+    sessionId,
+    guestAccessKind,
+    ayclToken,
+    ileToken,
     guestAccessBody,
-    ilePromptMaterials,
-  ]);
+    entryParamsKey,
+    router,
+    t,
+    isRecording,
+    setIsRecording,
+    isPaused,
+    setIsPaused,
+    elapsedSeconds,
+    setElapsedSeconds,
+    elapsedSecondsRef,
+    stream,
+    setStream,
+    setError,
+    tutoringLanguage,
+    setTutoringLanguage,
+    setLanguageConfirmed,
+    setSessionPlan,
+    sessionPlanRef,
+    setPlanLoading,
+    setPlanError,
+    setChapterPlanStatus,
+    setRegenerateChapters,
+    regenerateChapters,
+    objectives,
+    setObjectives,
+    setObjectiveStatuses,
+    setActiveProbe,
+    setViewingProbeIndex,
+    setArchivingProbeId,
+    isPreparing,
+    setIsPreparing,
+    setPrepStage,
+    setModelLoadError,
+    setModelLoadProgress,
+    localInferenceEnabled,
+    setLocalInferenceEnabled,
+    localInferenceEnabledRef,
+    localContextRef,
+    initialChapters,
+    resolvedSessionMode,
+    setShowWelcomeModal,
+    setShowWelcomePanel,
+    setIsStartingSession,
+    applyIleChapterGridStartup,
+    helpPreviousLayoutRef,
+    resizablePaneRef,
+    setPaneVisibility,
+    timerRef,
+    muteTimerRef,
+    micStreamRef,
+    setMicStatus,
+    setIsMuted,
+    setMuteRemaining,
+    setIsSaving,
+    setShowEndDialog,
+    whiteboardData,
+    notebookContent,
+    handleDisconnectMuse,
+    handleConnectMuse,
+    flushRemainingIlePow,
+    isScreenCapturing,
+    isWebcamEnabled,
+    setIsWebcamEnabled,
+    setIsScreenCapturing,
+    museStatus,
+    screenCaptureRef,
+    wasRecordingRef,
+    wasScreenCapturingRef,
+    wasWebcamEnabledRef,
+    wasMuseStreamingRef,
+    isRecordingRef,
+    pausedAudioStreamRef,
+    pausedScreenStreamRef,
+    pausedWebcamStreamRef,
+    handlePauseRef,
+  });
 
-  const handleUpdateChapter = useCallback(async (stepId: string, description: string) => {
-    const currentPlan = sessionPlanRef.current;
-    if (!currentPlan) return;
-    const trimmed = description.trim();
-    if (!trimmed) return;
-    const updatedSteps = currentPlan.steps.map((step) =>
-      step.id === stepId ? { ...step, description: trimmed } : step,
-    );
-    const updatedPlan = { ...currentPlan, steps: updatedSteps };
-    await persistPlanSteps(updatedPlan, {
-      toolAction: "chapter_edit",
-      toolData: {
-        stepId,
-        description: trimmed.slice(0, 120),
-      },
-    });
-  }, [persistPlanSteps]);
 
   const loadingChapterLabel = chapterLoadingIndex != null
     ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
     : null;
-
-  useEffect(() => {
-    if (!session || !isRecording || isPaused) return;
-    const interval = window.setInterval(() => {
-      void updateSessionStatus(session.id, "active", elapsedSecondsRef.current * 1000);
-    }, 15000);
-    return () => window.clearInterval(interval);
-  }, [session?.id, isRecording, isPaused]);
-
-  // Listen for probe-revealed custom events (e.g. from legacy probe UI)
-  useEffect(() => {
-    const handleProbeRevealed = (e: Event) => {
-      const probeId = (e as CustomEvent).detail;
-      setSession((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          probes: prev.probes.map((p) =>
-            p.id === probeId ? { ...p, isRevealed: true } : p
-          ),
-        };
-      });
-      if (sessionRef.current) {
-        sessionRef.current = {
-          ...sessionRef.current,
-          probes: sessionRef.current.probes.map((p) =>
-            p.id === probeId ? { ...p, isRevealed: true } : p
-          ),
-        };
-      }
-    };
-
-    const handleProbeStarToggled = (e: Event) => {
-      const { probeId, starred } = (e as CustomEvent).detail;
-      setSession((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          probes: prev.probes.map((p) =>
-            p.id === probeId ? { ...p, starred } : p
-          ),
-        };
-      });
-    };
-
-    window.addEventListener("probe-revealed", handleProbeRevealed);
-    window.addEventListener("probe-star-toggled", handleProbeStarToggled);
-
-    return () => {
-      window.removeEventListener("probe-revealed", handleProbeRevealed);
-      window.removeEventListener("probe-star-toggled", handleProbeStarToggled);
-    };
-  }, []);
-
-  // Load session on mount from Supabase + fire opening probe early
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const s =
-        guestAccessKind === "aycl" && ayclToken
-          ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
-          : guestAccessKind === "ile" && ileToken
-            ? await (await import("@/lib/ile-link-storage")).getIleLinkSession(ileToken, sessionId)
-            : await getSession(sessionId);
-      if (cancelled) return;
-      if (s) {
-        setSession(s);
-        sessionRef.current = s;
-        setElapsedSeconds(Math.floor((s.durationMs || 0) / 1000));
-        
-        // Reset language confirmation for new session
-        setLanguageConfirmed(false);
-        
-        // Load tutoring language from session metadata if set
-        if (s.metadata?.tutoringLanguage) {
-          setTutoringLanguage(coerceSpokenLocale(String(s.metadata.tutoringLanguage)));
-        }
-        
-        // Set paused state if session was paused
-        if (s.status === "paused") {
-          setIsPaused(true);
-        }
-        
-        // Load objectives from session or generate new ones
-        let loadedObjectives: string[] = [];
-        if (s.objectives && s.objectives.length > 0) {
-          loadedObjectives = s.objectives;
-        } else {
-          try {
-            const objRes = await fetch("/api/generate-objectives", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                problem: s.problem,
-                ...guestAccessBody,
-              }),
-            });
-            if (!cancelled && objRes.ok) {
-              const { objectives: generatedObjectives } = await objRes.json();
-              if (generatedObjectives && generatedObjectives.length > 0) {
-                loadedObjectives = generatedObjectives;
-              }
-            }
-          } catch { /* objectives are optional */ }
-        }
-        if (loadedObjectives.length > 0) {
-          setObjectives(loadedObjectives);
-          // Initialize all objectives with blue status
-          setObjectiveStatuses(loadedObjectives.map(() => "blue"));
-        }
-
-        // Load or create session plan - but wait for language confirmation first
-        setPlanLoading(true);
-        setPlanError(null);
-        setChapterPlanStatus("unknown");
-        setRegenerateChapters(false);
-        try {
-          // Cheap existence check — do not download full steps JSON just to
-          // set chapterPlanStatus. Hydrate the map only when chapters exist.
-          const hasChapters = await sessionPlanHasChapters(s.id);
-          if (hasChapters) {
-            const existingPlan = await getSessionPlan(s.id);
-            if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
-              setSessionPlan(existingPlan);
-              sessionPlanRef.current = existingPlan;
-              if (!cancelled) setChapterPlanStatus("exists");
-            } else if (!cancelled) {
-              setChapterPlanStatus("empty");
-            }
-          } else if (!cancelled) {
-            setChapterPlanStatus("empty");
-          }
-          // Don't create new plan here - wait for user to confirm language first
-        } catch (err) {
-          console.warn("Session plan loading failed:", err);
-          if (!cancelled) setChapterPlanStatus("empty");
-        } finally {
-          if (!cancelled) setPlanLoading(false);
-        }
-
-        // Fire opening probe (now uses session plan context if available) - but only if session already has probes
-        // Opening probe generation is now handled after language confirmation
-        if (s.probes.length > 0) {
-          // Session already has probes (e.g. page refresh) — show the latest
-          const lastProbe = s.probes[s.probes.length - 1];
-          setActiveProbe(lastProbe);
-          setViewingProbeIndex(s.probes.length - 1);
-        }
-      } else {
-        router.push("/");
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-    // guestAccessBody is derived from tokens + entryParamsKey; include key not object identity.
-  }, [sessionId, router, guestAccessKind, ayclToken, ileToken, entryParamsKey, guestAccessBody]);
-
-  // ---- Muse EEG ----
-  const handleConnectMuse = async () => {
-    handleDisconnectMuse();
-    setMuseStatus("connecting");
-    setMuseError(null);
-    try {
-      const { MuseAthenaClient } = await import("@/lib/muse-athena");
-      const muse = new MuseAthenaClient();
-
-      muse.onStatusChange((status: "disconnected" | "connecting" | "connected" | "streaming") => {
-        setMuseStatus(status);
-      });
-
-      muse.onDeviceStatus((status: DeviceStatus) => {
-        setMuseDeviceStatus(status);
-      });
-
-      muse.onDisconnected(() => {
-        if (eegIntervalRef.current) { clearInterval(eegIntervalRef.current); eegIntervalRef.current = null; }
-        if (bandIntervalRef.current) { clearInterval(bandIntervalRef.current); bandIntervalRef.current = null; }
-        museClientRef.current = null;
-        setMuseStatus("disconnected");
-        setMuseError("Muse disconnected. Reconnect it from the Muse tab.");
-      });
-
-      muse.onEEG((sample: { channels: Record<string, number[]> }) => {
-        const now = Date.now();
-        if (eegPendingStartMsRef.current === null) eegPendingStartMsRef.current = now;
-        eegLastSampleMsRef.current = now;
-
-        for (const [channelName, samples] of Object.entries(sample.channels)) {
-          const existing = eegBufferRef.current.get(channelName) || [];
-          existing.push(...samples);
-          if (existing.length > EEG_DISPLAY_MAX_SAMPLES) {
-            eegBufferRef.current.set(channelName, existing.slice(-EEG_DISPLAY_MAX_SAMPLES));
-          } else {
-            eegBufferRef.current.set(channelName, existing);
-          }
-
-          const pending = eegPendingBufferRef.current.get(channelName) || [];
-          pending.push(...samples);
-          if (pending.length > EEG_PERSIST_MAX_SAMPLES) {
-            eegPendingBufferRef.current.set(channelName, pending.slice(-EEG_PERSIST_MAX_SAMPLES));
-          } else {
-            eegPendingBufferRef.current.set(channelName, pending);
-          }
-        }
-      });
-
-      await muse.connect();
-      museClientRef.current = muse;
-      setMuseStatus("connected");
-
-      await muse.startStreaming();
-      setMuseStatus("streaming");
-
-      eegIntervalRef.current = setInterval(() => {
-        setEegChannelData(new Map(eegBufferRef.current));
-      }, 100);
-
-      bandIntervalRef.current = setInterval(() => {
-        const af7 = eegBufferRef.current.get("AF7");
-        const af8 = eegBufferRef.current.get("AF8");
-        if (!af7 || af7.length < 256 || !af8 || af8.length < 256) return;
-        const powers = computeBandPowers(af7.slice(-256), af8.slice(-256));
-        setBandPowers(powers);
-        if (localInferenceEnabledRef.current && localContextRef.current) {
-          localContextRef.current.addEEGData(powers);
-        }
-      }, 1000);
-    } catch (err: unknown) {
-      setMuseStatus("disconnected");
-      const error = err as Error;
-      if (error?.name === "NotFoundError" && error?.message?.includes("cancelled")) return;
-      setMuseError(error?.message || "Connection failed.");
-    }
-  };
-
-  const handleDisconnectMuse = () => {
-    if (museClientRef.current) {
-      try { museClientRef.current.disconnect(); } catch {}
-      museClientRef.current = null;
-    }
-    if (eegIntervalRef.current) { clearInterval(eegIntervalRef.current); eegIntervalRef.current = null; }
-    if (bandIntervalRef.current) { clearInterval(bandIntervalRef.current); bandIntervalRef.current = null; }
-    eegBufferRef.current.clear();
-    eegPendingBufferRef.current.clear();
-    eegPendingStartMsRef.current = null;
-    eegLastSampleMsRef.current = null;
-    setEegChannelData(new Map());
-    setBandPowers(null);
-    setMuseDeviceStatus(null);
-    setMuseStatus("disconnected");
-  };
-
-  const addSessionLog = useCallback((entry: Omit<LogEntry, "id">) => {
-    const logEntry: LogEntry = { ...entry, id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` };
-    logsRef.current.push(logEntry);
-    if (logsRef.current.length > 500) {
-      logsRef.current = logsRef.current.slice(-400);
-    }
-    setLogs([...logsRef.current]);
-  }, []);
-
-  const recordTransferEvent = useCallback(
-    (channel: keyof TransferHealth, saved: boolean, error?: string) => {
-      transferHealthRef.current[channel].sent++;
-      if (saved) transferHealthRef.current[channel].saved++;
-      else transferHealthRef.current[channel].failed++;
-      setTransferHealth({ ...transferHealthRef.current });
-      if (!saved && error) {
-        addSessionLog({
-          timestamp: Date.now(),
-          level: "warning",
-          source: channel,
-          message: error,
-        });
-      }
-    },
-    [addSessionLog],
-  );
-
-  const getWorkspaceId = useCallback(() => {
-    const workspaceId = sessionRef.current?.metadata?.workspace_id;
-    return typeof workspaceId === "string" && workspaceId ? workspaceId : undefined;
-  }, []);
-
-  const uploadPowItem = useCallback(
-    async (item: IleProofOfWorkUploadItem, channel: keyof TransferHealth) => {
-      const workspaceId = getWorkspaceId();
-      const currentSession = sessionRef.current;
-      if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
-
-      const result = await uploadIleEvidenceItem(
-        workspaceId,
-        currentSession.id,
-        item,
-        ileToken,
-        entryQueryParams,
-      );
-      recordTransferEvent(channel, result.ok, result.error);
-      if (result.ok && result.interruption) {
-        handlePowInterruptionRef.current(result.interruption);
-      }
-    },
-    [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
-  );
-
-  const uploadScreenshotPow = useCallback(
-    async (blob: Blob, timestampMs: number) => {
-      const workspaceId = getWorkspaceId();
-      const currentSession = sessionRef.current;
-      if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
-
-      const result = await uploadIleScreenshot(
-        workspaceId,
-        currentSession.id,
-        { blob, timestampMs },
-        ileToken,
-        entryQueryParams,
-      );
-      recordTransferEvent("screenshots", result.ok, result.error);
-      if (result.ok) {
-        setScreenshotCount((count) => count + 1);
-        if (result.interruption) {
-          handlePowInterruptionRef.current(result.interruption);
-        }
-      }
-    },
-    [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
-  );
-
-  const tryUploadFacialBatch = useCallback(
-    (force = false) => {
-      const currentSession = sessionRef.current;
-      if (!currentSession || !powSessionEnabledRef.current) return;
-      if (!meetsFacialUploadThreshold(facialBufferRef.current.length, force)) return;
-
-      const data = facialBufferRef.current.splice(0);
-      const item = buildIleFacialUploadItem(currentSession.id, data);
-      void uploadPowItem(item, "facial");
-    },
-    [uploadPowItem],
-  );
-
-  const consumePendingEegSamples = useCallback(() => {
-    const channels: Record<string, number[]> = {};
-    for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
-      channels[ch] = samples.slice();
-    }
-    return channels;
-  }, []);
-
-  const clearConsumedEegSamples = useCallback((channels: Record<string, number[]>) => {
-    for (const [ch, savedSamples] of Object.entries(channels)) {
-      const current = eegPendingBufferRef.current.get(ch) || [];
-      const remaining = current.slice(savedSamples.length);
-      if (remaining.length > 0) {
-        eegPendingBufferRef.current.set(ch, remaining);
-      } else {
-        eegPendingBufferRef.current.delete(ch);
-      }
-    }
-    if (eegPendingBufferRef.current.size === 0) {
-      eegPendingStartMsRef.current = null;
-      eegLastSampleMsRef.current = null;
-    }
-  }, []);
-
-  const tryUploadPendingEegChunk = useCallback(
-    (force = false) => {
-      const currentSession = sessionRef.current;
-      if (!currentSession || !powSessionEnabledRef.current) return;
-      if (museStatusRef.current !== "streaming" || eegPendingBufferRef.current.size === 0) return;
-
-      const channels = consumePendingEegSamples();
-      const sampleCount = totalIleEegSamples(channels);
-      if (!meetsEegUploadThreshold(sampleCount, force)) return;
-
-      const item = buildIleEegUploadItem(currentSession.id, {
-        channels,
-        bandPowers: bandPowersRef.current,
-        sampleRateHz: EEG_SAMPLE_RATE_HZ,
-        startedAtMs: eegPendingStartMsRef.current ?? Date.now(),
-        endedAtMs: eegLastSampleMsRef.current ?? Date.now(),
-        sampleCounts: Object.fromEntries(
-          Object.entries(channels).map(([ch, samples]) => [ch, samples.length]),
-        ),
-        deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
-        deviceName: museClientRef.current?.deviceName,
-        timestampMs: eegLastSampleMsRef.current ?? Date.now(),
-      });
-      clearConsumedEegSamples(channels);
-      void uploadPowItem(item, "eeg");
-    },
-    [clearConsumedEegSamples, consumePendingEegSamples, uploadPowItem],
-  );
-
-  const uploadCanvasPowNow = useCallback(
-    (force = false) => {
-      const currentSession = sessionRef.current;
-      const data = whiteboardDataRef.current;
-      if (!currentSession || !data || !powSessionEnabledRef.current) return;
-      if (!meetsCanvasUploadThreshold(data.length, force)) return;
-
-      const hash = hashIlePowContent(data);
-      if (hash === lastUploadedCanvasHashRef.current) return;
-      lastUploadedCanvasHashRef.current = hash;
-
-      void uploadPowItem(buildIleCanvasUploadItem(currentSession.id, data), "tools");
-    },
-    [uploadPowItem],
-  );
-
-  const uploadNotebookPowNow = useCallback(
-    (force = false) => {
-      const currentSession = sessionRef.current;
-      const content = notebookContentRef.current?.trim() || "";
-      if (!currentSession || !content || !powSessionEnabledRef.current) return;
-      if (!meetsNotebookUploadThreshold(content.length, force)) return;
-
-      const hash = hashIlePowContent(content);
-      if (hash === lastUploadedNotebookHashRef.current) return;
-      lastUploadedNotebookHashRef.current = hash;
-
-      void uploadPowItem(buildIleNotebookUploadItem(currentSession.id, content), "tools");
-    },
-    [uploadPowItem],
-  );
-
-  const scheduleCanvasPowUpload = useCallback(() => {
-    if (canvasPowDebounceRef.current) {
-      clearTimeout(canvasPowDebounceRef.current);
-    }
-    canvasPowDebounceRef.current = setTimeout(() => {
-      canvasPowDebounceRef.current = null;
-      uploadCanvasPowNow();
-    }, ILE_POW_DEBOUNCE_MS);
-  }, [uploadCanvasPowNow]);
-
-  const scheduleNotebookPowUpload = useCallback(() => {
-    if (notebookPowDebounceRef.current) {
-      clearTimeout(notebookPowDebounceRef.current);
-    }
-    notebookPowDebounceRef.current = setTimeout(() => {
-      notebookPowDebounceRef.current = null;
-      uploadNotebookPowNow();
-    }, ILE_POW_DEBOUNCE_MS);
-  }, [uploadNotebookPowNow]);
-
-  const flushRemainingIlePow = useCallback(
-    async (options?: { force?: boolean }) => {
-      const force = options?.force ?? false;
-      if (canvasPowDebounceRef.current) {
-        clearTimeout(canvasPowDebounceRef.current);
-        canvasPowDebounceRef.current = null;
-      }
-      if (notebookPowDebounceRef.current) {
-        clearTimeout(notebookPowDebounceRef.current);
-        notebookPowDebounceRef.current = null;
-      }
-      uploadCanvasPowNow(force);
-      uploadNotebookPowNow(force);
-      tryUploadFacialBatch(force);
-      tryUploadPendingEegChunk(force);
-    },
-    [tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow, uploadNotebookPowNow],
-  );
-
-  const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
-  // Speech + PoW uploads arm only while the learner is actively in-session.
-  // Returning users who skip the welcome panel must still call startRecording
-  // on entry — otherwise Helios shows "Speech capture off" with no way to arm.
-  const powSessionEnabled = isIleSpeechCaptureEnabled({
-    isRecording,
-    isPaused,
-    showWelcomePanel,
-  });
-
-  useEffect(() => {
-    powSessionEnabledRef.current = powSessionEnabled;
-    if (!powSessionEnabled) {
-      void flushRemainingIlePow({ force: true });
-    }
-  }, [powSessionEnabled, flushRemainingIlePow]);
-
-  useEffect(() => {
-    lastUploadedCanvasHashRef.current = null;
-    lastUploadedNotebookHashRef.current = null;
-  }, [session?.id, activeChapterKey]);
-
-  useEffect(() => {
-    if (!powSessionEnabled) return;
-    scheduleCanvasPowUpload();
-  }, [powSessionEnabled, whiteboardData, scheduleCanvasPowUpload]);
-
-  useEffect(() => {
-    if (!powSessionEnabled) return;
-    scheduleNotebookPowUpload();
-  }, [powSessionEnabled, notebookContent, scheduleNotebookPowUpload]);
-
-  useEffect(() => {
-    if (!powSessionEnabled || museStatus !== "streaming") return;
-    const interval = window.setInterval(() => {
-      tryUploadPendingEegChunk();
-    }, 3_000);
-    return () => window.clearInterval(interval);
-  }, [museStatus, powSessionEnabled, tryUploadPendingEegChunk]);
-
-  const ilePowContext = useMemo(
-    () => ({
-      workspaceId: getWorkspaceId() ?? undefined,
-      sessionId: session?.id ?? null,
-      // Shareable ILE guests authenticate PoW routes with the private link token.
-      privateToken: ileToken || undefined,
-      blockId:
-        typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
-      entryQueryParams,
-    }),
-    [getWorkspaceId, session?.id, session?.metadata?.block_id, ileToken, entryQueryParams],
-  );
-
-  const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
-    useCallback(
-      ({ message }) => {
-        const chapterKey = activeChapterKey;
-        updateChapterWorkspace(chapterKey, (workspace) => ({
-          chatMessages: [
-            ...workspace.chatMessages,
-            { id: `int_${Date.now()}`, role: "assistant", content: message },
-          ],
-        }));
-        setHeliosTurnMode("interruption");
-      },
-      [activeChapterKey, updateChapterWorkspace],
-    ),
-  );
-
-  const handlePowInterruption = useCallback(
-    (interruption: ProofOfWorkApiInterruption | undefined) => {
-      if (interruption === undefined) return;
-      applyInterruption(interruption);
-    },
-    [applyInterruption],
-  );
-
-  useEffect(() => {
-    handlePowInterruptionRef.current = handlePowInterruption;
-  }, [handlePowInterruption]);
-
-  const notifySpeechResultRef = useRef<(text: string) => void>(() => {});
-  const bumpUserActivityRef = useRef<() => void>(() => {});
-
-  const {
-    isTranscriptionActive,
-    notifySpeechResult,
-    flushSpeechSegment,
-    resetSpeechTracking,
-  } = useTapSpeechProofOfWork(
-    powSessionEnabled,
-    ilePowContext,
-    handlePowInterruption,
-    ILE_POW_API_PATHS.speech,
-  );
-
-  useEffect(() => {
-    notifySpeechResultRef.current = notifySpeechResult;
-  }, [notifySpeechResult]);
-
-  const uploadIleThoughtTrace = useCallback(
-    async (payload: SessionThoughtTracePayload) => {
-      const workspaceId = getWorkspaceId();
-      const currentSession = sessionRef.current;
-      if (!workspaceId || !currentSession) return;
-
-      const tracePayload = buildIleThoughtTracePayload({
-        traceType: payload.traceType,
-        action: payload.action as IleSystem1Action | IleSystem2Action,
-        sessionId: currentSession.id,
-        workspaceId,
-        thoughtId: payload.thoughtId,
-        thoughtIds: payload.thoughtIds,
-        chainId: payload.chainId,
-        text: payload.text,
-        originalText: payload.originalText,
-        combined: payload.combined,
-        timestampMs: payload.timestampMs,
-      });
-
-      const fileName = `ile-trace-${payload.traceType}-${payload.action}-${payload.thoughtId || Date.now()}.json`;
-      const result = await uploadIleProofOfWork({
-        workspaceId,
-        sessionId: currentSession.id,
-        type: "tool",
-        mime_type: "application/json",
-        data: textToBase64(JSON.stringify(tracePayload, null, 2)),
-        file_name: fileName,
-        timestamp_ms: payload.timestampMs ?? Date.now(),
-        tool_name: ILE_TRACE_TOOL_NAME,
-        tool_action: `${payload.traceType}:${payload.action}`,
-        metadata: {
-          trace_type: payload.traceType,
-          action: payload.action,
-          thought_id: payload.thoughtId ?? null,
-          thought_ids: payload.thoughtIds ?? null,
-          chain_id: payload.chainId ?? null,
-          text: payload.text ?? null,
-          original_text: payload.originalText ?? null,
-          combined: payload.combined ?? false,
-        },
-        ...(ileToken ? { ileToken } : {}),
-        ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
-          ? { entryQueryParams }
-          : {}),
-      });
-      recordTransferEvent("tools", result.ok, result.error);
-      if (result.ok) {
-        handlePowInterruption(result.interruption);
-      }
-    },
-    [getWorkspaceId, recordTransferEvent, handlePowInterruption, ileToken, entryQueryParams],
-  );
-
-  const logToolRef = useRef<
-    ((toolName: ToolName, action: ToolAction, metadata?: Record<string, unknown>) => Promise<void>) | null
-  >(null);
-
-  const logTool = useCallback(
-    async (
-      toolName: ToolName,
-      action: ToolAction,
-      metadata: Record<string, unknown> = {},
-    ) => {
-      const currentSession = sessionRef.current;
-      if (!currentSession) return;
-      const now = Date.now();
-      const elapsedMs = currentSession.startedAt
-        ? now - new Date(currentSession.startedAt).getTime()
-        : 0;
-
-      if (powSessionEnabledRef.current) {
-        const item = buildIleToolEventUploadItem(currentSession.id, {
-          toolName,
-          action,
-          timestampMs: now,
-          metadata,
-        });
-        void uploadPowItem(item, "tools");
-      }
-
-      const metaKeys = Object.keys(metadata);
-      let metaStr = "";
-      if (metaKeys.length > 0) {
-        try {
-          const compact: Record<string, unknown> = {};
-          for (const k of metaKeys) {
-            const v = metadata[k];
-            if (typeof v === "string" && v.length > 60) {
-              compact[k] = `${v.slice(0, 60)}… (${v.length}c)`;
-            } else if (Array.isArray(v)) {
-              compact[k] = `Array(${v.length})`;
-            } else {
-              compact[k] = v;
-            }
-          }
-          metaStr = ` ${JSON.stringify(compact).slice(0, 160)}`;
-        } catch {
-          metaStr = ` [${metaKeys.join(", ")}]`;
-        }
-      }
-
-      addSessionLog({
-        timestamp: now,
-        level: "info",
-        source: "tool",
-        message: `${toolName}/${action} @${Math.round(elapsedMs / 1000)}s${metaStr}`,
-      });
-    },
-    [addSessionLog, uploadPowItem],
-  );
-
-  useEffect(() => {
-    logToolRef.current = logTool;
-  }, [logTool]);
-
-  useEffect(() => {
-    tryUploadFacialBatchRef.current = tryUploadFacialBatch;
-  }, [tryUploadFacialBatch]);
-
-  const logSessionThoughtTrace = useCallback(
-    (payload: SessionThoughtTracePayload) => {
-      void uploadIleThoughtTrace(payload);
-    },
-    [uploadIleThoughtTrace],
-  );
-
-  const sessionSpeechLang = toSpeechBcp47(tutoringLanguage);
-
-  const logProjectThoughtTrace = useCallback(
-    (
-      traceType: "system1" | "system2",
-      action: IleSystem1Action | IleSystem2Action,
-      thought: { id: string; text: string; chainId: string; timestamp: number },
-    ) => {
-      void logSessionThoughtTrace({
-        traceType,
-        action,
-        thoughtId: thought.id,
-        chainId: thought.chainId,
-        text: thought.text,
-        timestampMs: thought.timestamp,
-      });
-    },
-    [logSessionThoughtTrace],
-  );
-
-  const mutateActiveProjectThoughts = useCallback(
-    (mutation: Parameters<typeof applyIleProjectThoughtMutation>[2]) => {
-      const chapterId = activeStep?.id ?? activeChapterKey ?? "default";
-      const status = activeStep?.status;
-      const current =
-        projectThoughtsByChapterRef.current[chapterId] ?? emptyIleProjectDualLists();
-      const result = applyIleProjectThoughtMutation(current, status, mutation);
-      if (result.rejected === "chapter_locked" || result.rejected === "invalid") {
-        return result;
-      }
-      setProjectThoughtsByChapter((prev) => ({
-        ...prev,
-        [chapterId]: result.lists,
-      }));
-      if (result.thought) {
-        if (mutation.type === "stash") {
-          logProjectThoughtTrace(
-            "system1",
-            mutation.auto ? "auto_stash" : "pause_finalize",
-            result.thought,
-          );
-        } else if (mutation.type === "demote") {
-          logProjectThoughtTrace("system2", "remove", result.thought);
-        } else {
-          logProjectThoughtTrace("system2", "send", result.thought);
-        }
-      }
-      return result;
-    },
-    [activeStep?.id, activeStep?.status, activeChapterKey, logProjectThoughtTrace],
-  );
-
-  const sessionThoughtInterface = useSessionThoughtInterface({
-    enabled: powSessionEnabled && !(isProjectMode && chapterThoughtsLocked),
-    speechLang: sessionSpeechLang,
-    sessionId: session?.id,
-    onLogTrace: (payload) => {
-      // Project Mode dual-list path owns PoW traces for stash/solution.
-      if (isProjectMode) return;
-      logSessionThoughtTrace(payload);
-    },
-    onSpeechTranscript: (text) => notifySpeechResultRef.current(text),
-    onUserActivity: () => bumpUserActivityRef.current(),
-    onSendToProbe: async (text) => {
-      if (isProjectMode) {
-        // Never open Helios dialogue path in Project Mode (keyboard Enter still hits this).
-        mutateActiveProjectThoughts({ type: "submit_direct", text });
-        return;
-      }
-      setHeliosTurnMode("idle");
-      await flushRemainingIlePow();
-      await submitHeliosChatMessageNow(text);
-    },
-  });
-
-  const handleProjectStash = useCallback((providedText?: string) => {
-    if (chapterThoughtsLocked) return;
-    const text = (
-      providedText ||
-      sessionThoughtInterface.getFormingText?.() ||
-      sessionThoughtInterface.crystallizableText ||
-      ""
-    ).trim();
-    if (!text) return;
-    sessionThoughtInterface.clearCurrentTranscription();
-    mutateActiveProjectThoughts({ type: "stash", text });
-  }, [
-    chapterThoughtsLocked,
-    sessionThoughtInterface,
-    mutateActiveProjectThoughts,
-  ]);
-
-  const handleProjectSubmitToSolution = useCallback(() => {
-    if (chapterThoughtsLocked) return;
-    const text = (
-      sessionThoughtInterface.getFormingText?.() ||
-      sessionThoughtInterface.crystallizableText ||
-      ""
-    ).trim();
-    if (!text) return;
-    sessionThoughtInterface.clearCurrentTranscription();
-    mutateActiveProjectThoughts({ type: "submit_direct", text });
-  }, [
-    chapterThoughtsLocked,
-    sessionThoughtInterface,
-    mutateActiveProjectThoughts,
-  ]);
-
-  const handleProjectPromote = useCallback(
-    (thoughtId: string) => {
-      mutateActiveProjectThoughts({ type: "promote", thoughtId });
-    },
-    [mutateActiveProjectThoughts],
-  );
-
-  const handleProjectDemote = useCallback(
-    (thoughtId: string) => {
-      mutateActiveProjectThoughts({ type: "demote", thoughtId });
-    },
-    [mutateActiveProjectThoughts],
-  );
-
-  // Project Mode: Del/Enter go to dual stacks (not Helios). Hook keydown still fires send for Enter
-  // with onSendToProbe → solution; Del uses hook stash which we skip logging for — intercept Del.
-  useEffect(() => {
-    if (!isProjectMode || !powSessionEnabled) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      const action = decideIleKeyboardAction({
-        mode: "project",
-        key: event.key,
-      });
-      if (action === "project_stash" && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        handleProjectStash();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [isProjectMode, powSessionEnabled, handleProjectStash]);
-
-  const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
-    powSessionEnabled,
-    ilePowContext,
-    handlePowInterruption,
-    {
-      speechText: sessionThoughtInterface.crystallizableText,
-      isTranscriptionActive,
-    },
-    ILE_POW_API_PATHS.idle,
-  );
-
-  useEffect(() => {
-    bumpUserActivityRef.current = bumpUserActivity;
-  }, [bumpUserActivity]);
-
-  useEffect(() => {
-    if (!powSessionEnabled) {
-      clearPendingInterruption();
-      flushSpeechSegment();
-      resetIdleTracking();
-      resetSpeechTracking();
-      setHeliosTurnMode("idle");
-    }
-  }, [
-    powSessionEnabled,
-    clearPendingInterruption,
-    flushSpeechSegment,
-    resetIdleTracking,
-    resetSpeechTracking,
-  ]);
-
-  const sessionThoughtHistory = useMemo(
-    () => sessionThoughtInterface.thoughts.slice().reverse(),
-    [sessionThoughtInterface.thoughts],
-  );
-
-  const handleSubmitToHelios = useCallback(
-    async (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => {
-      const targetChapterKey = activeChapterKey;
-      const targetWorkspace = chapterWorkspaces[targetChapterKey] ?? activeWorkspace;
-      const targetNotebookContent = targetWorkspace.notebookContent;
-      const targetCanvasData = canvasDataUrl || targetWorkspace.whiteboardData || null;
-      if (toolName === "canvas" && canvasDataUrl) {
-        whiteboardDataRef.current = canvasDataUrl;
-        updateChapterWorkspace(targetChapterKey, { whiteboardData: canvasDataUrl });
-      } else if (toolName === "canvas") {
-        whiteboardDataRef.current = targetCanvasData;
-      } else {
-        notebookContentRef.current = targetNotebookContent;
-      }
-
-      // Project Mode: no Helios chat — notebook/canvas submit becomes a Solution stack card.
-      if (isProjectMode) {
-        if (chapterThoughtsLocked) return;
-
-        let solutionText = "";
-        if (toolName === "notebook") {
-          const content = targetNotebookContent.trim();
-          if (!content) return;
-          solutionText =
-            content.length > 1800
-              ? `Notebook notes:\n${content.slice(0, 1800)}…`
-              : `Notebook notes:\n${content}`;
-          updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
-        } else {
-          if (!targetCanvasData) return;
-          // Keep a compact marker (full PNG lives in chapter workspace / PoW).
-          solutionText = `Canvas diagram submitted (${new Date().toLocaleString()})`;
-          updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
-        }
-
-        void logTool(toolName, "submit_to_solution", {
-          ...(toolName === "notebook"
-            ? { contentLength: targetNotebookContent.length }
-            : { hasCanvas: true }),
-          session_mode: "project",
-        });
-
-        mutateActiveProjectThoughts({ type: "submit_direct", text: solutionText });
-
-        try {
-          await flushRemainingIlePow();
-        } catch (err) {
-          console.warn("[SubmitToSolution] pow flush failed:", err);
-        }
-        return;
-      }
-
-      const metadata: Record<string, unknown> = {};
-      if (toolName === "notebook") {
-        metadata.contentLength = targetNotebookContent.length;
-      } else {
-        metadata.hasCanvas = !!targetCanvasData;
-      }
-      void logTool(toolName, "submit_to_helios", metadata);
-
-      try {
-        await flushRemainingIlePow();
-      } catch (err) {
-        console.warn("[SubmitToHelios] pow flush failed:", err);
-      }
-
-      if (toolName === "canvas") {
-        updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
-        const imageDataUrl = targetCanvasData || undefined;
-        void submitHeliosChatMessageNow(
-          "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
-          imageDataUrl,
-        );
-      } else {
-        updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
-        const content = targetNotebookContent.trim();
-        if (content) {
-          void submitHeliosChatMessageNow(
-            `Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`,
-          );
-        }
-      }
-    },
-    [
-      isProjectMode,
-      chapterThoughtsLocked,
-      activeChapterKey,
-      activeWorkspace,
-      chapterWorkspaces,
-      logTool,
-      flushRemainingIlePow,
-      submitHeliosChatMessageNow,
-      updateChapterWorkspace,
-      mutateActiveProjectThoughts,
-    ],
-  );
-
-  const checkMicrophone = async () => {
-    setMicStatus("checking");
-    setError(null);
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000,
-        },
-      });
-      micStreamRef.current = mediaStream;
-      setMicStatus("ready");
-    } catch (err) {
-      setMicStatus("denied");
-      setError(t('session.micDenied'));
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      setError(null);
-
-      // Request mic for browser speech recognition (transcripts only — no audio storage).
-      let mediaStream: MediaStream | null = micStreamRef.current;
-      try {
-        if (!mediaStream || mediaStream.getTracks().some(t => t.readyState === "ended")) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 48000,
-            },
-          });
-        }
-        micStreamRef.current = null;
-        setStream(mediaStream);
-      } catch (micErr) {
-        console.warn("[SessionView] Mic unavailable, starting session without live speech:", micErr);
-        setError(t('session.micNotFound'));
-        mediaStream = null;
-        micStreamRef.current = null;
-        setStream(null);
-      }
-
-      // Always start the session regardless of mic availability
-      setIsRecording(true);
-      setIsPaused(false);
-
-      // Sync DB status to active
-      if (session) {
-        updateSessionStatus(session.id, "active").catch(() => {});
-      }
-
-      const startTime = Date.now() - (elapsedSeconds * 1000);
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
-
-    } catch (err) {
-      console.error("[SessionView] startRecording failed:", err);
-      setError(t('session.micError'));
-    }
-  };
-
-  const stopRecording = async () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    // Clean up local inference if active
-    if (localInferenceEnabledRef.current) {
-      LocalInferenceManager.getInstance().dispose();
-      localContextRef.current?.clear();
-    }
-
-    await flushRemainingIlePow({ force: true });
-
-    if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
-    setIsRecording(false);
-    setIsSaving(true);
-    if (!session) return;
-
-    const finalSession = endSession(session, elapsedSeconds * 1000);
-    finalSession.hasAudio = false;
-    finalSession.metadata = {
-      ...finalSession.metadata,
-      whiteboardData: whiteboardData || undefined,
-      notebookData: notebookContent || undefined,
-    };
-
-    if (guestAccessKind === "aycl" && ayclToken) {
-      const { saveAyclSession } = await import("@/lib/aycl-storage");
-      await saveAyclSession(ayclToken, finalSession);
-    } else if (guestAccessKind === "ile" && ileToken) {
-      const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
-      await saveIleLinkSession(ileToken, finalSession);
-    } else {
-      await saveSession(finalSession);
-    }
-
-    // LWM Snapshot is manual (Knowledge UI) or Snapshot API POST .../lwm-snapshot —
-    // not auto-run on ILE end. PoW is already flushed above.
-
-    handleDisconnectMuse();
-
-    router.push(
-      guestAccessKind === "aycl" && ayclToken
-        ? `/learn/${ayclToken}`
-        : guestAccessKind === "ile"
-          ? `/ile/session/${ileToken}`
-          : getIlePostSessionPath(finalSession)
-    );
-  };
-
-  // ---- Screenshot Handlers ----
-  const handleStartScreenCapture = useCallback(async () => {
-    if (!screenCaptureRef.current) {
-      screenCaptureRef.current = createScreenCapture({
-        onScreenshotCaptured: async (blob: Blob, timestamp: number) => {
-          await uploadScreenshotPow(blob, timestamp);
-        },
-        intervalMs: 5000,
-        onStatusChange: (capturing: boolean) => {
-          setIsScreenCapturing(capturing);
-        },
-      });
-    }
-    return screenCaptureRef.current.start();
-  }, [uploadScreenshotPow]);
 
   const {
     notifyLeaveTab,
@@ -2586,133 +748,6 @@ export function SessionView({
     },
   });
 
-  const handleStopScreenCapture = useCallback(() => {
-    screenCaptureRef.current?.stop();
-  }, []);
-
-  const handlePause = async () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    // Track what was active before pause (for auto-resume)
-    wasRecordingRef.current = isRecordingRef.current;
-    wasScreenCapturingRef.current = isScreenCapturing;
-    wasWebcamEnabledRef.current = isWebcamEnabled;
-    wasMuseStreamingRef.current = museStatus === "streaming";
-
-    // Store stream references for potential resume
-    pausedAudioStreamRef.current = stream;
-    pausedScreenStreamRef.current = screenCaptureRef.current?.getStream() || null;
-    pausedWebcamStreamRef.current = null;
-
-    // Stop all data flows
-    if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
-    
-    // Stop screen capture
-    if (screenCaptureRef.current) {
-      screenCaptureRef.current.stop();
-      setIsScreenCapturing(false);
-    }
-
-    // Stop EEG
-    handleDisconnectMuse();
-
-    // Stop webcam (FaceTracker manages its own stream internally)
-    setIsWebcamEnabled(false);
-    
-    setIsRecording(false);
-    setIsPaused(true);
-
-    if (session) {
-      const durationMs = elapsedSeconds * 1000;
-      const pausedSession = { ...session, durationMs, status: "paused" as const };
-      setSession(pausedSession);
-      sessionRef.current = pausedSession;
-      await pauseSession(session.id, durationMs);
-    }
-  };
-
-  const handleResume = async () => {
-    if (!session) return;
-
-    try {
-      // Resume mic stream for speech recognition (no audio storage).
-      try {
-        let mediaStream = pausedAudioStreamRef.current;
-        const tracksStillActive = mediaStream?.getTracks().some(t => t.readyState === "live");
-        if (!mediaStream || !tracksStillActive) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 48000,
-            },
-          });
-        }
-        setStream(mediaStream);
-      } catch (micErr) {
-        console.warn("[SessionView] Mic unavailable on resume, continuing without live speech:", micErr);
-        setError(t('session.micNotFound'));
-        setStream(null);
-      }
-
-      setIsRecording(true);
-      setIsPaused(false);
-
-      await resumeSession(session.id);
-      const activeSession = { ...session, status: "active" as const };
-      setSession(activeSession);
-      sessionRef.current = activeSession;
-
-      const startTime = Date.now() - (elapsedSeconds * 1000);
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
-
-      // Auto-resume data sources that were active before pause
-      // Screen capture
-      if (wasScreenCapturingRef.current) {
-        if (screenCaptureRef.current) {
-          const existingStream = pausedScreenStreamRef.current;
-          const streamStillActive = existingStream?.getVideoTracks().some(t => t.readyState === "live");
-          if (streamStillActive) {
-            try {
-              await screenCaptureRef.current.start();
-              setIsScreenCapturing(true);
-            } catch (e) {
-              console.warn("[Resume] Could not restart screen capture:", e);
-              wasScreenCapturingRef.current = false;
-            }
-          } else {
-            wasScreenCapturingRef.current = false;
-          }
-        }
-      }
-
-      // Webcam (FaceTracker will auto-start when enabled)
-      if (wasWebcamEnabledRef.current) {
-        setIsWebcamEnabled(true);
-      }
-
-      // EEG (auto-reconnect)
-      if (wasMuseStreamingRef.current) {
-        handleConnectMuse();
-      }
-
-    } catch (err) {
-      console.error("[SessionView] handleResume failed:", err);
-      setError(t('session.micError'));
-    }
-  };
-
-  const handleMute = (durationMs: number) => {
-    setIsMuted(true);
-    setMuteRemaining(durationMs);
-    if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
-    muteTimerRef.current = setTimeout(() => { setIsMuted(false); setMuteRemaining(0); }, durationMs);
-  };
-
-  // Real-time voice activity for Helios background tile-reveal + action
-  // box highlight. Shares the same mic stream as inactivity detection.
   const isSpeaking = useVoiceActivity({
     stream,
     isRecording,
@@ -2726,361 +761,6 @@ export function SessionView({
   });
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
-
-  // Reset session - deletes probes but keeps data chunks
-  const handleReset = async () => {
-    if (!session) return;
-    
-    try {
-      // Clear probes from database
-      await resetSessionProbes(session.id);
-      
-      // Clear local probe state
-      const resetSession = { ...session, probes: [] };
-      setSession(resetSession);
-      sessionRef.current = resetSession;
-      setActiveProbe(null);
-      setViewingProbeIndex(-1);
-      
-    } catch (err) {
-      console.error("Reset session error:", err);
-    }
-  };
-
-  // Close session - return to workspace without ending
-  const pauseAndGoToDashboard = useCallback(async () => {
-    if (session && isRecording && !isPaused) {
-      await handlePause();
-    } else if (session && isPaused) {
-      await pauseSession(session.id, elapsedSeconds * 1000);
-    }
-    const current = sessionRef.current ?? session;
-    router.push(current ? getIlePostSessionPath(current) : "/dashboard");
-  }, [session, isRecording, isPaused, elapsedSeconds, handlePause, router]);
-
-  const handleClose = () => {
-    void pauseAndGoToDashboard();
-  };
-
-  /**
-   * The user clicked the Play button inside the tutor welcome panel. Mark the
-   * welcome as "seen" so a page refresh doesn't re-play the welcome.
-   */
-  const handleWelcomePlay = useCallback(async () => {
-    const s = sessionRef.current;
-    if (!s) return;
-    setIsStartingSession(true);
-    let didRevealChat = false;
-    const revealChat = () => {
-      if (didRevealChat) return;
-      didRevealChat = true;
-      setShowWelcomePanel(false);
-      applyIleChapterGridStartup();
-    };
-    try {
-      // Bring the session back to an actively-recording state. Three cases:
-      //   1. Fresh session: `!isRecording` → startRecording (first mic req).
-      //   2. Paused session (e.g. Help was just clicked): `isPaused` →
-      //      handleResume restarts the recorder/streams.
-      //   3. Already active: no-op.
-      if (!isRecording) {
-        await startRecording();
-      } else if (isPaused) {
-        await handleResume();
-      }
-      revealChat();
-    } finally {
-      markSessionWelcomeSeen(s.id);
-      revealChat();
-      setIsStartingSession(false);
-      // If the welcome was opened via the Help button, restore the
-      // user's previous pane layout so tools/plan don't stay hidden.
-      const prev = helpPreviousLayoutRef.current;
-      if (prev) {
-        helpPreviousLayoutRef.current = null;
-        // Give the welcome-panel collapse effect a beat to finish before
-        // we overwrite it, otherwise its 80ms timer races us.
-        window.setTimeout(() => {
-          resizablePaneRef.current?.setLayout(prev.inner);
-          const innerLeft = prev.inner.collapsedSide === "left";
-          const innerRight = prev.inner.collapsedSide === "right";
-          setPaneVisibility({
-            tools: !innerLeft,
-            // Helios (tutor) pane is always visible — it cannot be hidden.
-            tutor: true,
-            plan: !innerRight,
-          });
-        }, 120);
-      }
-    }
-    // startRecording / handleResume are defined inline and reference many
-    // setters/refs; including them as deps would cause noise.
-  }, [isRecording, isPaused]);
-
-  // Archive a probe (immediately, without LLM validation)
-  const handleArchiveProbe = async (probeId: string) => {
-    if (!session) return;
-    
-    const probe = session.probes.find(p => p.id === probeId);
-    if (!probe) return;
-    
-    setArchivingProbeId(probeId);
-    
-    try {
-      // Archive the probe directly
-      await archiveProbe(probeId);
-      
-      // Update local state
-      const updatedProbes = session.probes.map(p => 
-        p.id === probeId ? { ...p, archived: true } : p
-      );
-      const updatedSession = { ...session, probes: updatedProbes };
-      setSession(updatedSession);
-      sessionRef.current = updatedSession;
-      
-      // Play success sound
-      playArchiveSound();
-    } catch (err) {
-      console.error("Archive probe error:", err);
-    } finally {
-      // Delay clearing to allow animation to complete
-      setTimeout(() => setArchivingProbeId(null), 500);
-    }
-  };
-
-  // Toggle focus on a probe
-  const handleToggleFocus = async (probeId: string, focused: boolean) => {
-    if (!session) return;
-    
-    try {
-      await toggleProbeFocused(probeId, focused);
-      
-      // Update local state
-      const updatedProbes = session.probes.map(p => 
-        p.id === probeId ? { ...p, focused } : p
-      );
-      const updatedSession = { ...session, probes: updatedProbes };
-      setSession(updatedSession);
-      sessionRef.current = updatedSession;
-    } catch (err) {
-      console.error("Toggle focus error:", err);
-    }
-  };
-
-  const handleConfirmEnd = async () => {
-    setShowEndDialog(false);
-    if (session) {
-      const finalSession = endSession(session, elapsedSeconds * 1000, "completed");
-      setSession(finalSession);
-      sessionRef.current = finalSession;
-    }
-    await stopRecording();
-  };
-
-  const fetchChapterFollowUps = useCallback(
-    async (
-      step: SessionPlanStep,
-      lists: ExerciseDualLists,
-      options?: { force?: boolean },
-    ) => {
-      if (!session?.id || !isProjectMode) return;
-      if (!options?.force && followUpsFetchedRef.current.has(step.id)) return;
-      followUpsFetchedRef.current.add(step.id);
-      setChapterFollowUpsLoadingId(step.id);
-      setChapterFollowUpsErrorById((prev) => {
-        const next = { ...prev };
-        delete next[step.id];
-        return next;
-      });
-      try {
-        const response = await fetch("/api/workspace/suggest-chapter-follow-ups", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: session.id,
-            stepId: step.id,
-            chapterDescription: step.description,
-            solutionTexts: lists.submitted.map((t) => t.text),
-            stashTexts: lists.stash.map((t) => t.text),
-            locale,
-            ...guestAccessBody,
-          }),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            typeof data?.error === "string" ? data.error : "Failed to generate follow-ups",
-          );
-        }
-        const suggestions = Array.isArray(data.suggestions)
-          ? (data.suggestions as ChapterFollowUpSuggestion[]).slice(0, 3)
-          : [];
-        setChapterFollowUpsById((prev) => ({ ...prev, [step.id]: suggestions }));
-        if (suggestions.length === 0) {
-          setChapterFollowUpsErrorById((prev) => ({
-            ...prev,
-            [step.id]: "No follow-up topics returned.",
-          }));
-        }
-      } catch (err) {
-        followUpsFetchedRef.current.delete(step.id);
-        setChapterFollowUpsErrorById((prev) => ({
-          ...prev,
-          [step.id]: err instanceof Error ? err.message : "Failed to generate follow-ups",
-        }));
-      } finally {
-        setChapterFollowUpsLoadingId((current) => (current === step.id ? null : current));
-      }
-    },
-    [session?.id, isProjectMode, locale, guestAccessBody],
-  );
-
-  const handleSelectChapterFollowUp = useCallback(
-    async (suggestion: ChapterFollowUpSuggestion) => {
-      const plan = sessionPlanRef.current;
-      if (!plan || !isProjectMode) return;
-      const step = plan.steps[activeChapterIndexRef.current];
-      if (!step) return;
-      // Always place on the closest empty chapter square to the finished chapter.
-      const slot = findAdjacentFreeChapterSlot(plan, step);
-      // Seed from follow-up; handleAddChapter LLM-authors a real exercise.
-      const description = buildFollowUpChapterDescription(suggestion);
-      try {
-        await handleAddChapter(description, slot);
-        // Keep section visible: drop the chosen topic, then refresh so finished
-        // chapters always have optional follow-ups available.
-        setChapterFollowUpsById((prev) => ({
-          ...prev,
-          [step.id]: (prev[step.id] || []).filter(
-            (s) =>
-              !(s.title === suggestion.title && s.description === suggestion.description),
-          ),
-        }));
-        const lists =
-          projectThoughtsByChapterRef.current[step.id] ?? emptyIleProjectDualLists();
-        void fetchChapterFollowUps(step, lists, { force: true });
-      } catch (err) {
-        setChapterFollowUpsErrorById((prev) => ({
-          ...prev,
-          [step.id]: err instanceof Error ? err.message : "Could not add chapter",
-        }));
-      }
-    },
-    [handleAddChapter, isProjectMode, fetchChapterFollowUps],
-  );
-
-  // Finished Project chapters always show Next adjacent topics — fetch if missing.
-  useEffect(() => {
-    if (!isProjectMode || !activeStep || !chapterThoughtsLocked) return;
-    if (chapterFollowUpsLoadingId === activeStep.id) return;
-    if ((chapterFollowUpsById[activeStep.id]?.length ?? 0) > 0) return;
-    if (chapterFollowUpsErrorById[activeStep.id]) return;
-    const lists =
-      projectThoughtsByChapterRef.current[activeStep.id] ?? emptyIleProjectDualLists();
-    void fetchChapterFollowUps(activeStep, lists, {
-      force: !followUpsFetchedRef.current.has(activeStep.id),
-    });
-  }, [
-    isProjectMode,
-    activeStep,
-    chapterThoughtsLocked,
-    chapterFollowUpsById,
-    chapterFollowUpsErrorById,
-    chapterFollowUpsLoadingId,
-    fetchChapterFollowUps,
-  ]);
-
-  const handleMarkChapterDone = useCallback(async () => {
-    const currentPlan = sessionPlanRef.current;
-    if (!currentPlan?.steps?.length) return;
-
-    const idx = activeChapterIndexRef.current;
-    const step = currentPlan.steps[idx];
-    if (!step || step.status === "completed" || step.status === "skipped") return;
-
-    const updatedSteps = currentPlan.steps.map((s, i) =>
-      i === idx ? { ...s, status: "completed" as const } : s,
-    );
-    const updatedPlan = {
-      ...currentPlan,
-      steps: updatedSteps,
-      currentStepIndex: idx,
-    };
-
-    // Project Mode: Done is terminal + PoW only — never interface evaluation/score.
-    const toolData = isProjectMode
-      ? buildIleChapterDonePowToolData({
-          stepIndex: idx,
-          stepId: step.id,
-          stepDescription: step.description,
-          via: "chapter_map_mark_done",
-          sessionMode: resolvedSessionMode,
-        })
-      : {
-          stepIndex: idx,
-          stepId: step.id,
-          stepDescription: step.description?.slice(0, 120),
-          via: "chapter_map_mark_done",
-        };
-
-    await persistPlanSteps(updatedPlan, {
-      toolAction: "chapter_done",
-      toolData,
-    });
-
-    playStepCompleteSound();
-
-    if (isProjectMode) {
-      const lists =
-        projectThoughtsByChapterRef.current[step.id] ?? emptyIleProjectDualLists();
-      void fetchChapterFollowUps(step, lists);
-    }
-
-    if (updatedSteps.every((s) => s.status === "completed" || s.status === "skipped")) {
-      playSessionCompleteSound();
-      setTimeout(() => {
-        setShowPlanCompleteModal(true);
-        if (isRecording && !isPaused) setIsPaused(true);
-      }, 1500);
-    }
-  }, [
-    isPaused,
-    isRecording,
-    persistPlanSteps,
-    isProjectMode,
-    resolvedSessionMode,
-    fetchChapterFollowUps,
-  ]);
-
-  // Auto-pause on browser close/refresh
-  useEffect(() => {
-    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      if (isRecording && session) {
-        e.preventDefault();
-        await pauseSession(session.id, elapsedSecondsRef.current * 1000);
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [isRecording, session]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(t => t.stop());
-        micStreamRef.current = null;
-      }
-      handleDisconnectMuse();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (isMobile) {
     return (
@@ -3101,946 +781,187 @@ export function SessionView({
     );
   }
 
-  const selectedAesthetic = aestheticPackages.find((pkg) => pkg.id === selectedAestheticId) ?? aestheticPackages[0];
+  const selectedAesthetic = chromeSelectedAesthetic;
 
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
       {showWelcomeModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-          data-session-welcome-modal
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-          <div className="relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-[0_32px_100px_rgba(0,0,0,0.65)]">
-            <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
-              <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 sm:h-16 sm:w-16">
-                    <span className="font-serif text-2xl text-neutral-200 sm:text-3xl">H</span>
-                  </div>
-                  <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_28px_rgba(245,158,11,0.1)]" />
-                </div>
-                <div className="flex min-w-0 flex-col">
-                  <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
-                    {t("session.welcomeTitle")}
-                  </h2>
-                  <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-400">
-                    {t("session.welcomeMessage")}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
-            {(() => {
-              const isSessionReady = sessionPlan && !planLoading;
-
-              // Phase 1: Language selection (before confirmation)
-              if (!languageConfirmed) {
-                const isButtonDisabled = planLoading || isPreparing;
-
-                return (
-                  <>
-                    <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 lg:items-start">
-                      {/* Left column: language + aesthetics */}
-                      <div className="min-w-0 space-y-5">
-                        <div>
-                          <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                            {t("session.tutorLanguage")}
-                          </label>
-                          <select
-                            value={tutoringLanguage}
-                            onChange={(e) => {
-                              setTutoringLanguage(coerceSpokenLocale(e.target.value));
-                            }}
-                            disabled={isButtonDisabled}
-                            className="w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-3 text-sm text-white transition-colors hover:border-neutral-700 focus:border-neutral-600 focus:outline-none disabled:opacity-50"
-                          >
-                            {spokenLocales.map((loc) => (
-                              <option key={loc} value={loc}>
-                                {spokenLanguageNames[loc]}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <AestheticPicker
-                          packages={aestheticPackages}
-                          selectedId={selectedAesthetic?.id ?? selectedAestheticId}
-                          onSelect={setSelectedAestheticId}
-                          disabled={isButtonDisabled}
-                          loading={aestheticsLoading}
-                          wide
-                        />
-                      </div>
-
-                      {/* Right column: chapter map size + primary CTA */}
-                      <div className="min-w-0 flex flex-col">
-                    {/* Initial chapters — interactive only when no chapter set exists
-                        (or user opts in to regenerate). Status is persisted-plan aware
-                        so the regenerate checkbox does not flicker/disappear. */}
-                    {(() => {
-                      const hasExistingChapters = chapterPlanStatus === "exists";
-                      const statusUnknown = chapterPlanStatus === "unknown";
-                      const chaptersLocked =
-                        statusUnknown || (hasExistingChapters && !regenerateChapters);
-                      const chaptersDisabled = isButtonDisabled || chaptersLocked;
-
-                      return (
-                        <div
-                          className={`mb-5 transition-colors ${
-                            chaptersLocked
-                              ? "rounded-xl border border-neutral-800/80 bg-neutral-950/40 p-4"
-                              : ""
-                          }`}
-                        >
-                          <div className="mb-2.5 flex items-center justify-between gap-2">
-                            <label
-                              className={`block text-[11px] font-medium uppercase tracking-[0.12em] ${
-                                chaptersLocked ? "text-neutral-600" : "text-neutral-500"
-                              }`}
-                            >
-                              {t("session.initialChapters")}
-                            </label>
-                            {statusUnknown ? (
-                              <span className="text-[10px] text-neutral-600">
-                                {t("session.initialChaptersChecking")}
-                              </span>
-                            ) : hasExistingChapters ? (
-                              <span className="text-[10px] text-neutral-600">
-                                {t("session.initialChaptersExisting")}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div
-                            className={`grid grid-cols-3 gap-2.5 ${chaptersLocked ? "opacity-40 pointer-events-none" : ""}`}
-                          >
-                            {INITIAL_CHAPTERS_LEVELS.map((level) => {
-                              const selected = initialChapters === level;
-                              const titleKey =
-                                level === "narrow"
-                                  ? "session.initialChaptersNarrow"
-                                  : level === "mid"
-                                    ? "session.initialChaptersMid"
-                                    : "session.initialChaptersBroad";
-                              const descKey =
-                                level === "narrow"
-                                  ? "session.initialChaptersNarrowDesc"
-                                  : level === "mid"
-                                    ? "session.initialChaptersMidDesc"
-                                    : "session.initialChaptersBroadDesc";
-                              return (
-                                <button
-                                  key={level}
-                                  type="button"
-                                  onClick={() => setInitialChapters(level)}
-                                  disabled={chaptersDisabled}
-                                  className={`rounded-xl border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
-                                    selected && !chaptersLocked
-                                      ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
-                                      : "border-neutral-800 bg-neutral-950 hover:border-neutral-600 disabled:hover:border-neutral-800"
-                                  } ${isButtonDisabled && !chaptersLocked ? "opacity-50" : ""}`}
-                                >
-                                  <span
-                                    className={`block text-xs font-medium leading-tight ${
-                                      chaptersLocked ? "text-neutral-500" : "text-neutral-200"
-                                    }`}
-                                  >
-                                    {t(titleKey)}
-                                  </span>
-                                  <span className="mt-1.5 block text-[11px] leading-snug text-neutral-500">
-                                    {t(descKey)}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {statusUnknown && (
-                            <div
-                              className="mt-3 flex items-center gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                              role="status"
-                              aria-live="polite"
-                            >
-                              <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
-                              <span className="min-w-0">
-                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                                  {t("session.initialChaptersLoading")}
-                                </span>
-                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                  {t("session.initialChaptersLoadingDesc")}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          {hasExistingChapters && (
-                            <label
-                              className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 transition-colors hover:border-neutral-700 ${
-                                isButtonDisabled ? "pointer-events-none opacity-50" : ""
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={regenerateChapters}
-                                disabled={isButtonDisabled}
-                                onChange={(e) => setRegenerateChapters(e.target.checked)}
-                                className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
-                              />
-                              <span className="min-w-0">
-                                <span className="block text-xs font-medium text-neutral-200 leading-tight">
-                                  {t("session.regenerateChapters")}
-                                </span>
-                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                  {t("session.regenerateChaptersDesc")}
-                                </span>
-                              </span>
-                            </label>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Auto-advance toggle — hidden in UI (manual mode is the
-                        default). Underlying state remains wired; remove the
-                        `hidden` wrapper to bring the toggle back. */}
-                    <button
-                      type="button"
-                      onClick={() => !isButtonDisabled && setAutoAdvance(!autoAdvance)}
-                      disabled={isButtonDisabled}
-                      aria-hidden="true"
-                      tabIndex={-1}
-                      className="hidden w-full mb-3 p-3 rounded-xl border bg-neutral-900 border-neutral-800 hover:bg-neutral-800/60 hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
-                    >
-                      <div className="relative shrink-0 w-9 h-5 rounded-full bg-neutral-700">
-                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-neutral-200 leading-tight">
-                          {autoAdvance ? t('session.autoAdvanceOn') : t('session.manualMode')}
-                        </span>
-                        <span className="text-[11px] text-neutral-500 leading-tight mt-0.5">
-                          {autoAdvance
-                            ? t('session.aiDecidesMoveForward')
-                            : t('session.youClickToAdvance')}
-                        </span>
-                      </div>
-                    </button>
-
-                    {/* Browser Inference Toggle — hidden in UI while we
-                        stabilise the feature, but the underlying state &
-                        downstream logic remain wired so we can bring it
-                        back by removing the `hidden` wrapper. */}
-                    <button
-                      type="button"
-                      onClick={() => webGPUAvailable && !isButtonDisabled && setLocalInferenceEnabled(!localInferenceEnabled)}
-                      disabled={!webGPUAvailable || isButtonDisabled}
-                      aria-hidden="true"
-                      tabIndex={-1}
-                      className="hidden w-full mb-5 p-3 rounded-xl border bg-neutral-900 border-neutral-800 enabled:hover:bg-neutral-800/60 enabled:hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
-                    >
-                      <div className="relative shrink-0 w-9 h-5 rounded-full bg-neutral-700">
-                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-neutral-100 shadow transition-transform ${localInferenceEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-neutral-200 leading-tight">
-                          {localInferenceEnabled ? t('session.browserInferenceOn') : t('session.browserInference')}
-                        </span>
-                        <span className="text-[11px] text-neutral-500 leading-tight mt-0.5">
-                          {!webGPUAvailable
-                            ? t('session.webGPUNotAvailable')
-                            : t('session.browserInferenceDesc')}
-                        </span>
-                      </div>
-                    </button>
-
-                    {planError && !isPreparing && (
-                      <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl">
-                        <p className="text-xs text-red-400 leading-relaxed">{planError}</p>
-                      </div>
-                    )}
-
-                    <div className="mt-auto space-y-3">
-                    <button
-                      onClick={async () => {
-                        if (!session || isPreparing) return;
-                        
-                        setPrepStage("plan");
-                        setIsPreparing(true);
-                        setPlanLoading(true);
-                        setPlanError(null);
-                        setModelLoadError(null);
-                        setModelLoadProgress(null);
-                        
-                        try {
-                          if (guestAccessKind === "aycl" && ayclToken) {
-                            const { saveAyclSession } = await import("@/lib/aycl-storage");
-                            await saveAyclSession(ayclToken, {
-                              ...session,
-                              metadata: { ...(session.metadata || {}), tutoringLanguage },
-                            });
-                          } else if (guestAccessKind === "ile" && ileToken) {
-                            const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
-                            await saveIleLinkSession(ileToken, {
-                              ...session,
-                              metadata: { ...(session.metadata || {}), tutoringLanguage },
-                            });
-                          } else {
-                            const { data: sessionData } = await (await import("@/lib/supabase/client")).createClient()
-                              .from("sessions")
-                              .select("metadata")
-                              .eq("id", session.id)
-                              .single();
-                            if (sessionData?.metadata) {
-                              await (await import("@/lib/supabase/client")).createClient()
-                                .from("sessions")
-                                .update({ metadata: { ...sessionData.metadata, tutoringLanguage } })
-                                .eq("id", session.id);
-                            }
-                          }
-                          
-                          const hasExistingChapters = await sessionPlanHasChapters(session.id);
-                          let newPlan: SessionPlan | null = null;
-                          // Keep regenerate checkbox stable even if sessionPlan state lags.
-                          if (hasExistingChapters) {
-                            setChapterPlanStatus("exists");
-                          } else {
-                            setChapterPlanStatus("empty");
-                          }
-                          const shouldReuseExisting = hasExistingChapters && !regenerateChapters;
-
-                          if (shouldReuseExisting) {
-                            if (tutoringLanguage === "en") {
-                              const existingPlan = await getSessionPlan(session.id);
-                              if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
-                                newPlan = existingPlan;
-                              }
-                            } else {
-                              const translateRes = await fetch("/api/session-plan/translate", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  sessionId: session.id,
-                                  tutoringLanguage,
-                                  objectives,
-                                  ...guestAccessBody,
-                                }),
-                              });
-                              if (translateRes.ok) {
-                                const { plan } = await translateRes.json();
-                                newPlan = plan;
-                              } else {
-                                const err = await translateRes.json().catch(() => ({}));
-                                console.error("[SessionView] Translation failed:", err);
-                                // Do not force-recreate on translate failure when the user
-                                // did not opt into regeneration — keep existing chapters.
-                                setPlanError(
-                                  typeof err?.error === "string"
-                                    ? err.error
-                                    : "Failed to translate chapter map. Try again or regenerate chapters.",
-                                );
-                                return;
-                              }
-                            }
-                          }
-
-                          if (!newPlan) {
-                            const planRes = await fetch("/api/session-plan/create", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                sessionId: session.id,
-                                problem: session.problem,
-                                objectives,
-                                planningPrompt: session.planningPrompt,
-                                // Only force-replace when user opted in or no chapters exist.
-                                force: hasExistingChapters ? regenerateChapters : true,
-                                tutoringLanguage,
-                                initialChapters,
-                                sessionMode: resolvedSessionMode,
-                                session_mode: resolvedSessionMode,
-                                ...guestAccessBody,
-                              }),
-                            });
-                            if (planRes.ok) {
-                              const { plan } = await planRes.json();
-                              newPlan = plan;
-                              setRegenerateChapters(false);
-                            } else {
-                              const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
-                              console.error("[SessionView] Create plan failed:", errorMessage);
-                              setPlanError(errorMessage);
-                              return;
-                            }
-                          }
-
-                          if (!newPlan) {
-                            setPlanError("Failed to prepare chapter map. Please try again.");
-                            return;
-                          }
-
-                          setSessionPlan(newPlan);
-                          sessionPlanRef.current = newPlan;
-                          setChapterPlanStatus(
-                            (newPlan.steps?.length ?? 0) > 0 ? "exists" : "empty",
-                          );
-                          
-                          // Archive existing probes; the chapter question is
-                          // enough to start the discussion.
-                          if (session.probes.length > 0) {
-                            for (const probe of session.probes) {
-                              await archiveProbe(probe.id);
-                            }
-                          }
-                          const clearedSession = { ...session, probes: [] };
-                          setSession(clearedSession);
-                          sessionRef.current = clearedSession;
-                          setActiveProbe(null);
-                          setViewingProbeIndex(-1);
-
-                          // A session is "fresh" if the user has not yet
-                          // clicked Play for it. In that case we show the
-                          // typed tutor welcome + Play button. Returning
-                          // sessions skip that guide and must arm capture now.
-                          const isFreshSession = !isSessionWelcomeSeen(session.id);
-                          if (isFreshSession) {
-                            setShowWelcomePanel(true);
-                          }
-                          
-                          // Plan prep done
-                          setPlanLoading(false);
-                          setLanguageConfirmed(true);
-
-                          // Stage 2: Load local model if enabled
-                          if (localInferenceEnabled) {
-                            setPrepStage("model");
-                            try {
-                              const manager = LocalInferenceManager.getInstance();
-                              await manager.init((progress) => {
-                                setModelLoadProgress(progress);
-                              });
-                              localContextRef.current = new LocalContextBuffer();
-                            } catch (modelErr) {
-                              setModelLoadError(modelErr instanceof Error ? modelErr.message : String(modelErr));
-                              setIsPreparing(false);
-                              return; // Keep modal open to show error
-                            }
-                          }
-
-                          // All done - close modal and enter session
-                          setPrepStage("done");
-                          setIsPaused(false); // Reset paused state from previous session load
-                          setShowWelcomeModal(false);
-                          // Arm monitoring + speech when the welcome guide is not shown.
-                          // Fresh sessions wait for Play inside the guide (handleWelcomePlay).
-                          if (!isFreshSession) {
-                            await startRecording();
-                          }
-                        } catch (err) {
-                          console.error("Failed to prepare session:", err);
-                          setPlanError("Failed to prepare block");
-                        } finally {
-                          setPlanLoading(false);
-                          setIsPreparing(false);
-                        }
-                      }}
-                      disabled={isButtonDisabled}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
-                    >
-                      {isButtonDisabled ? (
-                        <>
-                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          {t('session.preparing')}
-                        </>
-                      ) : t('session.confirmSettings')}
-                    </button>
-
-                    {/* Inline loading progress */}
-                    {isPreparing && (
-                      <div className="space-y-2">
-                        {/* Plan prep row */}
-                        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
-                          <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
-                            prepStage !== "plan"
-                              ? 'bg-neutral-100 text-neutral-900'
-                              : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
-                          }`}>
-                            {prepStage !== "plan" ? (
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            ) : '01'}
-                          </div>
-                          <span className={`flex-1 text-xs ${prepStage !== "plan" ? 'text-neutral-500' : 'text-neutral-300'}`}>
-                            {prepStage === "plan" ? t('session.preparingPlan') : t('session.planReady')}
-                          </span>
-                          {prepStage === "plan" && (
-                            <div className="w-3.5 h-3.5 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                          )}
-                        </div>
-
-                        {localInferenceEnabled && (
-                          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
-                            <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
-                              prepStage === "done"
-                                ? 'bg-neutral-100 text-neutral-900'
-                                : prepStage === "model"
-                                  ? 'bg-neutral-800 text-neutral-300 border border-neutral-700'
-                                  : 'bg-neutral-900 text-neutral-600 border border-neutral-800'
-                            }`}>
-                              {prepStage === "done" ? (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ) : '02'}
-                            </div>
-                            <span className={`flex-1 text-xs ${
-                              prepStage === "done" ? 'text-neutral-500' : prepStage === "model" ? 'text-neutral-300' : 'text-neutral-600'
-                            }`}>
-                              {prepStage === "done" ? t('session.localModelLoaded') : prepStage === "model" ? t('session.loadingLocalModel') : t('session.loadLocalModel')}
-                            </span>
-                            {prepStage === "model" && !modelLoadProgress && (
-                              <div className="w-3.5 h-3.5 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                            )}
-                          </div>
-                        )}
-
-                        {/* Progress bar (only during model download) */}
-                        {prepStage === "model" && modelLoadProgress && (
-                          <div className="px-3 pt-1">
-                            <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-neutral-300 rounded-full transition-all duration-500 ease-out"
-                                style={{ width: `${modelLoadProgress.progress}%` }}
-                              />
-                            </div>
-                            <div className="flex justify-between mt-1.5">
-                              <span className="text-[10px] text-neutral-500">
-                                {modelLoadProgress.loaded && modelLoadProgress.total
-                                  ? `${(modelLoadProgress.loaded / 1024 / 1024).toFixed(0)} / ${(modelLoadProgress.total / 1024 / 1024).toFixed(0)} MB`
-                                  : t('session.downloading')}
-                              </span>
-                              <span className="text-[10px] text-neutral-500 font-mono tabular-nums">{modelLoadProgress.progress}%</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Errors */}
-                        {(planError || modelLoadError) && (
-                          <div className="px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl">
-                            <p className="text-xs text-red-400 leading-relaxed">{planError || modelLoadError}</p>
-                          </div>
-                        )}
-
-                        {/* Cancel for model loading errors */}
-                        {modelLoadError && (
-                          <button
-                            onClick={() => {
-                              LocalInferenceManager.getInstance().dispose();
-                              setModelLoadError(null);
-                              setLocalInferenceEnabled(false);
-                              setIsPreparing(false);
-                              setPrepStage("done");
-                            }}
-                            className="w-full py-2 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
-                          >
-                            {t('session.continueWithoutBrowserInference')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    </div>
-                      </div>
-                    </div>
-                  </>
-                );
-              }
-
-              // Phase 2: Ready (already confirmed before, e.g. page refresh).
-              // If the user has never clicked Play on this session we drop
-              // them into the in-panel tutor welcome. Otherwise arm capture
-              // immediately so Helios speech is not stuck "off".
-              return (
-                <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 py-6 text-center sm:min-h-[14rem]">
-                  <p className="max-w-lg text-sm leading-relaxed text-neutral-400">
-                    {t("session.welcomeMessage")}
-                  </p>
-                  <button
-                    onClick={() => {
-                      void (async () => {
-                        setIsPaused(false);
-                        const needsWelcome =
-                          !!session &&
-                          !isSessionWelcomeSeen(session.id) &&
-                          session.probes.filter((p) => !p.archived).length === 0;
-                        if (needsWelcome) {
-                          setShowWelcomePanel(true);
-                        } else {
-                          await startRecording();
-                        }
-                        setShowWelcomeModal(false);
-                      })();
-                    }}
-                    className="min-w-[14rem] rounded-xl bg-neutral-100 px-8 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
-                  >
-                    {t("session.getStarted")}
-                  </button>
-                </div>
-              );
-            })()}
-            </div>
-          </div>
-        </div>
+        <SessionWelcomeModal
+          t={t}
+          languageConfirmed={languageConfirmed}
+          planLoading={planLoading}
+          isPreparing={isPreparing}
+          tutoringLanguage={tutoringLanguage}
+          onTutoringLanguageChange={setTutoringLanguage}
+          aestheticPackages={aestheticPackages}
+          selectedAesthetic={selectedAesthetic}
+          selectedAestheticId={selectedAestheticId}
+          onSelectAesthetic={setSelectedAestheticId}
+          aestheticsLoading={aestheticsLoading}
+          chapterPlanStatus={chapterPlanStatus}
+          regenerateChapters={regenerateChapters}
+          onRegenerateChaptersChange={setRegenerateChapters}
+          initialChapters={initialChapters}
+          onInitialChaptersChange={setInitialChapters}
+          autoAdvance={autoAdvance}
+          onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
+          localInferenceEnabled={localInferenceEnabled}
+          onToggleLocalInference={() => setLocalInferenceEnabled(!localInferenceEnabled)}
+          webGPUAvailable={webGPUAvailable}
+          planError={planError}
+          modelLoadError={modelLoadError}
+          modelLoadProgress={modelLoadProgress}
+          prepStage={prepStage}
+          onConfirmSettings={handleConfirmSettings}
+          onContinueWithoutInference={handleContinueWithoutInference}
+          onReadyStart={handleWelcomeReadyStart}
+          hasSessionPlan={Boolean(sessionPlan)}
+        />
       )}
 
-      <ToolsPanel 
-              activeTool={activeTool}
-              onToolChange={(tool) => {
-                // "help" is a command, not a view: it pauses the session,
-                // opens the chapter grid, and re-opens the 3-step onboarding
-                // guide in the Helios panel. Probes and session data are
-                // preserved — clicking Start from the welcome resumes recording.
-                if (tool === "help") {
-                  // Snapshot the current pane layout from localStorage
-                  // so we can restore it when the user clicks Play. We
-                  // only capture if we don't already have one in-flight
-                  // (handles Help-clicked-again-while-welcome-open).
-                  if (!helpPreviousLayoutRef.current) {
-                    const readLayout = (key: string) => {
-                      try {
-                        const raw = localStorage.getItem(key);
-                        if (!raw) return { collapsedSide: null as null | "left" | "right" };
-                        const parsed = JSON.parse(raw);
-                        return {
-                          leftWidth: typeof parsed.leftWidth === "number" ? parsed.leftWidth : undefined,
-                          collapsedSide: parsed.collapsedSide === "left" || parsed.collapsedSide === "right"
-                            ? parsed.collapsedSide
-                            : null,
-                        };
-                      } catch {
-                        return { collapsedSide: null as null | "left" | "right" };
-                      }
-                    };
-                    const layout = readLayout("session-split-tools-helios");
-                    helpPreviousLayoutRef.current = {
-                      outer: layout,
-                      inner: layout,
-                    };
-                  }
-                  if (isRecording && !isPaused) {
-                    handlePause().catch(err =>
-                      console.error("[SessionView] Help pause failed:", err),
-                    );
-                  }
-                  applyIleChapterGridStartup();
-                  setShowWelcomePanel(true);
-                  setWelcomeOpenNonce(n => n + 1);
-                  return;
-                }
-                setActiveTool(tool);
-              }} 
-              problem={session.problem} 
-              workspaceId={session.metadata?.workspace_id as string | undefined}
-              disabledTools={[]}
-              onBackToDashboard={pauseAndGoToDashboard}
-              isRecording={isRecording}
-              isPaused={isPaused}
-              isWebcamEnabled={isWebcamEnabled}
-              museStatus={museStatus}
-              museDeviceStatus={museDeviceStatus}
-              museChannelData={eegChannelData}
-              showOpenPicInPic={showManualPicInPic}
-              onOpenPicInPic={openManualPicInPic}
-            />
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Error banner */}
-        {error && !showWelcomeModal && (
-          <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 flex items-center gap-2">
-            <span className="text-xs text-red-400">{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400 text-xs">✕</button>
-          </div>
-        )}
-        {participantIdentity && !showWelcomeModal ? (
-          <div className="flex shrink-0 justify-end border-b border-neutral-900/80 px-4 py-1.5">
-            <SessionIdentityBadge identity={participantIdentity} />
-          </div>
-        ) : null}
-
-        <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Tools | Helios */}
-          <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
-            <ResizablePane
-              ref={resizablePaneRef}
-              defaultLeftWidth={40}
-              storageKey="session-split-tools-helios"
-              left={
-                <div className="flex flex-col min-w-0 p-4 overflow-hidden h-full relative">
-                  {shouldBlockTools && !["data-input", "help", "logs", "chapters"].includes(activeTool) && (
-                    <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
-                  )}
-                  <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                    {activeTool === "chapters" && (
-                      <div className="h-full overflow-hidden rounded-lg border border-neutral-800">
-                        <ChapterMapPanel
-                          plan={sessionPlan}
-                          sessionId={session.id}
-                          ayclToken={ayclToken}
-                          ileToken={ileToken}
-                          locale={locale}
-                          loading={planLoading}
-                          activeChapterIndex={activeChapterIndex}
-                          loadingChapterIndex={chapterLoadingIndex}
-                          onLoadChapter={handleLoadChapter}
-                          onChapterDone={() => {
-                            void handleMarkChapterDone();
-                          }}
-                          onAddChapter={handleAddChapter}
-                          onUpdateChapter={handleUpdateChapter}
-                          onEnsurePositions={handleEnsureChapterPositions}
-                          isSessionActive={isRecording}
-                          isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
-                          learnerScopeId={
-                            participantIdentity?.userId ||
-                            participantIdentity?.guestUserId ||
-                            ayclToken ||
-                            ileToken ||
-                            "local"
-                          }
-
-                        />
-                      </div>
-                    )}
-                    <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
-                      <ExcalidrawCanvas
-                        key={activeChapterKey}
-                        initialData={whiteboardData || undefined}
-                        initialSceneData={whiteboardSceneData}
-                        onCanvasChange={(data) => {
-                          setWhiteboardData(data);
-                          // Any canvas change re-arms the submit button.
-                          setCanvasDirtyForHelios(true);
-                          if (sessionRef.current) {
-                            sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
-                          }
-                        }}
-                        onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
-                        onSubmitToHelios={(dataUrl) => handleSubmitToHelios("canvas", dataUrl)}
-                        canSubmitToHelios={
-                          !chapterThoughtsLocked && canvasDirtyForHelios
-                        }
-                        submitLabel={isProjectMode ? "To solution" : undefined}
-                        chapterLabel={activeChapterLabel}
-                      />
-                    </div>
-                    {activeTool === "notebook" && (
-                      <div className="h-full rounded-lg border border-neutral-800 bg-neutral-900/50 flex flex-col">
-                        <div className="shrink-0 px-3 py-2 border-b border-neutral-800 flex items-center justify-between gap-3">
-                          <span className="min-w-0 truncate text-[11px] text-neutral-500">Notes for {activeChapterLabel}</span>
-                          <NotebookSubmitButton
-                            onSubmit={() => handleSubmitToHelios("notebook")}
-                            disabled={
-                              chapterThoughtsLocked ||
-                              notebookContent.trim().length === 0 ||
-                              !notebookDirtyForHelios
-                            }
-                            disabledReason={
-                              chapterThoughtsLocked
-                                ? "Chapter marked Done"
-                                : notebookContent.trim().length === 0
-                                  ? t("whiteboard.nothingToSubmit")
-                                  : t("whiteboard.alreadySubmitted")
-                            }
-                            label={isProjectMode ? "To solution" : undefined}
-                          />
-                        </div>
-                        <textarea
-                          value={notebookContent}
-                          onChange={(e) => {
-                            setNotebookContent(e.target.value);
-                            // Any keystroke re-arms the submit button.
-                            setNotebookDirtyForHelios(true);
-                          }}
-                          placeholder={t('session.notebookPlaceholder')}
-                          className="flex-1 w-full bg-transparent border-none resize-none p-4 text-sm text-white placeholder-neutral-600 focus:outline-none focus:ring-0"
-                        />
-                        <div className="shrink-0 px-3 py-2 border-t border-neutral-800 flex items-center justify-between gap-3">
-                          <span className="text-[10px] text-neutral-600">{t('session.characters', { count: notebookContent.length })}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTool === "thought-history" && (
-                      <div
-                        className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
-                        data-ile-session-mode={resolvedSessionMode}
-                      >
-                        {isProjectMode ? (
-                          <ProjectThoughtsDualStack
-                            stash={activeProjectLists.stash}
-                            submitted={activeProjectLists.submitted}
-                            onPromoteToSolution={handleProjectPromote}
-                            onDemoteToStash={handleProjectDemote}
-                            locked={chapterThoughtsLocked}
-                          />
-                        ) : (
-                          <ThoughtMemoryPanel
-                            className="flex h-full min-h-0 max-h-full flex-col overflow-hidden px-1"
-                            listClassName="pr-2"
-                            thoughts={sessionThoughtHistory}
-                            workspaceId={session.metadata?.workspace_id ?? undefined}
-                            sessionId={session.id}
-                            insightSurface="ile"
-                            allowInsightGeneration={true}
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {activeTool === "dantes" && (
-                      <DantesTool
-                        problem={session.problem}
-                        activeStepDescription={activeStep?.description}
-                      />
-                    )}
-
-                    {/* Bottom tools wrapper. Help is a command (restarts
-                        the tutor welcome) rather than a view — handled in
-                        the ToolsPanel onToolChange below. */}
-                    <div className="mt-auto flex flex-col">
-                      <div className={activeTool === "data-input" ? "h-full" : "hidden"}>
-                      <DataInputTool
-                        isRecording={isRecording}
-                        sessionId={session?.id}
-                        audioStream={stream}
-                        museStatus={museStatus}
-                        museError={museError}
-                        museDeviceStatus={museDeviceStatus}
-                        museChannelData={eegChannelData}
-                        bandPowers={bandPowers}
-                        onConnectMuse={handleConnectMuse}
-                        onDisconnectMuse={handleDisconnectMuse}
-                        isWebcamEnabled={isWebcamEnabled}
-                        onWebcamToggle={() => setIsWebcamEnabled(prev => !prev)}
-                        latestFacialData={latestFacialData}
-                        onFacialData={handleFacialData}
-                        onFaceError={handleFaceError}
-                        isScreenCapturing={isScreenCapturing}
-                        onStartScreenCapture={handleStartScreenCapture}
-                        onStopScreenCapture={handleStopScreenCapture}
-                        screenshotCount={screenshotCount}
-                      />
-                    </div>
-                    {activeTool === "logs" && (
-                      <LogsTool
-                        logs={logs}
-                        transferHealth={transferHealth}
-                        onClear={() => {
-                          logsRef.current = [];
-                          setLogs([]);
-                        }}
-                      />
-                    )}
-                    </div>
-                    {activeTool === "plan-resources" && session?.metadata?.workspace_id && !isMobile && (
-                      <div className="h-full overflow-hidden">
-                        <WorkspaceResourcesPanel workspaceId={session.metadata.workspace_id as string} />
-                      </div>
-                    )}
-                    {/* Grokipedia search shortcut. Practice/Theory used to
-                        share this render block when they had their own
-                        panels — they've since been merged into the
-                        Helios chat surface, so this block is now
-                        Grokipedia-only. */}
-                    {activeTool === "grokipedia" && (
-                      <GrokGrokipediaTool
-                        sessionProblem={session?.problem}
-                        activeStepDescription={activeStep?.description}
-                        activeProbes={session?.probes?.filter((probe) => !probe.archived).map((probe) => ({ text: probe.text }))}
-                        onLeaveIleTab={notifyLeaveTab}
-                      />
-                    )}
-                  </div>
-                </div>
-              }
-              right={
-                    <div className="relative h-full">
-                      <SessionHeliosPanel
-                        key={`${activeChapterKey}-${chapterReloadNonce}`}
-                        lastUserTurn={isProjectMode ? null : lastDialogueUserTurn}
-                        lastAssistantTurn={isProjectMode ? null : lastDialogueAssistantTurn}
-                        isAssistantPending={isProjectMode ? false : isHeliosAssistantPending}
-                        heliosTurnMode={isProjectMode ? "idle" : heliosTurnMode}
-                        chapterPrompt={
-                          isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt
-                        }
-                        userInitial={userInitial}
-                        isSessionActive={isRecording && !isPaused}
-                        isInitializing={planLoading}
-                        isChapterLoading={chapterLoading}
-                        loadingChapterLabel={loadingChapterLabel}
-                        hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
-
-                        showWelcome={showWelcomePanel}
-                        onWelcomePlay={handleWelcomePlay}
-                        isStartingSession={isStartingSession}
-                        welcomeResetKey={welcomeOpenNonce}
-                        sessionId={session.id}
-                        ttsLanguage={tutoringLanguage}
-                        aestheticImages={selectedAesthetic?.images}
-                        aestheticName={selectedAesthetic?.name}
-                        thought={sessionThoughtInterface}
-                        projectMode={isProjectMode}
-                        chapterThoughtsLocked={chapterThoughtsLocked}
-                        projectStash={activeProjectLists.stash}
-                        projectSolution={activeProjectLists.submitted}
-                        chapterFollowUps={activeChapterFollowUps}
-                        chapterFollowUpsLoading={activeChapterFollowUpsLoading}
-                        chapterFollowUpsError={activeChapterFollowUpsError}
-                        onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
-                        onProjectStash={handleProjectStash}
-                        onProjectSubmitToSolution={handleProjectSubmitToSolution}
-                      />
-                    </div>
-              }
-            />
-          </div>
-
-
-
-        </div>
-      </div>
-      {allowEndSession ? (
-        <ConfirmDialog
-          open={showEndDialog}
-          onCancel={() => setShowEndDialog(false)}
-          onConfirm={handleConfirmEnd}
-          variant="info"
-          title={t('session.tutorSuggestsEnd')}
-          description={endReason}
-          confirmLabel={t('sessionEnd.endSession')}
-          cancelLabel={t('common.keepGoing')}
-          confirmTone="primary"
-        />
-      ) : null}
-
-      {/* SessionPrepModal removed -- loading progress now inline in welcome modal */}
-
-      {/* Plan Complete Modal - shown when all steps are done */}
-      <ConfirmDialog
-        open={showPlanCompleteModal}
-        onCancel={() => setShowPlanCompleteModal(false)}
-        onConfirm={() => {
+      <SessionChrome
+        t={t}
+        activeTool={activeTool}
+        onToolChange={handleToolChange}
+        problem={session.problem}
+        workspaceId={session.metadata?.workspace_id as string | undefined}
+        onBackToDashboard={pauseAndGoToDashboard}
+        isRecording={isRecording}
+        isPaused={isPaused}
+        isWebcamEnabled={isWebcamEnabled}
+        museStatus={museStatus}
+        museDeviceStatus={museDeviceStatus}
+        museChannelData={eegChannelData}
+        showOpenPicInPic={showManualPicInPic}
+        onOpenPicInPic={openManualPicInPic}
+        error={error}
+        onDismissError={() => setError(null)}
+        showWelcomeModal={showWelcomeModal}
+        participantIdentity={participantIdentity}
+        resizablePaneRef={resizablePaneRef}
+        allowEndSession={allowEndSession}
+        showEndDialog={showEndDialog}
+        onCancelEnd={() => setShowEndDialog(false)}
+        onConfirmEnd={handleConfirmEnd}
+        endReason={endReason}
+        showPlanCompleteModal={showPlanCompleteModal}
+        onCancelPlanComplete={() => setShowPlanCompleteModal(false)}
+        onConfirmPlanComplete={() => {
           setShowPlanCompleteModal(false);
           if (allowEndSession) {
             handleConfirmEnd();
           }
         }}
-        variant="neutral"
-        title={t('session.sessionComplete')}
-        description={t('session.congratulationsComplete')}
-        confirmLabel={
-          allowEndSession ? t('sessionEnd.returnToWorkspace') : t('common.keepGoing')
+        left={
+          <SessionToolPanes
+            t={t}
+            activeTool={activeTool}
+            shouldBlockTools={Boolean(shouldBlockTools)}
+            session={session}
+            sessionPlan={sessionPlan}
+            ayclToken={ayclToken}
+            ileToken={ileToken}
+            locale={locale}
+            planLoading={planLoading}
+            activeChapterIndex={activeChapterIndex}
+            chapterLoadingIndex={chapterLoadingIndex}
+            onLoadChapter={handleLoadChapter}
+            onChapterDone={() => { void handleMarkChapterDone(); }}
+            onAddChapter={handleAddChapter}
+            onUpdateChapter={handleUpdateChapter}
+            onEnsurePositions={handleEnsureChapterPositions}
+            isRecording={isRecording}
+            activeStep={activeStep}
+            participantIdentity={participantIdentity}
+            activeChapterKey={activeChapterKey}
+            whiteboardData={whiteboardData}
+            whiteboardSceneData={whiteboardSceneData}
+            onCanvasChange={(data) => {
+              setWhiteboardData(data);
+              setCanvasDirtyForHelios(true);
+              if (sessionRef.current) {
+                sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
+              }
+            }}
+            onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
+            onSubmitToHelios={handleSubmitToHelios}
+            chapterThoughtsLocked={chapterThoughtsLocked}
+            canvasDirtyForHelios={canvasDirtyForHelios}
+            notebookDirtyForHelios={notebookDirtyForHelios}
+            isProjectMode={isProjectMode}
+            activeChapterLabel={activeChapterLabel}
+            notebookContent={notebookContent}
+            onNotebookChange={(value) => {
+              setNotebookContent(value);
+              setNotebookDirtyForHelios(true);
+            }}
+            resolvedSessionMode={resolvedSessionMode}
+            activeProjectLists={activeProjectLists}
+            onProjectPromote={handleProjectPromote}
+            onProjectDemote={handleProjectDemote}
+            sessionThoughtHistory={sessionThoughtHistory}
+            stream={stream}
+            museStatus={museStatus}
+            museError={museError}
+            museDeviceStatus={museDeviceStatus}
+            eegChannelData={eegChannelData}
+            bandPowers={bandPowers}
+            onConnectMuse={handleConnectMuse}
+            onDisconnectMuse={handleDisconnectMuse}
+            isWebcamEnabled={isWebcamEnabled}
+            onWebcamToggle={() => setIsWebcamEnabled((prev) => !prev)}
+            latestFacialData={latestFacialData}
+            onFacialData={handleFacialData}
+            onFaceError={handleFaceError}
+            isScreenCapturing={isScreenCapturing}
+            onStartScreenCapture={handleStartScreenCapture}
+            onStopScreenCapture={handleStopScreenCapture}
+            screenshotCount={screenshotCount}
+            logs={logs}
+            transferHealth={transferHealth}
+            onClearLogs={() => {
+              logsRef.current = [];
+              setLogs([]);
+            }}
+            isMobile={isMobile}
+            onLeaveIleTab={notifyLeaveTab}
+          />
         }
-        confirmTone="primary"
-        hideCancel
+        right={
+          <SessionThoughtPane
+            activeChapterKey={activeChapterKey}
+            chapterReloadNonce={chapterReloadNonce}
+            isProjectMode={isProjectMode}
+            lastUserTurn={lastDialogueUserTurn}
+            lastAssistantTurn={lastDialogueAssistantTurn}
+            isAssistantPending={isHeliosAssistantPending}
+            heliosTurnMode={heliosTurnMode}
+            chapterPrompt={isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt}
+            userInitial={userInitial}
+            isSessionActive={isRecording && !isPaused}
+            isInitializing={planLoading}
+            isChapterLoading={chapterLoading}
+            loadingChapterLabel={loadingChapterLabel}
+            hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
+            showWelcome={showWelcomePanel}
+            onWelcomePlay={handleWelcomePlay}
+            isStartingSession={isStartingSession}
+            welcomeResetKey={welcomeOpenNonce}
+            sessionId={session.id}
+            ttsLanguage={tutoringLanguage}
+            selectedAesthetic={selectedAesthetic}
+            thought={sessionThoughtInterface}
+            chapterThoughtsLocked={chapterThoughtsLocked}
+            projectStash={activeProjectLists.stash}
+            projectSolution={activeProjectLists.submitted}
+            chapterFollowUps={activeChapterFollowUps}
+            chapterFollowUpsLoading={activeChapterFollowUpsLoading}
+            chapterFollowUpsError={activeChapterFollowUpsError}
+            onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
+            onProjectStash={handleProjectStash}
+            onProjectSubmitToSolution={handleProjectSubmitToSolution}
+          />
+        }
       />
     </div>
   );

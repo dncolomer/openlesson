@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
 
@@ -36,10 +37,7 @@ export async function PUT(
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
+      return jsonError(400, "No valid fields to update");
     }
 
     // First, let's check if we can read the plan
@@ -51,7 +49,7 @@ export async function PUT(
 
     if (checkError) {
       console.error("Check error:", checkError);
-      return NextResponse.json({ error: "Cannot access plan: " + checkError.message }, { status: 500 });
+      return jsonError(500, "Cannot access plan: " + checkError.message);
     }
 
     console.log("Existing plan:", existingPlan);
@@ -66,7 +64,7 @@ export async function PUT(
 
     if (updateError) {
       console.error("Update error:", updateError);
-      return NextResponse.json({ error: "Update failed: " + updateError.message }, { status: 500 });
+      return jsonError(500, "Update failed: " + updateError.message);
     }
 
     // Verify the update
@@ -107,9 +105,6 @@ export async function PUT(
     return NextResponse.json(response);
   } catch (error) {
     console.error("Error updating plan visibility:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update visibility" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to update visibility");
   }
 }

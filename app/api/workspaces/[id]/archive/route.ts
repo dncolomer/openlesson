@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUserManageWorkspace, setWorkspaceArchived } from "@/lib/workspace-archive";
@@ -22,14 +23,11 @@ export async function POST(
       .single();
 
     if (planError?.code === "PGRST116" || !plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     if (!canUserManageWorkspace(plan, user.id)) {
-      return NextResponse.json(
-        { error: "Only the workspace owner can archive or restore it" },
-        { status: 403 }
-      );
+      return jsonError(403, "Only the workspace owner can archive or restore it");
     }
 
     const workspace = await setWorkspaceArchived(
@@ -52,7 +50,7 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to archive workspace";
     const status = message.includes("not found") ? 404 : message.includes("owner") ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }
 
@@ -73,14 +71,11 @@ export async function DELETE(
       .single();
 
     if (planError?.code === "PGRST116" || !plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     if (!canUserManageWorkspace(plan, user.id)) {
-      return NextResponse.json(
-        { error: "Only the workspace owner can archive or restore it" },
-        { status: 403 }
-      );
+      return jsonError(403, "Only the workspace owner can archive or restore it");
     }
 
     const workspace = await setWorkspaceArchived(
@@ -103,6 +98,6 @@ export async function DELETE(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to restore workspace";
     const status = message.includes("not found") ? 404 : message.includes("owner") ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return jsonError(status, message);
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { toSkillGridNodes, withSkillGridPositions } from "@/lib/skill-grid-positions";
@@ -28,17 +29,11 @@ export async function POST(
     const { remixPrompt, title, exactCopy } = await req.json();
 
     if (!exactCopy && (!remixPrompt || typeof remixPrompt !== "string")) {
-      return NextResponse.json(
-        { error: "Remix prompt is required" },
-        { status: 400 }
-      );
+      return jsonError(400, "Remix prompt is required");
     }
 
     if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 }
-      );
+      return jsonError(400, "Title is required");
     }
 
     const { data: sourcePlan, error: planQueryError } = await supabase
@@ -49,14 +44,11 @@ export async function POST(
 
     if (planQueryError || !sourcePlan) {
       console.error("Source plan error:", planQueryError);
-      return NextResponse.json({ error: "Source plan not found" }, { status: 404 });
+      return jsonError(404, "Source plan not found");
     }
 
     if (!sourcePlan.is_public) {
-      return NextResponse.json(
-        { error: "Cannot remix a private plan" },
-        { status: 403 }
-      );
+      return jsonError(403, "Cannot remix a private plan");
     }
 
     const { data: sourceNodes, error: nodesError } = await supabase
@@ -66,7 +58,7 @@ export async function POST(
 
     if (nodesError) {
       console.error("Nodes error:", nodesError);
-      return NextResponse.json({ error: "Could not fetch source nodes" }, { status: 500 });
+      return jsonError(500, "Could not fetch source nodes");
     }
 
     if (exactCopy) {
@@ -209,13 +201,13 @@ Rules:
 
     if (!response.success || !response.data) {
       console.error("xAI error:", response.error);
-      return NextResponse.json({ error: "Failed to remix plan" }, { status: 500 });
+      return jsonError(500, "Failed to remix plan");
     }
 
     const planData = response.data;
 
     if (!planData.nodes || !Array.isArray(planData.nodes)) {
-      return NextResponse.json({ error: "Invalid plan data format" }, { status: 500 });
+      return jsonError(500, "Invalid plan data format");
     }
 
     const { data: newPlan, error: planError } = await supabase
@@ -292,9 +284,6 @@ Rules:
     });
   } catch (error) {
     console.error("Error remixing plan:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to remix plan" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to remix plan");
   }
 }

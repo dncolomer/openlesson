@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -52,13 +53,13 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    return jsonError(400, "Missing signature");
   }
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error("STRIPE_WEBHOOK_SECRET is not configured");
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    return jsonError(500, "Webhook not configured");
   }
 
   let event: Stripe.Event;
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("Webhook signature verification failed:", err);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    return jsonError(400, "Invalid signature");
   }
 
   const supabase = getAdminClient();
@@ -350,7 +351,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Webhook handler error:", error);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    return jsonError(500, "Webhook processing failed");
   }
 
   return NextResponse.json({ received: true });

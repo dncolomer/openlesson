@@ -3,14 +3,10 @@
  * the same scroll/overflow space (overlap / unusable checklist).
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
-const ROOT = join(__dirname, "../..");
-const PANEL = join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx");
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 function readPanel(): string {
-  return readFileSync(PANEL, "utf8");
+  return readKnowledgePanelSurface();
 }
 
 /** Slice the region-overlay-picker block for layout assertions. */
@@ -25,8 +21,8 @@ function overlayPickerBlock(src: string): string {
     src.indexOf("{/* Learning World Model", start),
     src.indexOf('data-section="lwm"', start),
   ].filter((i) => i > start);
-  const end = endCandidates.length ? Math.min(...endCandidates) : start + 8000;
-  return src.slice(start, Math.min(end + 200, start + 12000));
+  const end = endCandidates.length ? Math.min(...endCandidates) : start + 20000;
+  return src.slice(start, Math.min(end + 200, start + 20000));
 }
 
 describe("Embeddings region overlay non-overlap layout", () => {

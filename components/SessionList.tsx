@@ -46,31 +46,19 @@ interface SessionListProps {
   learnerScopeId?: string | null;
   /** Creator clone-paste (left-strip tool). */
   cloneArmed?: boolean;
+  cloneSourceBlockId?: string | null;
   onCloneArm?: (blockId: string) => void;
   onCloneCancel?: () => void;
+  onClonePaste?: (sourceBlockId: string, target: { row: number; col: number }) => void;
   /**
    * Controlled open-block id for the workspace right pane (double-click detail).
    * When provided with onExpandedNodeIdChange, SessionList does not host a modal.
    */
   expandedNodeId?: string | null;
   onExpandedNodeIdChange?: (blockId: string | null) => void;
-  /** Exclusive map selection. Preferred over the three-channel callbacks. */
+  /** Exclusive map selection from the product shell. */
+  mapSelection?: WorkspaceMapSelection;
   onMapSelectionChange?: (selection: WorkspaceMapSelection) => void;
-  /**
-   * Empty-cell selection for the right pane (1 → Add, 2+ → generate shape).
-   * Null/[] clears.
-   */
-  onEmptySelectionChange?: (cells: Array<{ row: number; col: number }> | null) => void;
-  /**
-   * Multi-selected filled block ids (2+ → parent shows combine surface).
-   * Null/[] clears combine.
-   */
-  onSelectedBlockIdsChange?: (blockIds: string[] | null) => void;
-  /** Host-driven multi-select apply (Map Search / Suggest empty spots). */
-  applyMapSelection?: {
-    token: number;
-    selection: WorkspaceMapSelection;
-  } | null;
   selectiveExplanationActive?: boolean;
   selectiveExplanationPolygon?: Array<{ x: number; y: number }> | null;
   onSelectiveExplanationComplete?: (
@@ -86,14 +74,10 @@ interface SessionListProps {
   /** Map explore toggle under minimap (above Add Note). */
   mapExploreOpen?: boolean;
   onMapExploreToggle?: () => void;
+  onMapToggle?: (id: "creator" | "learner" | "explore") => void;
   /** Build / Play mode toggle under minimap (not in top nav). */
   interactionMode?: "creator" | "learner";
   onInteractionModeChange?: (mode: "creator" | "learner") => void;
-  /**
-   * @deprecated Prefer onEmptySelectionChange.
-   * Single empty placeable cell for right-pane Add block (null clears).
-   */
-  onAddTargetChange?: (cell: { row: number; col: number } | null) => void;
   /** Unusable map ground cells (path-shaping). */
   unusableCells?: Array<{ row: number; col: number }> | null;
   /** Persist lock-until / unusable ground from left toolbar + selection. */
@@ -197,23 +181,23 @@ export function SessionList({
   ayclToken,
   learnerScopeId = null,
   cloneArmed = false,
+  cloneSourceBlockId = null,
   onCloneArm,
   onCloneCancel,
+  onClonePaste,
   expandedNodeId: expandedNodeIdProp,
   onExpandedNodeIdChange,
+  mapSelection,
   onMapSelectionChange,
-  onEmptySelectionChange,
-  onSelectedBlockIdsChange,
-  applyMapSelection = null,
   selectiveExplanationActive = false,
   selectiveExplanationPolygon = null,
   onSelectiveExplanationComplete,
   injectMapNote = null,
   mapExploreOpen = false,
   onMapExploreToggle,
+  onMapToggle,
   interactionMode = "creator",
   onInteractionModeChange,
-  onAddTargetChange,
   unusableCells = null,
   onMapGround,
   workspaceNotes = null,
@@ -477,38 +461,17 @@ export function SessionList({
           <BlockSkillGrid
             nodes={nodes}
             selectedNodeId={expandedNodeId}
-            onSelectNode={(blockId) => {
-              if (onMapSelectionChange) {
-                if (blockId) {
-                  onMapSelectionChange(
-                    nextWorkspaceMapSelection({ type: "open_block", blockId }),
-                  );
-                }
-                return;
-              }
-              setExpandedNodeId(blockId);
-            }}
+            onSelectNode={setExpandedNodeId}
+            mapSelection={mapSelection}
             onMapSelectionChange={onMapSelectionChange}
-            onSelectedBlockIdsChange={
-              onMapSelectionChange ? undefined : onSelectedBlockIdsChange
-            }
-            onEmptySelectionChange={
-              onMapSelectionChange ? undefined : onEmptySelectionChange
-            }
-            onAddTargetChange={
-              onAddTargetChange
-                ? (cell) => {
-                    if (cell) setExpandedNodeId(null);
-                    onAddTargetChange(cell);
-                  }
-                : undefined
-            }
             canEdit={isOwner && !learnerMode}
             learnerMode={learnerMode}
             learnerScopeId={learnerScopeId || ayclToken || null}
             cloneArmed={cloneArmed}
+            cloneSourceBlockId={cloneSourceBlockId}
             onCloneArm={onCloneArm}
             onCloneCancel={onCloneCancel}
+            onClonePaste={onClonePaste}
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
             workspaceId={workspaceId}
@@ -530,13 +493,13 @@ export function SessionList({
             expandJobs={expandJobs}
             onAbortExpandJob={onAbortExpandJob}
             clusterMapJob={clusterMapJob}
-            applyMapSelection={applyMapSelection}
             selectiveExplanationActive={selectiveExplanationActive}
             selectiveExplanationPolygon={selectiveExplanationPolygon}
             onSelectiveExplanationComplete={onSelectiveExplanationComplete}
             injectMapNote={injectMapNote}
             mapExploreOpen={mapExploreOpen}
             onMapExploreToggle={onMapExploreToggle}
+            onMapToggle={onMapToggle}
             interactionMode={interactionMode}
             onInteractionModeChange={onInteractionModeChange}
             appearingNodeIds={appearingNodeIds}

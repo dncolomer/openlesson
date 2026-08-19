@@ -3,6 +3,7 @@
  * opens requestWindow only — never window.open on that path.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -687,7 +688,7 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     expect(applyBody).not.toContain("shouldRequestIlePopupOnLeave");
 
     const tools = read("components/ToolsPanel.tsx");
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(tools).toContain("ILE_OPEN_PIC_IN_PIC_LABEL");
     expect(tools).toContain("data-ile-open-pic-in-pic");
     expect(tools.indexOf("ILE_OPEN_PIC_IN_PIC_LABEL")).toBeLessThan(tools.indexOf("bottomTools.map"));
@@ -763,7 +764,7 @@ describe("auto-PiP wiring (shipped source)", () => {
     const hook = read("lib/useIleBlurScreenshare.tsx");
     const auto = read("lib/ile-auto-pip.ts");
     const compact = read("lib/ile-compact-window.ts");
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(existsSync(join(ROOT, "components/IleMiniModeFirstAsk.tsx"))).toBe(false);
 
     expect(hook).toContain("registerIleEnterPictureInPictureHandler");

@@ -38,10 +38,19 @@ export const ILE_SESSION_MODE_LABELS: Record<IleSessionMode, string> = {
  * Normalize ILE session mode. Missing / legacy / invalid → Learning Mode.
  * Accepts project aliases (exercise, solo) and learning aliases (conversational, dialogue).
  */
+export function parseIleSessionModeWrite(value: unknown): IleSessionMode | null {
+  if (value === "learning" || value === "project") return value;
+  return null;
+}
+
 export function normalizeIleSessionMode(
   value: unknown,
   fallback: IleSessionMode = ILE_SESSION_MODE_DEFAULT,
+  opts?: { write?: boolean },
 ): IleSessionMode {
+  if (opts?.write) {
+    return parseIleSessionModeWrite(value) ?? fallback;
+  }
   if (value === true || value === 1) return "project";
   if (value === false || value === 0) return "learning";
   if (typeof value === "string") {
@@ -77,9 +86,14 @@ export function normalizeIleSessionMode(
 /** Resolve mode from create-body keys (snake/camel + project checkbox + TAP-style aliases). */
 export function resolveIleSessionModeFromBody(
   body: Record<string, unknown> | null | undefined,
+  opts?: { write?: boolean },
 ): IleSessionMode {
   if (!body || typeof body !== "object") return ILE_SESSION_MODE_DEFAULT;
   const record = body as Record<string, unknown>;
+  if (opts?.write) {
+    const raw = record.session_mode ?? record.sessionMode;
+    return parseIleSessionModeWrite(raw) ?? ILE_SESSION_MODE_DEFAULT;
+  }
   if ("session_mode" in record) return normalizeIleSessionMode(record.session_mode);
   if ("sessionMode" in record) return normalizeIleSessionMode(record.sessionMode);
   if ("ile_mode" in record) return normalizeIleSessionMode(record.ile_mode);
@@ -171,6 +185,36 @@ export function resolveIleShellFromSession(
   input: Parameters<typeof resolveIleSessionModeFromSession>[0],
 ): IleShellKind {
   return resolveIleSessionModeFromSession(input);
+}
+
+/**
+ * Durable Learning vs Project mode — same order as the ILE shell:
+ * explicit link/prop wins, then session metadata / link row, else learning.
+ */
+export function resolveIleDurableSessionMode(input: {
+  sessionModeProp?: unknown;
+  metadata?: {
+    session_mode?: unknown;
+    ile_session_mode?: unknown;
+    sessionMode?: unknown;
+    ileSessionMode?: unknown;
+  } | null;
+  ileLink?: {
+    session_mode?: unknown;
+    sessionMode?: unknown;
+  } | null;
+}): IleSessionMode {
+  if (
+    input.sessionModeProp !== undefined &&
+    input.sessionModeProp !== null &&
+    input.sessionModeProp !== ""
+  ) {
+    return normalizeIleSessionMode(input.sessionModeProp);
+  }
+  return resolveIleSessionModeFromSession({
+    metadata: input.metadata,
+    ileLink: input.ileLink,
+  });
 }
 
 /** Mark as Done / skipped is terminal for chapter thought mutations in Project Mode. */

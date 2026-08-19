@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -27,7 +28,7 @@ export async function GET() {
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError(404, "Profile not found");
     }
 
     if (!profile.organization_id) {
@@ -44,7 +45,7 @@ export async function GET() {
       .single();
 
     if (orgError || !organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return jsonError(404, "Organization not found");
     }
 
     // Get members if user is org admin
@@ -121,7 +122,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Get organization error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === "string" ? body.name.trim() : "";
-    if (!name) return NextResponse.json({ error: "Organization name is required" }, { status: 400 });
+    if (!name) return jsonError(400, "Organization name is required");
     const logo = parseLogoPayload(body);
 
     const adminClient = getAdminClient();
@@ -158,16 +159,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError(404, "Profile not found");
     }
 
     const isAdmin = profile.is_admin === true;
     const hasApi = isAdmin || (await userHasOrgApiAccess(adminClient, user.id));
     if (!hasApi) {
-      return NextResponse.json(
-        { error: "Teams or API Metered org entitlement is required to create a team organization" },
-        { status: 403 }
-      );
+      return jsonError(403, "Teams or API Metered org entitlement is required to create a team organization");
     }
 
     const baseSlug = slugify(typeof body.slug === "string" ? body.slug : name);
@@ -216,7 +214,7 @@ export async function POST(req: NextRequest) {
 
         if (orgError || !organization) {
           console.error("Promote organization error:", orgError);
-          return NextResponse.json({ error: "Failed to update organization" }, { status: 500 });
+          return jsonError(500, "Failed to update organization");
         }
 
         let finalOrg = organization;
@@ -238,13 +236,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ organization: finalOrg, is_org_admin: true, promoted: true }, { status: 200 });
       }
 
-      return NextResponse.json(
-        {
-          error:
-            "You already belong to a multi-member organization. Leave it before creating another.",
-        },
-        { status: 409 }
-      );
+      return jsonError(409, "You already belong to a multi-member organization. Leave it before creating another.",);
     }
 
     // No organization_id (should be rare post-migrate): create team org
@@ -271,7 +263,7 @@ export async function POST(req: NextRequest) {
 
     if (orgError || !organization) {
       console.error("Create organization error:", orgError);
-      return NextResponse.json({ error: "Failed to create organization" }, { status: 500 });
+      return jsonError(500, "Failed to create organization");
     }
 
     let finalOrg = organization;
@@ -291,7 +283,7 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       console.error("Assign organization admin error:", updateError);
-      return NextResponse.json({ error: "Failed to assign organization admin" }, { status: 500 });
+      return jsonError(500, "Failed to assign organization admin");
     }
 
     await adminClient
@@ -303,6 +295,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ organization: finalOrg, is_org_admin: true }, { status: 201 });
   } catch (error) {
     console.error("Create organization error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

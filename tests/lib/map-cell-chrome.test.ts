@@ -3,6 +3,7 @@
  * Drives shipped helpers used by workspace block maps and ILE chapter maps.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -137,7 +138,7 @@ describe("multi-select / empty selection tokens", () => {
 
 describe("structural: BlockSkillGrid title-only map tiles", () => {
   it("BlockSkillGrid uses title path plus tick/gear from the chrome mapper", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("resolveOccupiedMapTileChrome");
     expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("MapCellStatusGlyph");
@@ -146,7 +147,7 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(badges).toContain('data-map-cell-status="title"');
     expect(badges).toContain("data-ile-chapter-done-tick");
     expect(grid).toContain('suggestMode === "chapter"');
-    expect(grid).toContain("MAP_CELL_PREREQ_CLASS");
+    expect(read("lib/map-cell-chrome.ts")).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("MAP_CELL_EMPTY_SELECTED_CLASS");
     expect(grid).toContain("MAP_CELL_GENERATION_PENDING_CLASS");
     expect(grid).toContain("data-generation-pending");

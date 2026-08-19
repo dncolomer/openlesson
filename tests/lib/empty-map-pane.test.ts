@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Empty-selection map right pane: pure helpers + structural/wiring checks.
  * Drives shipped search / empty-spot / overview / selective-area / note helpers.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -433,8 +435,8 @@ describe("empty-map-pane structural + wiring", () => {
   it("empty map UI mounts for map_tools; search/suggest/overview/selective markers", () => {
     const pane = read("components/WorkspaceEmptyMapPane.tsx");
     const authoring = read("components/WorkspaceMapAuthoringPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const view = readWorkspaceViewSurface();
+    const grid = readMapGridSurface();
     const sessionList = read("components/SessionList.tsx");
     const lib = read("lib/empty-map-pane.ts");
     const api = read("app/api/workspace/map-explore/route.ts");
@@ -448,6 +450,7 @@ describe("empty-map-pane structural + wiring", () => {
     expect(pane).toContain('drawerId="map_search"');
     expect(pane).toContain('drawerId="map_suggest_spot"');
     expect(pane).toContain('drawerId="map_selective"');
+    expect(pane).toContain('drawerId="map_explore_block"');
     expect(pane).toContain("MAP_EXPLORE_DEFAULT_OPEN_DRAWER");
     expect(pane).toContain("data-empty-map-xai");
     expect(pane).toContain("data-empty-map-search");
@@ -477,6 +480,7 @@ describe("empty-map-pane structural + wiring", () => {
     expect(pane).toContain('callMapExplore("suggest_spot"');
     expect(pane).toContain('callMapExplore("overview"');
     expect(pane).toContain('callMapExplore("area_summary"');
+    expect(pane).toContain('callMapExplore("explore_block"');
     expect(pane).toContain("mapNoteCreateInputFromAreaSummary");
 
     // Authoring: explore only when exploreOpen; idle empty is short tip
@@ -492,14 +496,15 @@ describe("empty-map-pane structural + wiring", () => {
     expect(view).toContain("onMapExploreToggle={handleToggleMapExplore}");
     expect(view).toContain("mapExploreOpen={showMapExplore}");
     expect(view).toContain("handleToggleMapExplore");
-    expect(view).toContain("toggleMapExploreShell");
+    expect(view).toContain("handleMapToggle");
+    expect(view).toContain("openMapExploreShell");
     expect(view).toContain("resolveMapExploreRightColumn");
     expect(view).toContain("showMapExplore");
     expect(view).toContain("exploreOpen");
     expect(view).toMatch(/showMapExplore\s*\?\s*\([\s\S]*?WorkspaceMapAuthoringPane[\s\S]*?exploreOpen/);
     expect(view).toContain("handleEmptyMapSearchBlocks");
     expect(view).toContain("handleEmptyMapSuggestCells");
-    expect(view).toContain("applyMapSelection");
+    expect(view).toContain("mapSelection={mapSelection}");
     expect(view).toContain("selectiveExplanationActive");
     expect(view).toContain("selectiveExplanationPolygon");
     expect(view).toContain("injectMapNote");
@@ -509,20 +514,21 @@ describe("empty-map-pane structural + wiring", () => {
     expect(view).toContain(
       "onSuggestSelectEmptyCells={handleEmptyMapSuggestCells}",
     );
-    // Grid: explore control under minimap stack, above Add Note
-    expect(grid).toContain("data-map-explore-toggle");
-    expect(grid).toContain("data-map-explore-under-minimap");
+    // Grid: Build/Play/Explore is the under-minimap control (no standalone Explore button)
+    expect(grid).not.toContain("data-map-explore-toggle");
+    expect(grid).toContain("data-workspace-mode-toggle");
+    expect(grid).toContain("data-workspace-mode-under-minimap");
+    expect(grid).toContain("data-workspace-mode-toggle-states");
     expect(grid).toContain("data-map-minimap-stack");
-    expect(grid).toContain("onMapExploreToggle");
+    expect(grid).toContain("onMapToggle");
     expect(grid).toContain("mapExploreOpen");
     expect(grid).toContain("data-map-note-add");
-    // Order: map explore toggle appears before Add note in the stack
     const stackIdx = grid.indexOf("data-map-minimap-stack");
-    const exploreIdx = grid.indexOf("data-map-explore-toggle");
+    const modeIdx = grid.indexOf("data-workspace-mode-toggle");
     const addNoteIdx = grid.indexOf("data-map-note-add");
     expect(stackIdx).toBeGreaterThan(-1);
-    expect(exploreIdx).toBeGreaterThan(stackIdx);
-    expect(addNoteIdx).toBeGreaterThan(exploreIdx);
+    expect(modeIdx).toBeGreaterThan(stackIdx);
+    expect(addNoteIdx).toBeGreaterThan(modeIdx);
     // No floating bottom-right round FAB
     expect(view).not.toMatch(/data-map-explore-fab/);
     expect(view).not.toMatch(
@@ -542,11 +548,12 @@ describe("empty-map-pane structural + wiring", () => {
     );
     // Learner empty selection does not open create panes
     expect(view).toMatch(
-      /interactionMode === "learner"[\s\S]*?setEmptySurface\(clearWorkspaceAddTarget/,
+      /interactionMode === "learner"[\s\S]*?clearWorkspaceAddTarget/,
     );
 
-    // Grid: apply selection + selective overlay independent of lasso
-    expect(grid).toContain("applyMapSelection");
+    // Grid: exclusive selection + selective overlay independent of lasso
+    expect(grid).toContain("mapSelection?: WorkspaceMapSelection");
+    expect(grid).not.toContain("applyMapSelection");
     expect(grid).toContain("selectiveExplanationActive");
     expect(grid).toContain("onSelectiveExplanationComplete");
     expect(grid).toContain("data-selective-explanation-active");
@@ -569,6 +576,21 @@ describe("empty-map-pane structural + wiring", () => {
     expect(grid).toMatch(
       /selectiveExplanationActiveRef[\s\S]{0,800}?viewport\.setPointerCapture\(event\.pointerId\)/,
     );
+    // Ref must stay in sync with React state. A stale `false` lets pointerdown
+    // fall through to beginViewportPan ("pan the map") instead of drawing.
+    expect(grid).toMatch(
+      /selectiveExplanationActiveRef\.current\s*=\s*selectiveExplanationActive/,
+    );
+    expect(grid).toMatch(
+      /selectiveExplanationActive\s*\|\|\s*selectiveExplanationActiveRef\.current/,
+    );
+    // Empty-cell drag-to-pan and block drag must not steal the draw gesture.
+    expect(grid).toMatch(
+      /Selective Explanation owns the drag — do not arm empty-cell pan/,
+    );
+    expect(grid).toMatch(
+      /Selective Explanation owns the gesture — do not arm block drag/,
+    );
     expect(grid).toMatch(
       /Stay mounted for the entire active draw lifetime|Unmounting on selectiveDrawOverlay would release pointer capture/,
     );
@@ -582,7 +604,8 @@ describe("empty-map-pane structural + wiring", () => {
     expect(grid).not.toMatch(
       /data-selective-explanation-(draw|overlay)[\s\S]{0,120}?rgba\(250,\s*204,\s*21/,
     );
-    expect(sessionList).toContain("applyMapSelection");
+    expect(sessionList).toContain("mapSelection={mapSelection}");
+    expect(sessionList).not.toContain("applyMapSelection");
     expect(sessionList).toContain("selectiveExplanationActive");
 
     // Right pane still map_tools when nothing selected
@@ -646,16 +669,17 @@ describe("empty-map-pane structural + wiring", () => {
     writeEvidence(
       "map-explore-under-minimap-structural.log",
       [
-        "toggle_under_minimap=" + grid.includes("data-map-explore-under-minimap"),
-        "toggle_attr=" + grid.includes("data-map-explore-toggle"),
+        "toggle_under_minimap=" +
+          grid.includes("data-workspace-mode-under-minimap"),
+        "toggle_attr=" + grid.includes("data-workspace-mode-toggle"),
         "in_minimap_stack=" +
           String(
-            grid.indexOf("data-map-explore-toggle") >
+            grid.indexOf("data-workspace-mode-toggle") >
               grid.indexOf("data-map-minimap-stack"),
           ),
         "above_add_note=" +
           String(
-            grid.indexOf("data-map-explore-toggle") <
+            grid.indexOf("data-workspace-mode-toggle") <
               grid.indexOf("data-map-note-add") &&
               grid.indexOf("data-map-note-add") > -1,
           ),
@@ -681,7 +705,7 @@ describe("empty-map-pane structural + wiring", () => {
             view.includes("onMapExploreToggle={handleToggleMapExplore}") &&
               view.includes("mapExploreOpen={showMapExplore}"),
           ),
-        "grid_calls_toggle=" + grid.includes("onMapExploreToggle()"),
+        "grid_calls_toggle=" + grid.includes("onMapToggle"),
         "show_explore_mounts_pane=" +
           String(/showMapExplore\s*\?\s*\([\s\S]*?exploreOpen/.test(view)),
         "idle_exploreOpen_false=" +
@@ -704,7 +728,7 @@ describe("empty-map-pane structural + wiring", () => {
     writeEvidence(
       "map-explore-under-minimap-logic.log",
       [
-        "toggle_helper=" + lib.includes("toggleMapExploreShell"),
+        "toggle_helper=" + lib.includes("openMapExploreShell"),
         "resolve_helper=" + lib.includes("resolveMapExploreRightColumn"),
         "open_showExplore_true=" +
           resolveMapExploreRightColumn({
@@ -812,7 +836,7 @@ describe("empty-map-pane structural + wiring", () => {
               view.includes("handleEmptyMapSuggestCells"),
           ),
         "apply_map_selection_prop=" +
-          String(grid.includes("applyMapSelection")),
+          String(grid.includes("mapSelection?: WorkspaceMapSelection")),
         "selective_polygon_state=" +
           String(view.includes("selectiveExplanationPolygon")),
         "selective_not_only_selectedBlockIds=" +

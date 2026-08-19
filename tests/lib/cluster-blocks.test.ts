@@ -1,3 +1,8 @@
+import {
+  readGridOpsSurface,
+  readMapGridSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
@@ -429,10 +434,7 @@ describe("Cluster blocks structural wiring", () => {
   });
 
   it("WorkspaceView wires onClusterBlocks to grid-ops relocate and minimap progress", () => {
-    const view = fs.readFileSync(
-      path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("handleClusterBlocks");
     expect(view).toContain("onClusterBlocks={handleClusterBlocks}");
     expect(view).toContain("onClusterProgress={handleClusterProgress}");
@@ -442,10 +444,7 @@ describe("Cluster blocks structural wiring", () => {
   });
 
   it("cluster success clears filled multi-select, empty surface, and grid-local selection", () => {
-    const view = fs.readFileSync(
-      path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
+    const view = readWorkspaceViewSurface();
     const grid = fs.readFileSync(
       path.join(REPO_ROOT, "components/BlockSkillGrid.tsx"),
       "utf8",
@@ -455,7 +454,7 @@ describe("Cluster blocks structural wiring", () => {
       "utf8",
     );
     // Isolate the relocate success handler body after handleClusterBlocks.
-    const start = view.indexOf("handleClusterBlocks");
+    const start = view.indexOf("const handleClusterBlocks");
     expect(start).toBeGreaterThanOrEqual(0);
     const handler = view.slice(start, start + 2800);
     expect(handler).toContain('op: "relocate"');
@@ -471,10 +470,7 @@ describe("Cluster blocks structural wiring", () => {
   });
 
   it("BlockSkillGrid shows cluster progress bar under minimap", () => {
-    const grid = fs.readFileSync(
-      path.join(REPO_ROOT, "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
+    const grid = readMapGridSurface();
     expect(grid).toContain("clusterMapJob");
     expect(grid).toContain("data-map-cluster-job");
     expect(grid).toContain("data-map-cluster-progress-bar");
@@ -482,12 +478,9 @@ describe("Cluster blocks structural wiring", () => {
   });
 
   it("grid-ops supports relocate op with validateRelocatePlacements", () => {
-    const route = fs.readFileSync(
-      path.join(REPO_ROOT, "app/api/workspace/grid-ops/route.ts"),
-      "utf8",
-    );
+    const route = readGridOpsSurface();
     expect(route).toContain('"relocate"');
-    expect(route).toContain('op === "relocate"');
+    expect(route).toContain("handle_relocate");
     expect(route).toContain("validateRelocatePlacements");
     expect(route).toContain("position_x");
     expect(route).toContain("position_y");

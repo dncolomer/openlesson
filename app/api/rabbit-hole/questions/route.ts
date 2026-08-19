@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import type { RabbitHoleNode } from "@/lib/rabbit-hole";
 
@@ -57,7 +58,7 @@ export async function GET() {
     .order("sort_order", { ascending: true })
     .limit(100);
 
-  if (error) return NextResponse.json({ error: "Failed to load questions" }, { status: 500 });
+  if (error) return jsonError(500, "Failed to load questions");
 
   const ids = (questions ?? []).map((question) => question.id);
   const { data: nodes } = ids.length

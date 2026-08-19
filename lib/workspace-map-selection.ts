@@ -66,6 +66,12 @@ export function mapSelectionEmptyCells(
   return selection.kind === "empties" ? selection.cells : [];
 }
 
+/** Highlight set the map host paints — sole block or multi-fill, never both. */
+export function mapSelectionHighlightIds(selection: WorkspaceMapSelection): string[] {
+  const expanded = mapSelectionExpandedId(selection);
+  return expanded ? [expanded] : mapSelectionFilledIds(selection);
+}
+
 export function nextWorkspaceMapSelection(
   action: WorkspaceMapSelectionAction,
 ): WorkspaceMapSelection {
@@ -88,32 +94,4 @@ export function nextWorkspaceMapSelection(
   return { kind: "empties", cells };
 }
 
-export type WorkspaceMapApplyPayload = {
-  token: number;
-  selection: WorkspaceMapSelection;
-};
 
-export function mapSelectionToApplyPayload(
-  selection: WorkspaceMapSelection,
-  token: number,
-): WorkspaceMapApplyPayload {
-  return { token, selection };
-}
-
-/**
- * Map host → shell after a commit. Exclusive hosts get the committed
- * selection as-is. Never follow blocks/empties with open_block(null) —
- * that action is a full clear.
- */
-export function notifyMapHostCommit(
-  selection: WorkspaceMapSelection,
-  exclusive: ((next: WorkspaceMapSelection) => void) | undefined,
-  legacySelect: (blockId: string | null) => void,
-): WorkspaceMapSelection {
-  if (exclusive) {
-    exclusive(selection);
-    return selection;
-  }
-  legacySelect(mapSelectionExpandedId(selection));
-  return selection;
-}

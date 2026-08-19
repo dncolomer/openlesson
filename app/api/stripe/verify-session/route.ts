@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -20,12 +21,12 @@ export async function GET(request: NextRequest) {
   try {
     const sessionId = new URL(request.url).searchParams.get("session_id");
     if (!sessionId) {
-      return NextResponse.json({ error: "session_id is required" }, { status: 400 });
+      return jsonError(400, "session_id is required");
     }
 
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
     if (session.payment_status !== "paid" && session.status !== "complete") {
-      return NextResponse.json({ error: "Checkout is not complete yet." }, { status: 400 });
+      return jsonError(400, "Checkout is not complete yet.");
     }
 
     const admin = createAdminClient();
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
     const email = pending?.email || emailFromCheckoutSession(session);
     if (!email) {
-      return NextResponse.json({ error: "Checkout email not found." }, { status: 400 });
+      return jsonError(400, "Checkout email not found.");
     }
 
     const plan = pending?.plan || planIdFromPriceType(priceType);
@@ -58,6 +59,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("verify-session error:", error);
-    return NextResponse.json({ error: "Invalid or expired checkout session." }, { status: 400 });
+    return jsonError(400, "Invalid or expired checkout session.");
   }
 }

@@ -109,8 +109,7 @@ export async function PUT(req: NextRequest) {
     if (error) {
       console.error("[map-canvas] PUT", error);
       if (/schema cache|map_canvas_scene|does not exist/i.test(error.message || "")) {
-        return jsonError(503, "map_canvas_scene column missing — run npm run db:migrate",
-            scene,);
+        return jsonError(503, "map_canvas_scene column missing — run npm run db:migrate");
       }
       return jsonError(500, error.message);
     }

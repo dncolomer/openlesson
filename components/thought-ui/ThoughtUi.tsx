@@ -10,6 +10,7 @@ import {
   ileHeliosThinkingLine,
   resolveIleDialogueTurn,
 } from "@/lib/ile-dialogue-turn";
+import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
 
 export type HeliosTurnMode = "idle" | "responding" | "interruption";
 
@@ -389,13 +390,13 @@ function DialogueSplitIle(
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6"
+      className="flex min-h-0 flex-1 flex-col items-center px-4 py-3 sm:px-6"
       data-ile-dialogue-compact
       data-ile-dialogue-speaker="helios"
       data-ile-dialogue-kind={turn.kind}
     >
       {turn.showHeliosAvatar ? (
-        <div className="flex w-full justify-center" data-ile-helios-avatar-top>
+        <div className="flex w-full shrink-0 justify-center" data-ile-helios-avatar-top>
           <HeliosProbeAvatar
             size="ile"
             isActiveTurn={turn.kind === "waiting"}
@@ -425,15 +426,25 @@ function DialogueSplitIle(
           ) : null}
         </div>
       ) : (
-        <div className="mt-4 w-full max-w-[min(100%,34rem)]">
-          <div className={dialogueBubbleClasses(false, "rounded-md text-center", heliosVisualMode)}>
+        <div className="mt-4 flex min-h-0 w-full max-w-[min(100%,34rem)] flex-1 flex-col">
+          <div
+            data-ile-helios-scroll
+            className={cn(
+              dialogueBubbleClasses(false, "rounded-md", heliosVisualMode),
+              "max-h-[min(100%,28rem)] overflow-y-auto overscroll-contain",
+            )}
+          >
             {lastAssistantTurn ? (
-              <p className={`${textClass} text-center text-neutral-100`}>{lastAssistantTurn.content}</p>
+              <HeliosMarkdown className={`${textClass} text-neutral-100`}>
+                {lastAssistantTurn.content}
+              </HeliosMarkdown>
             ) : (
-              <p className={`${textClass} text-center text-neutral-300`}>{promptText}</p>
+              <HeliosMarkdown className={`${textClass} text-neutral-300`}>
+                {promptText}
+              </HeliosMarkdown>
             )}
             {error ? (
-              <p className="mt-2 text-center text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
+              <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
             ) : null}
           </div>
         </div>

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
-import { buildTapIdleHeartbeatPayload, TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";
+import { TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";
+import {
+  buildTutoringIdleOutcome,
+  resolveTutoringContext,
+} from "@/lib/tutoring-runtime";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
@@ -43,15 +47,21 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = stampPoWPracticeFlag(
-      buildTapIdleHeartbeatPayload({
-        tapSessionId: access.tapSessionId,
-        workspaceId: access.workspaceId,
-        blockId: blockId || access.blockId,
-        focusSessionId: focusSessionId || access.focusSessionId,
-        idleDurationMs,
-        hasPendingTranscription,
-        timestampMs,
-      }),
+      buildTutoringIdleOutcome(
+        resolveTutoringContext({
+          product: "tap",
+          modality: practice ? "solo" : "dialog",
+          authKind: "tap",
+          workspaceId: access.workspaceId,
+          sessionId: access.tapSessionId,
+          blockId: blockId || access.blockId,
+        }),
+        {
+          idleDurationMs,
+          hasPendingTranscription,
+          timestampMs,
+        },
+      ).payload,
       practice,
     );
 

@@ -68,8 +68,8 @@ describe("shipped editor drawer-id helpers", () => {
         `multiHasDanger=${multi.includes(WORKSPACE_EDITOR_DANGER_DRAWER_ID)}`,
         `singleHasEdit=${single.includes("edit")}`,
         `multiHasCombine=${multi.includes("combine")}`,
-        `dangerDistinctFromEdit=${WORKSPACE_EDITOR_DANGER_DRAWER_ID !== "edit"}`,
-        `dangerDistinctFromCombine=${WORKSPACE_EDITOR_DANGER_DRAWER_ID !== "combine"}`,
+        `dangerDistinctFromEdit=${String(WORKSPACE_EDITOR_DANGER_DRAWER_ID) !== "edit"}`,
+        `dangerDistinctFromCombine=${String(WORKSPACE_EDITOR_DANGER_DRAWER_ID) !== "combine"}`,
       ].join("\n"),
     );
   });

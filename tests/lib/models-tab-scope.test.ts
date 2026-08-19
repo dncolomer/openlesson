@@ -14,6 +14,8 @@ import {
   subjectOptionKeyFromRef,
 } from "@/lib/pow-api/models-tab-scope";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const ME = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
@@ -28,6 +30,9 @@ const SCRATCH =
 function read(rel: string) {
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
+  if (rel.endsWith("KnowledgeConfigTrajectoryPanel.tsx")) {
+    return readKnowledgePanelSurface();
+  }
   return readFileSync(path, "utf8");
 }
 
@@ -134,7 +139,7 @@ describe("learner self-lock for LWM + Embeddings", () => {
   it("learner Knowledge path locks pickers; creator still inspects", () => {
     const panel = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     const perf = read("components/WorkspacePerformancePanel.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
 
     expect(panel).toContain("resolveModelsTabCanInspectOthers");
     expect(panel).toContain("lockSubjectToSelf");

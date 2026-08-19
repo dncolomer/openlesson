@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: session, error: sessionError } = await auth.supabase
       .from("sessions")
       .insert({
-        user_id: auth.user.id,
+        user_id: auth.persistUserId,
         problem: block.title,
         status: "active",
         planning_prompt: planningPrompt,
@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
           block_id: block.id,
           block_title: block.title,
           workspace_id: workspaceId,
+          subject_id: auth.subjectId,
+          ...(auth.principal.kind === "aycl" ? { aycl_subject_id: auth.subjectId } : {}),
+          ...(auth.principal.guestUserId
+            ? { guest_user_id: auth.principal.guestUserId }
+            : {}),
         },
       })
       .select("id")
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
     const { error: joinError } = await auth.supabase.from("block_sessions").insert({
       block_id: blockId,
       session_id: session.id,
-      user_id: auth.user.id,
+      user_id: auth.persistUserId,
       workspace_id: workspaceId,
     });
     if (joinError) {

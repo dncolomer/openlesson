@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -183,7 +184,7 @@ describe("human TAP + ILE also use LLM domain exercise author", () => {
   });
 
   it("SessionView calls generate-exercise for Project Mode chapters with context layers", () => {
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("/api/generate-exercise");
     expect(view).toContain("ile_project");
     expect(view).toContain("buildIleProjectChapterExercisePrompt");

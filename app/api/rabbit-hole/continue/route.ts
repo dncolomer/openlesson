@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
   const { rootQuestion } = await request.json();
-  if (!rootQuestion || typeof rootQuestion !== "string") return NextResponse.json({ error: "Missing root question" }, { status: 400 });
+  if (!rootQuestion || typeof rootQuestion !== "string") return jsonError(400, "Missing root question");
 
   const result = await callXaiJSON<PlanData>([userMessage(`Generate a concise Uncertain Systems learning plan from this Rabbit Hole question: "${rootQuestion}".
 
@@ -30,7 +31,7 @@ Rules:
 - Use short IDs like a, b, c.
 - Every non-final node should point to the next node.`)], { model: DEFAULT_MODEL, maxTokens: 1200, temperature: 0.35 });
 
-  if (!result.success || !result.data?.nodes?.length) return NextResponse.json({ error: "Failed to create lesson" }, { status: 500 });
+  if (!result.success || !result.data?.nodes?.length) return jsonError(500, "Failed to create lesson");
 
   const { data: plan, error } = await supabase.from("workspaces").insert({
     user_id: user.id,
@@ -38,7 +39,7 @@ Rules:
     root_topic: rootQuestion,
     status: "active",
   }).select("id").single();
-  if (error || !plan) return NextResponse.json({ error: "Failed to create lesson" }, { status: 500 });
+  if (error || !plan) return jsonError(500, "Failed to create lesson");
 
   const blockIdMap = new Map<string, string>();
   for (const nodeData of result.data.nodes) {

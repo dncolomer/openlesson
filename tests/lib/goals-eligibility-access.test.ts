@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   fingerprintGoals,
   resolveEvaluatedGoals,
@@ -109,15 +110,16 @@ describe("goals GET access control (no open admin list)", () => {
 
   it("workspace goals route uses canAccessWorkspaceEval and never soft-opens admin to any session", () => {
     const src = readFileSync(join(ROOT, "app/api/workspace/goals/route.ts"), "utf8");
-    expect(src).toContain("canAccessWorkspaceEval");
-    expect(src).toContain("resolveEvalPersistenceClientMode");
+    expect(src).toContain("requireProductWorkspaceEvalAuth");
     expect(src).toContain('mode: "read"');
+    expect(src).toContain("auth.subjectId");
+    expect(src).toContain('action: "author"');
     // No unauthenticated-soft path that lists via admin for any logged-in user
     expect(src).not.toMatch(
       /allow authenticated users to list for LWM|Soften: allow authenticated/i,
     );
-    // Must deny when access denied
-    expect(src).toContain('resolveEvalPersistenceClientMode(access) === "deny"');
+    expect(src).not.toContain("actingUser");
+    expect(src).not.toMatch(/isOwner:\s*true/);
   });
 
   it("block goals GET uses the same access gate", () => {
@@ -147,10 +149,7 @@ describe("LWM UI + snapshot-history goals-aware eligibility wiring", () => {
   });
 
   it("KnowledgeConfigTrajectoryPanel sends goal_mode to eligibility and gates all modes", () => {
-    const src = readFileSync(
-      join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const src = readKnowledgePanelSurface();
     expect(src).toContain('params.set("goal_mode", goalMode)');
     expect(src).toContain("adhoc_goal");
     expect(src).toContain("goal_ids");

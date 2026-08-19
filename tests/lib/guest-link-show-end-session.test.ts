@@ -3,6 +3,7 @@
  * Drives shipped normalize helpers + UI gate wiring.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -89,7 +90,7 @@ describe("TAP UI gate", () => {
   });
 
   it("TapScoreClient gates End session button on showEndSession", () => {
-    const client = read("components/TapScoreClient.tsx");
+    const client = readTapScoreSurface();
     expect(client).toContain("resolveTapShowEndSession");
     expect(client).toContain("data-tap-end-session");
     expect(client).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
@@ -116,7 +117,7 @@ describe("ILE UI gate", () => {
   });
 
   it("SessionView and SessionControlBar hide end controls when showEndSession is false", () => {
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("showEndSession");
     expect(view).toContain("allowEndSession");
     expect(view).toMatch(/allowEndSession\s*\?\s*\([\s\S]*ConfirmDialog/);

@@ -95,7 +95,7 @@ export function WorkspaceDashboardCard({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-          <span>{formatDate(plan.created_at)}</span>
+          <span>{formatDate(plan.created_at ?? "")}</span>
           <span aria-hidden>•</span>
           <span
             className={

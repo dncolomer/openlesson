@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Right-pane UX: narrow column, Explore/Drill×timebox launch, mini tabs, news widget.
  * Drives shipped pure helpers + structural checks of UI source.
@@ -77,7 +78,7 @@ describe("desktop layout + block detail chrome", () => {
     expect(WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS).toBe("md:w-3/4");
     expect(WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS).toBe("md:w-1/4");
     // Prior split was md:w-1/2 each; new right is 50% of that width.
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const aycl = read("components/AyclWorkspaceView.tsx");
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS");
     expect(view).toContain("WORKSPACE_MAP_DESKTOP_RIGHT_WIDTH_CLASS");
@@ -191,7 +192,7 @@ describe("desktop layout + block detail chrome", () => {
     expect(examples.topics.some((t) => /Bayes/i.test(t))).toBe(true);
     expect(examples.questions.length).toBeGreaterThan(0);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).not.toContain("WorkspaceBlockDetailTabs");
     expect(view).not.toMatch(

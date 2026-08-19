@@ -16,6 +16,16 @@ import {
   type BlockLocalContextInput,
 } from "@/lib/prompt-workspace-context";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+import {
+  SimulationCollectionAddAllButton,
+  SimulationCollectionAddButton,
+  useSimulationCollectionAdd,
+} from "@/components/SimulationCollectionAddButton";
+import {
+  fetchSimulationCollectionItems,
+} from "@/lib/simulation-collection-client";
+import { simulationCollectionItemKey } from "@/lib/workspace-simulation-collection";
+import type { SimulationCollectionItem } from "@/lib/workspace-simulation-collection";
 
 /** Compact influence chips under a probe — minimal footprint. */
 function ContextInfluenceChips({
@@ -47,10 +57,18 @@ function ProbeList({
   items,
   kind,
   empty,
+  isAdded,
+  busyKey,
+  onAdd,
+  canAdd,
 }: {
   items: SimulationProbe[];
   kind: "question" | "exercise";
   empty: string;
+  isAdded: (kind: "question" | "exercise", text: string) => boolean;
+  busyKey: string | null;
+  onAdd: (probe: SimulationProbe) => void;
+  canAdd: boolean;
 }) {
   if (!items.length) {
     return <p className="mt-1.5 text-[11px] text-neutral-600">{empty}</p>;
@@ -68,12 +86,18 @@ function ProbeList({
           data-simulation-probe-kind={kind}
           className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5"
         >
-          <div className="flex gap-1.5 text-[11px] leading-snug text-neutral-300">
+          <div className="flex items-start gap-1.5 text-[11px] leading-snug text-neutral-300">
             <span
               className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/30"
               aria-hidden
             />
             <span className="min-w-0 flex-1">{p.question}</span>
+            <SimulationCollectionAddButton
+              added={isAdded(kind, p.question)}
+              busy={busyKey === simulationCollectionItemKey(kind, p.question)}
+              disabled={!canAdd}
+              onClick={() => onAdd(p)}
+            />
           </div>
           <ContextInfluenceChips sources={p.contextSources} />
         </li>
@@ -173,33 +197,51 @@ export function WorkspaceBlockSimulationPanel({
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modifierPrompt, setModifierPrompt] = useState("");
+  const [seedItems, setSeedItems] = useState<SimulationCollectionItem[]>([]);
   const autoRanForBlock = useRef<string | null>(null);
+  const origin = useMemo(
+    () => ({ kind: "block" as const, blockId, blockTitle }),
+    [blockId, blockTitle],
+  );
+  const {
+    addMany,
+    addOne,
+    isAdded,
+    busyKey,
+    error: addError,
+  } = useSimulationCollectionAdd({
+    workspaceId,
+    ayclToken,
+    origin,
+    modifierPrompt,
+    seedItems,
+  });
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    void fetchSimulationCollectionItems({ workspaceId }).then((items) => {
+      if (!cancelled) setSeedItems(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   const depositToCollection = useCallback(
     async (result: BlockSimulationResult) => {
       if (!workspaceId || !result.probes.length) return;
-      try {
-        await fetch("/api/workspace/simulation-collection", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            action: "deposit",
-            probes: result.probes,
-            origin: {
-              kind: "block",
-              blockId,
-              blockTitle,
-            },
-            modifierPrompt: modifierPrompt.trim() || null,
-            ...(ayclToken ? { ayclToken } : {}),
-          }),
-        });
-      } catch {
-        /* non-fatal — generation still shows in drawer */
+      const deposited = await addMany({ probes: result.probes });
+      if (deposited.ok && deposited.items.length) {
+        setSeedItems(deposited.items);
+      } else if (!deposited.ok) {
+        setError(
+          deposited.error ||
+            "Generated this block, but could not add it to the curated collection.",
+        );
       }
     },
-    [ayclToken, blockId, blockTitle, modifierPrompt, workspaceId],
+    [addMany, workspaceId],
   );
 
   const regenerate = useCallback(async () => {
@@ -323,6 +365,31 @@ export function WorkspaceBlockSimulationPanel({
           {error}
         </p>
       ) : null}
+      {addError ? (
+        <p
+          className="text-[11px] text-neutral-300/90"
+          data-simulation-collection-add-error
+        >
+          {addError}
+        </p>
+      ) : null}
+
+      {questions.length + exercises.length > 0 ? (
+        <SimulationCollectionAddAllButton
+          count={questions.length + exercises.length}
+          added={
+            questions.every((p) => isAdded("question", p.question)) &&
+            exercises.every((p) => isAdded("exercise", p.question))
+          }
+          busy={busyKey === "__all__"}
+          disabled={!workspaceId}
+          onClick={() => {
+            void addMany({ probes: sim.probes }).then((r) => {
+              if (r.ok && r.items.length) setSeedItems(r.items);
+            });
+          }}
+        />
+      ) : null}
 
       <div data-simulation-questions>
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
@@ -334,6 +401,14 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={questions}
           kind="question"
+          canAdd={Boolean(workspaceId)}
+          isAdded={isAdded}
+          busyKey={busyKey}
+          onAdd={(p) => {
+            void addOne("question", p.question, p.coachCue).then((r) => {
+              if (r.ok && r.items.length) setSeedItems(r.items);
+            });
+          }}
           empty={
             regenerating
               ? "Generating questions…"
@@ -352,6 +427,14 @@ export function WorkspaceBlockSimulationPanel({
         <ProbeList
           items={exercises}
           kind="exercise"
+          canAdd={Boolean(workspaceId)}
+          isAdded={isAdded}
+          busyKey={busyKey}
+          onAdd={(p) => {
+            void addOne("exercise", p.question, p.coachCue).then((r) => {
+              if (r.ok && r.items.length) setSeedItems(r.items);
+            });
+          }}
           empty={
             regenerating
               ? "Generating exercises…"

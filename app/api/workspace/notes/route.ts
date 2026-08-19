@@ -16,13 +16,12 @@ export async function PUT(req: NextRequest) {
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
-    const { user, supabase } = auth;
+    const { supabase } = auth;
 
     const { error: updateError } = await supabase
       .from("workspaces")
       .update({ notes })
-      .eq("id", workspaceId)
-      .eq("user_id", user.id);
+      .eq("id", workspaceId);
 
     if (updateError) {
       console.error("[Plan Notes] Update error:", updateError);

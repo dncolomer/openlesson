@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   GLOBAL_MAP_NEAR_RADIUS_FACTOR,
   buildGlobalMapEdges,
@@ -452,7 +453,7 @@ describe("Global Map UI structure", () => {
     expect(existsSync(knowledge)).toBe(true);
     const clientSrc = readFileSync(client, "utf8");
     const globalSrc = readFileSync(global, "utf8");
-    const knowledgeSrc = readFileSync(knowledge, "utf8");
+    const knowledgeSrc = readKnowledgePanelSurface();
 
     expect(clientSrc).toContain("Local Map");
     expect(clientSrc).toContain("Global Map");

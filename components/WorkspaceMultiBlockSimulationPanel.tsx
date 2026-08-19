@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  SimulationCollectionAddAllButton,
+  SimulationCollectionAddButton,
+  useSimulationCollectionAdd,
+} from "@/components/SimulationCollectionAddButton";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+import { simulationCollectionItemKey } from "@/lib/workspace-simulation-collection";
 
 /**
  * Map multi-select Simulation drawer body: generate probes across the
@@ -28,6 +34,20 @@ export function WorkspaceMultiBlockSimulationPanel({
   const [questions, setQuestions] = useState<string[]>([]);
   const [exercises, setExercises] = useState<string[]>([]);
   const [deposited, setDeposited] = useState(false);
+  const origin = useMemo(
+    () => ({
+      kind: "multi_block" as const,
+      blockIds,
+      blockTitles: blockTitles.length ? blockTitles : null,
+    }),
+    [blockIds, blockTitles],
+  );
+  const collectionAdd = useSimulationCollectionAdd({
+    workspaceId,
+    ayclToken,
+    origin,
+    modifierPrompt,
+  });
 
   const titles =
     blockTitles.length === blockIds.length
@@ -86,28 +106,17 @@ export function WorkspaceMultiBlockSimulationPanel({
       setQuestions(allQ);
       setExercises(allE);
 
-      // Deposit into workspace collection for Sim-tab curation
-      try {
-        await fetch("/api/workspace/simulation-collection", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            action: "deposit",
-            questions: allQ,
-            exercises: allE,
-            origin: {
-              kind: "multi_block",
-              blockIds,
-              blockTitles: titles,
-            },
-            modifierPrompt: modifierPrompt.trim() || null,
-            ...(ayclToken ? { ayclToken } : {}),
-          }),
-        });
+      const depositedResult = await collectionAdd.addMany({
+        questions: allQ,
+        exercises: allE,
+      });
+      if (depositedResult.ok) {
         setDeposited(true);
-      } catch {
-        /* generation still shown; deposit optional if column missing */
+      } else {
+        setError(
+          depositedResult.error ||
+            "Generated samples, but could not add them to the curated collection.",
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generate failed");
@@ -185,8 +194,32 @@ export function WorkspaceMultiBlockSimulationPanel({
           className="text-[10px] text-neutral-500"
           data-multi-block-simulation-deposited
         >
-          Deposited to Simulation tab collection.
+          Added to Simulation tab collection.
         </p>
+      ) : null}
+      {collectionAdd.error ? (
+        <p
+          className="text-[11px] text-neutral-300/90"
+          data-simulation-collection-add-error
+        >
+          {collectionAdd.error}
+        </p>
+      ) : null}
+      {questions.length + exercises.length > 0 ? (
+        <SimulationCollectionAddAllButton
+          count={questions.length + exercises.length}
+          added={
+            questions.every((q) => collectionAdd.isAdded("question", q)) &&
+            exercises.every((ex) => collectionAdd.isAdded("exercise", ex))
+          }
+          busy={collectionAdd.busyKey === "__all__"}
+          disabled={!workspaceId}
+          onClick={() => {
+            void collectionAdd.addMany({ questions, exercises }).then((r) => {
+              if (r.ok) setDeposited(true);
+            });
+          }}
+        />
       ) : null}
 
       {(questions.length > 0 || exercises.length > 0) && (
@@ -203,9 +236,20 @@ export function WorkspaceMultiBlockSimulationPanel({
                 <li
                   key={`q-${i}`}
                   data-simulation-question={i}
-                  className="rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
                 >
-                  {q}
+                  <span className="min-w-0 flex-1">{q}</span>
+                  <SimulationCollectionAddButton
+                    added={collectionAdd.isAdded("question", q)}
+                    busy={
+                      collectionAdd.busyKey ===
+                      simulationCollectionItemKey("question", q)
+                    }
+                    disabled={!workspaceId}
+                    onClick={() => {
+                      void collectionAdd.addOne("question", q);
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -219,9 +263,20 @@ export function WorkspaceMultiBlockSimulationPanel({
                 <li
                   key={`ex-${i}`}
                   data-simulation-exercise={i}
-                  className="rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
                 >
-                  {ex}
+                  <span className="min-w-0 flex-1">{ex}</span>
+                  <SimulationCollectionAddButton
+                    added={collectionAdd.isAdded("exercise", ex)}
+                    busy={
+                      collectionAdd.busyKey ===
+                      simulationCollectionItemKey("exercise", ex)
+                    }
+                    disabled={!workspaceId}
+                    onClick={() => {
+                      void collectionAdd.addOne("exercise", ex);
+                    }}
+                  />
                 </li>
               ))}
             </ul>

@@ -1,3 +1,4 @@
+import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
  * Shared snapshot runner / API request adapters for multi-goals.
  * Exercises parse + finalize + report payload contracts of shipped code.
@@ -139,10 +140,7 @@ describe("API / MCP surface structural contracts for goal selection", () => {
   });
 
   it("MCP lwm_snapshot schema documents goal_mode / adhoc_goal / goal_ids", () => {
-    const src = readFileSync(
-      join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"),
-      "utf8",
-    );
+    const src = readMcpSurface();
     expect(src).toContain("goal_mode");
     expect(src).toContain("adhoc_goal");
     expect(src).toContain("goal_ids");

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildGuestPlacementResult,
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (wsError || !workspace) {
-      return NextResponse.json({ error: "Workspace not found", code: "not_found" }, { status: 404 });
+      return jsonError(404, "Workspace not found", "not_found");
     }
     if (
       workspace.is_public !== true ||
@@ -95,10 +96,7 @@ export async function POST(req: NextRequest) {
         workspace.status.trim() !== "" &&
         workspace.status !== "active")
     ) {
-      return NextResponse.json(
-        { error: "Workspace is not public", code: "not_public" },
-        { status: 403 },
-      );
+      return jsonError(403, "Workspace is not public", "not_public");
     }
 
     const { data: blocks } = await supabase
@@ -117,20 +115,14 @@ export async function POST(req: NextRequest) {
       },
     );
     if (!validation.ok) {
-      return NextResponse.json(
-        { error: validation.error, code: validation.code },
-        { status: validation.code === "block_not_found" ? 404 : 400 },
-      );
+      return jsonError(validation.code === "block_not_found" ? 404 : 400, validation.error, validation.code);
     }
 
     const identity = generateAnonymousGuestIdentity();
     const guestDisplayName = guestNameRaw || identity.display_name;
 
     if (!workspace.user_id) {
-      return NextResponse.json(
-        { error: "Workspace owner is missing", code: "internal_error" },
-        { status: 500 },
-      );
+      return jsonError(500, "Workspace owner is missing", "internal_error");
     }
 
     const auth: AuthContext = {
@@ -195,18 +187,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof CreateTapLinkError || error instanceof CreateIleLinkError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status },
-      );
+      return jsonError(error.status, error.message, error.code);
     }
     console.error("[api/map-of-knowledge/guest-link]", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to create guest link",
-        code: "internal_error",
-      },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to create guest link", "internal_error",);
   }
 }

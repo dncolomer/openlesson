@@ -6,7 +6,7 @@ import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
-import { resolveIleSessionModeFromSession } from "@/lib/ile-mode";
+import { resolveIleDurableSessionMode } from "@/lib/ile-mode";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
       requireSessionId: !ayclToken && !ileToken,
     });
     if (!auth.ok) return auth.response;
-    const { supabase, user } = auth;
+    const { supabase } = auth;
 
-    // Get tutoring language + ILE mode from body or session metadata
+    // Tutoring language from body or session metadata. Mode is the same
+    // durable source as the ILE shell (link/prop, then metadata).
     let tutoringLanguage = bodyLanguage;
     let sessionMeta: Record<string, unknown> | null = null;
     if (sessionId) {
@@ -64,7 +65,9 @@ export async function POST(request: NextRequest) {
         tutoringLanguage = sessionMeta.tutoringLanguage;
       }
     }
-    const sessionMode = resolveIleSessionModeFromSession({ metadata: sessionMeta });
+    const sessionMode = resolveIleDurableSessionMode({
+      metadata: sessionMeta,
+    });
     const systemPrompt = withConversationLanguageInstruction(
       buildIleHeliosChatSystemPrompt(sessionMode),
       tutoringLanguage,
@@ -137,7 +140,7 @@ export async function POST(request: NextRequest) {
           console.error("[session-chat] PoW workspace missing; returning coach reply");
         } else {
           const attribution = powAttributionColumnsFromIds({
-            userId: user.id,
+            userId: auth.subjectId,
             guestUserId: auth.guestUserId,
           });
           const file = buildIleSessionChatPowFile({

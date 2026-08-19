@@ -77,10 +77,10 @@ export function resolveScreenCaptureMediaDevices(
 ): { mediaDevices: ScreenCaptureMediaDevices | null; source: ScreenCaptureMediaSource } {
   const pip = opener?.documentPictureInPicture?.window ?? null;
   if (hostIsUsableForDisplayMedia(pip)) {
-    return { mediaDevices: pip.navigator.mediaDevices, source: "pip" };
+    return { mediaDevices: pip!.navigator!.mediaDevices as ScreenCaptureMediaDevices, source: "pip" };
   }
   if (hostIsUsableForDisplayMedia(opener)) {
-    return { mediaDevices: opener.navigator.mediaDevices, source: "opener" };
+    return { mediaDevices: opener!.navigator!.mediaDevices as ScreenCaptureMediaDevices, source: "opener" };
   }
   if (hostHasGetDisplayMedia(opener)) {
     return { mediaDevices: opener.navigator.mediaDevices, source: "opener" };

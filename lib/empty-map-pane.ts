@@ -568,6 +568,7 @@ export const MAP_EXPLORE_DRAWER_IDS = [
   "map_search",
   "map_suggest_spot",
   "map_selective",
+  "map_explore_block",
 ] as const;
 
 export type MapExploreDrawerId = (typeof MAP_EXPLORE_DRAWER_IDS)[number];
@@ -714,7 +715,78 @@ export type MapExploreOp =
   | "search"
   | "suggest_spot"
   | "overview"
-  | "area_summary";
+  | "area_summary"
+  | "explore_block";
+
+export const MAP_EXPLORE_BLOCK_DRAWER_TITLE = "explore block";
+
+/** Filled blocks whose footprint is within Chebyshev radius of a cell. */
+export function collectNearbyFilledBlocks(input: {
+  cell: EmptyMapCell;
+  blocks: readonly EmptyMapBlock[] | null | undefined;
+  radius?: number;
+}): EmptyMapBlock[] {
+  const cell = input.cell;
+  if (!Number.isFinite(cell?.row) || !Number.isFinite(cell?.col)) return [];
+  const radius = Math.max(1, Math.min(12, Math.floor(Number(input.radius) || 3)));
+  const tr = Math.trunc(cell.row);
+  const tc = Math.trunc(cell.col);
+  const out: EmptyMapBlock[] = [];
+  for (const b of input.blocks || []) {
+    const placed = toPlacedRef(b);
+    if (!placed) continue;
+    const cells = placedBlockCells(placed);
+    const hit = cells.some(
+      (c) => Math.max(Math.abs(c.row - tr), Math.abs(c.col - tc)) <= radius,
+    );
+    if (hit) out.push(b);
+  }
+  return out;
+}
+
+export function buildExploreBlockSystemMessage(): string {
+  return `You are Grok helping an author explore what could go in an empty cell on a learning-block map.
+Given the target empty cell, nearby and already-filled blocks (map geometry), and an optional modifier, propose what is worth exploring in that empty spot.
+Return ONLY JSON: { "summary": "..." }
+Rules:
+- 2–5 sentences of prose. Ground claims in neighboring/filled block titles and positions.
+- Suggest themes, questions, or missing links — do not invent block ids.
+- Honor the author modifier when present.
+- No markdown.`;
+}
+
+export function buildExploreBlockUserPrompt(input: {
+  cell: EmptyMapCell;
+  blocks: readonly EmptyMapBlock[] | null | undefined;
+  nearbyBlocks?: readonly EmptyMapBlock[] | null;
+  modifierPrompt?: string | null;
+}): string {
+  const row = Math.trunc(Number(input.cell?.row));
+  const col = Math.trunc(Number(input.cell?.col));
+  const nearby = input.nearbyBlocks ?? collectNearbyFilledBlocks({
+    cell: { row, col },
+    blocks: input.blocks,
+  });
+  const modifier = clean(input.modifierPrompt);
+  return [
+    `Target empty cell: row=${row}, col=${col}`,
+    modifier ? `Author modifier: ${modifier}` : null,
+    `Already filled / explored blocks on the map:`,
+    formatMapBlockCatalog(input.blocks),
+    `Nearby filled blocks (geometry around the cell):`,
+    formatMapBlockCatalog(nearby),
+    `Return JSON with a prose summary of what to explore in this empty cell.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function parseExploreBlockAiResponse(raw: unknown): string {
+  if (typeof raw === "string") return clean(raw);
+  if (!raw || typeof raw !== "object") return "";
+  const obj = raw as Record<string, unknown>;
+  return clean(obj.summary ?? obj.text ?? obj.exploration ?? obj.description);
+}
 
 /** Compact block catalog line for Grok prompts. */
 export function formatMapBlockCatalogLine(block: EmptyMapBlock): string {

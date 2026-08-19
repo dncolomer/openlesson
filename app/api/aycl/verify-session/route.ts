@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fulfillAyclPurchase, getAyclPurchaseByCheckoutSession } from "@/lib/aycl";
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const sessionId = new URL(request.url).searchParams.get("session_id");
     if (!sessionId) {
-      return NextResponse.json({ error: "session_id is required" }, { status: 400 });
+      return jsonError(400, "session_id is required");
     }
 
     const stripeSession = await getStripe().checkout.sessions.retrieve(sessionId);
@@ -58,6 +59,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[aycl/verify-session]", error);
-    return NextResponse.json({ error: "Invalid checkout session" }, { status: 400 });
+    return jsonError(400, "Invalid checkout session");
   }
 }

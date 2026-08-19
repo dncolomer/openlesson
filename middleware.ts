@@ -84,7 +84,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/results", "/admin"];
+  const protectedRoutes = ["/session", "/dashboard", "/results"];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
   // Public routes that should skip all auth logic (shareable TAP/ILE guest links + Practice Portal)

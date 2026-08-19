@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { requireAuthenticatedProductUser } from "@/lib/api/require-auth";
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
     const step = searchParams.get("step"); // optional step context
 
     if (!topic) {
-      return NextResponse.json({ error: "Topic is required" }, { status: 400 });
+      return jsonError(400, "Topic is required");
     }
 
     let prompt = "";
@@ -76,7 +77,7 @@ Only include real, reputable sources (Wikipedia, Khan Academy, MIT OpenCourseWar
 Include a very brief (5 words max) description of why each is useful.`;
         break;
       default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+        return jsonError(400, "Invalid type");
     }
 
     const response = await callXaiText(
@@ -90,12 +91,12 @@ Include a very brief (5 words max) description of why each is useful.`;
 
     if (!response.success || !response.data) {
       console.error("xAI API error:", response.error);
-      return NextResponse.json({ error: "Failed to generate material" }, { status: 500 });
+      return jsonError(500, "Failed to generate material");
     }
 
     return NextResponse.json({ title, content: response.data });
   } catch (error) {
     console.error("Prep material error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

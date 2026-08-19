@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseAyclListingUpdateBody } from "@/lib/aycl-marketplace";
@@ -19,7 +20,7 @@ export async function PUT(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return jsonError(401, "Unauthorized");
     }
 
     const { data: profile } = await supabase
@@ -29,21 +30,18 @@ export async function PUT(
       .single();
 
     if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      return jsonError(403, "Admin access required");
     }
 
     const body = (await req.json()) as Record<string, unknown>;
     const { fields, error: parseError } = parseAyclListingUpdateBody(body);
 
     if (parseError) {
-      return NextResponse.json({ error: parseError }, { status: 400 });
+      return jsonError(400, parseError);
     }
 
     if (Object.keys(fields).length === 0) {
-      return NextResponse.json(
-        { error: "No AYCL listing fields to update" },
-        { status: 400 },
-      );
+      return jsonError(400, "No AYCL listing fields to update");
     }
 
     const admin = createAdminClient();
@@ -54,7 +52,7 @@ export async function PUT(
       .single();
 
     if (workspaceError || !workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const { data: updated, error: updateError } = await admin
@@ -65,7 +63,7 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      return jsonError(500, updateError.message);
     }
 
     const enabled = Boolean(updated?.is_all_you_can_learn);
@@ -82,9 +80,6 @@ export async function PUT(
     });
   } catch (error) {
     console.error("[workspaces/aycl]", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update AYCL listing" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to update AYCL listing");
   }
 }

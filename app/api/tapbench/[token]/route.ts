@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTapbenchSessionToken } from "@/lib/pow-api/tapbench-store";
 import { TAPBENCH_PRODUCT } from "@/lib/pow-api/tapbench";
@@ -17,10 +18,7 @@ interface RouteProps {
 export async function GET(req: NextRequest, { params }: RouteProps) {
   const { token } = await params;
   if (!token?.trim()) {
-    return NextResponse.json(
-      { error: { code: "not_found", message: "TAPBench session not found" } },
-      { status: 404 },
-    );
+    return jsonError(404, "TAPBench session not found", "not_found");
   }
 
   let supabase;

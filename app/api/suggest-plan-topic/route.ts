@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, problem, report } = body;
 
     if (!problem || !report) {
-      return NextResponse.json({ error: "Missing problem or report" }, { status: 400 });
+      return jsonError(400, "Missing problem or report");
     }
 
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
@@ -74,7 +75,7 @@ Return ONLY the suggested topic text (5-15 words), nothing else. No quotes, no e
     );
 
     if (!response.success || !response.data) {
-      return NextResponse.json({ error: "Failed to generate suggestion" }, { status: 500 });
+      return jsonError(500, "Failed to generate suggestion");
     }
 
     // Clean up the response - remove quotes and extra whitespace
@@ -83,6 +84,6 @@ Return ONLY the suggested topic text (5-15 words), nothing else. No quotes, no e
     return NextResponse.json({ suggestion });
   } catch (error) {
     console.error("Suggest plan topic error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

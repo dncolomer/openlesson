@@ -57,7 +57,7 @@ export function isMapItemWorkedOn(
   const id = String(itemId || "").trim();
   if (!id || !ids) return false;
   if (ids instanceof Set) return ids.has(id);
-  return ids.includes(id);
+  return Array.from(ids).includes(id);
 }
 
 export function addMapItemWorkedOn(

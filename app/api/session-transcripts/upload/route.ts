@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
 
@@ -32,10 +33,7 @@ export async function POST(req: NextRequest) {
     const chunkIndex = Number(body.chunkIndex);
 
     if (!body.sessionId || !transcript || !Number.isInteger(chunkIndex) || chunkIndex < 0) {
-      return NextResponse.json(
-        { error: "sessionId, transcript, and a non-negative integer chunkIndex are required" },
-        { status: 400 },
-      );
+      return jsonError(400, "sessionId, transcript, and a non-negative integer chunkIndex are required");
     }
 
     const { data: session } = await supabase
@@ -45,7 +43,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!session || session.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     const { data: existing } = await supabase
@@ -73,10 +71,7 @@ export async function POST(req: NextRequest) {
       xaiFileId = uploaded.file_id;
     } catch (err) {
       console.error("[session-transcripts/upload] xAI upload failed:", err);
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : "xAI upload failed" },
-        { status: 502 },
-      );
+      return jsonError(502, err instanceof Error ? err.message : "xAI upload failed");
     }
 
     const ts = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
@@ -104,12 +99,12 @@ export async function POST(req: NextRequest) {
     if (writeError) {
       console.error("[session-transcripts/upload] DB write failed:", writeError.message);
       await deleteFileFromXAI(xaiFileId).catch(() => {});
-      return NextResponse.json({ error: writeError.message }, { status: 500 });
+      return jsonError(500, writeError.message);
     }
 
     return NextResponse.json({ success: true, xai_file_id: xaiFileId });
   } catch (err) {
     console.error("[session-transcripts/upload] Internal error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

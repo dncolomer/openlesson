@@ -3,6 +3,8 @@
  * Drives the shipped mappers/appliers BlockSkillGrid / SessionHeliosPanel call.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -165,7 +167,7 @@ describe("ILE slowness + wiring (shipped source)", () => {
     const helpers = read("components/session/sessionViewHelpers.ts");
     expect(helpers).toMatch(/CHAPTER_LOAD_DURATION_MS = 0/);
 
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("CHAPTER_LOAD_DURATION_MS");
     expect(view).toContain("CHAPTER_LOAD_DURATION_MS > 0");
     expect(view).not.toContain("Handled in SessionHeliosPanel via onProjectStash");
@@ -181,7 +183,7 @@ describe("ILE slowness + wiring (shipped source)", () => {
     expect(helios).toContain("getFormingText");
     expect(helios).toContain("ingestStashedThought");
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface() + read("components/block-skill-grid/map-tile-badges.tsx");
     expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("data-ile-chapter-done-tick");
 

@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   consumeSnapshotAllNdjson,
   formatSnapshotAllProgress,
@@ -146,7 +147,7 @@ describe("LWM multi-user snapshot surface (structural)", () => {
     expect(existsSync(lwmPath)).toBe(true);
     expect(existsSync(routePath)).toBe(true);
 
-    const lwm = readFileSync(lwmPath, "utf8");
+    const lwm = readKnowledgePanelSurface();
     expect(lwm).toContain("data-lwm-generate-snapshot-all");
     expect(lwm).toContain("data-lwm-snapshot-modal");
     expect(lwm).toContain("data-lwm-snapshot-all-progress");

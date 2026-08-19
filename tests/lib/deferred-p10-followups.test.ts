@@ -3,6 +3,7 @@
  * product errors share the nested envelope, OpenAPI still not generated.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -13,7 +14,6 @@ import {
 import { errorResponse } from "@/lib/pow-api/auth";
 import { postWorkspaceGridOp } from "@/lib/workspace-grid-ops-client";
 import {
-  mapSelectionToApplyPayload,
   nextWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import { toolTooltip } from "@/components/block-skill-grid/map-tool-icons";
@@ -43,8 +43,7 @@ describe("deferred-after-P10 follow-ups", () => {
       type: "set_filled_ids",
       blockIds: ["b1"],
     });
-    const payload = mapSelectionToApplyPayload(opened, 1);
-    expect(payload.selection).toEqual({ kind: "block", id: "b1" });
+    expect(opened).toEqual({ kind: "block", id: "b1" });
 
     const posted: string[] = [];
     await postWorkspaceGridOp(
@@ -68,17 +67,17 @@ describe("deferred-after-P10 follow-ups", () => {
     const agentBody = await res.json();
     expect(classifyApiErrorEnvelope(agentBody)).toBe("nested_code");
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const icons = read("components/block-skill-grid/map-tool-icons.tsx");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     const sessionChat = read("app/api/session-chat/route.ts");
     const stashAuth = read("lib/pow-api/auth.ts");
 
-    expect(grid).toContain("from \"@/components/block-skill-grid/map-tool-icons\"");
-    expect(grid).toContain("from \"@/components/block-skill-grid/map-tile-badges\"");
+    expect(grid).toContain("map-tool-icons");
+    expect(grid).toContain("map-tile-badges");
     expect(read("components/SessionList.tsx")).toContain("postWorkspaceGridOp");
-    expect(grid).not.toContain("function ToolIcon");
-    expect(grid).not.toContain("function MapCellStatusGlyph");
+    expect(read("components/BlockSkillGrid.tsx")).not.toContain("function ToolIcon");
+    expect(read("components/BlockSkillGrid.tsx")).not.toContain("function MapCellStatusGlyph");
     expect(icons).toContain("export function ToolIcon");
     expect(badges).toContain("export function MapCellStatusGlyph");
 
@@ -92,7 +91,7 @@ describe("deferred-after-P10 follow-ups", () => {
       join(SCRATCH, "deferred-p10-followups.txt"),
       [
         `gridContractOps=${posted[0]}`,
-        `oneBlockSearch=${payload.selection.kind === "block" ? payload.selection.id : ""}`,
+        `oneBlockSearch=${opened.kind === "block" ? opened.id : ""}`,
         `productEnvelope=${classifyApiErrorEnvelope(productBody)}`,
         `agentEnvelope=${classifyApiErrorEnvelope(agentBody)}`,
         `nestedKind=${classifyApiErrorEnvelope(nested)}`,

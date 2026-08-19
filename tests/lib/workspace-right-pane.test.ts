@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Workspace right pane: block detail, single-empty Add, multi-empty generate shape.
  * Drives shipped pure helpers + structural wiring in WorkspaceView / AYCL / SessionList.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -243,7 +245,7 @@ describe("structural: right pane not map modal", () => {
   });
 
   it("WorkspaceView swaps right column among map tools, block detail, add, generate_shape", () => {
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("resolveWorkspaceRightPane");
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).toContain("WorkspaceMapAuthoringPane");
@@ -256,7 +258,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("handleCloseEmptyCreate");
     expect(view).toContain("handleSubmitAddBlock");
     expect(view).toContain("handleSubmitGenerateShape");
-    expect(view).toContain("clearWorkspaceBlockSelection");
+    expect(view).toContain("nextWorkspaceMapSelection");
     expect(view).toContain("onMapSelectionChange");
     expect(view).toContain("data-workspace-right-pane=");
     expect(view).toContain('showMapExplore ? "map_explore" : rightPane');
@@ -273,7 +275,7 @@ describe("structural: right pane not map modal", () => {
 
   it("AyclWorkspaceView shares the same right-pane open/close path including add + shape", () => {
     const aycl = read("components/AyclWorkspaceView.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     // AYCL is a token/access wrapper — right pane lives on WorkspaceView.
     expect(aycl).toContain("<WorkspaceView");
     expect(aycl).toContain("ayclToken={accessToken}");
@@ -376,7 +378,7 @@ describe("structural: right pane not map modal", () => {
     expect(detail).toContain("onSplitBlock");
     expect(detail).toContain("blockOffersSplitDrawer");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("handleSplitBlock");
     expect(view).toContain('op: "split"');
     expect(view).toContain("onSplitBlock={isOwner ? handleSplitBlock");
@@ -386,7 +388,7 @@ describe("structural: right pane not map modal", () => {
     expect(view).toContain("handleSplitBlock");
     expect(view).toContain('op: "split"');
 
-    const ops = read("app/api/workspace/grid-ops/route.ts");
+    const ops = read("lib/workspace-grid-ops/split.ts");
     expect(ops).toContain("userGuidance:");
     expect(ops).toMatch(/composeSplitBlockUserPrompt\([\s\S]*userGuidance/);
 
@@ -418,16 +420,17 @@ describe("structural: right pane not map modal", () => {
     // Stack layout — no wide side-by-side wrap for 3+ cards
     expect(pane).not.toContain("flex-wrap items-center justify-center");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceCombineBlocksPane");
     expect(view).toContain('rightPane === "combine_blocks"');
     expect(view).toContain("handleCombineBlocks");
     expect(view).toContain('op: "merge"');
     expect(view).toContain("onMapSelectionChange");
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("onMapSelectionChange");
-    expect(grid).toContain("notifyMapHostCommit");
+    expect(grid).toContain("onMapSelectionChange(selection)");
+    expect(grid).not.toContain("notifyMapHostCommit");
     expect(grid).not.toContain("emitFilledBlockSelection");
 
     const list = read("components/SessionList.tsx");
@@ -440,7 +443,7 @@ describe("structural: right pane not map modal", () => {
         "plus=" + pane.includes("data-combine-plus"),
         "prompt=" + pane.includes("data-combine-prompt"),
         "viewMerge=" + view.includes('op: "merge"'),
-        "gridEmit=" + grid.includes("notifyMapHostCommit"),
+        "gridEmit=" + grid.includes("onMapSelectionChange(selection)"),
       ].join("\n"),
     );
   });
@@ -589,7 +592,7 @@ describe("structural: right pane not map modal", () => {
     expect(detail).not.toContain("data-block-detail-close");
 
     // Hosts: edge-to-edge column; no nested WorkspaceBlockDetailTabs
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("overflow-hidden p-0");
     expect(view).toContain("WorkspaceBlockDetailPane");
     expect(view).not.toContain("WorkspaceBlockDetailTabs");
@@ -626,14 +629,13 @@ describe("structural: right pane not map modal", () => {
   });
 
   it("empty single → Add pane; multi empty → shape pane; no toolbar generate_shape required", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const addPane = read("components/WorkspaceAddBlockPane.tsx");
     const shapePane = read("components/WorkspaceGenerateShapePane.tsx");
     const list = read("components/SessionList.tsx");
     const tools = read("lib/block-map-tools.ts");
 
     expect(grid).toContain("onMapSelectionChange");
-    expect(grid).toContain("applyStandaloneEmptyChrome");
     expect(grid).toContain("resolveEmptySelectionSurface");
     expect(grid).not.toContain("handleEmptyCellDoubleClick");
     expect(grid).not.toContain("double-click empty to add");
@@ -654,8 +656,10 @@ describe("structural: right pane not map modal", () => {
     expect(stripVisible).not.toContain("generate_shape");
 
     expect(list).toContain("onMapSelectionChange");
-    expect(list).toMatch(
-      /onEmptySelectionChange=\{\s*onMapSelectionChange \? undefined : onEmptySelectionChange/,
+    expect(list).toContain("mapSelection={mapSelection}");
+    expect(list).not.toContain("onEmptySelectionChange");
+    expect(list).not.toMatch(
+      /onMapSelectionChange \? undefined : onEmptySelectionChange/,
     );
 
     writeEvidence(
@@ -667,9 +671,9 @@ describe("structural: right pane not map modal", () => {
         "stripHasGenerateShape=" + BLOCK_MAP_TOOL_STRIP.includes("generate_shape"),
         "visibleHasGenerateShape=" + stripVisible.includes("generate_shape"),
         "viewShapePane=" +
-          read("components/WorkspaceView.tsx").includes("WorkspaceGenerateShapePane"),
+          readWorkspaceViewSurface().includes("WorkspaceGenerateShapePane"),
         "viewOpGenerateShape=" +
-          read("components/WorkspaceView.tsx").includes('op: "generate_shape"'),
+          readWorkspaceViewSurface().includes('op: "generate_shape"'),
       ].join("\n"),
     );
   });

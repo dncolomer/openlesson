@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Workspace map Excalidraw canvas: pure scene normalize/persist + structural UI wire.
  */
@@ -92,7 +93,7 @@ describe("structural: map right pane has no workspace canvas", () => {
     expect(pane).not.toContain("WorkspaceTopicNewsWidget");
     expect(pane).not.toContain("@excalidraw/excalidraw");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceMapAuthoringPane");
     expect(view).not.toMatch(
       /WorkspaceMapAuthoringPane[\s\S]{0,200}workspaceId=\{workspaceId\}/,

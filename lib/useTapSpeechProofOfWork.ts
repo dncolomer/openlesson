@@ -5,6 +5,7 @@ import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interr
 import { TAP_SPEECH_SEGMENT_GAP_MS } from "@/lib/tap-speech-proof-of-work";
 import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 import { ILE_POW_API_PATHS, TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";
+import { postTutoringSpeech } from "@/lib/tutoring-client";
 
 export function useTapSpeechProofOfWork(
   enabled: boolean,
@@ -54,27 +55,20 @@ export function useTapSpeechProofOfWork(
 
       inFlightRef.current = true;
       try {
-        const response = await fetch(speechApiPathRef.current, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId: activeContext.workspaceId,
-            blockId: activeContext.blockId,
-            sessionId: activeContext.sessionId,
-            privateToken: activeContext.privateToken,
-            ileToken: activeContext.privateToken,
-            tapSessionId: activeContext.tapSessionId,
-            entryQueryParams: activeContext.entryQueryParams,
-            practice: activeContext.practice === true,
+        const posted = await postTutoringSpeech(
+          activeContext,
+          {
             event: input.event,
             segmentDurationMs: input.segmentDurationMs,
             transcriptSnapshot: input.transcriptSnapshot,
             timestampMs: input.timestampMs ?? Date.now(),
-          }),
-        });
-        const payload = await response.json();
-        if (!response.ok) return;
-        onInterruptionRef.current(payload.interruption ?? null);
+          },
+          speechApiPathRef.current,
+        );
+        if (!posted.ok) return;
+        onInterruptionRef.current(
+          (posted.payload.interruption as ProofOfWorkApiInterruption) ?? null,
+        );
       } catch {
         // ignore transient network errors
       } finally {

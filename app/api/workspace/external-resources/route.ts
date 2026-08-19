@@ -16,6 +16,7 @@ import {
   type ExternalResourceCreateInput,
 } from "@/lib/workspace-external-resources";
 
+
 export const runtime = "nodejs";
 
 /**
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
         if (!normalized) continue;
         rows.push({
           workspace_id: workspaceId,
-          user_id: auth.user.id,
+          user_id: auth.persistUserId,
           ...normalized,
           sort_order: normalized.sort_order || i,
         });
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
       .from("workspace_external_resources")
       .insert({
         workspace_id: workspaceId,
-        user_id: auth.user.id,
+        user_id: auth.persistUserId,
         ...normalized,
       })
       .select("*")

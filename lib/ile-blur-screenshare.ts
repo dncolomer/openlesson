@@ -124,7 +124,9 @@ export function applyIleLeaveFocusPolicy(
 /** Live ILE-tab focus after a picker await (document.hidden + hasFocus). */
 export function readIleTabFocusedFromDocument(
   doc: { hidden?: boolean } = typeof document !== "undefined" ? document : {},
-  win: { hasFocus?: () => boolean } = typeof window !== "undefined" ? window : {},
+  win: { hasFocus?: () => boolean } = (typeof window !== "undefined"
+    ? window
+    : {}) as { hasFocus?: () => boolean },
 ): boolean {
   const hasFocus = typeof win.hasFocus === "function" ? win.hasFocus() : true;
   return ileTabIsFocused({ hidden: Boolean(doc.hidden), hasFocus });

@@ -65,9 +65,9 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
   it("explains remaining-time stop behavior and tapbench pow flag", () => {
     const md = buildTapbenchSkillsMarkdown(fixture);
     expect(md).toMatch(/session_expired|stop sending|When to stop/i);
-    expect(md).toContain("error.expires_at");
-    expect(md).toContain("error.remaining_ms");
-    expect(md).toContain("error.tapbench");
+    expect(md).toContain("error.details.expires_at");
+    expect(md).toContain("error.details.remaining_ms");
+    expect(md).toContain("error.details.tapbench");
     expect(md).toContain("remaining_ms");
     expect(md).toContain("tapbench: true");
     expect(md).toContain(`pow_source: "${TAPBENCH_POW_SOURCE}"`);

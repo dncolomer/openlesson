@@ -49,7 +49,7 @@ export function MapMinimapChrome({
   labels: readonly MapMinimapLabel[];
   viewportRect: MapMinimapViewportRect | null;
   onTilePointerDown: (cell: { row: number; col: number }) => void;
-  onClusterPointerDown: (label: MapMinimapLabel) => void;
+  onClusterPointerDown: (label: any) => void;
   onViewportPointerDown: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerMove: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerUp: (e: PointerEvent<SVGRectElement>) => void;

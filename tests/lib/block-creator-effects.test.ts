@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -275,7 +276,7 @@ describe("creator effects wired into workspace UI + API", () => {
     // Learners can spawn generator targets after Mark Done (admin write after auth)
     expect(genRoute).toContain("createAdminClient");
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).not.toContain('data-creator-effect-icon="promptable"');
   });
 });

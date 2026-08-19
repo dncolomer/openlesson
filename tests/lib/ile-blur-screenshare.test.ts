@@ -3,6 +3,7 @@
  * Drives the shipped helpers SessionView / Grok-Grokipedia call.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -352,7 +353,7 @@ describe("applyIleLeaveFocusPolicy (shipped ILE leave-focus helper)", () => {
 
 describe("ILE leave-focus wiring (shipped source)", () => {
   it("SessionView + Grok/Grokipedia call the policy and existing getDisplayMedia start", () => {
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("useIleBlurScreenshare");
     expect(view).toContain("handleStartScreenCapture");
     expect(view).toContain("notifyLeaveTab");

@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * External Context resources: pure normalize/CRUD helpers + list order + wiring.
  */
@@ -205,7 +206,7 @@ describe("structural: Context Dantes + no map prompt-impact", () => {
       ),
     ).toBe(true);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceContextPanel");
     expect(view).toContain("data-workspace-context-section");
     expect(view).not.toContain("WorkspacePromptImpactPanel");

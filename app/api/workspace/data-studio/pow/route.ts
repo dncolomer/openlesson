@@ -363,7 +363,7 @@ export async function PATCH(req: NextRequest) {
       invalidate: body.invalidate === true,
       clearInvalidated: body.clearInvalidated === true,
       invalidateOptions: {
-        by: auth.user.id,
+        by: auth.subjectId,
         reason: typeof body.reason === "string" ? body.reason : null,
       },
       tool_name: body.tool_name,
@@ -443,7 +443,7 @@ export async function POST(req: NextRequest) {
         invalidate: action === "invalidate",
         clearInvalidated: action === "clear",
         invalidateOptions: {
-          by: auth.user.id,
+          by: auth.subjectId,
           reason: typeof body.reason === "string" ? body.reason : "bulk",
         },
       });

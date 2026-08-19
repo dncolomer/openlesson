@@ -12,7 +12,11 @@
 // (e.g. the Dashboard editor) can import the types + defaults.
 // ============================================
 
-import { ILE_CONTEXT_BODY } from "@/lib/prompt-kernel/surfaces/ile";
+import {
+  ILE_CONTEXT_BODY,
+  ILE_SURFACE,
+  ILE_TOOLS_BLOCK,
+} from "@/lib/prompt-kernel/surfaces/ile";
 
 // ============================================
 // ILE (INTEGRATED LEARNING ENVIRONMENT) CONTEXT
@@ -55,13 +59,13 @@ Return ONLY valid JSON with this structure:
 
 Be concise with signals - max 3 items. Use categories like: "hesitation", "unexamined assumption", "contradiction", "circular reasoning", "skipped step", "confusion".`,
 
-  opening_probe: `You are Helios, the learner's practice coach. Optimize progress on the **current chapter / problem** and set up productive practice that triggers deeper work (tasks, tools, artifacts to submit).
+  opening_probe: `${ILE_SURFACE}
 
+${ILE_TOOLS_BLOCK}
+
+OVERLAY — opening move variables only:
 The student is working towards solving: {problem}
 {objectives}
-
-ENVIRONMENT CONTEXT:
-The student has access to: Helios Chat, Canvas, Notebook, Grok / Grokipedia, and Screen Sharing. Prefer an opening that routes them into work (tool-directed task or micro-task), not only a question. This is not TAP dual-stream elicitation.
 
 Your task: generate ONE opening move that starts useful practice on THIS problem (question, micro-task, or tool prompt). Follow these principles:
 

@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Workspace + chapter map Done (white + tick) and self-progress (gear + fainter white).
  * Drives the shipped chrome mapper and per-user worked-on persist helper.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -228,8 +230,8 @@ describe("workspace Mark as Done + tile glyphs", () => {
   it("workspace pane marks Done; both maps render tick/gear from the chrome mapper", () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
     const chapter = read("components/ChapterMapPanel.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const grid = readMapGridSurface();
+    const view = readWorkspaceViewSurface();
 
     expect(pane).toContain("data-learner-mark-done");
     expect(pane).toContain("Mark as Done");

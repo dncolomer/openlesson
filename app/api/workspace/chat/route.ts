@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
-    const { user, supabase } = auth;
+    const { supabase, persistUserId } = auth;
 
     const languageNote = locale && locale !== 'en' 
       ? `\n\nIMPORTANT: Respond in ${locale} language (e.g., for 'vi' respond in Vietnamese, 'zh' in Chinese, 'es' in Spanish, 'de' in German, 'pl' in Polish).`
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       return jsonError(404, "Plan not found");
     }
 
-    if (plan.user_id !== user.id && !plan.is_public) {
+    if (plan.user_id !== persistUserId && !plan.is_public) {
       return jsonError(403, "Access denied");
     }
 

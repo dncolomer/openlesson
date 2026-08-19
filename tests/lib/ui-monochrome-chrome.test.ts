@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -73,7 +74,7 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
   });
 
   it("LWM generate / score chrome stays neutral-white outline", () => {
-    const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const lwm = readKnowledgePanelSurface();
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toMatch(/bg-white/);
     expect(lwm).not.toMatch(/bg-cyan-|text-blue-400|border-amber-/);

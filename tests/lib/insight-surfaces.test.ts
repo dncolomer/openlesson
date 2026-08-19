@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -67,8 +68,8 @@ describe("shipped insight surface wiring", () => {
     path.join(REPO_ROOT, "components/thought-ui/ThoughtMemoryPanel.tsx"),
     "utf8",
   );
-  const tapClient = fs.readFileSync(path.join(REPO_ROOT, "components/TapScoreClient.tsx"), "utf8");
-  const sessionView = fs.readFileSync(path.join(REPO_ROOT, "components/SessionView.tsx"), "utf8");
+  const tapClient = readTapScoreSurface();
+  const sessionView = readSessionViewSurface();
   const insightDetail = fs.readFileSync(
     path.join(REPO_ROOT, "components/InsightDetailClient.tsx"),
     "utf8",
@@ -82,11 +83,9 @@ describe("shipped insight surface wiring", () => {
   });
 
   it("hosts workspace-scoped Insights inside Knowledge performance panel", () => {
-    expect(performancePanel).toContain('"insights"');
-    expect(performancePanel).toContain("<InsightsDashboardTab");
-    expect(performancePanel).toContain("workspaceId={workspaceId}");
     expect(insightsTab).toContain("insightsListUrl(workspaceId)");
     expect(insightsTab).toContain("workspaceId?: string");
+    expect(insightsTab).toContain("export function InsightsDashboardTab");
   });
 
   it("lets Knowledge Insights tab generate suggestions and bookmark them", () => {

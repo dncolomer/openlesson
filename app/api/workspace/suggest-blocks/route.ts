@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         : await guardWorkspaceRoute(workspaceId, { ayclToken, ileToken });
     if (!auth.ok) return auth.response;
 
-    const { user, supabase } = auth;
+    const { supabase, persistUserId } = auth;
 
     const languageNote =
       locale && locale !== "en"
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         return jsonError(404, "Session not found");
       }
 
-      if (session.user_id !== user.id) {
+      if (session.user_id !== persistUserId) {
         return jsonError(403, "Access denied");
       }
 
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         return jsonError(404, "Plan not found");
       }
 
-      if (plan.user_id !== user.id) {
+      if (plan.user_id !== persistUserId) {
         return jsonError(403, "Access denied");
       }
 

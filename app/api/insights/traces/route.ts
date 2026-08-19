@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { fetchWorkspaceInsightThoughts } from "@/lib/insights-traces";
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const workspaceId = req.nextUrl.searchParams.get("workspaceId")?.trim();
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     // Workspace visibility is gated by RLS; missing row ⇒ not found / no access.
@@ -25,10 +26,10 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (workspaceError) {
-      return NextResponse.json({ error: workspaceError.message }, { status: 500 });
+      return jsonError(500, workspaceError.message);
     }
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const thoughts = await fetchWorkspaceInsightThoughts(supabase, workspaceId);
@@ -38,9 +39,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[insights/traces]", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load thought traces" },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to load thought traces");
   }
 }

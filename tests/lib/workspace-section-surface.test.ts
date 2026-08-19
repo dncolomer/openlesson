@@ -15,6 +15,7 @@ import {
   resolveSectionSurfaceImage,
 } from "@/lib/workspace-section-surface";
 import { aestheticImageForId } from "@/lib/aesthetics";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
@@ -104,7 +105,7 @@ describe("layout class contracts", () => {
 });
 
 describe("shipped Knowledge / Setting aesthetic wiring", () => {
-  const view = fs.readFileSync(path.join(REPO_ROOT, "components/WorkspaceView.tsx"), "utf8");
+  const view = readWorkspaceViewSurface();
   const aycl = fs.readFileSync(path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"), "utf8");
   const surface = fs.readFileSync(
     path.join(REPO_ROOT, "components/WorkspaceSectionSurface.tsx"),

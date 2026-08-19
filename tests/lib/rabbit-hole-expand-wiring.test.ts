@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Structural + wiring checks for Rabbit Hole Expansion from Expand Block drawer.
  * Exercises shipped process helpers for outline/slot mapping (no mock of unit under test).
@@ -43,7 +44,7 @@ describe("Rabbit Hole Expansion Expand-drawer wiring", () => {
     const expandPane = read("components/WorkspaceExpandBlockPane.tsx");
     const modal = read("components/RabbitHoleExpandModal.tsx");
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const api = read("app/api/workspace/rabbit-hole-expand/route.ts");
     const processLib = read("lib/rabbit-hole-expand.ts");
 
@@ -105,10 +106,9 @@ describe("Rabbit Hole Expansion Expand-drawer wiring", () => {
     expect(view).toContain("handleExpandFromSourceBlock");
     expect(view).toContain("runAddExpandCreateLoop");
     expect(view).toContain("/api/workspace/add-block-at-slot");
-    const expandFn = view.slice(
-      view.indexOf("handleExpandFromSourceBlock"),
-      view.indexOf("handleExpandFromSourceBlock") + 4500,
-    );
+    const expandHook = read("components/workspace-view/use-workspace-expand-jobs.ts");
+    const expandStart = expandHook.indexOf("const handleExpandFromSourceBlock");
+    const expandFn = expandHook.slice(expandStart, expandStart + 4500);
     expect(expandFn).toContain("buildRabbitHoleExpandSlotPrompt");
     expect(expandFn).toContain("candidatePrompts");
     expect(expandFn).toContain("runAddExpandCreateLoop");

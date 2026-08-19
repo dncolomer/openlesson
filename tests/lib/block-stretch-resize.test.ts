@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -286,7 +287,7 @@ describe("stretch settle sequence (preview then commit on end only)", () => {
 
 describe("stretch map UI chrome (structural)", () => {
   it("sole-select mounts edge and corner stretch targets; multi/unselected omit", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("data-stretch-handle");
     expect(grid).toContain("stretchBlockFromHandle");
     // All 8 handles referenced
@@ -305,7 +306,7 @@ describe("stretch map UI chrome (structural)", () => {
   });
 
   it("move/resize settle optimistically with quiet minimap save (no full-map freeze)", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     // Optimistic geometry keeps the map live during network save
     expect(grid).toContain("optimisticPlacements");
     expect(grid).toContain("displayNodes");
@@ -319,7 +320,7 @@ describe("stretch map UI chrome (structural)", () => {
     expect(grid).not.toMatch(
       /busy\s*&&\s*\(\s*<div[^>]*backdrop-blur/,
     );
-    expect(grid).toContain("No full-map freeze on geometry saves");
+    expect(grid).toContain("MapJobIndicators");
 
     const list = read("components/SessionList.tsx");
     expect(list).toContain("silentGeometry");

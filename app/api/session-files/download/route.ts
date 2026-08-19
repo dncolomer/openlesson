@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { getFileContentResponse } from "@/lib/xai-files";
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     const fileId = req.nextUrl.searchParams.get("fileId");
     if (!fileId) {
-      return NextResponse.json({ error: "fileId required" }, { status: 400 });
+      return jsonError(400, "fileId required");
     }
 
     // Verify the caller owns a row referencing this xai_file_id in any of
@@ -53,14 +54,14 @@ export async function GET(req: NextRequest) {
     }
 
     if (!allowed) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     const upstream = await getFileContentResponse(fileId);
     if (!upstream.ok || !upstream.body) {
       const body = await upstream.text().catch(() => "");
       console.error(`[session-files/download] xAI fetch failed for file_id=${fileId} status=${upstream.status} body=${body.slice(0, 200)}`);
-      return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: 502 });
+      return jsonError(502, `Upstream ${upstream.status}`);
     }
 
     return new Response(upstream.body, {
@@ -72,6 +73,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[session-files/download] Error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

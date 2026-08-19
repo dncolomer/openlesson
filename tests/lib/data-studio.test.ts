@@ -1,6 +1,6 @@
 /**
- * Admin Data Studio — pure helpers + structural wiring of shipped surfaces.
- * Exercises real access, bulk progress, and projection/region studio functions.
+ * Data Studio — pure helpers + structural wiring of the workspace Settings surface.
+ * Exercises browse, bulk progress, and projection/region studio functions.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,11 +9,9 @@ import {
   buildBulkSnapshotJobs,
   buildStudioProjectionView,
   consumePlatformBulkNdjson,
-  decideDataStudioAccess,
   evaluateStudioRegionGeometry,
   formatPlatformBulkSnapshotProgress,
   initialPlatformBulkSnapshotProgress,
-  isAdminProfile,
   matchesStudioPowFilter,
   matchesStudioPowToSessionLink,
   paginateSlice,
@@ -43,30 +41,6 @@ function unitVector(seed: number): number[] {
   );
   return l2Normalize(v);
 }
-
-describe("data studio access (pure)", () => {
-  it("isAdminProfile requires truthy is_admin", () => {
-    expect(isAdminProfile(null)).toBe(false);
-    expect(isAdminProfile({ is_admin: false })).toBe(false);
-    expect(isAdminProfile({ is_admin: true })).toBe(true);
-  });
-
-  it("decideDataStudioAccess mirrors requireAdmin status codes", () => {
-    expect(decideDataStudioAccess({ userId: null, isAdmin: true })).toEqual({
-      allowed: false,
-      status: 401,
-      error: "Not authenticated",
-    });
-    expect(decideDataStudioAccess({ userId: "u1", isAdmin: false })).toEqual({
-      allowed: false,
-      status: 403,
-      error: "Admin access required",
-    });
-    expect(decideDataStudioAccess({ userId: "u1", isAdmin: true })).toEqual({
-      allowed: true,
-    });
-  });
-});
 
 describe("data studio browse helpers (pure)", () => {
   it("paginateSlice pages and clamps", () => {
@@ -476,89 +450,31 @@ describe("studio projection + region geometry (shipped)", () => {
 });
 
 describe("data studio structural wiring", () => {
-  it("admin shell and page wire Data Studio under admin", () => {
-    const shell = readFileSync(join(ROOT, "components/admin/AdminShell.tsx"), "utf8");
-    expect(shell).toContain("/admin/data-studio");
-    expect(shell).toContain("Data Studio");
-
-    const pagePath = join(ROOT, "app/admin/data-studio/page.tsx");
-    expect(existsSync(pagePath)).toBe(true);
-    const page = readFileSync(pagePath, "utf8");
-    expect(page).toContain("useAdminGuard");
-    expect(page).toContain("/api/admin/data-studio/");
-    expect(page).toContain("data-admin-data-studio");
-    expect(page).toContain("data-studio-panel=\"pow\"");
-    expect(page).toContain("data-studio-panel=\"xai\"");
-    expect(page).toContain("data-studio-panel=\"snapshots\"");
-    expect(page).toContain("data-studio-panel=\"regions\"");
-    expect(page).toContain("data-studio-panel=\"bulk\"");
-    expect(page).toContain("data-studio-panel=\"projections\"");
-    // PoW session link paste + expand containment + sort controls
-    expect(page).toContain("data-studio-pow-link");
-    expect(page).toContain("data-studio-pow-link-input");
-    expect(page).toContain("data-studio-pow-lookup");
-    expect(page).toContain("data-studio-pow-details-row");
-    expect(page).toContain("colSpan={7}");
-    expect(page).toContain("data-studio-bulk-invalidate");
-    expect(page).toContain("data-studio-invalidate");
-    expect(page).toContain("sortStudioRows");
-    expect(page).toContain("toggleStudioSort");
-    expect(page).toContain("data-studio-sort");
-    expect(page).toMatch(/data-studio-sort-table|data-studio-sort-list/);
+  it("workspace Settings mounts Data Studio against the workspace PoW route", () => {
+    const panel = readFileSync(join(ROOT, "components/WorkspaceDataStudioPanel.tsx"), "utf8");
+    expect(panel).toContain("data-workspace-data-studio");
+    expect(panel).toContain("/api/workspace/data-studio/pow");
+    expect(panel).toContain("data-studio-filter-link");
+    expect(panel).toContain("data-studio-pow-details-row");
+    expect(panel).toContain("data-studio-bulk-invalidate");
+    expect(panel).toContain("data-studio-invalidate");
+    expect(existsSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/admin"))).toBe(false);
+    expect(existsSync(join(ROOT, "app/api/admin"))).toBe(false);
   });
 
-  it("pow API resolves TAP/ILE link tokens and matches related PoW", () => {
-    const src = readFileSync(join(ROOT, "app/api/admin/data-studio/pow/route.ts"), "utf8");
+  it("workspace pow API resolves TAP/ILE/TAPBench link tokens and matches related PoW", () => {
+    const src = readFileSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"), "utf8");
     expect(src).toContain("parseStudioSessionLinkInput");
     expect(src).toContain("hashPrivateToken");
     expect(src).toContain("matchesStudioPowToSessionLink");
     expect(src).toContain("workspace_tap_sessions");
     expect(src).toContain("workspace_ile_links");
+    expect(src).toContain("workspace_tapbench_links");
     expect(src).toContain("private_token_hash");
     expect(src).toContain("sortStudioRows");
-    expect(src).toContain('params.get("link")');
-  });
-
-  it("all Data Studio API routes call requireAdmin", () => {
-    const routes = [
-      "app/api/admin/data-studio/overview/route.ts",
-      "app/api/admin/data-studio/pow/route.ts",
-      "app/api/admin/data-studio/snapshots/route.ts",
-      "app/api/admin/data-studio/regions/route.ts",
-      "app/api/admin/data-studio/xai/route.ts",
-      "app/api/admin/data-studio/projection/route.ts",
-      "app/api/admin/data-studio/bulk-snapshot/route.ts",
-    ];
-    for (const rel of routes) {
-      const src = readFileSync(join(ROOT, rel), "utf8");
-      expect(src).toContain('from "@/lib/admin/require-admin"');
-      expect(src).toContain("requireAdmin()");
-      // Every handler path must gate before work
-      const handlerCount = (src.match(/export async function (GET|POST)/g) || []).length;
-      const requireCount = (src.match(/requireAdmin\(\)/g) || []).length;
-      expect(requireCount).toBeGreaterThanOrEqual(handlerCount);
-    }
-  });
-
-  it("bulk snapshot route reuses runVerticalScore and listWorkspaceSnapshotSubjects", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/admin/data-studio/bulk-snapshot/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("runVerticalScore");
-    expect(src).toContain("listWorkspaceSnapshotSubjects");
-    expect(src).toContain("selectWorkspacesForBulkSnapshot");
-    expect(src).toContain("buildBulkSnapshotJobs");
-    expect(src).toContain("application/x-ndjson");
-  });
-
-  it("projection route uses buildStudioProjectionView + trajectory loader", () => {
-    const src = readFileSync(
-      join(ROOT, "app/api/admin/data-studio/projection/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("buildStudioProjectionView");
-    expect(src).toContain("loadKnowledgeConfigTrajectory");
-    expect(src).toContain("custom_verification_models");
+    expect(src).toContain('searchParams.get("link")');
+    expect(src).toContain("guardWorkspaceRoute");
+    expect(src).not.toContain("requireAdmin");
   });
 });

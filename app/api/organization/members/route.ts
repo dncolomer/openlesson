@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -18,7 +19,7 @@ export async function DELETE(request: Request) {
     const { memberId } = await request.json();
 
     if (!memberId) {
-      return NextResponse.json({ error: "Member ID required" }, { status: 400 });
+      return jsonError(400, "Member ID required");
     }
 
     // Get requester's profile
@@ -29,15 +30,15 @@ export async function DELETE(request: Request) {
       .single();
 
     if (requesterError || !requesterProfile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError(404, "Profile not found");
     }
 
     if (!requesterProfile.organization_id) {
-      return NextResponse.json({ error: "You don't belong to an organization" }, { status: 400 });
+      return jsonError(400, "You don't belong to an organization");
     }
 
     if (!requesterProfile.is_org_admin) {
-      return NextResponse.json({ error: "Only org admins can remove members" }, { status: 403 });
+      return jsonError(403, "Only org admins can remove members");
     }
 
     const adminClient = getAdminClient();
@@ -50,12 +51,12 @@ export async function DELETE(request: Request) {
       .single();
 
     if (targetError || !targetProfile) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      return jsonError(404, "Member not found");
     }
 
     // Verify they're in the same organization
     if (targetProfile.organization_id !== requesterProfile.organization_id) {
-      return NextResponse.json({ error: "Member not in your organization" }, { status: 400 });
+      return jsonError(400, "Member not in your organization");
     }
 
     // If removing self and is org admin, check if there are other org admins
@@ -68,9 +69,7 @@ export async function DELETE(request: Request) {
         .neq("id", user.id);
 
       if (!otherAdmins || otherAdmins.length === 0) {
-        return NextResponse.json({ 
-          error: "Cannot leave as the last org admin. Promote another member first." 
-        }, { status: 400 });
+        return jsonError(400, "Cannot leave as the last org admin. Promote another member first.");
       }
     }
 
@@ -82,12 +81,12 @@ export async function DELETE(request: Request) {
 
     if (updateError) {
       console.error("Error removing member:", updateError);
-      return NextResponse.json({ error: "Failed to remove member" }, { status: 500 });
+      return jsonError(500, "Failed to remove member");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Remove member error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

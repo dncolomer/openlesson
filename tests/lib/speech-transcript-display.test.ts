@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -299,10 +300,7 @@ describe("live speech recognition helpers", () => {
 
 describe("ILE + TAP speech wiring (structural)", () => {
   it("SessionView enables speech via isIleSpeechCaptureEnabled and starts recording when welcome is skipped", () => {
-    const viewSrc = readFileSync(
-      path.join(process.cwd(), "components/SessionView.tsx"),
-      "utf8",
-    );
+    const viewSrc = readSessionViewSurface();
     expect(viewSrc).toContain("isIleSpeechCaptureEnabled");
     expect(viewSrc).toContain("powSessionEnabled");
     expect(viewSrc).toContain("enabled: powSessionEnabled");

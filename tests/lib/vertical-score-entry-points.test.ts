@@ -1,3 +1,4 @@
+import { readKnowledgePanelSurface, readMcpSurface, readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -92,6 +93,9 @@ const BANNED_CONTRACT_PATTERNS: Array<{ re: RegExp; label: string }> = [
 function readSurface(rel: string): string {
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing inventory file ${rel}`).toBe(true);
+  if (rel === "lib/pow-api/mcp-proof-of-work-server.ts") {
+    return readMcpSurface();
+  }
   return readFileSync(path, "utf8");
 }
 
@@ -226,11 +230,11 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(ileRoute).toContain("SESSION_AUTO_SNAPSHOT_VERTICAL");
     expect(ileRoute).toMatch(/not invoked automatically|not auto/i);
 
-    const tapClient = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const tapClient = readTapScoreSurface();
     expect(tapClient).not.toContain("/api/workspace-tap-score/performance");
     expect(tapClient).toMatch(/not auto-run on TAP end|manual/);
 
-    const sessionView = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const sessionView = readSessionViewSurface();
     expect(sessionView).not.toContain("ILE_POW_API_PATHS.performance");
     expect(sessionView).toMatch(/not auto-run on ILE end|manual/);
 
@@ -250,7 +254,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
   });
 
   it("LWM box hosts Generate new snapshot control with PoW gate", () => {
-    const lwm = readFileSync(join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"), "utf8");
+    const lwm = readKnowledgePanelSurface();
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("Generate new snapshot");
     expect(lwm).toContain("data-lwm-generate-snapshot-all");
@@ -264,7 +268,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(
       existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/performance/route.ts")),
     ).toBe(false);
-    const server = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
+    const server = readMcpSurface();
     expect(server).not.toContain('name: "analyze_performance"');
     const catalog = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-catalog.ts"), "utf8");
     expect(catalog).not.toContain("analyze_performance");

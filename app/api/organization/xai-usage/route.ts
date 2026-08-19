@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { billingPeriodStart } from "@/lib/usage-metrics";
@@ -123,10 +124,7 @@ export async function GET(req: NextRequest) {
         currentPeriodEnd: org.current_period_end,
       });
     } catch (err) {
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : "Invalid period" },
-        { status: 400 }
-      );
+      return jsonError(400, err instanceof Error ? err.message : "Invalid period");
     }
 
     const queryEnd = new Date(range.end.getTime() + 1000);
@@ -167,6 +165,6 @@ export async function GET(req: NextRequest) {
     }
   } catch (error) {
     console.error("organization xai-usage error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

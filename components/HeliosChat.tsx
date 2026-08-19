@@ -40,6 +40,7 @@ export type {
   PendingChatMessage,
 } from "@/lib/session-chat-client";
 import type { ChatMessage, PendingChatMessage } from "@/lib/session-chat-client";
+import { postIleSessionChat } from "@/lib/session-chat-client";
 
 interface HeliosChatProps {
   problem: string;
@@ -314,29 +315,21 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         imageDataUrl: m.imageDataUrl,
       }));
 
-      const response = await fetch("/api/session-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          problem,
-          activeStepIndex,
-          activeStepId: activeStep?.id,
-          activeStepDescription: activeStep?.description,
-          sessionPlan,
-          messages: [...conversationHistory, { role: "user", content: userMsg.content, imageDataUrl: userMsg.imageDataUrl }],
-          sessionId,
-          sessionMode: "learning",
-          session_mode: "learning",
-        }),
+      const { ok, data, errorMessage } = await postIleSessionChat({
+        problem,
+        activeStepIndex,
+        activeStepId: activeStep?.id,
+        activeStepDescription: activeStep?.description,
+        sessionPlan,
+        messages: [...conversationHistory, { role: "user", content: userMsg.content, imageDataUrl: userMsg.imageDataUrl }],
+        sessionId,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get response");
+      if (!ok || !data) {
+        throw new Error(errorMessage || "Failed to get response");
       }
 
-      const data = await response.json();
-
-      if (data.message) {
+      if (typeof data.message === "string") {
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: "assistant",

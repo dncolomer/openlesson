@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     const stats = await handle(workspaceId, auth.supabase, {
       quality: parseQuality(url.searchParams.get("quality")),
       subjectKey: parseSubjectKey(url.searchParams.get("subjectKey")),
-      currentUserId: auth.user?.id ?? null,
+      currentUserId: auth.subjectId,
       blockId: blockId && blockId.trim() ? blockId.trim() : null,
     });
     return NextResponse.json({ stats });
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     const stats = await handle(workspaceId, auth.supabase, {
       quality: parseQuality(body.quality),
       subjectKey: parseSubjectKey(body.subjectKey),
-      currentUserId: auth.user?.id ?? null,
+      currentUserId: auth.subjectId,
       blockId,
     });
     return NextResponse.json({ stats });

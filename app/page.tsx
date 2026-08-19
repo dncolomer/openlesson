@@ -89,6 +89,7 @@ export default function B2BLandingPage() {
           Create{" "}
           <span className="text-zinc-300">custom knowledge regions</span> from internal expert data and measure
           your workforce readiness without sharing confidential information about your internal systems.
+          Regions stay private to the workspace.
         </p>
         <div
           className="mt-6 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"

@@ -1,5 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
+import {
+  applyTutoringSessionMutate,
+  resolveTutoringContext,
+  type TutoringMutateAction,
+} from "@/lib/tutoring-runtime";
 
 export const runtime = "nodejs";
 
@@ -11,118 +17,45 @@ export async function POST(request: NextRequest) {
     const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
 
     if (!token || !action || !sessionId) {
-      return NextResponse.json({ error: "token, action, and sessionId are required" }, { status: 400 });
+      return jsonError(400, "token, action, and sessionId are required");
     }
 
     const ctx = await resolveAyclSessionAccess(token, sessionId);
     if ("error" in ctx) {
-      return NextResponse.json({ error: ctx.error }, { status: ctx.status });
+      return jsonError(ctx.status, ctx.error);
     }
 
-    if (action === "get") {
-      const { data: session, error } = await ctx.supabase
-        .from("sessions")
-        .select("*")
-        .eq("id", sessionId)
-        .single();
+    const mutateAction: TutoringMutateAction =
+      action === "save" || action === "add_probe" ? action : "get";
+    const result = await applyTutoringSessionMutate(
+      ctx.supabase as never,
+      resolveTutoringContext({
+        product: "ile",
+        modality: "dialog",
+        authKind: "aycl",
+        workspaceId: ctx.workspaceId,
+        sessionId,
+      }),
+      {
+        action: mutateAction,
+        session: body.session,
+        probes: body.probes,
+        probe: body.probe,
+      },
+    );
 
-      if (error || !session) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
-      }
-
-      const { data: probes } = await ctx.supabase
-        .from("probes")
-        .select("*")
-        .eq("session_id", sessionId)
-        .order("timestamp_ms", { ascending: true });
-
-      return NextResponse.json({ session, probes: probes || [] });
+    if (!result.ok) {
+      return jsonError(result.status, result.message);
     }
-
-    if (action === "save") {
-      const sessionPatch = body.session || {};
-      const probes = Array.isArray(body.probes) ? body.probes : [];
-
-      const metadata: Record<string, unknown> = {
-        ...(typeof sessionPatch.metadata === "object" && sessionPatch.metadata
-          ? sessionPatch.metadata
-          : {}),
-      };
-      if (Array.isArray(sessionPatch.objectives) && sessionPatch.objectives.length > 0) {
-        metadata.objectives = sessionPatch.objectives;
-      }
-
-      const updatePayload: Record<string, unknown> = {};
-      if (sessionPatch.status !== undefined) updatePayload.status = sessionPatch.status;
-      if (sessionPatch.duration_ms !== undefined) updatePayload.duration_ms = sessionPatch.duration_ms;
-      if (sessionPatch.ended_at !== undefined) updatePayload.ended_at = sessionPatch.ended_at;
-      if (sessionPatch.report !== undefined) updatePayload.report = sessionPatch.report;
-      if (sessionPatch.planning_prompt !== undefined) {
-        updatePayload.planning_prompt = sessionPatch.planning_prompt;
-      }
-      if (Object.keys(metadata).length > 0) updatePayload.metadata = metadata;
-
-      const { error: updateError } = await ctx.supabase
-        .from("sessions")
-        .update(updatePayload)
-        .eq("id", sessionId);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
-
-      for (const probe of probes) {
-        if (!probe?.id) continue;
-        await ctx.supabase.from("probes").upsert({
-          id: probe.id,
-          session_id: sessionId,
-          text: probe.text,
-          timestamp_ms: probe.timestamp_ms,
-          gap_score: probe.gap_score ?? 0,
-          signals: probe.signals ?? [],
-          expanded_text: probe.expanded_text,
-          starred: probe.starred ?? false,
-          is_revealed: probe.is_revealed ?? false,
-          request_type: probe.request_type ?? "question",
-          plan_step_id: probe.plan_step_id,
-          archived: probe.archived ?? false,
-          focused: probe.focused ?? false,
-        });
-      }
-
-      return NextResponse.json({ ok: true });
+    if (result.action === "get") {
+      return Response.json({ session: result.session, probes: result.probes });
     }
-
-    if (action === "add_probe") {
-      const probe = body.probe || {};
-      const id = typeof probe.id === "string" ? probe.id : crypto.randomUUID();
-      const row = {
-        id,
-        session_id: sessionId,
-        text: probe.text || "",
-        timestamp_ms: probe.timestamp_ms ?? probe.timestamp ?? Date.now(),
-        gap_score: probe.gap_score ?? probe.gapScore ?? 0,
-        signals: probe.signals ?? [],
-        expanded_text: probe.expanded_text ?? probe.expandedText ?? null,
-        starred: probe.starred ?? false,
-        is_revealed: probe.is_revealed ?? probe.isRevealed ?? false,
-        request_type: probe.request_type ?? probe.requestType ?? "question",
-        plan_step_id: probe.plan_step_id ?? probe.planStepId ?? null,
-        archived: probe.archived ?? false,
-        focused: probe.focused ?? false,
-      };
-
-      const { data, error } = await ctx.supabase.from("probes").insert(row).select("*").single();
-      if (error || !data) {
-        return NextResponse.json({ error: error?.message || "Failed to add probe" }, { status: 500 });
-      }
-
-      return NextResponse.json({ probe: data });
+    if (result.action === "add_probe") {
+      return Response.json({ probe: result.probe });
     }
-
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+    return Response.json({ ok: true });
   } catch (error) {
     console.error("[aycl/session-mutate]", error);
-    return NextResponse.json({ error: "Failed to update session" }, { status: 500 });
+    return jsonError(500, "Failed to update session");
   }
 }

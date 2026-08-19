@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
         "rabbit_hole_plays",
       ].includes(priceType)
     ) {
-      return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
+      return jsonError(400, "Invalid price type");
     }
     const priceTypeResolved = priceType as CheckoutPriceType;
 
@@ -92,13 +93,13 @@ export async function POST(request: NextRequest) {
       !ayclTokenEarly &&
       !upgradeFromIdEarly
     ) {
-      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+      return jsonError(400, "workspaceId is required");
     }
 
     const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceTypeResolved) && !user;
 
     if (priceTypeResolved === "rabbit_hole_plays" && !user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      return jsonError(401, "Not authenticated");
     }
 
     let priceId = "";
@@ -155,10 +156,7 @@ export async function POST(request: NextRequest) {
           purchase = await getAyclPurchaseByToken(admin, ayclTokenIn);
         }
         if (!purchase || !ayclPurchaseEligibleForUpgrade(purchase as import("@/lib/aycl").AyclPurchase)) {
-          return NextResponse.json(
-            { error: "This access cannot be upgraded (already full or invalid)." },
-            { status: 400 },
-          );
+          return jsonError(400, "This access cannot be upgraded (already full or invalid).");
         }
         const { data: catalogWorkspace } = await admin
           .from("workspaces")
@@ -202,10 +200,7 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (!catalogWorkspace?.is_all_you_can_learn) {
-          return NextResponse.json(
-            { error: "Workspace is not available for All-You-Can-Learn" },
-            { status: 404 },
-          );
+          return jsonError(404, "Workspace is not available for All-You-Can-Learn");
         }
 
         const tier: AyclAccessTier = isAyclAccessTier(rawTier)
@@ -236,10 +231,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!priceId && !lineItem && priceTypeResolved !== "rabbit_hole_plays") {
-      return NextResponse.json(
-        { error: `Stripe price not configured for ${priceTypeResolved}` },
-        { status: 500 }
-      );
+      return jsonError(500, `Stripe price not configured for ${priceTypeResolved}`);
     }
 
     const origin = request.headers.get("origin") || getAppOrigin(request);
@@ -375,6 +367,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Create checkout error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Failed to create checkout session: " + message }, { status: 500 });
+    return jsonError(500, "Failed to create checkout session: " + message);
   }
 }

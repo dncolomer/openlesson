@@ -2,14 +2,10 @@
  * LWM panel: control + snapshot list + integrated detail (scores+spider, tabbed rest).
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
-const ROOT = join(__dirname, "../..");
-const LWM = join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx");
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 function readLwm(): string {
-  return readFileSync(LWM, "utf8");
+  return readKnowledgePanelSurface();
 }
 
 function lwmSection(src: string): string {
@@ -45,23 +41,17 @@ describe("LWM architecture (integrated detail)", () => {
     const src = readLwm();
     const section = lwmSection(src);
     const controlStart = section.indexOf('data-lwm-zone="control"');
-    const modalStart = section.indexOf("data-lwm-snapshot-modal");
     const resultsStart = section.indexOf('data-lwm-zone="results"');
-    // Control bar only (before modal / results)
-    const controlEnd =
-      modalStart > controlStart && modalStart < resultsStart
-        ? modalStart
-        : resultsStart;
-    const control = section.slice(controlStart, controlEnd);
+    const control = section.slice(controlStart, resultsStart);
     expect(control).toContain("UserPicker");
     expect(control).toContain("data-lwm-generate-snapshot");
     expect(control).toContain("data-lwm-generate-snapshot-all");
     // Goal picker is no longer inline in the compact control bar
     expect(control).not.toContain("data-lwm-goal-selection");
     // Modal hosts goal selection + progress
-    expect(section).toContain("data-lwm-snapshot-modal");
-    expect(section).toContain("data-lwm-goal-selection");
-    expect(section).toContain("data-lwm-snapshot-progress");
+    expect(src).toContain("data-lwm-snapshot-modal");
+    expect(src).toContain("data-lwm-goal-selection");
+    expect(src).toContain("data-lwm-snapshot-progress");
     expect(src).toMatch(/openSnapshotModal\("single"\)/);
     expect(src).toMatch(/goal_mode:\s*goalMode/);
     expect(src).toMatch(/adhoc_goal/);

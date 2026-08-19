@@ -1,29 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import { getIlePostSessionPath } from "@/lib/storage";
-import { DialogueSplit, ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
-import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
-import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
-import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
-import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
-import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
   thoughtContextFillRatio,
 } from "@/lib/thought-context-auto-stash";
-import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
-import { TapBriefingConfig } from "@/components/TapBriefingConfig";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
@@ -31,9 +20,7 @@ import type { TapStartingTopic } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
-import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import {
-  formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
   stopLiveSpeechRecognition,
   useSessionThoughtInterface,
@@ -43,7 +30,6 @@ import {
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
 import {
-  coerceSpokenLocale,
   toSpeechBcp47,
   type SpokenLocale,
 } from "@/lib/tutoring-languages";
@@ -55,27 +41,23 @@ import {
   type TapSystem1Action,
   type TapSystem2Action,
   type TapChatMessage as ChatMessage,
-  OPENING_MESSAGE_ID,
   CHAIN_GAP_MS,
   BACKGROUND_IMAGES,
   getDialogueStorageKey,
   clearDialogueMessages,
   resolveInitialMinutes,
   normalize,
-  formatCountdown,
-  thoughtButtonClasses,
-  type ThoughtButtonSize,
-  type ThoughtButtonVariant,
 } from "@/lib/tap-score-client-helpers";
 import {
   tapTracePayload,
-  TAP_SESSION_RUNTIME_PATHS,
   isTapLiveThoughtSpeechEnabled,
   shouldRestartLocalTapSpeechBindings,
   tapLiveSpeechFlushText,
   tapHookFormingText,
 } from "@/lib/tap-session-runtime";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { TapScorePhases } from "@/components/tap-score/tap-score-phases";
+import { useTapScoreSession } from "@/components/tap-score/use-tap-score-flow";
 import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
@@ -84,20 +66,12 @@ import {
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
   shouldEvaluateSessionPurity,
-  shouldFadeLiveBar,
   shouldPenalizeEmptyBarSilence,
-  transcriptFadeOpacity,
 } from "@/lib/tap-session-purity";
-import {
-  TAP_PRACTICE_DURATION_MINUTES,
-  TAP_PRACTICE_DURATION_SECONDS,
-  resolveTapLiveMinutes,
-} from "@/lib/tap-practice";
 import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -133,18 +107,6 @@ export function resolveTapShowEndSession(input: {
   if (typeof input.showEndSession === "boolean") return input.showEndSession;
   if (input.initialSession && input.initialSession.show_end_session === false) return false;
   return true;
-}
-
-function ThoughtButton({
-  size = "md",
-  variant = "ghost",
-  className = "",
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  size?: ThoughtButtonSize;
-  variant?: ThoughtButtonVariant;
-}) {
-  return <button className={thoughtButtonClasses({ size, variant, className })} {...props} />;
 }
 
 export function TapScoreClient({
@@ -846,6 +808,45 @@ export function TapScoreClient({
     }
   }, [phase, speechBindings, speechLang]);
 
+  const applyTapSession = useCallback((patch: import("@/components/tap-score/use-tap-score-flow").TapScoreSessionPatch) => {
+    if (patch.isSending !== undefined) setIsSending(patch.isSending);
+    if (patch.heliosTurnMode !== undefined) setHeliosTurnMode(patch.heliosTurnMode);
+    if (patch.error !== undefined) setError(patch.error);
+    if (patch.messages !== undefined) setMessages(patch.messages);
+    if (patch.sentThoughtIds !== undefined) setSentThoughtIds(patch.sentThoughtIds);
+    if (patch.memoryThoughtIds !== undefined) setMemoryThoughtIds(patch.memoryThoughtIds);
+    if (patch.isStartingSession !== undefined) setIsStartingSession(patch.isStartingSession);
+    if (patch.startingTopicId !== undefined) setStartingTopicId(patch.startingTopicId);
+    if (patch.isPracticeMode !== undefined) setIsPracticeMode(patch.isPracticeMode);
+    if (patch.liveMinutes !== undefined) setLiveMinutes(patch.liveMinutes);
+    if (patch.speechError !== undefined) setSpeechError(patch.speechError);
+    if (patch.thoughts !== undefined) setThoughts(patch.thoughts);
+    if (patch.sessionPurity !== undefined) setSessionPurity(patch.sessionPurity);
+    if (patch.transcriptSilenceMs !== undefined) setTranscriptSilenceMs(patch.transcriptSilenceMs);
+    if (patch.sessionEndedImpure !== undefined) setSessionEndedImpure(patch.sessionEndedImpure);
+    if (patch.tapSessionId !== undefined) setTapSessionId(patch.tapSessionId);
+    if (patch.startedAt !== undefined) setStartedAt(patch.startedAt);
+    if (patch.remainingSeconds !== undefined) setRemainingSeconds(patch.remainingSeconds);
+    if (patch.phase !== undefined) setPhase(patch.phase);
+    if (patch.performanceReport !== undefined) setPerformanceReport(patch.performanceReport);
+    if (patch.resultsError !== undefined) setResultsError(patch.resultsError);
+    if (patch.interimText !== undefined) setInterimText(patch.interimText);
+    if (patch.crystallizableText !== undefined) setCrystallizableText(patch.crystallizableText);
+    if (patch.editingTranscription !== undefined) setEditingTranscription(patch.editingTranscription);
+  }, []);
+  const {
+    sendThought, sendCurrentTranscription, retryMicrophone, startSession, restartBriefingFlow, endSession,
+  } = useTapScoreSession({
+    isSending, sentThoughtIds, messages, workspaceId, blockId, sessionId, privateToken,
+    conversationLanguage, liveMinutes, minutes, startedAt, postSession, configuredRedirectUrl,
+    resolvedWorkspaceId, dialogueStorageKey, phase, router, entryQueryParamsRef, tapSessionIdRef,
+    isPracticeModeRef, isEndingRef, speechResultsLengthRef, consumedResultsIndexRef, finalBufferRef,
+    autoStashInFlightRef, speechBindings, tapThoughtSpeech, logTapTrace, bumpUserActivity,
+    handlePowInterruption, clearPendingInterruption, resetIdleTracking, resetSpeechTracking,
+    flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay, restartSpeechRecognitionSession,
+    apply: applyTapSession,
+  });
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (phase !== "live" || event.altKey) return;
@@ -883,291 +884,6 @@ export function TapScoreClient({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [phase, latestThoughts, stashCurrentTranscription, sendCurrentTranscription, editingTranscription, crystallizableText]);
 
-  async function sendThought(text: string, thoughtIds: string[] = []) {
-    const clean = normalize(text);
-    if (!clean || isSending) return;
-    const isResend = thoughtIds.length > 0 && thoughtIds.every((id) => sentThoughtIds.has(id));
-    logTapTrace({
-      traceType: "system2",
-      action: isResend ? "resend" : "send",
-      thoughtIds,
-      thoughtId: thoughtIds.length === 1 ? thoughtIds[0] : undefined,
-      text: clean,
-      combined: thoughtIds.length > 1,
-    });
-    bumpUserActivity();
-    setIsSending(true);
-    setHeliosTurnMode("idle");
-    setError("");
-    const userMessage: ChatMessage = { id: `u_${Date.now()}`, role: "user", content: clean, at: new Date().toISOString() };
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
-    setSentThoughtIds((current) => new Set([...current, ...thoughtIds]));
-    setMemoryThoughtIds((current) => {
-      const next = new Set(current);
-      thoughtIds.forEach((id) => next.delete(id));
-      return next;
-    });
-    try {
-      const response = await fetch("/api/workspace-tap-score/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          blockId,
-          sessionId,
-          privateToken,
-          entryQueryParams: entryQueryParamsRef.current,
-          tapSessionId: tapSessionIdRef.current,
-          minutes: liveMinutes,
-          practice: isPracticeModeRef.current,
-          thought: clean,
-          messages: nextMessages,
-          conversationLanguage,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get TAP response"));
-      const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
-      setMessages((current) => [...current, assistant]);
-      handlePowInterruption(payload.interruption ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not get TAP response");
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  async function sendCurrentTranscription() {
-    const text = tapHookFormingText(tapThoughtSpeech);
-    if (!text) return;
-    clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
-    await sendThought(text, []);
-  }
-
-  function retryMicrophone() {
-    if (phase !== "live") return;
-    setSpeechError(null);
-    tapThoughtSpeech.retryMicrophone();
-  }
-
-  async function startSession(topicOrOptions?: TapStartingTopic | { practice?: boolean; topic?: TapStartingTopic }) {
-    const practice =
-      !!topicOrOptions &&
-      "practice" in topicOrOptions &&
-      topicOrOptions.practice === true;
-    const topic =
-      topicOrOptions && "practice" in topicOrOptions
-        ? topicOrOptions.topic
-        : (topicOrOptions as TapStartingTopic | undefined);
-
-    isEndingRef.current = false;
-    clearPendingInterruption();
-    resetIdleTracking();
-    resetSpeechTracking();
-    setHeliosTurnMode("idle");
-    setIsStartingSession(true);
-    setStartingTopicId(practice ? "practice" : topic?.id ?? null);
-    setIsPracticeMode(practice);
-    isPracticeModeRef.current = practice;
-    const sessionMinutes = resolveTapLiveMinutes({ practice, minutes });
-    setLiveMinutes(sessionMinutes);
-    setError("");
-    setSpeechError(null);
-    speechResultsLengthRef.current = 0;
-    consumedResultsIndexRef.current = 0;
-    finalBufferRef.current = [];
-    setThoughts([]);
-    setMemoryThoughtIds(new Set());
-    setSentThoughtIds(new Set());
-    setSessionPurity(TAP_SESSION_PURITY_MAX);
-    setTranscriptSilenceMs(0);
-    setSessionEndedImpure(false);
-    autoStashInFlightRef.current = false;
-    clearDialogueMessages(dialogueStorageKey);
-
-    try {
-      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.start, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          blockId,
-          sessionId,
-          privateToken,
-          entryQueryParams: entryQueryParamsRef.current,
-          minutes: sessionMinutes,
-          practice,
-          tapSessionId: tapSessionIdRef.current,
-          openingQuestion: topic?.openingQuestion,
-          topicId: topic?.id,
-          topicTitle: topic?.title,
-          conversationLanguage,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not start TAP session"));
-      if (payload.tapSessionId) {
-        tapSessionIdRef.current = payload.tapSessionId;
-        setTapSessionId(payload.tapSessionId);
-      }
-
-      const openingQuestion = String(payload.openingQuestion || "").trim();
-      if (!openingQuestion) throw new Error("Could not generate opening question");
-
-      const started = Date.now();
-      setStartedAt(started);
-      setRemainingSeconds(sessionMinutes * 60);
-      setMessages([
-        {
-          id: OPENING_MESSAGE_ID,
-          role: "assistant",
-          content: openingQuestion,
-          at: new Date().toISOString(),
-        },
-      ]);
-      resetIdleTracking();
-      resetSpeechTracking();
-      setPhase("live");
-    } catch (err) {
-      stopLiveSpeechRecognition(speechBindings);
-      setIsPracticeMode(false);
-      isPracticeModeRef.current = false;
-      setError(err instanceof Error ? err.message : "Could not start TAP session");
-    } finally {
-      setIsStartingSession(false);
-      setStartingTopicId(null);
-    }
-  }
-
-  function restartBriefingFlow() {
-    isEndingRef.current = false;
-    setIsPracticeMode(false);
-    isPracticeModeRef.current = false;
-    setSessionEndedImpure(false);
-    setPerformanceReport(null);
-    setResultsError("");
-    setError("");
-    setMessages([]);
-    setThoughts([]);
-    setInterimText("");
-    setCrystallizableText("");
-    setMemoryThoughtIds(new Set());
-    setSentThoughtIds(new Set());
-    setEditingTranscription(null);
-    setHeliosTurnMode("idle");
-    setSessionPurity(TAP_SESSION_PURITY_MAX);
-    setTranscriptSilenceMs(0);
-    setStartedAt(null);
-    setRemainingSeconds(0);
-    setLiveMinutes(minutes);
-    autoStashInFlightRef.current = false;
-    clearPendingInterruption();
-    resetIdleTracking();
-    resetSpeechTracking();
-    clearDialogueMessages(dialogueStorageKey);
-    setPhase("briefing");
-  }
-
-  async function endSession(options?: { impure?: boolean }) {
-    if (isEndingRef.current) return;
-    isEndingRef.current = true;
-    const impure = options?.impure === true;
-    const practice = isPracticeModeRef.current;
-    setSessionEndedImpure(impure);
-    clearPendingInterruption();
-    flushSpeechSegment();
-    resetIdleTracking();
-    resetSpeechTracking();
-    setHeliosTurnMode("idle");
-    if (!impure) {
-      flushFinalBuffer();
-    } else {
-      // Impure close: drop any remaining live text without counting another stash.
-      clearTranscriptionDisplay();
-    }
-    setPhase("saving");
-    stopLiveSpeechRecognition(speechBindings);
-    try {
-      const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-      const transcript = messages.map((message) => ({ role: message.role, text: message.content, at: message.at }));
-      // Complete requires a non-empty transcript; practice opening always provides one.
-      const safeTranscript =
-        transcript.length > 0
-          ? transcript
-          : [{ role: "assistant", text: "Practice session", at: new Date().toISOString() }];
-      const response = await fetch(TAP_SESSION_RUNTIME_PATHS.complete, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          blockId,
-          sessionId,
-          privateToken,
-          entryQueryParams: entryQueryParamsRef.current,
-          tapSessionId: tapSessionIdRef.current,
-          transcript: safeTranscript,
-          durationSeconds,
-          requestedDurationSeconds: practice ? TAP_PRACTICE_DURATION_SECONDS : liveMinutes * 60,
-          sessionQuality: impure ? "impure" : "pure",
-          impure,
-          practice,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not save TAP session"));
-
-      // Practice always returns to a practice-done screen (unlimited retries).
-      if (practice) {
-        setPerformanceReport(null);
-        setPhase("practice_done");
-        return;
-      }
-
-      // Impure purity depletion: always show retry UI (refresh the link).
-      if (impure) {
-        setPerformanceReport(null);
-        setPhase("results");
-        return;
-      }
-
-      // Private session links: thank-you only (no redirect / results scorecard).
-      // LWM Snapshot remains manual (Knowledge UI / Snapshot API) for owners.
-      if (privateToken) {
-        setPerformanceReport(null);
-        setPhase("results");
-        return;
-      }
-
-      const resolvedPostSession = (payload.postSession as TapPostSessionMode) || postSession;
-      const resolvedRedirectUrl =
-        typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
-
-      if (resolvedPostSession === "show_results") {
-        setPerformanceReport(null);
-        setPhase("results");
-        return;
-      }
-
-      if (resolvedPostSession === "redirect_url" && resolvedRedirectUrl) {
-        window.location.href = resolvedRedirectUrl;
-        return;
-      }
-
-      const targetWorkspaceId = payload.workspaceId || resolvedWorkspaceId;
-      if (targetWorkspaceId) {
-        router.push(getIlePostSessionPath({ metadata: { workspace_id: targetWorkspaceId } }));
-        return;
-      }
-      router.push("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save TAP session");
-      setPhase("error");
-      isEndingRef.current = false;
-    }
-  }
-
   endAndScoreRef.current = endSession;
 
   useEffect(() => {
@@ -1194,6 +910,7 @@ export function TapScoreClient({
     setEditingTranscription({ draft: text, originalText: text });
   }
 
+
   if (isMobile) {
     return (
       <MobileBlockScreen
@@ -1204,378 +921,59 @@ export function TapScoreClient({
   }
 
   return (
-    <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0a0a0a] text-white selection:bg-zinc-700">
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
-      {bgImage && (
-        <div
-          className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
-          style={{ backgroundImage: `url(${bgImage})` }}
-        />
-      )}
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]" />
-
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6">
-        {phase === "briefing" && (
-          <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 py-4">
-            <div className="grid min-h-0 w-full flex-1 gap-4 lg:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
-                <SessionOnboardingGuide
-                  variant="tap"
-                  hideStep3Quote
-                  renderStep3Action={() => (
-                    <>
-                      <TapStartingTopicCards
-                        topics={startingTopics}
-                        isStarting={isStartingSession}
-                        startingTopicId={startingTopicId}
-                        onStartTopic={(selectedTopic) => void startSession(selectedTopic)}
-                        onPracticeFirst={() => void startSession({ practice: true })}
-                        practiceTitle={t("tap.practice.practiceFirst")}
-                        practiceSubtitle={t("tap.practice.practiceFirstHint")}
-                        practiceStartLabel={t("tap.practice.cardStart")}
-                        practiceStartingLabel={t("tap.practice.starting")}
-                        loadingLabel={t("tap.briefing.topicsLoading")}
-                        startLabel={t("onboardingGuide.tap.step3.start")}
-                        startingLabel={t("onboardingGuide.tap.step3.starting")}
-                      />
-                      {topicsError ? (
-                        <p className="mt-2 text-center text-xs text-neutral-300/90">{topicsError}</p>
-                      ) : null}
-                    </>
-                  )}
-                />
-              </div>
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 backdrop-blur-md">
-                <TapBriefingConfig
-                  workspaceTitle={workspaceTitle}
-                  minutes={minutes}
-                  onMinutesChange={setMinutes}
-                  conversationLanguage={conversationLanguage}
-                  onConversationLanguageChange={(locale) =>
-                    setConversationLanguage(coerceSpokenLocale(locale))
-                  }
-                  showDurationPicker={!privateToken && !durationLocked}
-                  disabled={isStartingSession}
-                />
-              </div>
-              {error ? (
-                <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
-                  {error}
-                </p>
-              ) : null}
-            </div>
-          </section>
-        )}
-
-        {phase === "live" && (
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {participantIdentity ? (
-              <div className="mb-2 flex shrink-0 justify-end">
-                <SessionIdentityBadge identity={participantIdentity} />
-              </div>
-            ) : null}
-            {isPracticeMode ? (
-              <div
-                data-tap-practice-banner
-                className="mb-3 shrink-0 rounded-xl border border-neutral-500/40 bg-neutral-800/10 px-4 py-2.5 text-center"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/90">
-                  {t("tap.practice.bannerKicker")}
-                </p>
-                <p className="mt-0.5 text-sm font-medium text-neutral-50">{t("tap.practice.bannerTitle")}</p>
-                <p className="mt-0.5 text-xs text-neutral-200/70">{t("tap.practice.bannerHint")}</p>
-              </div>
-            ) : null}
-            <div className="grid h-full min-h-0 gap-4 grid-rows-[minmax(0,1fr)_minmax(0,24rem)] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[minmax(0,1fr)]">
-              <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden lg:row-span-1">
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-                    <DialogueSplit
-                      layout="tap"
-                      lastUserTurn={lastUserTurn}
-                      lastAssistantTurn={lastAssistantTurn}
-                      promptText=""
-                      isSending={isSending || (isStartingSession && !lastAssistantTurn)}
-                      heliosTurnMode={
-                        heliosTurnMode === "interruption" ? "interruption" : isSending ? "responding" : "idle"
-                      }
-                      error={error}
-                      userInitial={userInitial}
-                    />
-                  </div>
-                </div>
-
-                <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
-                <div
-                  className="mb-3 flex w-full flex-wrap items-end justify-between gap-3 border-b border-neutral-900/80 pb-3"
-                  data-tap-live-control-strip
-                >
-                  {/* items-end + shared label/h-7 columns keep Time, Purity, Auto-stash vertically aligned */}
-                  <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4 sm:gap-5">
-                    <div className="flex shrink-0 flex-col gap-1">
-                      <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                        Time left
-                      </div>
-                      <div
-                        className={`flex h-7 items-center font-mono text-lg leading-none tabular-nums tracking-tight ${
-                          remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
-                        }`}
-                      >
-                        {formatCountdown(remainingSeconds)}
-                      </div>
-                    </div>
-                    <div
-                      className="flex shrink-0 flex-col gap-1"
-                      data-tap-session-purity
-                      aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}
-                    >
-                      <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                        {t("tap.live.sessionPurity")}
-                      </div>
-                      <div className="flex h-7 items-center gap-1.5">
-                        {Array.from({ length: TAP_SESSION_PURITY_MAX }, (_, index) => {
-                          const filled = index < sessionPurity;
-                          return (
-                            <span
-                              key={index}
-                              className={`h-2.5 w-2.5 shrink-0 rounded-full border transition-colors ${
-                                filled
-                                  ? sessionPurity === 1
-                                    ? "border-neutral-600/80 bg-neutral-300"
-                                    : "border-emerald-400/70 bg-emerald-400"
-                                  : "border-neutral-700 bg-transparent"
-                              }`}
-                              aria-hidden
-                            />
-                          );
-                        })}
-                        <span
-                          className={`ml-0.5 font-mono text-sm leading-none tabular-nums ${
-                            sessionPurity <= 1 ? "text-neutral-300" : "text-neutral-400"
-                          }`}
-                        >
-                          {sessionPurity}/{TAP_SESSION_PURITY_MAX}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Purity → Auto-stash context → End session (same column geometry as purity) */}
-                    <div className="min-w-[8rem] max-w-md flex-1">
-                      <AutoStashContextBar data-surface="tap" text={crystallizableText} />
-                    </div>
-                  </div>
-                  {showEndSession ? (
-                    <div className="flex h-[calc(0.625rem+0.25rem+1.75rem)] shrink-0 flex-wrap items-end gap-2" data-tap-end-session>
-                      <ThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                        End session
-                      </ThoughtButton>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                  <div
-                    className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
-                    style={{
-                      opacity: shouldFadeLiveBar(transcriptSilenceMs)
-                        ? transcriptFadeOpacity(transcriptSilenceMs)
-                        : 1,
-                    }}
-                    data-tap-transcript-fade
-                  >
-                    <SlidingTranscript
-                      text={formatSpeechTranscriptDisplay({
-                        text: crystallizableText,
-                        speechError,
-                        speechSupported,
-                        isListening,
-                        // Speech strip only mounts in live phase; keep enabled tied to it.
-                        enabled: phase === "live",
-                      })}
-                      className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
-                    />
-                  </div>
-                  {speechSupported !== false && !isListening ? (
-                    <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                      {speechError ? "Retry" : "Start"}
-                    </ThoughtButton>
-                  ) : null}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <ThoughtCompactAction
-                      shortcut="↵"
-                      label="Send"
-                      disabled={!crystallizableText || isSending}
-                      onClick={() => void sendCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="Del"
-                      label="Stash"
-                      disabled={!crystallizableText}
-                      onClick={() => stashCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="E"
-                      label="Edit"
-                      disabled={!crystallizableText}
-                      onClick={beginEditTranscription}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Stashed thoughts</p>
-                  <ActiveThoughtSlots
-                    thoughts={latestThoughts}
-                    isSending={isSending}
-                    onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
-                  />
-                </div>
-                </div>
-              </div>
-              <div className="flex min-h-0 flex-col overflow-hidden lg:h-full">
-                <ThoughtMemoryPanel
-                  className="flex h-full min-h-0 max-h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
-                  listClassName="pr-1"
-                  thoughts={thoughtHistory}
-                  workspaceId={workspaceId}
-                  blockId={blockId}
-                  sessionId={sessionId}
-                  insightSurface="tap"
-                  allowInsightGeneration={false}
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {phase === "saving" && (
-          <section className="flex flex-1 items-center justify-center">
-            <LoadingStatusMessage
-              tone="muted"
-              message={
-                isPracticeMode
-                  ? t("tap.practice.saving")
-                  : t("tap.postSession.savingAndReturning")
-              }
-            />
-          </section>
-        )}
-        {phase === "practice_done" ? (
-          <section
-            className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-            data-tap-practice-done
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
-              {t("tap.practice.doneKicker")}
-            </p>
-            <h1 className="mt-2 text-2xl font-medium text-neutral-100 sm:text-3xl">
-              {t("tap.practice.doneTitle")}
-            </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
-              {t("tap.practice.doneBody")}
-            </p>
-            <ThoughtButton
-              size="md"
-              variant="primary"
-              className="mt-8"
-              data-tap-practice-restart
-              onClick={restartBriefingFlow}
-            >
-              {t("tap.practice.restart")}
-            </ThoughtButton>
-          </section>
-        ) : null}
-        {phase === "results" ? (
-          sessionEndedImpure ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-impure
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.impureTitle")}
-              </h1>
-              <p className="mt-4 max-w-lg whitespace-pre-line text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.impureBody")}
-              </p>
-              <ThoughtButton
-                size="md"
-                variant="primary"
-                className="mt-8"
-                data-tap-impure-retry
-                onClick={() => window.location.reload()}
-              >
-                {t("tap.postSession.impureTryAgain")}
-              </ThoughtButton>
-            </section>
-          ) : privateToken ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-thank-you
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.thankYouTitle")}
-              </h1>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.thankYouBody")}
-              </p>
-              <a
-                href="/"
-                data-tap-explore-uncertain-systems
-                className="mt-8 inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-              >
-                {t("tap.postSession.exploreUncertainSystems")}
-              </a>
-            </section>
-          ) : (
-            <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
-              <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
-              {performanceReport ? (
-                <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-                  <PerformanceReportCard
-                    report={performanceReport}
-                    layout="spacious"
-                    fillHeight
-                    label={t("tap.postSession.verificationResultsTitle")}
-                  />
-                </div>
-              ) : null}
-            </section>
-          )
-        ) : null}
-        {phase === "error" && (
-          <section className="flex flex-1 flex-col items-center justify-center text-center">
-            <h1 className="text-2xl font-medium">Could not end TAP session</h1>
-            <p className="mt-3 max-w-md text-sm text-red-300">{resultsError || error}</p>
-            <ThoughtButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("briefing")}>
-              Try again
-            </ThoughtButton>
-          </section>
-        )}
-      </div>
-
-      {editingTranscription ? (
-        <ThoughtEditPanel
-          draft={editingTranscription.draft}
-          onDraftChange={(draft) => setEditingTranscription((current) => (current ? { ...current, draft } : null))}
-          onCancel={() => setEditingTranscription(null)}
-          onSend={() => {
-            const draft = normalize(editingTranscription.draft);
-            if (!draft) return;
-            logTapTrace({
-              traceType: "system2",
-              action: "edit",
-              originalText: editingTranscription.originalText,
-              text: draft,
-            });
-            setEditingTranscription(null);
-            clearTranscriptionDisplay();
-            restartSpeechRecognitionSession();
-            void sendThought(draft, []);
-          }}
-          isSending={isSending}
-        />
-      ) : null}
-    </main>
+    <TapScorePhases
+      phase={phase}
+      bgImage={bgImage}
+      t={t}
+      workspaceTitle={workspaceTitle}
+      minutes={minutes}
+      setMinutes={setMinutes}
+      conversationLanguage={conversationLanguage}
+      setConversationLanguage={setConversationLanguage}
+      privateToken={privateToken}
+      durationLocked={durationLocked}
+      isStartingSession={isStartingSession}
+      startingTopics={startingTopics}
+      startingTopicId={startingTopicId}
+      topicsError={topicsError}
+      error={error}
+      startSession={startSession}
+      participantIdentity={participantIdentity}
+      isPracticeMode={isPracticeMode}
+      lastUserTurn={lastUserTurn}
+      lastAssistantTurn={lastAssistantTurn}
+      isSending={isSending}
+      heliosTurnMode={heliosTurnMode}
+      userInitial={userInitial}
+      remainingSeconds={remainingSeconds}
+      sessionPurity={sessionPurity}
+      crystallizableText={crystallizableText}
+      showEndSession={showEndSession}
+      endSession={endSession}
+      speechError={speechError}
+      speechSupported={speechSupported}
+      isListening={isListening}
+      transcriptSilenceMs={transcriptSilenceMs}
+      retryMicrophone={retryMicrophone}
+      sendCurrentTranscription={sendCurrentTranscription}
+      stashCurrentTranscription={stashCurrentTranscription}
+      beginEditTranscription={beginEditTranscription}
+      latestThoughts={latestThoughts}
+      sendThought={sendThought}
+      thoughtHistory={thoughtHistory}
+      workspaceId={workspaceId}
+      blockId={blockId}
+      sessionId={sessionId}
+      resultsError={resultsError}
+      performanceReport={performanceReport}
+      sessionEndedImpure={sessionEndedImpure}
+      restartBriefingFlow={restartBriefingFlow}
+      setPhase={setPhase}
+      editingTranscription={editingTranscription}
+      setEditingTranscription={setEditingTranscription}
+      logTapTrace={logTapTrace}
+      clearTranscriptionDisplay={clearTranscriptionDisplay}
+      restartSpeechRecognitionSession={restartSpeechRecognitionSession}
+    />
   );
 }

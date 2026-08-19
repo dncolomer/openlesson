@@ -220,7 +220,7 @@ export function toggleAnnotationLayerVisible(
 export function deleteAnnotationLayer(
   layers: readonly AnnotationLayer[],
   layerId: string,
-  ctx: { learnerMode?: boolean } = {},
+  ctx: { learnerMode?: boolean; viewOnly?: boolean } = {},
 ): AnnotationLayer[] {
   if (!canDeleteAnnotationLayer(ctx)) {
     return layers.map((l) => ({ ...l, strokes: l.strokes.map((s) => ({ ...s })) }));

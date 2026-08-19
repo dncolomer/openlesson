@@ -4,6 +4,7 @@
  * Drives shipped resolve helpers — no re-implementation of the matrix.
  */
 import { describe, expect, it } from "vitest";
+import { readExerciseTapSurface, readMapGridSurface, readTapScoreSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -204,7 +205,7 @@ describe("structural: workspace + settings use Dialog/Solo axes", () => {
     expect(en).not.toContain('"productIle": "Integrated Learning Environment"');
     expect(en).toMatch(/forkToEditBody.*practice sessions/);
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).not.toContain("double-click block for TAP/ILE");
     // Map chrome should not brand technical product names
     expect(grid).not.toMatch(/TAP\/ILE/);
@@ -236,10 +237,10 @@ describe("structural: workspace + settings use Dialog/Solo axes", () => {
     expect(page).toContain("minutes");
     expect(page).toContain("initialMinutes");
     expect(page).toContain("lockDuration");
-    const score = read("components/TapScoreClient.tsx");
+    const score = readTapScoreSurface();
     expect(score).toContain("lockDuration");
     expect(score).toContain("showDurationPicker={!privateToken && !durationLocked}");
-    const exercise = read("components/ExerciseTapClient.tsx");
+    const exercise = readExerciseTapSurface();
     expect(exercise).toContain("lockDuration");
     expect(exercise).toContain("showDurationPicker={!privateToken && !durationLocked}");
   });

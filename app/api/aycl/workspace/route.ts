@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import {
   formatAyclPriceCents,
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
   const ctx = await resolveAyclAccess(token);
 
   if ("error" in ctx) {
-    return NextResponse.json({ error: ctx.error }, { status: ctx.status });
+    return jsonError(ctx.status, ctx.error);
   }
 
   // Full workspace row (includes unusable_cells, workspace_dags, etc.) — AYCL is a clone.
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (workspaceError || !workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return jsonError(404, "Workspace not found");
   }
 
   const { data: blocks, error: blocksError } = await ctx.supabase
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     .eq("workspace_id", ctx.workspaceId);
 
   if (blocksError) {
-    return NextResponse.json({ error: blocksError.message }, { status: 500 });
+    return jsonError(500, blocksError.message);
   }
 
   // Upgrade price comes from catalog source listing (not the private fork).

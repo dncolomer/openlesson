@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -24,6 +25,7 @@ const FEATURE_SURFACE_FILES = [
   // Workspace UI API + panel
   "app/api/workspace/knowledge-config/route.ts",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
+  "components/knowledge-panel/widgets.tsx",
   "components/WorkspacePerformancePanel.tsx",
   // Migration + docs (historical create keeps brain_* name; forward renames to knowledge_*)
   "supabase/migrations/20260719140000_learning_world_model_brain_config.sql",
@@ -32,6 +34,9 @@ const FEATURE_SURFACE_FILES = [
 ] as const;
 
 function read(rel: string) {
+  if (rel.endsWith("KnowledgeConfigTrajectoryPanel.tsx")) {
+    return readKnowledgePanelSurface();
+  }
   return readFileSync(join(ROOT, rel), "utf8");
 }
 

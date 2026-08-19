@@ -4,7 +4,7 @@
  */
 
 import type { NextResponse } from "next/server";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
@@ -14,69 +14,30 @@ import {
   resolveEvalPersistenceClientMode,
 } from "@/lib/pow-api/evaluation-subject";
 import type { AuthContext, ApiKeyScope } from "@/lib/pow-api/types";
+import {
+  allowProductWorkspaceEvalAccess,
+  allowProductWorkspaceLinkAccess,
+  assertWorkspacePolicy,
+  ayclPrincipal,
+  cookieUserPrincipal,
+  type WorkspacePrincipal,
+} from "@/lib/workspace-access-policy";
 
-export type ProductWorkspaceAuthFlags = {
-  allowOrgAdmin: boolean;
-  allowEvalMember: boolean;
-  ayclAsOwner: boolean;
+export {
+  allowProductWorkspaceEvalAccess,
+  allowProductWorkspaceLinkAccess,
 };
-
-export const PRODUCT_AUTH_OWNER_OR_ORG_ADMIN: ProductWorkspaceAuthFlags = {
-  allowOrgAdmin: true,
-  allowEvalMember: false,
-  ayclAsOwner: false,
-};
-
-export const PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER: ProductWorkspaceAuthFlags = {
-  allowOrgAdmin: false,
-  allowEvalMember: true,
-  ayclAsOwner: true,
-};
-
-export function resolveProductWorkspaceAuthMode(input: {
-  isOwner: boolean;
-  isOrgAdmin: boolean;
-  evalAllowed: boolean;
-  flags: ProductWorkspaceAuthFlags;
-}): "ok" | "deny" {
-  if (input.isOwner) return "ok";
-  if (input.flags.allowOrgAdmin && input.isOrgAdmin) return "ok";
-  if (input.flags.allowEvalMember && input.evalAllowed) return "ok";
-  return "deny";
-}
-
-export function productWorkspaceAuthIsOwner(input: {
-  cookieIsOwner: boolean;
-  ayclAccess: boolean;
-  flags: ProductWorkspaceAuthFlags;
-}): boolean {
-  if (input.ayclAccess && input.flags.ayclAsOwner) return true;
-  return input.cookieIsOwner;
-}
-
-export function decideProductWorkspaceAccess(input: {
-  isOwner: boolean;
-  isOrgAdmin: boolean;
-  evalAllowed: boolean;
-  ayclAccess: boolean;
-  flags: ProductWorkspaceAuthFlags;
-}): { allowed: boolean; isOwner: boolean } {
-  const isOwner = productWorkspaceAuthIsOwner({
-    cookieIsOwner: input.isOwner,
-    ayclAccess: input.ayclAccess,
-    flags: input.flags,
-  });
-  const mode = resolveProductWorkspaceAuthMode({
-    isOwner: input.isOwner,
-    isOrgAdmin: input.isOrgAdmin,
-    evalAllowed: input.evalAllowed,
-    flags: input.flags,
-  });
-  return { allowed: mode === "ok" || isOwner, isOwner };
-}
 
 export type ProductWorkspaceLinkAuth =
-  | { ok: true; auth: AuthContext; supabase: ReturnType<typeof createAdminClient>; isOwner: boolean }
+  | {
+      ok: true;
+      auth: AuthContext;
+      supabase: ReturnType<typeof createAdminClient>;
+      isOwner: boolean;
+      principal: WorkspacePrincipal;
+      subjectId: string;
+      persistUserId: string;
+    }
   | { ok: false; response: NextResponse };
 
 /** Cookie owner or org-admin of the workspace. Used by TAP/ILE/portal link routes. */
@@ -112,14 +73,17 @@ export async function requireProductWorkspaceLinkAuth(
     !!profile.organization_id &&
     profile.organization_id === workspace.organization_id;
 
-  const decided = decideProductWorkspaceAccess({
-    isOwner,
+  const principal = cookieUserPrincipal(user.id, {
+    organizationId: profile?.organization_id || workspace.organization_id,
     isOrgAdmin,
-    evalAllowed: false,
-    ayclAccess: false,
-    flags: PRODUCT_AUTH_OWNER_OR_ORG_ADMIN,
   });
-  if (!decided.allowed) {
+  const policy = assertWorkspacePolicy({
+    principal,
+    workspaceOwnerId: workspace.user_id,
+    workspaceOrgId: workspace.organization_id,
+    action: "link_admin",
+  });
+  if (!policy.ok) {
     return { ok: false, response: jsonError(403, "Not authorized") };
   }
 
@@ -135,11 +99,22 @@ export async function requireProductWorkspaceLinkAuth(
     },
     supabase: admin,
     isOwner,
+    principal,
+    subjectId: principal.subjectId,
+    persistUserId: user.id,
   };
 }
 
 export type ProductWorkspaceEvalAuth =
-  | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean; isOwner: boolean }
+  | {
+      ok: true;
+      supabase: SupabaseClient;
+      isOwner: boolean;
+      principal: WorkspacePrincipal;
+      subjectId: string;
+      persistUserId: string;
+      workspaceOwnerId: string;
+    }
   | { ok: false; response: NextResponse };
 
 /** Eval-member / AYCL-as-owner for knowledge-config and snapshot-history. */
@@ -161,12 +136,29 @@ export async function requireProductWorkspaceEvalAuth(
         response: jsonError(403, "Forbidden"),
       };
     }
+    const principal = ayclPrincipal({
+      purchaseId: aycl.purchase.id,
+      ownerUserId: aycl.ownerUserId,
+    });
+    const policy = assertWorkspacePolicy({
+      principal,
+      workspaceOwnerId: aycl.ownerUserId,
+      action: "eval",
+    });
+    if (!policy.ok) {
+      return {
+        ok: false,
+        response: jsonError(403, "Forbidden"),
+      };
+    }
     return {
       ok: true,
-      user: aycl.actingUser as User,
       supabase: aycl.supabase,
-      ayclAccess: true,
-      isOwner: true,
+      isOwner: false,
+      principal,
+      subjectId: principal.subjectId,
+      persistUserId: aycl.ownerUserId,
+      workspaceOwnerId: aycl.ownerUserId,
     };
   }
 
@@ -192,14 +184,15 @@ export async function requireProductWorkspaceEvalAuth(
     workspaceOwnerId: workspace.user_id,
     isGroup: Boolean(workspace.is_group),
   });
-  const decided = decideProductWorkspaceAccess({
-    isOwner: access.isOwner,
-    isOrgAdmin: false,
-    evalAllowed: resolveEvalPersistenceClientMode(access) !== "deny",
-    ayclAccess: false,
-    flags: PRODUCT_AUTH_EVAL_MEMBER_AYCL_OWNER,
+  const evalAllowed = resolveEvalPersistenceClientMode(access) !== "deny";
+  const principal = cookieUserPrincipal(session.user.id);
+  const policy = assertWorkspacePolicy({
+    principal,
+    workspaceOwnerId: workspace.user_id,
+    evalAllowed,
+    action: "eval",
   });
-  if (!decided.allowed) {
+  if (!policy.ok) {
     return {
       ok: false,
       response: jsonError(403, "Forbidden"),
@@ -208,8 +201,11 @@ export async function requireProductWorkspaceEvalAuth(
 
   return {
     ok: true,
-    user: session.user,
     supabase: admin,
     isOwner: access.isOwner,
+    principal,
+    subjectId: principal.subjectId,
+    persistUserId: session.user.id,
+    workspaceOwnerId: workspace.user_id,
   };
 }

@@ -1,5 +1,5 @@
 /**
- * TAPBench extras live on the error object; link/eval routes share one auth return.
+ * TAPBench extras live on error.details; link/eval routes share one auth return.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -36,18 +36,22 @@ describe("TAPBench stash extras + product workspace auth shape", () => {
     expect(classifyApiErrorEnvelope(envelope)).toBe("nested_code");
     expect(envelope.error.code).toBe("session_expired");
     expect(envelope.error.message).toBe("TAPBench session expired");
-    expect(envelope.error.expires_at).toBe(extras.expires_at);
-    expect(envelope.error.remaining_ms).toBe(0);
-    expect(envelope.error.tapbench).toBe(true);
-    expect(envelope.error.details).toBeUndefined();
+    expect(envelope.error.details?.expires_at).toBe(extras.expires_at);
+    expect(envelope.error.details?.remaining_ms).toBe(0);
+    expect(envelope.error.details?.tapbench).toBe(true);
+    expect(
+      Object.prototype.hasOwnProperty.call(envelope.error, "expires_at"),
+    ).toBe(false);
 
     const res = jsonError(401, "TAPBench session expired", "session_expired", extras);
     expect(res.status).toBe(401);
     const body = (await res.json()) as typeof envelope;
-    expect(body.error.expires_at).toBe(extras.expires_at);
-    expect(body.error.remaining_ms).toBe(0);
-    expect(body.error.tapbench).toBe(true);
-    expect(body.error.details).toBeUndefined();
+    expect(body.error.details?.expires_at).toBe(extras.expires_at);
+    expect(body.error.details?.remaining_ms).toBe(0);
+    expect(body.error.details?.tapbench).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(body.error, "expires_at")).toBe(
+      false,
+    );
 
     const stashAuth = read("lib/pow-api/authenticate-stash-request.ts");
     expect(stashAuth).toContain("jsonError(tb.status, tb.message, tb.code, tb.body)");
@@ -76,18 +80,23 @@ describe("TAPBench stash extras + product workspace auth shape", () => {
     }
 
     const linkAuth = read("lib/product-workspace-auth.ts");
-    expect(linkAuth).toContain("{ ok: false; response: NextResponse }");
-    expect(linkAuth).toContain("{ ok: true;");
+    expect(linkAuth).toContain("ok: false");
+    expect(linkAuth).toContain("ok: true");
+    expect(linkAuth).toContain("principal: WorkspacePrincipal");
     expect(linkAuth).not.toMatch(/\{ error: string; status: number \}/);
+    expect(linkAuth).toContain("allowProductWorkspaceLinkAccess");
+    expect(linkAuth).toContain("allowProductWorkspaceEvalAccess");
+    expect(linkAuth).not.toContain("ProductWorkspaceAuthFlags");
+    expect(linkAuth).not.toContain("decideProductWorkspaceAccess");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(
       join(SCRATCH, "auth-error-tests.log"),
       [
-        `expires_at=${String(body.error.expires_at)}`,
-        `remaining_ms=${String(body.error.remaining_ms)}`,
-        `tapbench=${String(body.error.tapbench)}`,
-        `details=${String(body.error.details)}`,
+        `expires_at=${String(body.error.details?.expires_at)}`,
+        `remaining_ms=${String(body.error.details?.remaining_ms)}`,
+        `tapbench=${String(body.error.details?.tapbench)}`,
+        `detailsKeys=${Object.keys(body.error.details || {}).join(",")}`,
         "link/eval routes: no resolveWebAuth; if (!auth.ok) return …",
       ].join("\n"),
       "utf8",

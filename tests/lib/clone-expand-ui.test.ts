@@ -1,3 +1,8 @@
+import {
+  readGridOpsSurface,
+  readMapGridSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Structural + wiring checks: Expand block drawer + left-bar Clone paste path.
  * Clone is a map tool strip control (not a block-detail drawer).
@@ -46,9 +51,9 @@ describe("Clone left-bar + Expand block UI wiring", () => {
   it("left strip has Clone; detail mounts Expand only (no Clone drawer)", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const expandPane = read("components/WorkspaceExpandBlockPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
-    const gridOps = read("app/api/workspace/grid-ops/route.ts");
+    const view = readWorkspaceViewSurface();
+    const grid = readMapGridSurface();
+    const gridOps = readGridOpsSurface();
 
     // Clone is left-bar, not detail drawer
     expect(BLOCK_MAP_TOOL_STRIP).toContain("clone");
@@ -81,8 +86,8 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     // Host wiring: arm → empty click paste; expand → multi-create job
     expect(view).toContain("handleCloneArm");
     expect(view).toContain("handleClonePaste");
-    expect(view).toContain("shouldInterceptEmptyClickForClone");
-    expect(view).toContain("resolveClonePasteTarget");
+    expect(view).toContain("onClonePaste");
+    expect(grid).toContain("resolveClonePasteTarget");
     expect(view).toContain('op: "clone_block"');
     expect(view).toContain("handleExpandFromSourceBlock");
     expect(view).toContain("buildExpandFromSourceSlotPrompt");
@@ -94,8 +99,8 @@ describe("Clone left-bar + Expand block UI wiring", () => {
       /handleExpandFromSourceBlock[\s\S]*?buildExpandFromSourceSlotPrompt[\s\S]*?add-block-at-slot/,
     );
     const expandFn = view.slice(
-      view.indexOf("handleExpandFromSourceBlock"),
-      view.indexOf("handleExpandFromSourceBlock") + 4500,
+      view.indexOf("const handleExpandFromSourceBlock"),
+      view.indexOf("const handleExpandFromSourceBlock") + 4500,
     );
     expect(expandFn).toContain("add-block-at-slot");
     expect(expandFn).toContain("runAddExpandCreateLoop");
@@ -213,7 +218,7 @@ describe("Clone left-bar + Expand block UI wiring", () => {
     expect(learner).not.toContain("WorkspaceCloneBlockPane");
     expect(learner).not.toContain("WorkspaceExpandBlockPane");
     expect(learner).not.toContain("Expand block");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     // Clone strip hidden in learner (no canEdit strip)
     expect(grid).toContain("!learnerMode");
   });

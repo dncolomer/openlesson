@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export async function GET(req: NextRequest) {
@@ -24,6 +25,6 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return jsonError(500, error.message);
   return NextResponse.json({ insights: data || [] });
 }

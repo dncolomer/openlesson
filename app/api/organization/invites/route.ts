@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -28,15 +29,15 @@ export async function POST(request: Request) {
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError(404, "Profile not found");
     }
 
     if (!profile.organization_id) {
-      return NextResponse.json({ error: "You don't belong to an organization" }, { status: 400 });
+      return jsonError(400, "You don't belong to an organization");
     }
 
     if (!profile.is_org_admin) {
-      return NextResponse.json({ error: "Only org admins can create invites" }, { status: 403 });
+      return jsonError(403, "Only org admins can create invites");
     }
 
     const { count = 1 } = await request.json();
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Error creating invites:", error);
-      return NextResponse.json({ error: "Failed to create invites" }, { status: 500 });
+      return jsonError(500, "Failed to create invites");
     }
 
     // Map returned rows back to one-time plaintext tokens by hash.
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ invites });
   } catch (error) {
     console.error("Create invites error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 
@@ -107,21 +108,21 @@ export async function DELETE(request: Request) {
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      return jsonError(404, "Profile not found");
     }
 
     if (!profile.organization_id) {
-      return NextResponse.json({ error: "You don't belong to an organization" }, { status: 400 });
+      return jsonError(400, "You don't belong to an organization");
     }
 
     if (!profile.is_org_admin) {
-      return NextResponse.json({ error: "Only org admins can revoke invites" }, { status: 403 });
+      return jsonError(403, "Only org admins can revoke invites");
     }
 
     const { inviteId } = await request.json();
 
     if (!inviteId) {
-      return NextResponse.json({ error: "Invite ID required" }, { status: 400 });
+      return jsonError(400, "Invite ID required");
     }
 
     const adminClient = getAdminClient();
@@ -136,12 +137,12 @@ export async function DELETE(request: Request) {
 
     if (error) {
       console.error("Error deleting invite:", error);
-      return NextResponse.json({ error: "Failed to revoke invite" }, { status: 500 });
+      return jsonError(500, "Failed to revoke invite");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Revoke invite error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
 
@@ -68,14 +69,11 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!sessionId || !kind || !fileName || !mimeType || !base64) {
-      return NextResponse.json(
-        { error: "sessionId, kind, fileName, mimeType, and data are required" },
-        { status: 400 }
-      );
+      return jsonError(400, "sessionId, kind, fileName, mimeType, and data are required");
     }
 
     if (!ALLOWED_KINDS.has(kind)) {
-      return NextResponse.json({ error: `kind must be one of: ${[...ALLOWED_KINDS].join(", ")}` }, { status: 400 });
+      return jsonError(400, `kind must be one of: ${[...ALLOWED_KINDS].join(", ")}`);
     }
 
     // Verify session ownership
@@ -86,7 +84,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!session || session.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     // Upload to xAI Files
@@ -96,10 +94,7 @@ export async function POST(req: NextRequest) {
       xaiFileId = uploaded.file_id;
     } catch (err) {
       console.error(`[session-files/upload] xAI upload failed for kind=${kind}:`, err);
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : "xAI upload failed" },
-        { status: 502 }
-      );
+      return jsonError(502, err instanceof Error ? err.message : "xAI upload failed");
     }
 
     const ts = typeof timestampMs === "number" ? timestampMs : Date.now();
@@ -162,12 +157,12 @@ export async function POST(req: NextRequest) {
       // Best-effort cleanup of xAI file
       const { deleteFileFromXAI } = await import("@/lib/xai-files");
       await deleteFileFromXAI(xaiFileId).catch(() => {});
-      return NextResponse.json({ error: msg }, { status: 500 });
+      return jsonError(500, msg);
     }
 
     return NextResponse.json({ success: true, xai_file_id: xaiFileId });
   } catch (err) {
     console.error("[session-files/upload] Internal error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

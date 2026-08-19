@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   MCP_OAUTH_PENDING_COOKIE,
   readPendingAuthorizationCookie,
@@ -7,7 +8,7 @@ import {
 export async function GET(req: NextRequest) {
   const pending = readPendingAuthorizationCookie(req.cookies.get(MCP_OAUTH_PENDING_COOKIE)?.value);
   if (!pending) {
-    return NextResponse.json({ error: "expired_session" }, { status: 400 });
+    return jsonError(400, "expired_session");
   }
 
   return NextResponse.json({

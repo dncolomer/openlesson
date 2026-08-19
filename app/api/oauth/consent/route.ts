@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceClient } from "@/lib/pow-api/auth";
 import { validateAssignableScopes } from "@/lib/pow-api/scopes";
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const pending = readPendingAuthorizationCookie(req.cookies.get(MCP_OAUTH_PENDING_COOKIE)?.value);
   if (!pending) {
-    return NextResponse.json({ error: "expired_session" }, { status: 400 });
+    return jsonError(400, "expired_session");
   }
 
   const body = (await req.json()) as { decision?: "approve" | "deny" };
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.decision !== "approve") {
-    return NextResponse.json({ error: "invalid_decision" }, { status: 400 });
+    return jsonError(400, "invalid_decision");
   }
 
   const supabaseSession = await createClient();
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   } = await supabaseSession.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return jsonError(401, "unauthorized");
   }
 
   const { data: profile } = await supabaseSession
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
     is_admin: profile?.is_admin,
   });
   if (!scopeValidation.ok) {
-    return NextResponse.json({ error: "invalid_scope", message: scopeValidation.message }, { status: 403 });
+    return jsonError(403, scopeValidation.message, "validation_error");
   }
 
   const supabase = await getServiceClient();

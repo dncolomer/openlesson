@@ -1,3 +1,8 @@
+import {
+  readGridOpsSurface,
+  readMapGridSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Generate-in-shape context selection: pure map to local_context + generation snippet.
  */
@@ -224,14 +229,14 @@ describe("link body enrichment for generation (pure)", () => {
 
 describe("structural: dialog + grid-ops wire selection → local_context + prompt", () => {
   it("BlockSkillGrid picker and generate_shape payload; grid-ops persists local_context", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("data-shape-context-picker");
     expect(grid).toContain("data-shape-context-list");
     expect(grid).toContain("contextSourceKeys");
     expect(grid).toContain("toggleShapeContextSelection");
     expect(grid).toContain("buildShapeContextSourceOptions");
 
-    const ops = read("app/api/workspace/grid-ops/route.ts");
+    const ops = readGridOpsSurface();
     expect(ops).toContain("contextSourceKeys");
     expect(ops).toContain("shapeSelectionToLocalContext");
     expect(ops).toContain("shapeSelectionToGenerationSnippet");
@@ -286,7 +291,7 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
     expect(detail).toContain('drawerId="effect_dynamic"');
     expect(detail).toContain('drawerId="effect_generator"');
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("WorkspaceAddBlockPane");
     expect(view).toContain("contextSourceKeys");
     expect(view).toContain("workspaceNotes=");
@@ -334,9 +339,9 @@ describe("structural: dialog + grid-ops wire selection → local_context + promp
         "slotLocal=" + slot.includes("shapeSelectionToLocalContext"),
         "slotFetchBody=" + slot.includes("fetchLinkBodyText"),
         "gridOpsFetchBody=" +
-          read("app/api/workspace/grid-ops/route.ts").includes("fetchLinkBodyText"),
+          readGridOpsSurface().includes("fetchLinkBodyText"),
         "gridOpsEnrich=" +
-          read("app/api/workspace/grid-ops/route.ts").includes(
+          readGridOpsSurface().includes(
             "enrichSelectedOptionsWithFetchedLinkBodies",
           ),
       ].join("\n"),

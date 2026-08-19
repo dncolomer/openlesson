@@ -197,10 +197,8 @@ describe("upgrade success path wiring (structural)", () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const root = path.resolve(__dirname, "../..");
-    const view = fs.readFileSync(
-      path.join(root, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
+    const { readWorkspaceViewSurface } = await import("@/tests/helpers/surface-source");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("AYCL_TOKEN_STORAGE_KEY");
     expect(view).toContain("sessionStorage.setItem(AYCL_TOKEN_STORAGE_KEY");
     expect(view).toContain("startAyclUpgradeCheckout");

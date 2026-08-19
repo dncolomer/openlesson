@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   buildKnowledgeRanking,
   formatRankingScore,
@@ -128,7 +129,7 @@ describe("Knowledge Ranking surface wiring", () => {
     expect(existsSync(helper)).toBe(true);
 
     const panelSrc = readFileSync(panel, "utf8");
-    const trajSrc = readFileSync(traj, "utf8");
+    const trajSrc = readKnowledgePanelSurface();
     const en = readFileSync(join(ROOT, "messages/en.json"), "utf8");
 
     expect(panelSrc).toContain('"ranking"');

@@ -20,14 +20,14 @@ export async function POST(req: NextRequest) {
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
-    const { user, supabase } = auth;
+    const { subjectId, persistUserId, supabase, principal } = auth;
 
     const { data: session } = await supabase
       .from("sessions")
       .select("id, user_id, workspace_id, problem")
       .eq("id", sessionId)
       .single();
-    if (!session || session.user_id !== user.id) {
+    if (!session || session.user_id !== persistUserId) {
       return jsonError(404, "Session not found");
     }
 
@@ -46,14 +46,16 @@ export async function POST(req: NextRequest) {
         const ctx = await buildWorkspacePerformanceContext({
           supabase,
           auth: {
-            user_id: user.id,
-            guest_user_id: null,
+            user_id: persistUserId,
+            guest_user_id: principal.guestUserId ?? null,
             organization_id: null,
             is_org_admin: false,
             key_id: "web",
             scopes: ["workspaces:read"],
           },
           workspaceId: session.workspace_id,
+          // Attribution subject — never persist aycl:{purchaseId} on UUID columns.
+          participantUserId: subjectId,
         });
         performanceNote = `Evidence: ${ctx.payload.counts.proof_of_work_artifacts} proof-of-work artifacts, ${ctx.payload.counts.linked_sessions} linked sessions. Blocks: ${ctx.payload.blocks.map((b) => b.title).filter(Boolean).join(", ") || "none"}`;
       } catch {

@@ -1,3 +1,4 @@
+import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -149,8 +150,8 @@ describe("multi-select DAG + Delete UI / API structural", () => {
   it("combine pane mounts visual DAG canvas + Delete; grid-ops apply_dag", () => {
     const pane = read("components/WorkspaceCombineBlocksPane.tsx");
     const canvas = read("components/MultiBlockDagCanvas.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const gridOps = read("app/api/workspace/grid-ops/route.ts");
+    const view = readWorkspaceViewSurface();
+    const gridOps = readGridOpsSurface();
     const mod = read("lib/multi-block-dag.ts");
 
     expect(mod).toContain("export function buildMultiBlockDagApplyUpdates");

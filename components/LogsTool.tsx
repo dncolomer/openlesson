@@ -2,6 +2,10 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
+import {
+  SESSION_LOG_MAX_ENTRIES,
+  capSessionLogs,
+} from "@/components/session/sessionViewHelpers";
 
 export type LogLevel = "error" | "warning" | "info";
 
@@ -45,6 +49,8 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
 
   // Dynamic list of sources present in the current log buffer, plus a
   // stable core set so common filters are always available even when empty.
+  const boundedLogs = useMemo(() => capSessionLogs(logs), [logs]);
+
   const availableSources = useMemo(() => {
     const core = new Set<string>([
       "session",
@@ -58,21 +64,24 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       "facial",
       "screenshots",
     ]);
-    for (const log of logs) {
+    for (const log of boundedLogs) {
       if (log.source) core.add(log.source);
     }
     return Array.from(core).sort();
-  }, [logs]);
+  }, [boundedLogs]);
 
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
+    return boundedLogs.filter((log) => {
       if (levelFilter !== "all" && log.level !== levelFilter) return false;
       if (sourceFilter !== ALL_SOURCES && log.source !== sourceFilter) return false;
       return true;
     });
-  }, [logs, levelFilter, sourceFilter]);
+  }, [boundedLogs, levelFilter, sourceFilter]);
 
-  const visibleLogs = useMemo(() => filteredLogs.slice(-200), [filteredLogs]);
+  const visibleLogs = useMemo(
+    () => capSessionLogs(filteredLogs, SESSION_LOG_MAX_ENTRIES),
+    [filteredLogs],
+  );
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -194,7 +203,8 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       {/* ── Event log list (scrolls) ─────────────────────────────── */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1"
+        data-ile-logs-scroll
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 space-y-1"
       >
         {filteredLogs.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -320,7 +330,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       <div className="shrink-0 p-2 border-t border-neutral-800 text-[10px] text-neutral-600">
-        {filteredLogs.length} / {logs.length} entries
+        {filteredLogs.length} / {boundedLogs.length} entries
       </div>
     </div>
   );

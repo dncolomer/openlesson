@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { deleteFileFromXAI } from "@/lib/xai-files";
 
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const sessionId = req.nextUrl.searchParams.get("sessionId");
     if (!sessionId) {
-      return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+      return jsonError(400, "sessionId required");
     }
 
     // Ownership check
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!session || session.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonError(403, "Forbidden");
     }
 
     // Collect all xAI file IDs across the per-session tables
@@ -64,6 +65,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, deleted: allFileIds.length });
   } catch (err) {
     console.error("[session-files/cleanup] Error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

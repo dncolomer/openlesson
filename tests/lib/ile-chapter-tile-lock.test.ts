@@ -3,6 +3,7 @@
  * highlights direct blocking prereqs (not the whole neighborhood).
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveMapOccupiedTileBadges } from "@/lib/map-tile-badges";
@@ -155,7 +156,7 @@ describe("ILE chapter unlock highlight", () => {
 
 describe("chapter map path wiring", () => {
   it("chapter grid omits extra badges and applies unlock-highlight on locked select", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const chapter = read("components/ChapterMapPanel.tsx");
     const mapper = read("lib/chapter-skill-grid.ts");
 

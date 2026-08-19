@@ -3,6 +3,7 @@
  * Drives shipped helpers in lib/map-minimap-clusters.ts.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -383,7 +384,7 @@ describe("getPanZoomToOneToOneClusterView", () => {
 
 describe("structural: minimap on BlockSkillGrid", () => {
   it("mounts rectangular top-right overlay; cluster click uses 1:1 view", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
     expect(grid).toContain("MapMinimapChrome");
     expect(mini).toContain("data-block-minimap");
@@ -406,7 +407,8 @@ describe("structural: minimap on BlockSkillGrid", () => {
     expect(grid).not.toContain("minimapCountsHeld");
     expect(mini).toContain("data-minimap-counts-hidden");
     // Clusters navigate on pointerdown
-    expect(grid).toContain("onClusterPointerDown={panToCluster}");
+    expect(grid).toContain("onClusterPointerDown");
+    expect(grid).toContain("panToCluster");
     expect(mini).toContain("onClusterPointerDown(label)");
     expect(grid).toContain("getPanZoomToOneToOneClusterView");
     // Minimap shell must not call setPointerCapture (only a "do NOT" comment is ok)
@@ -663,7 +665,7 @@ describe("minimap viewport rectangle (camera projection + drag→pan)", () => {
   });
 
   it("structural: viewport rect element + drag wires panFromMinimapViewportDrag/setPan", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
     const lib = read("lib/map-minimap-camera.ts");
 

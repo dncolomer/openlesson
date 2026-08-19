@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Structural + pure UI layout checks for Context surface, map-first chrome,
  * block local inspection, and prompt-impact readout.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -140,7 +142,7 @@ describe("map cell chrome for unusable / locked", () => {
 
 describe("structural wiring in WorkspaceView + AYCL", () => {
   it("WorkspaceView mounts Context section and map authoring / local inspection", () => {
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain('from "@/lib/workspace-sections"');
     expect(view).toContain("mountsContextPanel");
     expect(view).toContain("data-workspace-context-section");
@@ -183,7 +185,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(add).not.toContain('drawerId="local"');
 
     // Map tiles show a document icon when local context is attached.
-    const mapGrid = read("components/BlockSkillGrid.tsx");
+    const mapGrid = readMapGridSurface();
     expect(mapGrid).toContain("blockHasAttachedLocalContext");
     expect(mapGrid).toContain("data-block-local-context-badge");
     expect(mapGrid).toContain("data-block-has-local-context");
@@ -216,7 +218,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
     expect(context).toContain("data-workspace-context-panel");
 
     // Map host wires selection → ground tools (prereq-edit mode)
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("enterPrereqEditMode");
     expect(grid).toContain("confirmPrereqEdit");
     expect(grid).toContain("toggleStagedPrereq");
@@ -230,7 +232,7 @@ describe("structural wiring in WorkspaceView + AYCL", () => {
 
   it("AyclWorkspaceView shares Context + map authoring path", () => {
     const aycl = read("components/AyclWorkspaceView.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(aycl).toContain("<WorkspaceView");
     expect(aycl).toContain("ayclToken={accessToken}");
     expect(view).toContain("mountsContextPanel");

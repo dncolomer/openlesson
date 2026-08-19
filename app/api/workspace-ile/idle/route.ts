@@ -4,7 +4,11 @@ import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
 } from "@/lib/pow-api/workspace-session-access";
-import { buildIleIdleHeartbeatPayload, ILE_IDLE_TOOL_NAME } from "@/lib/ile-thought-traces";
+import { ILE_IDLE_TOOL_NAME } from "@/lib/ile-thought-traces";
+import {
+  buildTutoringIdleOutcome,
+  resolveTutoringContext,
+} from "@/lib/tutoring-runtime";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
@@ -32,14 +36,23 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if (access instanceof NextResponse) return access;
+    const participantUserId = access.auth.guest_user_id ? null : access.auth.user_id;
+    void participantUserId;
 
-    const payload = buildIleIdleHeartbeatPayload({
-      sessionId,
-      workspaceId,
-      idleDurationMs,
-      hasPendingTranscription,
-      timestampMs,
-    });
+    const payload = buildTutoringIdleOutcome(
+      resolveTutoringContext({
+        product: "ile",
+        modality: "dialog",
+        authKind: access.ileLinkId ? "ile" : "cookie",
+        workspaceId,
+        sessionId,
+      }),
+      {
+        idleDurationMs,
+        hasPendingTranscription,
+        timestampMs,
+      },
+    ).payload;
 
     const fileName = `ile-idle-${sessionId}-${timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");

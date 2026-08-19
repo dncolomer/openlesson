@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         return jsonError(400, "modelId / regionId is required");
       }
       const subject = {
-        user_id: typeof body.user_id === "string" ? body.user_id : auth.user.id,
+        user_id: typeof body.user_id === "string" ? body.user_id : auth.subjectId,
         guest_user_id: typeof body.guest_user_id === "string" ? body.guest_user_id : null,
         label: typeof body.label === "string" ? body.label : null,
       };
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
         files,
         fileIds,
         description: typeof body.description === "string" ? body.description : null,
-        createdBy: auth.user.id,
+        createdBy: auth.persistUserId,
       });
 
       return NextResponse.json({
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
         guest_user_id: typeof s.guest_user_id === "string" ? s.guest_user_id : null,
         label: typeof s.label === "string" ? s.label : null,
       })),
-      createdBy: auth.user.id,
+      createdBy: auth.subjectId,
     });
 
     return NextResponse.json({

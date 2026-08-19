@@ -3,6 +3,7 @@
  * TAP two-circle comic stays unchanged.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -90,7 +91,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(helios).not.toContain("onOpenThoughts");
     expect(helios).toContain("DialogueSplit");
 
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).not.toContain("onOpenThoughts");
     expect(view).toContain("thought-history");
 
@@ -101,7 +102,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(ui).toContain("ILE_DIALOGUE_AVATAR_SIZE_CLASS");
     expect(ui).toContain("TAP_DIALOGUE_AVATAR_SIZE_CLASS");
 
-    const tap = read("components/TapScoreClient.tsx");
+    const tap = readTapScoreSurface();
     expect(tap).toContain('layout="tap"');
     expect(tap).toContain("DialogueSplit");
 
@@ -201,7 +202,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(hook).not.toContain("thoughts={props.thoughts}");
     expect(hook).not.toContain("projectStash={props.projectStash}");
 
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("transcriptText: lastDialogueAssistantTurn");
     expect(view).toContain("formingText: sessionThoughtInterface.crystallizableText");
     expect(view).not.toContain('?? "ILE"');

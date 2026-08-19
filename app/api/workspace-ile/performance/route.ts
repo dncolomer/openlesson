@@ -12,9 +12,6 @@ import {
 import type { AuthContext } from "@/lib/pow-api/types";
 import { toErrorCode } from "@/lib/pow-api/types";
 import { ayclTokenFromBody } from "@/lib/api/require-auth";
-import { resolveAyclAccess } from "@/lib/aycl-session-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -37,120 +34,32 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
 
-    let supabase = createAdminClient();
-    let auth: AuthContext;
-    let participantUserId: string | null = null;
-    let participantGuestUserId: string | null = null;
-    let workspaceRow: {
-      id: string;
-      title: string | null;
-      root_topic: string | null;
-      description: string | null;
-      notes: string | null;
-      workspace_goal: string | null;
-      evaluation_mode?: string | null;
-      protocol_config?: unknown;
-      external_refs?: unknown;
-    } | null = null;
+    const access = await requireSessionWorkspaceProofOfWorkAccess(
+      workspaceId,
+      sessionId || null,
+      { ileToken, ayclToken },
+    );
+    if (access instanceof NextResponse) return access;
 
-    if (ileToken) {
-      const access = await requireSessionWorkspaceProofOfWorkAccess(
-        workspaceId,
-        sessionId || null,
-        { ileToken },
-      );
-      if (access instanceof NextResponse) return access;
-
-      supabase = access.supabase as typeof supabase;
-      // Score the link participant (guest), not the workspace owner used for PoW writes.
-      participantGuestUserId = access.auth.guest_user_id;
-      participantUserId = participantGuestUserId
-        ? null
-        : access.auth.user_id && access.auth.user_id !== access.userId
-          ? access.auth.user_id
-          : access.userId;
-      // Auth context for gate/history: subject is the participant.
-      auth = {
-        ...access.auth,
-        user_id: participantGuestUserId ? null : participantUserId,
-        guest_user_id: participantGuestUserId,
-      };
-
-      const { data: workspace } = await supabase
-        .from("workspaces")
-        .select(
-          "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs",
-        )
-        .eq("id", workspaceId)
-        .single();
-      workspaceRow = workspace;
-    } else if (ayclToken) {
-      const aycl = await resolveAyclAccess(ayclToken);
-      if ("error" in aycl) {
-        return jsonError(aycl.status, aycl.error);
-      }
-      if (aycl.workspaceId !== workspaceId) {
-        return jsonError(403, "Forbidden");
-      }
-      supabase = aycl.supabase as typeof supabase;
-      auth = {
-        user_id: aycl.actingUser.id,
-        guest_user_id: null,
-        organization_id: null,
-        is_org_admin: false,
-        key_id: "aycl-ile-performance",
-        scopes: ["workspaces:read"],
-      };
-      participantUserId = aycl.actingUser.id;
-      const { data: workspace } = await supabase
-        .from("workspaces")
-        .select(
-          "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs",
-        )
-        .eq("id", workspaceId)
-        .single();
-      workspaceRow = workspace;
-    } else {
-      // Cookie session (owner / group member ILE inside product)
-      const cookieClient = await createClient();
-      const {
-        data: { user },
-      } = await cookieClient.auth.getUser();
-      if (!user) {
-        return jsonError(401, "Not authenticated");
-      }
-      auth = {
-        user_id: user.id,
-        guest_user_id: null,
-        organization_id: null,
-        is_org_admin: false,
-        key_id: "ile-performance",
-        scopes: ["workspaces:read"],
-      };
-      participantUserId = user.id;
-      const { data: workspace } = await supabase
-        .from("workspaces")
-        .select(
-          "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs",
-        )
-        .eq("id", workspaceId)
-        .single();
-      workspaceRow = workspace;
-    }
-
-    if (!workspaceRow) {
-      return jsonError(404, "Workspace not found");
-    }
+    const participantGuestUserId = access.auth.guest_user_id;
+    const participantUserId = participantGuestUserId ? null : access.auth.user_id;
+    const auth: AuthContext = {
+      ...access.auth,
+      user_id: participantGuestUserId ? null : participantUserId,
+      guest_user_id: participantGuestUserId,
+      key_id: access.auth.key_id || "ile-performance",
+      scopes: ["workspaces:read"],
+    };
 
     const scored = await runVerticalScore({
-      supabase,
+      supabase: access.supabase,
       auth,
       workspaceId,
       vertical: SESSION_AUTO_SNAPSHOT_VERTICAL,
       blockId,
       participantUserId,
       participantGuestUserId,
-      workspaceRow,
+      workspaceRow: access.workspace,
       historySource: "ile",
     });
 

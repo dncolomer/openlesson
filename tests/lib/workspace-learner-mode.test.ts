@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readKnowledgePanelSurface, readMapGridSurface, readWorkspaceViewSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -112,7 +113,7 @@ describe("workspace mode pure resolvers", () => {
       }),
     ).toContain("knowledge");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     // Nav change must use mode-aware resolver (not owner-only gate alone).
     expect(view).toContain("resolveActiveSectionForMode");
     expect(view).toMatch(
@@ -295,6 +296,7 @@ describe("Build / Play mode display labels", () => {
   it("maps creator→Build and learner→Play; shell behavior unchanged for wire ids", () => {
     expect(workspaceModeDisplayLabel("creator")).toBe("Build");
     expect(workspaceModeDisplayLabel("learner")).toBe("Play");
+    expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
     expect(WORKSPACE_MODE_DISPLAY_LABELS.creator).toBe("Build");
     expect(WORKSPACE_MODE_DISPLAY_LABELS.learner).toBe("Play");
     expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["creator", "learner"]);
@@ -317,13 +319,13 @@ describe("Build / Play mode display labels", () => {
     expect(learnerShell.map.showAuthoringToolStrip).toBe(false);
     expect(learnerShell.soleBlockPane).toBe("learner_practice");
 
-    const grid = read("components/BlockSkillGrid.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const grid = readMapGridSurface();
+    const view = readWorkspaceViewSurface();
     // Build/Play toggle lives under minimap (not top nav)
     expect(grid).toContain("data-workspace-mode-toggle");
     expect(grid).toContain("data-workspace-mode-under-minimap");
     expect(grid).toContain("workspaceModeDisplayLabel");
-    expect(grid).toContain("WORKSPACE_INTERACTION_MODES");
+    expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
     expect(view).toContain("showModeToggle={false}");
     expect(view).toContain("onInteractionModeChange");
     // Toggle must not hardcode Creator/Learner button text
@@ -362,8 +364,8 @@ describe("Build / Play mode display labels", () => {
         "toggle_present=" + grid.includes("data-workspace-mode-toggle"),
         "uses_workspaceModeDisplayLabel=" +
           grid.includes("workspaceModeDisplayLabel"),
-        "uses_WORKSPACE_INTERACTION_MODES=" +
-          grid.includes("WORKSPACE_INTERACTION_MODES"),
+        "uses_WORKSPACE_MAP_TOGGLE_IDS=" +
+          grid.includes("WORKSPACE_MAP_TOGGLE_IDS"),
         "no_hardcoded_Creator_label=" + !/label:\s*"Creator"/.test(grid),
         "no_hardcoded_Learner_label=" + !/label:\s*"Learner"/.test(grid),
         "no_Creator_button_text=" + !/>\s*Creator\s*</.test(grid),
@@ -383,8 +385,8 @@ describe("Build / Play mode display labels", () => {
 describe("learner mode UI structural", () => {
   it("Build/Play toggle under minimap; learner drawer vs creator drawers; map flags", () => {
     const nav = read("components/WorkspaceSectionNav.tsx");
-    const view = read("components/WorkspaceView.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const view = readWorkspaceViewSurface();
+    const grid = readMapGridSurface();
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
     const perf = read("components/WorkspacePerformancePanel.tsx");
     const mapGround = read("app/api/workspace/map-ground/route.ts");
@@ -479,9 +481,10 @@ describe("learner mode UI structural", () => {
     expect(learner).toContain("data-learner-dag-drawer");
     expect(learner).toContain("MultiBlockDagCanvas");
     expect(learner).toContain("readOnly");
-    expect(grid).toContain("data-learner-locked-label");
-    expect(grid).toContain("data-learner-locked-icon");
-    expect(grid).toContain("data-learner-dep-highlight");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(grid + badges).toContain("data-learner-locked-label");
+    expect(grid + badges).toContain("data-learner-locked-icon");
+    expect(grid + badges).toContain("data-learner-dep-highlight");
     expect(learner).toContain("data-learner-pow-summary-stats");
     expect(learner).toContain("data-learner-mark-done");
     expect(learner).toContain("Mark Done anyway");
@@ -498,7 +501,7 @@ describe("learner mode UI structural", () => {
     expect(perf).toContain("data-knowledge-lwm-embeddings-only");
     expect(perf).toContain("LEARNER_KNOWLEDGE_SUBVIEWS");
     expect(perf).toContain("lockSubjectToSelf={lwmEmbeddingsOnly}");
-    const knowledgePanel = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const knowledgePanel = readKnowledgePanelSurface();
     expect(knowledgePanel).toContain("resolveModelsTabCanInspectOthers");
     expect(knowledgePanel).toContain("lockSubjectToSelf");
     expect(mapGround).toContain("set_block_status");

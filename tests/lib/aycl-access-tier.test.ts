@@ -1,3 +1,4 @@
+import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
@@ -202,10 +203,7 @@ describe("AYCL dual-tier wiring (structural)", () => {
   });
 
   it("WorkspaceView gates owner + upgrade bar on capabilities", () => {
-    const src = fs.readFileSync(
-      path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-      "utf8",
-    );
+    const src = readWorkspaceViewSurface();
     expect(src).toContain("ayclCapabilities");
     expect(src).toContain("canAuthor");
     expect(src).toContain("data-aycl-upgrade-bar");

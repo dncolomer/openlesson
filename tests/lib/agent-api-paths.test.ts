@@ -1,3 +1,4 @@
+import { readMcpSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -47,7 +48,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(skill).toContain("/api/v3/{pow,snapshot,stash}");
     expect(skill).not.toContain("/api/v3/{pow,eval,stash}");
 
-    const mcp = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
+    const mcp = readMcpSurface();
     expect(mcp).toContain("/api/v3/{pow,snapshot,stash}");
     expect(mcp).not.toContain("/api/v3/{pow,eval,stash}");
 

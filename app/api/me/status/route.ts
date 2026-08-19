@@ -2,6 +2,7 @@
  * Session/profile status for the signed-in user (admin gate for workspace settings).
  */
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -53,9 +54,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[me/status] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Status check failed" },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Status check failed");
   }
 }

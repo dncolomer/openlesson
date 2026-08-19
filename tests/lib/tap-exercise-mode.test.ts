@@ -23,6 +23,7 @@ import {
   stashExerciseSpeech,
   submitExerciseSpeechDirect,
 } from "@/lib/exercise-tap";
+import { readExerciseTapSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -373,7 +374,7 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
   });
 
   it("Exercise session UI is a separate dual-history shell without DialogueSplit/Helios bubbles", () => {
-    const client = read("components/ExerciseTapClient.tsx");
+    const client = readExerciseTapSurface();
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
     const stash = read("components/exercise-tap/ExerciseStashHistory.tsx");
     const submission = read("components/exercise-tap/ExerciseSubmissionStack.tsx");

@@ -36,6 +36,7 @@ Primary strip order from `lib/block-map-tools.ts` (`BLOCK_MAP_TOOL_STRIP`). Labe
 | **`lasso`** | mode | Region select; **submenu shapes:** `rect` · `circle` · `freehand` (`LASSO_SHAPE_ORDER`) |
 | **`merge`** | action | Merge contiguous multi-selected blocks (opens merge / combine flow when enabled) |
 | **`split`** | action | Split multi-cell block(s) into singles (toolbar when multi-cell selection qualifies) |
+| **`clone`** | action | Arm clone of the sole selected block; empty-cell click pastes via `onClonePaste` (not the selection bus) |
 | **`lock_until`** | action | Enter **prereq-edit**: target block + multi-select prerequisites; confirm/clear lock-until gates |
 | **`mark_unusable`** | action | Mark/clear **unusable ground** on multi-selected empty cells (path-shaping) |
 | **`clear_selection`** | action | Clear map selection |

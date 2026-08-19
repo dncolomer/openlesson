@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 /**
  * P10 leftovers: one map-selection path, TAP live hook, session-chat PoW,
  * used Project persist helper, dead leftovers gone.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -10,7 +12,6 @@ import {
   mapSelectionEmptyCells,
   mapSelectionExpandedId,
   mapSelectionFilledIds,
-  mapSelectionToApplyPayload,
   nextWorkspaceMapSelection,
 } from "@/lib/workspace-map-selection";
 import {
@@ -69,9 +70,6 @@ describe("P10 leftovers shipped helpers", () => {
       blockIds: ["only"],
     });
     expect(search).toEqual({ kind: "block", id: "only" });
-    const searchApply = mapSelectionToApplyPayload(search, 2);
-    expect(searchApply.selection).toEqual({ kind: "block", id: "only" });
-    expect(searchApply.token).toBe(2);
 
     const suggest = nextWorkspaceMapSelection({
       type: "set_empty_cells",
@@ -81,9 +79,6 @@ describe("P10 leftovers shipped helpers", () => {
 
     const cleared = nextWorkspaceMapSelection({ type: "clear" });
     expect(cleared).toEqual(emptyWorkspaceMapSelection());
-    const apply = mapSelectionToApplyPayload(cleared, 4);
-    expect(apply.token).toBe(4);
-    expect(apply.selection).toEqual({ kind: "none" });
 
     expect(isTapLiveThoughtSpeechEnabled("live")).toBe(true);
     expect(isTapLiveThoughtSpeechEnabled("briefing")).toBe(false);
@@ -139,13 +134,13 @@ describe("P10 leftovers shipped helpers", () => {
     expect(parseIleProjectThoughtsStored("nope")).toBeNull();
     expect(ileProjectThoughtsStorageKey("sess", "ch")).toContain("sess");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const list = read("components/SessionList.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const tap = read("components/TapScoreClient.tsx");
     const exercise = read("components/ExerciseTapClient.tsx");
     const sessionChat = read("app/api/session-chat/route.ts");
-    const sessionView = read("components/SessionView.tsx");
+    const sessionView = readSessionViewSurface();
     const hook = read("lib/useSessionThoughtInterface.ts");
 
     expect(view).toContain("nextWorkspaceMapSelection");
@@ -179,7 +174,6 @@ describe("P10 leftovers shipped helpers", () => {
       "p10-leftovers-excerpts.txt",
       [
         `selectionClear=${JSON.stringify(cleared)}`,
-        `applyClearToken=${apply.token}`,
         `tapLiveHook=${isTapLiveThoughtSpeechEnabled("live")}`,
         `searchOneBlock=${search.kind === "block" ? search.id : ""}`,
         `localRestartLive=${shouldRestartLocalTapSpeechBindings("live")}`,

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -85,7 +86,11 @@ describe("TAP speech language wiring", () => {
       "utf8",
     );
     expect(briefingSrc).toContain("spokenLocales");
-    expect(tapSrc).toContain("TapBriefingConfig");
+    const tapPhases = readFileSync(
+      path.join(process.cwd(), "components/tap-score/tap-score-phases.tsx"),
+      "utf8",
+    );
+    expect(tapPhases).toContain("TapBriefingConfig");
   });
 
   it("resolves TAP conversation language codes to the correct BCP-47 tags", () => {
@@ -147,10 +152,7 @@ describe("TAP speech language wiring", () => {
 
 describe("ILE Spoken Language wiring", () => {
   it("selector options come from full spoken allowlist", () => {
-    const viewSrc = readFileSync(
-      path.join(process.cwd(), "components/SessionView.tsx"),
-      "utf8",
-    );
+    const viewSrc = readSessionViewSurface();
     expect(viewSrc).toContain("spokenLocales");
     expect(viewSrc).toContain("toSpeechBcp47");
     expect(viewSrc).toMatch(/session\.tutorLanguage|session\.spokenLanguage/);
@@ -217,9 +219,14 @@ describe("conversation language instruction for Explore/Drill model replies", ()
       "utf8",
     );
     expect(tapClient).toMatch(/conversationLanguage/);
-    // chat + start + topics bodies include conversationLanguage
-    expect(tapClient).toMatch(/workspace-tap-score\/chat[\s\S]*conversationLanguage/);
-    expect(tapClient).toMatch(/workspace-tap-score\/start[\s\S]*conversationLanguage/);
+    const tapFlow = readFileSync(
+      path.join(process.cwd(), "components/tap-score/use-tap-score-flow.ts"),
+      "utf8",
+    );
+    expect(tapFlow).toMatch(/workspace-tap-score\/chat[\s\S]*conversationLanguage/);
+    expect(tapFlow).toMatch(
+      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
+    );
     expect(tapClient).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
   });
 
@@ -264,7 +271,9 @@ describe("conversation language instruction for Explore/Drill model replies", ()
       "utf8",
     );
     expect(exerciseTap).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
-    expect(exerciseTap).toMatch(/workspace-tap-score\/start[\s\S]*conversationLanguage/);
+    expect(exerciseTap).toMatch(
+      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
+    );
     expect(exerciseTap).toMatch(
       /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage\]/,
     );

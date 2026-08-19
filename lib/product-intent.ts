@@ -378,6 +378,53 @@ export function productIntentNeedsDuration(target: ProductLaunchTarget): boolean
   return target.product === "tap";
 }
 
+/** One decode for guest-link mint, map placement, and learner launch. */
+export function decodePracticeLaunchIntent(raw: unknown): ProductLaunchTarget {
+  if (raw && typeof raw === "object") {
+    const rec = raw as Record<string, unknown>;
+    if (rec.id != null) return resolveProductIntentFromId(rec.id);
+    if (rec.style != null || rec.modality != null || rec.horizon != null) {
+      return resolveProductIntentFromAxes({
+        style: rec.style as LearningStyle | undefined,
+        modality: rec.modality as PracticeModality | undefined,
+        horizon: rec.horizon as SessionHorizon | undefined,
+      });
+    }
+    if (rec.kind != null || rec.product != null) {
+      return productIntentFromGuestLink({
+        kind: String(rec.kind || rec.product || ""),
+        session_mode: rec.session_mode != null ? String(rec.session_mode) : null,
+        interaction_kind:
+          rec.interaction_kind != null ? String(rec.interaction_kind) : null,
+      });
+    }
+  }
+  return resolveProductIntentFromId(raw);
+}
+
+/** Learner launch path from a decoded intent. */
+export function launchPracticeHref(
+  target: ProductLaunchTarget,
+  input: { workspaceId: string; blockId?: string | null; sessionId?: string | null },
+): string {
+  const workspaceId = String(input.workspaceId || "").trim();
+  if (target.product === "ile") {
+    const params = new URLSearchParams();
+    if (input.sessionId) params.set("id", String(input.sessionId));
+    if (input.blockId) params.set("block", String(input.blockId));
+    if (target.session_mode) params.set("session_mode", target.session_mode);
+    const q = params.toString();
+    return q ? `/session?${q}` : "/session";
+  }
+  const params = new URLSearchParams();
+  if (input.blockId) params.set("block", String(input.blockId));
+  if (target.interaction_kind) params.set("interaction_kind", target.interaction_kind);
+  const q = params.toString();
+  return q
+    ? `/workspace/${workspaceId}/tap?${q}`
+    : `/workspace/${workspaceId}/tap`;
+}
+
 /** Style extracted from a launch target. */
 export function productIntentStyle(target: ProductLaunchTarget): LearningStyle {
   return target.id.startsWith("drill") ? "drill" : "explore";

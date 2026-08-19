@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedProductUser } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
@@ -22,29 +23,23 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "XAI_API_KEY not configured" },
-      { status: 501 },
-    );
+    return jsonError(501, "XAI_API_KEY not configured");
   }
 
   let body: { text?: unknown; voiceId?: unknown; language?: unknown };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return jsonError(400, "Invalid JSON body");
   }
 
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text) {
-    return NextResponse.json({ error: "Missing text" }, { status: 400 });
+    return jsonError(400, "Missing text");
   }
   // xAI limit is 15k chars; we cap defensively.
   if (text.length > 15000) {
-    return NextResponse.json(
-      { error: "Text exceeds 15000 character limit" },
-      { status: 400 },
-    );
+    return jsonError(400, "Text exceeds 15000 character limit");
   }
 
   const voiceId =
@@ -73,10 +68,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
       console.error("[xai-tts] upstream error", response.status, errorText);
-      return NextResponse.json(
-        { error: `xAI TTS error: ${response.status}` },
-        { status: 502 },
-      );
+      return jsonError(502, `xAI TTS error: ${response.status}`);
     }
 
     const audio = await response.arrayBuffer();
@@ -91,9 +83,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[xai-tts] error", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return jsonError(500, "Internal server error");
   }
 }

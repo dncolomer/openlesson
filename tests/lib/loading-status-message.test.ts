@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { AdminLoading } from "@/components/admin/AdminStatus";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
@@ -29,15 +28,12 @@ const GATE_FILES = [
   "app/all-you-can-learn/page.tsx",
   "app/workspace/new/page.tsx",
   "components/SessionView.tsx",
-  "components/WorkspaceView.tsx",
-  "components/admin/AdminStatus.tsx",
+  "components/workspace-view/workspace-chrome.tsx",
   "components/InsightsDashboardTab.tsx",
   "components/InsightDetailClient.tsx",
   "components/WorkspaceFilesTab.tsx",
   "components/SessionHeliosPanel.tsx",
   "components/ChapterMapPanel.tsx",
-  "app/admin/workspaces/[workspaceId]/page.tsx",
-  "app/admin/organizations/[orgId]/page.tsx",
 ] as const;
 
 describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {
@@ -68,25 +64,14 @@ describe("LoadingStatusMessage (CREATING WORKSPACE treatment)", () => {
     expect(html).toContain("Loading");
     expect(html).not.toMatch(/Loading\.\.\./);
   });
-
-  it("AdminLoading composes LoadingStatusMessage (shared admin gate)", () => {
-    const html = renderToStaticMarkup(createElement(AdminLoading));
-    expect(html).toContain("font-mono");
-    expect(html).toContain("uppercase");
-    expect(html).toContain("animate-pulse");
-    expect((html.match(/animate-bounce/g) ?? []).length).toBe(3);
-    expect(html).toContain("Loading");
-  });
 });
 
 describe("Loading gate call sites use shared treatment", () => {
-  it("each primary gate file imports LoadingStatusMessage or AdminLoading", () => {
+  it("each primary gate file imports LoadingStatusMessage", () => {
     const offenders: string[] = [];
     for (const file of GATE_FILES) {
       const source = readRepoFile(file);
-      const usesShared =
-        source.includes("LoadingStatusMessage") || source.includes("AdminLoading");
-      if (!usesShared) offenders.push(file);
+      if (!source.includes("LoadingStatusMessage")) offenders.push(file);
     }
     expect(offenders).toEqual([]);
   });
@@ -111,7 +96,7 @@ describe("Loading gate call sites use shared treatment", () => {
         if (!entry.name.endsWith(".tsx")) continue;
         const source = readRepoFile(rel);
         if (!source.includes("min-h-screen")) continue;
-        if (source.includes("LoadingStatusMessage") || source.includes("AdminLoading")) continue;
+        if (source.includes("LoadingStatusMessage")) continue;
         if (spinnerOnlyGate.test(source) || bareLoadingGate.test(source)) {
           offenders.push(rel);
         }

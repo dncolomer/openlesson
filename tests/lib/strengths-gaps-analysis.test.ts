@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   buildCohortCoverageChart,
   buildStrengthsGapsBrowseModel,
@@ -341,10 +342,7 @@ describe("Knowledge Strengths & Gaps tab wiring", () => {
   });
 
   it("Knowledge panel mounts strengths_gaps view with structural markers", () => {
-    const kctp = readFileSync(
-      join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const kctp = readKnowledgePanelSurface();
     const sgp = readFileSync(join(ROOT, "components/StrengthsGapsPanel.tsx"), "utf8");
 
     expect(kctp).toMatch(/KnowledgePanelView[\s\S]*strengths_gaps/);

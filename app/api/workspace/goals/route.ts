@@ -5,18 +5,12 @@
  * PUT  — update workspace goal by id
  * DELETE — delete workspace goal by id (query or body)
  *
- * Read access: workspace owner, AYCL token, or canAccessWorkspaceEval.
- * Write access: owner or AYCL only.
+ * Read access: workspace owner, AYCL purchase subject, or eval member.
+ * Write access: policy action "author" (owner, or AYCL unless canAuthor is false).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { resolveAyclAccess } from "@/lib/aycl-session-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  canAccessWorkspaceEval,
-  resolveEvalPersistenceClientMode,
-} from "@/lib/pow-api/evaluation-subject";
+import { ayclTokenFromBody } from "@/lib/api/require-auth";
 import {
   createWorkspaceGoal,
   deleteWorkspaceGoal,
@@ -24,6 +18,8 @@ import {
   listWorkspaceGoals,
   updateWorkspaceGoal,
 } from "@/lib/pow-api/goals-store";
+import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -36,79 +32,28 @@ async function resolveGoalsAccess(
   | { ok: true; supabase: SupabaseClient; userId: string; isOwner: boolean }
   | { ok: false; response: NextResponse }
 > {
-  if (ayclToken) {
-    const aycl = await resolveAyclAccess(ayclToken);
-    if ("error" in aycl) {
-      return {
-        ok: false,
-        response: jsonError(aycl.status, aycl.error),
-      };
-    }
-    if (aycl.workspaceId !== workspaceId) {
-      return {
-        ok: false,
-        response: jsonError(403, "Forbidden"),
-      };
-    }
-    return {
-      ok: true,
-      supabase: aycl.supabase as SupabaseClient,
-      userId: aycl.actingUser.id,
-      isOwner: true,
-    };
-  }
-
-  const session = await requireAuthenticatedUser();
-  if (!session.ok) return session;
-
-  const admin = createAdminClient();
-  const { data: plan } = await admin
-    .from("workspaces")
-    .select("id, user_id, is_group, is_public")
-    .eq("id", workspaceId)
-    .single();
-
-  if (!plan) {
-    return {
-      ok: false,
-      response: jsonError(404, "Workspace not found"),
-    };
-  }
-
-  const access = canAccessWorkspaceEval({
-    callerUserId: session.user.id,
-    workspaceOwnerId: plan.user_id,
-    isGroup: Boolean(plan.is_group),
-  });
+  const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
+  if (!auth.ok) return auth;
 
   if (mode === "write") {
-    if (!access.isOwner) {
+    const policy = assertWorkspacePolicy({
+      principal: auth.principal,
+      workspaceOwnerId: auth.workspaceOwnerId,
+      action: "author",
+    });
+    if (!policy.ok) {
       return {
         ok: false,
         response: jsonError(403, "Forbidden"),
       };
     }
-    return {
-      ok: true,
-      supabase: admin,
-      userId: session.user.id,
-      isOwner: true,
-    };
-  }
-
-  // Read: owner/eval access only — never open private goal text to any authenticated user.
-  if (resolveEvalPersistenceClientMode(access) === "deny") {
-    return {
-      ok: false,
-      response: jsonError(403, "Forbidden"),
-    };
   }
 
   return {
     ok: true,
-    supabase: admin,
-    userId: session.user.id,
-    isOwner: access.isOwner,
+    supabase: auth.supabase,
+    userId: auth.subjectId,
+    isOwner: auth.isOwner,
   };
 }
 

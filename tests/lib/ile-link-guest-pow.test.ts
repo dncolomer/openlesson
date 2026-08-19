@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import fs from "node:fs";
 import path from "node:path";
 import { ileTokenFromPowBody } from "@/lib/pow-api/workspace-session-access";
@@ -45,10 +46,7 @@ describe("shareable ILE guest PoW wiring", () => {
     path.join(REPO_ROOT, "app/api/workspace/proof-of-work/route.ts"),
     "utf8",
   );
-  const sessionSource = fs.readFileSync(
-    path.join(REPO_ROOT, "components/SessionView.tsx"),
-    "utf8",
-  );
+  const sessionSource = readSessionViewSurface();
   const perfSource = fs.readFileSync(
     path.join(REPO_ROOT, "components/WorkspacePerformancePanel.tsx"),
     "utf8",

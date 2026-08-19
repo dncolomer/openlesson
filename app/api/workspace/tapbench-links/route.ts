@@ -6,10 +6,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
+
 import {
   CreateTapbenchLinkError,
   createWorkspaceTapbenchLink,
 } from "@/lib/pow-api/create-tapbench-link";
+import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
+import { generateTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-generate";
 import { listTapbenchLinksPersisted } from "@/lib/pow-api/tapbench-store";
 import type { AuthContext } from "@/lib/pow-api/types";
 
@@ -81,15 +84,32 @@ export async function POST(req: NextRequest) {
           ? body.block_id.trim()
           : "";
 
+    const promptCtx = await loadWorkspacePromptContext(auth.supabase, workspaceId, {
+      focusedBlockId: blockId || null,
+    });
+    if (!promptCtx) {
+      return jsonError(404, "Workspace not found");
+    }
+
     const tapbenchLink = await createWorkspaceTapbenchLink({
       supabase: auth.supabase,
-      auth: sessionAuthContext(auth.user.id),
+      auth: sessionAuthContext(auth.persistUserId),
       workspaceId,
       blockId: blockId || null,
       body,
       baseUrl: baseUrl(req),
       // guardWorkspaceRoute already authorized this session for the workspace.
       skipAccessCheck: true,
+      promptContext: promptCtx,
+      generateExercise: (input) =>
+        generateTapbenchExercise({
+          ...input,
+          blocks: promptCtx.blocks,
+          blockLocalContext: promptCtx.blockLocalContext,
+          unusableCells: promptCtx.unusableCells,
+          focusedBlockId: promptCtx.focusedBlockId,
+          externalResources: promptCtx.externalResources,
+        }),
     });
 
     return NextResponse.json(

@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * UX grounding: Explore/Drill flavors → dialogue/exercise builders;
  * Simulation shares the same pure builders; LWM Snapshot is conscious-trigger only;
@@ -432,7 +433,7 @@ describe("Simulation shares live practice builders", () => {
     expect(detail).toContain("workspaceGoal={workspaceGoal}");
     expect(detail).toContain("workspaceTitle={workspaceTitle}");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
 
     const overview = deriveWorkspaceSimulationOverview(

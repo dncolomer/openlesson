@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -18,10 +19,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const logo = parseLogoPayload(body);
     if (!logo) {
-      return NextResponse.json(
-        { error: "logo.data and logo.mimeType are required" },
-        { status: 400 }
-      );
+      return jsonError(400, "logo.data and logo.mimeType are required");
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -31,14 +29,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (profileError || !profile?.organization_id) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return jsonError(404, "Organization not found");
     }
 
     if (!profile.is_org_admin && !profile.is_admin) {
-      return NextResponse.json(
-        { error: "Only organization admins can update the logo" },
-        { status: 403 }
-      );
+      return jsonError(403, "Only organization admins can update the logo");
     }
 
     const adminClient = createAdminClient();
@@ -49,12 +44,12 @@ export async function POST(req: NextRequest) {
     );
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+      return jsonError(result.status, result.error);
     }
 
     return NextResponse.json({ logo_url: result.logoUrl });
   } catch (error) {
     console.error("Organization logo upload error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

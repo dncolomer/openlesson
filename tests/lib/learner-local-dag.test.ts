@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
   type LearnerLocalDagBlock,
 } from "@/lib/learner-local-dag";
 import { layoutMultiBlockDagNodes } from "@/lib/multi-block-dag";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
@@ -145,10 +147,10 @@ describe("learner local DAG pure helpers", () => {
 
 describe("learner Locked + DAG drawer structural", () => {
   it("map chrome + learner drawer mini canvas; creator does not mount learner pane", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const chrome = read("lib/workspace-learner-chrome.ts");
     const learner = read("components/WorkspaceLearnerBlockPane.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const canvas = read("components/MultiBlockDagCanvas.tsx");
     const mod = read("lib/learner-local-dag.ts");
 
@@ -161,8 +163,9 @@ describe("learner Locked + DAG drawer structural", () => {
     expect(chrome).toContain("LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS");
     expect(chrome).toContain("depHighlight");
 
-    expect(grid).toContain("data-learner-locked-label");
-    expect(grid).toContain("data-learner-locked-icon");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    expect(grid + badges).toContain("data-learner-locked-label");
+    expect(grid + badges).toContain("data-learner-locked-icon");
     expect(grid).toContain("learnerDepHighlightIds");
     expect(grid).toContain("data-learner-dep-highlight");
     expect(grid).toContain("learnerSpottable");

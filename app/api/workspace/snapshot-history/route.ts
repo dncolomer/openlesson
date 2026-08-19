@@ -10,6 +10,7 @@ import { getAllEvalPowGateStatuses } from "@/lib/pow-api/eval-pow-gate";
 import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
 import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import type { AuthContext } from "@/lib/pow-api/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -54,7 +55,7 @@ async function handle(
     adhoc_goal?: string | null;
     goal_ids?: string | null;
   },
-  opts: { isOwner: boolean; ayclAccess?: boolean },
+  opts: { isOwner: boolean },
 ) {
   const { data: workspace } = await supabase
     .from("workspaces")
@@ -66,7 +67,7 @@ async function handle(
     return { error: "Workspace not found", status: 404 as const };
   }
 
-  const isWorkspaceOwner = opts.isOwner || Boolean(opts.ayclAccess);
+  const isWorkspaceOwner = opts.isOwner;
   const authLike: AuthContext = {
     user_id: userId,
     guest_user_id: null,
@@ -188,7 +189,7 @@ export async function GET(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const result = await handle(
       workspaceId,
-      auth.user.id,
+      auth.subjectId,
       auth.supabase,
       {
         user_ids: url.searchParams.get("user_ids"),
@@ -205,10 +206,10 @@ export async function GET(req: NextRequest) {
         adhoc_goal: url.searchParams.get("adhoc_goal"),
         goal_ids: url.searchParams.get("goal_ids"),
       },
-      { isOwner: auth.isOwner, ayclAccess: auth.ayclAccess },
+      { isOwner: auth.isOwner },
     );
     if ("error" in result) {
-      return jsonError(result.status, result.error);
+      return jsonError(result.status, result.error ?? "Request failed");
     }
     return NextResponse.json(result.body);
   } catch (error) {
@@ -231,7 +232,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const result = await handle(
       workspaceId,
-      auth.user.id,
+      auth.subjectId,
       auth.supabase,
       {
         user_ids:
@@ -263,10 +264,10 @@ export async function POST(req: NextRequest) {
             ? body.goal_ids
             : null,
       },
-      { isOwner: auth.isOwner, ayclAccess: auth.ayclAccess },
+      { isOwner: auth.isOwner },
     );
     if ("error" in result) {
-      return jsonError(result.status, result.error);
+      return jsonError(result.status, result.error ?? "Request failed");
     }
     return NextResponse.json(result.body);
   } catch (error) {

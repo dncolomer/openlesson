@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import {
   AYCL_WORKSPACE_LOCAL_TABS,
   ayclWorkspaceLocalTabs,
@@ -60,10 +61,7 @@ describe("AyclWorkspaceView full-clone wiring", () => {
     path.join(REPO_ROOT, "components/AyclWorkspaceView.tsx"),
     "utf8",
   );
-  const viewSource = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-    "utf8",
-  );
+  const viewSource = readWorkspaceViewSurface();
 
   it("reuses WorkspaceView with ayclToken (not a reduced fork UI)", () => {
     expect(ayclSource).toContain("WorkspaceView");

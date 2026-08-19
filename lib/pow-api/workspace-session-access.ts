@@ -8,6 +8,11 @@ import {
   resolveIleLinkAccess,
   resolveIleLinkSessionAccess,
 } from "@/lib/ile-link-auth";
+import { resolveAyclAccess } from "@/lib/aycl-session-auth";
+import {
+  assertWorkspacePolicy,
+  ayclPrincipal,
+} from "@/lib/workspace-access-policy";
 import type { AuthContext } from "./types";
 
 async function profileHasApiAccess(profile: {
@@ -57,6 +62,9 @@ export interface WorkspaceSessionPlan {
   workspace_goal: string | null;
   user_id: string;
   organization_id: string | null;
+  evaluation_mode?: string | null;
+  protocol_config?: unknown;
+  external_refs?: unknown;
 }
 
 export interface WorkspaceSessionAccess {
@@ -194,6 +202,8 @@ export interface SessionWorkspaceProofOfWorkAccess {
 export type SessionWorkspaceProofOfWorkAccessOptions = {
   /** Private token for shareable ILE guest links (`/ile/session/{token}`). */
   ileToken?: string | null;
+  /** AYCL purchase token — scores as the purchase subject, never the owner. */
+  ayclToken?: string | null;
   /** URL query params from the share link — param-scoped guest identity. */
   entryQueryParams?: import("@/lib/guest-link-access").EntryQueryParams | null;
 };
@@ -212,6 +222,53 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     return jsonError(400, "workspaceId is required");
   }
 
+  const ayclToken = options?.ayclToken?.trim() || "";
+  if (ayclToken) {
+    const aycl = await resolveAyclAccess(ayclToken);
+    if ("error" in aycl) {
+      return jsonError(aycl.status, aycl.error);
+    }
+    if (aycl.workspaceId !== normalizedWorkspaceId) {
+      return jsonError(403, "Forbidden");
+    }
+    const principal = ayclPrincipal({
+      purchaseId: aycl.purchase.id,
+      ownerUserId: aycl.ownerUserId,
+    });
+    const policy = assertWorkspacePolicy({
+      principal,
+      workspaceOwnerId: aycl.ownerUserId,
+      action: "score_performance",
+    });
+    if (!policy.ok) {
+      return jsonError(403, "Forbidden");
+    }
+    const { data: workspace } = await aycl.supabase
+      .from("workspaces")
+      .select(
+        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
+      )
+      .eq("id", normalizedWorkspaceId)
+      .single();
+    if (!workspace) {
+      return jsonError(404, "Workspace not found");
+    }
+    const auth: AuthContext = {
+      user_id: principal.subjectId,
+      guest_user_id: null,
+      organization_id: workspace.organization_id,
+      is_org_admin: false,
+      key_id: "aycl-ile-performance",
+      scopes: ["workspaces:read"],
+    };
+    return {
+      userId: principal.subjectId,
+      workspace,
+      auth,
+      supabase: aycl.supabase,
+    };
+  }
+
   const ileToken = options?.ileToken?.trim() || "";
   if (ileToken) {
     const entryQueryParams = options?.entryQueryParams ?? {};
@@ -227,7 +284,9 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
 
     const { data: workspace } = await ile.supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
+      .select(
+        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, evaluation_mode, protocol_config, external_refs",
+      )
       .eq("id", normalizedWorkspaceId)
       .single();
 
@@ -279,7 +338,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     supabase
       .from("workspaces")
       .select(
-        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, is_group",
+        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, is_group, evaluation_mode, protocol_config, external_refs",
       )
       .eq("id", normalizedWorkspaceId)
       .single(),

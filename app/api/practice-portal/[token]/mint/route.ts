@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/private-token";
 import {
@@ -37,7 +38,7 @@ export async function POST(
     const { token: rawToken } = await context.params;
     const token = typeof rawToken === "string" ? rawToken.trim() : "";
     if (!token) {
-      return NextResponse.json({ error: "Token required", code: "validation_error" }, { status: 400 });
+      return jsonError(400, "Token required", "validation_error");
     }
 
     const body = await req.json().catch(() => ({}));
@@ -52,13 +53,13 @@ export async function POST(
 
     if (error) {
       console.error("[practice-portal/mint] Resolve error:", error);
-      return NextResponse.json({ error: "Failed to resolve portal", code: "internal_error" }, { status: 500 });
+      return jsonError(500, "Failed to resolve portal", "internal_error");
     }
     if (!portal) {
-      return NextResponse.json({ error: "Portal not found", code: "not_found" }, { status: 404 });
+      return jsonError(404, "Portal not found", "not_found");
     }
     if (portal.status !== "active") {
-      return NextResponse.json({ error: "Portal is no longer active", code: "revoked" }, { status: 410 });
+      return jsonError(410, "Portal is no longer active", "revoked");
     }
 
     const { data: workspace } = await supabase
@@ -68,16 +69,13 @@ export async function POST(
       .maybeSingle();
 
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found", code: "not_found" }, { status: 404 });
+      return jsonError(404, "Workspace not found", "not_found");
     }
     if (workspace.archived_at != null) {
-      return NextResponse.json({ error: "Workspace is archived", code: "archived" }, { status: 410 });
+      return jsonError(410, "Workspace is archived", "archived");
     }
     if (!workspace.user_id) {
-      return NextResponse.json(
-        { error: "Workspace owner is missing", code: "internal_error" },
-        { status: 500 },
-      );
+      return jsonError(500, "Workspace owner is missing", "internal_error");
     }
 
     const config = normalizePracticePortalConfig(portal.config);
@@ -92,10 +90,7 @@ export async function POST(
         validated.code === "product_not_allowed" || validated.code === "timing_not_allowed"
           ? 403
           : 400;
-      return NextResponse.json(
-        { error: validated.error, code: validated.code },
-        { status },
-      );
+      return jsonError(status, validated.error, "validation_error");
     }
 
     // Ensure block belongs to this workspace when provided / required
@@ -107,10 +102,7 @@ export async function POST(
         .eq("workspace_id", portal.workspace_id)
         .maybeSingle();
       if (!block) {
-        return NextResponse.json(
-          { error: "Block not found in this workspace", code: "block_not_found" },
-          { status: 404 },
-        );
+        return jsonError(404, "Block not found in this workspace", "block_not_found");
       }
     }
 
@@ -151,10 +143,7 @@ export async function POST(
     }
 
     if (!createFields.blockId) {
-      return NextResponse.json(
-        { error: "block_id is required for open-ended products", code: "block_required" },
-        { status: 400 },
-      );
+      return jsonError(400, "block_id is required for open-ended products", "block_required");
     }
 
     const link = await createWorkspaceIleLink({
@@ -181,12 +170,9 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof CreateTapLinkError || error instanceof CreateIleLinkError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status },
-      );
+      return jsonError(error.status, error.message, error.code);
     }
     console.error("[practice-portal/mint] POST error:", error);
-    return NextResponse.json({ error: "Internal server error", code: "internal_error" }, { status: 500 });
+    return jsonError(500, "Internal server error", "internal_error");
   }
 }

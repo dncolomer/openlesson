@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   canAccessWorkspaceEval,
   canInspectOtherSubjects,
@@ -347,9 +348,7 @@ describe("Knowledge eval UI + web routes structural", () => {
       join(process.cwd(), "app/api/workspace/performance-report/route.ts"),
       "utf8",
     );
-    expect(web).toContain("canAccessWorkspaceEval");
-    expect(web).toContain("resolveEvalPersistenceClientMode");
-    expect(web).toContain("createAdminClient");
+    expect(web).toContain("requireProductWorkspaceEvalAuth");
     expect(web).toContain("resolveScoreParticipantIds");
     expect(web).toContain("eval_history_saved");
     expect(web).toContain("eval_run_history_error");
@@ -388,10 +387,7 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(panel).toContain("lwm");
     expect(panel).toContain("KnowledgeConfigTrajectoryPanel");
 
-    const lwm = readFileSync(
-      join(process.cwd(), "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const lwm = readKnowledgePanelSurface();
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("/api/workspace/performance-report");
     expect(lwm).toContain("snapshot-history");

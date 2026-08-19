@@ -7,18 +7,33 @@ import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-
 import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
 import type { AyclCapabilities } from "@/lib/aycl-shared";
+import {
+  ayclPrincipal,
+  cookieUserPrincipal,
+  ileGuestPrincipal,
+  persistableOwnerUserId,
+  type WorkspacePrincipal,
+} from "@/lib/workspace-access-policy";
 
 export type AuthenticatedRequest =
   | {
       ok: true;
-      user: User;
+      principal: WorkspacePrincipal;
+      /** Attribution subject — may be aycl:{purchaseId} or a guest id. */
+      subjectId: string;
+      /** auth.users FK only — never a token subject. */
+      persistUserId: string;
       supabase: SupabaseClient;
-      ayclAccess?: boolean;
-      ileAccess?: boolean;
       ayclCapabilities?: AyclCapabilities;
       guestUserId?: string | null;
     }
   | { ok: false; response: NextResponse };
+
+export function authSubjectId(
+  auth: Extract<AuthenticatedRequest, { ok: true }>,
+): string {
+  return auth.subjectId;
+}
 
 export function ayclTokenFromBody(body: Record<string, unknown>): string | null {
   const raw = body.ayclToken ?? body.aycl_token;
@@ -30,7 +45,18 @@ export function ileTokenFromBody(body: Record<string, unknown>): string | null {
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
-export async function requireAuthenticatedUser(): Promise<AuthenticatedRequest> {
+export type CookieAuthenticatedRequest =
+  | {
+      ok: true;
+      user: User;
+      principal: WorkspacePrincipal;
+      subjectId: string;
+      persistUserId: string;
+      supabase: SupabaseClient;
+    }
+  | { ok: false; response: NextResponse };
+
+export async function requireAuthenticatedUser(): Promise<CookieAuthenticatedRequest> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,7 +70,22 @@ export async function requireAuthenticatedUser(): Promise<AuthenticatedRequest> 
     };
   }
 
-  return { ok: true, user, supabase };
+  return {
+    ok: true,
+    user,
+    principal: cookieUserPrincipal(user.id),
+    subjectId: user.id,
+    persistUserId: user.id,
+    supabase,
+  };
+}
+
+function persistIds(
+  principal: WorkspacePrincipal,
+): { subjectId: string; persistUserId: string } | { error: "persist_missing" } {
+  const persistUserId = persistableOwnerUserId(principal);
+  if (!persistUserId) return { error: "persist_missing" };
+  return { subjectId: principal.subjectId, persistUserId };
 }
 
 export async function requireSessionOwnership(
@@ -70,10 +111,12 @@ export async function requireSessionOwnership(
 }
 
 async function enforceProductAccessUnlessAycl(
-  auth: Extract<AuthenticatedRequest, { ok: true }>
+  auth: Extract<AuthenticatedRequest, { ok: true }>,
+  cookieUser?: User,
 ): Promise<AuthenticatedRequest> {
-  if (auth.ayclAccess || auth.ileAccess) return auth;
-  const access = await requireProductAccess(auth.supabase, auth.user);
+  if (auth.principal.kind !== "cookie_user") return auth;
+  if (!cookieUser) return auth;
+  const access = await requireProductAccess(auth.supabase, cookieUser);
   if (!access.ok) return { ok: false, response: access.response };
   return auth;
 }
@@ -123,11 +166,20 @@ export async function guardWorkspaceRoute(
         ),
       };
     }
+    const principal = ayclPrincipal({
+      purchaseId: aycl.purchase.id,
+      ownerUserId: aycl.ownerUserId,
+    });
+    const ids = persistIds(principal);
+    if ("error" in ids) {
+      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
+    }
     return {
       ok: true,
-      user: aycl.actingUser as User,
+      principal,
+      subjectId: ids.subjectId,
+      persistUserId: ids.persistUserId,
       supabase: aycl.supabase,
-      ayclAccess: true,
       ayclCapabilities: aycl.capabilities,
     };
   }
@@ -147,12 +199,28 @@ export async function guardWorkspaceRoute(
         response: jsonError(403, "Forbidden"),
       };
     }
+    const principal = ileGuestPrincipal({
+      assignedUserId: ile.assignedUserId,
+      guestUserId: ile.guestUserId,
+      ownerUserId: ile.ownerUserId,
+    });
+    if ("error" in principal) {
+      return {
+        ok: false,
+        response: jsonError(500, "ILE guest participant is not provisioned", "guest_missing"),
+      };
+    }
+    const ids = persistIds(principal);
+    if ("error" in ids) {
+      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
+    }
     return {
       ok: true,
-      user: ile.actingUser as User,
+      principal,
+      subjectId: ids.subjectId,
+      persistUserId: ids.persistUserId,
       supabase: ile.supabase,
-      ileAccess: true,
-      guestUserId: ile.assignedUserId ? null : ile.guestUserId,
+      guestUserId: principal.guestUserId ?? null,
     };
   }
 
@@ -179,11 +247,12 @@ export async function guardWorkspaceRoute(
     };
   }
 
+  const stripped = stripCookieAuth(auth);
   if (options?.requireProductAccess !== false) {
-    return enforceProductAccessUnlessAycl(auth);
+    return enforceProductAccessUnlessAycl(stripped, auth.user);
   }
 
-  return auth;
+  return stripped;
 }
 
 export type GuardSessionOptions = {
@@ -213,11 +282,20 @@ export async function guardSessionRoute(
       };
     }
 
+    const principal = ayclPrincipal({
+      purchaseId: aycl.purchase.id,
+      ownerUserId: aycl.ownerUserId,
+    });
+    const ids = persistIds(principal);
+    if ("error" in ids) {
+      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
+    }
     return {
       ok: true,
-      user: aycl.actingUser as User,
+      principal,
+      subjectId: ids.subjectId,
+      persistUserId: ids.persistUserId,
       supabase: aycl.supabase,
-      ayclAccess: true,
     };
   }
 
@@ -230,12 +308,28 @@ export async function guardSessionRoute(
       };
     }
 
+    const principal = ileGuestPrincipal({
+      assignedUserId: ile.assignedUserId,
+      guestUserId: ile.guestUserId,
+      ownerUserId: ile.ownerUserId,
+    });
+    if ("error" in principal) {
+      return {
+        ok: false,
+        response: jsonError(500, "ILE guest participant is not provisioned", "guest_missing"),
+      };
+    }
+    const ids = persistIds(principal);
+    if ("error" in ids) {
+      return { ok: false, response: jsonError(500, "Workspace owner is missing") };
+    }
     return {
       ok: true,
-      user: ile.actingUser as User,
+      principal,
+      subjectId: ids.subjectId,
+      persistUserId: ids.persistUserId,
       supabase: ile.supabase,
-      ileAccess: true,
-      guestUserId: ile.assignedUserId ? null : ile.guestUserId,
+      guestUserId: principal.guestUserId ?? null,
     };
   }
 
@@ -256,11 +350,12 @@ export async function guardSessionRoute(
     }
   }
 
+  const stripped = stripCookieAuth(auth);
   if (requireProduct) {
-    return enforceProductAccessUnlessAycl(auth);
+    return enforceProductAccessUnlessAycl(stripped, auth.user);
   }
 
-  return auth;
+  return stripped;
 }
 
 /**
@@ -270,5 +365,17 @@ export async function guardSessionRoute(
 export async function requireAuthenticatedProductUser(): Promise<AuthenticatedRequest> {
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth;
-  return enforceProductAccessUnlessAycl(auth);
+  return enforceProductAccessUnlessAycl(stripCookieAuth(auth), auth.user);
+}
+
+function stripCookieAuth(
+  auth: Extract<CookieAuthenticatedRequest, { ok: true }>,
+): Extract<AuthenticatedRequest, { ok: true }> {
+  return {
+    ok: true,
+    principal: auth.principal,
+    subjectId: auth.subjectId,
+    persistUserId: auth.persistUserId,
+    supabase: auth.supabase,
+  };
 }

@@ -1,3 +1,8 @@
+import {
+  readGridOpsSurface,
+  readMapGridSurface,
+  readWorkspaceViewSurface,
+} from "@/tests/helpers/surface-source";
 /**
  * Ready-next quality items: nested error envelopes, map selection, TAP hook
  * forming text, SessionItem learner writes, grid chrome extract.
@@ -219,12 +224,12 @@ describe("quality-next shipped helpers", () => {
     const sessionChat = read("app/api/session-chat/route.ts");
     const tapChat = read("app/api/workspace-tap-score/chat/route.ts");
     const ileSpeech = read("app/api/workspace-ile/speech/route.ts");
-    const gridOps = read("app/api/workspace/grid-ops/route.ts");
-    const view = read("components/WorkspaceView.tsx");
+    const gridOps = readGridOpsSurface();
+    const view = readWorkspaceViewSurface();
     const tap = read("components/TapScoreClient.tsx");
     const exercise = read("components/ExerciseTapClient.tsx");
     const item = read("components/SessionItem.tsx");
-    const host = read("components/BlockSkillGrid.tsx");
+    const host = readMapGridSurface();
 
     expect(sessionChat).toContain("jsonError");
     expect(sessionChat).toContain("extracted.visibleText");

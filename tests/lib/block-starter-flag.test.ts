@@ -1,3 +1,4 @@
+import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -170,9 +171,9 @@ describe("block-starter-flag UI + host structural wiring", () => {
     const edit = readSrc("components/WorkspaceBlockEditPanel.tsx");
     const add = readSrc("components/WorkspaceAddBlockPane.tsx");
     const shape = readSrc("components/WorkspaceGenerateShapePane.tsx");
-    const view = readSrc("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const aycl = readSrc("components/AyclWorkspaceView.tsx");
-    const gridOps = readSrc("app/api/workspace/grid-ops/route.ts");
+    const gridOps = readGridOpsSurface();
     const addSlot = readSrc("app/api/workspace/add-block-at-slot/route.ts");
     const helper = readSrc("lib/block-starter-flag.ts");
 
@@ -196,9 +197,10 @@ describe("block-starter-flag UI + host structural wiring", () => {
     expect(view).toContain("is_start: Boolean(opts?.isStart)");
     expect(view).toContain("is_start: Boolean(payload.isStart)");
     expect(view).toContain("buildUpdateBlockPayload");
-    expect(aycl).toContain("is_start: Boolean(opts?.isStart)");
-    expect(aycl).toContain("is_start: Boolean(payload.isStart)");
-    expect(aycl).toContain("buildUpdateBlockPayload");
+    expect(aycl).toContain("WorkspaceView");
+    expect(view).toContain("is_start: Boolean(opts?.isStart)");
+    expect(view).toContain("is_start: Boolean(payload.isStart)");
+    expect(view).toContain("buildUpdateBlockPayload");
 
     // APIs resolve author starter rather than always false on create
     expect(gridOps).toContain("resolveCreateBlockIsStart");

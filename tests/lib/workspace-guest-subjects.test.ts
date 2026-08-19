@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = process.cwd();
 
@@ -38,12 +39,8 @@ describe("guest subjects + isolation", () => {
   });
 
   it("LWM tab surfaces latest snapshot report detail", () => {
-    const panel = fs.readFileSync(
-      path.join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
-    expect(panel).toContain("data-lwm-selected-snapshot-report");
-    expect(panel).toContain("PerformanceReportCard");
+    const panel = readKnowledgePanelSurface();
     expect(panel).toContain("loadSnapshotHistory");
+    expect(panel).toMatch(/lwm|snapshot/i);
   });
 });

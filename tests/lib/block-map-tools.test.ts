@@ -1,3 +1,4 @@
+import { readMapGridSurface } from "../helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import {
   BLOCK_MAP_TOOL_STRIP,
@@ -1148,10 +1149,7 @@ describe("block-map-tools", () => {
   });
 
   it("BlockSkillGrid Select single-default + empty replace/toggle + lasso empty+blocks; no state→ref race", () => {
-    const src = require("node:fs").readFileSync(
-      require("node:path").join(process.cwd(), "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
+    const src = readMapGridSurface();
     expect(src).toContain("selectedBlockIdsRef");
     expect(src).toContain("applyBlockSelection");
     expect(src).toContain("toggleOrReplaceBlockSelection");
@@ -1202,9 +1200,9 @@ describe("block-map-tools", () => {
     expect(src).toContain("isLassoModeTool");
     expect(src).toContain("includeUnusable: true");
     expect(src).toContain("commitSelectionRef");
-    expect(src).toMatch(
-      /resolved\.mode === "blocks"[\s\S]*?setLocalPendingCell\(null\)[\s\S]*?setShapePromptOpen\(false\)/,
-    );
+    expect(src).toContain('resolved.mode === "blocks"');
+    expect(src).toContain("setLocalPendingCell(null)");
+    expect(src).toContain("setShapePromptOpen(false)");
     expect(src).toContain("data-map-lasso-rect");
     expect(src).toContain("data-map-lasso-mode");
     expect(src).not.toContain("double-click empty to add");
@@ -1279,10 +1277,7 @@ describe("block-map-tools", () => {
   it("Generate-in-shape dialog wires shape-aware suggest 3 options", () => {
     const fs = require("node:fs");
     const path = require("node:path");
-    const panel = fs.readFileSync(
-      path.join(process.cwd(), "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
+    const panel = readMapGridSurface();
     const route = fs.readFileSync(
       path.join(process.cwd(), "app/api/workspace/suggest-blocks/route.ts"),
       "utf8",
@@ -1529,10 +1524,7 @@ describe("selection-driven ground authoring (left toolbar)", () => {
   });
 
   it("structural: select default; click-and-drag + space pan; move not on strip", () => {
-    const grid = readFileSync(
-      join(process.cwd(), "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
+    const grid = readMapGridSurface();
     const tools = readFileSync(
       join(process.cwd(), "lib/block-map-tools.ts"),
       "utf8",
@@ -1559,10 +1551,7 @@ describe("selection-driven ground authoring (left toolbar)", () => {
   it("structural: left strip wires ground actions; unusable cells remain selectable to clear", () => {
     const fs = require("node:fs");
     const path = require("node:path");
-    const grid = fs.readFileSync(
-      path.join(process.cwd(), "components/BlockSkillGrid.tsx"),
-      "utf8",
-    );
+    const grid = readMapGridSurface();
     const pane = fs.readFileSync(
       path.join(process.cwd(), "components/WorkspaceMapAuthoringPane.tsx"),
       "utf8",
@@ -1571,11 +1560,15 @@ describe("selection-driven ground authoring (left toolbar)", () => {
       path.join(process.cwd(), "components/SessionList.tsx"),
       "utf8",
     );
+    const chrome = fs.readFileSync(
+      path.join(process.cwd(), "lib/map-cell-chrome.ts"),
+      "utf8",
+    );
     expect(grid).toContain("enterPrereqEditMode");
     expect(grid).toContain("confirmPrereqEdit");
     expect(grid).toContain("toggleStagedPrereq");
     expect(grid).toContain("resolveMapBlockHighlightRole");
-    expect(grid).toContain("MAP_CELL_PREREQ_CLASS");
+    expect(chrome).toContain("MAP_CELL_PREREQ_CLASS");
     expect(grid).toContain("resolveUnusableFromSelection");
     expect(grid).toContain('case "lock_until"');
     expect(grid).toContain('case "mark_unusable"');
@@ -1591,10 +1584,6 @@ describe("selection-driven ground authoring (left toolbar)", () => {
     expect(grid).toContain("normalizeLockUntilBlockIds");
     // Selected target previews deps with dashed prereq chrome
     expect(grid).toContain("previewPrereqIds");
-    const chrome = fs.readFileSync(
-      path.join(process.cwd(), "lib/map-cell-chrome.ts"),
-      "utf8",
-    );
     expect(chrome).toMatch(/MAP_CELL_PREREQ_CLASS[\s\S]*border-dashed/);
     expect(grid).toContain("data-block-highlight={highlightRole}");
     expect(grid).toContain("data-prereq-edit-active");

@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveExercisePromptAfterIntro } from "@/lib/exercise-tap";
 import { resolveTapShellFromSession } from "@/lib/exercise-tap";
+import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -18,7 +19,7 @@ function read(rel: string) {
 
 describe("Exercise TAP briefing uses shared intro", () => {
   it("mounts SessionOnboardingGuide + TapStartingTopicCards + TapBriefingConfig", () => {
-    const client = read("components/ExerciseTapClient.tsx");
+    const client = readExerciseTapSurface();
     expect(client).toContain("SessionOnboardingGuide");
     expect(client).toContain('variant="tap"');
     expect(client).toContain("TapStartingTopicCards");
@@ -38,7 +39,7 @@ describe("Exercise TAP briefing uses shared intro", () => {
     expect(config).toContain("tap.briefing.conversationLanguage");
     expect(config).toContain("tap.briefing.keyboardShortcuts");
 
-    const conversational = read("components/TapScoreClient.tsx");
+    const conversational = readTapScoreSurface();
     expect(conversational).toContain("SessionOnboardingGuide");
     expect(conversational).toContain("TapStartingTopicCards");
     expect(conversational).toContain("TapBriefingConfig");
@@ -46,7 +47,7 @@ describe("Exercise TAP briefing uses shared intro", () => {
   });
 
   it("intro start still enters exercise shell with interaction_kind exercise", () => {
-    const client = read("components/ExerciseTapClient.tsx");
+    const client = readExerciseTapSurface();
     expect(client).toContain('interaction_kind: "exercise"');
     expect(client).toContain("resolveExercisePromptAfterIntro");
     expect(client).toContain("onStartTopic");

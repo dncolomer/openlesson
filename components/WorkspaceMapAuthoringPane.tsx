@@ -50,6 +50,7 @@ export function WorkspaceMapAuthoringPane({
   onStartSelectiveDraw,
   onClearSelectiveOverlay,
   onCreateNoteFromSummary,
+  exploreTargetCell = null,
   busy = false,
 }: {
   canEdit: boolean;
@@ -81,6 +82,7 @@ export function WorkspaceMapAuthoringPane({
     y: number;
     source: MapNoteSource;
   }) => void;
+  exploreTargetCell?: { row: number; col: number } | null;
   busy?: boolean;
 }) {
   if (exploreOpen) {
@@ -106,6 +108,7 @@ export function WorkspaceMapAuthoringPane({
           onStartSelectiveDraw={onStartSelectiveDraw}
           onClearSelectiveOverlay={onClearSelectiveOverlay}
           onCreateNoteFromSummary={onCreateNoteFromSummary}
+          exploreTargetCell={exploreTargetCell}
           busy={busy}
         />
       </div>

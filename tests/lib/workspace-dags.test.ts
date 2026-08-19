@@ -1,3 +1,4 @@
+import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -206,9 +207,9 @@ describe("Creator-only DAGs section visibility", () => {
 
 describe("DAGs tab UI / API structural", () => {
   it("nav + panel list/edit/delete; apply_dag registers; no create on tab", () => {
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const panel = read("components/WorkspaceDagsPanel.tsx");
-    const gridOps = read("app/api/workspace/grid-ops/route.ts");
+    const gridOps = readGridOpsSurface();
     const sections = read("lib/workspace-sections.ts");
     const en = read("messages/en.json");
     const mod = read("lib/workspace-dags.ts");

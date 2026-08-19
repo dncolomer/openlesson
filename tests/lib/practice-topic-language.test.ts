@@ -164,15 +164,24 @@ describe("Practice topic language structural wiring", () => {
     ]) {
       const src = read(rel);
       expect(src).toMatch(/workspace-tap-score\/topics[\s\S]*conversationLanguage/);
-      expect(src).toMatch(/workspace-tap-score\/start[\s\S]*conversationLanguage/);
-      // topics effect dependency includes conversationLanguage so changing locale re-fetches
       expect(src).toMatch(
         /}, \[phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage\]/,
       );
-      // Practice First start path
-      expect(src).toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
-      expect(src).toMatch(/practice[\s\S]*conversationLanguage/);
     }
+    const tapFlow = read("components/tap-score/use-tap-score-flow.ts");
+    const exercise = read("components/ExerciseTapClient.tsx");
+    expect(tapFlow).toMatch(
+      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
+    );
+    expect(exercise).toMatch(
+      /(?:workspace-tap-score\/start|TAP_SESSION_RUNTIME_PATHS\.start|postTutoringSessionStart)[\s\S]*conversationLanguage/,
+    );
+    const tapPhases = read("components/tap-score/tap-score-phases.tsx");
+    const exercisePhases = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(tapPhases).toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
+    expect(exercisePhases).toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
+    expect(tapFlow).toMatch(/practice[\s\S]*conversationLanguage/);
+    expect(exercise).toMatch(/practice[\s\S]*conversationLanguage/);
   });
 
   it("topics + start API routes pass conversationLanguage into Practice generators", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -201,7 +202,7 @@ describe("TAP idle + interruption wiring (static)", () => {
   });
 
   it("ILE SessionView is not required to change for this TAP-only gate", () => {
-    const ile = fs.readFileSync(path.join(ROOT, "components/SessionView.tsx"), "utf8");
+    const ile = readSessionViewSurface();
     expect(ile).not.toContain("tap-interruption-gate");
     expect(ile).not.toContain("shouldSkipSilenceInterruptionWhileFormingThought");
   });

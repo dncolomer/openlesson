@@ -4,11 +4,11 @@ import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
 } from "@/lib/pow-api/workspace-session-access";
+import { ILE_SPEECH_TOOL_NAME } from "@/lib/ile-thought-traces";
 import {
-  buildIleSpeechSegmentPayload,
-  ILE_SPEECH_TOOL_NAME,
-  type IleSpeechSegmentEvent,
-} from "@/lib/ile-thought-traces";
+  buildTutoringSpeechOutcome,
+  resolveTutoringContext,
+} from "@/lib/tutoring-runtime";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
@@ -17,14 +17,14 @@ import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-l
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SPEECH_EVENTS = new Set<IleSpeechSegmentEvent>(["start", "stop"]);
+const SPEECH_EVENTS = new Set(["start", "stop"]);
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
     const sessionId = body.sessionId ? String(body.sessionId) : "";
-    const event = String(body.event || "") as IleSpeechSegmentEvent;
+    const event = String(body.event || "");
     const segmentDurationMs =
       typeof body.segmentDurationMs === "number" ? Math.max(0, Math.trunc(body.segmentDurationMs)) : undefined;
     const transcriptSnapshot = body.transcriptSnapshot ? String(body.transcriptSnapshot).trim() : undefined;
@@ -42,15 +42,25 @@ export async function POST(req: NextRequest) {
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if (access instanceof NextResponse) return access;
+    const participantUserId = access.auth.guest_user_id ? null : access.auth.user_id;
+    void participantUserId;
 
-    const payload = buildIleSpeechSegmentPayload({
-      event,
-      sessionId,
-      workspaceId,
-      segmentDurationMs,
-      transcriptSnapshot,
-      timestampMs,
-    });
+    const outcome = buildTutoringSpeechOutcome(
+      resolveTutoringContext({
+        product: "ile",
+        modality: "dialog",
+        authKind: access.ileLinkId ? "ile" : "cookie",
+        workspaceId,
+        sessionId,
+      }),
+      {
+        event: event === "stop" ? "stop" : "start",
+        segmentDurationMs,
+        transcriptSnapshot,
+        timestampMs,
+      },
+    );
+    const payload = outcome.payload;
 
     const fileName = `ile-speech-${event}-${sessionId}-${timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");

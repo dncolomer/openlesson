@@ -87,7 +87,7 @@ function totalTopicResources(topic: DantesTopic) {
 }
 
 const MODE_CARD_COPY: Record<
-  (typeof UI_WORKSPACE_CREATE_MODES)[number],
+  "blank" | "template",
   { title: string; description: string; badge: string }
 > = {
   blank: {
@@ -104,7 +104,7 @@ const MODE_CARD_COPY: Record<
 
 const MODE_CARDS = UI_WORKSPACE_CREATE_MODES.map((mode) => ({
   mode,
-  ...MODE_CARD_COPY[mode],
+  ...MODE_CARD_COPY[mode as "blank" | "template"],
 }));
 
 export default function NewWorkspacePage() {

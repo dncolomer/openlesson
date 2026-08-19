@@ -1,4 +1,3 @@
-import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/ile-link";
 import type { EntryQueryParams, GuestLinkAccessMode } from "@/lib/guest-link-access";
@@ -34,8 +33,8 @@ export interface ResolvedIleLinkContext {
   showEndSession: boolean;
   /** learning (default) | project — durable on the share link. */
   sessionMode: IleSessionMode;
-  /** Synthetic user for routes that expect a user id (workspace owner). */
-  actingUser: Pick<User, "id">;
+  /** Guest / assigned participant — never the workspace owner. */
+  subjectId: string;
 }
 
 const LINK_SELECT =
@@ -144,13 +143,11 @@ export async function resolveIleLinkAccess(
     accessMode,
     showEndSession,
     sessionMode,
-    actingUser: {
-      id: resolveIleActingParticipantId({
-        ownerUserId,
-        assignedUserId: attribution.userId,
-        guestUserId: attribution.guestUserId,
-      }),
-    },
+    subjectId: resolveIleActingParticipantId({
+      ownerUserId,
+      assignedUserId: attribution.userId,
+      guestUserId: attribution.guestUserId,
+    }),
   };
 }
 

@@ -1,3 +1,4 @@
+import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
  * Structural checks: Knowledge Regions UI, always-visible guest/TAPBench links, no alaTAP on touched paths.
  */

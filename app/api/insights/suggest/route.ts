@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       : [];
 
     if (sourceThoughts.length < 2) {
-      return NextResponse.json({ error: "At least two thought traces are required" }, { status: 400 });
+      return jsonError(400, "At least two thought traces are required");
     }
 
     const thoughtBlock = sourceThoughts
@@ -67,7 +68,7 @@ Rules:
     );
 
     if (!ai.success || !Array.isArray(ai.data?.suggestions)) {
-      return NextResponse.json({ error: "Failed to suggest insights" }, { status: 502 });
+      return jsonError(502, "Failed to suggest insights");
     }
 
     const suggestions = ai.data.suggestions
@@ -84,6 +85,6 @@ Rules:
     return NextResponse.json({ suggestions });
   } catch (error) {
     console.error("[insights/suggest]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

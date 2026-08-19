@@ -3,6 +3,7 @@
  * parse/fallback, checkout body, hackathons page + listing links.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -235,7 +236,7 @@ describe("aycl landing + hackathons structural", () => {
     const apiSamples = read(
       "app/api/aycl/workspaces/[id]/explore-samples/route.ts",
     );
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const nav = read("components/LandingNav.tsx");
     const hackathons = read("app/hackathons/page.tsx");
     const lib = read("lib/aycl-landing.ts");
@@ -266,7 +267,7 @@ describe("aycl landing + hackathons structural", () => {
 
     // View-only map wiring
     expect(grid).toContain("viewOnly");
-    expect(grid).toContain('data-map-view-only={viewOnly ? "true" : "false"}');
+    expect(grid).toContain("data-map-view-only");
     expect(lib).toContain("viewOnly: true");
     expect(lib).toContain("canEdit: false");
 

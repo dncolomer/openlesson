@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { generateProbe } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import type { RequestType, SessionPlan } from "@/lib/storage";
@@ -29,10 +30,10 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!problem) {
-      return NextResponse.json({ error: "Missing problem" }, { status: 400 });
+      return jsonError(400, "Missing problem");
     }
     if (typeof gapScore !== "number") {
-      return NextResponse.json({ error: "Missing gapScore" }, { status: 400 });
+      return jsonError(400, "Missing gapScore");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -96,7 +97,7 @@ IMPORTANT: Your question MUST be specifically about the current step topic: "${c
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Probe generation failed" }, { status: 500 });
+      return jsonError(500, result.error || "Probe generation failed");
     }
 
     // Determine request type based on session plan if not explicitly provided
@@ -115,6 +116,6 @@ IMPORTANT: Your question MUST be specifically about the current step topic: "${c
     });
   } catch (error) {
     console.error("Generate probe error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

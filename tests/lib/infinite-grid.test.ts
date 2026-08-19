@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   MAP_INFINITE_GRID,
   MAP_INFINITE_GRID_BACKGROUND,
@@ -72,7 +73,7 @@ describe("Map infinite-grid surfaces — no axes, shared treatment", () => {
     const twoDSrc = readFileSync(twoD, "utf8");
     const threeDSrc = readFileSync(threeD, "utf8");
     const globalSrc = readFileSync(global, "utf8");
-    const knowledgeSrc = readFileSync(knowledge, "utf8");
+    const knowledgeSrc = readKnowledgePanelSurface();
     const tokensSrc = readFileSync(tokens, "utf8");
 
     // Shared module is the source of visual tokens

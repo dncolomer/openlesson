@@ -3,6 +3,7 @@
  * Drives shipped compose / Helios / persist-payload helpers — not a reimplementation.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
@@ -352,7 +353,7 @@ describe("shipped ILE planner / Helios text names the user's anti-patterns", () 
     expect(xai).toContain("shouldOfferIleChapterDone");
     expect(xai).toContain("sessionMode");
 
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("buildIleChapterAddPowToolData");
     expect(chatRoute).toContain("chapter_suggest");
     expect(view).toContain("postIleSessionChat");

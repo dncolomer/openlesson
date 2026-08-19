@@ -33,7 +33,6 @@ export type IleSessionChatRequestInput = {
   activeStepIndex?: number;
   activeStepId?: string;
   activeStepDescription?: string;
-  sessionMode?: string;
 } & Record<string, unknown>;
 
 export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Record<string, unknown> {
@@ -50,7 +49,6 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
   if (input.activeStepIndex != null) body.activeStepIndex = input.activeStepIndex;
   if (input.activeStepId) body.activeStepId = input.activeStepId;
   if (input.activeStepDescription) body.activeStepDescription = input.activeStepDescription;
-  if (input.sessionMode) body.session_mode = input.sessionMode;
   return body;
 }
 

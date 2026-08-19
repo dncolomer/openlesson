@@ -32,6 +32,7 @@ import {
   validateGuestPlacement,
 } from "@/lib/map-of-knowledge";
 import { projectVectors2D } from "@/lib/knowledge-config";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const root = join(__dirname, "../..");
 
@@ -794,7 +795,7 @@ describe("map-of-knowledge product surfaces", () => {
   it("removes group toggle UX and public fork gates from shipped surfaces", () => {
     const access = readFileSync(join(root, "components/WorkspaceAccessSettings.tsx"), "utf8");
     const identity = readFileSync(join(root, "components/WorkspaceIdentityPanel.tsx"), "utf8");
-    const view = readFileSync(join(root, "components/WorkspaceView.tsx"), "utf8");
+    const view = readWorkspaceViewSurface();
     const sessionItem = readFileSync(join(root, "components/SessionItem.tsx"), "utf8");
     const groupRoute = readFileSync(join(root, "app/api/workspaces/[id]/group/route.ts"), "utf8");
     const groupStart = readFileSync(

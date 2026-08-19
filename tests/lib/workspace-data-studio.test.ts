@@ -1,5 +1,5 @@
 /**
- * Workspace Settings Data Studio + Admin PoW invalidate — structural + pure mutate.
+ * Workspace Settings Data Studio PoW invalidate — structural + pure mutate.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -41,7 +41,7 @@ describe("workspace Data Studio surface", () => {
     expect(studio).toContain("JSON.stringify(meta");
   });
 
-  it("ships workspace and admin mutate routes using metadata invalidate", () => {
+  it("ships workspace mutate route using metadata invalidate", () => {
     const ws = read("app/api/workspace/data-studio/pow/route.ts");
     expect(ws).toContain("buildStudioPowPatch");
     expect(ws).toContain("invalidate");
@@ -55,15 +55,8 @@ describe("workspace Data Studio surface", () => {
     expect(ws).toContain("needsCandidateScan");
     expect(ws).toContain(".range(");
 
-    const admin = read("app/api/admin/data-studio/pow/route.ts");
-    expect(admin).toContain("export async function PATCH");
-    expect(admin).toContain("export async function POST");
-    expect(admin).toContain("buildStudioPowPatch");
-    expect(admin).toContain("invalidated");
-
     // No dedicated invalidated column in select / updates beyond metadata object
     expect(ws).not.toMatch(/\.update\(\s*\{\s*invalidated\s*:/);
-    expect(admin).not.toMatch(/\.update\(\s*\{\s*invalidated\s*:/);
 
     // Owner UPDATE RLS migration ships
     expect(
@@ -80,18 +73,6 @@ describe("workspace Data Studio surface", () => {
     const wsUi = read("components/WorkspaceDataStudioPanel.tsx");
     expect(wsUi).toContain("setExpandedId(null)");
     expect(wsUi).toMatch(/bulkInvalidate[\s\S]*setExpandedId\(null\)/);
-    const adminUi = read("app/admin/data-studio/page.tsx");
-    expect(adminUi).toContain("setExpandedPowId(null)");
-    expect(adminUi).toMatch(/bulkInvalidatePow[\s\S]*setExpandedPowId\(null\)/);
-  });
-
-  it("Admin Data Studio UI exposes bulk + single invalidate", () => {
-    const page = read("app/admin/data-studio/page.tsx");
-    expect(page).toContain("data-studio-bulk-invalidate");
-    expect(page).toContain("data-studio-invalidate");
-    expect(page).toContain("bulkInvalidatePow");
-    expect(page).toContain("savePowEdit");
-    expect(page).toContain("data-studio-edit-metadata");
   });
 });
 

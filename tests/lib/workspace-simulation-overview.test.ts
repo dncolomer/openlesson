@@ -9,6 +9,7 @@ import {
   availableWorkspaceSections,
   resolveWorkspaceSectionLayout,
 } from "@/lib/workspace-sections";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
@@ -93,7 +94,7 @@ describe("workspace Simulation section helpers + UI structure", () => {
     expect(layout.showBlockMapChrome).toBe(false);
     expect(layout.mountsContextPanel).toBe(false);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const aycl = read("components/AyclWorkspaceView.tsx");
     const panel = read("components/WorkspaceSimulationPanel.tsx");
     const sections = read("lib/workspace-sections.ts");

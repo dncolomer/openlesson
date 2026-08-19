@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import {
   ayclTokenFromBody,
   ileTokenFromBody,
@@ -240,9 +241,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[generate-exercise] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to generate exercise" },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to generate exercise");
   }
 }

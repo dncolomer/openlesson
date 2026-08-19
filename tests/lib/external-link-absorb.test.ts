@@ -1,3 +1,4 @@
+import { readGridOpsSurface } from "@/tests/helpers/surface-source";
 /**
  * External links: absorb into durable local notes + JIT URL bias for xAI prompts.
  */
@@ -215,7 +216,7 @@ describe("structural wiring: attach + prompt assembly", () => {
 
   it("create APIs fetch link bodies for selected externals", () => {
     const slot = read("app/api/workspace/add-block-at-slot/route.ts");
-    const ops = read("app/api/workspace/grid-ops/route.ts");
+    const ops = readGridOpsSurface();
     const fetchLib = read("lib/fetch-link-body.ts");
     expect(fetchLib).toContain("export async function fetchLinkBodyText");
     expect(slot).toContain("fetchLinkBodyText");

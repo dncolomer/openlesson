@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       requireSessionId: true,
     });
     if (!auth.ok) return auth.response;
-    const { user, supabase } = auth;
+    const { supabase, persistUserId } = auth;
 
     const { data: currentSession } = await supabase
       .from("sessions")
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       ? await supabase
         .from("sessions")
         .select("problem, report, duration_ms, created_at, metadata")
-        .eq("user_id", user.id)
+        .eq("user_id", persistUserId)
         .neq("id", sessionId)
         .filter("metadata->>workspace_id", "eq", workspaceId)
         .order("created_at", { ascending: false })

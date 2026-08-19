@@ -18,7 +18,8 @@ export type WorkspaceGridOp =
   | "delete_block"
   | "delete_blocks"
   | "apply_dag"
-  | "delete_dag";
+  | "delete_dag"
+  | "clone_block";
 
 export type WorkspaceGridOpsRequestInput = {
   workspaceId: string;

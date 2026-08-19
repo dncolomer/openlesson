@@ -3,6 +3,7 @@
  * Drives the shipped camera→rect helper BlockSkillGrid uses.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -186,7 +187,7 @@ describe("resolveMinimapViewportWindow (shipped projector)", () => {
 describe("AYCL landing preview mounts the viewport window", () => {
   it("view-only snapshot uses BlockSkillGrid; grid renders the projector window", () => {
     const landing = read("components/AyclLandingClient.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
 
     expect(landing).toContain("data-aycl-map-snapshot");
     expect(landing).toContain("data-aycl-map-viewport-window");

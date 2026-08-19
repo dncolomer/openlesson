@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import { resolveModelsTabScope } from "@/lib/pow-api/models-tab-scope";
 import type { AuthContext } from "@/lib/pow-api/types";
@@ -85,7 +86,7 @@ describe("API subject unique IDs (no subject=me)", () => {
     expect(docs).not.toMatch(/\?subject=me/);
 
     // Snapshot subject addressing lives in LWM panel (Eval tab removed).
-    const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const lwm = readKnowledgePanelSurface();
     expect(lwm).toMatch(/params\.set\("user_id"/);
     expect(lwm).not.toMatch(/params\.set\("subject", "me"\)/);
   });

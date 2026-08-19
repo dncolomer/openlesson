@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 
 export const runtime = "nodejs";
@@ -13,12 +14,12 @@ export async function POST(request: NextRequest) {
       typeof body.planningPrompt === "string" ? body.planningPrompt.trim() : null;
 
     if (!token || !blockId) {
-      return NextResponse.json({ error: "token and blockId are required" }, { status: 400 });
+      return jsonError(400, "token and blockId are required");
     }
 
     const ctx = await resolveAyclAccess(token);
     if ("error" in ctx) {
-      return NextResponse.json({ error: ctx.error }, { status: ctx.status });
+      return jsonError(ctx.status, ctx.error);
     }
 
     const { data: block, error: blockError } = await ctx.supabase
@@ -29,11 +30,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (blockError || !block) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return jsonError(404, "Block not found");
     }
 
     if (block.status === "locked") {
-      return NextResponse.json({ error: "Block is locked" }, { status: 403 });
+      return jsonError(403, "Block is locked");
     }
 
     const effectivePrompt = planningPrompt || block.planning_prompt || null;
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: sessionError?.message || "Failed to create session" }, { status: 500 });
+      return jsonError(500, sessionError?.message || "Failed to create session");
     }
 
     await ctx.supabase.from("blocks").update({
@@ -74,6 +75,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ session });
   } catch (error) {
     console.error("[aycl/start-session]", error);
-    return NextResponse.json({ error: "Failed to start session" }, { status: 500 });
+    return jsonError(500, "Failed to start session");
   }
 }

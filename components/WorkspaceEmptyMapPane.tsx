@@ -32,8 +32,8 @@ import {
 
 /**
  * Expand Map right-column UI as accordion drawers (overview, search, suggest
- * spot, selective description). Mounted only while the Explore / Expand Map
- * control is open — not the default empty-selection pane.
+ * spot, selective description). Mounted while Explore is the active map
+ * toggle state — not the default empty-selection pane.
  * Powered by /api/workspace/map-explore.
  */
 export function WorkspaceEmptyMapPane({
@@ -51,6 +51,7 @@ export function WorkspaceEmptyMapPane({
   onStartSelectiveDraw,
   onClearSelectiveOverlay,
   onCreateNoteFromSummary,
+  exploreTargetCell = null,
   busy = false,
 }: {
   canEdit?: boolean;
@@ -75,6 +76,8 @@ export function WorkspaceEmptyMapPane({
     y: number;
     source: MapNoteSource;
   }) => void;
+  /** Selected empty cell while Explore is active — opens explore-block drawer. */
+  exploreTargetCell?: EmptyMapCell | null;
   busy?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,6 +96,14 @@ export function WorkspaceEmptyMapPane({
     null,
   );
   const [areaBusy, setAreaBusy] = useState(false);
+  const [exploreModifier, setExploreModifier] = useState("");
+  const [exploreResult, setExploreResult] = useState<string>("");
+  const [exploreBusy, setExploreBusy] = useState(false);
+  const [exploreError, setExploreError] = useState<string | null>(null);
+  const [openDrawerId, setOpenDrawerId] = useState<string | null>(
+    MAP_EXPLORE_DEFAULT_OPEN_DRAWER,
+  );
+  const lastExploreCellKey = useRef("");
   const overviewKeyRef = useRef("");
   const areaKeyRef = useRef("");
   const overviewRequestIdRef = useRef(0);
@@ -155,6 +166,43 @@ export function WorkspaceEmptyMapPane({
     },
     [ayclToken, blockPayload, locale, unusablePayload, workspaceId],
   );
+
+  useEffect(() => {
+    if (!exploreTargetCell) return;
+    const key = `${exploreTargetCell.row}:${exploreTargetCell.col}`;
+    if (key === lastExploreCellKey.current) return;
+    lastExploreCellKey.current = key;
+    setOpenDrawerId("map_explore_block");
+    setExploreResult("");
+    setExploreError(null);
+  }, [exploreTargetCell]);
+
+  const handleExploreBlock = async () => {
+    if (!exploreTargetCell || exploreBusy || busy) return;
+    setExploreBusy(true);
+    setExploreError(null);
+    try {
+      const data = await callMapExplore("explore_block", {
+        cell: {
+          row: exploreTargetCell.row,
+          col: exploreTargetCell.col,
+        },
+        modifierPrompt: exploreModifier.trim() || undefined,
+      });
+      const text = String(data.summary || "").trim();
+      if (!text) {
+        throw new Error("No exploration result returned");
+      }
+      setExploreResult(text);
+    } catch (err) {
+      setExploreError(
+        err instanceof Error ? err.message : "Explore block failed",
+      );
+      setExploreResult("");
+    } finally {
+      setExploreBusy(false);
+    }
+  };
 
   // Overview only while this pane is mounted (explore open). Neutral busy/idle copy.
   useEffect(() => {
@@ -361,6 +409,8 @@ export function WorkspaceEmptyMapPane({
   return (
     <WorkspaceRightPaneDrawerGroup
       defaultOpenId={MAP_EXPLORE_DEFAULT_OPEN_DRAWER}
+      openId={openDrawerId}
+      onOpenIdChange={setOpenDrawerId}
       data-workspace-empty-map-pane
       data-workspace-map-explore-pane
       data-map-explore-drawers
@@ -640,6 +690,73 @@ export function WorkspaceEmptyMapPane({
           ) : selectiveDrawing ? (
             <p className="pt-0.5 text-[10px] leading-snug text-neutral-600">
               Drag a freehand path on the map to finish the area.
+            </p>
+          ) : null}
+        </div>
+      </WorkspaceRightPaneDrawer>
+
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="map_explore_block"
+        title="explore block"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-empty-map-explore-block"
+      >
+        <div
+          data-empty-map-explore-block
+          data-map-explore-drawer-body="map_explore_block"
+          className="flex flex-col gap-3"
+        >
+          {exploreTargetCell ? (
+            <p className="text-[10px] leading-snug text-neutral-500">
+              Empty cell r{exploreTargetCell.row}, c{exploreTargetCell.col}.
+              Explore uses map geometry and already filled blocks.
+            </p>
+          ) : (
+            <p className="text-[10px] leading-snug text-neutral-600">
+              Click an empty cell on the map to choose where to explore.
+            </p>
+          )}
+          <label className="block space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+              Modifier prompt
+            </span>
+            <textarea
+              value={exploreModifier}
+              onChange={(e) => setExploreModifier(e.target.value)}
+              rows={2}
+              disabled={exploreBusy || busy || !exploreTargetCell}
+              placeholder="Optional: influence what to explore here…"
+              data-explore-block-modifier
+              className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            />
+          </label>
+          <button
+            type="button"
+            data-explore-block-submit
+            disabled={
+              busy || exploreBusy || !exploreTargetCell || !workspaceId
+            }
+            onClick={() => void handleExploreBlock()}
+            className="w-full rounded-md border border-white/15 bg-white/[0.08] px-3 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exploreBusy ? "Exploring…" : "Explore"}
+          </button>
+          {exploreError ? (
+            <p
+              className="text-[11px] text-neutral-300/90"
+              data-explore-block-error
+            >
+              {exploreError}
+            </p>
+          ) : null}
+          {exploreResult ? (
+            <p
+              className="text-[12px] leading-relaxed text-neutral-200"
+              data-explore-block-result
+            >
+              {exploreResult}
             </p>
           ) : null}
         </div>

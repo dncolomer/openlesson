@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createSessionPlanLLM } from "@/lib/xai";
 import { createSessionPlan, getUserCalibration, getSessionPlan } from "@/lib/storage";
 import { getUserPrompts } from "@/lib/user-prompts";
@@ -29,16 +30,13 @@ export async function POST(request: NextRequest) {
     const initialChapters = resolveInitialChaptersFromBody(body);
 
     if (!sessionId || !problem) {
-      return NextResponse.json(
-        { error: "Missing sessionId or problem" },
-        { status: 400 }
-      );
+      return jsonError(400, "Missing sessionId or problem");
     }
 
     const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
-    const { user, supabase } = auth;
+    const { subjectId, supabase } = auth;
 
     const { data: sessionData, error: sessionError } = await supabase
       .from("sessions")
@@ -47,7 +45,7 @@ export async function POST(request: NextRequest) {
       .single();
     if (sessionError) {
       console.error("[session-plan/create] Failed to load session metadata:", sessionError);
-      return NextResponse.json({ error: `Could not load session metadata: ${sessionError.message}` }, { status: 500 });
+      return jsonError(500, `Could not load session metadata: ${sessionError.message}`);
     }
 
     let tutoringLanguage = bodyLanguage;
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     let calibrationText = "";
     try {
-      const calibration = await getUserCalibration(user.id, supabase);
+      const calibration = await getUserCalibration(subjectId, supabase);
       if (calibration.sessionCount > 0) {
         calibrationText = `Student has completed ${calibration.sessionCount} sessions. ` +
           `Average gap score: ${calibration.avgGapScore}. ` +
@@ -109,10 +107,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success || !result.plan) {
-      return NextResponse.json(
-        { error: result.error || "Plan generation failed" },
-        { status: 500 }
-      );
+      return jsonError(500, result.error || "Plan generation failed");
     }
 
     const validSteps = (result.plan.steps || []).filter(
@@ -120,10 +115,7 @@ export async function POST(request: NextRequest) {
     );
     if (validSteps.length === 0) {
       console.error("[Plan Create] LLM returned no valid steps:", result.plan.steps);
-      return NextResponse.json(
-        { error: "Plan generation produced no valid steps" },
-        { status: 500 }
-      );
+      return jsonError(500, "Plan generation produced no valid steps");
     }
     result.plan.steps = validSteps;
 
@@ -142,10 +134,7 @@ export async function POST(request: NextRequest) {
         .eq("session_id", sessionId);
       if (deleteError) {
         console.error("[session-plan/create] Failed to delete existing plan:", deleteError);
-        return NextResponse.json(
-          { error: `Could not replace existing plan: ${deleteError.message}` },
-          { status: 500 },
-        );
+        return jsonError(500, `Could not replace existing plan: ${deleteError.message}`);
       }
     }
 
@@ -158,16 +147,13 @@ export async function POST(request: NextRequest) {
         steps: toPersistedCreatePlanSteps(result.plan.steps),
       },
       supabase,
-      { userId: user.id },
+      { userId: subjectId },
     );
 
     return NextResponse.json({ plan: savedPlan });
   } catch (error) {
     console.error("Create session plan error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: `Internal server error: ${errorMessage}` },
-      { status: 500 }
-    );
+    return jsonError(500, `Internal server error: ${errorMessage}`);
   }
 }

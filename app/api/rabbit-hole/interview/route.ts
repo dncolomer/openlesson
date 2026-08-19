@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
 import { getUserTimezone, localDayKey, scoreRabbitHole } from "@/lib/rabbit-hole";
@@ -21,14 +22,14 @@ export async function POST(request: NextRequest) {
   const isAdmin = profile?.is_admin ?? false;
   const mustUseBonus = !isAdmin && (existingPlays?.length ?? 0) > 0;
   const bonusPlays = profile?.rabbit_hole_bonus_plays ?? 0;
-  if (mustUseBonus && bonusPlays <= 0) return NextResponse.json({ error: "Out of plays today" }, { status: 402 });
+  if (mustUseBonus && bonusPlays <= 0) return jsonError(402, "Out of plays today");
 
   const result = await callXaiJSON<Interview>([
     systemMessage("Generate exactly one calm, personal, 3-choice multiple-choice question based only on the user's Rabbit Hole question path. Return JSON with question, choices, correctIndex, rationale. choices must contain exactly 3 strings. correctIndex must be 0, 1, or 2."),
     userMessage(JSON.stringify({ path }, null, 2)),
   ], { model: DEFAULT_MODEL, maxTokens: 500, temperature: 0.2 });
 
-  if (!result.success || !result.data || result.data.choices?.length !== 3) return NextResponse.json({ error: "Failed to generate interview" }, { status: 500 });
+  if (!result.success || !result.data || result.data.choices?.length !== 3) return jsonError(500, "Failed to generate interview");
 
   const depth = Math.max(0, ...path.map((item: { depth?: number }) => item.depth ?? 0));
   const questionsExplored = path.length;
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
       .gt("rabbit_hole_bonus_plays", 0)
       .select("id")
       .single();
-    if (bonusError || !updatedProfile) return NextResponse.json({ error: "Out of plays today" }, { status: 402 });
+    if (bonusError || !updatedProfile) return jsonError(402, "Out of plays today");
   }
 
   const { data: play, error } = await supabase.from("rabbit_hole_plays").insert({
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
   if (error || !play) {
     if (mustUseBonus) await supabase.from("profiles").update({ rabbit_hole_bonus_plays: bonusPlays }).eq("id", user.id);
-    return NextResponse.json({ error: "Failed to save play" }, { status: 500 });
+    return jsonError(500, "Failed to save play");
   }
 
   return NextResponse.json({ playId: play.id, interview: result.data, depth, questionsExplored, scoreIfCorrect, scoreIfWrong });

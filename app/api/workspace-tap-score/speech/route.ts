@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { authContextFromTapAccess, resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
+import { TAP_SPEECH_TOOL_NAME } from "@/lib/tap-speech-proof-of-work";
 import {
-  buildTapSpeechSegmentPayload,
-  TAP_SPEECH_TOOL_NAME,
-  type TapSpeechSegmentEvent,
-} from "@/lib/tap-speech-proof-of-work";
+  buildTutoringSpeechOutcome,
+  resolveTutoringContext,
+} from "@/lib/tutoring-runtime";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
@@ -16,7 +16,7 @@ import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SPEECH_EVENTS = new Set<TapSpeechSegmentEvent>(["start", "stop"]);
+const SPEECH_EVENTS = new Set(["start", "stop"]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const tapSessionId = String(body.tapSessionId || "");
     const practice = isTapPracticeRequest(body.practice);
-    const event = String(body.event || "") as TapSpeechSegmentEvent;
+    const event = String(body.event || "");
     const segmentDurationMs =
       typeof body.segmentDurationMs === "number" ? Math.max(0, Math.trunc(body.segmentDurationMs)) : undefined;
     const transcriptSnapshot = body.transcriptSnapshot ? String(body.transcriptSnapshot).trim() : undefined;
@@ -51,18 +51,26 @@ export async function POST(req: NextRequest) {
     if ("error" in access) {
       return jsonError(access.status, access.error);
     }
+    const participantUserId = access.guestUserId ? null : access.userId;
+    void participantUserId;
 
     const payload = stampPoWPracticeFlag(
-      buildTapSpeechSegmentPayload({
-        event,
-        tapSessionId: access.tapSessionId,
-        workspaceId: access.workspaceId,
-        blockId: blockId || access.blockId,
-        focusSessionId: focusSessionId || access.focusSessionId,
-        segmentDurationMs,
-        transcriptSnapshot,
-        timestampMs,
-      }),
+      buildTutoringSpeechOutcome(
+        resolveTutoringContext({
+          product: "tap",
+          modality: practice ? "solo" : "dialog",
+          authKind: "tap",
+          workspaceId: access.workspaceId,
+          sessionId: access.tapSessionId,
+          blockId: blockId || access.blockId,
+        }),
+        {
+          event: event === "stop" ? "stop" : "start",
+          segmentDurationMs,
+          transcriptSnapshot,
+          timestampMs,
+        },
+      ).payload,
       practice,
     );
 

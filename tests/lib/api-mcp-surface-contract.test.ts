@@ -1,3 +1,4 @@
+import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
  * Structural contract: API / MCP / path builders stay aligned with shipped routes.
  * Drives real exports and filesystem route tree — not hard-coded expected strings
@@ -230,7 +231,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   });
 
   it("MCP upload_proof_of_work uses the same shared helper", () => {
-    const src = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
+    const src = readMcpSurface();
     expect(src).toMatch(/uploadWorkspaceProofOfWork/);
   });
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error("Error fetching public plans:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     const communityPlans = (plans || []).map((p: any) => ({
@@ -48,9 +49,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ plans: communityPlans, total: total || 0 });
   } catch (error) {
     console.error("Error fetching community plans:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch community plans" },
-      { status: 500 }
-    );
+    return jsonError(500, "Failed to fetch community plans");
   }
 }

@@ -1,106 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { resolveAyclAccess } from "@/lib/aycl-session-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { ayclTokenFromBody } from "@/lib/api/require-auth";
 import {
   LWM_SNAPSHOT_LABEL,
   SNAPSHOT_VERTICAL,
 } from "@/lib/pow-api/performance-report";
 import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
-import {
-  canAccessWorkspaceEval,
-  resolveEvalPersistenceClientMode,
-  resolveScoreParticipantIds,
-} from "@/lib/pow-api/evaluation-subject";
+import { resolveScoreParticipantIds } from "@/lib/pow-api/evaluation-subject";
 import type { AuthContext } from "@/lib/pow-api/types";
-import type { User } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
 import { NO_NEW_POW_CODE } from "@/lib/pow-api/eval-pow-gate";
 import { toErrorCode } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-/**
- * Cookie/AYCL auth for Knowledge LWM Snapshot. After access is granted, returns a
- * privileged (service-role) Supabase client for context + learner persistence —
- * same contract as TAP/ILE web routes. Authz is always checked against the
- * session user first.
- */
-async function resolveWebEvalAuth(
-  workspaceId: string,
-  ayclToken: string | null,
-): Promise<
-  | {
-      ok: true;
-      user: User;
-      /** Privileged client for post-authz read/write of learner evidence + history. */
-      supabase: SupabaseClient;
-      ayclAccess?: boolean;
-      isOwner: boolean;
-    }
-  | { ok: false; response: NextResponse }
-> {
-  if (ayclToken) {
-    const aycl = await resolveAyclAccess(ayclToken);
-    if ("error" in aycl) {
-      return {
-        ok: false,
-        response: jsonError(aycl.status, aycl.error),
-      };
-    }
-    if (aycl.workspaceId !== workspaceId) {
-      return {
-        ok: false,
-        response: jsonError(403, "Forbidden"),
-      };
-    }
-    return {
-      ok: true,
-      user: aycl.actingUser as User,
-      supabase: aycl.supabase,
-      ayclAccess: true,
-      isOwner: true,
-    };
-  }
-
-  const session = await requireAuthenticatedUser();
-  if (!session.ok) return session;
-
-  const admin = createAdminClient();
-  const { data: plan, error: planError } = await admin
-    .from("workspaces")
-    .select("id, user_id, is_group")
-    .eq("id", workspaceId)
-    .single();
-
-  if (planError || !plan) {
-    return {
-      ok: false,
-      response: jsonError(404, "Workspace not found"),
-    };
-  }
-
-  const access = canAccessWorkspaceEval({
-    callerUserId: session.user.id,
-    workspaceOwnerId: plan.user_id,
-    isGroup: Boolean(plan.is_group),
-  });
-  if (resolveEvalPersistenceClientMode(access) === "deny") {
-    return {
-      ok: false,
-      response: jsonError(403, "Forbidden"),
-    };
-  }
-
-  return {
-    ok: true,
-    user: session.user,
-    supabase: admin,
-    isOwner: access.isOwner,
-  };
-}
 
 /**
  * Generate a new LWM Snapshot for a subject (single strategy — former verification path).
@@ -114,10 +27,13 @@ export async function POST(req: NextRequest) {
       return jsonError(400, "workspaceId is required");
     }
 
-    const auth = await resolveWebEvalAuth(workspaceId, ayclTokenFromBody(body));
+    const auth = await requireProductWorkspaceEvalAuth(
+      workspaceId,
+      ayclTokenFromBody(body),
+    );
     if (!auth.ok) return auth.response;
 
-    const { user, supabase, isOwner: accessIsOwner } = auth;
+    const { supabase, isOwner: accessIsOwner, subjectId } = auth;
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
@@ -143,10 +59,12 @@ export async function POST(req: NextRequest) {
       return jsonError(404, "Workspace not found");
     }
 
-    const isWorkspaceOwner = accessIsOwner || Boolean(auth.ayclAccess);
+    const isWorkspaceOwner = accessIsOwner;
 
+    // Scoring identity is the policy subject (aycl:{purchaseId} for AYCL), never the
+    // owner UUID. This is AuthContext attribution, not an auth.users FK write.
     const authCtx: AuthContext = {
-      user_id: user.id,
+      user_id: subjectId,
       guest_user_id: null,
       organization_id: plan.organization_id ?? null,
       is_org_admin: false,

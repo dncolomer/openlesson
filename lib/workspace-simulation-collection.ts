@@ -60,6 +60,26 @@ function makeId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Stable identity for "already in the curated list" (kind + normalized text). */
+export function simulationCollectionItemKey(
+  kind: string,
+  text: string,
+): string {
+  return `${clean(kind) || "question"}:${clean(text).toLowerCase()}`;
+}
+
+export function simulationCollectionActiveKeys(
+  collection: SimulationCollection | null | undefined,
+): Set<string> {
+  const col = normalizeSimulationCollection(collection ?? null);
+  const keys = new Set<string>();
+  for (const item of col.items) {
+    if (item.removed) continue;
+    keys.add(simulationCollectionItemKey(item.kind, item.text));
+  }
+  return keys;
+}
+
 /** Normalize origin from raw JSON. */
 export function normalizeSimulationCollectionOrigin(
   raw: unknown,
@@ -193,12 +213,37 @@ export function appendSimulationCollectionItems(
   const col = normalizeSimulationCollection(collection ?? null);
   const ts = nowIso();
   const next = [...col.items];
+  const activeKeys = new Set(
+    next
+      .filter((item) => !item.removed)
+      .map((item) => simulationCollectionItemKey(item.kind, item.text)),
+  );
   for (const input of inputs) {
     const text = clean(input.text);
     if (text.length < 4) continue;
+    const kind = input.kind;
+    const key = simulationCollectionItemKey(kind, text);
+    if (activeKeys.has(key)) continue;
+    const removedIdx = next.findIndex(
+      (item) =>
+        item.removed && simulationCollectionItemKey(item.kind, item.text) === key,
+    );
+    if (removedIdx >= 0) {
+      next[removedIdx] = {
+        ...next[removedIdx]!,
+        removed: false,
+        coachCue: clean(input.coachCue) || next[removedIdx]!.coachCue,
+        origin: input.origin ?? next[removedIdx]!.origin,
+        modifierPrompt:
+          clean(input.modifierPrompt) || next[removedIdx]!.modifierPrompt,
+        updatedAt: ts,
+      };
+      activeKeys.add(key);
+      continue;
+    }
     next.push({
-      id: clean(input.id) || makeId(input.kind === "exercise" ? "ex" : "q"),
-      kind: input.kind,
+      id: clean(input.id) || makeId(kind === "exercise" ? "ex" : "q"),
+      kind,
       text,
       coachCue: clean(input.coachCue) || null,
       origin: input.origin ?? { kind: "workspace" },
@@ -207,6 +252,7 @@ export function appendSimulationCollectionItems(
       createdAt: ts,
       updatedAt: ts,
     });
+    activeKeys.add(key);
   }
   return { items: next, updatedAt: ts };
 }

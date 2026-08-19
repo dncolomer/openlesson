@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -33,25 +34,22 @@ async function registerFromInvite(body: {
   const password = typeof body.password === "string" ? body.password : "";
 
   if (!inviteToken) {
-    return NextResponse.json({ error: "inviteToken is required" }, { status: 400 });
+    return jsonError(400, "inviteToken is required");
   }
   if (!email || !email.includes("@")) {
-    return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
+    return jsonError(400, "A valid email is required");
   }
   if (!password || password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    return jsonError(400, "Password must be at least 6 characters");
   }
 
   const admin = createAdminClient();
   const invite = await findInviteByToken(admin, inviteToken);
   if (!invite) {
-    return NextResponse.json({ error: "Invalid invite link" }, { status: 404 });
+    return jsonError(404, "Invalid invite link");
   }
   if (invite.used_by) {
-    return NextResponse.json(
-      { error: "This invite has already been used. Sign in instead." },
-      { status: 400 }
-    );
+    return jsonError(400, "This invite has already been used. Sign in instead.");
   }
 
   const org = inviteOrganization(invite);
@@ -66,15 +64,9 @@ async function registerFromInvite(body: {
     console.error("createUser (invite) error:", createError);
     const message = createError?.message || "Failed to create account";
     if (/already|registered|exists/i.test(message)) {
-      return NextResponse.json(
-        {
-          error: "An account with this email already exists. Sign in instead.",
-          code: "email_exists",
-        },
-        { status: 409 }
-      );
+      return jsonError(409, "An account with this email already exists. Sign in instead.", "email_exists",);
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 
   const userId = created.user.id;
@@ -85,10 +77,7 @@ async function registerFromInvite(body: {
   } catch (err) {
     console.error("[register-invite] ensureUserProfile failed:", err);
     await admin.auth.admin.deleteUser(userId).catch(() => {});
-    return NextResponse.json(
-      { error: "Account could not be fully set up. Please try again." },
-      { status: 500 }
-    );
+    return jsonError(500, "Account could not be fully set up. Please try again.");
   }
 
   await ensurePersonalOrganization(admin, userId, { email }).catch((err) => {
@@ -133,15 +122,15 @@ async function registerFromCheckout(body: { sessionId?: string; password?: strin
   const password = typeof body.password === "string" ? body.password : "";
 
   if (!sessionId) {
-    return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+    return jsonError(400, "sessionId is required");
   }
   if (!password || password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    return jsonError(400, "Password must be at least 6 characters");
   }
 
   const stripeSession = await getStripe().checkout.sessions.retrieve(sessionId);
   if (stripeSession.payment_status !== "paid" && stripeSession.status !== "complete") {
-    return NextResponse.json({ error: "Checkout is not complete yet." }, { status: 400 });
+    return jsonError(400, "Checkout is not complete yet.");
   }
 
   const admin = createAdminClient();
@@ -160,7 +149,7 @@ async function registerFromCheckout(body: { sessionId?: string; password?: strin
   }
   const email = pending?.email || emailFromCheckoutSession(stripeSession);
   if (!email) {
-    return NextResponse.json({ error: "Checkout email not found." }, { status: 400 });
+    return jsonError(400, "Checkout email not found.");
   }
 
   const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -173,12 +162,9 @@ async function registerFromCheckout(body: { sessionId?: string; password?: strin
     console.error("createUser error:", createError);
     const message = createError?.message || "Failed to create account";
     if (/already|registered|exists/i.test(message)) {
-      return NextResponse.json(
-        { error: "An account with this email already exists. Sign in instead.", code: "email_exists" },
-        { status: 409 }
-      );
+      return jsonError(409, "An account with this email already exists. Sign in instead.", "email_exists");
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonError(500, message);
   }
 
   try {
@@ -186,16 +172,13 @@ async function registerFromCheckout(body: { sessionId?: string; password?: strin
   } catch (err) {
     console.error("[register] ensureUserProfile failed:", err);
     await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
-    return NextResponse.json(
-      { error: "Account could not be fully set up. Please try again." },
-      { status: 500 }
-    );
+    return jsonError(500, "Account could not be fully set up. Please try again.");
   }
 
   const claim = await claimPendingCheckout(admin, sessionId, created.user.id, email);
   if (!claim.ok) {
     await admin.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ error: claim.error }, { status: 400 });
+    return jsonError(400, claim.error);
   }
 
   const stripeCustomerId = pending?.stripe_customer_id;
@@ -233,6 +216,6 @@ export async function POST(request: NextRequest) {
     return await registerFromCheckout(body);
   } catch (error) {
     console.error("register error:", error);
-    return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
+    return jsonError(500, "Failed to create account");
   }
 }

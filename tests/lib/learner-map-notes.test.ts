@@ -3,6 +3,7 @@
  * Drives shipped helpers — no re-implementation of transform/CRUD.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
@@ -565,7 +566,7 @@ describe("store + UI structural", () => {
       false,
     );
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const postIt = read("components/LearnerMapNotePostIt.tsx");
     const lib = read("lib/learner-map-notes.ts");
 
@@ -762,7 +763,7 @@ describe("map notes plane hide/show (eye toggle)", () => {
   });
 
   it("UI wires notes visibility toggle for creator and learner paths", () => {
-    const grid = readFileSync(join(ROOT, "components/BlockSkillGrid.tsx"), "utf8");
+    const grid = readMapGridSurface();
     // Under minimap notes toolbar — not learner-only
     expect(grid).toContain("data-learner-map-notes-toolbar");
     expect(grid).toContain("data-map-notes-visibility-toggle");

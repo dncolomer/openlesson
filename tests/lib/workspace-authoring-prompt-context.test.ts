@@ -1,3 +1,4 @@
+import { readGridOpsSurface, readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -43,8 +44,8 @@ describe("workspace authoring prompt context (journey + bridge)", () => {
 
   it("add-block-at-slot and generate_shape wire journey + bridge intent", () => {
     const add = read("app/api/workspace/add-block-at-slot/route.ts");
-    const grid = read("app/api/workspace/grid-ops/route.ts");
-    const view = read("components/WorkspaceView.tsx");
+    const grid = readGridOpsSurface();
+    const view = readWorkspaceViewSurface();
     expect(add).toContain("composeJourneyGraphPromptSnippet");
     expect(add).toContain("composeAddBlockAtSlotSystemMessage");
     expect(add).toContain("intent");

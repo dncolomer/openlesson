@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { generateObjectives } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
@@ -20,12 +21,12 @@ export async function POST(request: NextRequest) {
     if (ayclToken) {
       const aycl = await resolveAyclAccess(ayclToken);
       if ("error" in aycl) {
-        return NextResponse.json({ error: aycl.error }, { status: aycl.status });
+        return jsonError(aycl.status, aycl.error);
       }
     } else if (ileToken) {
       const ile = await resolveIleLinkAccess(ileToken);
       if ("error" in ile) {
-        return NextResponse.json({ error: ile.error }, { status: ile.status });
+        return jsonError(ile.status, ile.error);
       }
     } else {
       const auth = await requireAuthenticatedProductUser();
@@ -34,25 +35,19 @@ export async function POST(request: NextRequest) {
     const { problem } = body;
 
     if (!problem) {
-      return NextResponse.json({ error: "Missing problem" }, { status: 400 });
+      return jsonError(400, "Missing problem");
     }
 
     const promptOverrides = await getUserPrompts();
     const result = await generateObjectives(problem, promptOverrides);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Objectives generation failed" },
-        { status: 500 }
-      );
+      return jsonError(500, result.error || "Objectives generation failed");
     }
 
     return NextResponse.json({ objectives: result.objectives });
   } catch (error) {
     console.error("Generate objectives error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError(500, "Internal server error");
   }
 }

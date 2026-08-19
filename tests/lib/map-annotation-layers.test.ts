@@ -3,6 +3,7 @@
  * Drives shipped helpers — no re-implementation of geometry/permissions.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -296,7 +297,7 @@ describe("annotation continuous plane coords", () => {
 
 describe("annotation layers UI structural", () => {
   it("creator stack + toolbox; learner toggle-only under Add note", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const lib = read("lib/map-annotation-layers.ts");
     const testSelf = read("tests/lib/map-annotation-layers.test.ts");
 
@@ -346,14 +347,14 @@ describe("annotation layers UI structural", () => {
     expect(grid).toContain("data-annotation-strokes-layer");
 
     // Committed strokes must paint ABOVE skill blocks (DOM order + z-index).
-    // Blocks use zIndex 2/5/6; strokes layer is after renderedBlockIds with z-[20].
+    // World layer renders occupied tiles first, then MapAnnotationStrokes (z-[20]).
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
     const blocksMarker = "Occupied blocks: solid rect or freeform multi-tile lecture";
-    const strokesMarker = "data-annotation-strokes-layer";
-    const blocksIdx = grid.indexOf(blocksMarker);
-    const strokesIdx = grid.indexOf(strokesMarker);
+    const strokesMarker = "<MapAnnotationStrokes";
+    const blocksIdx = world.indexOf(blocksMarker);
+    const strokesIdx = world.indexOf(strokesMarker);
     expect(blocksIdx).toBeGreaterThan(-1);
     expect(strokesIdx).toBeGreaterThan(-1);
-    // annotation strokes must render after blocks in DOM so paint is on top
     expect(strokesIdx).toBeGreaterThan(blocksIdx);
     expect(grid).toMatch(
       /data-annotation-strokes-layer[\s\S]{0,120}z-\[20\]/,

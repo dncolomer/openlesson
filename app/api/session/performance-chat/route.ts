@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
@@ -29,11 +30,11 @@ export async function POST(req: NextRequest) {
     const { sessionId, message, conversationHistory = [], fileIds = [] } = body;
 
     if (!sessionId) {
-      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+      return jsonError(400, "sessionId is required");
     }
 
     if (!message?.trim()) {
-      return NextResponse.json({ error: "message is required" }, { status: 400 });
+      return jsonError(400, "message is required");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       requireSessionId: true,
     });
     if (!auth.ok) return auth.response;
-    const { user, supabase } = auth;
+    const { subjectId, supabase } = auth;
 
     // Get the session (ownership already enforced by guardSessionRoute)
     const { data: session, error: sessionError } = await supabase
@@ -51,9 +52,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return jsonError(404, "Session not found");
     }
-    void user;
+    void subjectId;
 
     // If this is the first message (no fileIds), we need to fetch and upload data
     let activeFileIds = fileIds;
@@ -103,10 +104,7 @@ export async function POST(req: NextRequest) {
         activeFileIds = [uploadResult.file_id];
       } catch (uploadError) {
         console.error("[session-performance-chat] Failed to upload file to xAI:", uploadError);
-        return NextResponse.json(
-          { error: "Failed to prepare session data" },
-          { status: 500 }
-        );
+        return jsonError(500, "Failed to prepare session data");
       }
     }
 
@@ -145,10 +143,7 @@ export async function POST(req: NextRequest) {
 
     if (!result.success) {
       console.error("[session-performance-chat] xAI API error:", result.error);
-      return NextResponse.json(
-        { error: result.error || "Failed to get AI response" },
-        { status: 500 }
-      );
+      return jsonError(500, result.error || "Failed to get AI response");
     }
 
     return NextResponse.json({
@@ -158,10 +153,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error("[session-performance-chat] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Internal server error");
   }
 }
 

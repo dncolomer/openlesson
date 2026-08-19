@@ -3,8 +3,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { blockHasAttachedLocalContext } from "@/lib/block-skill-grid";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { readMapGridSurface } from "../helpers/surface-source";
 
 describe("blockHasAttachedLocalContext", () => {
   it("is true for notes, files, global refs, or external resources", () => {
@@ -36,7 +37,7 @@ describe("blockHasAttachedLocalContext", () => {
 
   it("BlockSkillGrid wires document badge from pure helper", () => {
     const root = join(__dirname, "../..");
-    const grid = readFileSync(join(root, "components/BlockSkillGrid.tsx"), "utf8");
+    const grid = readMapGridSurface();
     expect(existsSync(join(root, "lib/block-skill-grid.ts"))).toBe(true);
     expect(grid).toContain("blockHasAttachedLocalContext");
     expect(grid).toContain("data-block-local-context-badge");

@@ -18,6 +18,7 @@ export function buildLearnerLaunchBody(input: {
     workspaceId: String(input.workspaceId || "").trim(),
     blockId: String(input.blockId || "").trim(),
     sessionMode: input.sessionMode === "project" ? "project" : "learning",
+    session_mode: input.sessionMode === "project" ? "project" : "learning",
   };
   if (input.planningPrompt != null) body.planningPrompt = input.planningPrompt;
   if (input.ayclToken) body.ayclToken = input.ayclToken;

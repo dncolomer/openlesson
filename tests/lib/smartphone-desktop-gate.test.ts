@@ -2,6 +2,7 @@
  * TAP + ILE desktop gate: smartphone detection + MobileBlockScreen wiring.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -66,7 +67,7 @@ describe("TAP and ILE mount desktop-only smartphone gate", () => {
     expect(existsSync(join(ROOT, "components/MobileBlockScreen.tsx"))).toBe(true);
 
     const tap = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
-    const session = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    const session = readSessionViewSurface();
     const ile = readFileSync(join(ROOT, "components/IleGuestSessionClient.tsx"), "utf8");
     const block = readFileSync(join(ROOT, "components/MobileBlockScreen.tsx"), "utf8");
 

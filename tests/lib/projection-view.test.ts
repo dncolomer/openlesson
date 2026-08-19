@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 import {
   computeDataBounds,
   computeProjectionFitBounds,
@@ -156,10 +157,7 @@ describe("projection-view helpers (shipped)", () => {
 
 describe("projection widget surface (Embeddings)", () => {
   it("mounts professional projection markers, large canvas, and latest-mode toggle", () => {
-    const src = readFileSync(
-      join(process.cwd(), "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const src = readKnowledgePanelSurface();
     expect(src).toContain("ProjectionSpaceWidget");
     expect(src).toContain("data-projection-widget");
     expect(src).toContain("data-projection-professional");

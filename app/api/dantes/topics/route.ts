@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 
 export const runtime = "nodejs";
 export const revalidate = 3600;
@@ -8,10 +9,7 @@ const DANTES_BASE_URL = "https://dantes.io";
 export async function GET() {
   const apiKey = process.env.DANTES_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "DANTES_API_KEY not configured" },
-      { status: 501 },
-    );
+    return jsonError(501, "DANTES_API_KEY not configured");
   }
 
   try {
@@ -22,10 +20,7 @@ export async function GET() {
 
     if (!response.ok) {
       const error = await readDantesError(response);
-      return NextResponse.json(
-        { error: error ?? `Dantes topics request failed: ${response.status}` },
-        { status: response.status === 401 ? 502 : response.status },
-      );
+      return jsonError(response.status === 401 ? 502 : response.status, error ?? `Dantes topics request failed: ${response.status}`);
     }
 
     const topics = await response.json();
@@ -34,7 +29,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[dantes/topics] error", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 

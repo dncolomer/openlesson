@@ -3,7 +3,8 @@
  * helpers), chapter Done lock, and structural wiring for Learning vs Project shells.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyIleProjectThoughtMutation,
@@ -16,6 +17,7 @@ import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
   normalizeIleSessionMode,
+  resolveIleDurableSessionMode,
   resolveIleSessionModeFromBody,
   resolveIleSessionModeFromSession,
   resolveIleShellFromSession,
@@ -87,6 +89,50 @@ describe("normalizeIleSessionMode / resolve", () => {
         session_mode: "learning",
       }),
     ).toBe("learning");
+  });
+
+  it("session-chat and ILE shell share resolveIleDurableSessionMode", () => {
+    const fromMeta = resolveIleDurableSessionMode({
+      metadata: { session_mode: "project" },
+    });
+    expect(fromMeta).toBe("project");
+
+    const fromLinkWhenMetaMissing = resolveIleDurableSessionMode({
+      sessionModeProp: "project",
+      metadata: null,
+    });
+    expect(fromLinkWhenMetaMissing).toBe("project");
+
+    const learningDefault = resolveIleDurableSessionMode({});
+    expect(learningDefault).toBe("learning");
+
+    const route = read("app/api/session-chat/route.ts");
+    const client = read("lib/session-chat-client.ts");
+    const helios = read("components/HeliosChat.tsx");
+    const view = readSessionViewSurface();
+    expect(route).toContain("resolveIleDurableSessionMode");
+    expect(route).not.toContain("auth.ileSessionMode");
+    expect(view).toContain("resolveIleDurableSessionMode");
+    expect(client).not.toContain("session_mode");
+    expect(client).not.toContain("sessionMode");
+    expect(helios).not.toMatch(/sessionMode:\s*"learning"/);
+    expect(helios).not.toMatch(/session_mode:\s*"learning"/);
+
+    const scratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-f71f456e9e6e/implementer";
+    mkdirSync(scratch, { recursive: true });
+    writeFileSync(
+      join(scratch, "session-chat-mode.log"),
+      [
+        `fromMeta=${fromMeta}`,
+        `fromLinkWhenMetaMissing=${fromLinkWhenMetaMissing}`,
+        `learningDefault=${learningDefault}`,
+        "route uses resolveIleDurableSessionMode from session metadata",
+        "client/HeliosChat do not send session_mode",
+      ].join("\n"),
+      "utf8",
+    );
   });
 });
 
@@ -253,7 +299,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
   });
 
   it("SessionView Project Mode: no Helios bubbles path; dual-stack Thoughts; Done lock", () => {
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("isProjectMode");
     expect(view).toContain("ProjectThoughtsDualStack");
     expect(view).toContain("projectMode={isProjectMode}");

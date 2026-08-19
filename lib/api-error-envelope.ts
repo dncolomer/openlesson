@@ -8,10 +8,12 @@ import {
   statusToErrorCode,
   toErrorCode,
   type ApiError,
+  type ApiErrorDetails,
   type ErrorCode,
+  type TapbenchErrorDetails,
 } from "@/lib/api/error-codes";
 
-export type { ApiError, ErrorCode };
+export type { ApiError, ApiErrorDetails, ErrorCode, TapbenchErrorDetails };
 export { statusToErrorCode, toErrorCode };
 
 export type ApiErrorEnvelopeKind = "nested_code" | "string_error" | "unknown";
@@ -34,15 +36,14 @@ export function classifyApiErrorEnvelope(body: unknown): ApiErrorEnvelopeKind {
 export function buildNestedApiErrorEnvelope(
   code: ErrorCode,
   message: string,
-  extras?: Record<string, unknown>,
+  details?: ApiErrorDetails,
 ): { error: ApiError } {
-  const extraFields = extras && Object.keys(extras).length > 0 ? extras : null;
+  const extra =
+    details && Object.keys(details).length > 0 ? details : undefined;
   return {
-    error: {
-      code,
-      message,
-      ...(extraFields || {}),
-    },
+    error: extra
+      ? { code, message, details: extra }
+      : { code, message },
   };
 }
 
@@ -61,8 +62,8 @@ export function errorMessageFromBody(body: unknown, fallback: string): string {
 export function jsonError(
   status: number,
   message: string,
-  code?: ErrorCode,
-  details?: Record<string, unknown>,
+  code?: ErrorCode | string,
+  details?: ApiErrorDetails,
 ): NextResponse {
   const text = String(message || "").trim() || "Request failed";
   const typed = toErrorCode(code, statusToErrorCode(status));

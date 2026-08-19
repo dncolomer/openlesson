@@ -3,6 +3,7 @@
  * and smaller minimap/notes/layers chrome.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -147,7 +148,7 @@ describe("ILE chapter-map notes + layers persist (shipped helpers)", () => {
 
 describe("ILE chapter-map chrome (shipped source + frame constants)", () => {
   it("chapter map mounts notes/layers without a workspace id", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     const chapter = read("components/ChapterMapPanel.tsx");
     expect(grid).toContain("resolveMapOverlayPersistScope");
     expect(grid).toContain('mapKind: suggestMode === "chapter" ? "chapter"');
@@ -178,7 +179,7 @@ describe("ILE chapter-map chrome (shipped source + frame constants)", () => {
     expect(MINIMAP_FRAME_WIDTH_LEGACY).toBe(148);
     expect(MINIMAP_FRAME_HEIGHT_LEGACY).toBe(108);
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("MINIMAP_FRAME_WIDTH");
     expect(grid).toContain("MINIMAP_FRAME_HEIGHT");
     expect(grid).toContain("width: MINIMAP_FRAME_WIDTH");

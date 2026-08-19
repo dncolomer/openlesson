@@ -11,6 +11,7 @@ import {
   ileHeliosThinkingLine,
   resolveIleDialogueTurn,
 } from "@/lib/ile-dialogue-turn";
+import { processHeliosMarkdown } from "@/lib/helios-markdown";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -96,6 +97,20 @@ describe("ILE dialogue UI wiring", () => {
     expect(ileFn).toContain("<HeliosProbeAvatar");
     expect(ileFn).not.toContain("<LearnerThoughtAvatar");
     expect(ileFn).toContain('data-ile-dialogue-speaker="helios"');
+    expect(ileFn).toContain("HeliosMarkdown");
+    expect(ileFn).toContain("data-ile-helios-scroll");
+    expect(ileFn).toContain("overflow-y-auto");
+    expect(ileFn).not.toMatch(
+      /<p className=\{`\$\{textClass\} text-center text-neutral-100`\}>\{lastAssistantTurn\.content\}<\/p>/,
+    );
+
+    const markdown = read("components/thought-ui/HeliosMarkdown.tsx");
+    expect(markdown).toContain("react-markdown");
+    expect(markdown).toContain("remarkGfm");
+    expect(markdown).toContain("remarkMath");
+    expect(markdown).toContain("rehypeKatex");
+    expect(markdown).toContain("processHeliosMarkdown");
+    expect(markdown).toContain("data-helios-markdown");
 
     expect(ILE_DIALOGUE_AVATAR_SIZE_CLASS).toBe("h-10 w-10");
     expect(TAP_DIALOGUE_AVATAR_SIZE_CLASS).toBe("h-28 w-28");
@@ -110,8 +125,25 @@ describe("ILE dialogue UI wiring", () => {
         "DialogueSplitIle: Helios-only, data-ile-helios-avatar-top, waiting ellipsis + ileHeliosThinkingLine",
         "no LearnerThoughtAvatar on ILE path",
         "TAP DialogueSplitComic still mounts both avatars",
+        "Helios bubble: HeliosMarkdown + data-ile-helios-scroll overflow-y-auto",
         `ileAvatar=${ILE_DIALOGUE_AVATAR_SIZE_CLASS}`,
       ].join("\n"),
+    );
+  });
+});
+
+describe("processHeliosMarkdown", () => {
+  it("strips leaked role tags and undoubles LaTeX commands", () => {
+    expect(processHeliosMarkdown("See \\\\frac{1}{2} and \\\\[x\\\\]")).toBe(
+      "See \\frac{1}{2} and \\[x\\]",
+    );
+    expect(
+      processHeliosMarkdown(
+        "Hello <system-reminder>secret</system-reminder> world",
+      ),
+    ).toBe("Hello  world");
+    expect(processHeliosMarkdown("**bold** and a list\n- one\n- two")).toContain(
+      "**bold**",
     );
   });
 });

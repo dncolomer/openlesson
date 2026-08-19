@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  SimulationCollectionAddAllButton,
+  SimulationCollectionAddButton,
+  useSimulationCollectionAdd,
+} from "@/components/SimulationCollectionAddButton";
 import type { WorkspaceSimulationBlockRef } from "@/lib/workspace-simulation-overview";
-import type { SimulationCollectionItem } from "@/lib/workspace-simulation-collection";
+import {
+  simulationCollectionItemKey,
+  type SimulationCollectionItem,
+} from "@/lib/workspace-simulation-collection";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 /**
@@ -53,6 +61,14 @@ export function WorkspaceSimulationPanel({
   const [editText, setEditText] = useState("");
 
   const canGenerate = Boolean(workspaceId) && !generating;
+  const origin = useMemo(() => ({ kind: "workspace" as const }), []);
+  const collectionAdd = useSimulationCollectionAdd({
+    workspaceId,
+    ayclToken,
+    origin,
+    modifierPrompt,
+    seedItems: collectionItems,
+  });
 
   const loadCollection = useCallback(async () => {
     if (!workspaceId) return;
@@ -78,42 +94,6 @@ export function WorkspaceSimulationPanel({
   useEffect(() => {
     void loadCollection();
   }, [loadCollection]);
-
-  const deposit = useCallback(
-    async (payload: {
-      questions: string[];
-      exercises: string[];
-      origin: Record<string, unknown>;
-    }) => {
-      if (!workspaceId) return;
-      try {
-        const res = await fetch("/api/workspace/simulation-collection", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            action: "deposit",
-            questions: payload.questions,
-            exercises: payload.exercises,
-            origin: payload.origin,
-            modifierPrompt: modifierPrompt.trim() || null,
-            ...(ayclToken ? { ayclToken } : {}),
-          }),
-        });
-        const data = (await res.json().catch(() => ({}))) as {
-          items?: SimulationCollectionItem[];
-        };
-        if (res.ok && Array.isArray(data.items)) {
-          setCollectionItems(data.items);
-        } else {
-          void loadCollection();
-        }
-      } catch {
-        /* non-fatal */
-      }
-    },
-    [ayclToken, loadCollection, modifierPrompt, workspaceId],
-  );
 
   const generate = async () => {
     if (!workspaceId || generating) return;
@@ -157,11 +137,18 @@ export function WorkspaceSimulationPanel({
       }
       setQuestions(nextQ);
       setExercises(nextE);
-      await deposit({
+      const deposited = await collectionAdd.addMany({
         questions: nextQ,
         exercises: nextE,
-        origin: { kind: "workspace" },
       });
+      if (deposited.ok && deposited.items.length) {
+        setCollectionItems(deposited.items);
+      } else if (!deposited.ok) {
+        setError(
+          deposited.error ||
+            "Generated samples, but could not add them to the curated collection.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generate failed");
     } finally {
@@ -294,6 +281,34 @@ export function WorkspaceSimulationPanel({
             {error}
           </p>
         ) : null}
+        {collectionAdd.error ? (
+          <p
+            className="mt-2 text-[11px] text-neutral-300/90"
+            data-simulation-collection-add-error
+          >
+            {collectionAdd.error}
+          </p>
+        ) : null}
+        {questions.length + exercises.length > 0 ? (
+          <div className="mt-3">
+            <SimulationCollectionAddAllButton
+              count={questions.length + exercises.length}
+              added={
+                questions.every((q) => collectionAdd.isAdded("question", q)) &&
+                exercises.every((ex) => collectionAdd.isAdded("exercise", ex))
+              }
+              busy={collectionAdd.busyKey === "__all__"}
+              disabled={!workspaceId}
+              onClick={() => {
+                void collectionAdd
+                  .addMany({ questions, exercises })
+                  .then((r) => {
+                    if (r.ok && r.items.length) setCollectionItems(r.items);
+                  });
+              }}
+            />
+          </div>
+        ) : null}
       </section>
 
       <div
@@ -340,9 +355,22 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`q-${i}`}
                   data-simulation-question={i}
-                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
                 >
-                  {q}
+                  <span className="min-w-0 flex-1">{q}</span>
+                  <SimulationCollectionAddButton
+                    added={collectionAdd.isAdded("question", q)}
+                    busy={
+                      collectionAdd.busyKey ===
+                      simulationCollectionItemKey("question", q)
+                    }
+                    disabled={!workspaceId}
+                    onClick={() => {
+                      void collectionAdd.addOne("question", q).then((r) => {
+                        if (r.ok && r.items.length) setCollectionItems(r.items);
+                      });
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -386,9 +414,22 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`ex-${i}`}
                   data-simulation-exercise={i}
-                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
                 >
-                  {ex}
+                  <span className="min-w-0 flex-1">{ex}</span>
+                  <SimulationCollectionAddButton
+                    added={collectionAdd.isAdded("exercise", ex)}
+                    busy={
+                      collectionAdd.busyKey ===
+                      simulationCollectionItemKey("exercise", ex)
+                    }
+                    disabled={!workspaceId}
+                    onClick={() => {
+                      void collectionAdd.addOne("exercise", ex).then((r) => {
+                        if (r.ok && r.items.length) setCollectionItems(r.items);
+                      });
+                    }}
+                  />
                 </li>
               ))}
             </ul>

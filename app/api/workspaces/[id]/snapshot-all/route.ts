@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -149,7 +150,7 @@ export async function POST(
   try {
     const { id: workspaceId } = await params;
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspace id is required" }, { status: 400 });
+      return jsonError(400, "workspace id is required");
     }
 
     const auth = await requireAuthenticatedUser();
@@ -170,19 +171,13 @@ export async function POST(
           ? goalSelection.adhoc_goal.trim()
           : "";
       if (!text) {
-        return NextResponse.json(
-          { error: "adhoc_goal is required when goal_mode is adhoc" },
-          { status: 400 },
-        );
+        return jsonError(400, "adhoc_goal is required when goal_mode is adhoc");
       }
     }
     if (goalSelection.mode === "selected") {
       const ids = goalSelection.goal_ids ?? goalSelection.selected_goal_ids ?? [];
       if (!ids.length) {
-        return NextResponse.json(
-          { error: "goal_ids is required when goal_mode is selected" },
-          { status: 400 },
-        );
+        return jsonError(400, "goal_ids is required when goal_mode is selected");
       }
     }
 
@@ -202,14 +197,11 @@ export async function POST(
       .single();
 
     if (planError || !plan) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     if (plan.user_id !== user.id) {
-      return NextResponse.json(
-        { error: "Only the workspace owner can snapshot all users" },
-        { status: 403 },
-      );
+      return jsonError(403, "Only the workspace owner can snapshot all users");
     }
 
     const subjects = await listWorkspaceSnapshotSubjects(
@@ -386,11 +378,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("[workspaces/snapshot-all]", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to snapshot workspace users",
-      },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to snapshot workspace users",);
   }
 }

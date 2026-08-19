@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 
 export const runtime = "nodejs";
 export const revalidate = 1800;
@@ -9,18 +10,15 @@ const TOPIC_SLUG_PATTERN = /^[a-z0-9-]+$/;
 export async function GET(request: NextRequest) {
   const apiKey = process.env.DANTES_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "DANTES_API_KEY not configured" },
-      { status: 501 },
-    );
+    return jsonError(501, "DANTES_API_KEY not configured");
   }
 
   const topic = request.nextUrl.searchParams.get("topic")?.trim() ?? "";
   if (!topic) {
-    return NextResponse.json({ error: "Missing required query parameter: topic" }, { status: 400 });
+    return jsonError(400, "Missing required query parameter: topic");
   }
   if (!TOPIC_SLUG_PATTERN.test(topic)) {
-    return NextResponse.json({ error: "Invalid topic slug format" }, { status: 400 });
+    return jsonError(400, "Invalid topic slug format");
   }
 
   try {
@@ -34,10 +32,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const error = await readDantesError(response);
-      return NextResponse.json(
-        { error: error ?? `Dantes resources request failed: ${response.status}` },
-        { status: response.status === 401 ? 502 : response.status },
-      );
+      return jsonError(response.status === 401 ? 502 : response.status, error ?? `Dantes resources request failed: ${response.status}`);
     }
 
     const resources = await response.json();
@@ -46,7 +41,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[dantes/resources] error", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }
 

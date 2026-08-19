@@ -6,6 +6,7 @@ import {
   type WorkspaceValidationInput,
   type WorkspaceValidationResult,
 } from "@/lib/workspace-simulation-validation";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const SCRATCH =
   process.env.GROK_SCRATCH ||
@@ -179,7 +180,7 @@ describe("Simulation validation module remains pure (tab UI no longer primary ho
   it("validateWorkspaceSimulation still exported; panel redo uses scope+generate", () => {
     const panel = read("components/WorkspaceSimulationPanel.tsx");
     const blockSim = read("components/WorkspaceBlockSimulationPanel.tsx");
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     const aycl = read("components/AyclWorkspaceView.tsx");
     const mod = read("lib/workspace-simulation-validation.ts");
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 import {
   WORKSPACE_LOCAL_TABS,
   availableWorkspaceSections,
@@ -167,10 +168,7 @@ describe("isWorkspaceLocalTab", () => {
 });
 
 describe("WorkspaceView section shell wiring", () => {
-  const viewSource = fs.readFileSync(
-    path.join(REPO_ROOT, "components/WorkspaceView.tsx"),
-    "utf8",
-  );
+  const viewSource = readWorkspaceViewSurface();
   const sectionHelperSource = fs.readFileSync(
     path.join(REPO_ROOT, "lib/workspace-sections.ts"),
     "utf8",

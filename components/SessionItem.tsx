@@ -140,8 +140,8 @@ export function SessionItem({
       const launchRes = await fetch(WORKSPACE_LEARNER_LAUNCH_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          buildLearnerLaunchBody({
+        body: JSON.stringify({
+          ...buildLearnerLaunchBody({
             workspaceId,
             blockId: node.id,
             sessionMode: ileMode,
@@ -150,7 +150,8 @@ export function SessionItem({
                 ? editedPlanningPrompt
                 : undefined,
           }),
-        ),
+          session_mode: ileMode,
+        }),
       });
       const launchData = await launchRes.json().catch(() => ({}));
       if (!launchRes.ok || !launchData.sessionId) {

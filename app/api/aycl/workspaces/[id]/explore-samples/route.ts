@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ayclLandingPracticeContext,
@@ -33,7 +34,7 @@ export async function GET(
     const { id } = await context.params;
     const workspaceId = String(id || "").trim();
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspace id required" }, { status: 400 });
+      return jsonError(400, "workspace id required");
     }
 
     const supabase = createAdminClient();
@@ -47,10 +48,10 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const { data: blocks } = await supabase
@@ -75,17 +76,11 @@ export async function GET(
       { model: DEFAULT_MODEL, maxTokens: 2200, temperature: 0.55, retries: 2 },
     );
     if (!ai.success || !ai.data) {
-      return NextResponse.json(
-        { error: ai.error || "Failed to generate practice content" },
-        { status: 502 },
-      );
+      return jsonError(502, ai.error || "Failed to generate practice content");
     }
     const samples = parseAyclExploreLearnSamples(ai.data, practiceCtx);
     if (samples.questions.length === 0 && samples.exercises.length === 0) {
-      return NextResponse.json(
-        { error: "Failed to generate practice content" },
-        { status: 502 },
-      );
+      return jsonError(502, "Failed to generate practice content");
     }
 
     return NextResponse.json({
@@ -97,9 +92,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("[aycl/explore-samples]", error);
-    return NextResponse.json(
-      { error: "Failed to generate practice content" },
-      { status: 500 },
-    );
+    return jsonError(500, "Failed to generate practice content");
   }
 }

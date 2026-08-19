@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export async function POST(
@@ -18,11 +19,11 @@ export async function POST(
       .maybeSingle();
 
     if (fetchError || !insight) {
-      return NextResponse.json({ error: "Insight not found" }, { status: 404 });
+      return jsonError(404, "Insight not found");
     }
 
     if (insight.user_id !== user.id) {
-      return NextResponse.json({ error: "Only the insight owner can archive it" }, { status: 403 });
+      return jsonError(403, "Only the insight owner can archive it");
     }
 
     if (insight.archived_at) {
@@ -42,7 +43,7 @@ export async function POST(
       .single();
 
     if (updateError || !updated) {
-      return NextResponse.json({ error: updateError?.message || "Failed to archive insight" }, { status: 500 });
+      return jsonError(500, updateError?.message || "Failed to archive insight");
     }
 
     return NextResponse.json({
@@ -52,6 +53,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("[insights/archive]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

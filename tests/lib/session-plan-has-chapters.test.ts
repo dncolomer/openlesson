@@ -3,6 +3,7 @@
  * Drives the shipped helper SessionView load/confirm call.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -134,7 +135,7 @@ describe("sessionPlanHasChapters (shipped existence helper)", () => {
 
 describe("SessionView / getSessionPlan wiring", () => {
   it("load + confirm use the cheap helper for the boolean; full fetch stays on hydrate/reuse/translate", () => {
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(view).toContain("sessionPlanHasChapters");
     expect(view).toContain("getSessionPlan");
 

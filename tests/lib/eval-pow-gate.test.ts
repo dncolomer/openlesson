@@ -6,6 +6,7 @@ import {
 import { LWM_SNAPSHOT_LABEL, SNAPSHOT_VERTICAL } from "@/lib/pow-api/performance-report";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 describe("decideEvalPowGate (single LWM Snapshot strategy)", () => {
   it("allows first snapshot when no prior run", () => {
@@ -71,10 +72,7 @@ describe("eval pow gate wiring", () => {
       join(process.cwd(), "app/api/workspace/performance-report/route.ts"),
       "utf8",
     );
-    const lwm = readFileSync(
-      join(process.cwd(), "components/KnowledgeConfigTrajectoryPanel.tsx"),
-      "utf8",
-    );
+    const lwm = readKnowledgePanelSurface();
     expect(run).toContain("assertEvalAllowedWithNewPow");
     expect(web).toContain("NO_NEW_POW");
     expect(lwm).toContain("snapshot-history");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -73,7 +74,7 @@ describe("custom verification model surfaces", () => {
     expect(ui).toContain("data-custom-knowledge-regions");
 
     // Custom Knowledge Regions live in Settings; Embeddings overlays regions + distance.
-    const brain = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const brain = readKnowledgePanelSurface();
     expect(brain).not.toContain("<CustomVerificationModelsPanel");
     expect(brain).toContain("data-region-overlay-picker");
     expect(brain).toContain("data-region-overlay");

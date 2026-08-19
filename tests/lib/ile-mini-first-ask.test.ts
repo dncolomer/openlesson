@@ -2,6 +2,7 @@
  * ILE mini auto-open: leave decision is only open | hide. First-ask is gone.
  */
 import { describe, expect, it } from "vitest";
+import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -80,7 +81,7 @@ describe("decideIleMiniAutoOpen (shipped helper)", () => {
 
     const blur = read("lib/ile-blur-screenshare.ts");
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     expect(blur).toContain("decideIleMiniAutoOpen");
     expect(blur).not.toContain("IleMiniModeFirstAsk");
     expect(blur).not.toContain("ileMiniModeFirstAskCopy");
@@ -115,7 +116,7 @@ describe("decideIleMiniAutoOpen (shipped helper)", () => {
 describe("mini auto-open wiring", () => {
   it("no-PiP leave does not first-ask; button is the only popup trigger", () => {
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    const view = read("components/SessionView.tsx");
+    const view = readSessionViewSurface();
     const tools = read("components/ToolsPanel.tsx");
 
     expect(hook).toContain("shouldAutoOpenIleMiniOnLeave");

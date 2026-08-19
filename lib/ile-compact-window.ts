@@ -124,7 +124,10 @@ export function ileCompactPopupFeatures(
   height = ILE_COMPACT_WINDOW_HEIGHT,
   screenLike?: { availLeft?: number; availTop?: number; availWidth?: number; availHeight?: number },
 ): string {
-  const screen = screenLike ?? (typeof window !== "undefined" ? window.screen : undefined);
+  const screen = (screenLike ??
+    (typeof window !== "undefined" ? window.screen : undefined)) as
+    | { availLeft?: number; availTop?: number; availWidth?: number; availHeight?: number }
+    | undefined;
   const availLeft = screen?.availLeft ?? 0;
   const availTop = screen?.availTop ?? 0;
   const availWidth = screen?.availWidth ?? 1280;

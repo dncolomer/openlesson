@@ -3,6 +3,7 @@
  * preview notes+layer toggles, and map-preview fullscreen.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -171,7 +172,7 @@ describe("preview notes + handwriting visibility", () => {
     expect(canDeleteAnnotationLayer({ viewOnly: true })).toBe(false);
 
     const landing = read("components/AyclLandingClient.tsx");
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(landing).toContain("viewOnly");
     expect(landing).toContain("workspaceId={landing.workspaceId}");
     expect(landing).toContain("canEdit={false}");

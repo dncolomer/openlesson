@@ -39,7 +39,7 @@ export type IleMediaSessionLike = {
 export function resolveIleMediaSession(
   host: { mediaSession?: IleMediaSessionLike } | null | undefined = typeof navigator === "undefined"
     ? null
-    : navigator,
+    : (navigator as { mediaSession?: IleMediaSessionLike }),
 ): IleMediaSessionLike | null {
   const session = host?.mediaSession;
   if (!session || typeof session.setActionHandler !== "function") return null;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   AYCL_LANDING_WORKSPACE_SELECT,
@@ -19,7 +20,7 @@ export async function GET(
     const { id } = await context.params;
     const workspaceId = String(id || "").trim();
     if (!workspaceId) {
-      return NextResponse.json({ error: "workspace id required" }, { status: 400 });
+      return jsonError(400, "workspace id required");
     }
 
     const supabase = createAdminClient();
@@ -31,10 +32,10 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
     if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+      return jsonError(404, "Workspace not found");
     }
 
     const { data: blocks, error: blocksError } = await supabase
@@ -46,7 +47,7 @@ export async function GET(
       .limit(200);
 
     if (blocksError) {
-      return NextResponse.json({ error: blocksError.message }, { status: 500 });
+      return jsonError(500, blocksError.message);
     }
 
     const landing = assembleAyclLandingSummary({
@@ -65,9 +66,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("[aycl/workspaces/id]", error);
-    return NextResponse.json(
-      { error: "Failed to load workspace landing" },
-      { status: 500 },
-    );
+    return jsonError(500, "Failed to load workspace landing");
   }
 }

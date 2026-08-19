@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assembleAyclCatalogCard } from "@/lib/aycl-marketplace";
 
@@ -17,7 +18,7 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return jsonError(500, error.message);
     }
 
     const workspaces = (data || []).map((workspace) =>
@@ -27,6 +28,6 @@ export async function GET() {
     return NextResponse.json({ workspaces });
   } catch (error) {
     console.error("[aycl/workspaces]", error);
-    return NextResponse.json({ error: "Failed to load workspaces" }, { status: 500 });
+    return jsonError(500, "Failed to load workspaces");
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadPublicMapOfKnowledge } from "@/lib/map-of-knowledge/load-public-map";
 
@@ -25,11 +26,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[api/map-of-knowledge]", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to load Map of Knowledge",
-      },
-      { status: 500 },
-    );
+    return jsonError(500, error instanceof Error ? error.message : "Failed to load Map of Knowledge",);
   }
 }

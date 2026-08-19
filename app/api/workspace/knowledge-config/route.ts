@@ -203,7 +203,7 @@ export async function GET(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const payload = await handle(
       workspaceId,
-      auth.user.id,
+      auth.subjectId,
       auth.supabase,
       url.searchParams,
       { isOwner: auth.isOwner },
@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const payload = await handle(
       workspaceId,
-      auth.user.id,
+      auth.subjectId,
       auth.supabase,
       {
         from: typeof body.from === "string" ? body.from : undefined,

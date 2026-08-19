@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { readExerciseTapSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import {
   buildPracticePortalLandingView,
   buildPracticePortalUrl,
@@ -691,11 +692,11 @@ describe("Practice Portal structural wiring", () => {
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 
-    const exerciseTap = read("components/ExerciseTapClient.tsx");
+    const exerciseTap = readExerciseTapSurface();
     expect(exerciseTap).toContain("SessionOnboardingGuide");
     expect(exerciseTap).not.toMatch(/Solution Stack — that stack is what will be evaluated/i);
     expect(exerciseTap).toMatch(/Solo practice|Del stashes|Solution/);
-    const tapClient = read("components/TapScoreClient.tsx");
+    const tapClient = readTapScoreSurface();
     expect(tapClient).toContain("SessionOnboardingGuide");
 
     const middleware = read("middleware.ts");

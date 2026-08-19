@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { requireAuthenticatedProductUser } from "@/lib/api/require-auth";
 
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { sessionProblem, currentPlanStep, activeProbes } = body;
 
     if (!sessionProblem) {
-      return NextResponse.json({ error: "Missing sessionProblem" }, { status: 400 });
+      return jsonError(400, "Missing sessionProblem");
     }
 
     // Build context for the LLM
@@ -59,7 +60,7 @@ Return ONLY a JSON array of search term strings, nothing else. Example format:
     );
 
     if (!response.success || !response.data) {
-      return NextResponse.json({ error: "Failed to generate suggestions" }, { status: 500 });
+      return jsonError(500, "Failed to generate suggestions");
     }
 
     // Parse the JSON array from the response
@@ -86,6 +87,6 @@ Return ONLY a JSON array of search term strings, nothing else. Example format:
     return NextResponse.json({ terms });
   } catch (error) {
     console.error("Suggest grokipedia terms error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return jsonError(500, "Internal server error");
   }
 }

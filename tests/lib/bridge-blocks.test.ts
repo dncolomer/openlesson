@@ -1,3 +1,4 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Pure Bridge Blocks corridor geometry + knowledge prompt framing.
  * Structural checks wire multi-select UI into expand-job create path.
@@ -218,7 +219,7 @@ describe("bridge geometry", () => {
         "hasUserGuidance=" + prompt.includes("energy transfer"),
         "sparseForcesBridge=" + /bridge|link|connecting/i.test(sparse),
         "hostsUsePrompt=" +
-          read("components/WorkspaceView.tsx").includes(
+          readWorkspaceViewSurface().includes(
             "buildBridgeKnowledgePrompt",
           ),
         "ayclUsesPrompt=" +
@@ -226,7 +227,7 @@ describe("bridge geometry", () => {
             "buildBridgeKnowledgePrompt",
           ),
         "hostsRunExpandLoop=" +
-          read("components/WorkspaceView.tsx").includes(
+          readWorkspaceViewSurface().includes(
             "handleGenerateBridge",
           ),
       ].join("\n"),
@@ -270,7 +271,7 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
     expect(pane).toContain('drawerId="bridge"');
     expect(pane).toContain("openId={openDrawerId}");
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("handleGenerateBridge");
     expect(view).toContain("onGenerateBridge={handleGenerateBridge}");
     expect(view).toContain("buildBridgeKnowledgePrompt");
@@ -280,9 +281,10 @@ describe("structural: Bridge Blocks multi-select UI + job wire", () => {
     expect(view).toMatch(/handleGenerateBridge[\s\S]*frozenSlots/);
 
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("handleGenerateBridge");
-    expect(aycl).toContain("onGenerateBridge={handleGenerateBridge}");
-    expect(aycl).toContain("buildBridgeKnowledgePrompt");
+    expect(aycl).toContain("WorkspaceView");
+    expect(view).toContain("handleGenerateBridge");
+    expect(view).toContain("onGenerateBridge={handleGenerateBridge}");
+    expect(view).toContain("buildBridgeKnowledgePrompt");
 
     const lib = read("lib/bridge-blocks.ts");
     expect(lib).toContain("export function resolveBridgeSelection");

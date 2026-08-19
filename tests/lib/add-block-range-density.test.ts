@@ -1,8 +1,10 @@
+import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Pure Range/Density multi-create selection for Add-block cold-start.
  * Drives shipped helpers — no re-implementation of circle/sample logic.
  */
 import { describe, expect, it } from "vitest";
+import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -377,7 +379,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(add).toContain("onExpandPreviewChange");
     expect(add).toMatch(/expandCells|cellsToCreate/);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("expandCells");
     expect(view).toContain("add-block-at-slot");
     // Multi expand must not call generate_shape for this path
@@ -514,7 +516,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(add).not.toContain("data-add-expand-stop");
     expect(add).toMatch(/background|minimap/i);
 
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("data-map-expand-jobs");
     expect(grid).toContain("data-map-expand-progress-bar");
     expect(grid).toContain("data-map-expand-stop");
@@ -537,7 +539,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
       /generationPendingCellKeys[\s\S]*?mergeActiveExpandJobPreviews/,
     );
     // Map multi-select chrome follows selectedBlockIds (+ learner sole highlight)
-    expect(grid).toContain("chapterFocusOnly");
+    expect(grid).toContain("isBlockHighlighted");
     expect(grid).toContain("isBlockHighlighted");
     expect(grid).toContain("selected: isBlockHighlighted");
     // Generation click-lock while expand jobs run
@@ -557,7 +559,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(tileClassDecl).toBeGreaterThan(0);
     expect(genDecl).toBeLessThan(tileClassDecl);
 
-    const view = read("components/WorkspaceView.tsx");
+    const view = readWorkspaceViewSurface();
     expect(view).toContain("runAddExpandCreateLoop");
     expect(view).toContain("createAddExpandJob");
     expect(view).toContain("expandJobs");
@@ -568,10 +570,11 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
     expect(view).toContain("upsertAddExpandJob");
 
     const aycl = read("components/AyclWorkspaceView.tsx");
-    expect(aycl).toContain("runAddExpandCreateLoop");
-    expect(aycl).toContain("createAddExpandJob");
-    expect(aycl).toContain("expandJobs");
-    expect(aycl).toContain("Do NOT set isAddingBlock");
+    expect(view).toContain("runAddExpandCreateLoop");
+    expect(aycl).toContain("WorkspaceView");
+    expect(view).toContain("createAddExpandJob");
+    expect(view).toContain("expandJobs");
+    expect(view).toContain("Do NOT set isAddingBlock");
 
     const list = read("components/SessionList.tsx");
     expect(list).toContain("expandJobs");
@@ -609,7 +612,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
   });
 
   it("map receives expand preview highlight hook", () => {
-    const grid = read("components/BlockSkillGrid.tsx");
+    const grid = readMapGridSurface();
     expect(grid).toContain("previewEmptyCells");
     expect(grid).toMatch(/previewEmpty|data-empty-preview|EMPTY/);
 

@@ -23,6 +23,15 @@ const CHAPTER_BADGES: MapOccupiedTileBadges = {
   showGeneratorBusy: false,
 };
 
+const HIDDEN_OCCUPIED_BADGES: MapOccupiedTileBadges = {
+  showLock: false,
+  showStarter: false,
+  showPractice: false,
+  showLocalContext: false,
+  showEffects: false,
+  showGeneratorBusy: false,
+};
+
 export function resolveMapOccupiedTileBadges(input: {
   surface?: MapTileBadgeSurface | string | null;
   hasDagLock?: boolean;
@@ -31,7 +40,10 @@ export function resolveMapOccupiedTileBadges(input: {
   hasLocalContext?: boolean;
   hasEffects?: boolean;
   generatorBusy?: boolean;
+  /** Explore map: name-only occupied tiles (no occupancy icons). */
+  exploreActive?: boolean;
 }): MapOccupiedTileBadges {
+  if (input.exploreActive) return { ...HIDDEN_OCCUPIED_BADGES };
   const surface = input.surface === "chapter" ? "chapter" : "block";
   if (surface === "chapter") {
     return {
@@ -47,4 +59,20 @@ export function resolveMapOccupiedTileBadges(input: {
     showEffects: Boolean(input.hasEffects),
     showGeneratorBusy: Boolean(input.generatorBusy),
   };
+}
+
+/** Empty-cell glyph: Build plus, Explore search, otherwise none. */
+export type EmptyCellMarker = "plus" | "search" | "none";
+
+export function resolveEmptyCellMarker(input: {
+  exploreActive?: boolean;
+  canEdit?: boolean;
+  learnerMode?: boolean;
+  isUnusable?: boolean;
+  isGeneratorSpark?: boolean;
+}): EmptyCellMarker {
+  if (input.isUnusable || input.isGeneratorSpark) return "none";
+  if (input.exploreActive) return "search";
+  if (input.canEdit && !input.learnerMode) return "plus";
+  return "none";
 }

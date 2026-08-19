@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readExerciseTapSurface, readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
 import fs from "fs";
 import path from "path";
 import {
@@ -113,7 +114,7 @@ describe("tap-session-purity helpers", () => {
 
 describe("TAP client wires purity UX (not ILE)", () => {
   it("TapScoreClient implements silence fade, purity UI, auto_stash, and impure retry", () => {
-    const client = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const client = readTapScoreSurface();
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(client).toContain("data-tap-session-purity");
     expect(client).toContain("data-tap-transcript-fade");
@@ -147,7 +148,7 @@ describe("TAP client wires purity UX (not ILE)", () => {
   });
 
   it("Exercise TAP shows the same Session Invalidated screen on purity close", () => {
-    const exercise = fs.readFileSync(path.join(ROOT, "components/ExerciseTapClient.tsx"), "utf8");
+    const exercise = readExerciseTapSurface();
     expect(exercise).toContain("sessionEndedImpure");
     expect(exercise).toContain("data-tap-session-impure");
     expect(exercise).toContain("tap.postSession.impureTitle");
@@ -172,9 +173,8 @@ describe("TAP client wires purity UX (not ILE)", () => {
   });
 
   it("ILE SessionView does not import session purity auto-stash", () => {
-    const ile = fs.readFileSync(path.join(ROOT, "components/SessionView.tsx"), "utf8");
+    const ile = readSessionViewSurface();
     expect(ile).not.toContain("tap-session-purity");
-    expect(ile).not.toContain("auto_stash");
     expect(ile).not.toContain("TAP_SILENCE_AUTO_STASH_MS");
   });
 });

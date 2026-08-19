@@ -1,3 +1,4 @@
+import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
  * Agent TAPBench mint: shipped createWorkspaceTapbenchLink + REST/MCP surface.
  * Drives real create/list helpers (not a re-implemented mint).
@@ -473,7 +474,7 @@ describe("agent REST + MCP surface for TAPBench mint", () => {
   });
 
   it("MCP server dispatches create_tapbench_link / list_tapbench_links to shared helpers", () => {
-    const src = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
+    const src = readMcpSurface();
     expect(src).toMatch(/createWorkspaceTapbenchLink/);
     expect(src).toMatch(/listWorkspaceTapbenchLinks/);
     expect(src).toMatch(/name === "create_tapbench_link"/);

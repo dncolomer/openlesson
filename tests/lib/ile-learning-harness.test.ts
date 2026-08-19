@@ -68,11 +68,9 @@ describe("in-chapter harness (shipped compose + Helios)", () => {
       strategy: "Criteria then apply",
       steps: [
         {
-          id: "s1",
           type: "task",
           description: "Walk a case through just-war criteria",
           status: "in_progress",
-          order: 1,
         },
       ],
       currentStepIndex: 0,

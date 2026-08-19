@@ -11,6 +11,7 @@ import {
   scoreAgainstCustomVerificationModel,
 } from "@/lib/knowledge-config";
 import { emptyLearningWorldModel, mergeLearningWorldModelDelta } from "@/lib/prompt-kernel/world-model";
+import { readKnowledgePanelSurface } from "../helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 
@@ -125,7 +126,7 @@ describe("Knowledge distance surfaces", () => {
   });
 
   it("Embeddings overlay UI shows Knowledge distance (not Settings region cards)", () => {
-    const embeddings = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    const embeddings = readKnowledgePanelSurface();
     expect(embeddings).toContain("Knowledge distance");
     expect(embeddings).toContain("data-knowledge-distance");
     expect(embeddings).toContain("data-knowledge-distance-list");

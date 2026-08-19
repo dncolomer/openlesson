@@ -12,27 +12,76 @@ import {
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
+/** Under-minimap 3-state control: Build / Play / Explore. */
+export type WorkspaceMapToggleId = WorkspaceInteractionMode | "explore";
+
 export const WORKSPACE_INTERACTION_MODES: readonly WorkspaceInteractionMode[] = [
   "creator",
   "learner",
 ] as const;
 
+export const WORKSPACE_MAP_TOGGLE_IDS: readonly WorkspaceMapToggleId[] = [
+  "creator",
+  "learner",
+  "explore",
+] as const;
+
 /**
- * User-visible labels for the workspace mode toggle (next to workspace name).
- * Wire/state ids stay `"creator"` | `"learner"`; display is Build / Play.
+ * User-visible labels for the workspace mode toggle (under minimap).
+ * Wire/state ids stay `"creator"` | `"learner"` | `"explore"`; display is
+ * Build / Play / Explore.
  */
 export const WORKSPACE_MODE_DISPLAY_LABELS: Readonly<
-  Record<WorkspaceInteractionMode, string>
+  Record<WorkspaceMapToggleId, string>
 > = {
   creator: "Build",
   learner: "Play",
+  explore: "Explore",
 } as const;
 
-/** Display label for a mode id (Build for authoring, Play for practice). */
+/** Display label for a toggle id (Build / Play / Explore). */
 export function workspaceModeDisplayLabel(
-  mode: WorkspaceInteractionMode,
+  mode: WorkspaceMapToggleId,
 ): string {
   return WORKSPACE_MODE_DISPLAY_LABELS[mode];
+}
+
+export function isWorkspaceMapToggleId(
+  value: unknown,
+): value is WorkspaceMapToggleId {
+  return value === "creator" || value === "learner" || value === "explore";
+}
+
+/** Which under-minimap segment is lit. Explore wins over Build/Play. */
+export function resolveWorkspaceMapToggleId(input: {
+  interactionMode: WorkspaceInteractionMode | null | undefined;
+  exploreOpen?: boolean;
+}): WorkspaceMapToggleId {
+  if (input.exploreOpen) return "explore";
+  return normalizeWorkspaceInteractionMode(input.interactionMode);
+}
+
+/**
+ * Next Build / Play / Explore state after a toggle click.
+ * Explore keeps the current Build/Play shell underneath; leaving Explore
+ * closes the overlay without inventing a mode.
+ */
+export function nextWorkspaceMapToggle(input: {
+  clicked: unknown;
+  interactionMode: WorkspaceInteractionMode | null | undefined;
+  exploreOpen?: boolean;
+}): {
+  interactionMode: WorkspaceInteractionMode;
+  exploreOpen: boolean;
+} {
+  const current = normalizeWorkspaceInteractionMode(input.interactionMode);
+  if (input.clicked === "explore") {
+    return { interactionMode: current, exploreOpen: true };
+  }
+  if (input.clicked === "creator" || input.clicked === "learner") {
+    return { interactionMode: input.clicked, exploreOpen: false };
+  }
+  return { interactionMode: current, exploreOpen: Boolean(input.exploreOpen) };
 }
 
 export function isWorkspaceInteractionMode(

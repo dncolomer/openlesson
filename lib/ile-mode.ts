@@ -31,7 +31,7 @@ export type IleShellKind = "learning" | "project";
 
 export const ILE_SESSION_MODE_LABELS: Record<IleSessionMode, string> = {
   learning: "Learning Mode",
-  project: "Project Mode",
+  project: "Explore Solo",
 };
 
 /**

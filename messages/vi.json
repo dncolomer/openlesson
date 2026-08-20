@@ -1657,14 +1657,14 @@
     "blockDetailGuideHint3": "ILE: nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
     "blockDetailGuideHint4": "Trình tạo không gian, thêm hoặc điều chỉnh khối khi phát hiện khoảng trống trong kế hoạch.",
     "blockDetailGuideHint5": "TAP: chạy khi bạn sẵn sàng chứng minh kỹ năng, không phải lần đầu.",
-    "ileProjectHelpTitle": "ILE · Project Mode",
+    "ileProjectHelpTitle": "Explore · Solo Exercise",
     "ileProjectHelpSummary": "Longer-horizon exercises per chapter — no Helios conversation bubbles; dual-stack Thoughts (stash + solution).",
     "ileProjectHelpPoint1": "Each chapter is a solo exercise you work through with tools (canvas, notebook, thoughts).",
     "ileProjectHelpPoint2": "Thoughts tool splits stash (System 1) and solution (System 2); move thoughts between stacks.",
     "ileProjectHelpPoint3": "Mark as Done is final for that chapter (PoW only) — no on-screen score or evaluation.",
     "ileLearningCtaLabel": "ILE · Learning Mode",
     "ileLearningCtaHint": "Helios dialogue — practice & guidance",
-    "ileProjectCtaLabel": "ILE · Project Mode",
+    "ileProjectCtaLabel": "Explore · Solo Exercise",
     "ileProjectCtaHint": "Exercises per chapter — dual-stack Thoughts"
   },
   "planView": {
@@ -1774,8 +1774,8 @@
     "guestLinksBrowseCount": "Hiển thị {shown} / {total}",
     "guestLinksBrowseEmpty": "Chưa có liên kết TAP hoặc ILE. Tạo ở tab Tạo.",
     "guestLinksBrowseNoMatches": "Không có liên kết khớp tìm kiếm và bộ lọc.",
-    "ileLinksProjectMode": "Project Mode",
-    "ileLinksProjectModeHint": "Unchecked = Learning Mode with Helios dialogue. Checked = Project Mode: no conversation bubbles, each chapter is a longer exercise, Thoughts tool has stash + solution stacks, Mark as Done is final (PoW only, no on-screen score).",
+    "ileLinksProjectMode": "Explore · Solo Exercise",
+    "ileLinksProjectModeHint": "Unchecked = Explore · Dialog. Checked = Explore · Solo Exercise (exercises per chapter, dual-stack Thoughts).",
     "practicePortalTitle": "Knowledge Portal",
     "practicePortalHint": "Share one workspace-scoped link. Visitors open a landing page and mint the session type that fits their style — only the products and timings you enable. The portal URL stays available here to copy anytime.",
     "practicePortalCreate": "Create Knowledge Portal",
@@ -2500,7 +2500,7 @@
         "imageAlt": "Selective thought interface",
         "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights.",
         "titleProject": "Think aloud — stash & solution",
-        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Project Mode."
+        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Explore Solo."
       },
       "step3": {
         "title": "Depth over speed",

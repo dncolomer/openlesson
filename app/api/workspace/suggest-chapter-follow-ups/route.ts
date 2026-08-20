@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     const ai = await callXaiJSON<SuggestChapterFollowUpsResponse>(
       [
         systemMessage(
-          `You propose the next learning exercises after a learner marks a chapter Done in Project Mode (solo exercise, stash + solution thoughts).
+          `You propose the next learning exercises after a learner marks a chapter Done in Explore Solo (solo exercise, stash + solution thoughts).
 Return ONLY JSON: { "suggestions": [ { "title": "...", "description": "..." }, ... ] } with exactly 3 items.
 Rules:
 - Each suggestion is a longer-horizon exercise suitable as a NEW chapter next to the completed one (adjacent topic, not a duplicate).

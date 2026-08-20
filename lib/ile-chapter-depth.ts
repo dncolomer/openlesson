@@ -57,7 +57,7 @@ TOOL FIT (use when the topic earns it — never as ritual):
 
 export function ileChapterGrainRules(mode: IleSessionMode): string {
   if (mode === "project") {
-    return `PROJECT CHAPTER GRAIN (Explore · Solo / Project Mode — standalone exercises):
+    return `PROJECT CHAPTER GRAIN (Explore Solo — standalone exercises):
 - Each chapter is a standalone longer-horizon exercise: one completable task per chapter, not a Dialog multi-turn script.
 - Write a self-contained exercise the learner can finish solo (Thoughts, Notebook, Canvas as needed). Do not script a conversation sequence.
 - Do not split one exercise into micro-chapters such as "summarize what you understand as X", "draw X on a notebook", "make a list", then "finish the list from chapter 1".
@@ -103,7 +103,7 @@ export function ileChapterExpansionRules(mode: IleSessionMode): string {
 
   return `DIALOG CHAPTER MAP EXPANSION:
 - The chapter map can be expanded / grow — it is not a fixed list.
-- Prompt the learner to suggest / propose new chapters about the topic they are actually working on (not only after Project Mode Done).
+- Prompt the learner to suggest / propose new chapters about the topic they are actually working on (not only after Explore Solo Done).
 - When they (or you) suggest a new chapter, that suggestion is Proof of Work; if they accept and add it, the accepted add is also Proof of Work.
 - Ask something like: "This thread could be its own chapter — want to add one about [concrete topic]?"
 - Do not auto-insert chapters without the learner confirming.

@@ -242,7 +242,7 @@ export function SessionHeliosPanel({
                       chapterThoughtsLocked ? "text-neutral-500" : "text-neutral-300/85"
                     }`}
                   >
-                    Project Mode · Exercise
+                    Explore Solo · Exercise
                   </p>
                   <p
                     className={`mt-2.5 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed ${

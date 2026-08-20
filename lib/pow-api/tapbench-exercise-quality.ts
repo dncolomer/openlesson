@@ -19,7 +19,7 @@ function surfaceLabel(surface: DomainExerciseSurface): string {
     case "tap_exercise":
       return "human TAP timed drill";
     case "ile_project":
-      return "ILE Project Mode chapter exercise";
+      return "ILE Explore Solo chapter exercise";
     default:
       return "TAPBench agent evaluation";
   }

@@ -51,7 +51,7 @@ describe("normalizeIleSessionMode / resolve", () => {
     expect(resolveIleSessionModeFromSession({})).toBe("learning");
     expect(resolveIleShellFromSession({})).toBe("learning");
     expect(ILE_SESSION_MODE_LABELS.learning).toBe("Learning Mode");
-    expect(ILE_SESSION_MODE_LABELS.project).toBe("Project Mode");
+    expect(ILE_SESSION_MODE_LABELS.project).toBe("Explore Solo");
   });
 
   it("accepts Project Mode via kind string, checkbox flags, and aliases", () => {
@@ -314,7 +314,9 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(helios).toContain("projectMode");
     expect(helios).toContain('data-helios-bubbles="hidden"');
     expect(helios).toContain("data-ile-project-exercise-prompt");
-    // DialogueSplit remains for Learning Mode, not Project Mode live surface
+    expect(helios).toContain("Explore Solo · Exercise");
+    expect(helios).not.toContain("Project Mode · Exercise");
+    // DialogueSplit remains for Learning Mode, not Explore Solo live surface
     expect(helios).toContain("DialogueSplit");
     expect(helios).toContain("projectMode ?");
 

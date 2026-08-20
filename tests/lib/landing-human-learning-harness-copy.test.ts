@@ -61,6 +61,8 @@ describe("landing Human Learning Harness copy", () => {
     expect(lp).not.toContain("Beyond benchmarks for AI.");
     expect(lp).not.toContain("Beyond tests for humans.");
     expect(lp).not.toContain("three verticals for human and agentic learning");
+    expect(lp).not.toMatch(/\bagents?\b/i);
+    expect(lp).not.toMatch(/agentic/i);
     expect(lp).toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
   });
 

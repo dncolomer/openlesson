@@ -79,8 +79,8 @@ export default function B2BLandingPage() {
         <p className="mt-4 max-w-5xl text-base leading-relaxed text-zinc-400 sm:text-lg">
           Every workspace puts people into a shared embedding geometry. Create knowledge regions,
           multi-select users, and read{" "}
-          <span className="text-zinc-200">distance to knowledge</span> live: see how humans and agents alike
-          do against your defined knowledge regions.
+          <span className="text-zinc-200">distance to knowledge</span> live: see how people do against your
+          defined knowledge regions.
         </p>
         <p className="mt-3 max-w-5xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
           Create{" "}
@@ -134,9 +134,9 @@ export default function B2BLandingPage() {
             learner model to proactively steer the thinking process.
           </p>
           <p className="mt-5">
-            We score whether humans and agents can perform before being hired or deployed. We optimize routes
-            for the next practice or coaching step when gaps show up in the model. We augment by helping you
-            outsource the right type of thinking but not the actual learning.
+            We score whether people actually hold the knowledge. We optimize routes for the next practice or
+            coaching step when gaps show up in the model. We augment by helping you outsource the right type of
+            thinking but not the actual learning.
           </p>
         </div>
       </section>

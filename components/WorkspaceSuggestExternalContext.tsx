@@ -178,10 +178,6 @@ export function WorkspaceSuggestExternalContext({
           {busy ? "Suggesting…" : "Suggest from web"}
         </button>
       </div>
-      <p className="text-[10px] leading-snug text-neutral-600">
-        Proposes reputable links for this topic. Attach ones you want as local
-        context before create.
-      </p>
       {error ? (
         <p className="text-[11px] text-red-400/90" data-suggest-external-context-error>
           {error}

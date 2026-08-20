@@ -199,9 +199,6 @@ export function WorkspaceBlockEditPanel({
           <span className="block text-[11px] font-medium text-neutral-200">
             Starter block
           </span>
-          <span className="mt-0.5 block text-[10px] leading-snug text-neutral-500">
-            Flag as a potential start for learning paths on this map.
-          </span>
         </span>
       </label>
 
@@ -212,10 +209,6 @@ export function WorkspaceBlockEditPanel({
       >
         <div>
           <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
-          <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
-            Explore launches ILE; Drill launches TAP. Second choice for both:
-            With AI vs Solo. Durations apply to Drill (TAP) only.
-          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>

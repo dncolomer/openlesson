@@ -20,7 +20,7 @@ export function WorkspaceCloneBlockPane({
   onArm: (blockId: string) => void;
   onCancel: () => void;
 }) {
-  const title = String(blockTitle || "").trim() || "this block";
+  void blockTitle;
 
   return (
     <div
@@ -29,24 +29,13 @@ export function WorkspaceCloneBlockPane({
       data-clone-armed={armed ? "true" : "false"}
       className="space-y-3"
     >
-      <p className="text-[11px] leading-relaxed text-neutral-400">
-        Copy{" "}
-        <span className="text-neutral-200">&ldquo;{title}&rdquo;</span> onto an
-        empty map cell. Click <span className="text-neutral-200">Clone</span>,
-        then click a <span className="text-neutral-200">placeable empty</span>{" "}
-        cell — content is pasted as a new 1×1 block (not AI-invented).
-      </p>
-
       {armed ? (
         <div
           className="rounded-lg border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-2"
           data-clone-armed-banner
         >
           <p className="text-[11px] font-medium text-neutral-200/95">
-            Clone armed — click an empty cell on the map
-          </p>
-          <p className="mt-0.5 text-[10px] leading-snug text-neutral-200/70">
-            Occupied or unusable cells are ignored. Cancel to disarm.
+            Clone armed — click an empty cell
           </p>
           <button
             type="button"

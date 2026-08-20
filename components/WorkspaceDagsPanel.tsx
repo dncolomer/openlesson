@@ -161,10 +161,6 @@ export function WorkspaceDagsPanel({
     >
       <div className="mb-3 shrink-0">
         <h2 className="text-sm font-semibold text-white">DAGs</h2>
-        <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">
-          Journey graphs on this workspace. Open a card to edit leads-to links,
-          or delete. Create new graphs from the map (multi-select → DAG → Apply).
-        </p>
       </div>
 
       {error ? (
@@ -253,11 +249,6 @@ export function WorkspaceDagsPanel({
               className="rounded-lg border border-dashed border-white/10 bg-neutral-950/50 px-4 py-8 text-center"
             >
               <p className="text-xs text-neutral-300">No DAGs yet</p>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
-                Multi-select 2–9 blocks on the map, open the DAG drawer, connect
-                leads-to links, and Apply. Graphs already on the map (leads-to
-                links) also appear here automatically.
-              </p>
             </div>
           ) : (
             <ul

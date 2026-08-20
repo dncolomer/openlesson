@@ -424,10 +424,6 @@ export function WorkspaceLearnerBlockPane({
           surfaceDataAttr="data-learner-dynamic-unlock-drawer"
         >
           <div data-learner-dynamic-unlock className="space-y-2">
-            <p className="text-[11px] leading-relaxed text-neutral-400">
-              Complete every block below to unlock this Dynamic topic. These
-              are not path-graph (DAG) edges.
-            </p>
             <ul className="space-y-1" data-learner-dynamic-unlock-deps>
               {dynamicUnlockDeps.map((p) => (
                 <li
@@ -465,10 +461,6 @@ export function WorkspaceLearnerBlockPane({
             data-learner-dag-edge-count={localDagDraft.edges.length}
             className="space-y-2"
           >
-            <p className="text-[11px] leading-relaxed text-neutral-400">
-              Local path for this block. Map highlights related blocks when you
-              select a locked topic.
-            </p>
             <MultiBlockDagCanvas
               blocks={localDagCanvasBlocks}
               draft={localDagDraft}
@@ -513,15 +505,11 @@ export function WorkspaceLearnerBlockPane({
           data-learner-done-panel
           className="space-y-3"
         >
-          <p className="text-[11px] leading-relaxed text-neutral-400">
-            Your proof of work for{" "}
-            <span className="text-neutral-200">{displayTitle}</span>
-            {isCompleted ? (
-              <span className="ml-1.5 text-[10px] uppercase tracking-wide text-emerald-400/90">
-                · done
-              </span>
-            ) : null}
-          </p>
+          {isCompleted ? (
+            <p className="text-[10px] uppercase tracking-wide text-emerald-400/90">
+              Done
+            </p>
+          ) : null}
 
           {progress.phase === "checking_pow" ? (
             <p className="text-[11px] text-neutral-500" data-learner-pow-loading>
@@ -687,11 +675,6 @@ export function WorkspaceLearnerBlockPane({
                   ? "Mark Done anyway"
                   : "Mark as Done"}
           </button>
-          <p className="text-[10px] leading-snug text-neutral-600">
-            PoW recommendation is advisory only. Mark Done always persists
-            status, runs Generator / Dynamic effects, unlocks dependents, and
-            refreshes the learning world model in the background.
-          </p>
 
           <p className="sr-only" data-workspace-id={workspaceId}>
             {workspaceId}

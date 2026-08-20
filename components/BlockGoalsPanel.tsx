@@ -113,10 +113,6 @@ export function BlockGoalsPanel({
 
   return (
     <div className="space-y-3" data-block-goals-panel data-block-goals-drawer-body>
-      <p className="text-[11px] leading-relaxed text-neutral-500">
-        Goals specific to this block. Snapshots include them when proof of work is linked here.
-      </p>
-
       {loading ? (
         <p className="text-xs text-neutral-500">Loading…</p>
       ) : goals.length === 0 ? (

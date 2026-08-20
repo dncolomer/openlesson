@@ -131,11 +131,11 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
     expect(edit).toContain("With AI");
     expect(edit).toContain("Solo");
+    expect(edit).toContain("allowExplore");
+    expect(edit).toContain("allowDrill");
     // Must not restate Explore-always-dialog / Drill-always-timed contradiction
     expect(edit).not.toContain("Explore is always dialogue");
     expect(edit).not.toContain("Drill is always timed practice");
-    expect(edit).toContain("Explore launches ILE");
-    expect(edit).toContain("Drill launches TAP");
 
     // SessionItem learner launch: Drill, not Timed
     const sessionItem = read("components/SessionItem.tsx");
@@ -524,6 +524,45 @@ describe("suggest from knowledge + simulation", () => {
     expect(route).toContain("from(\"blocks\")");
     // Must not ship pure offline template builder as success path
     expect(route).not.toContain("buildSuggestFromKnowledge(");
+  });
+
+  it("generative drawers keep one adhoc prompt field (no leftover sibling textarea)", () => {
+    const alt = read("components/WorkspacePromptContextAlternatives.tsx");
+    expect(alt).toContain("adhocInputDataAttr");
+    expect(alt).toContain("data-prompt-context-adhoc-input");
+
+    const cases: Array<{ file: string; hook: string }> = [
+      { file: "components/WorkspaceAddBlockPane.tsx", hook: "data-add-block-prompt" },
+      {
+        file: "components/WorkspaceGenerateShapePane.tsx",
+        hook: "data-generate-shape-prompt",
+      },
+      {
+        file: "components/WorkspaceCombineBlocksPane.tsx",
+        hook: "data-bridge-prompt",
+      },
+      {
+        file: "components/WorkspaceExpandBlockPane.tsx",
+        hook: "data-expand-block-modifier-input",
+      },
+      {
+        file: "components/WorkspaceEmptyMapPane.tsx",
+        hook: "data-empty-map-suggest-input",
+      },
+    ];
+    for (const { file, hook } of cases) {
+      const src = read(file);
+      expect(src, file).toContain(`adhocInputDataAttr="${hook}"`);
+      // The hook must live on the shared Adhoc box, not a second bound field.
+      expect(src, file).not.toMatch(
+        new RegExp(`<(?:textarea|input)[^>]*\\b${hook}\\b`),
+      );
+    }
+
+    writeLog(
+      "single-adhoc-prompt-field.log",
+      "add+shape+bridge+expand+suggest_spot=one_adhoc_field\n",
+    );
   });
 });
 

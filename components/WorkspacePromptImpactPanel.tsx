@@ -26,7 +26,7 @@ export function WorkspacePromptImpactPanel({
   blockLocalContext,
   unusableCells,
   compact,
-  canEdit,
+  canEdit: _canEdit,
   /** When true, omit the "How context shapes practice" header (tab panels). */
   hideHeading,
 }: {
@@ -77,17 +77,8 @@ export function WorkspacePromptImpactPanel({
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
             How context shapes practice
           </p>
-          <p className="text-xs leading-relaxed text-neutral-400">
-            {canEdit
-              ? "Everything you attach — notes, files, map layout, and local block knowledge — is what TAP, ILE, and TAPBench read when they write prompts."
-              : "This workspace’s materials and map layout are what TAP, ILE, and TAPBench use to write prompts. Inspect layers below."}
-          </p>
         </header>
-      ) : (
-        <p className="text-xs leading-relaxed text-neutral-500" data-prompt-impact-tab-blurb>
-          Layers that feed practice prompts for this block.
-        </p>
-      )}
+      ) : null}
 
       <ul className="space-y-2" data-prompt-impact-layers>
         {ctx.promptImpactLayers.map((layer) => (

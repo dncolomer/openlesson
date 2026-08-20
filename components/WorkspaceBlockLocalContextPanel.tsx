@@ -441,14 +441,6 @@ export function WorkspaceBlockLocalContextPanel({
             ) : null}
           </div>
 
-          <p className="text-[11px] leading-relaxed text-neutral-500">
-            Explicitly links notes, file refs, and external sources to{" "}
-            <span className="font-medium text-neutral-300">
-              {blockTitle?.trim() || "this block"}
-            </span>{" "}
-            only — not the whole workspace. Changes are not applied until you
-            save.
-          </p>
           <button
             type="button"
             data-block-local-save

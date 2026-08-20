@@ -43,6 +43,8 @@ import {
   type PromptContextMode,
 } from "@/components/WorkspacePromptContextAlternatives";
 import { WorkspaceMultiBlockSimulationPanel } from "@/components/WorkspaceMultiBlockSimulationPanel";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { normalizeSuggestDagResponse } from "@/lib/suggest-dag";
 import {
   CLUSTER_SEPARATION_DEFAULT,
   CLUSTER_SEPARATION_MAX,
@@ -170,6 +172,7 @@ export function WorkspaceCombineBlocksPane({
     draftMultiBlockDag(blockIds, nodes),
   );
   const [dagSubmitting, setDagSubmitting] = useState(false);
+  const [dagSuggesting, setDagSuggesting] = useState(false);
   const [dagError, setDagError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -246,6 +249,7 @@ export function WorkspaceCombineBlocksPane({
     setBridgeError(null);
     setDagDraft(draftMultiBlockDag(blockIds, nodes));
     setDagError(null);
+    setDagSuggesting(false);
     setDeleteError(null);
     setClusterAuto(true);
     setClusterCountInput(Math.max(2, resolveAutoClusterCount(blockIds.length)));
@@ -371,7 +375,7 @@ export function WorkspaceCombineBlocksPane({
   };
 
   const submitDag = async () => {
-    if (!onApplyDag || dagSubmitting || busy || selected.length < 2) return;
+    if (!onApplyDag || dagSubmitting || dagSuggesting || busy || selected.length < 2) return;
     setDagSubmitting(true);
     setDagError(null);
     try {
@@ -383,6 +387,45 @@ export function WorkspaceCombineBlocksPane({
       setDagError(err instanceof Error ? err.message : "Failed to apply DAG");
     } finally {
       setDagSubmitting(false);
+    }
+  };
+
+  const suggestDag = async () => {
+    if (
+      !workspaceId ||
+      dagSuggesting ||
+      dagSubmitting ||
+      busy ||
+      selected.length < 2 ||
+      dagTooManyBlocks
+    ) {
+      return;
+    }
+    setDagSuggesting(true);
+    setDagError(null);
+    const ids = selected.map((n) => n.id);
+    try {
+      const res = await fetch("/api/workspace/suggest-dag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          blockIds: ids,
+          ...(ayclToken ? { ayclToken } : {}),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: unknown;
+        draft?: unknown;
+      };
+      if (!res.ok) {
+        throw new Error(errorMessageFromBody(data, "Failed to suggest DAG"));
+      }
+      setDagDraft(normalizeSuggestDagResponse(data, ids, selected));
+    } catch (err) {
+      setDagError(err instanceof Error ? err.message : "Failed to suggest DAG");
+    } finally {
+      setDagSuggesting(false);
     }
   };
 
@@ -549,13 +592,6 @@ export function WorkspaceCombineBlocksPane({
         defaultExpanded={contiguous}
         bodyClassName="space-y-3"
       >
-        <p className="text-[11px] leading-relaxed text-neutral-400">
-          Merge the selected map blocks into{" "}
-          <span className="text-neutral-200">one broader block</span>. The combined
-          topic spans the union of their shapes and covers more ground than either
-          alone — useful when several small lectures belong together as one unit.
-        </p>
-
         {/*
           Single-column merge diagram — never wraps in the narrow right pane.
           Stack of compact rows with + separators → result strip.
@@ -622,9 +658,6 @@ export function WorkspaceCombineBlocksPane({
               data-combine-result-hint
             >
               1 broader block
-            </p>
-            <p className="mt-0.5 text-[10px] leading-snug text-neutral-500">
-              Covers all {selected.length} selections as one larger topic
             </p>
           </div>
         </div>
@@ -700,15 +733,6 @@ export function WorkspaceCombineBlocksPane({
         surfaceDataAttr="data-bridge-blocks-drawer"
       >
         <div data-bridge-blocks-pane className="space-y-3">
-          <p className="text-[11px] leading-relaxed text-neutral-400">
-            Generate a{" "}
-            <span className="text-neutral-200">knowledge bridge</span> of new
-            1×1 blocks along a straight path linking the selected topics.{" "}
-            <span className="text-neutral-300">Width</span> thickens the
-            corridor; <span className="text-neutral-300">density</span> fills
-            placeable cells inside it.
-          </p>
-
           <label className="block space-y-1" data-bridge-width>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-neutral-400">Width</span>
@@ -728,9 +752,6 @@ export function WorkspaceCombineBlocksPane({
               className="w-full accent-white"
               data-bridge-width-input
             />
-            <p className="text-[10px] leading-snug text-neutral-600">
-              Corridor thickness (0 = centerline only; max {BRIDGE_WIDTH_MAX}).
-            </p>
           </label>
 
           <label className="block space-y-1" data-bridge-density>
@@ -751,9 +772,6 @@ export function WorkspaceCombineBlocksPane({
               className="w-full accent-white"
               data-bridge-density-input
             />
-            <p className="text-[10px] leading-snug text-neutral-600">
-              0% = placeable spine only; 100% = full thickened corridor.
-            </p>
           </label>
 
           <div data-bridge-context-alternatives data-generative-context-alternatives>
@@ -770,14 +788,7 @@ export function WorkspaceCombineBlocksPane({
               disabled={busy || bridgeSubmitting}
               adhocPlaceholder="Optional guidance for the bridge (e.g. emphasize causality, shared vocabulary, or a transition exercise)…"
               adhocLabel="Bridging prompt"
-            />
-            <textarea
-              data-bridge-prompt
-              value={bridgePrompt}
-              onChange={(e) => setBridgePrompt(e.target.value)}
-              rows={2}
-              disabled={busy || bridgeSubmitting}
-              className="mt-1 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              adhocInputDataAttr="data-bridge-prompt"
             />
           </div>
 
@@ -823,10 +834,6 @@ export function WorkspaceCombineBlocksPane({
                 ? `Generate bridge (${bridgeSelection.selected.length} blocks)`
                 : "Generate bridge"}
           </button>
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Runs in the background like expand create — progress and Stop appear
-            under the minimap; bridge tiles stay non-clickable until finished.
-          </p>
         </div>
       </WorkspaceRightPaneDrawer>
 
@@ -840,16 +847,6 @@ export function WorkspaceCombineBlocksPane({
         surfaceDataAttr="data-cluster-blocks-drawer"
       >
         <div data-cluster-blocks-pane className="space-y-3">
-          <p className="text-[11px] leading-relaxed text-neutral-400">
-            Relocate the selected blocks into{" "}
-            <span className="text-neutral-200">physical clusters</span> on the
-            map. Content is unchanged — only positions move. Groups pack tightly
-            by default (min 3 empty cells between them). Drag{" "}
-            <span className="text-neutral-300">Separation</span> up if you want
-            them farther apart. A progress bar appears under the minimap while
-            clustering runs.
-          </p>
-
           <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-2.5 py-2">
             <input
               type="checkbox"
@@ -888,11 +885,6 @@ export function WorkspaceCombineBlocksPane({
               data-cluster-count-input
               className="w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
-            <p className="text-[10px] leading-snug text-neutral-600">
-              {clusterAuto
-                ? `Auto resolves to ${clusterPreviewCount} for this selection.`
-                : "1 keeps the selection together; higher splits into more groups."}
-            </p>
           </label>
 
           <label className="block space-y-1" data-cluster-separation>
@@ -929,10 +921,6 @@ export function WorkspaceCombineBlocksPane({
               className="w-full accent-white"
               data-cluster-separation-input
             />
-            <p className="text-[10px] leading-snug text-neutral-600">
-              0 = tightest legal (3 empty cells between groups). Higher values
-              push clusters farther apart on the map.
-            </p>
           </label>
 
           <label className="block space-y-1">
@@ -1003,13 +991,6 @@ export function WorkspaceCombineBlocksPane({
             </p>
           ) : (
             <>
-              <p className="text-[11px] leading-relaxed text-neutral-400">
-                Draw <span className="text-neutral-200">leads to</span> links
-                among the selected blocks (journey order). Prerequisites still
-                use the map lock tool. Links outside this selection stay intact.
-                Apply to save.
-              </p>
-
               <MultiBlockDagCanvas
                 blocks={selected.map((b) => ({
                   id: b.id,
@@ -1018,7 +999,7 @@ export function WorkspaceCombineBlocksPane({
                   position_y: b.position_y,
                 }))}
                 draft={dagDraft}
-                disabled={busy || dagSubmitting}
+                disabled={busy || dagSubmitting || dagSuggesting}
                 onToggleEdge={toggleDagEdge}
               />
 
@@ -1040,10 +1021,27 @@ export function WorkspaceCombineBlocksPane({
 
               <button
                 type="button"
+                data-dag-suggest
+                disabled={
+                  busy ||
+                  dagSubmitting ||
+                  dagSuggesting ||
+                  selected.length < 2 ||
+                  dagTooManyBlocks ||
+                  !workspaceId
+                }
+                onClick={() => void suggestDag()}
+                className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {dagSuggesting ? "Suggesting…" : "Suggest DAG"}
+              </button>
+              <button
+                type="button"
                 data-dag-apply
                 disabled={
                   busy ||
                   dagSubmitting ||
+                  dagSuggesting ||
                   selected.length < 2 ||
                   !onApplyDag
                 }
@@ -1089,10 +1087,9 @@ export function WorkspaceCombineBlocksPane({
           className="space-y-3"
         >
           <p className="text-[11px] leading-relaxed text-neutral-400">
-            Permanently remove all{" "}
+            Permanently remove{" "}
             <span className="text-neutral-200">{selected.length}</span> selected
-            blocks from the map. Peer next-links and lock-until edges that pointed
-            at them are cleaned up.
+            blocks.
           </p>
           <ul className="space-y-1" data-delete-block-list>
             {selected.map((b) => (

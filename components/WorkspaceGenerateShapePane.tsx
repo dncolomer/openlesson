@@ -252,14 +252,9 @@ export function WorkspaceGenerateShapePane({
       >
         {!shapeFreeform.ok && shapeFootprint ? (
           <p className="text-[11px] text-neutral-300/90" data-shape-not-contiguous>
-            Select edge-connected cells only (no diagonal gaps). Any contiguous shape works as
-            one lecture.
+            Select edge-connected cells only.
           </p>
-        ) : (
-          <p className="text-[10px] leading-relaxed text-neutral-600">
-            Any contiguous shape (L, T, freeform). Suggestions scale with cell count.
-          </p>
-        )}
+        ) : null}
 
         <div className="mb-1 flex items-center justify-between gap-2 pb-1">
           <button
@@ -315,17 +310,10 @@ export function WorkspaceGenerateShapePane({
             disabled={busy || submitting}
             adhocPlaceholder={labels.addPlaceholder}
             adhocLabel="Shape prompt"
+            adhocInputDataAttr="data-generate-shape-prompt"
+            adhocAutoFocus
           />
         </div>
-        <textarea
-          data-generate-shape-prompt
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder={labels.addPlaceholder}
-          className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-          rows={4}
-          autoFocus
-        />
 
         <div
           className="space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5"
@@ -333,10 +321,6 @@ export function WorkspaceGenerateShapePane({
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Attach context sources
-          </p>
-          <p className="text-[10px] leading-relaxed text-neutral-600">
-            Selected files, external links, and notes become local context on the new block and
-            feed generation.
           </p>
           <WorkspaceSuggestExternalContext
             workspaceId={workspaceId}
@@ -355,10 +339,7 @@ export function WorkspaceGenerateShapePane({
               Loading sources…
             </p>
           ) : contextOptions.length === 0 ? (
-            <p className="text-[11px] text-neutral-600">
-              No Context sources yet — add files or links under the Context tab, or suggest
-              from the web above.
-            </p>
+            <p className="text-[11px] text-neutral-600">No sources yet</p>
           ) : (
             <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
               {contextOptions.map((opt) => {
@@ -419,9 +400,6 @@ export function WorkspaceGenerateShapePane({
           <span className="min-w-0 flex-1">
             <span className="block text-[11px] font-medium text-neutral-200">
               Starter block
-            </span>
-            <span className="mt-0.5 block text-[10px] leading-snug text-neutral-500">
-              Flag the created block as a potential start for learning paths.
             </span>
           </span>
         </label>

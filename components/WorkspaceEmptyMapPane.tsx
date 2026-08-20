@@ -37,7 +37,7 @@ import {
  * Powered by /api/workspace/map-explore.
  */
 export function WorkspaceEmptyMapPane({
-  canEdit = false,
+  canEdit: _canEdit = false,
   interactionMode = "creator",
   workspaceId,
   ayclToken = null,
@@ -431,9 +431,6 @@ export function WorkspaceEmptyMapPane({
         >
           Expand Map · {modeLabel}
         </p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-neutral-500">
-          Open a drawer: overview, search, empty spots, or selective summary.
-        </p>
       </div>
 
       <WorkspaceRightPaneDrawer
@@ -467,10 +464,6 @@ export function WorkspaceEmptyMapPane({
           data-map-explore-drawer-body="map_search"
           className="flex flex-col gap-3"
         >
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Find blocks about a topic — multi-selects matching filled blocks on
-            the map.
-          </p>
           <label className="block space-y-1.5">
             <span className="sr-only">Search topic</span>
             <input
@@ -522,11 +515,6 @@ export function WorkspaceEmptyMapPane({
           data-map-explore-drawer-body="map_suggest_spot"
           className="flex flex-col gap-3"
         >
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Recommend empty placeable cells for a topic — multi-selects empties
-            (not filled blocks).
-            {!canEdit ? " Visibility only in Play." : ""}
-          </p>
           <div data-expand-map-suggest-context data-suggest-best-spot-context>
             <WorkspacePromptContextAlternatives
               workspaceId={workspaceId || undefined}
@@ -541,26 +529,10 @@ export function WorkspaceEmptyMapPane({
               disabled={disabled || spotBusy}
               adhocPlaceholder="Best spot for… (or use Suggest from Knowledge / Simulation)"
               adhocLabel="Topic for empty spot"
+              adhocInputDataAttr="data-empty-map-suggest-input"
+              onAdhocEnter={() => void handleSuggestSpot()}
             />
           </div>
-          <label className="block space-y-1.5">
-            <span className="sr-only">Topic for empty spot</span>
-            <input
-              type="text"
-              data-empty-map-suggest-input
-              value={spotTopic}
-              disabled={disabled || spotBusy}
-              onChange={(e) => setSpotTopic(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void handleSuggestSpot();
-                }
-              }}
-              placeholder="Best spot for…"
-              className="w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
-            />
-          </label>
           <label
             className="block space-y-1.5"
             data-empty-map-suggest-limit
@@ -591,9 +563,6 @@ export function WorkspaceEmptyMapPane({
               data-empty-map-suggest-limit-input
               aria-label="How many empty cells to select"
             />
-            <p className="text-[10px] leading-snug text-neutral-600">
-              How many empty cells to multi-select for this suggestion.
-            </p>
           </label>
           <button
             type="button"
@@ -632,10 +601,6 @@ export function WorkspaceEmptyMapPane({
           data-map-explore-drawer-body="map_selective"
           className="flex flex-col gap-3"
         >
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Draw a free-shape white overlay on the map (not a block selection).
-            Get a summary of that area, then save it as a map Note.
-          </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-2.5">
             <button
               type="button"
@@ -710,12 +675,11 @@ export function WorkspaceEmptyMapPane({
         >
           {exploreTargetCell ? (
             <p className="text-[10px] leading-snug text-neutral-500">
-              Empty cell r{exploreTargetCell.row}, c{exploreTargetCell.col}.
-              Explore uses map geometry and already filled blocks.
+              r{exploreTargetCell.row}, c{exploreTargetCell.col}
             </p>
           ) : (
             <p className="text-[10px] leading-snug text-neutral-600">
-              Click an empty cell on the map to choose where to explore.
+              Click an empty cell
             </p>
           )}
           <label className="block space-y-1">

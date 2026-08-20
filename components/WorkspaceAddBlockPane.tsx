@@ -414,17 +414,10 @@ export function WorkspaceAddBlockPane({
             disabled={busy || submitting}
             adhocPlaceholder={labels.addPlaceholder}
             adhocLabel="Block prompt"
+            adhocInputDataAttr="data-add-block-prompt"
+            adhocAutoFocus
           />
         </div>
-        <textarea
-          data-add-block-prompt
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          placeholder={labels.addPlaceholder}
-          className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-          rows={4}
-          autoFocus
-        />
 
         {/* Attach context → generation prompt + saved local_context (like generate-in-shape). */}
         <div
@@ -434,11 +427,6 @@ export function WorkspaceAddBlockPane({
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Attach local context
-          </p>
-          <p className="text-[10px] leading-relaxed text-neutral-600">
-            Selected files, external links, and notes feed block generation and
-            are saved as this block&apos;s local context (editable later on the
-            block).
           </p>
           <WorkspaceSuggestExternalContext
             workspaceId={workspaceId}
@@ -457,10 +445,7 @@ export function WorkspaceAddBlockPane({
               Loading sources…
             </p>
           ) : contextOptions.length === 0 ? (
-            <p className="text-[11px] text-neutral-600">
-              No Context sources yet — add files or links under the Context tab,
-              or suggest from the web above.
-            </p>
+            <p className="text-[11px] text-neutral-600">No sources yet</p>
           ) : (
             <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
               {contextOptions.map((opt) => {
@@ -515,10 +500,6 @@ export function WorkspaceAddBlockPane({
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Expand around this cell
-          </p>
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Places separate 1×1 blocks (not one multi-cell shape). Use Range for
-            neighborhood size and Density for how many slots fill.
           </p>
 
           <label className="block space-y-1" data-add-range>
@@ -578,10 +559,6 @@ export function WorkspaceAddBlockPane({
           >
             Randomize selection
           </button>
-          <p className="text-[10px] leading-snug text-neutral-600">
-            Multi-create runs in the background — progress and Stop appear under
-            the minimap so you can keep editing the map.
-          </p>
         </div>
 
         <label
@@ -599,9 +576,6 @@ export function WorkspaceAddBlockPane({
           <span className="min-w-0 flex-1">
             <span className="block text-[11px] font-medium text-neutral-200">
               Starter block
-            </span>
-            <span className="mt-0.5 block text-[10px] leading-snug text-neutral-500">
-              Flag created block(s) as potential starts for learning paths.
             </span>
           </span>
         </label>

@@ -193,8 +193,6 @@ export function WorkspaceExpandBlockPane({
 
   const densityIsMax = density >= ADD_DENSITY_MAX;
   const cellsToCreate = expandSelection.selected;
-  const title =
-    String(sourceIdentity.title || "").trim() || "selected block";
 
   const handleSubmit = async (candidatePrompts?: string[]) => {
     if (submitting || busy || cellsToCreate.length === 0) return;
@@ -242,13 +240,6 @@ export function WorkspaceExpandBlockPane({
       data-expand-source-block-id={sourceBlock.id}
       className="space-y-3"
     >
-      <p className="text-[11px] leading-relaxed text-neutral-400">
-        Grow new 1×1 neighbors around{" "}
-        <span className="text-neutral-200">&ldquo;{title}&rdquo;</span>. The
-        selected block is the main prompt/context — same Range/Density circle
-        mechanics as empty-cell expand (placeable empties only).
-      </p>
-
       {error ? (
         <p className="text-xs text-red-400/90" data-expand-block-error>
           {error}
@@ -262,10 +253,6 @@ export function WorkspaceExpandBlockPane({
       >
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
           Expand block
-        </p>
-        <p className="text-[10px] leading-snug text-neutral-600">
-          Places separate 1×1 blocks (not one multi-cell shape). Use Range for
-          neighborhood size and Density for how many slots fill.
         </p>
 
         <div data-expand-block-modifier data-generative-context-alternatives>
@@ -281,17 +268,7 @@ export function WorkspaceExpandBlockPane({
             disabled={busy || submitting}
             adhocPlaceholder="Optional guidance for the expansion (e.g. emphasize applications, keep beginner-friendly, or focus on proofs)…"
             adhocLabel="Modifier prompt"
-          />
-          {/* Keep legacy data-hook for structural tests */}
-          <textarea
-            data-expand-block-modifier-input
-            value={userGuidance}
-            onChange={(e) => setUserGuidance(e.target.value)}
-            rows={2}
-            disabled={busy || submitting}
-            className="sr-only"
-            aria-hidden
-            tabIndex={-1}
+            adhocInputDataAttr="data-expand-block-modifier-input"
           />
         </div>
 
@@ -388,10 +365,6 @@ export function WorkspaceExpandBlockPane({
             Rabbit Hole Expansion
           </button>
         </div>
-        <p className="text-[10px] leading-snug text-neutral-600">
-          Multi-create runs in the background — progress and Stop appear under
-          the minimap so you can keep editing the map.
-        </p>
       </div>
 
       <button

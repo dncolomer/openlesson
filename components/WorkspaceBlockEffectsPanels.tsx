@@ -35,7 +35,7 @@ function EffectToggle({
   disabled?: boolean;
   onChange: (next: boolean) => void;
   label: string;
-  description: string;
+  description?: string;
   dataAttr: string;
 }) {
   return (
@@ -55,9 +55,11 @@ function EffectToggle({
         <span className="block text-[12px] font-medium text-neutral-100">
           {label}
         </span>
-        <span className="block text-[11px] leading-relaxed text-neutral-400">
-          {description}
-        </span>
+        {description ? (
+          <span className="block text-[11px] leading-relaxed text-neutral-400">
+            {description}
+          </span>
+        ) : null}
       </span>
     </label>
   );
@@ -249,10 +251,6 @@ export function WorkspaceBlockDynamicEffectPanel({
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
-        <p className="text-[11px] leading-relaxed text-neutral-200/75">
-          Dynamic only works on an existing block. Add this block, then open it
-          and pick unlock-after blocks on the map.
-        </p>
       </div>
     );
   }
@@ -319,21 +317,12 @@ export function WorkspaceBlockDynamicEffectPanel({
           });
         }}
         label="Dynamic"
-        description="Map shows “?” until generated. Click other blocks on the map to require them Done first, then Save."
       />
 
       {draft.dynamic.enabled ? (
         <div className="space-y-1.5" data-dynamic-unlock-picker>
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Unlock after all done ({deps.length})
-          </p>
-          <p
-            className="rounded-md border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-neutral-200"
-            data-dynamic-map-pick-hint
-          >
-            Click filled blocks on the map to add or remove unlock requirements
-            (not empty cells, not this block). Save to make this a Dynamic “?”
-            block.
           </p>
           {deps.length === 0 ? (
             <p className="text-[11px] text-neutral-500" data-dynamic-no-peers>
@@ -561,10 +550,6 @@ export function WorkspaceBlockGeneratorEffectPanel({
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
-        <p className="text-[11px] leading-relaxed text-neutral-200/75">
-          Generator only works on an existing block. Add this block, then open
-          it and configure Generator targets in the drawer.
-        </p>
       </div>
     );
   }
@@ -627,21 +612,12 @@ export function WorkspaceBlockGeneratorEffectPanel({
           });
         }}
         label="Generator"
-        description="When completed, generates new blocks on empty map cells you pick. Click empty cells on the map, then Save targets."
       />
 
       {draft.generator.enabled ? (
         <div className="space-y-1.5" data-generator-target-picker>
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Empty targets ({cells.length})
-          </p>
-          <p
-            className="rounded-md border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-neutral-200"
-            data-generator-map-pick-hint
-          >
-            Click empty cells on the map to add or remove generation targets.
-            Save to keep them — after save they stay highlighted whenever this
-            block is selected.
           </p>
           {cells.length === 0 ? (
             <p className="text-[11px] text-neutral-500" data-generator-no-targets>

@@ -212,11 +212,7 @@ export function MultiBlockDagCanvas({
             ? "Click another block to connect · click same to cancel"
             : "Drag between blocks to connect · click an edge to remove"}
         </p>
-      ) : (
-        <p className="text-[10px] leading-snug text-neutral-500" data-dag-readonly-hint>
-          Local path for this block (read-only)
-        </p>
-      )}
+      ) : null}
 
       <div
         className="overflow-hidden rounded-md border border-white/10 bg-neutral-950/80"

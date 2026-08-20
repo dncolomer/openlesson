@@ -133,13 +133,6 @@ export function WorkspaceMultiBlockSimulationPanel({
       data-simulation-block-count={blockIds.length}
       className="space-y-3"
     >
-      <p className="text-[11px] leading-relaxed text-neutral-400">
-        Generate questions and exercises across{" "}
-        <span className="text-neutral-200">{blockIds.length}</span> selected
-        blocks. Results deposit into the workspace Simulation tab for curation
-        and Suggest from Simulation.
-      </p>
-
       <ul
         className="max-h-28 space-y-1 overflow-y-auto"
         data-multi-block-simulation-list

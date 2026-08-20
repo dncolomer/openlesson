@@ -68,14 +68,6 @@ export function WorkspaceSplitBlockPane({
       data-split-cell-count={cellCount}
       className="space-y-3"
     >
-      <p className="text-[11px] leading-relaxed text-neutral-400">
-        Split this{" "}
-        <span className="text-neutral-200">broader multi-cell block</span> into{" "}
-        <span className="text-neutral-200">more focused 1×1 pieces</span>. Each
-        result covers a narrower slice of the same topic — useful after a merge
-        when you want lectures that stand alone again.
-      </p>
-
       <div
         className="rounded-lg border border-white/10 bg-neutral-950/70 p-2"
         data-split-visual

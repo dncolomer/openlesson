@@ -45,8 +45,10 @@ export function WorkspaceSimulationPanel({
 }) {
   void workspaceDescription;
   void workspaceNotes;
+  void workspaceTitle;
+  void workspaceGoal;
+  void rootTopic;
   void blocks;
-  const title = String(workspaceTitle || rootTopic || "").trim() || "Workspace";
 
   const [modifierPrompt, setModifierPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -220,18 +222,6 @@ export function WorkspaceSimulationPanel({
         <h2 className="text-sm font-semibold tracking-tight text-white">
           Simulation
         </h2>
-        <p className="max-w-2xl text-[12px] leading-relaxed text-neutral-400">
-          Workspace-level generation of questions and exercises for{" "}
-          <span className="text-neutral-200">{title}</span>
-          {workspaceGoal ? (
-            <>
-              {" "}
-              toward <span className="text-neutral-200">{workspaceGoal}</span>
-            </>
-          ) : null}
-          . Curate the collection here; block and multi-block simulation run from
-          the map drawers.
-        </p>
       </header>
 
       <section
@@ -243,12 +233,6 @@ export function WorkspaceSimulationPanel({
         <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
           Entire workspace
         </h3>
-        <p className="mt-1 text-[12px] leading-relaxed text-neutral-400">
-          Samples are grounded in workspace goal, notes, and the full map
-          inventory — not a single block. For one block, open Block Simulation on
-          the map; for several, select them and use the multi-block Simulation
-          drawer.
-        </p>
 
         <label className="mt-3 block space-y-1" data-simulation-modifier>
           <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
@@ -458,16 +442,12 @@ export function WorkspaceSimulationPanel({
             {collectionLoading ? "Loading…" : "Refresh"}
           </button>
         </div>
-        <p className="mt-1 text-[11px] text-neutral-500">
-          Workspace, block, and multi-block generation all deposit here. Edit or
-          delete items; Suggest from Simulation reads this collection.
-        </p>
         {collectionItems.length === 0 ? (
           <p
             className="mt-2 text-[12px] text-neutral-600"
             data-simulation-collection-empty
           >
-            Collection empty — generate here or from map Simulation drawers.
+            Collection empty
           </p>
         ) : (
           <ul className="mt-2 space-y-2" data-simulation-collection-items>

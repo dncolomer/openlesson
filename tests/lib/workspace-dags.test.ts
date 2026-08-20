@@ -246,7 +246,6 @@ describe("DAGs tab UI / API structural", () => {
     expect(panel).toContain("data-workspace-dag-edit-save");
     expect(panel).toContain("data-workspace-dag-delete");
     expect(panel).toContain("MultiBlockDagCanvas");
-    expect(panel).toMatch(/no create|There is no create|Create new graphs from the map/i);
     const preview = read("components/MultiBlockDagPreview.tsx");
     expect(preview).toContain("data-multi-block-dag-preview");
     expect(preview).toContain("data-dag-preview-svg");

@@ -331,7 +331,7 @@ export function WorkspaceBlockSimulationPanel({
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] leading-snug text-neutral-600">
           {SIMULATION_QUESTION_COUNT} questions · {SIMULATION_EXERCISE_COUNT}{" "}
-          exercises · auto-generates on open · deposits to Sim tab
+          exercises
         </p>
         <button
           type="button"

@@ -52,9 +52,6 @@ export function WorkspaceBlockDangerPanel({
       data-block-edit-delete-section
       data-block-id={blockId}
     >
-      <p className="text-[11px] leading-snug text-neutral-400">
-        Permanently remove this block from the map. This cannot be undone.
-      </p>
       {error ? (
         <p className="text-[11px] text-red-400/90" data-block-edit-error>
           {error}
@@ -74,8 +71,7 @@ export function WorkspaceBlockDangerPanel({
       ) : (
         <div className="space-y-2" data-block-edit-delete-confirm>
           <p className="text-[11px] leading-snug text-neutral-400">
-            Delete <span className="text-neutral-200">“{title}”</span>? This removes
-            the block from the map. This cannot be undone.
+            Delete <span className="text-neutral-200">“{title}”</span>?
           </p>
           <div className="flex gap-2">
             <button

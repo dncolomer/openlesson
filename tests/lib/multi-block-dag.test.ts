@@ -161,9 +161,10 @@ describe("multi-select DAG + Delete UI / API structural", () => {
     expect(pane).toContain('drawerId="dag"');
     expect(pane).toContain('title="DAG"');
     expect(pane).toContain("data-dag-apply");
+    expect(pane).toContain("data-dag-suggest");
+    expect(pane).toContain("Suggest DAG");
     expect(pane).toContain("data-multi-block-dag-pane");
     expect(pane).toContain("MultiBlockDagCanvas");
-    expect(pane).toContain("leads to");
     expect(pane).not.toContain("Depends on");
     expect(pane).toContain("data-dag-too-many-message");
     expect(pane).toContain("You can only have");

@@ -148,10 +148,6 @@ export function WorkspaceGoalsPanel({
     >
       <div>
         <h2 className="text-sm font-medium text-white">Goals</h2>
-        <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-          Natural-language outcomes this workspace optimizes toward. LWM Snapshots score against
-          these by default (plus related block goals).
-        </p>
       </div>
 
       {loading ? (
@@ -162,9 +158,6 @@ export function WorkspaceGoalsPanel({
           data-goals-empty
         >
           <p className="text-sm text-neutral-300">No workspace goals yet</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Add one or more goals that define success for learners in this workspace.
-          </p>
         </div>
       ) : (
         <ul className="space-y-2" data-goals-list>

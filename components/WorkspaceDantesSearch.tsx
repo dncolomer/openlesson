@@ -154,9 +154,6 @@ export function WorkspaceDantesSearch({
         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
           Dantes search
         </p>
-        <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-          Find curated topics and attach external resources to this workspace.
-        </p>
       </div>
 
       <input

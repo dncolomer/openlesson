@@ -29,6 +29,9 @@ export function WorkspacePromptContextAlternatives({
   disabled = false,
   adhocPlaceholder = "Optional guidance for generation…",
   adhocLabel = "Adhoc guidance",
+  adhocInputDataAttr,
+  onAdhocEnter,
+  adhocAutoFocus = false,
 }: {
   workspaceId?: string;
   ayclToken?: string;
@@ -43,6 +46,10 @@ export function WorkspacePromptContextAlternatives({
   disabled?: boolean;
   adhocPlaceholder?: string;
   adhocLabel?: string;
+  /** Extra data-* marker on the adhoc field (e.g. pane-specific test hooks). */
+  adhocInputDataAttr?: string;
+  onAdhocEnter?: () => void;
+  adhocAutoFocus?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,10 +174,18 @@ export function WorkspacePromptContextAlternatives({
           <textarea
             value={adhocValue}
             onChange={(e) => onAdhocChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && onAdhocEnter) {
+                e.preventDefault();
+                onAdhocEnter();
+              }
+            }}
             disabled={disabled}
+            autoFocus={adhocAutoFocus}
             rows={3}
             placeholder={adhocPlaceholder}
             data-prompt-context-adhoc-input
+            {...(adhocInputDataAttr ? { [adhocInputDataAttr]: true } : {})}
             className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           />
         </label>

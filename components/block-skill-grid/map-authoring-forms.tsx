@@ -160,13 +160,9 @@ export function MapAuthoringForms({
             </p>
             {!shapeFreeformOk && shapeFootprint ? (
               <p className="mt-1 text-[11px] text-neutral-300/90" data-shape-not-contiguous>
-                Select edge-connected cells only (no diagonal gaps). Any contiguous shape works as one lecture.
+                Select edge-connected cells only.
               </p>
-            ) : (
-              <p className="mt-1 text-[10px] leading-relaxed text-neutral-600">
-                Any contiguous shape (L, T, freeform). Suggestions scale with cell count.
-              </p>
-            )}
+            ) : null}
             <div className="mt-3 flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -212,18 +208,12 @@ export function MapAuthoringForms({
               <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
                 Attach context sources
               </p>
-              <p className="text-[10px] leading-relaxed text-neutral-600">
-                Selected files, external links, and notes become local context on the new
-                block and feed generation.
-              </p>
               {shapeContextLoading ? (
                 <p className="text-[11px] text-neutral-600" data-shape-context-loading>
                   Loading sources…
                 </p>
               ) : shapeContextOptions.length === 0 ? (
-                <p className="text-[11px] text-neutral-600">
-                  No Context sources yet — add files or links under the Context tab.
-                </p>
+                <p className="text-[11px] text-neutral-600">No sources yet</p>
               ) : (
                 <ul className="max-h-36 space-y-1 overflow-y-auto" data-shape-context-list>
                   {shapeContextOptions.map((opt) => {

@@ -154,7 +154,7 @@ export default function B2BLandingPage() {
               VERIFICATION AT SCALE
             </div>
             <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
-              Verify and rank knowledge against your own knowledge regions at volume.
+              Verify and rank knowledge against your own knowledge regions at scale.
             </h2>
             <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
               <p>

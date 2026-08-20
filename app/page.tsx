@@ -50,7 +50,8 @@ export default function B2BLandingPage() {
             </p>
             <p className="text-zinc-500 sm:text-base">
               Verify knowledge without a test — uncheatable proof that it is actually held. Optimize so people learn
-              faster without a tutor. Augment thinking: you can outsource knowledge, you cannot outsource your learning.
+              faster without a tutor. Our system helps you optimally outsource your knowledge without giving up on
+              your learning.
             </p>
           </div>
           <div className="mt-6 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">

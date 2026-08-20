@@ -26,7 +26,7 @@ const H1_LINE_2 = "Learn without a tutor. Verify without a test.";
 const P1 =
   "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.";
 const P2 =
-  "Verify knowledge without a test — uncheatable proof that it is actually held. Optimize so people learn faster without a tutor. Augment thinking: you can outsource knowledge, you cannot outsource your learning.";
+  "Verify knowledge without a test — uncheatable proof that it is actually held. Optimize so people learn faster without a tutor. Our system helps you optimally outsource your knowledge without giving up on your learning.";
 
 const AGENTIC_VERIFICATION_CLAIMS = [
   "agentic verification",
@@ -66,21 +66,18 @@ describe("landing Human Learning Harness copy", () => {
     expect(lp).toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
   });
 
-  it("keeps pillar titles and ships the six agreed box bullets from HERO_PILLAR_PAGES", () => {
+  it("keeps pillar titles and ships the agreed box bullets from HERO_PILLAR_PAGES", () => {
     expect(HERO_PILLAR_PAGES).toHaveLength(3);
     expect(LEARNING_VERIFICATION_PAGE.titleLines).toEqual(["Learning", "Verification"]);
     expect(LEARNING_OPTIMIZATION_PAGE.titleLines).toEqual(["Learning", "optimization"]);
     expect(LEARNING_AUGMENTATION_PAGE.titleLines).toEqual(["Learning", "Augmentation"]);
     expect(LEARNING_VERIFICATION_PAGE.cardSummary).toEqual([
-      "Human Knowledge / Skill Validation",
-      "Cannot be faked",
+      "Human Knowledge / Skill Validation which cannot be faked with AI",
     ]);
     expect(LEARNING_OPTIMIZATION_PAGE.cardSummary).toEqual([
-      "Learn faster without a tutor",
-      "Real insights (“aha!” moments) within 30 minutes",
+      "You don't need an AI tutor, you need a system, a learning harness",
     ]);
     expect(LEARNING_AUGMENTATION_PAGE.cardSummary).toEqual([
-      "Identify knowledge gaps within 30 minutes",
       "Outsource your knowledge but don't outsource your learning",
     ]);
     expect(HERO_PILLAR_PAGES.map((p) => p.cardSummary)).toEqual([

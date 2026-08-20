@@ -63,7 +63,11 @@ describe("marketing nav and platform rename", () => {
     expect(page).toContain("data-landing-scale-section");
     expect(page).toContain("data-landing-ranking-visual");
     expect(page).toContain("/ranking_app.png");
-    expect(page).toMatch(/recruitment at volume|high-volume hiring/i);
+    expect(page).toContain("Verify and rank knowledge against your own knowledge regions at volume.");
+    expect(page).toContain("knowledge verification at scale");
+    expect(page).toContain("knowledge regions");
+    expect(page).not.toMatch(/role regions/i);
+    expect(page).not.toMatch(/recruitment at volume|high-volume hiring/i);
     expect(page).toContain('eyebrow="THE APPROACH"');
     expect(page).not.toContain("— not a quiz score.");
     // Platform → approach → scale (last before footer)

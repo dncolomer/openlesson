@@ -77,10 +77,10 @@ export default function B2BLandingPage() {
           title="See skill as distance in knowledge space."
         />
         <p className="mt-4 max-w-5xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-          Every workspace puts people and roles into a shared embedding geometry. Create role regions,
+          Every workspace puts people into a shared embedding geometry. Create knowledge regions,
           multi-select users, and read{" "}
           <span className="text-zinc-200">distance to knowledge</span> live: see how humans and agents alike
-          do against your defined regions of knowledge.
+          do against your defined knowledge regions.
         </p>
         <p className="mt-3 max-w-5xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
           Create{" "}
@@ -95,7 +95,7 @@ export default function B2BLandingPage() {
           <div className="relative aspect-[16/9] w-full sm:aspect-[2918/1656]">
             <Image
               src="/knowledgeg2.png"
-              alt="Uncertain Systems Knowledge embeddings: multi-user projection with role regions and knowledge distance"
+              alt="Uncertain Systems Knowledge embeddings: multi-user projection with knowledge regions and knowledge distance"
               fill
               className="object-cover object-top"
               sizes="(max-width: 1152px) 100vw, 1152px"
@@ -104,7 +104,7 @@ export default function B2BLandingPage() {
           </div>
           <div className="border-t border-zinc-800/90 px-4 py-3 sm:px-5 sm:py-3.5">
             <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-              Knowledge · Embeddings · Role regions · Proof of Work
+              Knowledge · Embeddings · Knowledge regions · Proof of Work
             </p>
             <p className="mt-1.5 max-w-5xl text-sm leading-relaxed text-zinc-400">
               We help you build a living map of proximity to any kind of knowledge. We ground our results on real
@@ -153,22 +153,22 @@ export default function B2BLandingPage() {
               VERIFICATION AT SCALE
             </div>
             <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
-              Hire, screen, and rank against your own knowledge requirements at volume.
+              Verify and rank knowledge against your own knowledge regions at volume.
             </h2>
             <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
               <p>
-                The same measurement stack scales human verification, from{" "}
-                <span className="text-zinc-200">recruitment at volume</span> to internal mobility and agent
-                deployment gates, without sharing proprietary skills and specs into a public repository or
-                database.
+                The same measurement stack runs{" "}
+                <span className="text-zinc-200">knowledge verification at scale</span> — many people against
+                the same knowledge regions — without sharing proprietary skills and specs into a public
+                repository or database.
               </p>
               <p>
                 Our hosted{" "}
                 <span className="text-zinc-200">Think Aloud Protocol (TAP)</span> runs live, time-framed
-                screening for high-volume hiring without building your own UX. With our{" "}
+                verification in parallel, not one session at a time, without building your own UX. With our{" "}
                 <span className="text-zinc-200">Integrated Learning Environment (ILE)</span> we add open-ended
-                assignment depth that is more affordable and scalable than traditional take-home assignments. We
-                help you surface data that no traditional tech can beat.
+                assignment depth that stays practical as volume grows. We help you surface data that no
+                traditional tech can beat.
               </p>
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function B2BLandingPage() {
             >
               <Image
                 src="/ranking_app.png"
-                alt="Candidate ranking by proximity to a knowledge region bar"
+                alt="Ranking by proximity to a knowledge region bar"
                 width={2080}
                 height={1644}
                 className="h-auto w-full object-cover object-center"

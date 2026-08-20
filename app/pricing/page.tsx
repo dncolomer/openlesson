@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LandingNav } from "@/components/LandingNav";
@@ -15,14 +15,10 @@ import {
   type PlanId,
 } from "@/lib/plans";
 import {
-  estimateScenarioMonthly,
-  formatEstimateUsd,
-  PRICING_SCENARIOS,
-  type PricingScenarioConfig,
-  type PricingScenarioSlug,
-  type ScenarioSliderKey,
-  type ScenarioSliderValues,
-} from "@/lib/pricing/scenarios";
+  PRICING_AUDIENCE_COPY,
+  PRICING_AYCL_HREF,
+  PRICING_AYCL_LABEL,
+} from "@/lib/pricing/audience-copy";
 
 interface UserState {
   authenticated: boolean;
@@ -50,208 +46,27 @@ function formatTierPrice(price: number) {
   return Number.isInteger(price) ? `$${price}` : `$${price.toFixed(2)}`;
 }
 
-function defaultSliderState(scenario: PricingScenarioConfig): ScenarioSliderValues {
-  const values: ScenarioSliderValues = {};
-  for (const slider of scenario.sliders) {
-    values[slider.key] = slider.defaultValue;
-  }
-  return values;
-}
-
-function ScenarioPanel() {
-  const [activeSlug, setActiveSlug] = useState<PricingScenarioSlug>(
-    PRICING_SCENARIOS[0].slug,
-  );
-  const [sliderByScenario, setSliderByScenario] = useState<
-    Partial<Record<PricingScenarioSlug, ScenarioSliderValues>>
-  >(() => {
-    const init: Partial<Record<PricingScenarioSlug, ScenarioSliderValues>> = {};
-    for (const s of PRICING_SCENARIOS) {
-      init[s.slug] = defaultSliderState(s);
-    }
-    return init;
-  });
-
-  const activeScenario =
-    PRICING_SCENARIOS.find((s) => s.slug === activeSlug) ?? PRICING_SCENARIOS[0];
-  const sliderValues =
-    sliderByScenario[activeScenario.slug] ?? defaultSliderState(activeScenario);
-  const estimate = useMemo(
-    () => estimateScenarioMonthly(activeScenario, sliderValues),
-    [activeScenario, sliderValues],
-  );
-
-  const setSlider = (key: ScenarioSliderKey, value: number) => {
-    setSliderByScenario((prev) => ({
-      ...prev,
-      [activeScenario.slug]: {
-        ...(prev[activeScenario.slug] ?? defaultSliderState(activeScenario)),
-        [key]: value,
-      },
-    }));
-  };
-
+function AudienceCostCards() {
   return (
-    <div
-      data-testid="pricing-scenarios"
-      className="border border-neutral-800 bg-neutral-950/80 p-5 backdrop-blur-sm sm:p-6"
-    >
-      <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
-        Real-world cost scenarios
-      </p>
-      <h2 className="mt-2 text-lg font-medium text-white">
-        See API Metered under product use cases
-      </h2>
-      <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-        Estimates use the same platform and usage rates as billing. Adjust volume
-        with the sliders — totals update live.
-      </p>
-
-      {/* Tabs */}
-      <div
-        role="tablist"
-        aria-label="Use-case scenarios"
-        className="mt-5 flex flex-wrap gap-1.5"
-      >
-        {PRICING_SCENARIOS.map((scenario) => {
-          const selected = activeSlug === scenario.slug;
-          return (
-            <button
-              key={scenario.slug}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              data-testid={`scenario-tab-${scenario.slug}`}
-              onClick={() => setActiveSlug(scenario.slug)}
-              className={`rounded-sm border px-2.5 py-1.5 text-left text-xs font-medium transition sm:text-[13px] ${
-                selected
-                  ? "border-white bg-white text-black"
-                  : "border-neutral-700 bg-neutral-950/60 text-neutral-300 hover:border-neutral-500"
-              }`}
-            >
-              {scenario.title}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        role="tabpanel"
-        data-testid={`scenario-panel-${activeScenario.slug}`}
-        className="mt-5"
-      >
-        <p className="text-sm leading-relaxed text-neutral-400">{activeScenario.context}</p>
-        <Link
-          href={activeScenario.salesPath}
-          className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[1px] text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline"
-        >
-          Sales product →
-        </Link>
-
-        {/* Sliders */}
-        <div className="mt-5 space-y-5">
-          {activeScenario.sliders.map((slider) => {
-            const value = sliderValues[slider.key] ?? slider.defaultValue;
-            return (
-              <div key={slider.key} data-testid={`slider-${slider.key}`}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <label
-                    htmlFor={`scenario-${activeScenario.slug}-${slider.key}`}
-                    className="text-sm font-medium text-neutral-200"
-                  >
-                    {slider.label}
-                  </label>
-                  <span className="font-mono text-sm tabular-nums text-white">
-                    {value.toLocaleString()}
-                  </span>
-                </div>
-                <input
-                  id={`scenario-${activeScenario.slug}-${slider.key}`}
-                  type="range"
-                  min={slider.min}
-                  max={slider.max}
-                  step={slider.step}
-                  value={value}
-                  onChange={(e) => setSlider(slider.key, Number(e.target.value))}
-                  className="mt-2 w-full accent-white"
-                />
-                <p className="mt-1 text-xs text-neutral-600">{slider.hint}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Live estimate */}
-        <div
-          data-testid="scenario-estimate"
-          className="mt-6 border border-neutral-700 bg-black/40 p-4"
+    <div data-testid="pricing-audiences" className="space-y-4">
+      {(
+        [
+          ["individual", PRICING_AUDIENCE_COPY.individual],
+          ["business", PRICING_AUDIENCE_COPY.business],
+        ] as const
+      ).map(([key, copy]) => (
+        <article
+          key={key}
+          data-testid={`pricing-audience-${key}`}
+          className="border border-neutral-800 bg-neutral-950/80 p-5 backdrop-blur-sm sm:p-6"
         >
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
-            Estimated monthly (API Metered)
+            {copy.eyebrow}
           </p>
-          <p
-            data-testid="scenario-estimate-total"
-            className="mt-2 text-3xl font-medium tracking-[-1px] text-white"
-          >
-            {formatEstimateUsd(estimate.totalUsd)}
-            <span className="ml-1 text-sm font-normal text-neutral-500">/ mo</span>
-          </p>
-          <ul className="mt-3 space-y-1 text-xs text-neutral-400">
-            <li>
-              Platform{" "}
-              <span className="text-neutral-200">
-                {formatEstimateUsd(estimate.platformUsd)}
-              </span>
-            </li>
-            <li>
-              Usage{" "}
-              <span className="text-neutral-200">
-                {formatEstimateUsd(estimate.usageUsd)}
-              </span>
-              <span className="text-neutral-600">
-                {" "}
-                (
-                {estimate.units.externalPowCount > 0 && (
-                  <>{estimate.units.externalPowCount.toLocaleString()} API PoW</>
-                )}
-                {estimate.units.externalPowCount > 0 &&
-                  (estimate.units.tapSessionCount > 0 ||
-                    estimate.units.ileSessionCount > 0) &&
-                  " · "}
-                {estimate.units.tapSessionCount > 0 && (
-                  <>{estimate.units.tapSessionCount.toLocaleString()} TAP</>
-                )}
-                {estimate.units.tapSessionCount > 0 &&
-                  estimate.units.ileSessionCount > 0 &&
-                  " · "}
-                {estimate.units.ileSessionCount > 0 && (
-                  <>{estimate.units.ileSessionCount.toLocaleString()} ILE</>
-                )}
-                {estimate.units.externalPowCount === 0 &&
-                  estimate.units.tapSessionCount === 0 &&
-                  estimate.units.ileSessionCount === 0 &&
-                  "no metered usage"}
-                )
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Assumptions */}
-        <div data-testid="scenario-assumptions" className="mt-5">
-          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
-            Assumptions
-          </p>
-          <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-neutral-500">
-            {activeScenario.assumptions.map((line) => (
-              <li key={line} className="flex gap-2">
-                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-neutral-600" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+          <h2 className="mt-2 text-lg font-medium text-white">{copy.title}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-neutral-400">{copy.body}</p>
+        </article>
+      ))}
     </div>
   );
 }
@@ -375,7 +190,18 @@ function PricingPageContent() {
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
             One ongoing plan — API Metered — with clear usage rates. External API PoW is billed
             separately from TAP and ILE sessions so product usage never double-charges internal PoW.
-            Explore real-world cost scenarios on the right.
+            Use the harness yourself or run it at scale: same rates.
+          </p>
+          <p className="mt-4 text-sm text-neutral-500">
+            Ready-made workspaces live on{" "}
+            <Link
+              href={PRICING_AYCL_HREF}
+              data-testid="pricing-aycl-link"
+              className="text-neutral-200 underline-offset-2 hover:text-white hover:underline"
+            >
+              {PRICING_AYCL_LABEL}
+            </Link>
+            .
           </p>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-4 py-3 text-sm text-neutral-200">
@@ -383,7 +209,7 @@ function PricingPageContent() {
             </div>
           )}
 
-          {/* Two-column: metered plan left, scenarios right — tops aligned */}
+          {/* Two-column: metered plan left, individual vs at-scale cost right */}
           <div
             data-testid="pricing-layout"
             className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-10"
@@ -483,8 +309,7 @@ function PricingPageContent() {
               </p>
             </div>
 
-            {/* RIGHT: tabbed real-world scenarios */}
-            <ScenarioPanel />
+            <AudienceCostCards />
           </div>
         </section>
         <Footer />

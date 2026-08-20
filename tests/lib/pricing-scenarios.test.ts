@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   API_METERED_PLATFORM_FEE_CENTS,
   estimateApiMeteredInvoice,
@@ -16,7 +18,17 @@ import {
   resolveScenarioSliderValues,
 } from "@/lib/pricing/scenarios";
 
+const PRICING_PAGE = join(__dirname, "../..", "app/pricing/page.tsx");
+
 describe("pricing scenarios catalog", () => {
+  it("is not mounted on the public /pricing page", () => {
+    const src = readFileSync(PRICING_PAGE, "utf8");
+    expect(src).not.toContain('data-testid="pricing-scenarios"');
+    expect(src).not.toContain("PRICING_SCENARIOS");
+    expect(src).not.toContain("ScenarioPanel");
+    expect(src).not.toContain("Real-world cost scenarios");
+  });
+
   it("covers the four shipped sales product lines with matching titles", () => {
     expect(PRICING_SCENARIO_SLUGS).toEqual([
       "self-service-skill-check",

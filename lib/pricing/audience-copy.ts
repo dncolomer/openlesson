@@ -11,6 +11,7 @@ import {
 
 export const PRICING_AYCL_HREF = "/all-you-can-learn" as const;
 export const PRICING_AYCL_LABEL = "All-You-Can-Learn";
+export const PRICING_AYCL_CTA = "Browse ready-made workspaces";
 
 export function formatApiMeteredPlatformPrice(): string {
   const dollars = API_METERED_PLATFORM_FEE_CENTS / 100;

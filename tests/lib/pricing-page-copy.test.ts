@@ -14,6 +14,7 @@ import {
   formatApiMeteredPlatformPrice,
   getPricingAudienceFullText,
   PRICING_AUDIENCE_COPY,
+  PRICING_AYCL_CTA,
   PRICING_AYCL_HREF,
   PRICING_AYCL_LABEL,
 } from "@/lib/pricing/audience-copy";
@@ -85,13 +86,17 @@ describe("pricing page source", () => {
     expect(src).toContain("copy.body");
   });
 
-  it("links to All-You-Can-Learn", () => {
+  it("links to All-You-Can-Learn as a visible CTA", () => {
     const src = read("app/pricing/page.tsx");
     expect(src).toContain("PRICING_AYCL_HREF");
+    expect(src).toContain("PRICING_AYCL_CTA");
     expect(src).toContain("PRICING_AYCL_LABEL");
     expect(src).toContain('data-testid="pricing-aycl-link"');
+    expect(src).toContain("href={PRICING_AYCL_HREF}");
+    expect(src).toMatch(/inline-flex min-h-12/);
+    expect(src).not.toContain("Ready-made workspaces live on");
     expect(PRICING_AYCL_HREF).toBe("/all-you-can-learn");
     expect(PRICING_AYCL_LABEL).toMatch(/All-You-Can-Learn/);
-    expect(src).toContain("href={PRICING_AYCL_HREF}");
+    expect(PRICING_AYCL_CTA.toLowerCase()).toMatch(/browse ready-made workspaces/);
   });
 });

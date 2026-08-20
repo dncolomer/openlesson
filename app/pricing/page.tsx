@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { LandingNav } from "@/components/LandingNav";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/plans";
 import {
   PRICING_AUDIENCE_COPY,
+  PRICING_AYCL_CTA,
   PRICING_AYCL_HREF,
   PRICING_AYCL_LABEL,
 } from "@/lib/pricing/audience-copy";
@@ -192,17 +194,15 @@ function PricingPageContent() {
             separately from TAP and ILE sessions so product usage never double-charges internal PoW.
             Use the harness yourself or run it at scale: same rates.
           </p>
-          <p className="mt-4 text-sm text-neutral-500">
-            Ready-made workspaces live on{" "}
-            <Link
-              href={PRICING_AYCL_HREF}
-              data-testid="pricing-aycl-link"
-              className="text-neutral-200 underline-offset-2 hover:text-white hover:underline"
-            >
-              {PRICING_AYCL_LABEL}
-            </Link>
-            .
-          </p>
+          <Link
+            href={PRICING_AYCL_HREF}
+            data-testid="pricing-aycl-link"
+            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-neutral-200"
+          >
+            {PRICING_AYCL_CTA}
+            <span className="ml-2 font-normal text-neutral-700">{PRICING_AYCL_LABEL}</span>
+            <ArrowRight className="ml-2" size={16} />
+          </Link>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-neutral-600/30 bg-neutral-800/10 px-4 py-3 text-sm text-neutral-200">
               Choose a plan to continue. Start API Metered or try everything unlimited for 3 days for $19.99.

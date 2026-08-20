@@ -16,6 +16,7 @@ import {
   KNOWLEDGE_TOMOGRAPHY_WHITEPAPER,
   KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
 } from "@/lib/science/knowledge-tomography-whitepaper";
+import { SCIENCE_FEP_COPY } from "@/lib/science/free-energy-principle-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
@@ -192,6 +193,34 @@ export default function SciencePage() {
           </article>
         </section>
       ) : null}
+
+      <section
+        id="science-free-energy"
+        data-science-free-energy
+        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="science-fep-heading"
+      >
+        <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {SCIENCE_FEP_COPY.eyebrow}
+          </p>
+          <h2
+            id="science-fep-heading"
+            className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
+          >
+            {SCIENCE_FEP_COPY.title}
+          </h2>
+          <p className="mt-5 text-base leading-relaxed text-zinc-400 sm:text-lg">
+            {SCIENCE_FEP_COPY.influence}
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
+            {SCIENCE_FEP_COPY.name}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
+            {SCIENCE_FEP_COPY.caveat}
+          </p>
+        </article>
+      </section>
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
         <div className="space-y-6">

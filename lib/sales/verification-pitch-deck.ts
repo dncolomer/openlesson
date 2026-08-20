@@ -17,7 +17,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Learning Verification · Uncertain Systems",
       title: "Verify skills before they cost you downstream.",
       subtitle:
-        "Confirm what candidates, employees, and agents can actually do before hire, promote, certify, or deploy. Example: an HR tech or talent marketplace embeds verification into its existing funnel.",
+        "A Human Learning Harness for knowledge verification: confirm what candidates and employees actually hold — without a test, and it cannot be faked. Example: an HR tech or talent marketplace embeds verification into its existing funnel.",
       backgroundImage: PITCH_ASSETS.aesthetics.verification,
       cards: [
         {
@@ -30,7 +30,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "3 · PoW API in their stack",
-          body: "When the product owns the UX, pipe recordings, docs, and agent tool traces into Proof-of-Work API endpoints. Anonymized payloads if needed. Deploy gates and compliance links use the same scoring model.",
+          body: "When the product owns the UX, pipe recordings, documents, and work traces into Proof-of-Work API endpoints. Anonymized payloads if needed. Hiring and compliance links use the same scoring model.",
         },
       ],
     },
@@ -40,7 +40,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "The problem",
       title: "Polished output is no longer proof of skill.",
       subtitle:
-        "AI assist makes take-homes, interviews, and agent demos look production-ready. HR tech, recruitment platforms, and talent marketplaces need verification that survives the assist layer.",
+        "AI assist makes take-homes and interviews look production-ready. HR tech, recruitment platforms, and talent marketplaces need verification that survives the assist layer.",
       backgroundImage: PITCH_ASSETS.aesthetics.problem,
       ...labeledHighlights([
         [
@@ -55,7 +55,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Candidates deliver AI-fed interviews and take-home fluff",
         "Employees self-report proficiency that manager anecdotes cannot stress-test",
-        "Agents ship on benchmark scores that do not predict production tool use",
+        "Tests and take-homes can be faked; they no longer prove what a person actually holds",
         "Compliance and certification still rely on checkbox completions",
       ],
     },
@@ -64,13 +64,13 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "The definition of Learning is radically changing",
       subtitle:
-        "One workspace model scores live cognition and tool traces. Auditable gap reports.",
+        "One workspace model scores live human cognition. Auditable gap reports.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("verification"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
       bullets: [
-        "Human hard skill validation under probe",
-        "Agentic skill validation from real tool traces",
+        "Human Knowledge / Skill Validation",
+        "Cannot be faked — not a score on a test",
         "Trace Interruption Model targets where reasoning actually breaks",
         "Proof of work tied to the decision you need to make",
       ],
@@ -93,7 +93,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "03 · PoW API (Proof-of-Work)",
-          body: "Native integration into ATS, HRIS, LMS, CI, and agent pipelines when you own the UX. Pipe traces and artifacts (including anonymized payloads) into the same markers.",
+          body: "Native integration into ATS, HRIS, and LMS when you own the UX. Pipe traces and artifacts (including anonymized payloads) into the same markers.",
         },
       ],
     },
@@ -137,16 +137,16 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
     },
     {
       layout: "statement",
-      kicker: "Use case · Deploy gates",
-      title: "Agent vendor & deploy readiness",
+      kicker: "Use case · Without a test",
+      title: "Verify knowledge without a test.",
       subtitle:
-        "Validate agentic skill before production rollout. Score tool traces and run scenarios the same way you gate human hires.",
+        "Human knowledge and skill validation from real work. Uncheatable proof that it is actually held — not a score anyone can fake.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
-        "Beyond benchmark pass rates: tool use under realistic workspace constraints",
-        "Severity-ranked gaps feed ALE skill iteration before go-live",
-        "Vendor evaluation with the same scoring model as internal agents",
-        "CI-friendly Proof-of-Work API hooks for continuous gates",
+        "Proof of work under probe, not a quiz pass rate",
+        "Cannot be faked with polished deliverables or AI assist",
+        "Same workspace markers for TAP speed and ILE depth",
+        "Auditable gap reports for hiring, promotion, and certification",
       ],
     },
     {
@@ -164,11 +164,11 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
     {
       layout: "close",
       kicker: "Next step",
-      title: "Verify skills before hire, deploy, or certify.",
+      title: "Verify skills before hire or certify.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
         "Map TAP, ILE, and Proof-of-Work API tiers to your HR or recruitment product",
-        "Pilot one gate: screening, TAP-cha, promotion, or agent deploy",
+        "Pilot one gate: screening, TAP-cha, or promotion",
         "Create a Workspace and score the first real scenario this week",
       ],
       footnote: "uncertain.systems · Learning Verification · TAP · ILE · Proof-of-Work API",

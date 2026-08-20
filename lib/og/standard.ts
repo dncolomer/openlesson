@@ -8,11 +8,11 @@ import type { Metadata } from "next";
 
 /** LP hero H1 — `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_TITLE =
-  "Beyond benchmarks for AI. Beyond tests for humans.";
+  "A Human Learning Harness. Learn without a tutor. Verify without a test.";
 
 /** LP hero body first paragraph — `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "Uncertain Systems is built on three verticals for human and agentic learning: verification, optimization, and augmentation.";
+  "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.";
 
 /** LP hero pill — VERIFICATION . OPTIMIZATION . AUGMENTATION */
 export const UNSYS_STANDARD_SHARE_EYEBROW =

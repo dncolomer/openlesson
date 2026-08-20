@@ -227,7 +227,7 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       },
       {
         label: "PoW API",
-        body: "Score real work and agent traces at the API layer — the measurement foundation every product shares.",
+        body: "Score real work at the API layer — the measurement foundation every product shares.",
       },
     ],
   },

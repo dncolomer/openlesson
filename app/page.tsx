@@ -40,20 +40,17 @@ export default function B2BLandingPage() {
         <div className="w-full">
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">VERIFICATION . OPTIMIZATION . AUGMENTATION</div>
           <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">
-            Beyond benchmarks for AI.
+            A Human Learning Harness.
             <br />
-            Beyond tests for humans.
+            Learn without a tutor. Verify without a test.
           </h1>
           <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
             <p>
-              Uncertain Systems is built on three verticals for human and agentic learning:{" "}
-              <span className="text-zinc-200">verification</span>,{" "}
-              <span className="text-zinc-200">optimization</span>, and{" "}
-              <span className="text-zinc-200">augmentation</span>.
+              Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.
             </p>
             <p className="text-zinc-500 sm:text-base">
-              Verify hard skills before hiring a human or deploying an agent to production. Optimize learning
-              until adoption and outcomes improve. Augment how humans and agentic systems learn.
+              Verify knowledge without a test — uncheatable proof that it is actually held. Optimize so people learn
+              faster without a tutor. Augment thinking: you can outsource knowledge, you cannot outsource your learning.
             </p>
           </div>
           <div className="mt-6 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">

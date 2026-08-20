@@ -49,7 +49,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   path: "/use-cases/learning-verification",
   eyebrow: "Learning Verification",
   titleLines: ["Learning", "Verification"],
-  cardSummary: ["Human hard skill validation", "Agentic skill validation"],
+  cardSummary: ["Human Knowledge / Skill Validation", "Cannot be faked"],
   intro:
     "Verify what candidates, employees, and agents can actually do — before you hire, promote, certify, or deploy. Built for HR tech, recruitment platforms, and talent marketplaces that need signal beyond polished deliverables and benchmark pass rates.",
   metaTitle: "Learning Verification | HR, Hiring & Agent Skill Validation",
@@ -156,8 +156,8 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
   eyebrow: "Learning Optimization",
   titleLines: ["Learning", "optimization"],
   cardSummary: [
-    "Help your users “learn” your app",
-    "Form real insights (“aha!” moments) within 30 minutes",
+    "Learn faster without a tutor",
+    "Real insights (“aha!” moments) within 30 minutes",
   ],
   intro:
     "Turn verification findings into learning that shows up downstream — adoption, deployment, and real use. Optimize onboarding and agent skills with loops that close gaps instead of checking boxes.",
@@ -231,7 +231,10 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
   path: "/use-cases/reasoning-augmentation",
   eyebrow: "Learning Augmentation",
   titleLines: ["Learning", "Augmentation"],
-  cardSummary: ["Identify knowledge gaps within 30 minutes"],
+  cardSummary: [
+    "Identify knowledge gaps within 30 minutes",
+    "Outsource your knowledge but don't outsource your learning",
+  ],
   intro:
     "Strengthen how learners think — not just what they recall. Engineer interruptions that probe a deeper reasoning layer inside courses, prep programs, and certification journeys.",
   metaTitle: "Learning Augmentation | EdTech & Certification Prep Integration",

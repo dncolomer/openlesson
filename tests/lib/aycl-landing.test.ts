@@ -270,6 +270,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(grid).toContain("data-map-view-only");
     expect(lib).toContain("viewOnly: true");
     expect(lib).toContain("canEdit: false");
+    expect(lib).toContain("learnerMode: true");
+    expect(lib).not.toContain("learnerMode: false");
 
     // OG dedicated route emits unsys standard (not per-workspace copy)
     expect(og).toContain("composeStandardOgImage");

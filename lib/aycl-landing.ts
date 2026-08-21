@@ -78,11 +78,11 @@ export type AyclLandingSummary = {
   authorAvatarUrl: string | null;
   blockCount: number;
   offers: { learner: AyclLandingOffer; full: AyclLandingOffer };
-  /** View-only map props for BlockSkillGrid */
+  /** View-only map props for BlockSkillGrid (Play-mode fog, no authoring). */
   map: {
     viewOnly: true;
     canEdit: false;
-    learnerMode: false;
+    learnerMode: true;
     nodes: SkillGridNode[];
   };
   paths: {

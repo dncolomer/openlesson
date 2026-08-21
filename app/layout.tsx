@@ -3,20 +3,21 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BRAND_LOGO_PATH } from "../lib/brand";
 import { I18nProvider } from "../lib/i18n";
-import { standardShareSocialMetadata } from "@/lib/og/standard";
+import {
+  standardShareSocialMetadata,
+  UNSYS_STANDARD_SHARE_DESCRIPTION,
+  unsysRootHtmlMetadata,
+} from "@/lib/og/standard";
 import "./globals.css";
 
 const standardSocial = standardShareSocialMetadata({
   url: "https://uncertain.systems",
 });
+const rootHtml = unsysRootHtmlMetadata();
 
 export const metadata: Metadata = {
-  title: {
-    default: "Uncertain Systems — Learning Efficiency for Humans & Agents",
-    template: "%s | Uncertain Systems",
-  },
-  description:
-    "Optimize learning efficiency for humans and agentic systems. Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Workspaces.",
+  title: rootHtml.title,
+  description: rootHtml.description,
   keywords: [
     "learning efficiency platform",
     "think aloud protocol",
@@ -62,8 +63,7 @@ const organizationSchema = {
   "@type": "Organization",
   name: "Uncertain Systems",
   url: "https://uncertain.systems",
-  description:
-    "Learning efficiency platform on Workspaces: Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+  description: UNSYS_STANDARD_SHARE_DESCRIPTION,
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -86,8 +86,7 @@ const softwareSchema = {
     price: "0",
     priceCurrency: "USD",
   },
-  description:
-    "Learning efficiency measurement and improvement on Workspaces—via Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+  description: UNSYS_STANDARD_SHARE_DESCRIPTION,
   featureList: [
     "Workspaces",
     "Proof-of-Work API — headless efficiency scoring",

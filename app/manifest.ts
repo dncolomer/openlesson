@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
 import { BRAND_LOGO_PATH } from "../lib/brand";
+import { UNSYS_STANDARD_SHARE_DESCRIPTION } from "@/lib/og/standard";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Uncertain Systems",
     short_name: "Uncertain Systems",
-    description:
-      "Learning efficiency for humans and agents — Proof-of-Work API, Think Aloud Protocol, ILE, and ALE on Workspaces.",
+    description: UNSYS_STANDARD_SHARE_DESCRIPTION,
     start_url: "/",
     scope: "/",
     display: "standalone",

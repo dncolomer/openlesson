@@ -45,6 +45,8 @@ export {
   standardOpenGraph,
   standardTwitter,
   standardShareSocialMetadata,
+  unsysRootHtmlMetadata,
+  UNSYS_ROOT_TITLE_TEMPLATE,
   type UnsysStandardShare,
 } from "@/lib/og/standard";
 export {

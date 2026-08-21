@@ -30,6 +30,7 @@ import {
   standardShareImages,
   standardShareSocialMetadata,
   standardTwitter,
+  unsysRootHtmlMetadata,
 } from "@/lib/og/standard";
 import {
   OG_DESCRIPTION_MAX,
@@ -186,6 +187,21 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(lp).not.toContain("Beyond tests for humans.");
     expect(lp).toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
     expect(lp).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
+  });
+
+  it("unsysRootHtmlMetadata matches LP hero and is what layout emits for title/description", () => {
+    const html = unsysRootHtmlMetadata();
+    expect(html.title.default).toBe(UNSYS_STANDARD_SHARE_TITLE);
+    expect(html.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(html.title.default).not.toMatch(/Learning Efficiency for Humans/i);
+    expect(html.description).not.toMatch(/Optimize learning efficiency/i);
+
+    const layout = fs.readFileSync(path.join(REPO_ROOT, "app/layout.tsx"), "utf8");
+    expect(layout).toContain("unsysRootHtmlMetadata()");
+    expect(layout).toContain("title: rootHtml.title");
+    expect(layout).toContain("description: rootHtml.description");
+    expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
+    expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
   });
 
   it("standardShareSocialMetadata always points at root opengraph-image with LP copy", () => {

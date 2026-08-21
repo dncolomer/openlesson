@@ -14,7 +14,10 @@ import {
 import {
   UNSYS_STANDARD_SHARE_DESCRIPTION,
   UNSYS_STANDARD_SHARE_TITLE,
+  standardShareSocialMetadata,
+  unsysRootHtmlMetadata,
 } from "@/lib/og/standard";
+import manifest from "@/app/manifest";
 import { inventoryDeck } from "@/lib/sales/pitch-content-inventory";
 import { PLATFORM_PITCH_DECK } from "@/lib/sales/platform-pitch-deck";
 import { VERIFICATION_PITCH_DECK } from "@/lib/sales/verification-pitch-deck";
@@ -97,6 +100,42 @@ describe("landing Human Learning Harness copy", () => {
     const standard = readRel("lib/og/standard.ts");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
+  });
+
+  it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
+    const heroTitle = `${H1_LINE_1} ${H1_LINE_2}`;
+    const rootHtml = unsysRootHtmlMetadata();
+    expect(rootHtml.title.default).toBe(heroTitle);
+    expect(rootHtml.title.default).toBe(UNSYS_STANDARD_SHARE_TITLE);
+    expect(rootHtml.description).toBe(P1);
+    expect(rootHtml.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+
+    const social = standardShareSocialMetadata({ url: "https://uncertain.systems" });
+    expect(social.openGraph?.title).toBe(heroTitle);
+    expect(social.openGraph?.description).toBe(P1);
+    expect(social.twitter?.title).toBe(heroTitle);
+    expect(social.twitter?.description).toBe(P1);
+
+    const webManifest = manifest();
+    expect(webManifest.description).toBe(P1);
+
+    const layout = readRel("app/layout.tsx");
+    expect(layout).toContain("unsysRootHtmlMetadata");
+    expect(layout).toContain("title: rootHtml.title");
+    expect(layout).toContain("description: rootHtml.description");
+    expect(layout).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
+    expect(layout).toMatch(/openGraph:\s*standardSocial\.openGraph/);
+    expect(layout).toMatch(/twitter:\s*standardSocial\.twitter/);
+    expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
+    expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
+
+    const manifestSrc = readRel("app/manifest.ts");
+    expect(manifestSrc).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
+    expect(manifestSrc).not.toContain("Learning efficiency for humans and agents");
+
+    const standard = readRel("lib/og/standard.ts");
+    expect(standard).not.toContain("Learning Efficiency for Humans & Agents");
+    expect(standard).not.toContain("Optimize learning efficiency for humans and agentic systems");
   });
 });
 

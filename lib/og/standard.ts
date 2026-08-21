@@ -112,3 +112,23 @@ export function standardShareSocialMetadata(options?: {
     twitter: standardTwitter(),
   };
 }
+
+/** Root `<title>` template for nested routes. */
+export const UNSYS_ROOT_TITLE_TEMPLATE = "%s | Uncertain Systems";
+
+/**
+ * Default HTML title + meta description for crawlers that prefer those
+ * tags over Open Graph / Twitter cards.
+ */
+export function unsysRootHtmlMetadata(): {
+  title: { default: string; template: string };
+  description: string;
+} {
+  return {
+    title: {
+      default: UNSYS_STANDARD_SHARE_TITLE,
+      template: UNSYS_ROOT_TITLE_TEMPLATE,
+    },
+    description: UNSYS_STANDARD_SHARE_DESCRIPTION,
+  };
+}

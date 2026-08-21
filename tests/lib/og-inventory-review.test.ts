@@ -165,6 +165,13 @@ describe("OG share inventory (one unsys standard)", () => {
     const layout = read("app/layout.tsx");
     expect(layout).toContain("standardShareSocialMetadata");
     expect(layout).toContain("@/lib/og/standard");
+    expect(layout).toContain("unsysRootHtmlMetadata");
+    expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
+    expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
+    expect(read("app/manifest.ts")).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
+    expect(read("app/manifest.ts")).not.toContain(
+      "Learning efficiency for humans and agents",
+    );
 
     const pricing = read("app/pricing/layout.tsx");
     expect(pricing).toContain("standardShareSocialMetadata");

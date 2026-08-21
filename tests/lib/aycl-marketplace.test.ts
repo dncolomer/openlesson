@@ -276,6 +276,8 @@ describe("AYCL marketplace structure (settings + catalog + checkout)", () => {
     expect(settings).toContain("Enable Paid (AYCL)");
     expect(settings).toContain("/api/workspaces/");
     expect(settings).toContain("/aycl");
+    expect(settings).toContain("data-aycl-complimentary-create-play");
+    expect(settings).toContain("data-aycl-complimentary-create-full");
   });
 
   it("Access settings no longer hosts AYCL toggle (moved to AYCL tab)", () => {

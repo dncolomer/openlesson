@@ -20,6 +20,10 @@ import {
 import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 import { forkWorkspaceExactCopy } from "@/lib/fork-workspace";
 import { emailFromCheckoutSession } from "@/lib/stripe-checkout";
+import {
+  ayclComplimentaryPurchaseRow,
+  complimentaryAyclLinkEligible,
+} from "@/lib/aycl-complimentary";
 
 export {
   AYCL_PRICE_CENTS,
@@ -48,8 +52,143 @@ export interface AyclPurchase {
   /** learner | full — null/missing treated as full by normalizeAyclAccessTier */
   access_tier?: string | null;
   upgraded_from_purchase_id?: string | null;
+  /** Set when this purchase was minted from a complimentary (free) special URL. */
+  complimentary_link_id?: string | null;
   created_at: string;
   completed_at: string | null;
+}
+
+export interface AyclComplimentaryLink {
+  id: string;
+  workspace_id: string;
+  created_by: string | null;
+  access_tier: string;
+  access_token_hash: string;
+  public_token: string;
+  max_uses: number | null;
+  use_count: number;
+  expires_at: string | null;
+  status: "active" | "revoked" | string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+export async function getAyclComplimentaryLinkByToken(
+  supabase: SupabaseClient,
+  accessToken: string,
+): Promise<AyclComplimentaryLink | null> {
+  const token = accessToken.trim();
+  if (!token) return null;
+
+  const { data, error } = await supabase
+    .from("aycl_complimentary_links")
+    .select("*")
+    .eq("access_token_hash", hashPrivateToken(token))
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as AyclComplimentaryLink;
+}
+
+/**
+ * Redeem a complimentary special URL: check eligibility, reserve a use, fork
+ * a private copy, insert a completed aycl_purchases row with no Stripe session.
+ * Returns a new personal access token (caller should redirect to /learn/{token}).
+ */
+export async function redeemComplimentaryAyclLink(
+  supabase: SupabaseClient,
+  couponToken: string,
+  now: Date = new Date(),
+): Promise<
+  | { accessToken: string; purchase: AyclPurchase; accessTier: AyclAccessTier }
+  | { error: string; status: number }
+> {
+  const token = couponToken.trim();
+  if (!token) return { error: "Access token required", status: 401 };
+
+  const link = await getAyclComplimentaryLinkByToken(supabase, token);
+  if (!link) return { error: "Invalid or expired access link", status: 404 };
+
+  const eligibility = complimentaryAyclLinkEligible(link, now);
+  if (!eligibility.ok) {
+    return { error: "Invalid or expired access link", status: 404 };
+  }
+
+  const accessTier = normalizeAyclAccessTier(link.access_tier);
+
+  const nowIso = now.toISOString();
+  const { data: reserved, error: reserveError } = await supabase
+    .from("aycl_complimentary_links")
+    .update({ use_count: link.use_count + 1 })
+    .eq("id", link.id)
+    .eq("status", "active")
+    .eq("use_count", link.use_count)
+    .or(`expires_at.is.null,expires_at.gt."${nowIso}"`)
+    .select("id")
+    .maybeSingle();
+
+  if (reserveError || !reserved) {
+    return { error: "Invalid or expired access link", status: 404 };
+  }
+
+  const { data: sourceWorkspace, error: sourceError } = await supabase
+    .from("workspaces")
+    .select("id, title, root_topic, user_id, is_all_you_can_learn")
+    .eq("id", link.workspace_id)
+    .single();
+
+  if (sourceError || !sourceWorkspace?.user_id) {
+    await supabase
+      .from("aycl_complimentary_links")
+      .update({ use_count: link.use_count })
+      .eq("id", link.id)
+      .eq("use_count", link.use_count + 1);
+    return { error: "Workspace not found", status: 404 };
+  }
+
+  const accessToken = createPrivateToken();
+  try {
+    const fork = await forkWorkspaceExactCopy(supabase, {
+      sourceWorkspaceId: sourceWorkspace.id,
+      ownerUserId: sourceWorkspace.user_id,
+      title: sourceWorkspace.title || sourceWorkspace.root_topic,
+      originalWorkspaceId: sourceWorkspace.id,
+      isAyclFork: true,
+    });
+
+    const row = ayclComplimentaryPurchaseRow({
+      sourceWorkspaceId: sourceWorkspace.id,
+      forkedWorkspaceId: fork.workspaceId,
+      accessTokenHash: hashPrivateToken(accessToken),
+      accessTier,
+      complimentaryLinkId: link.id,
+      now,
+    });
+
+    const { data: purchase, error: insertError } = await supabase
+      .from("aycl_purchases")
+      .insert(row)
+      .select("*")
+      .single();
+
+    if (insertError || !purchase) {
+      throw new Error(insertError?.message || "Failed to create complimentary purchase");
+    }
+
+    return {
+      accessToken,
+      purchase: purchase as AyclPurchase,
+      accessTier,
+    };
+  } catch (err) {
+    console.error("[aycl] complimentary redeem failed", err);
+    await supabase
+      .from("aycl_complimentary_links")
+      .update({ use_count: link.use_count })
+      .eq("id", link.id)
+      .eq("use_count", link.use_count + 1);
+    return { error: "Failed to grant complimentary access", status: 500 };
+  }
 }
 
 export async function getAyclPurchaseByToken(

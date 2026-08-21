@@ -2,6 +2,7 @@
 
 import { ChevronsRight } from "lucide-react";
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
+import { cn } from "@/lib/utils";
 
 export const ACTIVE_THOUGHT_SLOT_COUNT = 3;
 
@@ -14,6 +15,8 @@ interface ActiveThoughtSlotsProps {
   thoughts: ActiveThoughtSlotEntry[];
   onSendThought: (text: string, thoughtId: string) => void;
   isSending?: boolean;
+  /** Fill the parent: three stacked slots instead of a 3-column strip. */
+  fill?: boolean;
 }
 
 function StashSlotHeader({ index, filled }: { index: number; filled?: boolean }) {
@@ -39,16 +42,19 @@ function StashSlotHeader({ index, filled }: { index: number; filled?: boolean })
   );
 }
 
-function EmptyThoughtSlot({ index }: { index: number }) {
+function EmptyThoughtSlot({ index, fill }: { index: number; fill?: boolean }) {
   return (
     <div
-      className="flex h-28 min-h-28 w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-xl border border-dashed border-neutral-800/90 bg-black/30 p-3"
+      className={cn(
+        "flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-none border border-dashed border-neutral-800/90 bg-black/30 p-3",
+        fill ? "h-full min-h-0" : "h-28 min-h-28",
+      )}
       aria-hidden
     >
       <StashSlotHeader index={index} filled={false} />
-      <div className="min-h-0 flex-1 rounded-lg border border-dashed border-neutral-800/70 bg-black/20" />
+      <div className="min-h-0 flex-1 rounded-none border border-dashed border-neutral-800/70 bg-black/20" />
       <div className="flex shrink-0 justify-end border-t border-neutral-900/50 pt-2">
-        <div className="h-7 w-7 rounded-md border border-dashed border-neutral-800/70" />
+        <div className="h-7 w-7 rounded-none border border-dashed border-neutral-800/70" />
       </div>
     </div>
   );
@@ -59,21 +65,31 @@ function ThoughtSlot({
   thought,
   isSending,
   onSendThought,
+  fill,
 }: {
   index: number;
   thought?: ActiveThoughtSlotEntry;
   isSending: boolean;
   onSendThought: (text: string, thoughtId: string) => void;
+  fill?: boolean;
 }) {
   if (!thought) {
-    return <EmptyThoughtSlot index={index} />;
+    return <EmptyThoughtSlot index={index} fill={fill} />;
   }
 
   return (
-    <div className="group flex h-28 min-h-28 w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-xl border border-neutral-800 bg-black/70 p-3 text-left">
+    <div
+      className={cn(
+        "group flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-none border border-neutral-800 bg-black/55 p-3 text-left",
+        fill ? "h-full min-h-0" : "h-28 min-h-28",
+      )}
+    >
       <StashSlotHeader index={index} filled />
       <p
-        className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-neutral-200 line-clamp-3"
+        className={cn(
+          "min-h-0 flex-1 text-sm leading-relaxed text-neutral-200",
+          fill ? "overflow-y-auto" : "overflow-hidden line-clamp-3",
+        )}
         title={thought.text}
       >
         {thought.text}
@@ -90,9 +106,22 @@ function ThoughtSlot({
   );
 }
 
-export function ActiveThoughtSlots({ thoughts, onSendThought, isSending = false }: ActiveThoughtSlotsProps) {
+export function ActiveThoughtSlots({
+  thoughts,
+  onSendThought,
+  isSending = false,
+  fill = false,
+}: ActiveThoughtSlotsProps) {
   return (
-    <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-3">
+    <div
+      data-active-thought-slots
+      data-active-thought-slots-fill={fill ? "true" : "false"}
+      className={
+        fill
+          ? "grid h-full min-h-0 w-full grid-rows-3 gap-2"
+          : "grid w-full grid-cols-1 gap-2 md:grid-cols-3"
+      }
+    >
       {Array.from({ length: ACTIVE_THOUGHT_SLOT_COUNT }, (_, index) => (
         <ThoughtSlot
           key={`stash-slot-${index}`}
@@ -100,6 +129,7 @@ export function ActiveThoughtSlots({ thoughts, onSendThought, isSending = false 
           thought={thoughts[index]}
           isSending={isSending}
           onSendThought={onSendThought}
+          fill={fill}
         />
       ))}
     </div>

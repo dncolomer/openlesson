@@ -837,7 +837,6 @@ export function SessionView({
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
-        participantIdentity={participantIdentity}
         resizablePaneRef={resizablePaneRef}
         allowEndSession={allowEndSession}
         showEndDialog={showEndDialog}
@@ -932,6 +931,7 @@ export function SessionView({
             activeChapterKey={activeChapterKey}
             chapterReloadNonce={chapterReloadNonce}
             isProjectMode={isProjectMode}
+            participantIdentity={participantIdentity}
             lastUserTurn={lastDialogueUserTurn}
             lastAssistantTurn={lastDialogueAssistantTurn}
             isAssistantPending={isHeliosAssistantPending}

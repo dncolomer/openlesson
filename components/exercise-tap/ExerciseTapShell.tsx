@@ -2,12 +2,15 @@
 
 import type { ReactNode } from "react";
 import type { ExerciseThought } from "@/lib/exercise-tap";
+import type { TapSoloProblem } from "@/lib/tap-session-map";
+import { TapSessionMap } from "@/components/tap-score/tap-session-map";
+import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
+import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { ExerciseStashHistory } from "./ExerciseStashHistory";
 import { ExerciseSubmissionStack } from "./ExerciseSubmissionStack";
 
 /**
- * Wider Exercise TAP live shell — prompt + speech + dual history (stash / Solution Stack).
- * No Helios/user dialogue bubbles. Non-essential chrome trimmed for room.
+ * Exercise TAP live shell — 50/50 map | stash/solution with aesthetic.
  */
 export function ExerciseTapShell({
   exerciseText,
@@ -18,6 +21,12 @@ export function ExerciseTapShell({
   speechBar,
   controlStrip,
   identityBadge,
+  problems,
+  activeProblemId,
+  onSelectProblem,
+  onSubmitSolution,
+  solutionSubmitted = false,
+  bgImage,
 }: {
   exerciseText: string;
   stash: ExerciseThought[];
@@ -27,41 +36,80 @@ export function ExerciseTapShell({
   speechBar: ReactNode;
   controlStrip?: ReactNode;
   identityBadge?: ReactNode;
+  problems: TapSoloProblem[];
+  activeProblemId: string | null;
+  onSelectProblem: (id: string) => void;
+  onSubmitSolution: () => void;
+  solutionSubmitted?: boolean;
+  bgImage?: string | null;
 }) {
+  const active = problems.find((problem) => problem.id === activeProblemId) ?? problems[0];
+  const prompt = active?.prompt || exerciseText;
+
   return (
     <section
       data-exercise-tap-shell
       data-exercise-dual-history
-      className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden"
+      data-exercise-dual-history-fixed
+      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0b0b0b]"
     >
-      <div className="flex shrink-0 items-start justify-between gap-3">
-        <div
-          data-exercise-prompt
-          className="min-w-0 flex-1 rounded-xl border border-neutral-800/90 bg-neutral-950/75 px-4 py-3"
-        >
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/70">
-            Exercise
-          </p>
-          <p className="mt-1.5 text-sm leading-relaxed text-neutral-100 sm:text-base">
-            {exerciseText}
-          </p>
-        </div>
-        {identityBadge ? <div className="shrink-0 pt-1">{identityBadge}</div> : null}
-      </div>
-
-      {controlStrip}
-
       <div
-        data-exercise-speech-panel
-        className="shrink-0 rounded-xl border border-neutral-800/90 bg-neutral-950/70 p-2.5"
+        data-exercise-tap-live-split
+        className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-1"
       >
-        {speechBar}
-      </div>
+        <div
+          data-exercise-tap-map-pane
+          className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
+        >
+          <TapSessionMap
+            blocks={problems}
+            selectedId={active?.id ?? null}
+            onSelect={onSelectProblem}
+            overlay={
+              <TapTurnOverlay
+                kind="solo"
+                kicker={active?.title || "Exercise"}
+                body={prompt}
+                onSubmitSolution={onSubmitSolution}
+                solutionSubmitted={Boolean(active?.solutionSubmitted || solutionSubmitted)}
+              />
+            }
+          />
+        </div>
 
-      {/* Wide dual history: stash (sys1) | Solution Stack (sys2, evaluated at end) */}
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
-        <ExerciseStashHistory thoughts={stash} onSubmitThought={onSubmitStashThought} />
-        <ExerciseSubmissionStack thoughts={submitted} onRemove={onRemoveSubmission} />
+        <TapAestheticSection
+          bgImage={bgImage}
+          kind="solo-stacks"
+          className="min-h-0 min-w-0"
+        >
+          {identityBadge ? (
+            <div className="flex shrink-0 items-center justify-end gap-2 border-b border-neutral-800/60 bg-black/35 px-3 py-1.5">
+              {identityBadge}
+            </div>
+          ) : null}
+          {controlStrip}
+          <div
+            data-exercise-speech-panel
+            className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5"
+          >
+            {speechBar}
+          </div>
+          <div
+            data-exercise-dual-history-pane
+            className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden"
+          >
+            <ExerciseStashHistory
+              thoughts={stash}
+              onSubmitThought={onSubmitStashThought}
+              className="border-b border-neutral-800/60 bg-black/35 lg:border-r-0"
+            />
+            <ExerciseSubmissionStack
+              thoughts={submitted}
+              onRemove={onRemoveSubmission}
+              className="bg-black/35"
+            />
+          </div>
+        </TapAestheticSection>
       </div>
     </section>
   );

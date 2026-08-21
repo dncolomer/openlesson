@@ -25,6 +25,8 @@ import {
 import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
+import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
+import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 interface SessionHeliosPanelProps {
   lastUserTurn: DialogueMessage | null;
@@ -49,6 +51,7 @@ interface SessionHeliosPanelProps {
   aestheticName?: string;
   sessionControls?: ReactNode;
   thought: SessionThoughtInterface;
+  participantIdentity?: PowParticipantIdentity | null;
   hasPlanSteps?: boolean;
   /**
    * Project Mode: no Helios conversation bubbles; exercise prompt + speech only.
@@ -91,6 +94,7 @@ export function SessionHeliosPanel({
   aestheticName,
   sessionControls,
   thought,
+  participantIdentity = null,
   hasPlanSteps = true,
   projectMode = false,
   chapterThoughtsLocked = false,
@@ -209,8 +213,13 @@ export function SessionHeliosPanel({
       )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
+        {participantIdentity ? (
+          <div className="flex shrink-0 justify-end">
+            <SessionIdentityBadge identity={participantIdentity} />
+          </div>
+        ) : null}
         {isInitializing && !hasPlanSteps ? (
-          <div className="rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+          <div className="rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
             {sessionControls && (
               <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
                 {sessionControls}
@@ -226,30 +235,22 @@ export function SessionHeliosPanel({
               <div
                 data-ile-project-panel
                 data-helios-bubbles="hidden"
-                className="mt-auto flex w-full shrink-0 flex-col"
+                className="flex min-h-0 w-full flex-1 flex-col"
               >
                 <div
                   data-ile-project-exercise-prompt
                   data-chapter-solved={chapterThoughtsLocked ? "true" : "false"}
-                  className={`rounded-2xl border px-5 py-4 backdrop-blur-md sm:px-6 sm:py-5 ${
-                    chapterThoughtsLocked
-                      ? "border-neutral-600/70 bg-neutral-950/75 shadow-none"
-                      : "border-neutral-500/40 bg-neutral-950/80 shadow-[0_0_24px_rgba(251,191,36,0.06)]"
-                  }`}
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4 sm:px-6 sm:py-5"
                 >
                   <p
-                    className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
+                    className={`shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] ${
                       chapterThoughtsLocked ? "text-neutral-500" : "text-neutral-300/85"
                     }`}
                   >
                     Explore Solo · Exercise
                   </p>
                   <p
-                    className={`mt-2.5 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed ${
-                      chapterThoughtsLocked
-                        ? "max-h-[8rem] sm:max-h-[9rem]"
-                        : "max-h-[12rem] sm:max-h-[14rem]"
-                    }`}
+                    className="mt-2.5 min-h-0 flex-1 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed"
                   >
                     {chapterPrompt}
                   </p>
@@ -283,7 +284,7 @@ export function SessionHeliosPanel({
                               <li
                                 key={item.id}
                                 data-ile-solved-solution-item={item.id}
-                                className="rounded-lg border border-neutral-800/90 bg-black/40 px-2.5 py-2"
+                                className="rounded-none border border-neutral-800/90 bg-black/40 px-2.5 py-2"
                               >
                                 <p className="font-mono text-[9px] uppercase tracking-wide text-neutral-600">
                                   Solution {index + 1}
@@ -315,7 +316,7 @@ export function SessionHeliosPanel({
                               <li
                                 key={item.id}
                                 data-ile-solved-stash-item={item.id}
-                                className="rounded-lg border border-neutral-800/70 bg-black/30 px-2.5 py-2"
+                                className="rounded-none border border-neutral-800/70 bg-black/30 px-2.5 py-2"
                               >
                                 <p className="font-mono text-[9px] uppercase tracking-wide text-neutral-600">
                                   Stash {index + 1}
@@ -362,7 +363,7 @@ export function SessionHeliosPanel({
                                   data-ile-follow-up-topic={index}
                                   disabled={!onSelectChapterFollowUp}
                                   onClick={() => onSelectChapterFollowUp?.(suggestion)}
-                                  className="w-full rounded-lg border border-neutral-600/30 bg-neutral-800/5 px-3 py-2.5 text-left transition hover:border-neutral-500/50 hover:bg-neutral-800/10 disabled:opacity-50"
+                                  className="w-full rounded-none border border-neutral-600/30 bg-neutral-800/5 px-3 py-2.5 text-left transition hover:border-neutral-500/50 hover:bg-neutral-800/10 disabled:opacity-50"
                                 >
                                   <p className="text-xs font-semibold text-neutral-200">
                                     {suggestion.title}
@@ -404,7 +405,7 @@ export function SessionHeliosPanel({
               </div>
             )}
 
-            <div className="min-w-0 shrink-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+            <div className="min-w-0 shrink-0 overflow-hidden rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
               {sessionControls && (
                 <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
                   {sessionControls}
@@ -412,7 +413,7 @@ export function SessionHeliosPanel({
               )}
               <div className="flex min-w-0 flex-col gap-2">
                 <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
                     <SlidingTranscript
                       text={formatSpeechTranscriptDisplay({
                         text: thought.crystallizableText,
@@ -430,7 +431,7 @@ export function SessionHeliosPanel({
                     <button
                       type="button"
                       onClick={() => void thought.retryMicrophone()}
-                      className="shrink-0 rounded-md border border-neutral-600/40 bg-neutral-800/10 px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                      className="shrink-0 rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
                     >
                       {thought.speechError ? "Retry" : "Start"}
                     </button>

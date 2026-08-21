@@ -29,7 +29,6 @@ import {
   type MapUserLocation,
   type ProjectionAlgorithmId,
 } from "@/lib/map-of-knowledge";
-import { PRODUCT_INTENT_LABELS } from "@/lib/product-intent";
 import { MapOfKnowledge2D } from "@/components/MapOfKnowledge2D";
 import { MapOfKnowledge3D } from "@/components/MapOfKnowledge3D";
 import { MapOfKnowledgeGlobal } from "@/components/MapOfKnowledgeGlobal";
@@ -84,22 +83,22 @@ const PLACEMENT_PRODUCTS: Record<
   }
 > = {
   timed_explore: {
-    label: PRODUCT_INTENT_LABELS.drillDialog,
-    eyebrow: "LLM-powered Dialog",
+    label: "Drill with AI",
+    eyebrow: "With AI",
     shortDiff:
-      "Drill · Dialog — timed dialogue practice. You still think aloud; Helios keeps the conversation going as you show what you know.",
-    mintingLabel: "Minting Drill · Dialog…",
-    mintLabel: "Mint Drill · Dialog link",
+      "Timed practice with Helios. You still think aloud; Helios keeps the conversation going as you show what you know.",
+    mintingLabel: "Minting Drill with AI…",
+    mintLabel: "Mint Drill with AI link",
     interaction_kind: "conversational",
     accent: "slate",
   },
   timed_drill: {
-    label: PRODUCT_INTENT_LABELS.drillSolo,
-    eyebrow: "Solo Exercise",
+    label: "Drill Solo Exercises",
+    eyebrow: "Solo Exercises",
     shortDiff:
-      "Drill · Solo Exercise — timed solo work without dialog partner. You still think aloud as you work through and submit your solution.",
-    mintingLabel: "Minting Drill · Solo…",
-    mintLabel: "Mint Drill · Solo Exercise link",
+      "Timed solo work. You still think aloud as you work through and submit your solution.",
+    mintingLabel: "Minting Drill Solo Exercises…",
+    mintLabel: "Mint Drill Solo Exercises link",
     interaction_kind: "exercise",
     accent: "amber",
   },
@@ -1149,10 +1148,9 @@ export function MapOfKnowledgeClient() {
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
           Place yourself on the Map of Knowledge by running a short timed session on a public
-          workspace. Choose a{" "}
-          <span className="text-zinc-300">timed exploratory dialog</span> (interactive LLM-powered
-          dialog) or a <span className="text-neutral-300/90">timed exercise without dialog</span>{" "}
-          (solo monolog).
+          workspace. Choose{" "}
+          <span className="text-zinc-300">Drill with AI</span> or{" "}
+          <span className="text-neutral-300/90">Drill Solo Exercises</span>.
           In both cases you still <span className="text-zinc-300">think aloud</span> — then you
           appear on the map after you practice.
         </p>

@@ -89,6 +89,13 @@ import {
   type ExerciseThought,
 } from "@/lib/exercise-tap";
 import {
+  cloneTapSoloLists,
+  markTapSoloProblemSubmitted,
+  seedTapSoloProblems,
+  setTapSoloProblemLists,
+  type TapSoloProblem,
+} from "@/lib/tap-session-map";
+import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
@@ -206,6 +213,10 @@ export function ExerciseTapClient({
   );
   const [lists, setLists] = useState<ExerciseDualLists>(() => emptyExerciseDualLists());
   const listsRef = useRef<ExerciseDualLists>(emptyExerciseDualLists());
+  const [soloProblems, setSoloProblems] = useState<TapSoloProblem[]>([]);
+  const soloProblemsRef = useRef<TapSoloProblem[]>([]);
+  const [activeSoloProblemId, setActiveSoloProblemId] = useState<string | null>(null);
+  const activeSoloProblemIdRef = useRef<string | null>(null);
   const [crystallizableText, setCrystallizableText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
@@ -252,6 +263,20 @@ export function ExerciseTapClient({
   useEffect(() => {
     listsRef.current = lists;
   }, [lists]);
+
+  useEffect(() => {
+    soloProblemsRef.current = soloProblems;
+  }, [soloProblems]);
+
+  useEffect(() => {
+    activeSoloProblemIdRef.current = activeSoloProblemId;
+  }, [activeSoloProblemId]);
+
+  useEffect(() => {
+    const id = activeSoloProblemId;
+    if (!id) return;
+    setSoloProblems((prev) => setTapSoloProblemLists(prev, id, lists));
+  }, [lists, activeSoloProblemId]);
 
   useEffect(() => {
     setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
@@ -551,6 +576,35 @@ export function ExerciseTapClient({
     [logExerciseTrace],
   );
 
+  const persistActiveSoloLists = useCallback((problems?: TapSoloProblem[]) => {
+    const current = problems ?? soloProblemsRef.current;
+    const id = activeSoloProblemIdRef.current;
+    if (!id) return current;
+    const next = setTapSoloProblemLists(current, id, listsRef.current);
+    soloProblemsRef.current = next;
+    return next;
+  }, []);
+
+  const selectSoloProblem = useCallback((id: string) => {
+    if (id === activeSoloProblemIdRef.current) return;
+    const next = persistActiveSoloLists();
+    const problem = next.find((item) => item.id === id);
+    if (!problem) return;
+    setSoloProblems(next);
+    setActiveSoloProblemId(id);
+    const listsNext = cloneTapSoloLists(problem.lists);
+    listsRef.current = listsNext;
+    setLists(listsNext);
+    setExerciseText(problem.prompt);
+  }, [persistActiveSoloLists]);
+
+  const submitSoloSolution = useCallback(() => {
+    const id = activeSoloProblemIdRef.current;
+    if (!id) return;
+    const next = markTapSoloProblemSubmitted(persistActiveSoloLists(), id);
+    setSoloProblems(next);
+  }, [persistActiveSoloLists]);
+
   // Silence auto-stash (system 1) — same purity mechanics as conversational TAP.
   // Grace after live entry so briefing elapsed time / UI settle does not burn purity.
   useEffect(() => {
@@ -613,6 +667,10 @@ export function ExerciseTapClient({
     setSpeechError(null);
     setLists(emptyExerciseDualLists());
     listsRef.current = emptyExerciseDualLists();
+    setSoloProblems([]);
+    soloProblemsRef.current = [];
+    setActiveSoloProblemId(null);
+    activeSoloProblemIdRef.current = null;
     setSessionPurity(TAP_SESSION_PURITY_MAX);
     setSessionEndedImpure(false);
     setTranscriptSilenceMs(0);
@@ -650,6 +708,15 @@ export function ExerciseTapClient({
       });
       if (!prompt) throw new Error("Could not generate exercise prompt");
       setExerciseText(prompt);
+      const seeded = seedTapSoloProblems({
+        exerciseText: prompt,
+        topics: startingTopics,
+        startedTopicId: topic?.id ?? null,
+      });
+      setSoloProblems(seeded.placed);
+      soloProblemsRef.current = seeded.placed;
+      setActiveSoloProblemId(seeded.placed[0]?.id ?? null);
+      activeSoloProblemIdRef.current = seeded.placed[0]?.id ?? null;
 
       const started = Date.now();
       setStartedAt(started);
@@ -717,19 +784,40 @@ export function ExerciseTapClient({
 
     try {
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-      // Transcript: exercise prompt + submitted stack (sys2), then leftover stash (sys1).
-      const timeline: ExerciseThought[] = [
-        ...finalLists.submitted,
-        ...finalLists.stash,
-      ].sort((a, b) => a.timestamp - b.timestamp);
-      const transcript = [
-        { role: "assistant", text: exerciseText, at: new Date(startedAt || Date.now()).toISOString() },
-        ...timeline.map((thought) => ({
-          role: "user" as const,
-          text: thought.text,
-          at: new Date(thought.timestamp).toISOString(),
-        })),
-      ];
+      const persistedProblems = activeSoloProblemIdRef.current
+        ? setTapSoloProblemLists(soloProblemsRef.current, activeSoloProblemIdRef.current, finalLists)
+        : soloProblemsRef.current;
+      const at = new Date(startedAt || Date.now()).toISOString();
+      const transcript: Array<{ role: "assistant" | "user"; text: string; at: string }> = [];
+      if (persistedProblems.length > 0) {
+        for (const problem of persistedProblems) {
+          transcript.push({ role: "assistant", text: problem.prompt, at });
+          const timeline: ExerciseThought[] = [
+            ...problem.lists.submitted,
+            ...problem.lists.stash,
+          ].sort((a, b) => a.timestamp - b.timestamp);
+          for (const thought of timeline) {
+            transcript.push({
+              role: "user",
+              text: thought.text,
+              at: new Date(thought.timestamp).toISOString(),
+            });
+          }
+        }
+      } else {
+        const timeline: ExerciseThought[] = [
+          ...finalLists.submitted,
+          ...finalLists.stash,
+        ].sort((a, b) => a.timestamp - b.timestamp);
+        transcript.push({ role: "assistant", text: exerciseText, at });
+        for (const thought of timeline) {
+          transcript.push({
+            role: "user",
+            text: thought.text,
+            at: new Date(thought.timestamp).toISOString(),
+          });
+        }
+      }
       const safeTranscript =
         transcript.length > 0
           ? transcript
@@ -891,6 +979,10 @@ export function ExerciseTapClient({
       retryMicrophone={retryMicrophone}
       stashCurrentTranscription={stashCurrentTranscription}
       submitCurrentOrLatestStash={submitCurrentOrLatestStash}
+      soloProblems={soloProblems}
+      activeSoloProblemId={activeSoloProblemId}
+      onSelectSoloProblem={selectSoloProblem}
+      onSubmitSoloSolution={submitSoloSolution}
       sessionEndedImpure={sessionEndedImpure}
       resolvedWorkspaceId={resolvedWorkspaceId}
       restartPractice={() => {
@@ -900,6 +992,10 @@ export function ExerciseTapClient({
         setError("");
         setLists(emptyExerciseDualLists());
         listsRef.current = emptyExerciseDualLists();
+        setSoloProblems([]);
+        soloProblemsRef.current = [];
+        setActiveSoloProblemId(null);
+        activeSoloProblemIdRef.current = null;
         setExerciseText(buildExercisePromptText({ workspaceTitle }));
         setPhase("briefing");
       }}

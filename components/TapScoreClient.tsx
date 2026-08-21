@@ -942,6 +942,7 @@ export function TapScoreClient({
       isPracticeMode={isPracticeMode}
       lastUserTurn={lastUserTurn}
       lastAssistantTurn={lastAssistantTurn}
+      messages={messages}
       isSending={isSending}
       heliosTurnMode={heliosTurnMode}
       userInitial={userInitial}
@@ -959,6 +960,7 @@ export function TapScoreClient({
       stashCurrentTranscription={stashCurrentTranscription}
       beginEditTranscription={beginEditTranscription}
       latestThoughts={latestThoughts}
+      stashedThoughts={stashedThoughts}
       sendThought={sendThought}
       thoughtHistory={thoughtHistory}
       workspaceId={workspaceId}

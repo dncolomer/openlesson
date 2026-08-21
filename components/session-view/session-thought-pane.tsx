@@ -7,11 +7,13 @@ import type { ExerciseDualLists } from "@/lib/ile-mode";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
+import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 export type SessionThoughtPaneProps = {
   activeChapterKey: string;
   chapterReloadNonce: number;
   isProjectMode: boolean;
+  participantIdentity?: PowParticipantIdentity | null;
   lastUserTurn: { id: string; content: string } | null;
   lastAssistantTurn: { id: string; content: string } | null;
   isAssistantPending: boolean;
@@ -46,6 +48,7 @@ export function SessionThoughtPane({
   activeChapterKey,
   chapterReloadNonce,
   isProjectMode,
+  participantIdentity = null,
   lastUserTurn,
   lastAssistantTurn,
   isAssistantPending,
@@ -99,6 +102,7 @@ export function SessionThoughtPane({
         aestheticImages={selectedAesthetic?.images}
         aestheticName={selectedAesthetic?.name}
         thought={thought}
+        participantIdentity={participantIdentity}
         projectMode={isProjectMode}
         chapterThoughtsLocked={chapterThoughtsLocked}
         projectStash={projectStash}

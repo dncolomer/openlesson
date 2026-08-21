@@ -94,7 +94,8 @@ describe("structural dual history + wider shell", () => {
     expect(client).toContain('traceType: "system2"');
     expect(client).toContain('action: "send"');
     expect(client).toContain('action: "remove"');
-    expect(client).toContain("max-w-7xl");
+    expect(client).toContain("h-screen");
+    expect(client).not.toContain("max-w-7xl");
     expect(client).not.toContain("DialogueSplit");
 
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
@@ -102,6 +103,7 @@ describe("structural dual history + wider shell", () => {
     expect(shell).toContain("ExerciseStashHistory");
     expect(shell).toContain("ExerciseSubmissionStack");
     expect(shell).toContain("lg:grid-cols-2");
+    expect(shell).toContain("data-exercise-tap-live-split");
 
     expect(read("components/exercise-tap/ExerciseStashHistory.tsx")).toContain(
       "data-exercise-stash-history",

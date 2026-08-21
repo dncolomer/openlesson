@@ -1,6 +1,6 @@
 /**
- * Compact ILE submit/stash: one smaller active avatar, no Open Thoughts.
- * TAP two-circle comic stays unchanged.
+ * Compact ILE submit/stash: no Open Thoughts; Helios-only dialogue.
+ * TAP live uses the ephemeral session map (comic helper unused on live).
  */
 import { describe, expect, it } from "vitest";
 import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/surface-source";
@@ -46,7 +46,7 @@ describe("resolveIleDialogueTurn (shipped ILE speaker helper)", () => {
     const heliosSend = resolveIleDialogueTurn({ isSending: true, heliosTurnMode: "responding" });
     expect(heliosSend.speaker).toBe("helios");
     expect(heliosSend.kind).toBe("waiting");
-    expect(heliosSend.showHeliosAvatar).toBe(true);
+    expect(heliosSend.showHeliosAvatar).toBe(false);
     expect(heliosSend.showLearnerAvatar).toBe(false);
 
     const interrupt = resolveIleDialogueTurn({
@@ -55,14 +55,14 @@ describe("resolveIleDialogueTurn (shipped ILE speaker helper)", () => {
     });
     expect(interrupt.speaker).toBe("helios");
     expect(interrupt.kind).toBe("waiting");
-    expect(interrupt.showHeliosAvatar).toBe(true);
+    expect(interrupt.showHeliosAvatar).toBe(false);
     expect(interrupt.showLearnerAvatar).toBe(false);
 
     const firstChapter = resolveIleDialogueTurn({ isSending: false, heliosTurnMode: "idle" });
     expect(firstChapter.speaker).toBe("helios");
     expect(firstChapter.kind).toBe("helios");
     expect(firstChapter.showLearnerAvatar).toBe(false);
-    expect(firstChapter.showHeliosAvatar).toBe(true);
+    expect(firstChapter.showHeliosAvatar).toBe(false);
 
     expect(avatarRem(ILE_DIALOGUE_AVATAR_SIZE_CLASS)).toBeLessThan(
       avatarRem(TAP_DIALOGUE_AVATAR_SIZE_CLASS),
@@ -84,7 +84,7 @@ describe("resolveIleDialogueTurn (shipped ILE speaker helper)", () => {
 });
 
 describe("ILE vs TAP dialogue chrome (shipped source)", () => {
-  it("ILE has no Open Thoughts button and uses the single-avatar helper; TAP still mounts both circles", () => {
+  it("ILE has no Open Thoughts button and uses the single-avatar helper; TAP live uses the session map", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain("data-open-thoughts");
     expect(helios).not.toContain("Open Thoughts");
@@ -98,13 +98,15 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     expect(ui).toContain("resolveIleDialogueTurn");
     expect(ui).toContain("data-ile-dialogue-compact");
-    expect(ui).toContain('size="ile"');
     expect(ui).toContain("ILE_DIALOGUE_AVATAR_SIZE_CLASS");
     expect(ui).toContain("TAP_DIALOGUE_AVATAR_SIZE_CLASS");
+    const ileFn = ui.slice(ui.indexOf("function DialogueSplitIle"), ui.indexOf("function DialogueSplitFramed"));
+    expect(ileFn).not.toContain("<HeliosProbeAvatar");
 
     const tap = readTapScoreSurface();
-    expect(tap).toContain('layout="tap"');
-    expect(tap).toContain("DialogueSplit");
+    expect(tap).toContain("TapSessionMap");
+    expect(tap).toContain("TapTurnOverlay");
+    expect(tap).not.toContain("<DialogueSplit");
 
     const comic = ui.slice(ui.indexOf("function DialogueSplitComic"), ui.indexOf("function DialogueSplitIle"));
     expect(comic).toContain("<HeliosProbeAvatar");
@@ -115,8 +117,8 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
       "ile-compact-stash-excerpts.txt",
       [
         "SessionHeliosPanel: no Open Thoughts / data-open-thoughts",
-        "DialogueSplitIle: resolveIleDialogueTurn + size=ile",
-        "DialogueSplitComic (TAP): both HeliosProbeAvatar and LearnerThoughtAvatar",
+        "DialogueSplitIle: resolveIleDialogueTurn, no Helios avatar",
+        "TAP live: TapSessionMap + overlay (comic helper unused on live)",
         "Tools rail still has thought-history",
       ].join("\n"),
     );
@@ -179,7 +181,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     const compact = read("components/IleCompactStashWindow.tsx");
     expect(compact).toContain("ThoughtBackgroundLayers");
     expect(compact).toContain("THOUGHT_BACKGROUND_IMAGES");
-    expect(compact).toContain("HeliosProbeAvatar");
+    expect(compact).not.toContain("HeliosProbeAvatar");
     expect(compact).toContain("data-ile-compact-transcript");
     expect(compact).toContain("data-ile-compact-forming");
     expect(compact).toContain("data-ile-compact-share-cta");

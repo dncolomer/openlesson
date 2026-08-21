@@ -652,6 +652,8 @@ describe("map-of-knowledge product surfaces", () => {
     // Product language on placement cards (not TAP/ILE jargon)
     expect(clientSrc).toContain("Timed Exploration");
     expect(clientSrc).toContain("Timed Drill");
+    expect(clientSrc).toContain("Drill with AI");
+    expect(clientSrc).toContain("Drill Solo Exercises");
     expect(clientSrc).toContain("data-mint-timed-explore");
     expect(clientSrc).toContain("data-mint-timed-drill");
     expect(clientSrc).toContain("interaction_kind");
@@ -684,8 +686,15 @@ describe("map-of-knowledge product surfaces", () => {
     expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
-    expect(clientSrc).toMatch(/Interactive LLM-powered Dialog|exploratory dialog/i);
-    expect(clientSrc).toMatch(/Solo monolog/i);
+    expect(clientSrc).toContain("Drill with AI");
+    expect(clientSrc).toContain("Drill Solo Exercises");
+    const timedExploreCard = clientSrc.slice(
+      clientSrc.indexOf("data-mint-timed-explore-card"),
+      clientSrc.indexOf("data-mint-timed-drill-card"),
+    );
+    const timedDrillCard = clientSrc.slice(clientSrc.indexOf("data-mint-timed-drill-card"));
+    expect(timedExploreCard).not.toMatch(/Dialog/);
+    expect(timedDrillCard.slice(0, 2500)).not.toMatch(/Dialog/);
     expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
     expect(pageSrc).not.toMatch(/TAP or ILE/);
     // Map canvas appears before placement section

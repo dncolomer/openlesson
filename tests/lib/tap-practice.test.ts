@@ -109,7 +109,7 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(cards).toContain('data-tap-topic-grid={showPractice ? "2x2-practice"');
     expect(cards).toContain("PracticeFirstCard");
     expect(client).toContain("onPracticeFirst");
-    expect(client).toContain("data-tap-practice-banner");
+    expect(client).toContain("data-tap-practice-pill");
     expect(client).toContain("data-tap-practice-done");
     expect(client).toContain("data-tap-practice-restart");
     expect(client).toContain("practice: true");
@@ -173,14 +173,19 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(ile).not.toContain("tap-practice");
   });
 
-  it("keeps practice cue on banner only — stash/submit box stays neutral", () => {
+  it("keeps practice cue as a pill next to signed-as — stash/submit box stays neutral", () => {
     const client = readTapScoreSurface();
-    expect(client).toContain("data-tap-practice-banner");
-    // Stash/submit panel is always neutral (no practice cyan on that box)
-    expect(client).toContain(
-      'className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md"',
-    );
+    expect(client).toContain("data-tap-practice-pill");
+    expect(client).not.toContain("data-tap-practice-banner");
+    expect(client).toContain("SessionIdentityBadge");
+    expect(client).toContain("TapPracticePill");
+    expect(client).toContain('data-tap-live-control-strip');
     expect(client).not.toMatch(/isPracticeMode\s*\?\s*[\s\S]*border-cyan-400\/30 bg-cyan-950\/40/);
+    expect(client).toContain('data-tap-aesthetic-section={kind}');
+    expect(client).toContain('kind="shortcuts"');
+    expect(client).toContain('kind="convo-stash"');
+    expect(client).not.toContain('kind="thought-memory"');
+    expect(client).not.toMatch(/fixed inset-0 z-0 bg-cover/);
   });
 
   it("practice conversation prompts stay on-topic but easier", () => {

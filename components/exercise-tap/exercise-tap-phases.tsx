@@ -5,16 +5,19 @@ import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
+import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { ExerciseTapShell } from "@/components/exercise-tap/ExerciseTapShell";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
+import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { ExerciseThought } from "@/lib/exercise-tap";
+import type { TapSoloProblem } from "@/lib/tap-session-map";
 import {
   TAP_SESSION_PURITY_MAX,
   shouldFadeLiveBar,
@@ -70,6 +73,10 @@ export function ExerciseTapPhases(props: {
   restartPractice: () => void;
   backToBriefing: () => void;
   onDone: () => void;
+  soloProblems: TapSoloProblem[];
+  activeSoloProblemId: string | null;
+  onSelectSoloProblem: (id: string) => void;
+  onSubmitSoloSolution: () => void;
 }) {
   const {
     phase,
@@ -111,29 +118,24 @@ export function ExerciseTapPhases(props: {
     restartPractice,
     backToBriefing,
     onDone,
+    soloProblems,
+    activeSoloProblemId,
+    onSelectSoloProblem,
+    onSubmitSoloSolution,
   } = props;
 
   return (
-    <div data-exercise-tap-client className="relative min-h-screen bg-[#0a0a0a] text-white">
-      {bgImage ? (
-        <div
-          className="pointer-events-none fixed inset-0 opacity-30"
-          style={{
-            backgroundImage: `url(${bgImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      ) : null}
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-3 py-3 sm:px-5">
+    <div data-exercise-tap-client className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white">
+      <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         {phase === "briefing" && (
           <section
-            className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 py-4"
+            className="relative flex min-h-0 flex-1"
             data-exercise-briefing
             data-exercise-tap-intro
+            data-tap-briefing-layout="sections"
           >
-            <div className="grid min-h-0 w-full flex-1 gap-4 lg:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
+            <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
+              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
                 <SessionOnboardingGuide
                   variant="tap"
                   hideStep3Quote
@@ -160,7 +162,7 @@ export function ExerciseTapPhases(props: {
                   )}
                 />
               </div>
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 backdrop-blur-md">
+              <TapAestheticSection bgImage={bgImage} kind="shortcuts">
                 <TapBriefingConfig
                   kicker="Exercise TAP"
                   workspaceTitle={workspaceTitle}
@@ -180,7 +182,7 @@ export function ExerciseTapPhases(props: {
                     { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
                   ]}
                 />
-              </div>
+              </TapAestheticSection>
               {error ? (
                 <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
                   {error}
@@ -192,33 +194,31 @@ export function ExerciseTapPhases(props: {
 
         {phase === "live" && (
           <>
-            {isPracticeMode ? (
-              <div
-                data-tap-practice-banner
-                className="mb-3 shrink-0 rounded-xl border border-neutral-500/40 bg-neutral-800/10 px-4 py-2.5 text-center"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/90">
-                  {t("tap.practice.bannerKicker")}
-                </p>
-                <p className="mt-0.5 text-sm font-medium text-neutral-50">{t("tap.practice.bannerTitle")}</p>
-                <p className="mt-0.5 text-xs text-neutral-200/70">{t("tap.practice.bannerHint")}</p>
-              </div>
-            ) : null}
-          <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
           <ExerciseTapShell
             exerciseText={exerciseText}
             stash={stash}
             submitted={submitted}
             onSubmitStashThought={submitStashThought}
             onRemoveSubmission={handleUndoSubmissionToStash}
+            problems={soloProblems}
+            activeProblemId={activeSoloProblemId}
+            onSelectProblem={onSelectSoloProblem}
+            onSubmitSolution={onSubmitSoloSolution}
+            bgImage={bgImage}
             identityBadge={
-              participantIdentity ? (
-                <SessionIdentityBadge identity={participantIdentity} />
+              isPracticeMode || participantIdentity ? (
+                <div className="flex items-center justify-end gap-2">
+                  {isPracticeMode ? (
+                    <TapPracticePill label={t("tap.practice.bannerKicker")} />
+                  ) : null}
+                  <SessionIdentityBadge identity={participantIdentity} />
+                </div>
               ) : undefined
             }
             controlStrip={
               <div
-                className="flex w-full flex-wrap items-end justify-between gap-3 rounded-xl border border-neutral-800/90 bg-neutral-950/70 px-3 py-2"
+                className="flex w-full shrink-0 flex-wrap items-end justify-between gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
                 data-exercise-live-control-strip
               >
                 <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4 sm:gap-5">
@@ -291,7 +291,7 @@ export function ExerciseTapPhases(props: {
               <>
                 <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                   <div
-                    className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
+                    className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
                     style={{
                       opacity: shouldFadeLiveBar(transcriptSilenceMs)
                         ? transcriptFadeOpacity(transcriptSilenceMs)
@@ -410,7 +410,7 @@ export function ExerciseTapPhases(props: {
               <a
                 href="/"
                 data-tap-explore-uncertain-systems
-                className="mt-8 inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                className="mt-8 inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
               >
                 {t("tap.postSession.exploreUncertainSystems")}
               </a>

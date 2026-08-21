@@ -1,5 +1,5 @@
 /**
- * ILE dialogue is Helios-only: small top-center avatar + waiting think copy.
+ * ILE dialogue is Helios-only: question fills the panel; no Helios avatar.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -42,7 +42,7 @@ describe("ILE Helios-only surface helper", () => {
     for (const turn of [idle, reply, sending, interrupt]) {
       expect(turn.speaker).toBe("helios");
       expect(turn.showLearnerAvatar).toBe(false);
-      expect(turn.showHeliosAvatar).toBe(true);
+      expect(turn.showHeliosAvatar).toBe(false);
     }
     expect(idle.kind).toBe("helios");
     expect(reply.kind).toBe("helios");
@@ -82,24 +82,24 @@ describe("Helios thinking copy", () => {
 });
 
 describe("ILE dialogue UI wiring", () => {
-  it("small top-center Helios avatar; no learner avatar; centered wait + think helper", () => {
+  it("question fills remaining space; no Helios avatar; wait + think helper", () => {
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     expect(ui).toContain("resolveIleDialogueTurn");
     expect(ui).toContain("ileHeliosThinkingLine");
-    expect(ui).toContain("data-ile-helios-avatar-top");
-    expect(ui).toContain("justify-center");
+    expect(ui).not.toContain("data-ile-helios-avatar-top");
     expect(ui).toContain("data-ile-helios-waiting");
     expect(ui).toContain("data-ile-helios-waiting-ellipsis");
     expect(ui).toContain("data-ile-helios-thinking-copy");
     expect(ui).toContain("ILE_HELIOS_THINKING_ROTATE_MS");
 
     const ileFn = ui.slice(ui.indexOf("function DialogueSplitIle"), ui.indexOf("function DialogueSplitFramed"));
-    expect(ileFn).toContain("<HeliosProbeAvatar");
+    expect(ileFn).not.toContain("<HeliosProbeAvatar");
     expect(ileFn).not.toContain("<LearnerThoughtAvatar");
     expect(ileFn).toContain('data-ile-dialogue-speaker="helios"');
     expect(ileFn).toContain("HeliosMarkdown");
     expect(ileFn).toContain("data-ile-helios-scroll");
     expect(ileFn).toContain("overflow-y-auto");
+    expect(ileFn).toContain("flex-1");
     expect(ileFn).not.toMatch(
       /<p className=\{`\$\{textClass\} text-center text-neutral-100`\}>\{lastAssistantTurn\.content\}<\/p>/,
     );
@@ -122,7 +122,7 @@ describe("ILE dialogue UI wiring", () => {
     writeScratch(
       "ile-helios-dialogue-excerpts.txt",
       [
-        "DialogueSplitIle: Helios-only, data-ile-helios-avatar-top, waiting ellipsis + ileHeliosThinkingLine",
+        "DialogueSplitIle: Helios-only, no avatar, question fills remaining space",
         "no LearnerThoughtAvatar on ILE path",
         "TAP DialogueSplitComic still mounts both avatars",
         "Helios bubble: HeliosMarkdown + data-ile-helios-scroll overflow-y-auto",

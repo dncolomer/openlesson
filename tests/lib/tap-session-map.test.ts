@@ -194,6 +194,7 @@ describe("TAP solo problems", () => {
     const beforeCount = problems.length;
     problems = markTapSoloProblemSubmitted(problems, aId);
     expect(problems.find((p) => p.id === aId)?.solutionSubmitted).toBe(true);
+    expect(problems.find((p) => p.id === aId)?.done).toBe(true);
     expect(problems.find((p) => p.id === bId)?.solutionSubmitted).toBe(false);
     expect(problems).toHaveLength(beforeCount);
 
@@ -237,6 +238,8 @@ describe("TAP live map wiring", () => {
     expect(map).toContain("tapSessionMapCenterOnOrigin");
     expect(map).toContain("data-tap-session-block-dimmed");
     expect(map).toContain("opacity-25");
+    expect(map).toContain("Boolean(block.done)");
+    expect(map).not.toContain('status: block.done ? "completed"');
     expect(map).not.toContain("formatGridCoordinate");
     expect(tap).toContain("currentId={convoBlocks[convoBlocks.length - 1]?.id");
 

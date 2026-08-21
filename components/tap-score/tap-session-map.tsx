@@ -128,7 +128,9 @@ export function TapSessionMap({
               const vis = fog(row, col);
               if (block) {
                 const selected = block.id === selectedId;
-                const dimmed = Boolean(currentId) && block.id !== currentId;
+                const dimmed =
+                  Boolean(block.done) ||
+                  (Boolean(currentId) && block.id !== currentId);
                 return (
                   <button
                     key={key}
@@ -142,7 +144,7 @@ export function TapSessionMap({
                     className={cn(
                       "flex flex-col items-start justify-end overflow-hidden rounded-none border p-1.5 text-left",
                       learnerMapCellChromeClasses({
-                        status: block.done ? "completed" : "available",
+                        status: "available",
                         selected: selected && !dimmed,
                       }),
                       dimmed &&

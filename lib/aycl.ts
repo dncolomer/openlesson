@@ -24,6 +24,10 @@ import {
   ayclComplimentaryPurchaseRow,
   complimentaryAyclLinkEligible,
 } from "@/lib/aycl-complimentary";
+import {
+  ayclForkWorkspaceParams,
+  createAyclForkGuestUser,
+} from "@/lib/aycl-fork-guest";
 
 export {
   AYCL_PRICE_CENTS,
@@ -148,13 +152,16 @@ export async function redeemComplimentaryAyclLink(
 
   const accessToken = createPrivateToken();
   try {
-    const fork = await forkWorkspaceExactCopy(supabase, {
-      sourceWorkspaceId: sourceWorkspace.id,
-      ownerUserId: sourceWorkspace.user_id,
-      title: sourceWorkspace.title || sourceWorkspace.root_topic,
-      originalWorkspaceId: sourceWorkspace.id,
-      isAyclFork: true,
-    });
+    const guest = await createAyclForkGuestUser(supabase);
+    const fork = await forkWorkspaceExactCopy(
+      supabase,
+      ayclForkWorkspaceParams({
+        sourceWorkspaceId: sourceWorkspace.id,
+        catalogOwnerUserId: sourceWorkspace.user_id,
+        guestUserId: guest.id,
+        title: sourceWorkspace.title || sourceWorkspace.root_topic,
+      }),
+    );
 
     const row = ayclComplimentaryPurchaseRow({
       sourceWorkspaceId: sourceWorkspace.id,
@@ -377,13 +384,16 @@ export async function fulfillAyclPurchase(
     existing.access_tier || meta.aycl_access_tier || "full",
   );
 
-  const fork = await forkWorkspaceExactCopy(supabase, {
-    sourceWorkspaceId,
-    ownerUserId: sourceWorkspace.user_id,
-    title: sourceWorkspace.title || sourceWorkspace.root_topic,
-    originalWorkspaceId: sourceWorkspaceId,
-    isAyclFork: true,
-  });
+  const guest = await createAyclForkGuestUser(supabase);
+  const fork = await forkWorkspaceExactCopy(
+    supabase,
+    ayclForkWorkspaceParams({
+      sourceWorkspaceId,
+      catalogOwnerUserId: sourceWorkspace.user_id,
+      guestUserId: guest.id,
+      title: sourceWorkspace.title || sourceWorkspace.root_topic,
+    }),
+  );
 
   const { error: updateError } = await supabase
     .from("aycl_purchases")

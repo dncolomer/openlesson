@@ -239,10 +239,12 @@ describe("Explore on purchased clones", () => {
 
     const fork = read("lib/fork-workspace.ts");
     const aycl = read("lib/aycl.ts");
+    const forkGuest = read("lib/aycl-fork-guest.ts");
     const mapCol = read("components/workspace-view/workspace-map-column.tsx");
     const view = readWorkspaceViewSurface();
     const shared = read("lib/aycl-shared.ts");
-    expect(aycl).toContain("isAyclFork: true");
+    expect(aycl).toContain("ayclForkWorkspaceParams");
+    expect(forkGuest).toContain("isAyclFork: true");
     expect(fork).toContain("isAyclFork");
     expect(fork).toContain("parseAyclClonePracticeOptions");
     expect(fork).toContain("practice_options");

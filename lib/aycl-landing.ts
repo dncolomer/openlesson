@@ -8,6 +8,7 @@ import {
   ayclOfferLabel,
   type AyclAccessTier,
 } from "@/lib/aycl-shared";
+import { AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL } from "@/lib/aycl-complimentary";
 import { shouldShowMapNotesPlaneToggle } from "@/lib/learner-map-notes";
 import { shouldShowAnnotationLayerToggles } from "@/lib/map-annotation-layers";
 import {
@@ -233,6 +234,52 @@ export function toggleAyclMapPreviewFullscreen(open: unknown): boolean {
   return !ayclMapPreviewFullscreenActive(open);
 }
 
+export type AyclLandingOfferDisplay = {
+  tier: AyclAccessTier;
+  label: string;
+  description: string;
+  originalPriceCents: number;
+  originalPriceLabel: string;
+  currentPriceLabel: string;
+  isComplimentary: boolean;
+};
+
+/**
+ * Original paid price vs current price for landing CTAs.
+ * Only the complimentary link's access type (play/learner vs full) is Free;
+ * the unmatched offer stays at its paid listing price.
+ */
+export function ayclLandingOffersForComplimentary(
+  offers: AyclLandingSummary["offers"],
+  complimentaryTier: AyclAccessTier | null | undefined,
+): { learner: AyclLandingOfferDisplay; full: AyclLandingOfferDisplay } {
+  const match = (offer: AyclLandingOffer): AyclLandingOfferDisplay => {
+    const isComplimentary = complimentaryTier === offer.tier;
+    return {
+      tier: offer.tier,
+      label: offer.label,
+      description: offer.description,
+      originalPriceCents: offer.priceCents,
+      originalPriceLabel: offer.priceLabel,
+      currentPriceLabel: isComplimentary
+        ? AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL
+        : offer.priceLabel,
+      isComplimentary,
+    };
+  };
+  return {
+    learner: match(offers.learner),
+    full: match(offers.full),
+  };
+}
+
+export function ayclLandingCtaKind(
+  complimentaryTier: AyclAccessTier | null | undefined,
+  ctaTier: AyclAccessTier,
+): "complimentary" | "paid" {
+  return complimentaryTier === ctaTier ? "complimentary" : "paid";
+}
+
 /** Stripe checkout body for AYCL purchase from the landing CTA. */
 export function ayclLandingCheckoutBody(
   workspaceId: string,
@@ -247,6 +294,12 @@ export function ayclLandingCheckoutBody(
     workspaceId: String(workspaceId || "").trim(),
     ayclAccessTier: tier === "learner" ? "learner" : "full",
   };
+}
+
+export function ayclLandingComplimentaryRedeemBody(token: string): {
+  token: string;
+} {
+  return { token: String(token || "").trim() };
 }
 
 export type AyclExploreLearnSamples = {

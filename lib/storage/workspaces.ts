@@ -37,6 +37,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     notes: p.notes,
     cover_image_url: p.cover_image_url,
     is_group: p.is_group || false,
+    is_all_you_can_learn: Boolean(p.is_all_you_can_learn),
   }));
 }
 

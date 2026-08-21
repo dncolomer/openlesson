@@ -160,10 +160,40 @@ export function ayclComplimentaryPurchaseRow(input: {
   };
 }
 
-export function complimentaryLinkPublicUrl(
-  baseUrl: string,
+/** Query param on `/all-you-can-learn/{workspaceId}` for complimentary access. */
+export const AYCL_COMPLIMENTARY_QUERY_PARAM = "comp";
+
+/** Current-price label when the complimentary link matches this offer. */
+export const AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL = "Free";
+
+export function complimentaryTokenFromQuery(query: unknown): string | null {
+  if (!query || typeof query !== "object") return null;
+  const raw = (query as Record<string, unknown>)[AYCL_COMPLIMENTARY_QUERY_PARAM];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string") return null;
+  const token = value.trim();
+  return token || null;
+}
+
+/** Path-only share URL: workspace landing + complimentary token (not /learn shell). */
+export function complimentaryLinkLandingPath(
+  workspaceId: string,
   publicToken: string,
 ): string {
-  const origin = baseUrl.replace(/\/$/, "");
-  return `${origin}/learn/${publicToken}`;
+  const id = String(workspaceId || "").trim();
+  const token = String(publicToken || "").trim();
+  if (!id) return "/all-you-can-learn";
+  const q = token
+    ? `?${AYCL_COMPLIMENTARY_QUERY_PARAM}=${encodeURIComponent(token)}`
+    : "";
+  return `/all-you-can-learn/${encodeURIComponent(id)}${q}`;
+}
+
+export function complimentaryLinkPublicUrl(
+  baseUrl: string,
+  workspaceId: string,
+  publicToken: string,
+): string {
+  const origin = String(baseUrl || "").replace(/\/$/, "");
+  return `${origin}${complimentaryLinkLandingPath(workspaceId, publicToken)}`;
 }

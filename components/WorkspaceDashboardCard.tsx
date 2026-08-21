@@ -49,6 +49,7 @@ export function WorkspaceDashboardCard({
       className="group overflow-hidden rounded-none border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
       data-workspace-dashboard-card
       data-workspace-pinned={isPinned ? "true" : "false"}
+      data-workspace-aycl={plan.is_all_you_can_learn ? "true" : "false"}
     >
       <Link href={`/workspace/${plan.id}`} className="block">
         <WorkspaceCardHero
@@ -60,6 +61,7 @@ export function WorkspaceDashboardCard({
             <>
               {heroBadge(plan.source_type === "youtube" ? "Video" : "Workspace")}
               {isPublic ? heroBadge("Public") : null}
+              {plan.is_all_you_can_learn ? heroBadge("AYCL") : null}
               {isPinned ? heroBadge("Pinned") : null}
             </>
           }

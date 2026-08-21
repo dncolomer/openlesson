@@ -4,11 +4,14 @@ import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { AyclLandingClient } from "@/components/AyclLandingClient";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAyclComplimentaryLinkByToken } from "@/lib/aycl";
+import { complimentaryAyclLinkEligible, complimentaryTokenFromQuery } from "@/lib/aycl-complimentary";
 import {
   AYCL_LANDING_WORKSPACE_SELECT,
   ayclLandingPath,
   assembleAyclLandingSummary,
 } from "@/lib/aycl-landing";
+import { normalizeAyclAccessTier, type AyclAccessTier } from "@/lib/aycl-shared";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
@@ -20,6 +23,7 @@ const BACKGROUND_IMAGE = aestheticImageForId("all-you-can-learn-landing", [
 
 interface PageProps {
   params: Promise<{ workspaceId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function loadLanding(workspaceId: string) {
@@ -78,10 +82,30 @@ export async function generateMetadata({
   };
 }
 
-export default async function AyclWorkspaceLandingPage({ params }: PageProps) {
+export default async function AyclWorkspaceLandingPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { workspaceId } = await params;
   const landing = await loadLanding(workspaceId);
   if (!landing) notFound();
+
+  let complimentaryToken: string | null = null;
+  let complimentaryTier: AyclAccessTier | null = null;
+  const token = complimentaryTokenFromQuery(
+    searchParams ? await searchParams : null,
+  );
+  if (token) {
+    const link = await getAyclComplimentaryLinkByToken(createAdminClient(), token);
+    if (
+      link &&
+      link.workspace_id === landing.workspaceId &&
+      complimentaryAyclLinkEligible(link).ok
+    ) {
+      complimentaryToken = token;
+      complimentaryTier = normalizeAyclAccessTier(link.access_tier);
+    }
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
@@ -97,7 +121,11 @@ export default async function AyclWorkspaceLandingPage({ params }: PageProps) {
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <AyclLandingClient landing={landing} />
+        <AyclLandingClient
+          landing={landing}
+          complimentaryToken={complimentaryToken}
+          complimentaryTier={complimentaryTier}
+        />
       </section>
 
       <div className="relative z-10">

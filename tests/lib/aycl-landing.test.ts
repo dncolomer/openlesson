@@ -9,6 +9,8 @@ import { join } from "node:path";
 import {
   AYCL_LANDING_WORKSPACE_SELECT,
   ayclLandingCheckoutBody,
+  ayclLandingCtaKind,
+  ayclLandingOffersForComplimentary,
   ayclLandingOgImagePath,
   ayclLandingPath,
   ayclLandingPracticeContext,
@@ -18,6 +20,10 @@ import {
   buildAyclExploreLearnUserPrompt,
   parseAyclExploreLearnSamples,
 } from "@/lib/aycl-landing";
+import {
+  AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL,
+  complimentaryAyclAccessTierFromInput,
+} from "@/lib/aycl-complimentary";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -131,6 +137,63 @@ describe("aycl landing model", () => {
         "checkout=" + JSON.stringify(body),
       ].join("\n"),
     );
+  });
+
+  it("complimentary play token: original learner price + current Free; full stays paid", () => {
+    const landing = assembleAyclLandingSummary({
+      workspace: fixtureWorkspace,
+      blocks: fixtureBlocks,
+    });
+    const playTier = complimentaryAyclAccessTierFromInput("play");
+    const offers = ayclLandingOffersForComplimentary(landing.offers, playTier);
+    expect(playTier).toBe("learner");
+    expect(offers.learner.isComplimentary).toBe(true);
+    expect(offers.learner.originalPriceCents).toBe(landing.offers.learner.priceCents);
+    expect(offers.learner.originalPriceLabel).toBe(landing.offers.learner.priceLabel);
+    expect(offers.learner.originalPriceLabel).toMatch(/\$/);
+    expect(offers.learner.currentPriceLabel).toBe(AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL);
+    expect(offers.learner.currentPriceLabel.toLowerCase()).toBe("free");
+    expect(offers.full.isComplimentary).toBe(false);
+    expect(offers.full.currentPriceLabel).toBe(landing.offers.full.priceLabel);
+    expect(offers.full.currentPriceLabel.toLowerCase()).not.toBe("free");
+    expect(ayclLandingCtaKind(playTier, "learner")).toBe("complimentary");
+    expect(ayclLandingCtaKind(playTier, "full")).toBe("paid");
+  });
+
+  it("complimentary full token: original full price + current Free; play stays paid", () => {
+    const landing = assembleAyclLandingSummary({
+      workspace: fixtureWorkspace,
+      blocks: fixtureBlocks,
+    });
+    const fullTier = complimentaryAyclAccessTierFromInput("full");
+    const offers = ayclLandingOffersForComplimentary(landing.offers, fullTier);
+    expect(fullTier).toBe("full");
+    expect(offers.full.isComplimentary).toBe(true);
+    expect(offers.full.originalPriceCents).toBe(landing.offers.full.priceCents);
+    expect(offers.full.originalPriceLabel).toBe(landing.offers.full.priceLabel);
+    expect(offers.full.originalPriceLabel).toMatch(/\$/);
+    expect(offers.full.currentPriceLabel).toBe(AYCL_COMPLIMENTARY_CURRENT_PRICE_LABEL);
+    expect(offers.learner.isComplimentary).toBe(false);
+    expect(offers.learner.currentPriceLabel).toBe(landing.offers.learner.priceLabel);
+    expect(offers.learner.currentPriceLabel.toLowerCase()).not.toBe("free");
+    expect(ayclLandingCtaKind(fullTier, "full")).toBe("complimentary");
+    expect(ayclLandingCtaKind(fullTier, "learner")).toBe("paid");
+  });
+
+  it("no complimentary token: both offers stay original paid prices with no Free", () => {
+    const landing = assembleAyclLandingSummary({
+      workspace: fixtureWorkspace,
+      blocks: fixtureBlocks,
+    });
+    const offers = ayclLandingOffersForComplimentary(landing.offers, null);
+    expect(offers.learner.isComplimentary).toBe(false);
+    expect(offers.full.isComplimentary).toBe(false);
+    expect(offers.learner.currentPriceLabel).toBe(landing.offers.learner.priceLabel);
+    expect(offers.full.currentPriceLabel).toBe(landing.offers.full.priceLabel);
+    expect(offers.learner.currentPriceLabel.toLowerCase()).not.toBe("free");
+    expect(offers.full.currentPriceLabel.toLowerCase()).not.toBe("free");
+    expect(ayclLandingCtaKind(null, "learner")).toBe("paid");
+    expect(ayclLandingCtaKind(null, "full")).toBe("paid");
   });
 
   it("listing fields win on landing summary, author, category, and prices", () => {
@@ -263,7 +326,14 @@ describe("aycl landing + hackathons structural", () => {
     expect(landingClient).toContain("canEdit={false}");
     expect(landingClient).toContain("explore-samples");
     expect(landingClient).toContain("ayclLandingCheckoutBody");
+    expect(landingClient).toContain("ayclLandingOffersForComplimentary");
+    expect(landingClient).toContain("ayclLandingComplimentaryRedeemBody");
+    expect(landingClient).toContain("/api/aycl/complimentary/redeem");
     expect(landingClient).toContain("data-aycl-checkout-full");
+    expect(landingClient).toContain("data-aycl-offer-original-price");
+    expect(landingClient).toContain("data-aycl-offer-current-price");
+    expect(landingPage).toContain("complimentaryTokenFromQuery");
+    expect(landingPage).toContain("complimentaryAyclLinkEligible");
 
     // View-only map wiring
     expect(grid).toContain("viewOnly");

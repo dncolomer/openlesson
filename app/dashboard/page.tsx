@@ -22,6 +22,11 @@ import {
   sortWorkspacesPinnedFirst,
   togglePinnedWorkspaceId,
 } from "@/lib/dashboard-workspace-pins";
+import {
+  isDashboardWorkspaceListFilter,
+  workspaceMatchesDashboardListFilter,
+  type DashboardWorkspaceListFilter,
+} from "@/lib/dashboard-workspace-filters";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -159,10 +164,9 @@ export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceSearch, setPlanSearch] = useState("");
   const [showArchivedWorkspaces, setShowArchivedPlans] = useState(false);
-  /** Filter workspace cards by visibility: all | public | private */
-  const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] = useState<
-    "all" | "public" | "private"
-  >("all");
+  /** Filter workspace cards by visibility or AYCL listing: all | public | private | aycl */
+  const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] =
+    useState<DashboardWorkspaceListFilter>("all");
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
   const workspacePageSize = 10;
@@ -710,10 +714,7 @@ export default function DashboardPage() {
         p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
         (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
       if (!matchesSearch) return false;
-      const isPublic = p.is_public ?? false;
-      if (workspaceVisibilityFilter === "public") return isPublic;
-      if (workspaceVisibilityFilter === "private") return !isPublic;
-      return true;
+      return workspaceMatchesDashboardListFilter(p, workspaceVisibilityFilter);
     });
     return sortWorkspacesPinnedFirst(filtered, pinnedWorkspaceIds);
   }, [workspaces, workspaceSearch, workspaceVisibilityFilter, pinnedWorkspaceIds]);
@@ -991,17 +992,18 @@ export default function DashboardPage() {
                     value={workspaceVisibilityFilter}
                     onChange={(e) => {
                       const next = e.target.value;
-                      if (next === "all" || next === "public" || next === "private") {
+                      if (isDashboardWorkspaceListFilter(next)) {
                         setWorkspaceVisibilityFilter(next);
                         setPlanPage(1);
                       }
                     }}
                     className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 focus:border-neutral-500 focus:outline-none"
-                    aria-label="Filter workspaces by public or private"
+                    aria-label="Filter workspaces by public, private, or AYCL"
                   >
                     <option value="all">All</option>
                     <option value="public">{t("dashboard.public")}</option>
                     <option value="private">{t("dashboard.private")}</option>
+                    <option value="aycl">AYCL</option>
                   </select>
                 </label>
                 <label className="flex items-center gap-2 text-xs text-neutral-400">

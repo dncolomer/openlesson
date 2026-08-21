@@ -66,7 +66,7 @@ function serializeLink(
     status: row.status,
     created_at: row.created_at,
     revoked_at: row.revoked_at,
-    url: complimentaryLinkPublicUrl(origin, row.public_token),
+    url: complimentaryLinkPublicUrl(origin, row.workspace_id, row.public_token),
   };
 }
 

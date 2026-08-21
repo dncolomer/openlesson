@@ -79,15 +79,19 @@ describe("workspace dashboard card layout", () => {
     expect(routeSrc).toContain("stream");
   });
 
-  it("filters workspaces by public / private next to archived", () => {
+  it("filters workspaces by public / private / AYCL next to archived", () => {
     const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    const storageSrc = readFileSync(join(root, "lib/storage/workspaces.ts"), "utf8");
+    const cardSrc = readFileSync(join(root, "components/WorkspaceDashboardCard.tsx"), "utf8");
     expect(dashSrc).toContain("data-workspace-visibility-filter");
     expect(dashSrc).toContain("workspaceVisibilityFilter");
+    expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
     expect(dashSrc).toContain('value="public"');
     expect(dashSrc).toContain('value="private"');
+    expect(dashSrc).toContain('value="aycl"');
     expect(dashSrc).toContain("Show archived");
-    // Visibility filter applied in list filtering
-    expect(dashSrc).toMatch(/workspaceVisibilityFilter === "public"/);
-    expect(dashSrc).toMatch(/workspaceVisibilityFilter === "private"/);
+    expect(storageSrc).toContain("is_all_you_can_learn");
+    expect(cardSrc).toContain("heroBadge(\"AYCL\")");
+    expect(cardSrc).toContain("data-workspace-aycl");
   });
 });

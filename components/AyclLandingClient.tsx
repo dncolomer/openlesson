@@ -6,6 +6,9 @@ import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   ayclLandingCheckoutBody,
+  ayclLandingComplimentaryRedeemBody,
+  ayclLandingCtaKind,
+  ayclLandingOffersForComplimentary,
   ayclMapPreviewFullscreenActive,
   toggleAyclMapPreviewFullscreen,
   type AyclLandingSummary,
@@ -31,8 +34,12 @@ type ExploreSamples = {
 
 export function AyclLandingClient({
   landing,
+  complimentaryToken = null,
+  complimentaryTier = null,
 }: {
   landing: AyclLandingSummary;
+  complimentaryToken?: string | null;
+  complimentaryTier?: AyclAccessTier | null;
 }) {
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -66,12 +73,43 @@ export function AyclLandingClient({
     };
   }, [landing.workspaceId]);
 
+  const offerDisplay = ayclLandingOffersForComplimentary(
+    landing.offers,
+    complimentaryTier,
+  );
+
   const startCheckout = useCallback(
     async (tier: AyclAccessTier) => {
       const key = `${landing.workspaceId}:${tier}`;
       setCheckoutKey(key);
       setError("");
       try {
+        if (
+          ayclLandingCtaKind(complimentaryTier, tier) === "complimentary" &&
+          complimentaryToken
+        ) {
+          const res = await fetch("/api/aycl/complimentary/redeem", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              ayclLandingComplimentaryRedeemBody(complimentaryToken),
+            ),
+          });
+          const data = await res.json();
+          const accessToken =
+            typeof data.accessToken === "string"
+              ? data.accessToken
+              : typeof data.ayclAccessToken === "string"
+                ? data.ayclAccessToken
+                : "";
+          if (!res.ok || !accessToken) {
+            throw new Error(data.error || "Complimentary access is no longer valid");
+          }
+          sessionStorage.setItem(AYCL_TOKEN_STORAGE_KEY, accessToken);
+          window.location.href = `/learn/${accessToken}`;
+          return;
+        }
+
         const res = await fetch("/api/stripe/create-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -92,7 +130,7 @@ export function AyclLandingClient({
         setCheckoutKey(null);
       }
     },
-    [landing.workspaceId],
+    [complimentaryTier, complimentaryToken, landing.workspaceId],
   );
 
   const nodes = landing.map.nodes as SkillGridNode[];
@@ -208,6 +246,7 @@ export function AyclLandingClient({
         <div
           className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur-sm"
           data-aycl-landing-cta
+          data-aycl-complimentary-landing={complimentaryTier || undefined}
         >
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
             Get this environment
@@ -233,13 +272,27 @@ export function AyclLandingClient({
                   {landing.offers.learner.description}
                 </p>
               </div>
-              <p className="text-lg font-semibold text-white">
-                {landing.offers.learner.priceLabel}
+              <p
+                className="text-right"
+                data-aycl-offer-price="learner"
+                data-aycl-offer-complimentary={
+                  offerDisplay.learner.isComplimentary ? "true" : "false"
+                }
+              >
+                {offerDisplay.learner.isComplimentary ? (
+                  <span className="block text-xs text-zinc-500 line-through" data-aycl-offer-original-price="learner">
+                    {offerDisplay.learner.originalPriceLabel}
+                  </span>
+                ) : null}
+                <span className="text-lg font-semibold text-white" data-aycl-offer-current-price="learner">
+                  {offerDisplay.learner.currentPriceLabel}
+                </span>
               </p>
             </div>
             <button
               type="button"
               data-aycl-checkout-learner
+              data-aycl-cta-kind={ayclLandingCtaKind(complimentaryTier, "learner")}
               disabled={anyBusy}
               onClick={() => void startCheckout("learner")}
               className="mt-3 w-full rounded-sm border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 disabled:opacity-50"
@@ -267,13 +320,27 @@ export function AyclLandingClient({
                   {landing.offers.full.description}
                 </p>
               </div>
-              <p className="text-lg font-semibold text-white">
-                {landing.offers.full.priceLabel}
+              <p
+                className="text-right"
+                data-aycl-offer-price="full"
+                data-aycl-offer-complimentary={
+                  offerDisplay.full.isComplimentary ? "true" : "false"
+                }
+              >
+                {offerDisplay.full.isComplimentary ? (
+                  <span className="block text-xs text-zinc-500 line-through" data-aycl-offer-original-price="full">
+                    {offerDisplay.full.originalPriceLabel}
+                  </span>
+                ) : null}
+                <span className="text-lg font-semibold text-white" data-aycl-offer-current-price="full">
+                  {offerDisplay.full.currentPriceLabel}
+                </span>
               </p>
             </div>
             <button
               type="button"
               data-aycl-checkout-full
+              data-aycl-cta-kind={ayclLandingCtaKind(complimentaryTier, "full")}
               disabled={anyBusy}
               onClick={() => void startCheckout("full")}
               className="mt-3 w-full rounded-sm bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"

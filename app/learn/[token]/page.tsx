@@ -1,6 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { AyclLearnInvalidLink, AyclLearnRedirect } from "@/components/AyclLearnRedirect";
 import { AyclWorkspaceView } from "@/components/AyclWorkspaceView";
-import { redeemComplimentaryAyclLink } from "@/lib/aycl";
+import { getAyclComplimentaryLinkByToken } from "@/lib/aycl";
+import { complimentaryLinkLandingPath } from "@/lib/aycl-complimentary";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -13,9 +14,13 @@ export default async function AyclLearnPage({ params }: PageProps) {
   const ctx = await resolveAyclAccess(token);
 
   if ("error" in ctx) {
-    const redeemed = await redeemComplimentaryAyclLink(createAdminClient(), token);
-    if ("error" in redeemed) notFound();
-    redirect(`/learn/${redeemed.accessToken}`);
+    const link = await getAyclComplimentaryLinkByToken(createAdminClient(), token);
+    if (link) {
+      return (
+        <AyclLearnRedirect href={complimentaryLinkLandingPath(link.workspace_id, token)} />
+      );
+    }
+    return <AyclLearnInvalidLink />;
   }
 
   const { data: workspace, error: workspaceError } = await ctx.supabase
@@ -24,7 +29,9 @@ export default async function AyclLearnPage({ params }: PageProps) {
     .eq("id", ctx.workspaceId)
     .single();
 
-  if (workspaceError || !workspace) notFound();
+  if (workspaceError || !workspace) {
+    return <AyclLearnInvalidLink />;
+  }
 
   const { data: blocks } = await ctx.supabase
     .from("blocks")

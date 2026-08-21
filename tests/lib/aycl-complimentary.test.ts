@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  AYCL_COMPLIMENTARY_QUERY_PARAM,
   ayclComplimentaryPurchaseRow,
   complimentaryAyclAccessTierFromInput,
   complimentaryAyclLinkEligible,
+  complimentaryLinkLandingPath,
   complimentaryLinkPublicUrl,
+  complimentaryTokenFromQuery,
   parseComplimentaryLinkCreateBody,
   resolveComplimentaryAyclCapabilities,
 } from "@/lib/aycl-complimentary";
@@ -246,9 +249,16 @@ describe("complimentary grant row has no checkout session", () => {
     expect(row.completed_at).toBe(now.toISOString());
   });
 
-  it("builds /learn/{token} URLs", () => {
-    expect(complimentaryLinkPublicUrl("https://uncertain.systems/", "tok")).toBe(
-      "https://uncertain.systems/learn/tok",
+  it("builds workspace landing URLs with complimentary token (not /learn shell)", () => {
+    expect(
+      complimentaryLinkPublicUrl("https://uncertain.systems/", "ws-1", "tok"),
+    ).toBe("https://uncertain.systems/all-you-can-learn/ws-1?comp=tok");
+    expect(complimentaryLinkLandingPath("ws-1", "tok")).toBe(
+      "/all-you-can-learn/ws-1?comp=tok",
+    );
+    expect(complimentaryLinkLandingPath("ws-1", "tok")).not.toContain("/learn/");
+    expect(complimentaryTokenFromQuery({ [AYCL_COMPLIMENTARY_QUERY_PARAM]: "tok" })).toBe(
+      "tok",
     );
   });
 });
@@ -285,30 +295,66 @@ describe("complimentary AYCL surfaces (structural)", () => {
     expect(settings).toContain("/aycl/complimentary");
   });
 
-  it("learn path redeems complimentary URL without checkout", () => {
+  it("share URL and /learn coupon hop target the workspace landing, not in-course shell", () => {
     const page = readFileSync(join(root, "app/learn/[token]/page.tsx"), "utf8");
-    expect(page).toContain("redeemComplimentaryAyclLink");
-    expect(page).toContain("redirect(`/learn/${redeemed.accessToken}`)");
-    expect(page).not.toContain("stripe");
+    expect(page).toContain("complimentaryLinkLandingPath");
+    expect(page).toContain("getAyclComplimentaryLinkByToken");
+    expect(page).toContain("AyclLearnRedirect");
+    expect(page).not.toContain('from "next/navigation"');
+    expect(page).not.toContain("redeemComplimentaryAyclLink");
     expect(page).not.toContain("create-checkout");
+    expect(page).not.toMatch(/\bredirect\s*\(/);
+    expect(page).not.toMatch(/\bnotFound\s*\(/);
 
-    const aycl = readFileSync(join(root, "lib/aycl.ts"), "utf8");
-    const redeemStart = aycl.indexOf("export async function redeemComplimentaryAyclLink");
-    const redeemEnd = aycl.indexOf("export async function getAyclPurchaseByToken");
-    expect(redeemStart).toBeGreaterThan(-1);
-    expect(redeemEnd).toBeGreaterThan(redeemStart);
-    const redeemFn = aycl.slice(redeemStart, redeemEnd);
-    expect(redeemFn).toContain("ayclComplimentaryPurchaseRow");
-    expect(redeemFn).toContain("complimentaryAyclLinkEligible");
-    expect(redeemFn).not.toContain("Checkout.Session");
-    expect(redeemFn).not.toContain("stripe_checkout_session_id: sessionId");
+    const hop = readFileSync(join(root, "components/AyclLearnRedirect.tsx"), "utf8");
+    expect(hop).toContain("location.replace");
+    expect(hop).toContain("data-aycl-learn-redirect");
 
     const route = readFileSync(
       join(root, "app/api/workspaces/[id]/aycl/complimentary/route.ts"),
       "utf8",
     );
     expect(route).toContain("parseComplimentaryLinkCreateBody");
-    expect(route).toContain("hashPrivateToken");
-    expect(route).toContain("createPrivateToken");
+    expect(route).toContain("complimentaryLinkPublicUrl(origin, row.workspace_id, row.public_token)");
+
+    const helper = readFileSync(join(root, "lib/aycl-complimentary.ts"), "utf8");
+    expect(helper).toContain("/all-you-can-learn/");
+    expect(helper).not.toMatch(/return `\$\{origin\}\/learn\//);
+  });
+
+  it("landing matching CTA redeems complimentary without Stripe; eligibility still gates grant", () => {
+    const landingPage = readFileSync(
+      join(root, "app/all-you-can-learn/[workspaceId]/page.tsx"),
+      "utf8",
+    );
+    expect(landingPage).toContain("complimentaryTokenFromQuery");
+    expect(landingPage).toContain("complimentaryAyclLinkEligible");
+    expect(landingPage).toContain("complimentaryToken");
+    expect(landingPage).toContain("complimentaryTier");
+
+    const client = readFileSync(join(root, "components/AyclLandingClient.tsx"), "utf8");
+    expect(client).toContain("ayclLandingOffersForComplimentary");
+    expect(client).toContain("ayclLandingCtaKind");
+    expect(client).toContain("/api/aycl/complimentary/redeem");
+    expect(client).toContain("ayclLandingComplimentaryRedeemBody");
+    expect(client).toContain("data-aycl-offer-original-price");
+    expect(client).toContain("data-aycl-offer-current-price");
+    expect(client).toContain("/api/stripe/create-checkout");
+
+    const redeem = readFileSync(
+      join(root, "app/api/aycl/complimentary/redeem/route.ts"),
+      "utf8",
+    );
+    expect(redeem).toContain("redeemComplimentaryAyclLink");
+    expect(redeem).not.toContain("create-checkout");
+    expect(redeem).not.toContain("stripe");
+
+    const aycl = readFileSync(join(root, "lib/aycl.ts"), "utf8");
+    const redeemStart = aycl.indexOf("export async function redeemComplimentaryAyclLink");
+    const redeemEnd = aycl.indexOf("export async function getAyclPurchaseByToken");
+    const redeemFn = aycl.slice(redeemStart, redeemEnd);
+    expect(redeemFn).toContain("complimentaryAyclLinkEligible");
+    expect(redeemFn).toContain("ayclComplimentaryPurchaseRow");
+    expect(redeemFn).not.toContain("stripe_checkout_session_id: sessionId");
   });
 });

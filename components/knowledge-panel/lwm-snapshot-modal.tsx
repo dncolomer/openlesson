@@ -59,7 +59,7 @@ export function LwmSnapshotModal({
                   if (!snapshotLoading && !snapshotAllRunning) closeSnapshotModal();
                 }}
               />
-              <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+              <div className="relative z-10 w-full max-w-md overflow-hidden rounded-none border border-neutral-800 bg-neutral-900 shadow-2xl">
                 <div className="border-b border-neutral-800/70 px-5 pb-4 pt-5">
                   <h3
                     id="lwm-snapshot-modal-title"
@@ -76,7 +76,7 @@ export function LwmSnapshotModal({
                   </p>
 
                   <div
-                    className="mt-4 space-y-2 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3"
+                    className="mt-4 space-y-2 rounded-none border border-neutral-800 bg-neutral-950/60 p-3"
                     data-lwm-goal-selection
                   >
                     <p className="text-[11px] font-medium text-neutral-300">
@@ -107,7 +107,7 @@ export function LwmSnapshotModal({
                           data-active={goalMode === m.id ? "true" : "false"}
                           disabled={snapshotLoading || snapshotAllRunning}
                           onClick={() => setGoalMode(m.id)}
-                          className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
+                          className={`rounded-none px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
                             goalMode === m.id
                               ? "bg-white text-black"
                               : "border border-neutral-700 text-neutral-400 hover:text-neutral-200"
@@ -135,7 +135,7 @@ export function LwmSnapshotModal({
                         onChange={(e) => setAdhocGoal(e.target.value)}
                         disabled={snapshotLoading || snapshotAllRunning}
                         placeholder="Adhoc goal for this run…"
-                        className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white focus:border-neutral-400 focus:outline-none disabled:opacity-50"
+                        className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white focus:border-neutral-400 focus:outline-none disabled:opacity-50"
                         data-lwm-adhoc-goal
                       />
                     ) : null}
@@ -193,7 +193,7 @@ export function LwmSnapshotModal({
 
                   {/* Progress */}
                   <div
-                    className="mt-4 space-y-2 rounded-xl border border-neutral-800 bg-neutral-950/40 p-3"
+                    className="mt-4 space-y-2 rounded-none border border-neutral-800 bg-neutral-950/40 p-3"
                     data-lwm-snapshot-progress
                     data-lwm-snapshot-all-progress={
                       snapshotModalMode === "all" ? "true" : undefined
@@ -300,7 +300,7 @@ export function LwmSnapshotModal({
                   <button
                     type="button"
                     onClick={closeSnapshotModal}
-                    className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900 py-2.5 px-4 text-sm text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
+                    className="flex-1 rounded-none border border-neutral-800 bg-neutral-900 py-2.5 px-4 text-sm text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
                   >
                     {snapshotLoading || snapshotAllRunning ? "Hide" : "Cancel"}
                   </button>
@@ -315,7 +315,7 @@ export function LwmSnapshotModal({
                         (goalMode === "adhoc" && !adhocGoal.trim()) ||
                         (goalMode === "selected" && selectedGoalIds.length === 0)
                       }
-                      className="flex-1 rounded-xl bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex-1 rounded-none bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                       data-lwm-snapshot-modal-confirm
                     >
                       {snapshotLoading ? "Generating…" : "Generate"}
@@ -331,7 +331,7 @@ export function LwmSnapshotModal({
                         (goalMode === "adhoc" && !adhocGoal.trim()) ||
                         (goalMode === "selected" && selectedGoalIds.length === 0)
                       }
-                      className="flex-1 rounded-xl bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex-1 rounded-none bg-white py-2.5 px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                       data-lwm-snapshot-modal-confirm-all
                     >
                       {snapshotAllRunning

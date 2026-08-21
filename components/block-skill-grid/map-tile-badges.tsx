@@ -68,7 +68,7 @@ export function BlockDependencyLockBadge({
   const redLocked = learnerSpottable && currentlyLocked;
   return (
     <span
-      className={`absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px ${
+      className={`absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px ${
         redLocked
           ? "text-rose-400"
           : currentlyLocked
@@ -108,7 +108,7 @@ export function BlockDependencyLockBadge({
 export function BlockLocalContextDocBadge() {
   return (
     <span
-      className="absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-400"
+      className="absolute bottom-1 left-1.5 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px text-neutral-400"
       data-block-local-context-badge
       title="Has attached local context"
       aria-hidden
@@ -137,7 +137,7 @@ export function BlockLocalContextDocBadge() {
 export function BlockStarterFlagBadge() {
   return (
     <span
-      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded px-0.5 py-px text-neutral-300/95"
+      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px text-neutral-300/95"
       data-block-starter-flag
       data-block-starter-badge
       title="Starter block"
@@ -170,7 +170,7 @@ export function BlockCreatorEffectsBadge({
     .join(" · ");
   return (
     <span
-      className="absolute bottom-1 left-1/2 z-[1] flex -translate-x-1/2 max-w-[calc(100%-8px)] flex-wrap items-center justify-center gap-0.5 rounded bg-black/50 px-0.5 py-px"
+      className="absolute bottom-1 left-1/2 z-[1] flex -translate-x-1/2 max-w-[calc(100%-8px)] flex-wrap items-center justify-center gap-0.5 rounded-none bg-black/50 px-0.5 py-px"
       data-block-creator-effect-icons
       data-creator-effect-icon-keys={keys.join(",")}
       data-learner-mode={learnerMode ? "true" : undefined}
@@ -204,7 +204,7 @@ export function BlockCreatorEffectsBadge({
 export function BlockGeneratorTargetSparkBadge() {
   return (
     <span
-      className="absolute right-1 top-1 z-[2] inline-flex items-center justify-center rounded bg-white/20 p-0.5 text-white shadow ring-1 ring-white/40"
+      className="absolute right-1 top-1 z-[2] inline-flex items-center justify-center rounded-none bg-white/20 p-0.5 text-white shadow ring-1 ring-white/40"
       data-block-generator-target-spark
       title="Will be generated"
       aria-label="Generator target"
@@ -240,7 +240,7 @@ export function BlockPracticeOptionsBadge({
     .join(" · ");
   return (
     <span
-      className="absolute left-1 top-1 z-[1] inline-flex max-w-[calc(100%-8px)] flex-wrap items-center gap-0.5 rounded bg-black/45 px-0.5 py-px"
+      className="absolute left-1 top-1 z-[1] inline-flex max-w-[calc(100%-8px)] flex-wrap items-center gap-0.5 rounded-none bg-black/45 px-0.5 py-px"
       data-block-practice-icons
       data-practice-icon-keys={keys.join(",")}
       title={title}

@@ -102,7 +102,7 @@ export function thoughtButtonClasses({
   className?: string;
 }) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-md font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
+    "inline-flex shrink-0 items-center justify-center rounded-none font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
     size === "sm" && "h-8 px-2.5 text-xs",
     size === "md" && "h-9 px-3.5 text-xs",
     size === "lg" && "h-11 px-4 text-sm",

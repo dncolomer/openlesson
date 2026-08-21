@@ -128,7 +128,7 @@ export function WorkspaceBlockDetailTabs({
                           {examples.topics.map((topic) => (
                             <li
                               key={topic}
-                              className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-neutral-300"
+                              className="rounded-none border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-neutral-300"
                             >
                               {topic}
                             </li>

@@ -40,12 +40,12 @@ function EffectToggle({
 }) {
   return (
     <label
-      className="flex cursor-pointer items-start gap-2.5 rounded-md border border-white/10 bg-black/20 px-2.5 py-2"
+      className="flex cursor-pointer items-start gap-2.5 rounded-none border border-white/10 bg-black/20 px-2.5 py-2"
       data-effect-toggle={dataAttr}
     >
       <input
         type="checkbox"
-        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-neutral-600 bg-neutral-900 text-white focus:ring-neutral-500 disabled:opacity-40"
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-900 text-white focus:ring-neutral-500 disabled:opacity-40"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
@@ -91,7 +91,7 @@ function SaveBar({
         type="button"
         disabled={!dirty || busy}
         onClick={() => void onSave()}
-        className="w-full rounded-md border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-neutral-100 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-none border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-neutral-100 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
         data-effect-save
       >
         {busy ? "Saving…" : dirty ? action : "Saved"}
@@ -246,7 +246,7 @@ export function WorkspaceBlockDynamicEffectPanel({
     return (
       <div
         data-block-dynamic-effect-needs-base
-        className="space-y-1.5 rounded-md border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
+        className="space-y-1.5 rounded-none border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
@@ -333,7 +333,7 @@ export function WorkspaceBlockDynamicEffectPanel({
               {deps.map((id) => (
                 <li key={id}>
                   <div
-                    className="flex items-center justify-between gap-2 rounded border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-neutral-100"
+                    className="flex items-center justify-between gap-2 rounded-none border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-neutral-100"
                     data-dynamic-unlock-dep={id}
                   >
                     <span className="truncate">
@@ -393,7 +393,7 @@ export function WorkspaceBlockDynamicEffectPanel({
         data-dynamic-save
         disabled={!dirty || busy || saving || !onSave}
         onClick={() => void handleSave()}
-        className="w-full rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-none border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {saving
           ? "Saving…"
@@ -545,7 +545,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
     return (
       <div
         data-block-generator-effect-needs-base
-        className="space-y-1.5 rounded-md border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
+        className="space-y-1.5 rounded-none border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
@@ -628,7 +628,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
               {cells.map((c) => (
                 <li key={generatorCellKey(c)}>
                   <div
-                    className="flex items-center justify-between gap-2 rounded border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-neutral-100"
+                    className="flex items-center justify-between gap-2 rounded-none border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] text-neutral-100"
                     data-generator-target-cell={`${c.row}:${c.col}`}
                   >
                     <span className="font-mono">
@@ -687,7 +687,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
         data-generator-save-targets
         disabled={!dirty || busy || saving || !onSave}
         onClick={() => void handleSave()}
-        className="w-full rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-none border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {saving
           ? "Saving…"

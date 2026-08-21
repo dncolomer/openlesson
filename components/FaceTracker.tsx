@@ -540,7 +540,7 @@ export function FaceTracker({ isEnabled, onDataPoint, onError }: FaceTrackerProp
   if (!isEnabled) return null;
 
   return (
-    <div className="relative w-full h-48 rounded-lg overflow-hidden bg-neutral-900">
+    <div className="relative w-full h-48 rounded-none overflow-hidden bg-neutral-900">
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"

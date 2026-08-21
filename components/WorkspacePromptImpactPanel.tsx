@@ -69,7 +69,7 @@ export function WorkspacePromptImpactPanel({
       className={
         compact
           ? "space-y-2"
-          : "space-y-3 rounded-xl border border-neutral-800/80 bg-neutral-950/80 p-3 sm:p-4"
+          : "space-y-3 rounded-none border border-neutral-800/80 bg-neutral-950/80 p-3 sm:p-4"
       }
     >
       {!hideHeading ? (
@@ -89,7 +89,7 @@ export function WorkspacePromptImpactPanel({
       {ctx.hasLocalContext ? (
         <div
           data-local-context-preview
-          className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5"
+          className="rounded-none border border-white/10 bg-white/[0.03] p-2.5"
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Local block context in prompts
@@ -101,7 +101,7 @@ export function WorkspacePromptImpactPanel({
       ) : null}
 
       {!compact && ctx.contextBlock ? (
-        <details className="group rounded-lg border border-neutral-800/70 bg-black/30">
+        <details className="group rounded-none border border-neutral-800/70 bg-black/30">
           <summary className="cursor-pointer list-none px-2.5 py-2 text-[11px] text-neutral-400 hover:text-neutral-200">
             <span className="underline-offset-2 group-open:underline">
               Preview assembled context (what models see)
@@ -124,7 +124,7 @@ function PromptImpactLayerRow({ layer }: { layer: PromptImpactLayer }) {
     <li
       data-prompt-impact-layer={layer.id}
       data-present={layer.present ? "true" : "false"}
-      className={`rounded-lg border px-2.5 py-2 ${
+      className={`rounded-none border px-2.5 py-2 ${
         layer.present
           ? "border-white/10 bg-white/[0.04]"
           : "border-neutral-800/60 bg-transparent opacity-70"
@@ -140,7 +140,7 @@ function PromptImpactLayerRow({ layer }: { layer: PromptImpactLayer }) {
             <span
               key={feed}
               data-prompt-feed={feed}
-              className="rounded border border-neutral-700/80 bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-400"
+              className="rounded-none border border-neutral-700/80 bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-400"
             >
               {feed}
             </span>

@@ -16,9 +16,13 @@ import {
 import {
   UI_WORKSPACE_CREATE_MODES,
   isUiWorkspaceCreateMode,
+  resolveWorkspaceCreateOverlay,
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
-import { AYCL_PRICE_LABEL } from "@/lib/aycl-shared";
+import {
+  AYCL_FULL_PRICE_LABEL,
+  AYCL_LEARNER_PRICE_LABEL,
+} from "@/lib/aycl-shared";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -88,19 +92,50 @@ function totalTopicResources(topic: DantesTopic) {
 
 const MODE_CARD_COPY: Record<
   "blank" | "template",
-  { title: string; description: string; badge: string }
+  { title: string; description: string; badge: string; details: string[]; cta: string }
 > = {
   blank: {
     title: "Blank",
-    description: "Empty workspace — no blocks. Creates immediately so you can build the grid yourself.",
+    description:
+      "An empty skill grid with no generated blocks. Creates immediately so you can place the first tiles yourself.",
     badge: "Start empty",
+    details: [
+      "Empty skill grid — no generated blocks",
+      "Creates immediately, no setup step",
+      "Add, drag, and shape the map yourself",
+    ],
+    cta: "Create blank workspace",
   },
   template: {
     title: "From Template",
-    description: "Pick a topic; curated resources become generation context.",
+    description:
+      "Start from a topic library. Curated resources become generation context for the first map.",
     badge: "Topic + size",
+    details: [
+      "Browse categories, then pick a topic",
+      "Choose which resources to include as context",
+      "Set a starting size before the map is generated",
+    ],
+    cta: "Choose a template",
   },
 };
+
+const AYCL_CARD = {
+  title: "All You Can Learn",
+  badge: "Marketplace",
+  description:
+    "Ready-made workspaces you can practice on or fork. One-time lifetime packages.",
+  details: [
+    `Practice from ${AYCL_LEARNER_PRICE_LABEL} · full pack ${AYCL_FULL_PRICE_LABEL}`,
+    "Curated maps for topics that already exist",
+    "Skip the blank-page start and jump into a live grid",
+  ],
+  cta: "Explore AYCL",
+  href: "/all-you-can-learn",
+};
+
+const START_CARD_CLASS =
+  "group flex h-full min-h-[22rem] flex-col rounded-none border border-zinc-800 bg-zinc-950/90 p-5 text-left transition hover:border-zinc-500 hover:bg-zinc-900/90 focus:outline-none focus:ring-2 focus:ring-white/30";
 
 const MODE_CARDS = UI_WORKSPACE_CREATE_MODES.map((mode) => ({
   mode,
@@ -334,6 +369,7 @@ export default function NewWorkspacePage() {
     if (busy) return;
     setBusy(true);
     setError("");
+    let succeeded = false;
     try {
       if (!(await ensureAuthed())) return;
       const response = await fetch("/api/workspace/generate", {
@@ -348,10 +384,11 @@ export default function NewWorkspacePage() {
       const payload = await response.json();
       trackWorkspaceCreated({ hasFiles: false });
       router.push(`/workspace/${payload.workspaceId}`);
+      succeeded = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setBusy(false);
+      setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy);
     }
   }
 
@@ -359,6 +396,7 @@ export default function NewWorkspacePage() {
     if (!selectedTopic || busy) return;
     setBusy(true);
     setError("");
+    let succeeded = false;
     try {
       if (!(await ensureAuthed())) return;
       const response = await fetch("/api/workspace/generate", {
@@ -392,10 +430,11 @@ export default function NewWorkspacePage() {
       const payload = await response.json();
       trackWorkspaceCreated({ hasFiles: false });
       router.push(`/workspace/${payload.workspaceId}`);
+      succeeded = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setBusy(false);
+      setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy);
     }
   }
 
@@ -433,9 +472,9 @@ export default function NewWorkspacePage() {
       <section
         className={`relative z-10 flex flex-1 items-center justify-center px-6 py-12 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
-        <div className="w-full max-w-[980px]">
+        <div className="w-full max-w-[1080px]">
           <div className="mb-7 text-center">
-            <div className="mb-5 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+            <div className="mb-5 inline-block rounded-none border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               STEP {step} • {step === 1 ? "CHOOSE HOW TO START" : "CONFIGURE WORKSPACE"}
             </div>
             <h1 className="text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
@@ -443,40 +482,52 @@ export default function NewWorkspacePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               {step === 1
-                ? "Pick a starting path. Blank creates an empty grid right away. Template starts from a topic library."
+                ? "Pick how you want to start."
                 : "Browse by category, pick a topic, then choose which resources to use as context."}
             </p>
           </div>
 
-          {/* AYCL ad banner */}
-          <a
-            href="/all-you-can-learn"
-            className="mb-8 flex flex-col gap-2 rounded-md border border-zinc-700 bg-gradient-to-r from-zinc-900/90 via-zinc-950/90 to-zinc-950/90 px-4 py-3 transition hover:border-zinc-500 sm:flex-row sm:items-center sm:justify-between"
-            data-aycl-banner
-          >
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
-                All You Can Learn
-              </p>
-              <p className="mt-1 text-sm text-zinc-200">
-                Lifetime packages from {AYCL_PRICE_LABEL} — curated workspaces, not another subscription.
-              </p>
-            </div>
-            <span className="shrink-0 text-sm font-medium text-white">Explore AYCL →</span>
-          </a>
-
           {step === 1 && (
-            <div className="mx-auto grid max-w-[680px] grid-cols-1 gap-3 sm:grid-cols-2" data-create-mode-cards>
+            <div
+              className="mx-auto grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4"
+              data-create-mode-cards
+            >
+              <a
+                href={AYCL_CARD.href}
+                className={START_CARD_CLASS}
+                data-aycl-banner
+                data-create-mode="aycl"
+              >
+                <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                  {AYCL_CARD.badge}
+                </span>
+                <h2 className="mt-4 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
+                  {AYCL_CARD.title}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
+                  {AYCL_CARD.description}
+                </p>
+                <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400">
+                  {AYCL_CARD.details.map((line) => (
+                    <li key={line} className="border-l border-zinc-700 pl-2.5">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+                <span className="mt-5 text-sm font-medium text-white">
+                  {AYCL_CARD.cta} →
+                </span>
+              </a>
               {MODE_CARDS.map((card) => (
                 <button
                   key={card.mode}
                   type="button"
                   disabled={busy}
                   onClick={() => selectMode(card.mode)}
-                  className="group aspect-square rounded-md border border-zinc-800 bg-zinc-950/90 p-5 text-left transition hover:border-zinc-500 hover:bg-zinc-900/90 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`${START_CARD_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
                   data-create-mode={card.mode}
                 >
-                  <span className="inline-block rounded-sm border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                  <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
                     {card.badge}
                   </span>
                   <h2 className="mt-4 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
@@ -485,6 +536,16 @@ export default function NewWorkspacePage() {
                   <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
                     {card.description}
                   </p>
+                  <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400">
+                    {card.details.map((line) => (
+                      <li key={line} className="border-l border-zinc-700 pl-2.5">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="mt-5 text-sm font-medium text-white">
+                    {card.cta} →
+                  </span>
                 </button>
               ))}
             </div>
@@ -495,7 +556,7 @@ export default function NewWorkspacePage() {
           )}
 
           {step === 2 && mode === "template" && (
-            <div className="rounded-md border border-zinc-800 bg-zinc-950/90 p-4 sm:p-6">
+            <div className="rounded-none border border-zinc-800 bg-zinc-950/90 p-4 sm:p-6">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="text-lg font-medium text-white">From Template</h2>
                 <button
@@ -515,7 +576,7 @@ export default function NewWorkspacePage() {
                 <button
                   type="button"
                   onClick={resetBrowseToCategories}
-                  className={`rounded px-1.5 py-0.5 transition hover:text-white ${
+                  className={`rounded-none px-1.5 py-0.5 transition hover:text-white ${
                     !browseCategory ? "text-white" : "text-zinc-400"
                   }`}
                 >
@@ -527,7 +588,7 @@ export default function NewWorkspacePage() {
                     <button
                       type="button"
                       onClick={resetBrowseToSubcategories}
-                      className={`rounded px-1.5 py-0.5 transition hover:text-white ${
+                      className={`rounded-none px-1.5 py-0.5 transition hover:text-white ${
                         browseCategory && !browseSubcategory ? "text-white" : "text-zinc-400"
                       }`}
                     >
@@ -538,7 +599,7 @@ export default function NewWorkspacePage() {
                 {browseSubcategory && (
                   <>
                     <span className="text-zinc-700">/</span>
-                    <span className="rounded px-1.5 py-0.5 text-white">{browseSubcategory}</span>
+                    <span className="rounded-none px-1.5 py-0.5 text-white">{browseSubcategory}</span>
                   </>
                 )}
               </nav>
@@ -547,7 +608,7 @@ export default function NewWorkspacePage() {
                 value={dantesQuery}
                 onChange={(e) => setDantesQuery(e.target.value)}
                 placeholder="Search all topics..."
-                className="mb-3 w-full rounded-md border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm text-white outline-none focus:border-zinc-500"
+                className="mb-3 w-full rounded-none border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm text-white outline-none focus:border-zinc-500"
               />
 
               <div className="grid max-h-[300px] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
@@ -562,7 +623,7 @@ export default function NewWorkspacePage() {
                         key={topic.slug}
                         type="button"
                         onClick={() => pickTopic(topic)}
-                        className={`rounded-md border p-3 text-left transition ${
+                        className={`rounded-none border p-3 text-left transition ${
                           selectedTopic?.slug === topic.slug
                             ? "border-white/50 bg-white/10 ring-1 ring-white/20"
                             : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600"
@@ -588,7 +649,7 @@ export default function NewWorkspacePage() {
                         key={cat.name}
                         type="button"
                         onClick={() => selectCategory(cat.name)}
-                        className="rounded-md border border-zinc-800 bg-zinc-900/50 p-3 text-left transition hover:border-zinc-500 hover:bg-zinc-900"
+                        className="rounded-none border border-zinc-800 bg-zinc-900/50 p-3 text-left transition hover:border-zinc-500 hover:bg-zinc-900"
                       >
                         <span className="block text-sm font-medium text-zinc-100">{cat.name}</span>
                         <span className="mt-1 block text-[11px] text-zinc-500">
@@ -606,7 +667,7 @@ export default function NewWorkspacePage() {
                         key={sub.name}
                         type="button"
                         onClick={() => selectSubcategory(sub.name)}
-                        className="rounded-md border border-zinc-800 bg-zinc-900/50 p-3 text-left transition hover:border-zinc-500 hover:bg-zinc-900"
+                        className="rounded-none border border-zinc-800 bg-zinc-900/50 p-3 text-left transition hover:border-zinc-500 hover:bg-zinc-900"
                       >
                         <span className="block text-sm font-medium text-zinc-100">{sub.name}</span>
                         <span className="mt-1 block text-[11px] text-zinc-500">
@@ -623,7 +684,7 @@ export default function NewWorkspacePage() {
                       key={topic.slug}
                       type="button"
                       onClick={() => pickTopic(topic)}
-                      className={`rounded-md border p-3 text-left transition ${
+                      className={`rounded-none border p-3 text-left transition ${
                         selectedTopic?.slug === topic.slug
                           ? "border-white/50 bg-white/10 ring-1 ring-white/20"
                           : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600"
@@ -692,7 +753,7 @@ export default function NewWorkspacePage() {
                   {resourcesLoading ? (
                     <p className="py-6 text-center text-sm text-zinc-500">Loading resources…</p>
                   ) : dantesResources.length === 0 ? (
-                    <p className="rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-4 text-center text-sm text-zinc-500">
+                    <p className="rounded-none border border-zinc-800 bg-zinc-900/40 px-3 py-4 text-center text-sm text-zinc-500">
                       No curated resources for this topic — generation will use the topic name only.
                     </p>
                   ) : (
@@ -706,7 +767,7 @@ export default function NewWorkspacePage() {
                             type="button"
                             onClick={() => toggleResource(key)}
                             disabled={busy}
-                            className={`rounded-md border p-2.5 text-left transition disabled:opacity-50 ${
+                            className={`rounded-none border p-2.5 text-left transition disabled:opacity-50 ${
                               included
                                 ? "border-white/40 bg-white/10 ring-1 ring-white/15"
                                 : "border-zinc-800 bg-zinc-950/60 opacity-55 hover:opacity-80"
@@ -719,10 +780,10 @@ export default function NewWorkspacePage() {
                                 <img
                                   src={resource.image}
                                   alt=""
-                                  className="h-11 w-11 shrink-0 rounded object-cover"
+                                  className="h-11 w-11 shrink-0 rounded-none object-cover"
                                 />
                               ) : (
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded border border-zinc-800 bg-zinc-900 text-[10px] font-medium uppercase text-zinc-500">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none border border-zinc-800 bg-zinc-900 text-[10px] font-medium uppercase text-zinc-500">
                                   {(resource.type || "?").slice(0, 3)}
                                 </div>
                               )}
@@ -771,7 +832,7 @@ export default function NewWorkspacePage() {
                   type="button"
                   disabled={!selectedTopic || busy}
                   onClick={() => void handleCreateTemplate()}
-                  className="rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {busy ? "Creating..." : "Create from template →"}
                 </button>
@@ -821,7 +882,7 @@ function StartingSizePicker({
               type="button"
               onClick={() => onChange(level)}
               disabled={busy}
-              className={`rounded-md border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
                   ? "border-zinc-300 bg-zinc-900 ring-1 ring-zinc-300/30"
                   : "border-zinc-800 bg-zinc-950/80 hover:border-zinc-600"

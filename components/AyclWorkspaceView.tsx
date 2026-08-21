@@ -82,7 +82,7 @@ export function AyclWorkspaceView({
       <button
         type="button"
         onClick={() => void handleCopyLink()}
-        className="shrink-0 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10"
+        className="shrink-0 rounded-none border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10"
       >
         {copied ? "Copied!" : "Copy access link"}
       </button>

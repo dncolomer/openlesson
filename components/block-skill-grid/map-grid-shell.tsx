@@ -46,7 +46,7 @@ export function MapGridShell({
   const activeLassoShape = world.activeLassoShape;
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
       data-block-map-tool={rail.activeTool}
       data-lasso-shape={activeLassoShape || undefined}
       data-space-pan={chrome.spaceHeld ? "true" : "false"}

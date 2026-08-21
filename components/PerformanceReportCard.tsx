@@ -144,7 +144,7 @@ function GapsPanel({
             className={
               spacious
                 ? `border-l-2 py-1 pl-5 ${textClass} ${severityAccentBorder(gap.severity)}`
-                : `rounded-md border px-3 py-2 ${textClass} ${severityColor(gap.severity)}`
+                : `rounded-none border px-3 py-2 ${textClass} ${severityColor(gap.severity)}`
             }
           >
             <div className={titleClass}>{gap.title}</div>
@@ -216,7 +216,7 @@ function ScoreEvolution({ history, flat = false }: { history: PerformanceReportS
   const { t } = useI18n();
 
   return (
-    <div className={flat ? "space-y-4" : "rounded-md border border-zinc-800 bg-black/30 p-3"}>
+    <div className={flat ? "space-y-4" : "rounded-none border border-zinc-800 bg-black/30 p-3"}>
       {!flat ? (
         <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
           {t("performanceReportCard.scoreEvolution")}
@@ -231,7 +231,7 @@ function ScoreEvolution({ history, flat = false }: { history: PerformanceReportS
                 ? `border-b border-zinc-800/60 pb-4 text-sm last:border-b-0 ${
                     index === history.length - 1 ? "text-zinc-200" : "text-zinc-400"
                   }`
-                : `rounded-md border px-3 py-2 text-xs ${
+                : `rounded-none border px-3 py-2 text-xs ${
                     index === history.length - 1
                       ? "border-zinc-600 bg-zinc-900 text-zinc-200"
                       : "border-zinc-800/80 text-zinc-400"
@@ -375,7 +375,7 @@ function ScoreCardTabBar({
             >
               <span className="whitespace-nowrap text-sm font-medium">{tabLabels[tab]}</span>
               {badge ? (
-                <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
+                <span className="rounded-none bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
                   {badge}
                 </span>
               ) : null}
@@ -591,7 +591,7 @@ export function PerformanceReportCard({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-zinc-800 bg-black/30 p-4">
+    <div className="space-y-4 rounded-none border border-zinc-800 bg-black/30 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-white">{cardLabel}</h3>
         <div className="flex flex-wrap items-center gap-2">
@@ -617,7 +617,7 @@ export function PerformanceReportCard({
       ) : null}
 
       {markerScores.length > 0 ? (
-        <div className="rounded-md border border-zinc-800 bg-black/20 px-3 py-4">
+        <div className="rounded-none border border-zinc-800 bg-black/20 px-3 py-4">
           <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
             {t("performanceReportCard.competencyProfile")}
           </div>
@@ -632,7 +632,7 @@ export function PerformanceReportCard({
             {markerScores.map((marker) => (
               <div
                 key={marker.id}
-                className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
+                className="rounded-none border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-zinc-300">{marker.label}</span>

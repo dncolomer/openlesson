@@ -256,7 +256,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
           className="hidden md:flex flex-col h-full min-h-0 flex-none"
           style={{ width: hideSessions ? "100%" : `${leftWidth}%` }}
         >
-          <div className={`flex-1 overflow-hidden flex flex-col ${hideSessions ? "" : "bg-neutral-900/50 rounded-md border border-neutral-800/60 p-4 shadow-lg shadow-black/10"}`}>
+          <div className={`flex-1 overflow-hidden flex flex-col ${hideSessions ? "" : "bg-neutral-900/50 rounded-none border border-neutral-800/60 p-4 shadow-lg shadow-black/10"}`}>
             <ChatPanel
               workspaceId={plan.id}
               model={model}
@@ -289,7 +289,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
         className="hidden md:flex flex-col h-full min-h-0 flex-none"
         style={{ width: isOwner ? `${100 - leftWidth - 0.5}%` : "100%" }}
       >
-        <div className="flex-1 bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
+        <div className="flex-1 bg-neutral-900/50 rounded-none border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -330,7 +330,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
       {/* Sessions Panel - Mobile: always visible, full width */}
       {!hideSessions && (
       <div className="md:hidden flex-1 min-h-0 overflow-hidden">
-        <div className="h-full bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
+        <div className="h-full bg-neutral-900/50 rounded-none border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -354,7 +354,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
       {isOwner && !hideSessions && !sheetOpen && (
         <button
           onClick={() => setSheetOpen(true)}
-            className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-md shadow-xl shadow-black/30 transition-all active:scale-95"
+            className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-none shadow-xl shadow-black/30 transition-all active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
@@ -374,7 +374,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
 
           {/* Sheet */}
           <div
-            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f0f] border-t border-neutral-800 rounded-t-2xl flex flex-col ${sheetDragging ? "" : "transition-all duration-300 ease-out"}`}
+            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f0f] border-t border-neutral-800 rounded-none flex flex-col ${sheetDragging ? "" : "transition-all duration-300 ease-out"}`}
             style={{ height: `${sheetHeight}vh` }}
           >
             {/* Drag handle */}
@@ -397,7 +397,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
               </div>
               <button
                 onClick={() => { setSheetOpen(false); setSheetHeight(65); }}
-                className="p-1.5 text-neutral-500 hover:text-white rounded-lg transition-colors"
+                className="p-1.5 text-neutral-500 hover:text-white rounded-none transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -407,7 +407,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
 
             {/* Chat content */}
             <div className="flex-1 min-h-0 overflow-hidden px-3 pb-3">
-              <div className="h-full bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden flex flex-col p-3">
+              <div className="h-full bg-neutral-900/50 rounded-none border border-neutral-800/60 overflow-hidden flex flex-col p-3">
                 <ChatPanel
                   workspaceId={plan.id}
                   model={model}
@@ -432,7 +432,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
             className="fixed inset-0 z-50 bg-black/60"
             onClick={() => setShowDeleteConfirm(null)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-50 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-neutral-800 border-t md:border border-neutral-700 rounded-t-md md:rounded-md p-4">
+          <div className="fixed bottom-0 left-0 right-0 z-50 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-neutral-800 border-t md:border border-neutral-700 rounded-none md:rounded-none p-4">
             <h3 className="text-lg font-semibold text-white mb-2">{t('planChat.deleteSession')}</h3>
             <p className="text-sm text-neutral-400 mb-4">
               {t('planChat.deleteSessionConfirm')}
@@ -440,13 +440,13 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-md transition-colors"
+                className="flex-1 px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-none transition-colors"
               >
                 {t('common.cancel')}
               </button>
               <button
                 onClick={() => handleDeleteConfirm(showDeleteConfirm)}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-md transition-colors"
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-none transition-colors"
               >
                 {t('planChat.delete')}
               </button>

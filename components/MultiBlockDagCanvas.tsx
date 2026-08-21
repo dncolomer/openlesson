@@ -215,7 +215,7 @@ export function MultiBlockDagCanvas({
       ) : null}
 
       <div
-        className="overflow-hidden rounded-md border border-white/10 bg-neutral-950/80"
+        className="overflow-hidden rounded-none border border-white/10 bg-neutral-950/80"
         data-dag-canvas-frame
       >
         <svg
@@ -380,7 +380,7 @@ export function MultiBlockDagCanvas({
                   disabled={interactionOff}
                   title={readOnly ? undefined : "Click to remove"}
                   onClick={() => handleEdgeClick(edge)}
-                  className="inline-flex max-w-full items-center gap-1 rounded border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-neutral-100 transition hover:bg-white/10 disabled:opacity-50"
+                  className="inline-flex max-w-full items-center gap-1 rounded-none border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-neutral-100 transition hover:bg-white/10 disabled:opacity-50"
                 >
                   <span className="truncate">{truncateLabel(fromTitle, 10)}</span>
                   <span className="shrink-0 opacity-70">→</span>

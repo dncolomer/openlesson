@@ -46,7 +46,7 @@ export function SessionWelcomeModal({
       data-session-welcome-modal
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-      <div className="relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-[0_32px_100px_rgba(0,0,0,0.65)]">
+      <div className="relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-900 shadow-[0_32px_100px_rgba(0,0,0,0.65)]">
         <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
@@ -89,7 +89,7 @@ export function SessionWelcomeModal({
                           onTutoringLanguageChange(coerceSpokenLocale(e.target.value));
                         }}
                         disabled={isButtonDisabled}
-                        className="w-full rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-3 text-sm text-white transition-colors hover:border-neutral-700 focus:border-neutral-600 focus:outline-none disabled:opacity-50"
+                        className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-sm text-white transition-colors hover:border-neutral-700 focus:border-neutral-600 focus:outline-none disabled:opacity-50"
                       >
                         {spokenLocales.map((loc) => (
                           <option key={loc} value={loc}>
@@ -125,7 +125,7 @@ export function SessionWelcomeModal({
                     <div
                       className={`mb-5 transition-colors ${
                         chaptersLocked
-                          ? "rounded-xl border border-neutral-800/80 bg-neutral-950/40 p-4"
+                          ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
                           : ""
                       }`}
                     >
@@ -170,7 +170,7 @@ export function SessionWelcomeModal({
                               type="button"
                               onClick={() => onInitialChaptersChange(level)}
                               disabled={chaptersDisabled}
-                              className={`rounded-xl border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
+                              className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
                                 selected && !chaptersLocked
                                   ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
                                   : "border-neutral-800 bg-neutral-950 hover:border-neutral-600 disabled:hover:border-neutral-800"
@@ -192,7 +192,7 @@ export function SessionWelcomeModal({
                       </div>
                       {statusUnknown && (
                         <div
-                          className="mt-3 flex items-center gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                          className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
                           role="status"
                           aria-live="polite"
                         >
@@ -209,7 +209,7 @@ export function SessionWelcomeModal({
                       )}
                       {hasExistingChapters && (
                         <label
-                          className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 transition-colors hover:border-neutral-700 ${
+                          className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 transition-colors hover:border-neutral-700 ${
                             isButtonDisabled ? "pointer-events-none opacity-50" : ""
                           }`}
                         >
@@ -218,7 +218,7 @@ export function SessionWelcomeModal({
                             checked={regenerateChapters}
                             disabled={isButtonDisabled}
                             onChange={(e) => onRegenerateChaptersChange(e.target.checked)}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
                           />
                           <span className="min-w-0">
                             <span className="block text-xs font-medium text-neutral-200 leading-tight">
@@ -243,7 +243,7 @@ export function SessionWelcomeModal({
                   disabled={isButtonDisabled}
                   aria-hidden="true"
                   tabIndex={-1}
-                  className="hidden w-full mb-3 p-3 rounded-xl border bg-neutral-900 border-neutral-800 hover:bg-neutral-800/60 hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
+                  className="hidden w-full mb-3 p-3 rounded-none border bg-neutral-900 border-neutral-800 hover:bg-neutral-800/60 hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
                 >
                   <div className="relative shrink-0 w-9 h-5 rounded-full bg-neutral-700">
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
@@ -270,7 +270,7 @@ export function SessionWelcomeModal({
                   disabled={!webGPUAvailable || isButtonDisabled}
                   aria-hidden="true"
                   tabIndex={-1}
-                  className="hidden w-full mb-5 p-3 rounded-xl border bg-neutral-900 border-neutral-800 enabled:hover:bg-neutral-800/60 enabled:hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
+                  className="hidden w-full mb-5 p-3 rounded-none border bg-neutral-900 border-neutral-800 enabled:hover:bg-neutral-800/60 enabled:hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
                 >
                   <div className="relative shrink-0 w-9 h-5 rounded-full bg-neutral-700">
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-neutral-100 shadow transition-transform ${localInferenceEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
@@ -288,7 +288,7 @@ export function SessionWelcomeModal({
                 </button>
 
                 {planError && !isPreparing && (
-                  <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl">
+                  <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-none">
                     <p className="text-xs text-red-400 leading-relaxed">{planError}</p>
                   </div>
                 )}
@@ -297,7 +297,7 @@ export function SessionWelcomeModal({
                 <button
                   onClick={() => void onConfirmSettings()}
                                 disabled={isButtonDisabled}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
+                  className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                 >
                   {isButtonDisabled ? (
                     <>
@@ -314,7 +314,7 @@ export function SessionWelcomeModal({
                 {isPreparing && (
                   <div className="space-y-2">
                     {/* Plan prep row */}
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-none bg-neutral-950 border border-neutral-800">
                       <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
                         prepStage !== "plan"
                           ? 'bg-neutral-100 text-neutral-900'
@@ -333,7 +333,7 @@ export function SessionWelcomeModal({
                     </div>
 
                     {localInferenceEnabled && (
-                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
+                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-none bg-neutral-950 border border-neutral-800">
                         <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
                           prepStage === "done"
                             ? 'bg-neutral-100 text-neutral-900'
@@ -378,7 +378,7 @@ export function SessionWelcomeModal({
 
                     {/* Errors */}
                     {(planError || modelLoadError) && (
-                      <div className="px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl">
+                      <div className="px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-none">
                         <p className="text-xs text-red-400 leading-relaxed">{planError || modelLoadError}</p>
                       </div>
                     )}
@@ -412,7 +412,7 @@ export function SessionWelcomeModal({
               </p>
               <button
                 onClick={() => void onReadyStart()}
-                className="min-w-[14rem] rounded-xl bg-neutral-100 px-8 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
+                className="min-w-[14rem] rounded-none bg-neutral-100 px-8 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
               >
                 {t("session.getStarted")}
               </button>

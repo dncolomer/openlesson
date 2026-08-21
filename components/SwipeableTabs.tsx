@@ -139,7 +139,7 @@ export function SwipeableTabs({
           <button
             key={tab.id}
             onClick={() => setActiveTab(index)}
-            className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+            className={`relative flex items-center gap-2 px-3 py-1.5 rounded-none transition-all ${
               activeTab === index
                 ? "text-white"
                 : "text-neutral-500 hover:text-neutral-400"

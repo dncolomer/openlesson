@@ -210,7 +210,7 @@ export function RabbitHoleExpandModal({
     >
       {/* Fixed height cap so collected path scrolls instead of growing off-screen */}
       <div
-        className="flex h-[min(90vh,720px)] max-h-[min(90vh,720px)] w-full max-w-3xl min-h-0 overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-900 shadow-2xl"
+        className="flex h-[min(90vh,720px)] max-h-[min(90vh,720px)] w-full max-w-3xl min-h-0 overflow-hidden rounded-none border border-neutral-700 bg-neutral-900 shadow-2xl"
         data-rabbit-hole-expand-panel
       >
         {/* Sidebar: depth + remaining; path list scrolls when deep */}
@@ -267,7 +267,7 @@ export function RabbitHoleExpandModal({
             {state.candidates.map((c, i) => (
               <li
                 key={`${i}-${c.slice(0, 24)}`}
-                className="rounded-md border border-neutral-800 bg-neutral-900/80 px-1.5 py-1 text-[10px] leading-snug text-neutral-400"
+                className="rounded-none border border-neutral-800 bg-neutral-900/80 px-1.5 py-1 text-[10px] leading-snug text-neutral-400"
                 data-rabbit-hole-path-item
               >
                 <span className="mr-1 font-mono text-neutral-600">
@@ -284,7 +284,7 @@ export function RabbitHoleExpandModal({
                 type="button"
                 data-rabbit-hole-finish-early
                 onClick={handleFinishEarly}
-                className="w-full rounded-md border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15"
+                className="w-full rounded-none border border-white/25 bg-white/10 px-2 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/15"
                 title="Stop diving and review the topics collected so far"
               >
                 Stop &amp; review collection
@@ -295,7 +295,7 @@ export function RabbitHoleExpandModal({
               data-rabbit-hole-restart
               onClick={handleRestart}
               disabled={loading && state.candidates.length === 0}
-              className="w-full rounded-md border border-white/15 bg-white/5 px-2 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
+              className="w-full rounded-none border border-white/15 bg-white/5 px-2 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
             >
               Restart from top
             </button>
@@ -320,7 +320,7 @@ export function RabbitHoleExpandModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 text-neutral-500 transition hover:bg-white/5 hover:text-white"
+              className="rounded-none p-1 text-neutral-500 transition hover:bg-white/5 hover:text-white"
               aria-label="Close"
               data-rabbit-hole-close
             >
@@ -368,7 +368,7 @@ export function RabbitHoleExpandModal({
                   {summary.candidates.map((c, i) => (
                     <li key={`sum-${i}`}>
                       <label
-                        className="flex cursor-pointer items-start gap-2 rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2 transition hover:border-neutral-600"
+                        className="flex cursor-pointer items-start gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-3 py-2 transition hover:border-neutral-600"
                         data-rabbit-hole-summary-item
                       >
                         <input
@@ -414,7 +414,7 @@ export function RabbitHoleExpandModal({
                           data-rabbit-hole-question-index={i}
                           disabled={loading}
                           onClick={() => handlePick(i)}
-                          className="w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2.5 text-left text-xs leading-snug text-neutral-100 transition hover:border-white/30 hover:bg-white/5 disabled:opacity-50"
+                          className="w-full rounded-none border border-neutral-700 bg-neutral-950/60 px-3 py-2.5 text-left text-xs leading-snug text-neutral-100 transition hover:border-white/30 hover:bg-white/5 disabled:opacity-50"
                         >
                           {q}
                         </button>
@@ -428,7 +428,7 @@ export function RabbitHoleExpandModal({
                     data-rabbit-hole-regenerate
                     disabled={loading}
                     onClick={handleRegenerate}
-                    className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
+                    className="rounded-none border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
                   >
                     Generate 3 more
                   </button>
@@ -441,7 +441,7 @@ export function RabbitHoleExpandModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition hover:bg-white/5"
+              className="rounded-none border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition hover:bg-white/5"
               data-rabbit-hole-cancel
             >
               Cancel
@@ -451,7 +451,7 @@ export function RabbitHoleExpandModal({
                 type="button"
                 data-rabbit-hole-finish-early
                 onClick={handleFinishEarly}
-                className="rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-neutral-100 transition hover:bg-white/15"
+                className="rounded-none border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-neutral-100 transition hover:bg-white/15"
               >
                 Stop &amp; review ({state.candidates.length})
               </button>
@@ -462,7 +462,7 @@ export function RabbitHoleExpandModal({
                 data-rabbit-hole-confirm
                 disabled={confirmed.length === 0}
                 onClick={() => onConfirm(confirmed)}
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+                className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
               >
                 {confirmed.length === 0
                   ? "Select at least one"

@@ -86,9 +86,9 @@ export function WorkspaceKnowledgePortalPanel({
   const [browseStatus, setBrowseStatus] = useState<string>("all");
 
   const fieldClass =
-    "mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
+    "mt-1 w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
   const primaryBtnClass =
-    "rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
+    "rounded-none bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
   const blockTitleById = useMemo(() => {
     return new Map(blocks.map((block) => [block.id, block.title || block.id]));
@@ -342,7 +342,7 @@ export function WorkspaceKnowledgePortalPanel({
   if (!isOwner || !currentUserId) {
     return (
       <section
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
         data-settings-section="knowledge-portal"
         data-knowledge-portal-panel
       >
@@ -363,7 +363,7 @@ export function WorkspaceKnowledgePortalPanel({
       data-knowledge-portal-panel
     >
       <div
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
         data-knowledge-portal-inner-tabs
       >
         <WorkspaceSectionSubTabs
@@ -440,7 +440,7 @@ export function WorkspaceKnowledgePortalPanel({
                 return (
                   <label
                     key={opt.mode}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-none border px-3 py-2 text-xs transition ${
                       selected
                         ? "border-white bg-white/5 text-white"
                         : "border-neutral-700 bg-neutral-900 text-neutral-400"
@@ -499,7 +499,7 @@ export function WorkspaceKnowledgePortalPanel({
 
             {portalScopeMode === "workspace" ? (
               <p
-                className="rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-[11px] leading-relaxed text-neutral-500"
+                className="rounded-none border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-[11px] leading-relaxed text-neutral-500"
                 data-practice-portal-workspace-scope-note
               >
                 {t("planView.practicePortalScopeWorkspaceNote")}
@@ -519,7 +519,7 @@ export function WorkspaceKnowledgePortalPanel({
                   return (
                     <label
                       key={id}
-                      className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-none border px-3 py-2 text-xs transition ${
                         exploreDisabled
                           ? "cursor-not-allowed border-neutral-800 bg-neutral-950 text-neutral-600 opacity-60"
                           : checked
@@ -533,7 +533,7 @@ export function WorkspaceKnowledgePortalPanel({
                     >
                       <input
                         type="checkbox"
-                        className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+                        className="mt-0.5 rounded-none border-neutral-700 bg-neutral-900"
                         checked={checked && !exploreDisabled}
                         disabled={exploreDisabled}
                         onChange={() => togglePortalProduct(id)}
@@ -558,7 +558,7 @@ export function WorkspaceKnowledgePortalPanel({
                         key={mins}
                         type="button"
                         onClick={() => togglePortalMinutes("explore", mins)}
-                        className={`rounded-md border px-2.5 py-1.5 font-mono text-[11px] transition ${
+                        className={`rounded-none border px-2.5 py-1.5 font-mono text-[11px] transition ${
                           checked
                             ? "border-white bg-white text-black"
                             : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
@@ -588,7 +588,7 @@ export function WorkspaceKnowledgePortalPanel({
                         key={mins}
                         type="button"
                         onClick={() => togglePortalMinutes("drill", mins)}
-                        className={`rounded-md border px-2.5 py-1.5 font-mono text-[11px] transition ${
+                        className={`rounded-none border px-2.5 py-1.5 font-mono text-[11px] transition ${
                           checked
                             ? "border-white bg-white text-black"
                             : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
@@ -724,7 +724,7 @@ export function WorkspaceKnowledgePortalPanel({
                   return (
                     <li
                       key={portal.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-neutral-800 px-3 py-2 text-xs"
                       data-practice-portal-row={portal.id}
                       data-practice-portal-status={portal.status}
                       data-practice-portal-scope-mode={scopeMode}
@@ -759,7 +759,7 @@ export function WorkspaceKnowledgePortalPanel({
                           <button
                             type="button"
                             onClick={() => void copyLink(portal.id, url)}
-                            className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+                            className="rounded-none border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
                             data-practice-portal-copy={portal.id}
                           >
                             {copiedLinkId === portal.id
@@ -772,7 +772,7 @@ export function WorkspaceKnowledgePortalPanel({
                             type="button"
                             disabled={invalidating || creatingPortal}
                             onClick={() => void invalidatePracticePortal(portal.id)}
-                            className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                            className="rounded-none border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
                             data-practice-portal-invalidate={portal.id}
                           >
                             {t("planView.practicePortalInvalidate")}

@@ -28,7 +28,7 @@ export interface TapbenchLinkRow {
 }
 
 const PRIMARY_CTA_CLASS =
-  "rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
+  "rounded-none bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
 interface WorkspaceTapbenchLinksPanelProps {
   workspaceId: string;
@@ -156,7 +156,7 @@ export function WorkspaceTapbenchLinksPanel({
   return (
     <div className="space-y-4" data-tapbench-mint data-region-tapbench-links data-knowledge-links-tapbench>
       {error ? (
-        <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+        <div className="rounded-none border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
           {error}
         </div>
       ) : null}
@@ -178,7 +178,7 @@ export function WorkspaceTapbenchLinksPanel({
           <select
             value={tapbenchBlockId}
             onChange={(e) => setTapbenchBlockId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            className="mt-1 w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
             data-tapbench-block-select
           >
             <option value="">Entire workspace</option>
@@ -197,7 +197,7 @@ export function WorkspaceTapbenchLinksPanel({
             max={180}
             value={tapbenchMinutes}
             onChange={(e) => setTapbenchMinutes(Number(e.target.value) || 15)}
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            className="mt-1 w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
             data-tapbench-minutes
           />
         </label>
@@ -223,7 +223,7 @@ export function WorkspaceTapbenchLinksPanel({
           {tapbenchLinks.map((link) => (
             <li
               key={link.id}
-              className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3"
+              className="flex flex-wrap items-start justify-between gap-2 rounded-none border border-neutral-800 bg-neutral-900/50 p-3"
               data-tapbench-link-id={link.id}
             >
               <div className="min-w-0 flex-1">
@@ -243,7 +243,7 @@ export function WorkspaceTapbenchLinksPanel({
                 <button
                   type="button"
                   onClick={() => downloadTapbenchSkills(link)}
-                  className="rounded-md border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
+                  className="rounded-none border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
                   data-download-tapbench-skills
                   data-tapbench-skills-md
                   title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}
@@ -253,7 +253,7 @@ export function WorkspaceTapbenchLinksPanel({
                 <button
                   type="button"
                   onClick={() => void copyTapbenchUrl(link)}
-                  className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-[11px] text-white transition hover:border-neutral-400"
+                  className="rounded-none border border-neutral-600 px-2.5 py-1.5 text-[11px] text-white transition hover:border-neutral-400"
                   data-copy-tapbench-link
                 >
                   {copiedTapbenchId === link.id ? "Copied" : "Copy link"}

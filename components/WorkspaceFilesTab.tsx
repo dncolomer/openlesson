@@ -167,7 +167,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
         </div>
 
         {error && (
-          <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
+          <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-none text-xs text-red-400">
             {error}
           </div>
         )}
@@ -178,7 +178,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-3 px-4 py-3 bg-neutral-900/60 border border-neutral-800 rounded-xl"
+                className="flex items-center gap-3 px-4 py-3 bg-neutral-900/60 border border-neutral-800 rounded-none"
               >
                 <FileTypeIcon mimeType={file.mime_type} />
                 <div className="flex-1 min-w-0">
@@ -189,7 +189,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
                   <button
                     onClick={() => handleDownload(file)}
                     disabled={downloadingId === file.id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-neutral-400 hover:text-white border border-neutral-700 hover:border-neutral-500 rounded-lg transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-neutral-400 hover:text-white border border-neutral-700 hover:border-neutral-500 rounded-none transition-colors disabled:opacity-50"
                   >
                     {downloadingId === file.id ? (
                       <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -249,7 +249,7 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-white disabled:bg-neutral-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-white disabled:bg-neutral-700 text-white text-sm font-medium rounded-none transition-colors"
               >
                 {uploading ? (
                   <>

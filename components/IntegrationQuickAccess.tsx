@@ -63,12 +63,12 @@ export function IntegrationQuickAccess({
 
   const cardClass =
     layout === "stack"
-      ? "rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-5 flex flex-col gap-4"
-      : "rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-4 flex flex-col gap-3 h-full";
+      ? "rounded-none border border-neutral-800/80 bg-neutral-950/70 p-5 flex flex-col gap-4"
+      : "rounded-none border border-neutral-800/80 bg-neutral-950/70 p-4 flex flex-col gap-3 h-full";
   const buttonClass =
-    "rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white";
+    "rounded-none border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white";
   const codeClass =
-    "block overflow-x-auto rounded border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300 break-all";
+    "block overflow-x-auto rounded-none border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300 break-all";
   const sectionTitleClass =
     layout === "stack"
       ? "text-sm font-medium text-white"
@@ -91,7 +91,7 @@ export function IntegrationQuickAccess({
       ) : null}
 
       {showWorkspaceLevelNote ? (
-        <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-sm text-neutral-200/90">
+        <div className="rounded-none border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-sm text-neutral-200/90">
           {t("integrationAccess.workspaceLevelNote")}
         </div>
       ) : null}
@@ -141,7 +141,7 @@ export function IntegrationQuickAccess({
               </p>
               <code className={`${codeClass} mt-1`}>{mcpEndpointUrl}</code>
             </div>
-            <pre className="overflow-x-auto rounded-md border border-neutral-800 bg-black/40 p-2 font-mono text-[10px] leading-relaxed text-neutral-500">
+            <pre className="overflow-x-auto rounded-none border border-neutral-800 bg-black/40 p-2 font-mono text-[10px] leading-relaxed text-neutral-500">
               {`Authorization: Bearer ${apiKeyPlaceholder}`}
             </pre>
             <div className="mt-auto flex flex-wrap gap-2">

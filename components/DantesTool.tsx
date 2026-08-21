@@ -140,7 +140,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
   }, [selectedTopic]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-lg border border-neutral-800 bg-neutral-950/70">
+    <div className="flex h-full min-h-0 flex-col rounded-none border border-neutral-800 bg-neutral-950/70">
       <div className="shrink-0 border-b border-neutral-800 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -154,7 +154,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search Dantes topics..."
-            className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none transition-colors focus:border-neutral-600"
+            className="w-full rounded-none border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 outline-none transition-colors focus:border-neutral-600"
           />
         </div>
       </div>
@@ -177,7 +177,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
                   key={topic.slug}
                   type="button"
                   onClick={() => setSelectedTopic(topic)}
-                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                  className={`w-full rounded-none border p-3 text-left transition-colors ${
                     selectedTopic?.slug === topic.slug
                       ? "border-neutral-600/40 bg-neutral-800/10"
                       : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-700 hover:bg-neutral-900"
@@ -206,7 +206,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
             <StateMessage message="Select a topic to view resources." />
           ) : (
             <div className="mx-auto max-w-3xl space-y-4">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
+              <div className="rounded-none border border-neutral-800 bg-neutral-900/50 p-4">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">{selectedTopic.categoryName ?? "Dantes Topic"}</p>
                 <h4 className="mt-1 text-xl font-semibold text-white">{selectedTopic.name}</h4>
                 {selectedTopic.description && <p className="mt-2 text-sm leading-relaxed text-neutral-400">{selectedTopic.description}</p>}
@@ -246,14 +246,14 @@ function ResourceCard({ resource }: { resource: DantesResource }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
+      className="block rounded-none border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-neutral-700 hover:bg-neutral-900"
     >
       <div className="flex items-start gap-3">
         {resource.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={resource.image} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+          <img src={resource.image} alt="" className="h-16 w-16 shrink-0 rounded-none object-cover" />
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-950 text-lg text-neutral-500">{resource.type.slice(0, 1).toUpperCase()}</div>
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-none border border-neutral-800 bg-neutral-950 text-lg text-neutral-500">{resource.type.slice(0, 1).toUpperCase()}</div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -279,7 +279,7 @@ function ResourceCard({ resource }: { resource: DantesResource }) {
 
 function StateMessage({ message, tone = "muted" }: { message: string; tone?: "muted" | "error" }) {
   return (
-    <div className={`rounded-xl border p-4 text-sm ${tone === "error" ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-neutral-800 bg-neutral-900/50 text-neutral-500"}`}>
+    <div className={`rounded-none border p-4 text-sm ${tone === "error" ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-neutral-800 bg-neutral-900/50 text-neutral-500"}`}>
       {message}
     </div>
   );

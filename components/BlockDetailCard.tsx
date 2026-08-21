@@ -396,7 +396,7 @@ export function BlockDetailCard({
               aria-pressed={selected}
               disabled={isStarting || isLocked || !canLaunchStyle(id)}
               onClick={() => setStyle(id)}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg border-2 px-3 text-left transition disabled:opacity-40 ${
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
                 selected
                   ? "border-white/55 bg-white/10 text-white"
                   : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
@@ -455,7 +455,7 @@ export function BlockDetailCard({
                     aria-pressed={selected}
                     disabled={isStarting || isLocked}
                     onClick={() => setSolo(isSolo)}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg border-2 px-3 text-left transition disabled:opacity-40 ${
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
                       selected
                         ? "border-white/55 bg-white/10 text-white"
                         : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
@@ -494,7 +494,7 @@ export function BlockDetailCard({
                   aria-pressed={selected}
                   disabled={isStarting || isLocked}
                   onClick={() => setDurationMinutes(mins)}
-                  className={`h-8 rounded-lg border-2 text-[11px] font-semibold tracking-tight transition disabled:opacity-40 ${
+                  className={`h-8 rounded-none border-2 text-[11px] font-semibold tracking-tight transition disabled:opacity-40 ${
                     selected
                       ? "border-white/55 bg-white/10 text-white"
                       : "border-white/25 bg-transparent text-neutral-300 hover:border-white/45 hover:bg-white/5"
@@ -514,7 +514,7 @@ export function BlockDetailCard({
         data-resolved-intent-id={resolvedTarget.id}
         disabled={isStarting || isLocked || !canStart}
         onClick={(e) => launch(resolvedTarget, e)}
-        className="mt-3 w-full rounded-lg bg-white px-3 py-2.5 text-xs font-semibold tracking-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+        className="mt-3 w-full rounded-none bg-white px-3 py-2.5 text-xs font-semibold tracking-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
       >
         {isStarting
           ? t("sessionItem.starting")
@@ -536,7 +536,7 @@ export function BlockDetailCard({
           {forkCallout ? <div className="shrink-0">{forkCallout}</div> : null}
 
           {hasFloatingActions ? (
-            <div className="shrink-0 rounded-xl border border-white/15 bg-neutral-950/92 p-3 shadow-[0_-10px_36px_rgba(0,0,0,0.5)] backdrop-blur-md">
+            <div className="shrink-0 rounded-none border border-white/15 bg-neutral-950/92 p-3 shadow-[0_-10px_36px_rgba(0,0,0,0.5)] backdrop-blur-md">
               {actionButtons}
             </div>
           ) : null}

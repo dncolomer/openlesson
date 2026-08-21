@@ -119,12 +119,12 @@ export function DataInputTool({
               </div>
             </div>
             {audioStream && isRecording && (
-              <div className="h-24 rounded-lg overflow-hidden bg-neutral-950 border border-neutral-800">
+              <div className="h-24 rounded-none overflow-hidden bg-neutral-950 border border-neutral-800">
                 <AudioLevelMeter stream={audioStream} />
               </div>
             )}
             {!audioStream && (
-              <div className="h-24 flex items-center justify-center rounded-lg bg-neutral-950 border border-neutral-800">
+              <div className="h-24 flex items-center justify-center rounded-none bg-neutral-950 border border-neutral-800">
                 <p className="text-neutral-500 text-xs">{t('dataInput.startRecordingMessage')}</p>
               </div>
             )}
@@ -141,7 +141,7 @@ export function DataInputTool({
               <button
                 onClick={isMuseConnected ? onDisconnectMuse : onConnectMuse}
                 disabled={museStatus === "connecting"}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-none transition-colors ${
                   isMuseConnected
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
                     : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
@@ -152,7 +152,7 @@ export function DataInputTool({
             </div>
 
             {museError && (
-              <div className="p-2 rounded-md bg-red-500/10 border border-red-500/30">
+              <div className="p-2 rounded-none bg-red-500/10 border border-red-500/30">
                 <p className="text-xs text-red-400">{museError}</p>
               </div>
             )}
@@ -182,11 +182,11 @@ export function DataInputTool({
 
               {museDeviceStatus && (
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded bg-neutral-800/40 p-2">
+                  <div className="rounded-none bg-neutral-800/40 p-2">
                     <span className="text-neutral-500">Battery: </span>
                     <span className="text-neutral-300">{museDeviceStatus.battery || 0}%</span>
                   </div>
-                  <div className="rounded bg-neutral-800/40 p-2">
+                  <div className="rounded-none bg-neutral-800/40 p-2">
                     <span className="text-neutral-500">Quality: </span>
                     <span className={
                       museDeviceStatus.signalQuality === "good" ? "text-green-400" :
@@ -220,7 +220,7 @@ export function DataInputTool({
                     const height = Math.max(4, (band.value / maxVal) * 40);
                     return (
                       <div key={band.label} className="flex flex-col items-center">
-                        <div className="w-full h-10 bg-neutral-800 rounded-md relative overflow-hidden">
+                        <div className="w-full h-10 bg-neutral-800 rounded-none relative overflow-hidden">
                           <div 
                             className={`absolute bottom-0 w-full ${band.color} transition-all duration-300`}
                             style={{ height: `${height}px` }}
@@ -256,7 +256,7 @@ export function DataInputTool({
               <button
                 onClick={() => onWebcamToggle?.()}
                 disabled={!onWebcamToggle}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-none transition-colors ${
                   isWebcamEnabled
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
                     : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
@@ -276,43 +276,43 @@ export function DataInputTool({
 
                 {latestFacialData && (
                   <div className="grid grid-cols-3 gap-1 text-xs font-mono">
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.engagement')}: </span>
                       <span className={latestFacialData.engagementScore >= 70 ? "text-green-400" : latestFacialData.engagementScore >= 40 ? "text-neutral-300" : "text-red-400"}>
                         {Math.round(latestFacialData.engagementScore)}%
                       </span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.confusion')}: </span>
                       <span className="text-orange-400">{Math.round(latestFacialData.confusionScore)}%</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.processing')}: </span>
                       <span className="text-neutral-300">{Math.round(latestFacialData.processingScore)}%</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.frustration')}: </span>
                       <span className="text-red-400">{Math.round(latestFacialData.frustrationScore)}%</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.smile')}: </span>
                       <span className="text-neutral-300">{Math.round(latestFacialData.smileScore)}%</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.emotion')}: </span>
                       <span className="text-neutral-300">{latestFacialData.emotion.toUpperCase()}</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.attention')}: </span>
                       <span className={latestFacialData.attentionLevel === "high" ? "text-green-400" : latestFacialData.attentionLevel === "medium" ? "text-neutral-300" : "text-red-400"}>
                         {latestFacialData.attentionLevel.toUpperCase()}
                       </span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.blink')}: </span>
                       <span className="text-neutral-300">{blinkRate}/min</span>
                     </div>
-                    <div className="p-1.5 rounded bg-neutral-800/30">
+                    <div className="p-1.5 rounded-none bg-neutral-800/30">
                       <span className="text-neutral-500">{t('dataInput.gaze')}: </span>
                       <span className={latestFacialData.gazeDirection === "at_camera" ? "text-green-400" : latestFacialData.gazeDirection === "away" ? "text-neutral-300" : "text-neutral-400"}>
                         {latestFacialData.gazeDirection.toUpperCase().replace("_", " ")}
@@ -324,7 +324,7 @@ export function DataInputTool({
             )}
 
             {!isWebcamEnabled && (
-              <div className="h-48 flex items-center justify-center rounded-lg bg-neutral-950 border border-neutral-800">
+              <div className="h-48 flex items-center justify-center rounded-none bg-neutral-950 border border-neutral-800">
                 <p className="text-neutral-500 text-xs">{t('dataInput.enableWebcamMessage')}</p>
               </div>
             )}
@@ -342,7 +342,7 @@ export function DataInputTool({
               <button
                 onClick={isScreenCapturing ? onStopScreenCapture : onStartScreenCapture}
                 disabled={!sessionId}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-none transition-colors ${
                   isScreenCapturing
                     ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
                     : "bg-neutral-800/20 text-neutral-300 border border-neutral-600/30 hover:bg-neutral-800/30"
@@ -352,7 +352,7 @@ export function DataInputTool({
               </button>
             </div>
 
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-neutral-950 border border-neutral-800">
+            <div className="flex items-center gap-4 p-4 rounded-none bg-neutral-950 border border-neutral-800">
               <div className={`w-3 h-3 rounded-full ${isScreenCapturing ? "bg-red-500 animate-pulse" : "bg-neutral-600"}`} />
               <span className="text-xs text-neutral-400">
                 {isScreenCapturing ? t('dataInput.capturingScreenshots', { count: String(screenshotCount) }) : t('dataInput.screenCaptureOff')}

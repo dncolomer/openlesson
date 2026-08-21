@@ -123,7 +123,7 @@ export function ThinkAloudTraces({
 
   return (
     <section
-      className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/50 ${compact ? "p-3" : "p-3.5"}`}
+      className={`w-full min-w-0 max-w-full overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/50 ${compact ? "p-3" : "p-3.5"}`}
     >
       <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
@@ -150,12 +150,12 @@ export function ThinkAloudTraces({
       </div>
 
       {showUnavailable ? (
-        <p className="rounded-xl border border-neutral-800 bg-neutral-900/50 px-3 py-2.5 text-xs leading-relaxed text-neutral-400">
+        <p className="rounded-none border border-neutral-800 bg-neutral-900/50 px-3 py-2.5 text-xs leading-relaxed text-neutral-400">
           {t("probes.liveTranscriptionUnavailable")}
         </p>
       ) : (
         <div className="min-w-0 space-y-2">
-          <div className="max-h-32 min-h-[42px] overflow-x-hidden overflow-y-auto rounded-xl border border-neutral-800 bg-black/20 px-3 py-2 text-xs leading-relaxed text-neutral-300">
+          <div className="max-h-32 min-h-[42px] overflow-x-hidden overflow-y-auto rounded-none border border-neutral-800 bg-black/20 px-3 py-2 text-xs leading-relaxed text-neutral-300">
             {interimText ? (
               <span className="block break-words text-neutral-200">{interimText}</span>
             ) : (
@@ -183,13 +183,13 @@ export function ThinkAloudTraces({
                   }}
                   placeholder={t("heliosChat.placeholder")}
                   rows={1}
-                  className="min-h-10 flex-1 resize-none rounded-xl border border-neutral-800 bg-neutral-950/70 px-3 py-2.5 text-xs text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
+                  className="min-h-10 flex-1 resize-none rounded-none border border-neutral-800 bg-neutral-950/70 px-3 py-2.5 text-xs text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
                 />
                 <button
                   type="button"
                   onClick={submitManualText}
                   disabled={!manualText.trim()}
-                  className="shrink-0 rounded-xl border border-red-500/40 bg-red-500/10 px-3 text-red-200 transition-colors hover:border-red-400/70 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 rounded-none border border-red-500/40 bg-red-500/10 px-3 text-red-200 transition-colors hover:border-red-400/70 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label={t("common.submit")}
                   title={t("common.submit")}
                 >
@@ -244,7 +244,7 @@ export function ThinkAloudTraces({
                       title={t("probes.selectThought")}
                     >
                       <span
-                        className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border flex items-center justify-center ${
+                        className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border flex items-center justify-center ${
                           isSelected ? "border-white bg-white text-neutral-950" : "border-neutral-700 bg-neutral-950"
                         }`}
                         aria-hidden="true"
@@ -257,7 +257,7 @@ export function ThinkAloudTraces({
                       </span>
                       <span className="min-w-0 flex-1 break-words">{thought.text}</span>
                       {shortcut && (
-                        <span className="shrink-0 rounded-md border border-neutral-700 bg-neutral-950/70 px-1.5 py-0.5 text-[10px] leading-none text-neutral-500">
+                        <span className="shrink-0 rounded-none border border-neutral-700 bg-neutral-950/70 px-1.5 py-0.5 text-[10px] leading-none text-neutral-500">
                           {shortcut}
                         </span>
                       )}

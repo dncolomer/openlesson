@@ -52,7 +52,7 @@ export function MapJobIndicators({
               key={job.id}
               data-map-geometry-save={job.id}
               data-map-geometry-save-status={job.status}
-              className="rounded-md border border-white/15 bg-neutral-950/95 px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              className="rounded-none border border-white/15 bg-neutral-950/95 px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
             >
               <div className="flex items-center gap-2">
                 {job.status === "saving" ? (
@@ -111,7 +111,7 @@ export function MapJobIndicators({
           }}
         >
           <div
-            className="rounded-md border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+            className="rounded-none border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
             data-map-cluster-progress
           >
             <div className="mb-1 flex items-start justify-between gap-1.5">
@@ -175,7 +175,7 @@ export function MapJobIndicators({
                 data-map-expand-job-status={job.status}
                 data-map-expand-progress-completed={job.completed}
                 data-map-expand-progress-total={job.total}
-                className="rounded-md border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+                className="rounded-none border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
               >
                 <div className="mb-1 flex items-start justify-between gap-1.5">
                   <p className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-100">
@@ -217,7 +217,7 @@ export function MapJobIndicators({
                     data-map-expand-stop
                     data-map-expand-stop-job={job.id}
                     onClick={() => onAbortExpandJob?.(job.id)}
-                    className="w-full rounded-md border border-white/50 bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:bg-neutral-100"
+                    className="w-full rounded-none border border-white/50 bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:bg-neutral-100"
                   >
                     Stop
                   </button>

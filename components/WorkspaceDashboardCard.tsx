@@ -46,7 +46,7 @@ export function WorkspaceDashboardCard({
 
   return (
     <article
-      className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
+      className="group overflow-hidden rounded-none border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
       data-workspace-dashboard-card
       data-workspace-pinned={isPinned ? "true" : "false"}
     >
@@ -83,7 +83,7 @@ export function WorkspaceDashboardCard({
               aria-pressed={isPinned}
               aria-label={isPinned ? "Unpin workspace" : "Pin workspace"}
               title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
-              className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition ${
+              className={`shrink-0 rounded-none border px-2.5 py-1 text-xs transition ${
                 isPinned
                   ? "border-neutral-600/70 bg-neutral-950/40 text-neutral-300 hover:border-white/60 hover:bg-neutral-950/60"
                   : "border-neutral-700 bg-neutral-900/60 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
@@ -100,7 +100,7 @@ export function WorkspaceDashboardCard({
           <span
             className={
               plan.status === "archived"
-                ? "rounded border border-neutral-600/30 px-1.5 py-0.5 text-neutral-300"
+                ? "rounded-none border border-neutral-600/30 px-1.5 py-0.5 text-neutral-300"
                 : "capitalize"
             }
           >
@@ -127,7 +127,7 @@ export function WorkspaceDashboardCard({
                 type="button"
                 onClick={() => onRestore(plan.id)}
                 disabled={archivingWorkspaceId === plan.id}
-                className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                className="rounded-none border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
               >
                 {archivingWorkspaceId === plan.id ? "Restoring…" : "Restore"}
               </button>
@@ -136,7 +136,7 @@ export function WorkspaceDashboardCard({
                 type="button"
                 onClick={() => onArchive(plan.id)}
                 disabled={archivingWorkspaceId === plan.id}
-                className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300 disabled:opacity-50"
+                className="rounded-none border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-neutral-600/40 hover:text-neutral-300 disabled:opacity-50"
               >
                 {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
               </button>
@@ -144,7 +144,7 @@ export function WorkspaceDashboardCard({
             <button
               type="button"
               onClick={() => onToggleVisibility(plan)}
-              className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+              className={`rounded-none border px-2.5 py-1 text-xs transition-colors ${
                 isPublic
                   ? "border-green-800/80 bg-green-900/30 text-green-400 hover:bg-green-900/50"
                   : "border-neutral-700 bg-neutral-900/60 text-neutral-500 hover:text-neutral-300"

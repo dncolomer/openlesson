@@ -225,7 +225,7 @@ export function WorkspaceSimulationPanel({
       </header>
 
       <section
-        className="rounded-lg border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
+        className="rounded-none border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
         data-workspace-simulation-scope
         data-simulation-scope-control
         data-simulation-scope-workspace
@@ -245,7 +245,7 @@ export function WorkspaceSimulationPanel({
             disabled={generating}
             placeholder="Optional: influence generation (e.g. emphasize unknowns, domain edge cases)…"
             data-simulation-modifier-input
-            className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           />
         </label>
 
@@ -255,7 +255,7 @@ export function WorkspaceSimulationPanel({
           data-simulation-generate-samples
           disabled={!canGenerate}
           onClick={() => void generate()}
-          className="mt-3 w-full shrink-0 rounded-md border border-white/15 bg-white/[0.08] px-4 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-3 w-full shrink-0 rounded-none border border-white/15 bg-white/[0.08] px-4 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {generating ? "Generating…" : "Generate workspace samples"}
         </button>
@@ -319,10 +319,10 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`q-skel-${i}`}
                   data-simulation-question-skeleton={i}
-                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
+                  className="rounded-none border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
                 >
-                  <div className="h-2.5 w-[92%] animate-pulse rounded bg-white/10" />
-                  <div className="mt-2 h-2.5 w-[68%] animate-pulse rounded bg-white/[0.07]" />
+                  <div className="h-2.5 w-[92%] animate-pulse rounded-none bg-white/10" />
+                  <div className="mt-2 h-2.5 w-[68%] animate-pulse rounded-none bg-white/[0.07]" />
                 </li>
               ))}
             </ul>
@@ -339,7 +339,7 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`q-${i}`}
                   data-simulation-question={i}
-                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-none border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
                 >
                   <span className="min-w-0 flex-1">{q}</span>
                   <SimulationCollectionAddButton
@@ -378,10 +378,10 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`ex-skel-${i}`}
                   data-simulation-exercise-skeleton={i}
-                  className="rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
+                  className="rounded-none border border-white/10 bg-neutral-950/50 px-2.5 py-2.5"
                 >
-                  <div className="h-2.5 w-[88%] animate-pulse rounded bg-white/10" />
-                  <div className="mt-2 h-2.5 w-[54%] animate-pulse rounded bg-white/[0.07]" />
+                  <div className="h-2.5 w-[88%] animate-pulse rounded-none bg-white/10" />
+                  <div className="mt-2 h-2.5 w-[54%] animate-pulse rounded-none bg-white/[0.07]" />
                 </li>
               ))}
             </ul>
@@ -398,7 +398,7 @@ export function WorkspaceSimulationPanel({
                 <li
                   key={`ex-${i}`}
                   data-simulation-exercise={i}
-                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-none border border-white/10 bg-neutral-950/50 px-2.5 py-2 text-[12px] leading-snug text-neutral-300"
                 >
                   <span className="min-w-0 flex-1">{ex}</span>
                   <SimulationCollectionAddButton
@@ -422,7 +422,7 @@ export function WorkspaceSimulationPanel({
       </div>
 
       <section
-        className="rounded-lg border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
+        className="rounded-none border border-white/10 bg-neutral-950/70 px-3 py-3 sm:px-4"
         data-simulation-collection-list
       >
         <div className="flex items-center justify-between gap-2">
@@ -437,7 +437,7 @@ export function WorkspaceSimulationPanel({
             data-simulation-collection-refresh
             disabled={collectionLoading || !workspaceId}
             onClick={() => void loadCollection()}
-            className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] text-neutral-300 hover:border-neutral-500 disabled:opacity-40"
+            className="rounded-none border border-neutral-700 px-2 py-1 text-[10px] text-neutral-300 hover:border-neutral-500 disabled:opacity-40"
           >
             {collectionLoading ? "Loading…" : "Refresh"}
           </button>
@@ -456,10 +456,10 @@ export function WorkspaceSimulationPanel({
                 key={item.id}
                 data-simulation-collection-item={item.id}
                 data-simulation-collection-kind={item.kind}
-                className="rounded-md border border-white/10 bg-black/20 px-2.5 py-2"
+                className="rounded-none border border-white/10 bg-black/20 px-2.5 py-2"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="rounded border border-white/10 px-1 py-px text-[9px] uppercase tracking-wide text-neutral-500">
+                  <span className="rounded-none border border-white/10 px-1 py-px text-[9px] uppercase tracking-wide text-neutral-500">
                     {item.kind}
                     {item.origin?.kind && item.origin.kind !== "workspace"
                       ? ` · ${item.origin.kind === "multi_block" ? "multi" : "block"}`
@@ -497,14 +497,14 @@ export function WorkspaceSimulationPanel({
                       onChange={(e) => setEditText(e.target.value)}
                       rows={3}
                       data-simulation-collection-edit-input
-                      className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100"
+                      className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100"
                     />
                     <div className="flex gap-1.5">
                       <button
                         type="button"
                         data-simulation-collection-save={item.id}
                         onClick={() => void saveEdit(item.id)}
-                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-white"
+                        className="rounded-none border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-white"
                       >
                         Save
                       </button>
@@ -514,7 +514,7 @@ export function WorkspaceSimulationPanel({
                           setEditingId(null);
                           setEditText("");
                         }}
-                        className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400"
+                        className="rounded-none border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400"
                       >
                         Cancel
                       </button>

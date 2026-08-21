@@ -42,7 +42,7 @@ export function SessionControlBar({
   const barClassName = isEmbedded
     ? "flex items-center justify-center gap-3 px-1 py-1"
     : isPanel
-      ? "w-full max-w-[680px] rounded-2xl border border-neutral-800 bg-neutral-950/55 px-3 py-2 shadow-lg shadow-black/30 flex items-center justify-center gap-3 backdrop-blur-md"
+      ? "w-full max-w-[680px] rounded-none border border-neutral-800 bg-neutral-950/55 px-3 py-2 shadow-lg shadow-black/30 flex items-center justify-center gap-3 backdrop-blur-md"
       : "w-full px-4 py-2.5 bg-neutral-900/95 border-b border-neutral-700/80 shadow-2xl shadow-black/50 flex items-center justify-center gap-3 backdrop-blur-md";
 
   return (
@@ -77,7 +77,7 @@ export function SessionControlBar({
               else if (isPaused) onResume();
             }}
             disabled={isPlaying}
-            className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
+            className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-none transition-all ${
               isPlaying
                 ? "text-green-500/20 cursor-default"
                 : "text-green-400 hover:bg-green-500/20 hover:text-green-300"
@@ -93,7 +93,7 @@ export function SessionControlBar({
           <button
             onClick={() => onPause()}
             disabled={!isPlaying}
-            className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
+            className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-none transition-all ${
               !isPlaying
                 ? "text-neutral-200/20 cursor-default"
                 : "text-neutral-300 hover:bg-neutral-800/20 hover:text-neutral-300"
@@ -111,7 +111,7 @@ export function SessionControlBar({
               data-session-end-control
               onClick={() => onStopRecording()}
               disabled={isStopped}
-              className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
+              className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-none transition-all ${
                 isStopped
                   ? "text-red-500/20 cursor-default"
                   : "text-red-400 hover:bg-red-500/20 hover:text-red-300"

@@ -141,7 +141,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
               <button
                 key={level}
                 onClick={() => setLevelFilter(level)}
-                className={`px-2 py-1 text-[10px] rounded capitalize transition-colors ${
+                className={`px-2 py-1 text-[10px] rounded-none capitalize transition-colors ${
                   levelFilter === level
                     ? "bg-neutral-700 text-white"
                     : "text-neutral-500 hover:text-neutral-300"
@@ -157,7 +157,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
                 type="checkbox"
                 checked={autoScroll}
                 onChange={(e) => setAutoScroll(e.target.checked)}
-                className="w-3 h-3 rounded border-neutral-700 bg-neutral-800"
+                className="w-3 h-3 rounded-none border-neutral-700 bg-neutral-800"
               />
               {t("logs.autoScroll")}
             </label>
@@ -180,7 +180,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="text-[11px] bg-neutral-800 text-neutral-300 border border-neutral-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-neutral-500"
+            className="text-[11px] bg-neutral-800 text-neutral-300 border border-neutral-700 rounded-none px-1.5 py-0.5 focus:outline-none focus:border-neutral-500"
           >
             <option value={ALL_SOURCES}>{t("logs.allSources")}</option>
             {availableSources.map((src) => (
@@ -220,7 +220,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
             {visibleLogs.map((log) => (
             <div
               key={log.id}
-              className={`p-2 rounded border text-xs ${getLevelColor(log.level)}`}
+              className={`p-2 rounded-none border text-xs ${getLevelColor(log.level)}`}
             >
               <div className="flex items-start gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full mt-1 ${getLevelDot(log.level)}`} />
@@ -265,7 +265,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
                 type="checkbox"
                 checked={healthAutoRefresh}
                 onChange={(e) => setHealthAutoRefresh(e.target.checked)}
-                className="w-3 h-3 rounded border-neutral-700 bg-neutral-800"
+                className="w-3 h-3 rounded-none border-neutral-700 bg-neutral-800"
               />
               Auto
             </label>

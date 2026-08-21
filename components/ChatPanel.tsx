@@ -261,7 +261,7 @@ export function ChatPanel({
   return (
     <div
       className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${
-        embedded ? "bg-black/20" : "rounded-md border border-neutral-800 bg-neutral-950/50"
+        embedded ? "bg-black/20" : "rounded-none border border-neutral-800 bg-neutral-950/50"
       }`}
     >
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
@@ -276,7 +276,7 @@ export function ChatPanel({
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[92%] rounded-md px-3 py-2 ${
+                className={`max-w-[92%] rounded-none px-3 py-2 ${
                   msg.role === "user"
                     ? "bg-white text-black"
                     : "border border-neutral-800 bg-neutral-900/80 text-neutral-200"
@@ -289,7 +289,7 @@ export function ChatPanel({
                         key={img.id}
                         src={img.preview}
                         alt=""
-                        className="h-14 w-14 rounded-lg border border-neutral-600 object-cover"
+                        className="h-14 w-14 rounded-none border border-neutral-600 object-cover"
                       />
                     ))}
                   </div>
@@ -298,7 +298,7 @@ export function ChatPanel({
                   <div
                     className={`max-w-none text-sm leading-6 ${
                       msg.role === "assistant"
-                        ? "prose prose-invert prose-sm prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-headings:text-sm prose-headings:font-semibold prose-ul:my-2 prose-ul:pl-4 prose-ol:my-2 prose-ol:pl-4 prose-li:my-0.5 prose-li:leading-5 prose-code:text-neutral-200 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-strong:text-neutral-100 prose-a:text-neutral-200"
+                        ? "prose prose-invert prose-sm prose-p:my-2 prose-headings:mt-3 prose-headings:mb-1 prose-headings:text-sm prose-headings:font-semibold prose-ul:my-2 prose-ul:pl-4 prose-ol:my-2 prose-ol:pl-4 prose-li:my-0.5 prose-li:leading-5 prose-code:text-neutral-200 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-none prose-code:text-xs prose-strong:text-neutral-100 prose-a:text-neutral-200"
                         : "whitespace-pre-wrap"
                     }`}
                   >
@@ -320,7 +320,7 @@ export function ChatPanel({
 
           {isLoading && (
             <div className="flex justify-start">
-              <div className="rounded-md border border-neutral-800 bg-neutral-900/80 px-3 py-2">
+              <div className="rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2">
                 <div className="flex gap-1">
                   <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "0ms" }} />
                   <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "150ms" }} />
@@ -340,7 +340,7 @@ export function ChatPanel({
             <p className="mb-2 text-xs text-neutral-500">{t("chatPanel.signUpToCustomize")}</p>
             <a
               href="/pricing"
-              className="inline-flex rounded-md bg-white px-4 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200"
+              className="inline-flex rounded-none bg-white px-4 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200"
             >
               {t("chatPanel.signUpCta")}
             </a>
@@ -353,7 +353,7 @@ export function ChatPanel({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("openRemixModal"));
               }}
-              className="inline-flex rounded-md bg-white px-4 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200"
+              className="inline-flex rounded-none bg-white px-4 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200"
             >
               {t("planView.forkRemix")}
             </button>
@@ -368,7 +368,7 @@ export function ChatPanel({
                   type="button"
                   onClick={() => applyHint(hint.example)}
                   disabled={isLoading}
-                  className="rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-400 transition-colors hover:border-neutral-700 hover:text-neutral-200 disabled:opacity-50"
+                  className="rounded-none border border-neutral-800 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-400 transition-colors hover:border-neutral-700 hover:text-neutral-200 disabled:opacity-50"
                 >
                   {hint.label}
                 </button>
@@ -383,7 +383,7 @@ export function ChatPanel({
                       <img
                         src={img.preview}
                         alt=""
-                        className="h-12 w-12 rounded-lg border border-neutral-700 object-cover"
+                        className="h-12 w-12 rounded-none border border-neutral-700 object-cover"
                       />
                       <button
                         type="button"
@@ -397,7 +397,7 @@ export function ChatPanel({
                 </div>
               )}
               <div
-                className={`flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-900/80 px-2.5 py-1.5 ${
+                className={`flex items-end gap-2 rounded-none border border-neutral-800 bg-neutral-900/80 px-2.5 py-1.5 ${
                   isDragging ? "ring-2 ring-neutral-400" : ""
                 }`}
                 onDrop={handleDrop}
@@ -415,7 +415,7 @@ export function ChatPanel({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="shrink-0 rounded p-1.5 text-neutral-500 transition-colors hover:text-white"
+                  className="shrink-0 rounded-none p-1.5 text-neutral-500 transition-colors hover:text-white"
                   aria-label="Attach image"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -440,7 +440,7 @@ export function ChatPanel({
                 <button
                   type="submit"
                   disabled={(!input.trim() && uploadedImages.length === 0) || isLoading}
-                  className="shrink-0 rounded p-1.5 text-neutral-400 transition-colors hover:text-white disabled:text-neutral-700"
+                  className="shrink-0 rounded-none p-1.5 text-neutral-400 transition-colors hover:text-white disabled:text-neutral-700"
                   aria-label="Send"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -126,7 +126,7 @@ export function BlockGoalsPanel({
               key={g.id}
               data-goal-id={g.id}
               data-goal-scope="block"
-              className="flex items-start justify-between gap-2 rounded-md border border-neutral-800/80 bg-neutral-950/50 px-2 py-1.5"
+              className="flex items-start justify-between gap-2 rounded-none border border-neutral-800/80 bg-neutral-950/50 px-2 py-1.5"
             >
               <span className="min-w-0 flex-1 text-xs text-neutral-200">{g.text}</span>
               {canEdit ? (
@@ -151,7 +151,7 @@ export function BlockGoalsPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a block goal…"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white focus:border-neutral-400 focus:outline-none"
+            className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-white focus:border-neutral-400 focus:outline-none"
             data-block-goal-add-input
             onKeyDown={(e) => {
               if (e.key === "Enter") void addGoal();
@@ -161,7 +161,7 @@ export function BlockGoalsPanel({
             type="button"
             onClick={() => void addGoal()}
             disabled={saving || !draft.trim()}
-            className="rounded-md bg-white/90 px-3 py-1.5 text-[11px] font-medium text-black disabled:opacity-40"
+            className="rounded-none bg-white/90 px-3 py-1.5 text-[11px] font-medium text-black disabled:opacity-40"
             data-block-goal-add-submit
           >
             Add

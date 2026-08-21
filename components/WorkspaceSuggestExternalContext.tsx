@@ -156,7 +156,7 @@ export function WorkspaceSuggestExternalContext({
 
   return (
     <div
-      className="space-y-2 rounded-md border border-neutral-800 bg-neutral-950/50 p-2"
+      className="space-y-2 rounded-none border border-neutral-800 bg-neutral-950/50 p-2"
       data-suggest-external-context
     >
       <div className="flex items-center justify-between gap-2">
@@ -173,7 +173,7 @@ export function WorkspaceSuggestExternalContext({
               ? "Enter a block prompt first"
               : "Suggest external sources for this topic"
           }
-          className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-none border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? "Suggesting…" : "Suggest from web"}
         </button>
@@ -191,7 +191,7 @@ export function WorkspaceSuggestExternalContext({
           {suggestions.map((s) => (
             <li
               key={s.key}
-              className="rounded-md border border-neutral-800 bg-neutral-900/50 px-2 py-1.5"
+              className="rounded-none border border-neutral-800 bg-neutral-900/50 px-2 py-1.5"
               data-suggest-external-context-item={s.key}
             >
               <div className="flex items-start justify-between gap-2">
@@ -218,7 +218,7 @@ export function WorkspaceSuggestExternalContext({
                   data-suggest-external-context-accept={s.key}
                   disabled={Boolean(acceptingKey) || disabled}
                   onClick={() => void acceptOne(s)}
-                  className="shrink-0 rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white transition hover:bg-white/20 disabled:opacity-40"
+                  className="shrink-0 rounded-none border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white transition hover:bg-white/20 disabled:opacity-40"
                 >
                   {acceptingKey === s.key ? "…" : "Attach"}
                 </button>

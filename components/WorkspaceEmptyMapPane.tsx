@@ -479,7 +479,7 @@ export function WorkspaceEmptyMapPane({
                 }
               }}
               placeholder="Find me blocks about…"
-              className="w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              className="w-full rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
           </label>
           <button
@@ -487,7 +487,7 @@ export function WorkspaceEmptyMapPane({
             data-empty-map-search-submit
             disabled={disabled || searchBusy}
             onClick={() => void handleSearch()}
-            className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
+            className="w-full rounded-none border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
           >
             {searchBusy ? "Searching…" : "Search map"}
           </button>
@@ -569,7 +569,7 @@ export function WorkspaceEmptyMapPane({
             data-empty-map-suggest-submit
             disabled={disabled || spotBusy}
             onClick={() => void handleSuggestSpot()}
-            className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
+            className="w-full rounded-none border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-medium text-neutral-200 transition hover:bg-white/10 disabled:opacity-40"
           >
             {spotBusy
               ? "Suggesting…"
@@ -608,7 +608,7 @@ export function WorkspaceEmptyMapPane({
               data-active={selectiveDrawing ? "true" : "false"}
               disabled={busy}
               onClick={handleStartDraw}
-              className={`min-w-0 flex-1 rounded-md border px-3 py-2 text-[11px] font-medium transition disabled:opacity-40 ${
+              className={`min-w-0 flex-1 rounded-none border px-3 py-2 text-[11px] font-medium transition disabled:opacity-40 ${
                 selectiveDrawing
                   ? "border-white/30 bg-white/15 text-white"
                   : "border-white/15 bg-white/5 text-neutral-200 hover:bg-white/10"
@@ -629,7 +629,7 @@ export function WorkspaceEmptyMapPane({
                 setAreaSummary(null);
                 onClearSelectiveOverlay?.();
               }}
-              className="min-w-0 flex-1 rounded-md border border-white/10 bg-transparent px-3 py-2 text-[11px] font-medium text-neutral-400 transition hover:bg-white/5 disabled:opacity-40"
+              className="min-w-0 flex-1 rounded-none border border-white/10 bg-transparent px-3 py-2 text-[11px] font-medium text-neutral-400 transition hover:bg-white/5 disabled:opacity-40"
             >
               Clear overlay
             </button>
@@ -637,7 +637,7 @@ export function WorkspaceEmptyMapPane({
           {areaSummary && isSelectivePolygonReady(areaSummary.polygon) ? (
             <div
               data-empty-map-selective-summary
-              className="space-y-3 rounded-md border border-neutral-700/80 bg-black/40 p-3"
+              className="space-y-3 rounded-none border border-neutral-700/80 bg-black/40 p-3"
             >
               <p className="text-[11px] leading-relaxed text-neutral-200">
                 {areaBusy ? "Summarizing this area…" : areaSummary.text}
@@ -647,7 +647,7 @@ export function WorkspaceEmptyMapPane({
                 data-empty-map-selective-to-note
                 disabled={busy || areaBusy}
                 onClick={handleSaveNote}
-                className="w-full rounded-md bg-white px-3 py-2 text-[11px] font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+                className="w-full rounded-none bg-white px-3 py-2 text-[11px] font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
               >
                 Save summary as map Note
               </button>
@@ -693,7 +693,7 @@ export function WorkspaceEmptyMapPane({
               disabled={exploreBusy || busy || !exploreTargetCell}
               placeholder="Optional: influence what to explore here…"
               data-explore-block-modifier
-              className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-[12px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
           </label>
           <button
@@ -703,7 +703,7 @@ export function WorkspaceEmptyMapPane({
               busy || exploreBusy || !exploreTargetCell || !workspaceId
             }
             onClick={() => void handleExploreBlock()}
-            className="w-full rounded-md border border-white/15 bg-white/[0.08] px-3 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-none border border-white/15 bg-white/[0.08] px-3 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {exploreBusy ? "Exploring…" : "Explore"}
           </button>

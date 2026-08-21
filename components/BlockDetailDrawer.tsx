@@ -33,7 +33,7 @@ export function BlockDetailDrawer({ open, onClose, title, children }: BlockDetai
           role="dialog"
           aria-modal="true"
           aria-label={title || t("sessionList.sessions")}
-          className="flex w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-neutral-800/90 bg-[#0b0b0b] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+          className="flex w-full max-w-5xl flex-col overflow-hidden rounded-none border border-neutral-800/90 bg-[#0b0b0b] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-800/60 px-4 py-2.5">
@@ -43,7 +43,7 @@ export function BlockDetailDrawer({ open, onClose, title, children }: BlockDetai
             <button
               type="button"
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-900 hover:text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-none text-neutral-500 transition-colors hover:bg-neutral-900 hover:text-white"
               title={t("common.close")}
             >
               <X className="h-4 w-4" />

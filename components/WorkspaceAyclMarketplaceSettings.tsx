@@ -80,7 +80,7 @@ export function WorkspaceAyclMarketplaceSettings({
   if (!isAdmin) {
     return (
       <section
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
         data-settings-section="aycl-marketplace"
         data-workspace-aycl-marketplace-settings
       >
@@ -161,7 +161,7 @@ export function WorkspaceAyclMarketplaceSettings({
 
   return (
     <section
-      className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+      className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
       data-settings-section="aycl-marketplace"
       data-workspace-aycl-marketplace-settings
     >
@@ -174,13 +174,13 @@ export function WorkspaceAyclMarketplaceSettings({
       </div>
 
       <div className="mt-5 space-y-4">
-        <label className="flex items-center gap-3 rounded-md border border-white/10 bg-white/5 px-3 py-2.5">
+        <label className="flex items-center gap-3 rounded-none border border-white/10 bg-white/5 px-3 py-2.5">
           <input
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
             data-aycl-listing-enabled
-            className="h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-neutral-300 focus:ring-neutral-600/40"
+            className="h-4 w-4 rounded-none border-neutral-600 bg-neutral-900 text-neutral-300 focus:ring-neutral-600/40"
           />
           <span className="text-sm text-neutral-200">
             Enable Paid (AYCL) — show on marketplace catalog
@@ -199,7 +199,7 @@ export function WorkspaceAyclMarketplaceSettings({
               onChange={(e) => setCategory(e.target.value)}
               placeholder="e.g. Engineering"
               data-aycl-listing-category
-              className="w-full rounded-md border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
             />
             <datalist id="aycl-category-suggestions">
               {AYCL_SUGGESTED_CATEGORIES.map((c) => (
@@ -218,7 +218,7 @@ export function WorkspaceAyclMarketplaceSettings({
               onChange={(e) => setAuthorName(e.target.value)}
               placeholder="Instructor or studio name"
               data-aycl-listing-author-name
-              className="w-full rounded-md border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
             />
           </label>
         </div>
@@ -233,7 +233,7 @@ export function WorkspaceAyclMarketplaceSettings({
             onChange={(e) => setAuthorAvatarUrl(e.target.value)}
             placeholder="https://… or /path/to/avatar.jpg"
             data-aycl-listing-author-avatar
-            className="w-full rounded-md border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+            className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
           />
         </label>
 
@@ -247,7 +247,7 @@ export function WorkspaceAyclMarketplaceSettings({
             rows={3}
             placeholder="Marketplace blurb shown on the catalog card and landing"
             data-aycl-listing-summary
-            className="w-full resize-y rounded-md border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+            className="w-full resize-y rounded-none border border-neutral-800 bg-neutral-900/80 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
           />
         </label>
 
@@ -267,7 +267,7 @@ export function WorkspaceAyclMarketplaceSettings({
                 onChange={(e) => setLearnerDollars(e.target.value)}
                 placeholder={defaultLearnerLabel.replace("$", "")}
                 data-aycl-listing-learner-price
-                className="w-full rounded-md border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+                className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
               />
             </div>
             <p className="mt-1 text-[11px] text-neutral-600">
@@ -290,7 +290,7 @@ export function WorkspaceAyclMarketplaceSettings({
                 onChange={(e) => setFullDollars(e.target.value)}
                 placeholder={defaultFullLabel.replace("$", "")}
                 data-aycl-listing-full-price
-                className="w-full rounded-md border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+                className="w-full rounded-none border border-neutral-800 bg-neutral-900/80 py-2 pl-7 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
               />
             </div>
             <p className="mt-1 text-[11px] text-neutral-600">
@@ -311,7 +311,7 @@ export function WorkspaceAyclMarketplaceSettings({
             onClick={() => void save()}
             disabled={busy}
             data-aycl-listing-save
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
+            className="rounded-none bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save marketplace listing"}
           </button>

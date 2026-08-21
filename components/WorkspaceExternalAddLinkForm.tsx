@@ -50,7 +50,7 @@ export function WorkspaceExternalAddLinkForm({
     <form
       data-workspace-add-link-form
       onSubmit={(e) => void submit(e)}
-      className="space-y-2 rounded-xl border border-neutral-800/80 bg-neutral-950/90 p-3 sm:p-4"
+      className="space-y-2 rounded-none border border-neutral-800/80 bg-neutral-950/90 p-3 sm:p-4"
     >
       <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
         Add link
@@ -62,7 +62,7 @@ export function WorkspaceExternalAddLinkForm({
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://…"
         disabled={busy || saving}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
+        className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
         required
       />
       <input
@@ -72,7 +72,7 @@ export function WorkspaceExternalAddLinkForm({
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title (optional)"
         disabled={busy || saving}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
+        className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
       />
       {error ? (
         <p className="text-[11px] text-red-400" data-add-link-error>
@@ -83,7 +83,7 @@ export function WorkspaceExternalAddLinkForm({
         type="submit"
         data-add-link-submit
         disabled={busy || saving || !url.trim()}
-        className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+        className="w-full rounded-none border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
       >
         {saving ? "Adding…" : "Add external resource"}
       </button>

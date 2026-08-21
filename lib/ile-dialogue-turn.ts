@@ -16,7 +16,7 @@ export type IleDialogueTurnVisibility = {
   showLearnerAvatar: false;
 };
 
-/** TAP comic circles (Tailwind). ILE Helios mark is smaller and top-centered. */
+/** TAP comic circles (Tailwind). ILE no longer mounts a Helios mark. */
 export const TAP_DIALOGUE_AVATAR_SIZE_CLASS = "h-28 w-28";
 export const ILE_DIALOGUE_AVATAR_SIZE_CLASS = "h-10 w-10";
 
@@ -52,7 +52,7 @@ export function resolveIleDialogueTurn(input: {
   return {
     speaker: "helios",
     kind: waiting ? "waiting" : "helios",
-    showHeliosAvatar: true,
+    showHeliosAvatar: false,
     showLearnerAvatar: false,
   };
 }

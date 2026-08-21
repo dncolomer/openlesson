@@ -11,7 +11,7 @@ export function WorkspaceMobileTabBar({
 }) {
   return (
     <div className="md:hidden flex-shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2">
-      <div className="grid grid-cols-3 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
+      <div className="grid grid-cols-3 gap-2 rounded-none border border-neutral-800 bg-neutral-950/70 p-1">
         {[
           { key: "plan" as const, label: "Workspace", icon: (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -33,7 +33,7 @@ export function WorkspaceMobileTabBar({
             key={key}
             type="button"
             onClick={() => onChange(key)}
-            className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 rounded-none px-2 py-2 text-xs font-medium transition-colors ${
               mobileColumn === key
                 ? "bg-neutral-700/80 text-white"
                 : "text-neutral-500 hover:text-neutral-300"

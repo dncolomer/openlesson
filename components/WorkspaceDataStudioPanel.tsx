@@ -240,7 +240,7 @@ export function WorkspaceDataStudioPanel({
 
       <div className="flex flex-wrap gap-2" data-workspace-data-studio-filters>
         <input
-          className="min-w-[10rem] flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
+          className="min-w-[10rem] flex-1 rounded-none border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
           placeholder="Search file, tool, metadata…"
           value={search}
           onChange={(e) => {
@@ -250,7 +250,7 @@ export function WorkspaceDataStudioPanel({
           data-studio-filter-search
         />
         <input
-          className="min-w-[8rem] rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
+          className="min-w-[8rem] rounded-none border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
           placeholder="User id"
           value={userId}
           onChange={(e) => {
@@ -260,7 +260,7 @@ export function WorkspaceDataStudioPanel({
           data-studio-filter-user
         />
         <input
-          className="min-w-[12rem] flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
+          className="min-w-[12rem] flex-1 rounded-none border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
           placeholder="Link / token (TAP, ILE, TAPBench)"
           value={link}
           onChange={(e) => {
@@ -270,7 +270,7 @@ export function WorkspaceDataStudioPanel({
           data-studio-filter-link
         />
         <select
-          className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
+          className="rounded-none border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
           value={invalidatedFilter}
           onChange={(e) => {
             setPage(1);
@@ -284,7 +284,7 @@ export function WorkspaceDataStudioPanel({
         </select>
         <button
           type="button"
-          className="rounded border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"
+          className="rounded-none border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"
           onClick={() => void load()}
           data-studio-refresh
         >
@@ -292,7 +292,7 @@ export function WorkspaceDataStudioPanel({
         </button>
         <button
           type="button"
-          className="rounded border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-xs text-red-200 hover:bg-red-950/70 disabled:opacity-40"
+          className="rounded-none border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-xs text-red-200 hover:bg-red-950/70 disabled:opacity-40"
           disabled={selected.size === 0 || bulkBusy}
           onClick={() => void bulkInvalidate()}
           data-studio-bulk-invalidate
@@ -312,7 +312,7 @@ export function WorkspaceDataStudioPanel({
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded border border-neutral-800" data-studio-pow-table>
+      <div className="overflow-x-auto rounded-none border border-neutral-800" data-studio-pow-table>
         <table className="w-full min-w-[44rem] text-left text-xs">
           <thead className="border-b border-neutral-800 bg-neutral-950/80 text-[10px] uppercase tracking-wide text-neutral-500">
             <tr>
@@ -404,7 +404,7 @@ export function WorkspaceDataStudioPanel({
                       <td className="px-2 py-2">
                         {inv ? (
                           <span
-                            className="rounded bg-red-950/50 px-1.5 py-0.5 text-[10px] text-red-300"
+                            className="rounded-none bg-red-950/50 px-1.5 py-0.5 text-[10px] text-red-300"
                             data-pow-invalidated-badge
                           >
                             invalidated
@@ -435,7 +435,7 @@ export function WorkspaceDataStudioPanel({
                           <div className="space-y-4">
                             {/* Read-only details */}
                             <div
-                              className="rounded-md border border-neutral-800 bg-black/30 p-3"
+                              className="rounded-none border border-neutral-800 bg-black/30 p-3"
                               data-studio-pow-details
                             >
                               <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
@@ -525,7 +525,7 @@ export function WorkspaceDataStudioPanel({
                                 <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                                   Thought / text (from metadata)
                                 </div>
-                                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded border border-neutral-800 bg-black/40 p-2 text-[11px] leading-relaxed text-neutral-300">
+                                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-none border border-neutral-800 bg-black/40 p-2 text-[11px] leading-relaxed text-neutral-300">
                                   {textPreview}
                                 </pre>
                               </div>
@@ -543,7 +543,7 @@ export function WorkspaceDataStudioPanel({
                                 <p className="text-xs text-neutral-600">No metadata on this row.</p>
                               ) : (
                                 <pre
-                                  className="max-h-64 overflow-auto rounded border border-neutral-800 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-neutral-300"
+                                  className="max-h-64 overflow-auto rounded-none border border-neutral-800 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-neutral-300"
                                   data-studio-pow-metadata-json
                                 >
                                   {JSON.stringify(meta, null, 2)}
@@ -558,7 +558,7 @@ export function WorkspaceDataStudioPanel({
                                 <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                                   Band powers
                                 </div>
-                                <pre className="max-h-32 overflow-auto rounded border border-neutral-800 bg-black/40 p-2 font-mono text-[11px] text-neutral-400">
+                                <pre className="max-h-32 overflow-auto rounded-none border border-neutral-800 bg-black/40 p-2 font-mono text-[11px] text-neutral-400">
                                   {JSON.stringify(item.bandPowers, null, 2)}
                                 </pre>
                               </div>
@@ -566,7 +566,7 @@ export function WorkspaceDataStudioPanel({
 
                             {/* Edit */}
                             <div
-                              className="space-y-2 rounded border border-neutral-800 p-3"
+                              className="space-y-2 rounded-none border border-neutral-800 p-3"
                               data-studio-pow-edit
                             >
                               <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
@@ -575,7 +575,7 @@ export function WorkspaceDataStudioPanel({
                               <label className="block text-[11px] text-neutral-500">
                                 Tool name
                                 <input
-                                  className="mt-1 w-full rounded border border-neutral-700 bg-black/40 px-2 py-1 text-xs text-neutral-200"
+                                  className="mt-1 w-full rounded-none border border-neutral-700 bg-black/40 px-2 py-1 text-xs text-neutral-200"
                                   value={editToolName}
                                   onChange={(e) => setEditToolName(e.target.value)}
                                   data-studio-edit-tool-name
@@ -584,7 +584,7 @@ export function WorkspaceDataStudioPanel({
                               <label className="block text-[11px] text-neutral-500">
                                 Tool action
                                 <input
-                                  className="mt-1 w-full rounded border border-neutral-700 bg-black/40 px-2 py-1 text-xs text-neutral-200"
+                                  className="mt-1 w-full rounded-none border border-neutral-700 bg-black/40 px-2 py-1 text-xs text-neutral-200"
                                   value={editToolAction}
                                   onChange={(e) => setEditToolAction(e.target.value)}
                                   data-studio-edit-tool-action
@@ -593,7 +593,7 @@ export function WorkspaceDataStudioPanel({
                               <label className="block text-[11px] text-neutral-500">
                                 Metadata (JSON — editable)
                                 <textarea
-                                  className="mt-1 h-48 w-full rounded border border-neutral-700 bg-black/40 p-2 font-mono text-[11px] text-neutral-300"
+                                  className="mt-1 h-48 w-full rounded-none border border-neutral-700 bg-black/40 p-2 font-mono text-[11px] text-neutral-300"
                                   value={editMeta}
                                   onChange={(e) => setEditMeta(e.target.value)}
                                   data-studio-edit-metadata
@@ -602,7 +602,7 @@ export function WorkspaceDataStudioPanel({
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  className="rounded border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
+                                  className="rounded-none border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
                                   disabled={saving}
                                   onClick={() => void saveEdit()}
                                   data-studio-save-edit
@@ -611,7 +611,7 @@ export function WorkspaceDataStudioPanel({
                                 </button>
                                 <button
                                   type="button"
-                                  className="rounded border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-200 hover:bg-red-950/50 disabled:opacity-40"
+                                  className="rounded-none border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-200 hover:bg-red-950/50 disabled:opacity-40"
                                   disabled={saving}
                                   onClick={() => void saveEdit({ invalidate: true })}
                                   data-studio-invalidate
@@ -620,7 +620,7 @@ export function WorkspaceDataStudioPanel({
                                 </button>
                                 <button
                                   type="button"
-                                  className="rounded border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400 hover:bg-neutral-900 disabled:opacity-40"
+                                  className="rounded-none border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400 hover:bg-neutral-900 disabled:opacity-40"
                                   disabled={saving}
                                   onClick={() => void saveEdit({ clearInvalidated: true })}
                                   data-studio-clear-invalidated
@@ -648,7 +648,7 @@ export function WorkspaceDataStudioPanel({
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded border border-neutral-700 px-2 py-1 disabled:opacity-40"
+            className="rounded-none border border-neutral-700 px-2 py-1 disabled:opacity-40"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -656,7 +656,7 @@ export function WorkspaceDataStudioPanel({
           </button>
           <button
             type="button"
-            className="rounded border border-neutral-700 px-2 py-1 disabled:opacity-40"
+            className="rounded-none border border-neutral-700 px-2 py-1 disabled:opacity-40"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

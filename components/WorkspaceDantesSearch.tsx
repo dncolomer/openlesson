@@ -148,7 +148,7 @@ export function WorkspaceDantesSearch({
   return (
     <div
       data-workspace-dantes-search
-      className="space-y-3 rounded-xl border border-neutral-800/80 bg-neutral-950/90 p-3 sm:p-4"
+      className="space-y-3 rounded-none border border-neutral-800/80 bg-neutral-950/90 p-3 sm:p-4"
     >
       <div>
         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
@@ -163,7 +163,7 @@ export function WorkspaceDantesSearch({
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search topics…"
         disabled={!canEdit}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
+        className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
       />
 
       {topicsLoading ? (
@@ -175,7 +175,7 @@ export function WorkspaceDantesSearch({
       ) : (
         <ul
           data-dantes-topic-list
-          className="max-h-36 space-y-1 overflow-y-auto rounded-md border border-neutral-800/80 p-1"
+          className="max-h-36 space-y-1 overflow-y-auto rounded-none border border-neutral-800/80 p-1"
         >
           {filteredTopics.map((topic) => {
             const active = selectedTopic?.slug === topic.slug;
@@ -186,7 +186,7 @@ export function WorkspaceDantesSearch({
                   data-dantes-topic={topic.slug}
                   disabled={!canEdit}
                   onClick={() => setSelectedTopic(topic)}
-                  className={`w-full rounded px-2 py-1.5 text-left text-[11px] transition ${
+                  className={`w-full rounded-none px-2 py-1.5 text-left text-[11px] transition ${
                     active
                       ? "bg-white/10 text-white"
                       : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
@@ -223,7 +223,7 @@ export function WorkspaceDantesSearch({
                   <li
                     key={key}
                     data-dantes-resource={resource.url}
-                    className="flex items-start justify-between gap-2 rounded-md border border-neutral-800/70 bg-black/30 px-2 py-1.5"
+                    className="flex items-start justify-between gap-2 rounded-none border border-neutral-800/70 bg-black/30 px-2 py-1.5"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-[11px] font-medium text-neutral-200">
@@ -239,7 +239,7 @@ export function WorkspaceDantesSearch({
                         data-dantes-add-resource
                         disabled={busy || addingKey === key}
                         onClick={() => void addResource(resource, index)}
-                        className="shrink-0 rounded border border-white/15 bg-white/10 px-2 py-1 text-[10px] font-medium text-white disabled:opacity-40"
+                        className="shrink-0 rounded-none border border-white/15 bg-white/10 px-2 py-1 text-[10px] font-medium text-white disabled:opacity-40"
                       >
                         {addingKey === key ? "Adding…" : "Add"}
                       </button>

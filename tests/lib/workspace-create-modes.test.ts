@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   API_WORKSPACE_CREATE_MODES,
   assertApiCreateMode,
@@ -12,6 +14,7 @@ import {
   isApiAllowedCreateMode,
   parseWorkspaceCreateMode,
   isUiWorkspaceCreateMode,
+  resolveWorkspaceCreateOverlay,
   UI_WORKSPACE_CREATE_MODES,
 } from "@/lib/workspace-create-modes";
 import { INITIAL_CHAPTERS_BANDS } from "@/lib/initial-chapters";
@@ -126,5 +129,38 @@ describe("workspace create modes", () => {
     expect(ctx).toContain("runbook.md");
     expect(ctx).toContain("sla.pdf");
     expect(ctx).toMatch(/files always in context/i);
+  });
+});
+
+const OVERLAY_SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1caf392ccbf2/implementer";
+
+describe("workspace create overlay after blank/template attempt", () => {
+  it("keeps overlay on success and restores chooser on failure", () => {
+    const blankOk = resolveWorkspaceCreateOverlay({ succeeded: true });
+    const templateOk = resolveWorkspaceCreateOverlay({ succeeded: true });
+    const blankFail = resolveWorkspaceCreateOverlay({ succeeded: false });
+    const templateFail = resolveWorkspaceCreateOverlay({ succeeded: false });
+
+    expect(blankOk.busy).toBe(true);
+    expect(templateOk.busy).toBe(true);
+    expect(blankFail.busy).toBe(false);
+    expect(templateFail.busy).toBe(false);
+
+    mkdirSync(OVERLAY_SCRATCH, { recursive: true });
+    writeFileSync(
+      join(OVERLAY_SCRATCH, "workspace-create-busy.log"),
+      [
+        "blank_success_busy=" + blankOk.busy,
+        "template_success_busy=" + templateOk.busy,
+        "blank_failure_busy=" + blankFail.busy,
+        "template_failure_busy=" + templateFail.busy,
+        "success_keeps_overlay=" + String(blankOk.busy && templateOk.busy),
+        "failure_restores_chooser=" +
+          String(!blankFail.busy && !templateFail.busy),
+      ].join("\n") + "\n",
+      "utf8",
+    );
   });
 });

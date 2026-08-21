@@ -95,7 +95,7 @@ export function WorkspaceViewChrome({
             data-aycl-upgrade-cta
             disabled={ayclUpgradeBusy}
             onClick={() => void onUpgrade()}
-            className="rounded-md bg-white px-3 py-1.5 text-[11px] font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
+            className="rounded-none bg-white px-3 py-1.5 text-[11px] font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
           >
             {ayclUpgradeBusy ? "Redirecting…" : ayclUpgradeOfferLabel()}
           </button>

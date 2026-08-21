@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  HeliosProbeAvatar,
   THOUGHT_BACKGROUND_IMAGES,
   ThoughtBackgroundLayers,
   type HeliosTurnMode,
@@ -51,9 +50,6 @@ export function IleCompactStashWindow({
   const bgImage = backgroundImage?.trim() || THOUGHT_BACKGROUND_IMAGES[0];
   const live = String(formingText || "").trim();
   const showShare = shouldShowIleMiniShareCta(isScreenSharing);
-  const heliosVisualMode: HeliosTurnMode =
-    heliosTurnMode === "interruption" ? "interruption" : isSending ? "responding" : "idle";
-
   useEffect(() => {
     if (turn.kind !== "waiting") {
       setThinkTick(0);
@@ -127,24 +123,17 @@ export function IleCompactStashWindow({
             minHeight: 0,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          <div data-ile-helios-avatar-top>
-            <HeliosProbeAvatar
-              size="ile"
-              isActiveTurn={turn.kind === "waiting"}
-              turnMode={heliosVisualMode}
-            />
-          </div>
           <div
             data-ile-compact-transcript
             style={{
-              marginTop: 12,
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
               width: "100%",
-              maxWidth: "22rem",
-              textAlign: "center",
+              textAlign: "left",
               fontSize: 13,
               lineHeight: 1.45,
               color: "#f5f5f5",
@@ -162,7 +151,7 @@ export function IleCompactStashWindow({
               flexShrink: 0,
               marginTop: 8,
               padding: "8px 10px",
-              borderRadius: 8,
+              borderRadius: 0,
               border: "1px solid rgba(255,255,255,0.22)",
               background: "rgba(10,10,10,0.55)",
               fontSize: 12,
@@ -184,7 +173,7 @@ export function IleCompactStashWindow({
               flexShrink: 0,
               width: "100%",
               border: "none",
-              borderRadius: 8,
+              borderRadius: 0,
               padding: "10px 12px",
               background: "#fafafa",
               color: "#0a0a0a",

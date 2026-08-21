@@ -47,7 +47,7 @@ function ExpandableSection({ icon, label, labelColor, text }: { icon: React.Reac
   return (
     <button
       onClick={() => isLong && setExpanded(!expanded)}
-      className={`w-full text-left rounded-xl bg-neutral-900/50 border border-neutral-800/40 p-3.5 transition-all ${isLong ? "cursor-pointer hover:bg-neutral-800/40" : "cursor-default"}`}
+      className={`w-full text-left rounded-none bg-neutral-900/50 border border-neutral-800/40 p-3.5 transition-all ${isLong ? "cursor-pointer hover:bg-neutral-800/40" : "cursor-default"}`}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         {icon}
@@ -69,7 +69,7 @@ function StepCard({ step, index }: { step: SessionStep; index: number }) {
   const config = typeConfig[step.type] || typeConfig.question;
 
   return (
-    <div className="w-full text-left rounded-xl border bg-neutral-900/40 border-neutral-800/50 px-3.5 py-2.5">
+    <div className="w-full text-left rounded-none border bg-neutral-900/40 border-neutral-800/50 px-3.5 py-2.5">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 pt-0.5">
           <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.color}`}>
@@ -136,7 +136,7 @@ export function PreviewSessionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-[#111] border border-neutral-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl lg:max-w-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col sm:mx-4 shadow-2xl shadow-black/40"
+        className="bg-[#111] border border-neutral-800 rounded-none sm:rounded-none w-full sm:max-w-2xl lg:max-w-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col sm:mx-4 shadow-2xl shadow-black/40"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle — mobile */}
@@ -152,7 +152,7 @@ export function PreviewSessionModal({
               <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{nodeDescription}</p>
             )}
           </div>
-          <button onClick={onClose} className="p-1 text-neutral-500 hover:text-white rounded-lg transition-colors flex-shrink-0">
+          <button onClick={onClose} className="p-1 text-neutral-500 hover:text-white rounded-none transition-colors flex-shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -220,14 +220,14 @@ export function PreviewSessionModal({
           <div className="flex items-center gap-3 px-5 py-4 border-t border-neutral-800/50">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 rounded-xl transition-colors font-medium"
+              className="flex-1 px-4 py-2.5 text-sm text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 rounded-none transition-colors font-medium"
             >
               {t('previewSession.close')}
             </button>
             {preview && onStartSession && (
               <button
                 onClick={onStartSession}
-                className="flex-1 px-4 py-2.5 bg-white hover:bg-white text-black text-sm font-medium rounded-xl transition-colors"
+                className="flex-1 px-4 py-2.5 bg-white hover:bg-white text-black text-sm font-medium rounded-none transition-colors"
               >
                 {t('previewSession.startSession')}
               </button>

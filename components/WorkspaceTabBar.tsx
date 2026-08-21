@@ -32,7 +32,7 @@ export function WorkspaceTabBar({
   if (variant === "mobile") {
     return (
       <nav
-        className={`grid gap-0.5 rounded-lg border border-neutral-800/60 bg-neutral-950/80 p-0.5 ${
+        className={`grid gap-0.5 rounded-none border border-neutral-800/60 bg-neutral-950/80 p-0.5 ${
           tabs.length >= 5 ? "grid-cols-5" : "grid-cols-4"
         }`}
         role="tablist"
@@ -48,7 +48,7 @@ export function WorkspaceTabBar({
               aria-selected={isActive}
               onClick={() => onChange(key)}
               title={label}
-              className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-2 transition-colors ${
+              className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-none px-1 py-2 transition-colors ${
                 isActive
                   ? "bg-neutral-800/90 text-white"
                   : "text-neutral-500 hover:bg-neutral-900/60 hover:text-neutral-300"

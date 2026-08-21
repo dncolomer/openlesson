@@ -141,7 +141,7 @@ export function WorkspaceMultiBlockSimulationPanel({
           <li
             key={id}
             data-multi-block-simulation-block={id}
-            className="rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-neutral-300"
+            className="rounded-none border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-neutral-300"
           >
             {titles[i] || id.slice(0, 8)}
           </li>
@@ -160,7 +160,7 @@ export function WorkspaceMultiBlockSimulationPanel({
           placeholder="Optional: influence generation across these blocks…"
           data-simulation-modifier-input
           data-multi-block-simulation-modifier
-          className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-2.5 py-2 text-[12px] text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-2.5 py-2 text-[12px] text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
         />
       </label>
 
@@ -170,7 +170,7 @@ export function WorkspaceMultiBlockSimulationPanel({
         data-simulation-generate
         disabled={!canGenerate}
         onClick={() => void generate()}
-        className="w-full rounded-md border border-white/15 bg-white/[0.08] px-3 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-none border border-white/15 bg-white/[0.08] px-3 py-2 text-[12px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
       >
         {generating
           ? "Generating…"
@@ -229,7 +229,7 @@ export function WorkspaceMultiBlockSimulationPanel({
                 <li
                   key={`q-${i}`}
                   data-simulation-question={i}
-                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-none border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
                 >
                   <span className="min-w-0 flex-1">{q}</span>
                   <SimulationCollectionAddButton
@@ -256,7 +256,7 @@ export function WorkspaceMultiBlockSimulationPanel({
                 <li
                   key={`ex-${i}`}
                   data-simulation-exercise={i}
-                  className="flex items-start justify-between gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
+                  className="flex items-start justify-between gap-2 rounded-none border border-white/10 bg-black/20 px-2 py-1.5 text-[11px] leading-snug text-neutral-300"
                 >
                   <span className="min-w-0 flex-1">{ex}</span>
                   <SimulationCollectionAddButton

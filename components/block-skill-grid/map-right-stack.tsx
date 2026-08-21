@@ -103,7 +103,7 @@ export function MapRightStack({
       (typeof onMapToggle === "function" ||
         typeof onInteractionModeChange === "function") ? (
         <div
-          className="flex w-full shrink-0 items-center gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+          className="flex w-full shrink-0 items-center gap-0.5 rounded-none border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
           data-workspace-mode-toggle
           data-workspace-mode-under-minimap
           data-workspace-mode-toggle-states="build,play,explore"
@@ -148,7 +148,7 @@ export function MapRightStack({
                     onInteractionModeChange?.(next.interactionMode);
                   }
                 }}
-                className={`min-w-0 flex-1 rounded px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-normal transition ${
+                className={`min-w-0 flex-1 rounded-none px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-normal transition ${
                   active
                     ? "bg-white/15 text-white"
                     : "text-neutral-500 hover:text-neutral-300"
@@ -163,7 +163,7 @@ export function MapRightStack({
       {mountMapNotes &&
       (!viewOnly || shouldShowMapNotesPlaneToggle(mapNotesCount)) ? (
         <div
-          className="flex items-stretch gap-0.5 rounded-md border border-neutral-700/90 bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+          className="flex items-stretch gap-0.5 rounded-none border border-neutral-700/90 bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
           data-map-notes-visibility-row
           data-map-notes-visibility={mapNotesPlaneVisible ? "visible" : "hidden"}
         >
@@ -270,7 +270,7 @@ export function MapRightStack({
           {!viewOnly && !learnerMode ? (
             annotationNameOpen ? (
               <div
-                className="rounded-md border border-neutral-700/90 bg-neutral-950/95 p-1.5 shadow-lg"
+                className="rounded-none border border-neutral-700/90 bg-neutral-950/95 p-1.5 shadow-lg"
                 data-annotation-layer-name-form
               >
                 <input
@@ -288,14 +288,14 @@ export function MapRightStack({
                       setAnnotationNameDraft("");
                     }
                   }}
-                  className="mb-1 w-full rounded border border-neutral-700 bg-black/40 px-2 py-1 text-left text-[11px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+                  className="mb-1 w-full rounded-none border border-neutral-700 bg-black/40 px-2 py-1 text-left text-[11px] text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
                 />
                 <div className="flex gap-1">
                   <button
                     type="button"
                     data-annotation-layer-add-confirm
                     onClick={() => handleAnnotationLayerAdd()}
-                    className="flex-1 rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-left text-[10px] font-medium text-white hover:bg-white/15"
+                    className="flex-1 rounded-none border border-white/30 bg-white/10 px-1.5 py-0.5 text-left text-[10px] font-medium text-white hover:bg-white/15"
                   >
                     Add
                   </button>
@@ -306,7 +306,7 @@ export function MapRightStack({
                       setAnnotationNameOpen(false);
                       setAnnotationNameDraft("");
                     }}
-                    className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:text-white"
+                    className="rounded-none border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:text-white"
                   >
                     Cancel
                   </button>
@@ -318,7 +318,7 @@ export function MapRightStack({
                 data-annotation-layer-add
                 title="Add a freehand annotation layer"
                 onClick={() => setAnnotationNameOpen(true)}
-                className="w-full rounded-md border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
+                className="w-full rounded-none border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition hover:border-neutral-500 hover:text-white"
               >
                 Add layer
               </button>
@@ -334,7 +334,7 @@ export function MapRightStack({
                 key={layer.id}
                 data-annotation-layer-row={layer.id}
                 data-annotation-layer-visible={layer.visible ? "true" : "false"}
-                className={`flex items-stretch gap-0.5 rounded-md border bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm ${
+                className={`flex items-stretch gap-0.5 rounded-none border bg-neutral-950/90 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm ${
                   selected ? "border-white/40" : "border-neutral-700/90"
                 }`}
               >

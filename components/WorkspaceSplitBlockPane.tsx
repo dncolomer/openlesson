@@ -69,7 +69,7 @@ export function WorkspaceSplitBlockPane({
       className="space-y-3"
     >
       <div
-        className="rounded-lg border border-white/10 bg-neutral-950/70 p-2"
+        className="rounded-none border border-white/10 bg-neutral-950/70 p-2"
         data-split-visual
         data-split-layout="stack"
       >
@@ -77,7 +77,7 @@ export function WorkspaceSplitBlockPane({
           Source
         </p>
         <div
-          className="rounded-md border border-white/25 bg-white/[0.07] px-2.5 py-2.5"
+          className="rounded-none border border-white/25 bg-white/[0.07] px-2.5 py-2.5"
           data-split-source-card
         >
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
@@ -121,10 +121,10 @@ export function WorkspaceSplitBlockPane({
                   </div>
                 ) : null}
                 <div
-                  className="flex min-w-0 items-start gap-2.5 rounded-md border border-white/15 bg-neutral-900/90 px-2.5 py-2"
+                  className="flex min-w-0 items-start gap-2.5 rounded-none border border-white/15 bg-neutral-900/90 px-2.5 py-2"
                   data-split-result-slot={i}
                 >
-                  <span className="mt-0.5 shrink-0 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-neutral-400">
+                  <span className="mt-0.5 shrink-0 rounded-none border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-neutral-400">
                     {marker}
                   </span>
                   <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-neutral-300">
@@ -141,7 +141,7 @@ export function WorkspaceSplitBlockPane({
 
       {!canSplit ? (
         <p
-          className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
+          className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
           data-split-not-available
         >
           This block is already a single cell — there is nothing to split. Merge
@@ -163,7 +163,7 @@ export function WorkspaceSplitBlockPane({
             labels?.promptPlaceholder ||
             "Optional guidance for the split (e.g. how to name the focused pieces)…"
           }
-          className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
         />
       </label>
 
@@ -178,7 +178,7 @@ export function WorkspaceSplitBlockPane({
         data-split-submit
         disabled={busy || submitting || !canSplit}
         onClick={() => void submit()}
-        className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+        className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
       >
         {submitting || busy
           ? "Splitting…"

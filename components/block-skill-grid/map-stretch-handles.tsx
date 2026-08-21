@@ -8,7 +8,7 @@ export function stretchHandleStyle(handle: StretchHandle): CSSProperties {
     position: "absolute",
     width: 10,
     height: 10,
-    borderRadius: 2,
+    borderRadius: 0,
     zIndex: 30,
     boxSizing: "border-box",
   };

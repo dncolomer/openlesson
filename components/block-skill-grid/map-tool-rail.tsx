@@ -143,7 +143,7 @@ export function MapToolRail({
                 aria-label={tool.title}
                 aria-pressed={active}
                 onClick={() => setAnnotationDrawTool(tool.id)}
-                className={`flex h-8 w-8 flex-col items-center justify-center rounded border text-white transition ${
+                className={`flex h-8 w-8 flex-col items-center justify-center rounded-none border text-white transition ${
                   active
                     ? "border-white/50 bg-white/15"
                     : "border-transparent text-white/70 hover:border-neutral-600 hover:bg-white/5 hover:text-white"
@@ -225,7 +225,7 @@ export function MapToolRail({
                   aria-label={`${label} stroke`}
                   aria-pressed={active}
                   onClick={() => setAnnotationStrokeThickness(w)}
-                  className={`flex h-7 w-8 items-center justify-center rounded border transition ${
+                  className={`flex h-7 w-8 items-center justify-center rounded-none border transition ${
                     active
                       ? "border-white/50 bg-white/15"
                       : "border-transparent hover:border-neutral-600 hover:bg-white/5"
@@ -246,7 +246,7 @@ export function MapToolRail({
             data-annotation-exit
             title="Exit annotation drawing (back to map tools)"
             onClick={() => setActiveAnnotationLayerId(null)}
-            className="flex h-7 w-7 items-center justify-center rounded border border-transparent text-[10px] text-neutral-400 hover:border-neutral-600 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-none border border-transparent text-[10px] text-neutral-400 hover:border-neutral-600 hover:text-white"
           >
             ✕
           </button>
@@ -274,7 +274,7 @@ export function MapToolRail({
                       aria-label={lassoShapeTooltip(shape)}
                       aria-pressed={active}
                       onClick={() => setLassoShape(shape)}
-                      className={`flex h-7 w-7 items-center justify-center rounded border text-[10px] transition ${
+                      className={`flex h-7 w-7 items-center justify-center rounded-none border text-[10px] transition ${
                         active
                           ? "border-white/40 bg-white/10 text-white"
                           : "border-transparent text-neutral-400 hover:border-neutral-700 hover:text-white"

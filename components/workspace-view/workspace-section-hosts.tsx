@@ -198,7 +198,7 @@ export function WorkspaceSectionHosts({
           imageSrc={workspaceImage}
           identity={identity}
         >
-          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md">
             <WorkspacePerformancePanel
               workspaceId={workspaceId}
               isOwner={isOwner}

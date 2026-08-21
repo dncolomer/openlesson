@@ -343,7 +343,7 @@ export function ExcalidrawCanvas({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] rounded-xl overflow-hidden">
+    <div className="flex flex-col h-full bg-[#0a0a0a] rounded-none overflow-hidden">
       {/* Toolbar with Submit to Helios button */}
       <div className="flex items-center gap-2 p-2 border-b border-neutral-800 bg-neutral-900/30">
         <div className="min-w-0 flex-1 text-[11px] text-neutral-500">
@@ -354,7 +354,7 @@ export function ExcalidrawCanvas({
           type="button"
           onClick={openCamera}
           title="Open webcam"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-300 bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-300 bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 hover:text-white rounded-none transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -373,7 +373,7 @@ export function ExcalidrawCanvas({
                 : t("whiteboard.alreadySubmitted")
             }
             aria-label={submitButtonLabel}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
           >
             {isSubmittingToHelios ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -438,13 +438,13 @@ export function ExcalidrawCanvas({
         )}
         {cameraOpen && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 p-6">
-            <div className="w-full max-w-xl rounded-xl border border-neutral-700 bg-neutral-950 p-3 shadow-2xl">
-              <video ref={cameraVideoRef} autoPlay muted playsInline className="aspect-video w-full rounded-lg bg-black object-cover" />
+            <div className="w-full max-w-xl rounded-none border border-neutral-700 bg-neutral-950 p-3 shadow-2xl">
+              <video ref={cameraVideoRef} autoPlay muted playsInline className="aspect-video w-full rounded-none bg-black object-cover" />
               <div className="mt-3 flex items-center justify-end gap-2">
-                <button type="button" onClick={stopCamera} className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-white">
+                <button type="button" onClick={stopCamera} className="rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-white">
                   Cancel
                 </button>
-                <button type="button" onClick={captureCameraFrame} className="rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-950 hover:bg-white">
+                <button type="button" onClick={captureCameraFrame} className="rounded-none border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-950 hover:bg-white">
                   Capture to Canvas
                 </button>
               </div>
@@ -452,7 +452,7 @@ export function ExcalidrawCanvas({
           </div>
         )}
         {cameraError && (
-          <div className="absolute left-3 top-3 z-20 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+          <div className="absolute left-3 top-3 z-20 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
             {cameraError}
           </div>
         )}

@@ -192,8 +192,11 @@ describe("AYCL landing preview mounts the viewport window", () => {
     expect(landing).toContain("data-aycl-map-snapshot");
     expect(landing).toContain("data-aycl-map-viewport-window");
     expect(landing).toContain("viewOnly");
+    expect(landing).toContain("learnerMode");
     expect(landing).toContain("canEdit={false}");
     expect(landing).toContain("BlockSkillGrid");
+    expect(grid).toContain("createMapFogLookup");
+    expect(grid).toContain("data-map-fog-veil");
     expect(landing).toMatch(/nodes\.length === 0/);
     expect(landing).toContain('data-aycl-map-viewport-window={nodes.length > 0 ? "live" : "none"}');
 

@@ -80,7 +80,7 @@ function isSyntheticRegion(m: { description?: string | null; subject_count?: num
 
 /** Shared Settings primary CTA — white fill, black text (monochrome outline aesthetic). */
 const PRIMARY_CTA_CLASS =
-  "rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
+  "rounded-none bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
 interface CustomVerificationModelsPanelProps {
   workspaceId: string;
@@ -283,13 +283,13 @@ export function CustomVerificationModelsPanel({
     >
       {confirmDialog}
       {error && (
-        <div className="mb-3 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+        <div className="mb-3 rounded-none border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
           {error}
         </div>
       )}
 
       <div
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
         data-knowledge-regions-inner-tabs
       >
         <WorkspaceSectionSubTabs
@@ -324,7 +324,7 @@ export function CustomVerificationModelsPanel({
                   onChange={(e) =>
                     setSourceFilter(e.target.value as RegionBuilderSourceFilter)
                   }
-                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  className="rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
                   data-region-source-filter
                 >
                   <option value="all">All PoW sources</option>
@@ -336,7 +336,7 @@ export function CustomVerificationModelsPanel({
                   value={linkFilter}
                   onChange={(e) => setLinkFilter(e.target.value)}
                   placeholder="Filter by link / TAPBench link id or URL"
-                  className="min-w-[14rem] flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
+                  className="min-w-[14rem] flex-1 rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
                   data-region-link-filter
                 />
               </div>
@@ -349,24 +349,24 @@ export function CustomVerificationModelsPanel({
                   TAPBench sessions so embeddings exist.
                 </p>
               ) : (
-                <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-neutral-800 p-2">
+                <ul className="max-h-48 space-y-1 overflow-y-auto rounded-none border border-neutral-800 p-2">
                   {filteredSubjects.map((s) => {
                     const key = regionBuilderSubjectKey(s);
                     const checked = selected.has(key);
                     return (
                       <li key={key}>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-neutral-900">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-none px-2 py-1.5 text-xs hover:bg-neutral-900">
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggle(key)}
-                            className="rounded border-neutral-600"
+                            className="rounded-none border-neutral-600"
                           />
                           <span className="text-neutral-200">
                             {s.label || subjectLabel(s)}
                           </span>
                           <span
-                            className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400"
+                            className="rounded-none border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400"
                             data-pow-source={s.pow_source}
                           >
                             {s.pow_source}
@@ -392,7 +392,7 @@ export function CustomVerificationModelsPanel({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Region name (e.g. Production SRE bar)"
-                  className="min-w-[12rem] flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
+                  className="min-w-[12rem] flex-1 rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
                   data-region-name-input
                 />
                 <button
@@ -446,7 +446,7 @@ export function CustomVerificationModelsPanel({
                     return (
                       <li
                         key={m.id}
-                        className="flex items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3"
+                        className="flex items-start gap-3 rounded-none border border-neutral-800 bg-neutral-900/50 p-3"
                         data-knowledge-region-id={m.id}
                       >
                         <div className="min-w-0 flex-1">
@@ -461,7 +461,7 @@ export function CustomVerificationModelsPanel({
                           type="button"
                           disabled={isDeleting || deletingId !== null}
                           onClick={() => void removeRegion(m)}
-                          className="shrink-0 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="shrink-0 rounded-none border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
                           data-remove-knowledge-region={m.id}
                           title={`Remove ${m.name}`}
                         >

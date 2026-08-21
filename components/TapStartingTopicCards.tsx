@@ -22,14 +22,14 @@ interface TapStartingTopicCardsProps {
 
 function TopicCardSkeleton() {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
+    <div className="flex h-full flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950">
       <div className="h-28 animate-pulse bg-neutral-900 sm:h-32" />
       <div className="flex flex-1 flex-col gap-3 p-3">
         <div className="space-y-2">
-          <div className="h-3 w-full animate-pulse rounded bg-neutral-900" />
-          <div className="h-3 w-4/5 animate-pulse rounded bg-neutral-900" />
+          <div className="h-3 w-full animate-pulse rounded-none bg-neutral-900" />
+          <div className="h-3 w-4/5 animate-pulse rounded-none bg-neutral-900" />
         </div>
-        <div className="mt-auto h-8 w-24 animate-pulse rounded-full bg-neutral-800" />
+        <div className="mt-auto h-8 w-24 animate-pulse rounded-none bg-neutral-800" />
       </div>
     </div>
   );
@@ -80,7 +80,7 @@ function PracticeFirstCard({
   return (
     <article
       data-tap-practice-first
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-500/35 bg-neutral-950/30 transition hover:border-neutral-600/55"
+      className="group flex h-full flex-col overflow-hidden rounded-none border border-neutral-500/35 bg-neutral-950/30 transition hover:border-neutral-600/55"
     >
       <div className="relative flex h-28 flex-col justify-end bg-gradient-to-br from-neutral-800/80 via-neutral-950 to-black p-3 sm:h-32">
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/80">Warm-up</p>
@@ -93,7 +93,7 @@ function PracticeFirstCard({
           disabled={isStarting}
           onClick={onPracticeFirst}
           aria-busy={isThisStarting}
-          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-neutral-600/40 bg-neutral-800/15 px-4 py-2 text-xs font-semibold text-neutral-50 transition hover:bg-neutral-800/25 disabled:cursor-wait disabled:opacity-70"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-none border border-neutral-600/40 bg-neutral-800/15 px-4 py-2 text-xs font-semibold text-neutral-50 transition hover:bg-neutral-800/25 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
             <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
@@ -134,7 +134,7 @@ function TopicCard({
   startingLabel: string;
 }) {
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600">
+    <article className="group flex h-full flex-col overflow-hidden rounded-none border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600">
       <div className="relative h-28 overflow-hidden sm:h-32">
         <div
           className="absolute inset-0 scale-105 bg-cover bg-center transition duration-500 group-hover:scale-110"
@@ -154,7 +154,7 @@ function TopicCard({
           disabled={isStarting}
           onClick={() => onStartTopic(topic)}
           aria-busy={isThisStarting}
-          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-none bg-white px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
             <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>

@@ -327,7 +327,7 @@ export function WorkspaceIntegrationPanel({
                   type="button"
                   onClick={handleDownloadSkill}
                   disabled={generatingSkill}
-                  className="w-full rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 sm:w-auto"
+                  className="w-full rounded-none bg-white px-3 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 sm:w-auto"
                 >
                   {generatingSkill
                     ? t("workspaceIntegration.generatingSkill")

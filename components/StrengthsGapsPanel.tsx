@@ -240,7 +240,7 @@ function CohortVennGrid({
   if (empty) {
     return (
       <div
-        className="rounded-xl border border-dashed border-neutral-800 bg-neutral-950/40 px-4 py-6 text-center"
+        className="rounded-none border border-dashed border-neutral-800 bg-neutral-950/40 px-4 py-6 text-center"
         data-cohort-coverage-chart
         data-cohort-venn-grid
         data-cohort-coverage-empty="true"
@@ -255,7 +255,7 @@ function CohortVennGrid({
 
   return (
     <div
-      className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 sm:p-5"
+      className="rounded-none border border-neutral-800 bg-neutral-950/60 p-4 sm:p-5"
       data-cohort-coverage-chart
       data-cohort-venn-grid
       data-cohort-coverage-empty="false"
@@ -299,7 +299,7 @@ function CohortVennGrid({
                 return (
                   <li
                     key={theme.themeKey}
-                    className="rounded-lg border border-neutral-800 bg-black/25 p-3"
+                    className="rounded-none border border-neutral-800 bg-black/25 p-3"
                     data-cohort-coverage-row={theme.themeKey}
                     data-cohort-coverage-kind="gap"
                     data-cohort-coverage-pct={coveragePct}
@@ -347,7 +347,7 @@ function CohortVennGrid({
                 return (
                   <li
                     key={theme.themeKey}
-                    className="rounded-lg border border-neutral-800 bg-black/25 p-3"
+                    className="rounded-none border border-neutral-800 bg-black/25 p-3"
                     data-cohort-coverage-row={theme.themeKey}
                     data-cohort-coverage-kind="strength"
                     data-cohort-coverage-pct={coveragePct}
@@ -457,7 +457,7 @@ export function StrengthsGapsPanel({
             onClick={onRefresh}
             disabled={loading}
             data-strengths-gaps-refresh
-            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
           >
             {loading ? "Refreshing…" : "Refresh"}
           </button>
@@ -466,7 +466,7 @@ export function StrengthsGapsPanel({
 
       {error ? (
         <div
-          className="shrink-0 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300"
+          className="shrink-0 rounded-none border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300"
           data-strengths-gaps-error
         >
           {error}
@@ -479,7 +479,7 @@ export function StrengthsGapsPanel({
         </p>
       ) : cards.length === 0 ? (
         <div
-          className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
+          className="rounded-none border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
           data-strengths-gaps-empty
         >
           <p className="text-sm font-medium text-neutral-200">No snapshot data yet</p>
@@ -512,7 +512,7 @@ export function StrengthsGapsPanel({
                 onClick={() => setFocus(id)}
                 data-strengths-gaps-focus={id}
                 data-active={focus === id ? "true" : "false"}
-                className={`rounded-t-md px-3 py-1.5 text-xs transition ${
+                className={`rounded-none px-3 py-1.5 text-xs transition ${
                   focus === id
                     ? "bg-neutral-900 text-white ring-1 ring-neutral-700"
                     : "text-neutral-500 hover:text-neutral-300"
@@ -561,7 +561,7 @@ export function StrengthsGapsPanel({
                             data-gap-card={gap.id}
                             data-gap-severity={gap.severity}
                             data-gap-selected={selected ? "true" : "false"}
-                            className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                            className={`w-full rounded-none border px-3 py-2.5 text-left transition ${
                               selected
                                 ? "border-neutral-700/60 bg-neutral-950/25 ring-1 ring-neutral-800/40"
                                 : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600"
@@ -593,7 +593,7 @@ export function StrengthsGapsPanel({
               </aside>
 
               <div
-                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-xl border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-none border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
                 data-gap-detail
                 data-gap-detail-id={selectedGap?.id ?? ""}
               >
@@ -654,7 +654,7 @@ export function StrengthsGapsPanel({
                               key={action.id}
                               data-gap-pow-link={action.id}
                               data-gap-pow-link-kind={action.kind}
-                              className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-2"
+                              className="rounded-none border border-neutral-800 bg-black/20 px-3 py-2"
                             >
                               <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-neutral-300/80">
                                 {actionKindLabel(action.kind)}
@@ -694,7 +694,7 @@ export function StrengthsGapsPanel({
                             type="button"
                             onClick={() => setSelectedStrengthId(s.id)}
                             data-strength-card={s.id}
-                            className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                            className={`w-full rounded-none border px-3 py-2.5 text-left transition ${
                               selected
                                 ? "border-emerald-700/60 bg-emerald-950/25 ring-1 ring-emerald-800/40"
                                 : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600"
@@ -712,7 +712,7 @@ export function StrengthsGapsPanel({
                 </ul>
               </aside>
               <div
-                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-xl border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-none border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
                 data-strength-detail
               >
                 {selectedStrength ? (
@@ -733,7 +733,7 @@ export function StrengthsGapsPanel({
 
           {focus === "analysis" ? (
             <div
-              className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-xl border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
+              className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-none border border-neutral-800/90 bg-neutral-950/50 p-4 sm:p-5"
               data-strengths-gaps-analysis-detail
               data-cohort-overlap-analysis
             >
@@ -743,7 +743,7 @@ export function StrengthsGapsPanel({
                 surface cohort gaps and common strengths without re-clustering free text.
               </p>
               <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-neutral-800 px-3 py-2">
+                <div className="rounded-none border border-neutral-800 px-3 py-2">
                   <dt className="text-[10px] uppercase tracking-wide text-neutral-500">
                     Subjects in roster
                   </dt>
@@ -751,7 +751,7 @@ export function StrengthsGapsPanel({
                     {analysis.subjectCount}
                   </dd>
                 </div>
-                <div className="rounded-lg border border-neutral-800 px-3 py-2">
+                <div className="rounded-none border border-neutral-800 px-3 py-2">
                   <dt className="text-[10px] uppercase tracking-wide text-neutral-500">
                     With snapshot reports
                   </dt>
@@ -759,7 +759,7 @@ export function StrengthsGapsPanel({
                     {analysis.subjectsWithReports}
                   </dd>
                 </div>
-                <div className="rounded-lg border border-neutral-800 px-3 py-2">
+                <div className="rounded-none border border-neutral-800 px-3 py-2">
                   <dt className="text-[10px] uppercase tracking-wide text-neutral-500">
                     Shared gap themes
                   </dt>
@@ -767,7 +767,7 @@ export function StrengthsGapsPanel({
                     {analysis.sharedGapThemes.length}
                   </dd>
                 </div>
-                <div className="rounded-lg border border-neutral-800 px-3 py-2">
+                <div className="rounded-none border border-neutral-800 px-3 py-2">
                   <dt className="text-[10px] uppercase tracking-wide text-neutral-500">
                     Shared strength themes
                   </dt>
@@ -799,7 +799,7 @@ export function StrengthsGapsPanel({
                           key={theme.themeKey}
                           data-shared-gap-theme={theme.themeKey}
                           data-theme-subject-count={theme.subjectCount}
-                          className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-2.5"
+                          className="rounded-none border border-neutral-800 bg-black/20 px-3 py-2.5"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <p className="text-sm font-medium text-neutral-100">{theme.label}</p>
@@ -838,7 +838,7 @@ export function StrengthsGapsPanel({
                           key={theme.themeKey}
                           data-shared-strength-theme={theme.themeKey}
                           data-theme-subject-count={theme.subjectCount}
-                          className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-2.5"
+                          className="rounded-none border border-neutral-800 bg-black/20 px-3 py-2.5"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <p className="text-sm font-medium text-neutral-100">{theme.label}</p>

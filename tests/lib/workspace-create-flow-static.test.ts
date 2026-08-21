@@ -22,11 +22,62 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("data-create-mode-cards");
     expect(page).toContain("data-aycl-banner");
     expect(page).toContain("/all-you-can-learn");
+    expect(page).toContain("md:grid-cols-3");
+    expect(page).toContain('data-create-mode="aycl"');
+    expect(page).toContain("All You Can Learn");
     // Login control removed from header (auth redirect on submit remains)
     expect(page).not.toMatch(/href=["']\/login["']/);
     expect(page).toMatch(/Login removed from workspace new screen/);
     expect(page).toContain("createMode: \"blank\"");
     expect(page).toContain("createMode: \"template\"");
+  });
+
+  it("blank and template keep creating overlay through workspace redirect", () => {
+    const page = read("app/workspace/new/page.tsx");
+    expect(page).toContain("resolveWorkspaceCreateOverlay");
+    expect(page).toContain("LoadingStatusMessage");
+    expect(page).toContain("Creating workspace");
+    expect(page).toContain("router.push(`/workspace/${payload.workspaceId}`)");
+    expect(page).not.toMatch(/finally\s*\{\s*setBusy\(false\)\s*\}/);
+    const blankFn = page.slice(
+      page.indexOf("async function handleCreateBlank"),
+      page.indexOf("async function handleCreateTemplate"),
+    );
+    const templateFn = page.slice(page.indexOf("async function handleCreateTemplate"));
+    expect(blankFn).toContain("succeeded = true");
+    expect(blankFn).toContain(
+      "setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy)",
+    );
+    expect(blankFn.indexOf("router.push")).toBeGreaterThan(-1);
+    expect(blankFn.indexOf("succeeded = true")).toBeGreaterThan(
+      blankFn.indexOf("router.push"),
+    );
+    expect(templateFn).toContain("succeeded = true");
+    expect(templateFn).toContain(
+      "setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy)",
+    );
+    expect(templateFn.indexOf("router.push")).toBeGreaterThan(-1);
+    expect(templateFn.indexOf("succeeded = true")).toBeGreaterThan(
+      templateFn.indexOf("router.push"),
+    );
+
+    const wiringScratch =
+      process.env.GROK_GOAL_SCRATCH ||
+      "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1caf392ccbf2/implementer";
+    fs.mkdirSync(wiringScratch, { recursive: true });
+    fs.writeFileSync(
+      path.join(wiringScratch, "workspace-create-redirect-wiring.log"),
+      [
+        "uses_overlay_helper=" + page.includes("resolveWorkspaceCreateOverlay"),
+        "blank_push=" + blankFn.includes("router.push(`/workspace/${payload.workspaceId}`)"),
+        "template_push=" +
+          templateFn.includes("router.push(`/workspace/${payload.workspaceId}`)"),
+        "no_unconditional_finally_clear=" +
+          String(!/finally\s*\{\s*setBusy\(false\)\s*\}/.test(page)),
+        "overlay_copy=" + page.includes("Creating workspace"),
+      ].join("\n") + "\n",
+      "utf8",
+    );
   });
 
   it("builder tab label is Builder in English messages", () => {

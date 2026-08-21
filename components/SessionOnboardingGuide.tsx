@@ -43,7 +43,7 @@ function OnboardingQuote({ text, author }: { text: string; author?: string }) {
   const attribution = author?.trim();
 
   return (
-    <figure className="relative mb-5 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-transparent px-6 py-6 sm:px-8 sm:py-7">
+    <figure className="relative mb-5 overflow-hidden rounded-none border border-white/10 bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-transparent px-6 py-6 sm:px-8 sm:py-7">
       <div
         className="pointer-events-none absolute left-3 top-3 sm:left-4 sm:top-4 font-serif text-[4.5rem] leading-none text-white/15 select-none"
         aria-hidden
@@ -249,7 +249,7 @@ export function SessionOnboardingGuide({
     <div
       className={`flex min-h-0 flex-col ${
         isFloating
-          ? "max-h-[min(100%,46rem)] min-h-[34rem] w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+          ? "max-h-[min(100%,46rem)] min-h-[34rem] w-full max-w-lg overflow-hidden rounded-none border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl"
           : `flex-1 ${className}`
       }`}
     >
@@ -293,7 +293,7 @@ export function SessionOnboardingGuide({
               className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-5 pb-6 sm:px-6 sm:pb-7"
             >
               {slide.kind === "visual" ? (
-                <div className="mb-4 aspect-[16/10] overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
+                <div className="mb-4 aspect-[16/10] overflow-hidden rounded-none border border-neutral-800 bg-neutral-950">
                   <StepVisual
                     imageSrc={slide.imageSrc}
                     videoSrc={slide.videoSrc}
@@ -312,7 +312,7 @@ export function SessionOnboardingGuide({
               </p>
               {slide.kind === "visual" && slide.highlight ? (
                 <aside
-                  className="mt-4 rounded-xl border border-neutral-500/35 bg-neutral-800/10 px-3.5 py-3 text-sm leading-relaxed text-neutral-50/95"
+                  className="mt-4 rounded-none border border-neutral-500/35 bg-neutral-800/10 px-3.5 py-3 text-sm leading-relaxed text-neutral-50/95"
                   data-onboarding-highlight
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300/80">
@@ -328,7 +328,7 @@ export function SessionOnboardingGuide({
                   type="button"
                   onClick={onStart}
                   disabled={isStarting}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-none bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
                 >
                   {isStarting ? (
                     <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
@@ -368,7 +368,7 @@ export function SessionOnboardingGuide({
           type="button"
           onClick={() => setStep((current) => Math.max(0, current - 1))}
           disabled={step === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-none border border-neutral-800 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="size-4" aria-hidden />
           {tt("back")}
@@ -380,7 +380,7 @@ export function SessionOnboardingGuide({
           <button
             type="button"
             onClick={() => setStep((current) => Math.min(STEP_COUNT - 1, current + 1))}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-100 transition hover:border-neutral-500 hover:bg-neutral-800"
+            className="inline-flex items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-100 transition hover:border-neutral-500 hover:bg-neutral-800"
           >
             {tt("next")}
             <ChevronRight className="size-4" aria-hidden />

@@ -216,6 +216,17 @@ export function blankWorkspaceCreateOutcome(): { blocks: []; mode: "blank" } {
   return { blocks: [], mode: "blank" };
 }
 
+/**
+ * Overlay after a blank/template create attempt on `/workspace/new`.
+ * Success keeps busy through `router.push` so the chooser does not flash.
+ * Failure clears busy so the form/error is usable again.
+ */
+export function resolveWorkspaceCreateOverlay(input: {
+  succeeded: boolean;
+}): { busy: boolean } {
+  return { busy: Boolean(input.succeeded) };
+}
+
 export function goalFieldsFromPrompt(goalPrompt: string): {
   root_topic: string;
   notes: string;

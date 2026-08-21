@@ -84,7 +84,7 @@ export function MapAuthoringForms({
           className="absolute inset-0 z-20 flex items-end justify-center bg-black/55 p-3 sm:items-center"
           data-local-add-fallback
         >
-          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl shadow-black/50">
+          <div className="w-full max-w-md rounded-none border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl shadow-black/50">
             <h3 className="text-sm font-medium text-white">{labels.addTitle}</h3>
             <p className="mt-1 text-[11px] text-neutral-500">
               Slot {formatGridCoordinate(localPendingCell.row, localPendingCell.col)}
@@ -94,7 +94,7 @@ export function MapAuthoringForms({
                 type="button"
                 disabled={!canSuggest || isSuggesting || busy}
                 onClick={() => void onSuggestLocalAdd()}
-                className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
+                className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
               >
                 {isSuggesting ? labels.suggesting : labels.suggestTopics}
               </button>
@@ -108,7 +108,7 @@ export function MapAuthoringForms({
                     key={suggestion}
                     type="button"
                     onClick={() => setPrompt(suggestion)}
-                    className="rounded-md border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
+                    className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                   >
                     {suggestion}
                   </button>
@@ -119,7 +119,7 @@ export function MapAuthoringForms({
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder={labels.addPlaceholder}
-              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              className="mt-3 w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
               rows={3}
               autoFocus
             />
@@ -127,7 +127,7 @@ export function MapAuthoringForms({
               <button
                 type="button"
                 onClick={onCancelLocalAdd}
-                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+                className="rounded-none px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 {labels.addCancel}
               </button>
@@ -135,7 +135,7 @@ export function MapAuthoringForms({
                 type="button"
                 disabled={!prompt.trim() || busy}
                 onClick={() => void onSubmitLocalAdd()}
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+                className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
               >
                 {busy ? "..." : labels.addSubmit}
               </button>
@@ -147,7 +147,7 @@ export function MapAuthoringForms({
       {shapePromptOpen && (
         <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
           <div
-            className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl"
+            className="w-full max-w-md rounded-none border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl"
             data-generate-shape-dialog
           >
             <h3 className="text-sm font-medium text-white">
@@ -171,7 +171,7 @@ export function MapAuthoringForms({
                   !canSuggest || isSuggesting || busy || !shapeFootprint || !shapeFreeformOk
                 }
                 onClick={() => void onSuggestShapeTopics()}
-                className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
+                className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
               >
                 {isSuggesting ? labels.suggesting : labels.suggestTopics}
               </button>
@@ -185,7 +185,7 @@ export function MapAuthoringForms({
                     key={suggestion}
                     type="button"
                     onClick={() => setPrompt(suggestion)}
-                    className="rounded-md border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
+                    className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
                   >
                     {suggestion}
                   </button>
@@ -196,13 +196,13 @@ export function MapAuthoringForms({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={labels.addPlaceholder}
-              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              className="mt-3 w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
               rows={3}
               autoFocus
             />
 
             <div
-              className="mt-3 space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5"
+              className="mt-3 space-y-1.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-2.5"
               data-shape-context-picker
             >
               <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
@@ -221,7 +221,7 @@ export function MapAuthoringForms({
                     return (
                       <li key={opt.key}>
                         <label
-                          className={`flex cursor-pointer items-start gap-2 rounded-md border px-2 py-1.5 text-[11px] transition ${
+                          className={`flex cursor-pointer items-start gap-2 rounded-none border px-2 py-1.5 text-[11px] transition ${
                             checked
                               ? "border-white/30 bg-white/10 text-neutral-100"
                               : "border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:border-neutral-600"
@@ -263,7 +263,7 @@ export function MapAuthoringForms({
               <button
                 type="button"
                 onClick={onCancelShape}
-                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+                className="rounded-none px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 {labels.addCancel}
               </button>
@@ -272,7 +272,7 @@ export function MapAuthoringForms({
                 data-generate-shape-submit
                 disabled={!prompt.trim() || busy || !shapeFreeformOk}
                 onClick={onSubmitShape}
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+                className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
               >
                 {busy ? "..." : labels.addSubmit}
               </button>
@@ -283,7 +283,7 @@ export function MapAuthoringForms({
 
       {mergePromptOpen && (
         <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
-          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
+          <div className="w-full max-w-md rounded-none border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
             <h3 className="text-sm font-medium text-white">{labels.merge || "Merge blocks"}</h3>
             <p className="mt-1 text-[11px] text-neutral-500">
               Merging {selectedBlockIds.length} blocks into one larger geometric topic
@@ -292,7 +292,7 @@ export function MapAuthoringForms({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Optional guidance for the merged topic..."
-              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              className="mt-3 w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
               rows={3}
               autoFocus
             />
@@ -301,7 +301,7 @@ export function MapAuthoringForms({
               <button
                 type="button"
                 onClick={onCancelMerge}
-                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+                className="rounded-none px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >
                 {labels.addCancel}
               </button>
@@ -309,7 +309,7 @@ export function MapAuthoringForms({
                 type="button"
                 disabled={busy}
                 onClick={() => void onSubmitMerge()}
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+                className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
               >
                 {busy ? "..." : labels.merge || "Merge"}
               </button>

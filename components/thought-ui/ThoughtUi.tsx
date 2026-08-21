@@ -39,7 +39,7 @@ export function thoughtButtonClasses({
   className?: string;
 }) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-md font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
+    "inline-flex shrink-0 items-center justify-center rounded-none font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
     size === "sm" && "h-8 px-2.5 text-xs",
     size === "md" && "h-9 px-3.5 text-xs",
     size === "lg" && "h-11 px-4 text-sm",
@@ -65,7 +65,7 @@ export function ThoughtButton({
 
 export function ThoughtKeyHint({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-5 items-center justify-center rounded border border-neutral-600 bg-black/55 px-1.5 font-mono text-[10px] font-medium leading-none text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+    <span className="inline-flex h-5 items-center justify-center rounded-none border border-neutral-600 bg-black/55 px-1.5 font-mono text-[10px] font-medium leading-none text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       {children}
     </span>
   );
@@ -82,7 +82,7 @@ export function ThoughtShortcutChord({ keys }: { keys: string[] }) {
 }
 
 export const thoughtSelectionBarClass =
-  "rounded-md border border-white/25 bg-white/5";
+  "rounded-none border border-white/25 bg-white/5";
 
 export const thoughtSelectionBarTextClass = "text-[11px] text-neutral-100";
 
@@ -98,7 +98,7 @@ export function thoughtSelectionCardClass(isSelected: boolean, baseClass = "") {
 
 export function thoughtSelectionChipClass(isSelected: boolean) {
   return cn(
-    "flex w-full min-w-0 items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs leading-relaxed transition-all active:scale-[0.99]",
+    "flex w-full min-w-0 items-start gap-2 rounded-none border px-3 py-2 text-left text-xs leading-relaxed transition-all active:scale-[0.99]",
     isSelected
       ? "border-white/60 bg-white/10 text-white"
       : "border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:border-white/35 hover:bg-white/5 hover:text-white",
@@ -181,7 +181,7 @@ function dialogueAvatarGlowClass(isActiveTurn: boolean, turnMode: HeliosTurnMode
 
 function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string, turnMode: HeliosTurnMode = "idle") {
   return cn(
-    "rounded-2xl border px-4 py-3 backdrop-blur-sm",
+    "rounded-none border px-4 py-3 backdrop-blur-sm",
     cornerClass,
     turnMode === "interruption"
       ? "animate-dialogue-interruption-pulse border-neutral-600/70 bg-neutral-950/55"
@@ -296,7 +296,7 @@ function DialogueSplitComic({
         <div className="flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4">
           <HeliosProbeAvatar isActiveTurn={isHeliosResponding} turnMode={heliosVisualMode} />
           <div className="min-w-0 flex-1">
-            <div className={dialogueBubbleClasses(isHeliosResponding, "rounded-tl-md", heliosVisualMode)}>
+            <div className={dialogueBubbleClasses(isHeliosResponding, "rounded-none", heliosVisualMode)}>
               {isSending ? (
                 <div className="flex gap-1.5 py-1">
                   <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
@@ -330,7 +330,7 @@ function DialogueSplitComic({
         >
           {hasUserBubble ? (
             <div className="min-w-0 flex-1">
-              <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-br-md bg-black/55")}>
+              <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-none bg-black/55")}>
                 {userLines.length > 0 ? (
                   <div className="space-y-3">
                     {userLines.map((line, index) => (
@@ -366,12 +366,6 @@ function DialogueSplitIle(
     isSending,
     heliosTurnMode,
   });
-  const isHeliosInterruption = heliosTurnMode === "interruption";
-  const heliosVisualMode: HeliosTurnMode = isHeliosInterruption
-    ? "interruption"
-    : isSending
-      ? "responding"
-      : "idle";
   const textClass = ILE_DIALOGUE_TEXT_CLASS;
   const [thinkTick, setThinkTick] = useState(0);
 
@@ -390,24 +384,14 @@ function DialogueSplitIle(
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col items-center px-4 py-3 sm:px-6"
+      className="flex min-h-0 flex-1 flex-col px-4 py-3 sm:px-6"
       data-ile-dialogue-compact
       data-ile-dialogue-speaker="helios"
       data-ile-dialogue-kind={turn.kind}
     >
-      {turn.showHeliosAvatar ? (
-        <div className="flex w-full shrink-0 justify-center" data-ile-helios-avatar-top>
-          <HeliosProbeAvatar
-            size="ile"
-            isActiveTurn={turn.kind === "waiting"}
-            turnMode={heliosVisualMode}
-          />
-        </div>
-      ) : null}
-
       {turn.kind === "waiting" ? (
         <div
-          className="mt-4 flex w-full max-w-[min(100%,22rem)] flex-col items-center text-center"
+          className="flex min-h-0 w-full flex-1 flex-col items-center justify-center text-center"
           data-ile-helios-waiting
         >
           <div className="flex justify-center gap-1.5 py-1" data-ile-helios-waiting-ellipsis>
@@ -426,27 +410,22 @@ function DialogueSplitIle(
           ) : null}
         </div>
       ) : (
-        <div className="mt-4 flex min-h-0 w-full max-w-[min(100%,34rem)] flex-1 flex-col">
-          <div
-            data-ile-helios-scroll
-            className={cn(
-              dialogueBubbleClasses(false, "rounded-md", heliosVisualMode),
-              "max-h-[min(100%,28rem)] overflow-y-auto overscroll-contain",
-            )}
-          >
-            {lastAssistantTurn ? (
-              <HeliosMarkdown className={`${textClass} text-neutral-100`}>
-                {lastAssistantTurn.content}
-              </HeliosMarkdown>
-            ) : (
-              <HeliosMarkdown className={`${textClass} text-neutral-300`}>
-                {promptText}
-              </HeliosMarkdown>
-            )}
-            {error ? (
-              <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
-            ) : null}
-          </div>
+        <div
+          data-ile-helios-scroll
+          className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain"
+        >
+          {lastAssistantTurn ? (
+            <HeliosMarkdown className={`${textClass} text-neutral-100`}>
+              {lastAssistantTurn.content}
+            </HeliosMarkdown>
+          ) : (
+            <HeliosMarkdown className={`${textClass} text-neutral-300`}>
+              {promptText}
+            </HeliosMarkdown>
+          )}
+          {error ? (
+            <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
+          ) : null}
         </div>
       )}
     </div>

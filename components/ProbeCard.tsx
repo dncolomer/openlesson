@@ -16,7 +16,7 @@ export function ProbeCard({ probe, problem, isNew = false }: ProbeCardProps) {
 
   return (
     <div
-      className={`p-4 rounded-xl border transition-all duration-500 ${
+      className={`p-4 rounded-none border transition-all duration-500 ${
         isNew
           ? "bg-neutral-700/30 border-neutral-500 animate-fade-in"
           : probe.starred
@@ -34,7 +34,7 @@ export function ProbeCard({ probe, problem, isNew = false }: ProbeCardProps) {
           <div className="flex items-start gap-2">
             <p className="text-white leading-relaxed flex-1">{probe.text}</p>
             {probe.starred && (
-              <span className="shrink-0 mt-1 px-1.5 py-0.5 text-[10px] rounded bg-neutral-800/15 text-neutral-300 border border-neutral-600/20 font-medium">
+              <span className="shrink-0 mt-1 px-1.5 py-0.5 text-[10px] rounded-none bg-neutral-800/15 text-neutral-300 border border-neutral-600/20 font-medium">
                 {t('probes.starred')}
               </span>
             )}

@@ -44,7 +44,7 @@ function ContextInfluenceChips({
           key={s}
           data-context-source-chip
           title={s}
-          className="max-w-[9rem] truncate rounded border border-white/10 bg-white/[0.04] px-1 py-px text-[9px] leading-tight text-neutral-500"
+          className="max-w-[9rem] truncate rounded-none border border-white/10 bg-white/[0.04] px-1 py-px text-[9px] leading-tight text-neutral-500"
         >
           {s}
         </span>
@@ -84,7 +84,7 @@ function ProbeList({
           key={p.id}
           data-simulation-probe={p.id}
           data-simulation-probe-kind={kind}
-          className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5"
+          className="rounded-none border border-white/10 bg-white/[0.03] px-2 py-1.5"
         >
           <div className="flex items-start gap-1.5 text-[11px] leading-snug text-neutral-300">
             <span
@@ -339,7 +339,7 @@ export function WorkspaceBlockSimulationPanel({
           data-content-samples-regenerate
           disabled={!workspaceId || regenerating}
           onClick={() => void regenerate()}
-          className="shrink-0 rounded-md border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+          className="shrink-0 rounded-none border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {regenerating ? "Generating…" : "Regenerate"}
         </button>
@@ -356,7 +356,7 @@ export function WorkspaceBlockSimulationPanel({
           disabled={regenerating}
           placeholder="Optional: influence generation (e.g. focus on edge cases, medical examples)…"
           data-simulation-modifier-input
-          className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
         />
       </label>
 

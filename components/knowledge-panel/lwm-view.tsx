@@ -78,7 +78,7 @@ export function KnowledgeLwmView({
           className="flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2"
         >
           {lwmError ? (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-300">
+            <div className="rounded-none border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-300">
               {lwmError}
             </div>
           ) : null}
@@ -122,7 +122,7 @@ export function KnowledgeLwmView({
                   (!currentUserId && !lwmUserId && !lwmGuestUserId)
                 }
                 title="Choose a goal and generate a Learning World Model Snapshot for the selected user"
-                className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-none bg-white px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                 data-lwm-generate-snapshot
               >
                 {snapshotLoading ? "Generating…" : "Generate new snapshot"}
@@ -133,7 +133,7 @@ export function KnowledgeLwmView({
                   onClick={() => openSnapshotModal("all")}
                   disabled={snapshotLoading || snapshotAllRunning}
                   title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
-                  className="rounded-md border border-white/80 bg-transparent px-2.5 py-1.5 text-xs font-medium text-white transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-none border border-white/80 bg-transparent px-2.5 py-1.5 text-xs font-medium text-white transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                   data-lwm-generate-snapshot-all
                 >
                   {snapshotAllRunning
@@ -193,7 +193,7 @@ export function KnowledgeLwmView({
               <p className="text-xs text-neutral-500">Loading learning world model…</p>
             ) : !selectedLwmRun && !wm && lwmHistoryRuns.length === 0 ? (
               <div
-                className="rounded-xl border border-dashed border-neutral-700 bg-neutral-950/40 px-4 py-6 text-center"
+                className="rounded-none border border-dashed border-neutral-700 bg-neutral-950/40 px-4 py-6 text-center"
                 data-lwm-empty
               >
                 <p className="text-sm font-medium text-neutral-200">No snapshots yet</p>
@@ -205,7 +205,7 @@ export function KnowledgeLwmView({
               </div>
             ) : (
               <div
-                className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/80"
+                className="flex min-h-0 flex-1 overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/80"
                 data-lwm-results-layout="list-detail"
                 data-lwm-selected-run={selectedLwmRun?.id || undefined}
               >
@@ -261,7 +261,7 @@ export function KnowledgeLwmView({
                               role="option"
                               aria-selected={selected}
                               onClick={() => setSelectedLwmRunId(run.id)}
-                              className={`w-full rounded-md px-2 py-1.5 text-left transition ${
+                              className={`w-full rounded-none px-2 py-1.5 text-left transition ${
                                 selected
                                   ? "bg-white/10 ring-1 ring-white/25"
                                   : "hover:bg-neutral-900/80"
@@ -276,13 +276,13 @@ export function KnowledgeLwmView({
                                 </span>
                                 <span className="flex items-center gap-1 text-[10px] font-mono tabular-nums">
                                   <span
-                                    className="rounded border border-neutral-600 bg-neutral-900 px-1 py-0.5 text-neutral-100"
+                                    className="rounded-none border border-neutral-600 bg-neutral-900 px-1 py-0.5 text-neutral-100"
                                     data-lwm-skill-score-chip
                                   >
                                     {Math.round(run.score)}
                                   </span>
                                   <span
-                                    className="rounded border border-neutral-700 bg-neutral-900/80 px-1 py-0.5 text-neutral-300"
+                                    className="rounded-none border border-neutral-700 bg-neutral-900/80 px-1 py-0.5 text-neutral-300"
                                     data-lwm-ghc-score-chip
                                   >
                                     {run.ghc_score != null ? Math.round(run.ghc_score) : "—"}
@@ -340,7 +340,7 @@ export function KnowledgeLwmView({
                             data-lwm-group="scores"
                           >
                             <div
-                              className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white px-3 py-2 text-black"
+                              className="min-w-[5.5rem] rounded-none border border-white/80 bg-white px-3 py-2 text-black"
                               data-lwm-skill-score
                             >
                               <p className="text-[10px] font-medium text-neutral-600">
@@ -351,7 +351,7 @@ export function KnowledgeLwmView({
                               </p>
                             </div>
                             <div
-                              className="min-w-[5.5rem] rounded-lg border border-white/60 bg-neutral-100 px-3 py-2 text-black"
+                              className="min-w-[5.5rem] rounded-none border border-white/60 bg-neutral-100 px-3 py-2 text-black"
                               data-lwm-ghc-score
                             >
                               <p className="text-[10px] font-medium text-neutral-600">
@@ -364,7 +364,7 @@ export function KnowledgeLwmView({
                             <button
                               type="button"
                               onClick={() => setShowScoreExplainModal(true)}
-                              className="flex min-h-[3.25rem] min-w-[5.5rem] flex-col justify-center rounded-lg border border-white/60 bg-transparent px-3 py-2 text-left transition hover:border-white hover:bg-white/10"
+                              className="flex min-h-[3.25rem] min-w-[5.5rem] flex-col justify-center rounded-none border border-white/60 bg-transparent px-3 py-2 text-left transition hover:border-white hover:bg-white/10"
                               data-lwm-explain-scores
                               title="Explain skill readiness and authenticity scores"
                             >
@@ -391,7 +391,7 @@ export function KnowledgeLwmView({
                             className="absolute inset-0 bg-black/70 backdrop-blur-md"
                             onClick={() => setShowScoreExplainModal(false)}
                           />
-                          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+                          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-none border border-neutral-800 bg-neutral-900 shadow-2xl">
                             <div className="border-b border-neutral-800/70 px-5 pb-4 pt-5">
                               <h3
                                 id="lwm-score-explain-title"
@@ -408,7 +408,7 @@ export function KnowledgeLwmView({
                                 data-lwm-score-explanations
                               >
                                 <div
-                                  className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
+                                  className="rounded-none border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
                                   data-lwm-primary-explanation
                                 >
                                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -442,7 +442,7 @@ export function KnowledgeLwmView({
                                   ) : null}
                                 </div>
                                 <div
-                                  className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
+                                  className="rounded-none border border-neutral-800 bg-neutral-950/60 px-3.5 py-3"
                                   data-lwm-ghc-explanation
                                 >
                                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -477,7 +477,7 @@ export function KnowledgeLwmView({
                               <button
                                 type="button"
                                 onClick={() => setShowScoreExplainModal(false)}
-                                className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                                className="rounded-none bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
                                 data-lwm-score-explain-close
                               >
                                 Close
@@ -545,7 +545,7 @@ export function KnowledgeLwmView({
                         {lwmDetailTab === "profile" ? (
                           <div className="flex flex-col gap-5" data-lwm-detail-profile>
                             <div
-                              className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-4"
+                              className="rounded-none border border-neutral-800 bg-black/20 px-3 py-4"
                               data-lwm-detail-spider
                             >
                               <p className="text-[11px] font-medium text-neutral-400">
@@ -579,7 +579,7 @@ export function KnowledgeLwmView({
                                 {selectedRunReport!.evaluated_goals!.map((g, i) => (
                                   <li
                                     key={g.id || `${g.scope}-${i}`}
-                                    className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2"
+                                    className="rounded-none border border-neutral-800 bg-neutral-950/50 px-3 py-2"
                                     data-lwm-evaluated-goal={g.id || undefined}
                                     data-lwm-goal-scope={g.scope}
                                   >
@@ -596,7 +596,7 @@ export function KnowledgeLwmView({
                             ) : selectedRunReport?.workspace_goal?.trim() ||
                               wm?.inferred_goal?.text ? (
                               <div
-                                className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2"
+                                className="rounded-none border border-neutral-800 bg-neutral-950/50 px-3 py-2"
                                 data-lwm-workspace-goal
                               >
                                 <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
@@ -734,7 +734,7 @@ export function KnowledgeLwmView({
                                     {gapAnalysis.gaps.map((gap) => (
                                       <li
                                         key={gap.title}
-                                        className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
+                                        className="rounded-none border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
                                       >
                                         <div className="font-medium text-neutral-200">
                                           {gap.title}

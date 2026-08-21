@@ -77,7 +77,7 @@ export function WorkspaceIdentitySettings({
 
   return (
     <section
-      className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+      className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
       data-settings-section="identity"
       data-workspace-identity-settings
     >
@@ -103,7 +103,7 @@ export function WorkspaceIdentitySettings({
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
+            className="mt-2 w-full rounded-none border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
           />
           <p
             className="mt-1.5 text-xs text-neutral-500"
@@ -126,7 +126,7 @@ export function WorkspaceIdentitySettings({
             onChange={(e) => setEditDescription(e.target.value)}
             placeholder={t("planView.addDescription")}
             rows={4}
-            className="mt-2 min-h-[6rem] w-full resize-y rounded-md border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
+            className="mt-2 min-h-[6rem] w-full resize-y rounded-none border border-neutral-700 bg-neutral-900/80 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
           />
           <p
             className="mt-1.5 text-xs text-neutral-500"
@@ -142,7 +142,7 @@ export function WorkspaceIdentitySettings({
             onClick={() => void saveIdentity()}
             disabled={!canSave}
             data-identity-save
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="rounded-none bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
           >
             {saving ? t("common.saving") : t("common.save")}
           </button>

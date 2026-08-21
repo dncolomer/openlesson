@@ -228,7 +228,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
               />
 
               {/* Chat input card - styled like Helios action container */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+              <div className="w-full rounded-none border border-neutral-800 bg-neutral-950/40 p-3">
                 <p className="mb-2 text-center text-[10px] leading-tight text-neutral-600">
                   {t('sessionPerformanceChat.exampleQuestions')}
                 </p>
@@ -241,7 +241,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <button
                       key={i}
                       onClick={() => setInput(example)}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
+                      className="text-[11px] px-2.5 py-1 rounded-none bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
                     >
                       {example}
                     </button>
@@ -250,7 +250,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                 
                 {/* Input */}
                 <form onSubmit={handleSubmit}>
-                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2">
+                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-none px-3 py-2">
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -264,7 +264,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-none transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -285,7 +285,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
               </div>
 
               {/* Messages container - card style */}
-              <div className="w-full flex-1 min-h-0 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4 mb-3 overflow-y-auto max-h-[calc(100vh-360px)]">
+              <div className="w-full flex-1 min-h-0 rounded-none border border-neutral-800 bg-neutral-950/40 p-4 mb-3 overflow-y-auto max-h-[calc(100vh-360px)]">
                 <div className="space-y-4">
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -304,17 +304,17 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
 
                       {/* Message bubble */}
                       <div
-                        className={`relative group flex-1 min-w-0 px-2.5 py-1.5 rounded-lg ${
+                        className={`relative group flex-1 min-w-0 px-2.5 py-1.5 rounded-none ${
                           msg.role === "user"
-                            ? "bg-white text-black rounded-br-sm"
-                            : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-bl-sm"
+                            ? "bg-white text-black rounded-none"
+                            : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-none"
                         }`}
                       >
                         <div
                           className="prose prose-invert prose-sm max-w-none text-sm leading-7
                           prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold
                           prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4
-                          prose-li:my-1 prose-li:leading-6 prose-code:text-neutral-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          prose-li:my-1 prose-li:leading-6 prose-code:text-neutral-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-none prose-code:text-xs
                           prose-strong:text-neutral-100 prose-a:text-neutral-300"
                         >
                           <ReactMarkdown
@@ -329,7 +329,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                         {msg.role === "assistant" && (
                           <button
                             onClick={() => copyToClipboard(msg.content, msg.id)}
-                            className="absolute top-1 right-1 p-0.5 rounded bg-neutral-700/50 text-neutral-400 hover:text-white hover:bg-neutral-600/50 opacity-0 group-hover:opacity-100 transition-all"
+                            className="absolute top-1 right-1 p-0.5 rounded-none bg-neutral-700/50 text-neutral-400 hover:text-white hover:bg-neutral-600/50 opacity-0 group-hover:opacity-100 transition-all"
                             title={t('common.copy')}
                           >
                             {copiedId === msg.id ? (
@@ -353,7 +353,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                       <div className="flex-shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-neutral-800/20 via-neutral-800 to-neutral-900 border border-neutral-600/30 flex items-center justify-center">
                         <span className="text-[9px] font-serif text-neutral-300">H</span>
                       </div>
-                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-2.5 py-1.5 rounded-lg rounded-bl-sm">
+                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-2.5 py-1.5 rounded-none rounded-none">
                         <div className="flex gap-1">
                           <div className="w-1 h-1 bg-neutral-800/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                           <div className="w-1 h-1 bg-neutral-800/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -368,9 +368,9 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
               </div>
 
               {/* Input card */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-2.5">
+              <div className="w-full rounded-none border border-neutral-800 bg-neutral-950/40 p-2.5">
                 <form onSubmit={handleSubmit}>
-                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-1.5">
+                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-none px-3 py-1.5">
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -384,7 +384,7 @@ export function SessionPerformanceChat({ sessionId, sessionTopic }: SessionPerfo
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-neutral-300 disabled:text-neutral-700 rounded-none transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

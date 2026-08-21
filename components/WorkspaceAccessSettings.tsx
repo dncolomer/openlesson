@@ -48,7 +48,7 @@ export function WorkspaceAccessSettings({
 
   return (
     <section
-      className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+      className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
       data-settings-section="access"
       data-workspace-access-settings
     >
@@ -65,7 +65,7 @@ export function WorkspaceAccessSettings({
           type="button"
           onClick={() => void togglePublic()}
           disabled={busy === "public"}
-          className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-all disabled:opacity-50 ${
+          className={`flex w-full items-center gap-3 rounded-none border px-3 py-2.5 text-left text-sm transition-all disabled:opacity-50 ${
             plan.is_public
               ? "border-green-500/30 bg-green-500/15 text-green-400 hover:bg-green-500/25"
               : "border-white/10 bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white"

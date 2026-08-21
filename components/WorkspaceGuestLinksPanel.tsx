@@ -186,9 +186,9 @@ export function WorkspaceGuestLinksPanel({
   const creatingBusy = creatingLink || creatingIleLink || mintingTapbench;
 
   const fieldClass =
-    "mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
+    "mt-1 w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
   const primaryBtnClass =
-    "rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
+    "rounded-none bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40";
 
   const blockTitleById = useMemo(() => {
     return new Map(blocks.map((block) => [block.id, block.title || block.id]));
@@ -745,12 +745,12 @@ export function WorkspaceGuestLinksPanel({
         data-guest-link-kind={link.kind}
         data-product-intent-id={intent?.id || (isTapbench ? "tapbench" : undefined)}
         data-tapbench-link-id={isTapbench ? link.id : undefined}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-neutral-800 px-3 py-2 text-xs"
       >
         <div className="min-w-0 text-neutral-400">
           <p className="text-neutral-300">
             <span
-              className="mr-2 rounded border border-neutral-600 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-neutral-200"
+              className="mr-2 rounded-none border border-neutral-600 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-neutral-200"
               data-guest-link-intent-badge
             >
               {clusterLabel}
@@ -815,7 +815,7 @@ export function WorkspaceGuestLinksPanel({
               onClick={() =>
                 void (isTap ? reissueTapLink(link.id) : reissueIleLink(link.id))
               }
-              className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
+              className="rounded-none border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
             >
               {isTap ? t("planView.tapLinksReuseGuest") : t("planView.ileLinksReuseGuest")}
             </button>
@@ -826,7 +826,7 @@ export function WorkspaceGuestLinksPanel({
               disabled={invalidating || creatingLink}
               onClick={() => void invalidateTapLink(link.id)}
               data-guest-link-invalidate="tap"
-              className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+              className="rounded-none border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
             >
               {t("planView.tapLinksInvalidate")}
             </button>
@@ -837,7 +837,7 @@ export function WorkspaceGuestLinksPanel({
               disabled={invalidating || creatingIleLink}
               onClick={() => void invalidateIleLink(link.id)}
               data-guest-link-invalidate="ile"
-              className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+              className="rounded-none border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
             >
               {t("planView.ileLinksInvalidate")}
             </button>
@@ -846,7 +846,7 @@ export function WorkspaceGuestLinksPanel({
             <button
               type="button"
               onClick={() => downloadTapbenchSkills(tbRow)}
-              className="rounded-md border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
+              className="rounded-none border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
               data-download-tapbench-skills
               data-tapbench-skills-md
               title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}
@@ -858,7 +858,7 @@ export function WorkspaceGuestLinksPanel({
             <button
               type="button"
               onClick={() => void copyLink(link.id, privateUrl)}
-              className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+              className="rounded-none border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
               data-copy-tapbench-link={isTapbench ? true : undefined}
             >
               {copiedLinkId === link.id
@@ -874,7 +874,7 @@ export function WorkspaceGuestLinksPanel({
   if (!isOwner || !currentUserId) {
     return (
       <section
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6"
         data-settings-section="guest-links"
       >
         <p className="text-xs text-neutral-500">{t("planView.tapIleLinksOwnerOnly")}</p>
@@ -927,7 +927,7 @@ export function WorkspaceGuestLinksPanel({
   return (
     <div className="flex w-full flex-col gap-0" data-settings-section="guest-links">
       <div
-        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
+        className="rounded-none border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
         data-guest-links-inner-tabs
       >
         <WorkspaceSectionSubTabs
@@ -963,7 +963,7 @@ export function WorkspaceGuestLinksPanel({
                   return (
                     <label
                       key={opt.id}
-                      className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-xs transition ${
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-none border px-3 py-2 text-xs transition ${
                         selected
                           ? "border-white bg-white/5 text-white"
                           : "border-neutral-700 bg-neutral-900 text-neutral-400"
@@ -1052,7 +1052,7 @@ export function WorkspaceGuestLinksPanel({
               <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
                 <input
                   type="checkbox"
-                  className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+                  className="mt-0.5 rounded-none border-neutral-700 bg-neutral-900"
                   checked={showEndSession}
                   onChange={(e) => setShowEndSession(e.target.checked)}
                   data-guest-link-show-end-session
@@ -1208,7 +1208,7 @@ export function WorkspaceGuestLinksPanel({
                     disabled={invalidating || creatingLink}
                     onClick={() => void invalidateAllTapLinks()}
                     data-guest-link-invalidate-all="tap"
-                    className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                    className="rounded-none border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
                   >
                     {invalidating
                       ? t("planView.tapLinksInvalidating")
@@ -1221,7 +1221,7 @@ export function WorkspaceGuestLinksPanel({
                     disabled={invalidating || creatingIleLink}
                     onClick={() => void invalidateAllIleLinks()}
                     data-guest-link-invalidate-all="ile"
-                    className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                    className="rounded-none border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
                   >
                     {invalidating
                       ? t("planView.ileLinksInvalidating")

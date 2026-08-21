@@ -395,7 +395,7 @@ export function WorkspaceNotesFilesPanel({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col overflow-y-auto rounded-xl border border-neutral-800/70 bg-neutral-950/80 p-3 shadow-lg shadow-black/20 backdrop-blur-md sm:p-4"
+      className="flex h-full min-h-0 flex-col overflow-y-auto rounded-none border border-neutral-800/70 bg-neutral-950/80 p-3 shadow-lg shadow-black/20 backdrop-blur-md sm:p-4"
       data-workspace-notes-files-panel
       data-unified-resource-list
     >
@@ -414,7 +414,7 @@ export function WorkspaceNotesFilesPanel({
       </div>
 
       {error ? (
-        <div className="mb-2 rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-400">
+        <div className="mb-2 rounded-none border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-400">
           {error}
         </div>
       ) : null}
@@ -430,7 +430,7 @@ export function WorkspaceNotesFilesPanel({
           value={listQuery}
           onChange={(e) => setListQuery(e.target.value)}
           placeholder="Search links, notes, files…"
-          className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
+          className="w-full rounded-none border border-neutral-800 bg-neutral-950/80 px-2 py-1 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"
           aria-label="Search context materials"
         />
         <div
@@ -450,7 +450,7 @@ export function WorkspaceNotesFilesPanel({
                 onClick={() =>
                   setTypeFilter((cur) => nextResourceTypeFilter(cur, chip.id))
                 }
-                className={`rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition ${
+                className={`rounded-none border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition ${
                   active
                     ? "border-white/35 bg-white/10 text-white"
                     : "border-neutral-800 bg-transparent text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
@@ -484,7 +484,7 @@ export function WorkspaceNotesFilesPanel({
                 data-resource-row="external"
                 data-resource-row-compact
                 data-external-id={r.id}
-                className="rounded-md border border-neutral-600/10 bg-neutral-950/10 px-2 py-1"
+                className="rounded-none border border-neutral-600/10 bg-neutral-950/10 px-2 py-1"
               >
                 <div className="flex items-center gap-2">
                   <svg
@@ -530,7 +530,7 @@ export function WorkspaceNotesFilesPanel({
                               setExtUrl(r.url);
                             }
                           }}
-                          className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                          className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                         >
                           {isEditing ? t("common.cancel") : t("common.edit")}
                         </button>
@@ -545,7 +545,7 @@ export function WorkspaceNotesFilesPanel({
                               setDeletingExternalId(null),
                             );
                           }}
-                          className="rounded border border-red-500/25 px-1.5 py-0.5 text-[9px] text-red-300/80 hover:bg-red-500/10"
+                          className="rounded-none border border-red-500/25 px-1.5 py-0.5 text-[9px] text-red-300/80 hover:bg-red-500/10"
                         >
                           {deletingExternalId === r.id ? "…" : t("common.delete")}
                         </button>
@@ -555,7 +555,7 @@ export function WorkspaceNotesFilesPanel({
                         href={r.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                        className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                       >
                         Open
                       </a>
@@ -568,13 +568,13 @@ export function WorkspaceNotesFilesPanel({
                       data-external-edit-title
                       value={extTitle}
                       onChange={(e) => setExtTitle(e.target.value)}
-                      className="w-full rounded border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
+                      className="w-full rounded-none border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
                     />
                     <input
                       data-external-edit-url
                       value={extUrl}
                       onChange={(e) => setExtUrl(e.target.value)}
-                      className="w-full rounded border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
+                      className="w-full rounded-none border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-[11px] text-white"
                     />
                     <button
                       type="button"
@@ -585,7 +585,7 @@ export function WorkspaceNotesFilesPanel({
                           onUpdateExternal(r.id, { title: extTitle, url: extUrl }),
                         ).then(() => setEditingExternalId(null));
                       }}
-                      className="rounded bg-white px-2 py-1 text-[10px] text-black"
+                      className="rounded-none bg-white px-2 py-1 text-[10px] text-black"
                     >
                       {t("common.save")}
                     </button>
@@ -610,7 +610,7 @@ export function WorkspaceNotesFilesPanel({
                 data-resource-kind="notes"
                 data-resource-row="attachment"
                 data-resource-row-compact
-                className="rounded-md border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
+                className="rounded-none border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
               >
                 <div className="flex items-center gap-2">
                   <NotesTypeIcon />
@@ -633,7 +633,7 @@ export function WorkspaceNotesFilesPanel({
                             setIsEditingNotes(true);
                           }
                         }}
-                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
+                        className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
                       >
                         {isEditingNotes
                           ? t("common.cancel")
@@ -645,7 +645,7 @@ export function WorkspaceNotesFilesPanel({
                       <button
                         type="button"
                         onClick={() => setIsEditingNotes(!isEditingNotes)}
-                        className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                        className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                       >
                         {isEditingNotes ? t("common.cancel") : "Open"}
                       </button>
@@ -659,7 +659,7 @@ export function WorkspaceNotesFilesPanel({
                       value={notesContent}
                       onChange={(e) => setNotesContent(e.target.value)}
                       placeholder={t("planView.notesPlaceholder")}
-                      className="h-[min(28vh,12rem)] w-full resize-none rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
+                      className="h-[min(28vh,12rem)] w-full resize-none rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                       autoFocus
                     />
                     <div className="flex gap-1.5">
@@ -667,14 +667,14 @@ export function WorkspaceNotesFilesPanel({
                         type="button"
                         onClick={() => void onSaveNotes()}
                         disabled={savingNotes}
-                        className="rounded bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-black"
+                        className="rounded-none bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-black"
                       >
                         {savingNotes ? t("common.saving") : t("common.save")}
                       </button>
                       <button
                         type="button"
                         onClick={onCancelNotes}
-                        className="rounded bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
+                        className="rounded-none bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
                       >
                         {t("common.cancel")}
                       </button>
@@ -702,7 +702,7 @@ export function WorkspaceNotesFilesPanel({
               data-resource-row="attachment"
               data-resource-row-compact
               data-notes-file={canInlineEdit ? "true" : undefined}
-              className="rounded-md border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
+              className="rounded-none border border-neutral-800/90 bg-neutral-900/50 px-2 py-1"
             >
               <div className="flex items-center gap-2">
                 <FileTypeIcon mimeType={item.mime_type} />
@@ -722,7 +722,7 @@ export function WorkspaceNotesFilesPanel({
                         if (isEditingThis) cancelFileEditor();
                         else void openFileEditor(item);
                       }}
-                      className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
+                      className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white"
                     >
                       {isEditingThis ? t("common.cancel") : t("common.edit")}
                     </button>
@@ -731,7 +731,7 @@ export function WorkspaceNotesFilesPanel({
                     type="button"
                     onClick={() => void handleDownload(item)}
                     disabled={downloadingId === item.id}
-                    className="rounded border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white disabled:opacity-50"
+                    className="rounded-none border border-neutral-700/80 px-1.5 py-0.5 text-[9px] text-neutral-400 hover:text-white disabled:opacity-50"
                   >
                     {t("workspaceFiles.download")}
                   </button>
@@ -761,14 +761,14 @@ export function WorkspaceNotesFilesPanel({
                         type="text"
                         value={fileEditName}
                         onChange={(e) => setFileEditName(e.target.value)}
-                        className="w-full rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1 text-[11px] text-white focus:border-neutral-500 focus:outline-none"
+                        className="w-full rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1 text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                         aria-label="File name"
                       />
                       <textarea
                         value={fileEditContent}
                         onChange={(e) => setFileEditContent(e.target.value)}
                         placeholder={t("planView.notesPlaceholder")}
-                        className="h-[min(28vh,12rem)] w-full resize-none rounded border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
+                        className="h-[min(28vh,12rem)] w-full resize-none rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1.5 font-mono text-[11px] text-white focus:border-neutral-500 focus:outline-none"
                         autoFocus
                       />
                       <div className="flex gap-1.5">
@@ -776,14 +776,14 @@ export function WorkspaceNotesFilesPanel({
                           type="button"
                           onClick={() => void saveFileEditor(item)}
                           disabled={savingFileId === item.id}
-                          className="rounded bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
+                          className="rounded-none bg-white px-2 py-1 text-[10px] text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
                         >
                           {savingFileId === item.id ? t("common.saving") : t("common.save")}
                         </button>
                         <button
                           type="button"
                           onClick={cancelFileEditor}
-                          className="rounded bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
+                          className="rounded-none bg-neutral-800 px-2 py-1 text-[10px] text-white hover:bg-neutral-700"
                         >
                           {t("common.cancel")}
                         </button>
@@ -803,7 +803,7 @@ export function WorkspaceNotesFilesPanel({
           data-create-notes-file-row
           onClick={() => void createNotesFile()}
           disabled={creatingNotesFile}
-          className="mt-1.5 flex w-full items-center gap-2 rounded-md border border-dashed border-neutral-700 bg-neutral-900/30 px-2 py-1.5 text-left transition-colors hover:border-neutral-500 hover:bg-neutral-900/60 disabled:opacity-40"
+          className="mt-1.5 flex w-full items-center gap-2 rounded-none border border-dashed border-neutral-700 bg-neutral-900/30 px-2 py-1.5 text-left transition-colors hover:border-neutral-500 hover:bg-neutral-900/60 disabled:opacity-40"
         >
           <NotesTypeIcon />
           <div className="min-w-0 flex-1">
@@ -812,7 +812,7 @@ export function WorkspaceNotesFilesPanel({
               {nextNotesFileName(files)}
             </p>
           </div>
-          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-neutral-700 text-neutral-400">
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-none border border-neutral-700 text-neutral-400">
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -829,7 +829,7 @@ export function WorkspaceNotesFilesPanel({
               type="button"
               onClick={() => void handleUpload()}
               disabled={uploading}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white disabled:bg-neutral-700"
+              className="flex items-center gap-2 rounded-none bg-white px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white disabled:bg-neutral-700"
             >
               {uploading
                 ? t("workspaceFiles.uploading")

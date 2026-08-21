@@ -108,12 +108,12 @@ export function GrokGrokipediaTool({
             value={grokipediaQuery}
             onChange={(event) => setGrokipediaQuery(event.target.value)}
             placeholder={t("session.grokipediaSearchPlaceholder")}
-            className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-neutral-600 focus:outline-none"
+            className="min-w-0 flex-1 rounded-none border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-neutral-600 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!grokipediaQuery.trim()}
-            className="shrink-0 rounded-lg border border-neutral-700 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
+            className="shrink-0 rounded-none border border-neutral-700 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
           >
             {t("session.grokipediaSearch")}
           </button>
@@ -125,7 +125,7 @@ export function GrokGrokipediaTool({
             <button
               type="button"
               onClick={() => openGrokipedia(sessionProblem)}
-              className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-left text-sm text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900"
+              className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-left text-sm text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900"
             >
               <span className="line-clamp-2">{sessionProblem}</span>
             </button>
@@ -155,7 +155,7 @@ export function GrokGrokipediaTool({
                   key={term}
                   type="button"
                   onClick={() => openGrokipedia(term)}
-                  className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+                  className="rounded-none border border-neutral-800 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-600 hover:text-white"
                 >
                   {term}
                 </button>
@@ -187,12 +187,12 @@ export function GrokGrokipediaTool({
             value={grokQuery}
             onChange={(event) => setGrokQuery(event.target.value)}
             placeholder="Ask Grok anything about this step..."
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-neutral-600 focus:outline-none"
+            className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-neutral-600 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!grokQuery.trim()}
-            className="w-full rounded-lg border border-neutral-700 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
+            className="w-full rounded-none border border-neutral-700 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
           >
             Open Grok
           </button>

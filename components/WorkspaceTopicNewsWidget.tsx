@@ -86,7 +86,7 @@ export function WorkspaceTopicNewsWidget({
       ) : null}
 
       {error && items.length === 0 ? (
-        <div className="space-y-2 rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
+        <div className="space-y-2 rounded-none border border-neutral-800 bg-neutral-950/60 p-3">
           <p className="text-xs text-neutral-500" data-news-status="error">
             {error}
           </p>
@@ -94,7 +94,7 @@ export function WorkspaceTopicNewsWidget({
             type="button"
             data-news-retry
             onClick={() => void load()}
-            className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-neutral-300 hover:bg-white/10 hover:text-white"
+            className="rounded-none border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-neutral-300 hover:bg-white/10 hover:text-white"
           >
             Retry
           </button>
@@ -107,7 +107,7 @@ export function WorkspaceTopicNewsWidget({
             <li
               key={`${item.url}-${item.title}`}
               data-news-item
-              className="rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-2.5"
+              className="rounded-none border border-neutral-800/80 bg-neutral-950/70 p-2.5"
             >
               <a
                 href={item.url}

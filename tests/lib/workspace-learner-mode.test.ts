@@ -463,6 +463,12 @@ describe("learner mode UI structural", () => {
     expect(grid).toContain("data-learner-mode");
     expect(grid).toContain("data-empty-cell-plus");
     expect(grid).toContain("data-map-minimap");
+    expect(grid).toContain("data-workspace-mode-toggle");
+    // Empty Play maps keep the same grid shell as Build/Explore (minimap + mode toggle).
+    expect(grid).not.toContain("nodes.length === 0 && !canEdit");
+    expect(grid).not.toMatch(
+      /if \(nodes\.length === 0 && !canEdit\)[\s\S]{0,80}labels\.emptyCell/,
+    );
     // Practice drawer: BlockDetailCard launch UI
     expect(learner).toContain("BlockDetailCard");
     expect(learner).toContain('drawerId="practice"');

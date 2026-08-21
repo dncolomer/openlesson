@@ -553,7 +553,7 @@ describe("structural: Add pane Range/Density/Randomize + multi 1×1 create", () 
       "const generationLocked = generationLockedBlockIds.has(node.id)",
     );
     const tileClassDecl = grid.indexOf(
-      "const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition ${",
+      "const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-none border px-2 text-center transition ${",
     );
     expect(genDecl).toBeGreaterThan(0);
     expect(tileClassDecl).toBeGreaterThan(0);

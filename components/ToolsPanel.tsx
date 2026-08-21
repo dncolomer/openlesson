@@ -154,7 +154,7 @@ export function ToolsPanel({
             key={toolId}
             onClick={() => !isDisabled && onToolChange(toolId)}
             disabled={isDisabled}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all ${
               isDisabled
                 ? "bg-neutral-800/30 text-neutral-600 border border-neutral-800/30 cursor-not-allowed"
                 : activeTool === toolId
@@ -186,7 +186,7 @@ export function ToolsPanel({
             type="button"
             data-ile-open-pic-in-pic
             onClick={onOpenPicInPic}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
@@ -198,7 +198,7 @@ export function ToolsPanel({
           <button
             key={toolId}
             onClick={() => onToolChange(toolId)}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all ${
               activeTool === toolId
                 ? "bg-neutral-700/70 text-white border border-neutral-600"
                 : "bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
@@ -216,7 +216,7 @@ export function ToolsPanel({
           <button
             type="button"
             onClick={onBackToDashboard}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
             title={t('session.backToDashboard')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -286,7 +286,7 @@ function WebcamMiniPreview() {
   }, []);
 
   return (
-    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/70 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]" title="Live webcam preview">
+    <div className="overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/70 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]" title="Live webcam preview">
       <video
         ref={videoRef}
         autoPlay
@@ -300,7 +300,7 @@ function WebcamMiniPreview() {
 
 function AudioMiniMeter({ active }: { active: boolean }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Audio recording is active" : "Audio recording is off"}>
+    <div className="flex items-center gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Audio recording is active" : "Audio recording is off"}>
       <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-neutral-200 animate-pulse" : "bg-neutral-700"}`} />
       <span className={`text-[10px] uppercase tracking-wide ${active ? "text-neutral-300" : "text-neutral-600"}`}>Audio {active ? "on" : "off"}</span>
       <div className="ml-auto flex items-end gap-0.5 h-3">
@@ -318,7 +318,7 @@ function AudioMiniMeter({ active }: { active: boolean }) {
 
 function WebcamMiniStatus({ active }: { active: boolean }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Webcam tracking is active" : "Webcam tracking is off"}>
+    <div className="flex items-center gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Webcam tracking is active" : "Webcam tracking is off"}>
       <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-neutral-200 animate-pulse" : "bg-neutral-700"}`} />
       <span className={`text-[10px] uppercase tracking-wide ${active ? "text-neutral-300" : "text-neutral-600"}`}>Webcam {active ? "on" : "off"}</span>
       <svg className={`ml-auto w-3.5 h-3.5 ${active ? "text-neutral-300" : "text-neutral-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -346,7 +346,7 @@ function EEGMiniStatus({
   const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-neutral-200" : "bg-red-400";
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
+    <div className="flex items-center gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
       <div className="flex items-center gap-2 shrink-0">
         <div className={`w-1.5 h-1.5 rounded-full ${isStreaming ? `${dotColor} animate-pulse` : "bg-neutral-700"}`} />
         <span className={`text-[10px] uppercase tracking-wide ${isStreaming ? textColor : "text-neutral-600"}`}>{label}</span>

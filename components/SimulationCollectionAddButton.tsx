@@ -167,7 +167,7 @@ export function SimulationCollectionAddButton({
       data-simulation-add-state={added ? "added" : busy ? "busy" : "idle"}
       disabled={disabled || busy || added}
       onClick={onClick}
-      className="shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.1] disabled:cursor-default disabled:opacity-40"
+      className="shrink-0 rounded-none border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.1] disabled:cursor-default disabled:opacity-40"
     >
       {added ? "Added" : busy ? "Adding…" : label}
     </button>
@@ -194,7 +194,7 @@ export function SimulationCollectionAddAllButton({
       data-simulation-add-state={added ? "added" : busy ? "busy" : "idle"}
       disabled={disabled || busy || added || count < 1}
       onClick={onClick}
-      className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+      className="rounded-none border border-white/15 bg-white/[0.08] px-2.5 py-1 text-[11px] font-medium text-white transition hover:border-white/25 hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
     >
       {added
         ? "All added to collection"

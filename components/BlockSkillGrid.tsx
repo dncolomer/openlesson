@@ -12,6 +12,7 @@ import {
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
+import { createMapFogLookup } from "@/lib/map-fog-of-war";
 import {
   createLearnerMapNote,
   createLearnerMapNoteAtViewportCenter,
@@ -401,6 +402,32 @@ export function BlockSkillGrid({
     localBusy,
   });
 
+  const extraRevealCells = useMemo(() => {
+    const cells = [...selectedEmptyCells];
+    if (previewEmptyCells && previewEmptyCells.length > 0) {
+      cells.push(...previewEmptyCells);
+    }
+    return cells;
+  }, [selectedEmptyCells, previewEmptyCells]);
+
+  const fogLookup = useMemo(
+    () =>
+      createMapFogLookup({
+        occupancy,
+        extraRevealCells,
+        extraRevealKeys: generatorSparkEmptyKeys,
+        dragBlockIds: blockDragIds,
+        dragOffset: blockDragOffset,
+      }),
+    [
+      occupancy,
+      extraRevealCells,
+      generatorSparkEmptyKeys,
+      blockDragIds,
+      blockDragOffset,
+    ],
+  );
+
   const {
     viewportRef,
     hasInitialCenterRef,
@@ -629,6 +656,7 @@ export function BlockSkillGrid({
     activeToolRef,
     nodesById,
     occupancy,
+    fogLookup,
     placements,
     spans,
     busy,
@@ -770,10 +798,6 @@ export function BlockSkillGrid({
     pan,
   });
 
-  if (nodes.length === 0 && !canEdit) {
-    return <div className="flex h-full items-center justify-center text-sm text-neutral-600">{labels.emptyCell}</div>;
-  }
-
   const {
     toolEnablement,
     stripTools,
@@ -874,6 +898,7 @@ export function BlockSkillGrid({
         handleEmptyCellPointerDown,
         handleEmptyCellPointerMove,
         handleEmptyCellPointerUp,
+        fogLookup,
         generatorPickActive,
         activeLassoShape,
         canEdit,

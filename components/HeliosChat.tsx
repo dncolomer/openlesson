@@ -391,7 +391,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         </div>
         <div className="flex items-center gap-2">
           {activeStep && (
-            <div className="flex min-w-0 max-w-[12rem] items-center gap-2 rounded-lg border border-neutral-700/80 bg-neutral-900/90 px-2.5 py-1.5 text-[10px] text-neutral-400 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] sm:max-w-[22rem] sm:gap-2.5 sm:px-3 sm:text-[11px]">
+            <div className="flex min-w-0 max-w-[12rem] items-center gap-2 rounded-none border border-neutral-700/80 bg-neutral-900/90 px-2.5 py-1.5 text-[10px] text-neutral-400 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] sm:max-w-[22rem] sm:gap-2.5 sm:px-3 sm:text-[11px]">
               <span className="shrink-0 font-semibold uppercase tracking-[0.14em] text-red-100">
                 Chapter {activeStepIndex + 1}{totalSteps ? `/${totalSteps}` : ""}
               </span>
@@ -414,7 +414,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
               setVoiceReadyMessageIds(new Set(existingAssistantIds));
               setAutoVoiceEnabled(true);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-none border px-2 py-1 text-[10px] font-medium transition-colors ${
               autoVoiceEnabled
                 ? "border-neutral-500/50 bg-neutral-800/10 text-neutral-300"
                 : "border-neutral-800 bg-neutral-900/80 text-neutral-500 hover:text-neutral-300"
@@ -427,7 +427,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           </button>
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-md transition-colors"
+            className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-none transition-colors"
             title={t('heliosChat.clearChat')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -445,7 +445,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                 className="flex items-start gap-2 justify-start"
               >
                 <HeliosAvatar size={28} />
-                <div className="bg-neutral-800 rounded-md px-4 py-2.5 flex items-center gap-3">
+                <div className="bg-neutral-800 rounded-none px-4 py-2.5 flex items-center gap-3">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
                     <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -463,7 +463,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
             >
               {message.role === "assistant" && <HeliosAvatar size={28} />}
               <div
-                className={`max-w-[85%] rounded-md px-4 py-2.5 text-sm ${
+                className={`max-w-[85%] rounded-none px-4 py-2.5 text-sm ${
                   message.role === "user"
                     ? "bg-neutral-100 text-black"
                     : "bg-neutral-800 text-neutral-200"
@@ -481,7 +481,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                     <img
                       src={message.imageDataUrl}
                       alt="Submitted canvas"
-                      className="mt-3 max-h-64 rounded-md border border-white/20 object-contain"
+                      className="mt-3 max-h-64 rounded-none border border-white/20 object-contain"
                     />
                   )}
                 </div>
@@ -492,7 +492,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         {isLoading && (
           <div className="flex items-start gap-2 justify-start">
             <HeliosAvatar size={28} />
-            <div className="bg-neutral-800 rounded-md px-4 py-2.5">
+            <div className="bg-neutral-800 rounded-none px-4 py-2.5">
               <div className="flex gap-1">
                 <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
                 <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />

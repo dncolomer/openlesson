@@ -89,7 +89,7 @@ export function ProbeSidebar({
               )}
               <button
                 onClick={onToggle}
-                className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center hover:bg-neutral-700 transition-colors"
+                className="w-8 h-8 rounded-none bg-neutral-800 flex items-center justify-center hover:bg-neutral-700 transition-colors"
               >
                 <CloseIcon />
               </button>

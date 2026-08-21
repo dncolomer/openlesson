@@ -47,7 +47,7 @@ export function WorkspaceSectionNav({
 
   const modeControl = modeToggle ? (
     <div
-      className="flex shrink-0 items-center gap-0.5 rounded-md border border-neutral-800 bg-neutral-950/80 p-0.5"
+      className="flex shrink-0 items-center gap-0.5 rounded-none border border-neutral-800 bg-neutral-950/80 p-0.5"
       data-workspace-mode-toggle
       role="group"
       aria-label="Workspace mode"
@@ -64,7 +64,7 @@ export function WorkspaceSectionNav({
             aria-pressed={active}
             aria-label={label}
             onClick={() => onInteractionModeChange?.(id)}
-            className={`rounded px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
+            className={`rounded-none px-2 py-1 text-[10px] font-medium uppercase tracking-wide transition ${
               active
                 ? "bg-white/15 text-white"
                 : "text-neutral-500 hover:text-neutral-300"
@@ -81,7 +81,7 @@ export function WorkspaceSectionNav({
     return (
       <div className="flex min-w-0 items-center gap-2">
         <nav
-          className="flex min-w-0 flex-1 gap-1 rounded-lg border border-neutral-800/60 bg-neutral-950/80 p-0.5"
+          className="flex min-w-0 flex-1 gap-1 rounded-none border border-neutral-800/60 bg-neutral-950/80 p-0.5"
           role="tablist"
           aria-label={navLabel}
         >
@@ -95,7 +95,7 @@ export function WorkspaceSectionNav({
                 aria-selected={isActive}
                 onClick={() => onChange(key)}
                 title={label}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-none px-2 py-2 text-xs font-medium transition-colors ${
                   isActive
                     ? "bg-neutral-800/90 text-white"
                     : "text-neutral-500 hover:bg-neutral-900/60 hover:text-neutral-300"

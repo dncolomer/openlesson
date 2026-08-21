@@ -277,7 +277,7 @@ export function ProjectionSpaceWidget({
   if (!bounds || !activeView) {
     return (
       <div
-        className="flex min-h-[28rem] h-full w-full flex-1 items-center justify-center rounded-xl border border-neutral-800 bg-neutral-950/60 text-xs text-neutral-500"
+        className="flex min-h-[28rem] h-full w-full flex-1 items-center justify-center rounded-none border border-neutral-800 bg-neutral-950/60 text-xs text-neutral-500"
         data-projection-widget
         data-projection-empty
       >
@@ -397,7 +397,7 @@ export function ProjectionSpaceWidget({
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5" data-projection-zoom-controls>
           <div
-            className="flex items-center gap-0.5 rounded-lg border border-neutral-700 bg-neutral-950 p-0.5"
+            className="flex items-center gap-0.5 rounded-none border border-neutral-700 bg-neutral-950 p-0.5"
             data-projection-display-toggle
             role="group"
             aria-label="Projection display mode"
@@ -405,7 +405,7 @@ export function ProjectionSpaceWidget({
             <button
               type="button"
               onClick={() => onDisplayModeChange?.("trajectory")}
-              className={`rounded-md px-2.5 py-1 text-[11px] transition ${
+              className={`rounded-none px-2.5 py-1 text-[11px] transition ${
                 displayMode === "trajectory"
                   ? "bg-neutral-800 text-white"
                   : "text-neutral-500 hover:text-neutral-300"
@@ -418,7 +418,7 @@ export function ProjectionSpaceWidget({
             <button
               type="button"
               onClick={() => onDisplayModeChange?.("latest")}
-              className={`rounded-md px-2.5 py-1 text-[11px] transition ${
+              className={`rounded-none px-2.5 py-1 text-[11px] transition ${
                 displayMode === "latest"
                   ? "bg-neutral-800 text-white"
                   : "text-neutral-500 hover:text-neutral-300"
@@ -432,7 +432,7 @@ export function ProjectionSpaceWidget({
           <button
             type="button"
             onClick={() => zoomBy(1.25)}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
+            className="rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
             data-projection-zoom-in
             aria-label="Zoom in"
           >
@@ -441,7 +441,7 @@ export function ProjectionSpaceWidget({
           <button
             type="button"
             onClick={() => zoomBy(0.8)}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
+            className="rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
             data-projection-zoom-out
             aria-label="Zoom out"
           >
@@ -450,7 +450,7 @@ export function ProjectionSpaceWidget({
           <button
             type="button"
             onClick={resetView}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
+            className="rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-200 transition hover:border-neutral-500"
             data-projection-reset
             aria-label="Reset view"
           >
@@ -471,7 +471,7 @@ export function ProjectionSpaceWidget({
       </div>
 
       <div
-        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-neutral-800"
+        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-none border border-neutral-800"
         style={{ backgroundColor: MAP_INFINITE_GRID.background }}
       >
         <svg
@@ -719,7 +719,7 @@ export function SectionCard({
     <section
       data-models-section={dataSection}
       data-section={dataSection}
-      className="w-full space-y-3 rounded-xl border border-neutral-800 bg-neutral-950/40 p-4"
+      className="w-full space-y-3 rounded-none border border-neutral-800 bg-neutral-950/40 p-4"
     >
       {hasHeader ? (
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -764,8 +764,8 @@ export function UserPicker({
   compact?: boolean;
 }) {
   const fieldClass = compact
-    ? "w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white"
-    : "w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white";
+    ? "w-full rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-white"
+    : "w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white";
 
   if (!canInspectOthers) {
     return (
@@ -864,7 +864,7 @@ export function EmbeddingsUserMultiPicker({
           <select
             value={selfKey}
             disabled
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
             aria-label={ariaLabel}
             data-models-user-select="embeddings"
           >
@@ -928,8 +928,8 @@ export function EmbeddingsUserMultiPicker({
       <ul
         className={
           fillHeight
-            ? "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
-            : "flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
+            ? "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-none border border-neutral-800 bg-neutral-950/50 p-1"
+            : "flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-none border border-neutral-800 bg-neutral-950/50 p-1"
         }
         role="group"
         aria-label={ariaLabel}
@@ -946,7 +946,7 @@ export function EmbeddingsUserMultiPicker({
             return (
               <li key={key}>
                 <label
-                  className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs transition ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-none px-1.5 py-1.5 text-xs transition ${
                     checked
                       ? "bg-neutral-800/80 text-white"
                       : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
@@ -956,7 +956,7 @@ export function EmbeddingsUserMultiPicker({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggle(key)}
-                    className="rounded border-neutral-500"
+                    className="rounded-none border-neutral-500"
                     data-embeddings-user-toggle={key}
                   />
                   <span

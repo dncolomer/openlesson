@@ -228,7 +228,7 @@ export function LearnerMapNotePostIt({
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className={`relative flex h-full min-h-0 flex-col rounded-md border border-neutral-300/90 bg-white text-neutral-900 shadow-[0_4px_16px_rgba(0,0,0,0.22)] ${
+        className={`relative flex h-full min-h-0 flex-col rounded-none border border-neutral-300/90 bg-white text-neutral-900 shadow-[0_4px_16px_rgba(0,0,0,0.22)] ${
           collapsed ? "px-1 py-1" : ""
         }`}
         data-learner-note-postit
@@ -245,7 +245,7 @@ export function LearnerMapNotePostIt({
             role="presentation"
             data-learner-note-drag-handle
             title={canDragResize ? "Drag to move" : "Note (fixed)"}
-            className={`flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 rounded border border-dashed px-1.5 py-1 ${
+            className={`flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 rounded-none border border-dashed px-1.5 py-1 ${
               canDragResize
                 ? "cursor-grab border-neutral-300 bg-neutral-50 active:cursor-grabbing active:border-neutral-400 active:bg-neutral-100"
                 : "cursor-default border-neutral-200 bg-neutral-50/80"
@@ -291,7 +291,7 @@ export function LearnerMapNotePostIt({
             title={collapsed ? "Expand note" : "Collapse note"}
             aria-expanded={!collapsed}
             onClick={() => onToggleCollapsed(note.id)}
-            className="shrink-0 self-center rounded border border-neutral-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-900"
+            className="shrink-0 self-center rounded-none border border-neutral-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-900"
           >
             {collapsed ? "▸" : "▾"}
           </button>
@@ -303,7 +303,7 @@ export function LearnerMapNotePostIt({
               title="Delete note"
               aria-label="Delete note"
               onClick={() => onDelete(note.id)}
-              className="shrink-0 self-center rounded border border-neutral-200 bg-white px-1.5 py-1 text-[11px] leading-none text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              className="shrink-0 self-center rounded-none border border-neutral-200 bg-white px-1.5 py-1 text-[11px] leading-none text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
             >
               ×
             </button>
@@ -337,7 +337,7 @@ export function LearnerMapNotePostIt({
                       commit();
                     }
                   }}
-                  className="h-full min-h-[3rem] w-full resize-none rounded border border-neutral-200 bg-neutral-50 px-1.5 py-1 text-[11px] leading-snug text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
+                  className="h-full min-h-[3rem] w-full resize-none rounded-none border border-neutral-200 bg-neutral-50 px-1.5 py-1 text-[11px] leading-snug text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
                   placeholder="Short note…"
                 />
               ) : (
@@ -369,7 +369,7 @@ export function LearnerMapNotePostIt({
                         setDraft(note.body);
                         setEditing(false);
                       }}
-                      className="rounded px-1.5 py-0.5 text-[10px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+                      className="rounded-none px-1.5 py-0.5 text-[10px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
                     >
                       Cancel
                     </button>
@@ -377,7 +377,7 @@ export function LearnerMapNotePostIt({
                       type="button"
                       data-learner-note-save
                       onClick={commit}
-                      className="rounded bg-neutral-900 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black"
+                      className="rounded-none bg-neutral-900 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black"
                     >
                       Save
                     </button>
@@ -390,7 +390,7 @@ export function LearnerMapNotePostIt({
                       setDraft(note.body);
                       setEditing(true);
                     }}
-                    className="w-full rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-medium text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100"
+                    className="w-full rounded-none border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-medium text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100"
                   >
                     Edit
                   </button>

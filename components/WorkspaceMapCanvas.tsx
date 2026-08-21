@@ -129,7 +129,7 @@ export function WorkspaceMapCanvas({
       data-workspace-map-canvas
       data-canvas-ready={ready ? "true" : "false"}
       data-canvas-editable={canEdit ? "true" : "false"}
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-neutral-800/80 bg-neutral-950"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/80 bg-neutral-950"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-800/70 px-2.5 py-1.5">
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">

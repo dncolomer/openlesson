@@ -173,7 +173,7 @@ export function WorkspaceDagsPanel({
         <div
           data-workspace-dag-edit
           data-workspace-dag-edit-id={editingId}
-          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-lg border border-white/10 bg-neutral-950/80 p-3"
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-none border border-white/10 bg-neutral-950/80 p-3"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -189,7 +189,7 @@ export function WorkspaceDagsPanel({
               type="button"
               data-workspace-dag-edit-cancel
               onClick={closeEdit}
-              className="shrink-0 rounded px-2 py-1 text-[10px] text-neutral-400 hover:text-white"
+              className="shrink-0 rounded-none px-2 py-1 text-[10px] text-neutral-400 hover:text-white"
             >
               Back
             </button>
@@ -212,7 +212,7 @@ export function WorkspaceDagsPanel({
 
           {editHasCycle ? (
             <p
-              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
+              className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
               data-dag-cycle-warning
             >
               Draft has a directed cycle. You can still save; prefer acyclic
@@ -226,7 +226,7 @@ export function WorkspaceDagsPanel({
               data-workspace-dag-edit-save
               disabled={busy || saving}
               onClick={() => void saveEdit()}
-              className="flex-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+              className="flex-1 rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
             >
               {saving ? "Saving…" : "Save"}
             </button>
@@ -235,7 +235,7 @@ export function WorkspaceDagsPanel({
               data-workspace-dag-edit-cancel-footer
               disabled={saving}
               onClick={closeEdit}
-              className="rounded-md border border-white/15 px-3 py-2 text-xs text-neutral-300 hover:bg-white/5"
+              className="rounded-none border border-white/15 px-3 py-2 text-xs text-neutral-300 hover:bg-white/5"
             >
               Cancel
             </button>
@@ -246,7 +246,7 @@ export function WorkspaceDagsPanel({
           {items.length === 0 ? (
             <div
               data-workspace-dags-empty
-              className="rounded-lg border border-dashed border-white/10 bg-neutral-950/50 px-4 py-8 text-center"
+              className="rounded-none border border-dashed border-white/10 bg-neutral-950/50 px-4 py-8 text-center"
             >
               <p className="text-xs text-neutral-300">No DAGs yet</p>
             </div>
@@ -263,7 +263,7 @@ export function WorkspaceDagsPanel({
                     key={item.id}
                     data-workspace-dag-row={item.id}
                     data-workspace-dag-card={item.id}
-                    className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition hover:border-white/20"
+                    className="flex flex-col overflow-hidden rounded-none border border-white/10 bg-neutral-950/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition hover:border-white/20"
                   >
                     <button
                       type="button"
@@ -305,7 +305,7 @@ export function WorkspaceDagsPanel({
                         data-workspace-dag-edit-open={item.id}
                         disabled={busy || item.blockCount < 2}
                         onClick={() => openEdit(item)}
-                        className="flex-1 rounded-md border border-white/15 bg-white/[0.06] px-2 py-1.5 text-[10px] font-medium text-neutral-100 hover:bg-white/10 disabled:opacity-40"
+                        className="flex-1 rounded-none border border-white/15 bg-white/[0.06] px-2 py-1.5 text-[10px] font-medium text-neutral-100 hover:bg-white/10 disabled:opacity-40"
                       >
                         Edit
                       </button>
@@ -316,7 +316,7 @@ export function WorkspaceDagsPanel({
                             data-workspace-dag-delete-confirm={item.id}
                             disabled={busy || deletingId === item.id}
                             onClick={() => void runDelete(item.id)}
-                            className="rounded-md border border-rose-500/40 bg-rose-500/15 px-2 py-1.5 text-[10px] font-medium text-rose-100 hover:bg-rose-500/25 disabled:opacity-40"
+                            className="rounded-none border border-rose-500/40 bg-rose-500/15 px-2 py-1.5 text-[10px] font-medium text-rose-100 hover:bg-rose-500/25 disabled:opacity-40"
                           >
                             {deletingId === item.id ? "…" : "Confirm"}
                           </button>
@@ -324,7 +324,7 @@ export function WorkspaceDagsPanel({
                             type="button"
                             data-workspace-dag-delete-cancel={item.id}
                             onClick={() => setConfirmDeleteId(null)}
-                            className="rounded-md px-2 py-1.5 text-[10px] text-neutral-400 hover:text-white"
+                            className="rounded-none px-2 py-1.5 text-[10px] text-neutral-400 hover:text-white"
                           >
                             Cancel
                           </button>
@@ -335,7 +335,7 @@ export function WorkspaceDagsPanel({
                           data-workspace-dag-delete={item.id}
                           disabled={busy || deletingId === item.id}
                           onClick={() => setConfirmDeleteId(item.id)}
-                          className="rounded-md border border-white/10 px-2 py-1.5 text-[10px] text-neutral-400 hover:border-white/20 hover:text-neutral-200 disabled:opacity-40"
+                          className="rounded-none border border-white/10 px-2 py-1.5 text-[10px] text-neutral-400 hover:border-white/20 hover:text-neutral-200 disabled:opacity-40"
                         >
                           Delete
                         </button>

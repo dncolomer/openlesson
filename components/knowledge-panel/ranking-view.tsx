@@ -49,7 +49,7 @@ export function KnowledgeRankingView({
           onClick={() => void loadRanking()}
           disabled={rankingLoading}
           data-ranking-refresh
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
         >
           {rankingLoading ? "Refreshing…" : "Refresh"}
         </button>
@@ -57,7 +57,7 @@ export function KnowledgeRankingView({
 
       {rankingError ? (
         <div
-          className="shrink-0 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300"
+          className="shrink-0 rounded-none border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300"
           data-ranking-error
         >
           {rankingError}
@@ -70,7 +70,7 @@ export function KnowledgeRankingView({
         </p>
       ) : rankingCards.length === 0 ? (
         <div
-          className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
+          className="rounded-none border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
           data-ranking-empty
         >
           <p className="text-sm font-medium text-neutral-200">No subjects yet</p>
@@ -98,7 +98,7 @@ export function KnowledgeRankingView({
                     <button
                       type="button"
                       onClick={() => setSelectedRankingKey(card.subjectKey)}
-                      className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                      className={`w-full rounded-none border px-3 py-2.5 text-left transition ${
                         selected
                           ? "border-neutral-700/70 bg-neutral-950/30 ring-1 ring-neutral-800/40"
                           : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600 hover:bg-neutral-900/60"
@@ -155,7 +155,7 @@ export function KnowledgeRankingView({
           </aside>
 
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-xl border border-neutral-800/90 bg-neutral-950/50"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-none border border-neutral-800/90 bg-neutral-950/50"
             data-ranking-detail
             data-ranking-detail-subject={selectedRankingCard?.subjectKey ?? ""}
           >
@@ -174,7 +174,7 @@ export function KnowledgeRankingView({
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
+                    <div className="rounded-none border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
                       <p className="text-[10px] uppercase tracking-wide text-neutral-300/80">
                         Snapshot
                       </p>
@@ -182,7 +182,7 @@ export function KnowledgeRankingView({
                         {formatRankingScore(selectedRankingCard.snapshotScore)}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
+                    <div className="rounded-none border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
                       <p className="text-[10px] uppercase tracking-wide text-neutral-300/80">
                         GHC
                       </p>
@@ -195,7 +195,7 @@ export function KnowledgeRankingView({
 
                 {!selectedRankingCard.hasSnapshot || !selectedRankingReport ? (
                   <div
-                    className="rounded-lg border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500"
+                    className="rounded-none border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500"
                     data-ranking-detail-empty
                   >
                     {selectedRankingCard.hasSnapshot
@@ -205,7 +205,7 @@ export function KnowledgeRankingView({
                 ) : (
                   <>
                     <div
-                      className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-4"
+                      className="rounded-none border border-neutral-800 bg-black/20 px-3 py-4"
                       data-ranking-detail-spider
                     >
                       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
@@ -271,7 +271,7 @@ export function KnowledgeRankingView({
                               {gapAnalysis.gaps.map((gap) => (
                                 <li
                                   key={gap.title}
-                                  className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
+                                  className="rounded-none border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
                                   data-ranking-gap={gap.title}
                                 >
                                   <div className="font-medium text-neutral-200">{gap.title}</div>

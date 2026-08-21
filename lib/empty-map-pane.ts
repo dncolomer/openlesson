@@ -31,6 +31,7 @@ import {
   placedBlockCells,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
+import { createMapFogLookup } from "@/lib/map-fog-of-war";
 
 export type EmptyMapBlock = {
   id: string;
@@ -315,13 +316,25 @@ export function suggestEmptySpotsForTopic(input: {
     }
   }
 
-  return collectPlaceableEmptyNearSeeds({
+  const limit = resolveSuggestSpotLimit(input.limit);
+  // Search past occupancy fog so suggested empties can land in fogged rings
+  // (extra-reveal then makes those cells fully visible).
+  const pool = collectPlaceableEmptyNearSeeds({
     seeds,
     occupiedKeys: occupied,
     unusableKeys: unusable,
-    radius: matchIds.size > 0 ? 3 : 2,
-    limit: input.limit ?? 8,
+    radius: matchIds.size > 0 ? 6 : 5,
+    limit: 48,
   });
+  const fogLookup = createMapFogLookup({ occupiedKeys: occupied });
+  const fogged: EmptyMapCell[] = [];
+  const lit: EmptyMapCell[] = [];
+  for (const c of pool) {
+    if (fogLookup(c.row, c.col).fullyVisible) lit.push(c);
+    else fogged.push(c);
+  }
+  const preferred = fogged.length > 0 ? fogged : lit;
+  return preferred.slice(0, limit);
 }
 
 /**

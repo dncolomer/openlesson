@@ -48,7 +48,7 @@ export function AestheticPicker({
                 type="button"
                 onClick={() => onSelect(pkg.id)}
                 disabled={disabled}
-                className={`group overflow-hidden rounded-xl border bg-neutral-950 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`group overflow-hidden rounded-none border bg-neutral-950 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   selected
                     ? "border-neutral-200 ring-1 ring-neutral-200/40"
                     : "border-neutral-800 hover:border-neutral-600"
@@ -75,7 +75,7 @@ export function AestheticPicker({
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2.5 text-xs text-neutral-500">
+        <div className="rounded-none border border-neutral-800 bg-neutral-900 px-3 py-2.5 text-xs text-neutral-500">
           {loading ? t("session.aestheticsLoading") : t("session.noAestheticsFound")}
         </div>
       )}

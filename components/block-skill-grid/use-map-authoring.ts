@@ -45,6 +45,10 @@ import {
 } from "@/lib/workspace-map-selection";
 import { resolveClonePasteTarget } from "@/lib/clone-block";
 import {
+  canBuildOnFogVisibleEmpty,
+  type MapFogLookup,
+} from "@/lib/map-fog-of-war";
+import {
   footprintFromCells,
   normalizeSpan,
   parseShapeCells,
@@ -87,6 +91,7 @@ export function useMapAuthoring(input: {
   activeToolRef: { current: BlockMapModeTool };
   nodesById: Map<string, SkillGridNode>;
   occupancy: Map<string, string>;
+  fogLookup: MapFogLookup;
   placements: Map<string, GridCell>;
   spans: Map<string, { span_w: number; span_h: number }>;
   busy: boolean;
@@ -212,6 +217,7 @@ export function useMapAuthoring(input: {
     activeToolRef,
     nodesById,
     occupancy,
+    fogLookup,
     placements,
     spans,
     busy,
@@ -667,6 +673,14 @@ export function useMapAuthoring(input: {
       if (selectiveExplanationActiveRef.current) return;
 
       const isUnusable = unusableKeys.has(`${cell.row}:${cell.col}`);
+      // Fade / black fog empties cannot be used to add, clone, or generator-pick.
+      // Pan and explore-click are handled above / in pointer-down, not here.
+      if (
+        !isUnusable &&
+        !canBuildOnFogVisibleEmpty(fogLookup(cell.row, cell.col))
+      ) {
+        return;
+      }
 
       // Generator pick: toggle empty (placeable) cells only; keep block focus.
       if (generatorPickActive && onGeneratorEmptyToggle && !isUnusable) {
@@ -721,6 +735,7 @@ export function useMapAuthoring(input: {
       cloneSourceBlockId,
       generatorPickActive,
       occupancy,
+      fogLookup,
       onClonePaste,
       onGeneratorEmptyToggle,
       selectedNodeId,

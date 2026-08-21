@@ -174,7 +174,7 @@ export function AudioPlayer({ audioBlob }: AudioPlayerProps) {
 
       <canvas
         ref={canvasRef}
-        className="w-full h-12 rounded-lg"
+        className="w-full h-12 rounded-none"
       />
     </div>
   );

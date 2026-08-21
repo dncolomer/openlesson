@@ -30,7 +30,7 @@ export function WorkspaceMobilePlanAside({
           <h1 className="text-lg font-semibold leading-snug text-white">{plan.title || plan.root_topic}</h1>
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {plan.is_public && (
-              <span className="rounded border border-green-500/25 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-green-400/90">
+              <span className="rounded-none border border-green-500/25 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-green-400/90">
                 {t("planView.public")}
               </span>
             )}
@@ -55,7 +55,7 @@ export function WorkspaceMobilePlanAside({
                 <button
                   type="button"
                   onClick={() => selectSection("settings")}
-                  className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
+                  className="w-full rounded-none border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
                 >
                   <span className="block text-xs font-medium text-white">{t("planView.productProofOfWorkApi")}</span>
                   <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productProofOfWorkApiHint")}</span>
@@ -63,7 +63,7 @@ export function WorkspaceMobilePlanAside({
               ) : (
                 <Link
                   href="/docs/proof-of-work-api"
-                  className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
+                  className="w-full rounded-none border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
                 >
                   <span className="block text-xs font-medium text-white">{t("planView.productProofOfWorkApi")}</span>
                   <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productProofOfWorkApiHint")}</span>
@@ -73,18 +73,18 @@ export function WorkspaceMobilePlanAside({
               <button
                 type="button"
                 onClick={onOpenSessions}
-                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
+                className="w-full rounded-none border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
               >
                 <span className="block text-xs font-medium text-white">{t("planView.productIle")}</span>
                 <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productIleHint")}</span>
               </button>
               <div
-                className="w-full rounded-md border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-left opacity-80"
+                className="w-full rounded-none border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-left opacity-80"
                 aria-disabled="true"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-neutral-400">{t("planView.productAle")}</span>
-                  <span className="rounded-sm border border-neutral-500/20 bg-neutral-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-neutral-300/90">
+                  <span className="rounded-none border border-neutral-500/20 bg-neutral-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-neutral-300/90">
                     {t("planView.productUpcoming")}
                   </span>
                 </div>
@@ -98,13 +98,13 @@ export function WorkspaceMobilePlanAside({
               <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionShare")}</p>
               <button
                 onClick={onShare}
-                className="w-full rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70 transition-all hover:bg-white/15 hover:text-white"
+                className="w-full rounded-none border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70 transition-all hover:bg-white/15 hover:text-white"
               >
                 {copied ? t("planView.copied") : t("planView.share")}
               </button>
               <Link
                 href="/map-of-knowledge"
-                className="block w-full rounded-md border border-neutral-600/20 bg-neutral-950/20 px-3 py-2 text-center text-xs text-neutral-300/90 transition-all hover:bg-neutral-950/40"
+                className="block w-full rounded-none border border-neutral-600/20 bg-neutral-950/20 px-3 py-2 text-center text-xs text-neutral-300/90 transition-all hover:bg-neutral-950/40"
               >
                 Map of Knowledge
               </Link>
@@ -117,7 +117,7 @@ export function WorkspaceMobilePlanAside({
               <button
                 type="button"
                 onClick={() => selectSection("settings")}
-                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-neutral-300 transition-all hover:bg-white/10 hover:text-white"
+                className="w-full rounded-none border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-neutral-300 transition-all hover:bg-white/10 hover:text-white"
               >
                 {t("planView.sectionSetting")} — {t("planView.sectionAccess")}
               </button>

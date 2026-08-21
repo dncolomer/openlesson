@@ -59,7 +59,7 @@ export function BrainStateBar({ powers, isConnected }: BrainStateBarProps) {
 
       {/* Tooltip */}
       {showTooltip && (
-        <div className="absolute bottom-full left-0 mb-2 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-xs z-20 w-48">
+        <div className="absolute bottom-full left-0 mb-2 bg-neutral-800 border border-neutral-700 rounded-none p-3 text-xs z-20 w-48">
           <div className="space-y-1">
             <div className="flex justify-between">
               <span className="text-neutral-300">{t('brainState.theta')}</span>

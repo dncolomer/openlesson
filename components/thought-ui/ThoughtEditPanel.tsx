@@ -32,7 +32,7 @@ export function ThoughtEditPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="thought-edit-title"
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+        className="relative z-10 w-full max-w-lg rounded-none border border-neutral-800 bg-neutral-950 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
       >
         <p id="thought-edit-title" className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-500">
           Edit transcription
@@ -47,7 +47,7 @@ export function ThoughtEditPanel({
             }
           }}
           rows={6}
-          className="w-full resize-y rounded-lg border border-neutral-800 bg-black px-3 py-2 text-sm leading-relaxed text-neutral-100 outline-none transition focus:border-neutral-600"
+          className="w-full resize-y rounded-none border border-neutral-800 bg-black px-3 py-2 text-sm leading-relaxed text-neutral-100 outline-none transition focus:border-neutral-600"
           placeholder="Refine your transcription before sending to Helios..."
           autoFocus
         />

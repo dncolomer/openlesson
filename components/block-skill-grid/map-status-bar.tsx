@@ -39,7 +39,7 @@ export function MapStatusBar({
   if (!canEdit) return null;
   return (
     <div
-      className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500"
+      className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-none border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500"
       data-map-status-bar
       data-prereq-edit-active={prereqEdit.active ? "true" : undefined}
     >

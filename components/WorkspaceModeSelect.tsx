@@ -280,13 +280,13 @@ export function PlanModeSelect({
             onKeyDown={handleKeyDown}
             placeholder={displayPlaceholder}
             rows={3}
-            className={`w-full h-28 px-4 pt-3.5 pb-14 pr-32 border rounded-2xl text-white text-[15px] focus:outline-none resize-none transition-colors ${styles.textarea}`}
+            className={`w-full h-28 px-4 pt-3.5 pb-14 pr-32 border rounded-none text-white text-[15px] focus:outline-none resize-none transition-colors ${styles.textarea}`}
             disabled={isGenerating}
           />
           <button
             onClick={handleGeneratePlan}
             disabled={isGenerateDisabled}
-            className={`absolute right-4 bottom-4 px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center gap-2 ${styles.button} ${styles.buttonDisabled}`}
+            className={`absolute right-4 bottom-4 px-4 py-2 text-sm font-medium rounded-none transition-colors flex items-center gap-2 ${styles.button} ${styles.buttonDisabled}`}
           >
             {isGenerating ? (
               <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -306,7 +306,7 @@ export function PlanModeSelect({
         <div className="mt-3 space-y-2">
           <button
             onClick={() => setShowFileZone(!showFileZone)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-none transition-colors ${
               attachedFiles.length > 0
                 ? "text-neutral-300 border-neutral-600/40 bg-neutral-800/10"
                 : styles.topicPill
@@ -360,7 +360,7 @@ export function PlanModeSelect({
                 type="button"
                 onClick={() => setInitialChapters(level)}
                 disabled={isGenerating}
-                className={`rounded-xl border px-2.5 py-2.5 text-left transition-colors disabled:opacity-50 ${
+                className={`rounded-none border px-2.5 py-2.5 text-left transition-colors disabled:opacity-50 ${
                   selected ? styles.weekActive : styles.weekInactive
                 }`}
               >
@@ -382,7 +382,7 @@ export function PlanModeSelect({
             <button
               key={option.value}
               onClick={() => setWeeks(option.value)}
-              className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-none border transition-colors ${
                 weeks === option.value
                   ? styles.weekActive
                   : styles.weekInactive

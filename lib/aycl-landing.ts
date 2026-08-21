@@ -193,7 +193,7 @@ export function assembleAyclLandingSummary(input: {
     map: {
       viewOnly: true,
       canEdit: false,
-      learnerMode: false,
+      learnerMode: true,
       nodes,
     },
     paths: {

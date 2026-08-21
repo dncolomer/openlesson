@@ -62,7 +62,7 @@ export function MapMinimapChrome({
       data-minimap-block-count={totalBlocks}
       data-minimap-tile-count={tiles.length}
       data-minimap-empty={tiles.length === 0 ? "true" : "false"}
-      className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-md border border-neutral-700/90 bg-neutral-950/95 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+      className="pointer-events-auto absolute right-2 top-2 z-20 overflow-hidden rounded-none border border-neutral-700/90 bg-neutral-950/95 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{ width: MINIMAP_FRAME_WIDTH, height: MINIMAP_FRAME_HEIGHT }}
       onPointerDown={(e) => e.stopPropagation()}
       title={

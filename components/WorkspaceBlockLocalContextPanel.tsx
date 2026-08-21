@@ -200,7 +200,7 @@ export function WorkspaceBlockLocalContextPanel({
       {/* Always show what is already attached (create-time + later edits). */}
       <div
         data-block-local-attached
-        className="space-y-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2"
+        className="space-y-1.5 rounded-none border border-white/10 bg-white/[0.03] px-2.5 py-2"
       >
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
           Already attached
@@ -232,7 +232,7 @@ export function WorkspaceBlockLocalContextPanel({
                     <span
                       key={name}
                       data-attached-file={name}
-                      className="rounded border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-neutral-200"
+                      className="rounded-none border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] text-neutral-200"
                     >
                       {name}
                     </span>
@@ -250,7 +250,7 @@ export function WorkspaceBlockLocalContextPanel({
                     <li
                       key={f.name}
                       data-attached-external={f.name}
-                      className="rounded border border-white/10 bg-neutral-900/60 px-1.5 py-1"
+                      className="rounded-none border border-white/10 bg-neutral-900/60 px-1.5 py-1"
                     >
                       <span className="block truncate font-medium text-neutral-200">
                         {f.name.replace(/^\[external\]\s*/i, "")}
@@ -286,7 +286,7 @@ export function WorkspaceBlockLocalContextPanel({
                     <li
                       key={f.name}
                       data-attached-local-file={f.name}
-                      className="rounded border border-white/10 bg-neutral-900/60 px-1.5 py-1"
+                      className="rounded-none border border-white/10 bg-neutral-900/60 px-1.5 py-1"
                     >
                       <span className="block truncate font-medium text-neutral-200">
                         {f.name}
@@ -317,7 +317,7 @@ export function WorkspaceBlockLocalContextPanel({
               value={localNotes}
               onChange={(e) => setLocalNotes(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
+              className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
               placeholder="Notes only this block should feed into prompts…"
             />
           </label>
@@ -327,7 +327,7 @@ export function WorkspaceBlockLocalContextPanel({
               <p className="text-[11px] text-neutral-500">
                 Reference workspace files (from global Context)
               </p>
-              <div className="max-h-28 space-y-1 overflow-y-auto rounded-md border border-neutral-800 p-2">
+              <div className="max-h-28 space-y-1 overflow-y-auto rounded-none border border-neutral-800 p-2">
                 {fileNames.map((name) => (
                   <label
                     key={name}
@@ -378,13 +378,13 @@ export function WorkspaceBlockLocalContextPanel({
                 value={localFileName}
                 onChange={(e) => setLocalFileName(e.target.value)}
                 placeholder="snippet.md"
-                className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
+                className="flex-1 rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
               />
               <button
                 type="button"
                 data-local-file-add
                 onClick={addLocalFile}
-                className="rounded-md border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs text-white"
+                className="rounded-none border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs text-white"
               >
                 Add
               </button>
@@ -395,7 +395,7 @@ export function WorkspaceBlockLocalContextPanel({
               onChange={(e) => setLocalFileExcerpt(e.target.value)}
               rows={2}
               placeholder="Optional excerpt substance…"
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
+              className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200"
             />
             {localFiles.length > 0 ? (
               <ul className="space-y-1 text-[11px] text-neutral-400">
@@ -446,7 +446,7 @@ export function WorkspaceBlockLocalContextPanel({
             data-block-local-save
             disabled={saving || busy || !dirty || !onSaveLocalContext}
             onClick={() => void save()}
-            className="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-none border border-white/20 bg-white/10 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving
               ? "Saving…"

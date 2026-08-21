@@ -240,7 +240,7 @@ export function SessionItem({
   };
 
   const detailButtonClass =
-    "w-full rounded-md px-3 py-2 text-xs font-medium transition-colors disabled:opacity-40";
+    "w-full rounded-none px-3 py-2 text-xs font-medium transition-colors disabled:opacity-40";
   const actionButtons = !isLocked && isOwner && (
     <div className={`flex gap-1.5 ${isDetail ? "w-[10.5rem] shrink-0 flex-col" : "pt-0.5"}`}>
       {isCompleted ? (
@@ -253,7 +253,7 @@ export function SessionItem({
           className={
             isDetail
               ? `${detailButtonClass} bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400`
-              : "min-w-0 flex-1 rounded-md bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
+              : "min-w-0 flex-1 rounded-none bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
           }
         >
           {isStarting ? t("sessionItem.starting") : "Run again"}
@@ -268,7 +268,7 @@ export function SessionItem({
           className={
             isDetail
               ? `${detailButtonClass} bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400`
-              : "min-w-0 flex-1 rounded-md bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
+              : "min-w-0 flex-1 rounded-none bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
           }
         >
           {isStarting
@@ -284,7 +284,7 @@ export function SessionItem({
           className={
             isDetail
               ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
-              : "shrink-0 rounded-md border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
+              : "shrink-0 rounded-none border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
           }
           title="Start Drill · Dialog"
           data-session-item-drill-dialog
@@ -296,7 +296,7 @@ export function SessionItem({
   );
 
   const promptSection = isOwner && (
-    <div className={isDetail ? "min-w-0 flex-1 rounded-md border border-neutral-800/70 bg-black/25 p-2.5" : ""}>
+    <div className={isDetail ? "min-w-0 flex-1 rounded-none border border-neutral-800/70 bg-black/25 p-2.5" : ""}>
       {!isDetail && (
         <button
           onClick={(e) => {
@@ -329,7 +329,7 @@ export function SessionItem({
           onChange={(e) => setEditedPlanningPrompt(e.target.value)}
           onBlur={savePlanningPrompt}
           placeholder={t("sessionItem.customInstructions")}
-          className={`w-full resize-none rounded-lg border bg-neutral-950/70 text-white placeholder:text-neutral-600 focus:outline-none ${
+          className={`w-full resize-none rounded-none border bg-neutral-950/70 text-white placeholder:text-neutral-600 focus:outline-none ${
             isDetail
               ? "border-neutral-700/60 px-2.5 py-2 text-xs leading-relaxed focus:border-neutral-500"
               : "mt-1.5 border-neutral-700/50 px-2.5 py-1.5 text-xs focus:border-neutral-600"
@@ -366,7 +366,7 @@ export function SessionItem({
           onChange={(e) => setEditedPlanningPrompt(e.target.value)}
           onBlur={savePlanningPrompt}
           placeholder={t("sessionItem.customInstructions")}
-          className="w-full resize-none rounded border border-neutral-700/60 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+          className="w-full resize-none rounded-none border border-neutral-700/60 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
           rows={3}
         />
       </div>
@@ -436,7 +436,7 @@ export function SessionItem({
   return (
     <div
       id={`session-item-${node.id}`}
-      className={`rounded-md transition-all duration-200 ${
+      className={`rounded-none transition-all duration-200 ${
         highlighted ? "ring-1 ring-neutral-300/40" : ""
       } ${
         isExpanded

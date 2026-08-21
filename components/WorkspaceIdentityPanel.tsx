@@ -35,17 +35,17 @@ export function WorkspaceIdentityPanel({
   const showShare = Boolean(plan.is_public);
 
   const iconButtonClass =
-    "flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white";
+    "flex h-7 w-7 items-center justify-center rounded-none border border-white/10 bg-white/5 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white";
 
   const badges = (
     <>
       {plan.is_public && (
-        <span className="rounded border border-green-500/25 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-green-400/90">
+        <span className="rounded-none border border-green-500/25 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-green-400/90">
           {t("planView.public")}
         </span>
       )}
       {plan.is_all_you_can_learn && (
-        <span className="rounded border border-neutral-600/25 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300/90">
+        <span className="rounded-none border border-neutral-600/25 bg-neutral-800/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300/90">
           Paid
         </span>
       )}

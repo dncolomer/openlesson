@@ -113,7 +113,7 @@ export function WorkspaceResourcesPanel({ workspaceId }: WorkspaceResourcesPanel
                 key={file.id}
                 onClick={() => handleDownload(file)}
                 disabled={downloadingId === file.id}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left hover:bg-neutral-800/60 transition-colors group disabled:opacity-60"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-none text-left hover:bg-neutral-800/60 transition-colors group disabled:opacity-60"
               >
                 <FileTypeIcon mimeType={file.mime_type} />
                 <div className="flex-1 min-w-0">

@@ -194,7 +194,7 @@ export function InsightsDashboardTab({
 
   if (loading) {
     return (
-      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 px-6 py-12 flex items-center justify-center">
+      <div className="rounded-none border border-neutral-800 bg-neutral-950/75 px-6 py-12 flex items-center justify-center">
         <LoadingStatusMessage tone="subtle" message="Loading insights" />
       </div>
     );
@@ -202,7 +202,7 @@ export function InsightsDashboardTab({
 
   if (error) {
     return (
-      <div className="rounded-md border border-red-900/50 bg-red-950/20 px-6 py-12 text-center text-sm text-red-300">
+      <div className="rounded-none border border-red-900/50 bg-red-950/20 px-6 py-12 text-center text-sm text-red-300">
         {error}
       </div>
     );
@@ -249,7 +249,7 @@ export function InsightsDashboardTab({
                 type="button"
                 disabled={loadingThoughts || suggesting || thoughts.length < 2}
                 onClick={() => void suggestInsights()}
-                className="rounded-md border border-neutral-800/80 bg-neutral-950/40 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/70 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-none border border-neutral-800/80 bg-neutral-950/40 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:border-white/60 hover:bg-neutral-950/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {suggesting
                   ? "Generating suggestions…"
@@ -280,7 +280,7 @@ export function InsightsDashboardTab({
       </div>
 
       {scoped && lastInsightUrl ? (
-        <div className="rounded-md border border-neutral-600/25 bg-neutral-800/10 px-4 py-3 text-xs text-neutral-200">
+        <div className="rounded-none border border-neutral-600/25 bg-neutral-800/10 px-4 py-3 text-xs text-neutral-200">
           Insight bookmarked.{" "}
           <Link href={lastInsightUrl} className="underline underline-offset-2 hover:text-white">
             View now
@@ -289,7 +289,7 @@ export function InsightsDashboardTab({
       ) : null}
 
       {scoped && actionError ? (
-        <div className="rounded-md border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-xs text-neutral-200">
+        <div className="rounded-none border border-neutral-800/40 bg-neutral-950/20 px-4 py-3 text-xs text-neutral-200">
           {actionError}
         </div>
       ) : null}
@@ -304,7 +304,7 @@ export function InsightsDashboardTab({
               return (
                 <div
                   key={key}
-                  className="rounded-md border border-neutral-600/20 bg-neutral-800/5 p-4 transition hover:border-neutral-600/35"
+                  className="rounded-none border border-neutral-600/20 bg-neutral-800/5 p-4 transition hover:border-neutral-600/35"
                 >
                   <h3 className="text-base font-medium leading-snug text-neutral-100">{suggestion.title}</h3>
                   <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-neutral-400">{suggestion.summary}</p>
@@ -316,7 +316,7 @@ export function InsightsDashboardTab({
                       type="button"
                       disabled={Boolean(bookmarkingKey)}
                       onClick={() => void bookmarkSuggestion(suggestion, index)}
-                      className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition hover:border-neutral-500 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-none border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition hover:border-neutral-500 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isBookmarking ? "Bookmarking…" : "Bookmark insight"}
                     </button>
@@ -329,7 +329,7 @@ export function InsightsDashboardTab({
       ) : null}
 
       {sortedInsights.length === 0 ? (
-        <div className="rounded-md border border-dashed border-neutral-800 px-6 py-12 text-center">
+        <div className="rounded-none border border-dashed border-neutral-800 px-6 py-12 text-center">
           <p className="text-sm text-neutral-500">No insights yet.</p>
           <p className="mt-2 text-xs text-neutral-600">
             {scoped
@@ -346,7 +346,7 @@ export function InsightsDashboardTab({
             return (
               <div
                 key={insight.id}
-                className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 transition hover:border-neutral-700 hover:bg-neutral-900/80"
+                className="group overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/75 transition hover:border-neutral-700 hover:bg-neutral-900/80"
               >
                 <Link href={insightPublicPath(insight)} className="block">
                   <div className={compact ? "relative h-28 bg-neutral-900" : "relative h-40 bg-neutral-900"}>

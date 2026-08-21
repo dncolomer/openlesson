@@ -126,7 +126,7 @@ export function WorkspacePromptContextAlternatives({
             setSuggestions([]);
             setError(null);
           }}
-          className={`rounded-md border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
+          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
             mode === "adhoc"
               ? "border-white/40 bg-white/10 text-white"
               : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
@@ -140,7 +140,7 @@ export function WorkspacePromptContextAlternatives({
           data-suggest-from-knowledge
           disabled={disabled || !workspaceId || busy}
           onClick={() => void runSuggest("knowledge")}
-          className={`rounded-md border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
+          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
             mode === "knowledge"
               ? "border-white/40 bg-white/10 text-white"
               : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
@@ -156,7 +156,7 @@ export function WorkspacePromptContextAlternatives({
           data-suggest-from-simulation
           disabled={disabled || !workspaceId || busy}
           onClick={() => void runSuggest("simulation")}
-          className={`rounded-md border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
+          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
             mode === "simulation"
               ? "border-white/40 bg-white/10 text-white"
               : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
@@ -186,7 +186,7 @@ export function WorkspacePromptContextAlternatives({
             placeholder={adhocPlaceholder}
             data-prompt-context-adhoc-input
             {...(adhocInputDataAttr ? { [adhocInputDataAttr]: true } : {})}
-            className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           />
         </label>
       ) : null}
@@ -214,7 +214,7 @@ export function WorkspacePromptContextAlternatives({
                   onAdhocChange(s.prompt);
                   onModeChange("adhoc");
                 }}
-                className="w-full rounded-md border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left transition hover:border-neutral-500 hover:bg-neutral-800 disabled:opacity-40"
+                className="w-full rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left transition hover:border-neutral-500 hover:bg-neutral-800 disabled:opacity-40"
               >
                 <span className="block text-[11px] font-medium text-neutral-100">
                   {s.label}

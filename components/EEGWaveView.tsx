@@ -148,7 +148,7 @@ export function EEGWaveView({
   const totalHeight = channels.length * traceHeight;
 
   return (
-    <div className="rounded-lg overflow-hidden">
+    <div className="rounded-none overflow-hidden">
       <canvas
         ref={canvasRef}
         className="w-full"

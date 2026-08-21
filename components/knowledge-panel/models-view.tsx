@@ -113,7 +113,7 @@ export function KnowledgeModelsView({
                       aria-label="Projection algorithm (2D Local, 3D volume, and Global Map)"
                       data-projection-algorithm-select
                       data-map-3d-projection-select
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
+                      className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
                     >
                       {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
                         <option key={opt.id} value={opt.id} title={opt.description}>
@@ -178,7 +178,7 @@ export function KnowledgeModelsView({
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <div
-                    className="inline-flex rounded-md border border-neutral-700 p-0.5"
+                    className="inline-flex rounded-none border border-neutral-700 p-0.5"
                     role="group"
                     aria-label="Knowledge map scope"
                     data-knowledge-map-scope-toggle
@@ -186,7 +186,7 @@ export function KnowledgeModelsView({
                     <button
                       type="button"
                       onClick={() => setKnowledgeMapScope("local")}
-                      className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                      className={`rounded-none px-2 py-1 font-mono text-[10px] tracking-wide transition ${
                         knowledgeMapScope === "local"
                           ? "bg-white/10 text-white"
                           : "text-neutral-500 hover:text-neutral-300"
@@ -199,7 +199,7 @@ export function KnowledgeModelsView({
                     <button
                       type="button"
                       onClick={() => setKnowledgeMapScope("global")}
-                      className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                      className={`rounded-none px-2 py-1 font-mono text-[10px] tracking-wide transition ${
                         knowledgeMapScope === "global"
                           ? "bg-white/10 text-white"
                           : "text-neutral-500 hover:text-neutral-300"
@@ -212,7 +212,7 @@ export function KnowledgeModelsView({
                   </div>
                   {knowledgeMapScope === "global" ? (
                     <div
-                      className="inline-flex rounded-md border border-neutral-700 p-0.5"
+                      className="inline-flex rounded-none border border-neutral-700 p-0.5"
                       role="group"
                       aria-label="Global Map view mode"
                       data-knowledge-global-view-mode-toggle
@@ -221,7 +221,7 @@ export function KnowledgeModelsView({
                       <button
                         type="button"
                         onClick={() => setKnowledgeGlobalViewMode("2d")}
-                        className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                        className={`rounded-none px-2 py-1 font-mono text-[10px] tracking-wide transition ${
                           knowledgeGlobalViewMode === "2d"
                             ? "bg-white/10 text-white"
                             : "text-neutral-500 hover:text-neutral-300"
@@ -235,7 +235,7 @@ export function KnowledgeModelsView({
                       <button
                         type="button"
                         onClick={() => setKnowledgeGlobalViewMode("3d")}
-                        className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                        className={`rounded-none px-2 py-1 font-mono text-[10px] tracking-wide transition ${
                           knowledgeGlobalViewMode === "3d"
                             ? "bg-white/10 text-white"
                             : "text-neutral-500 hover:text-neutral-300"
@@ -292,7 +292,7 @@ export function KnowledgeModelsView({
                         ? "Exit browser fullscreen embedding visual"
                         : "Enter browser fullscreen embedding visual"
                     }
-                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                   >
                     {embeddingsFullscreen ? (
                       <>
@@ -327,7 +327,7 @@ export function KnowledgeModelsView({
                     onClick={() => void loadEmbeddings()}
                     disabled={embLoading}
                     data-embeddings-refresh
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
                   >
                     <svg
                       className={`h-3 w-3 ${embLoading ? "animate-spin" : ""}`}
@@ -355,7 +355,7 @@ export function KnowledgeModelsView({
               </div>
 
               {embError ? (
-                <div className="shrink-0 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+                <div className="shrink-0 rounded-none border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
                   {embError}
                 </div>
               ) : null}
@@ -369,7 +369,7 @@ export function KnowledgeModelsView({
                 </div>
               ) : knowledgeMapScope === "global" ? (
                 <div
-                  className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-neutral-800"
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border border-neutral-800"
                   data-knowledge-global-map
                   data-embeddings-fullscreen-scope={embeddingsFullscreen ? "true" : "false"}
                 >
@@ -477,7 +477,7 @@ export function KnowledgeModelsView({
                 data-region-overlay-picker
                 data-map-region-workspace-groups
                 aria-label="Knowledge regions multi-select"
-                className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70"
+                className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/70"
               >
                 <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-800 px-2.5 py-2">
                   <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
@@ -532,7 +532,7 @@ export function KnowledgeModelsView({
                       return (
                         <ul className="space-y-2" data-region-overlay-list>
                           <li
-                            className={`rounded-sm border bg-black/20 ${
+                            className={`rounded-none border bg-black/20 ${
                               hasSelection ? "border-zinc-500/80" : "border-zinc-800/90"
                             }`}
                             data-map-region-workspace-group
@@ -629,7 +629,7 @@ export function KnowledgeModelsView({
                                         type="button"
                                         disabled={!hasCentroid}
                                         onClick={() => toggleRegionOverlay(r.id)}
-                                        className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
+                                        className={`flex w-full items-start gap-2 rounded-none border px-2.5 py-2 text-left text-xs transition ${
                                           checked
                                             ? "border-neutral-600/25 bg-neutral-950/20 text-zinc-200"
                                             : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
@@ -639,7 +639,7 @@ export function KnowledgeModelsView({
                                         aria-pressed={checked}
                                       >
                                         <span
-                                          className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
+                                          className={`mt-0.5 h-3 w-3 shrink-0 rounded-none border ${
                                             checked
                                               ? "border-white/60 bg-neutral-800/80"
                                               : "border-zinc-600"
@@ -701,7 +701,7 @@ export function KnowledgeModelsView({
                         return (
                           <li
                             key={overlay.id}
-                            className="rounded-md bg-neutral-900/70 px-2 py-1.5 text-[10px]"
+                            className="rounded-none bg-neutral-900/70 px-2 py-1.5 text-[10px]"
                             data-knowledge-distance={overlay.id}
                           >
                             <div className="flex items-center gap-1.5 text-neutral-200">

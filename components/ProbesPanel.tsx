@@ -240,7 +240,7 @@ export function ProbesPanel({
   }, [currentProbeId]);
 
   const actionButtonClass =
-    "py-3 px-3 text-[12px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white";
+    "py-3 px-3 text-[12px] font-medium rounded-none border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white";
 
   // Parent-controlled welcome surface. Takes precedence over both the
   // empty state and the active-probe carousel — this lets the Help
@@ -314,7 +314,7 @@ export function ProbesPanel({
                 disabled={resettingProbes}
                 title="Reset Helios — generates a fresh question for the current step"
                 aria-label="Reset Helios"
-                className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-800 text-[11px] text-neutral-500 hover:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none border border-neutral-800 text-[11px] text-neutral-500 hover:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {resettingProbes ? (
                   <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -417,7 +417,7 @@ export function ProbesPanel({
                         disabled={resettingProbes}
                         title="Reset Helios — clears all active probes and generates a fresh one"
                         aria-label="Reset Helios"
-                        className="p-1 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="p-1 rounded-none text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         {resettingProbes ? (
                           <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -473,12 +473,12 @@ export function ProbesPanel({
               {/* Action row — framed card under the probe text. */}
               <div className="shrink-0 w-full max-w-[680px] px-2">
                 {isCurrentStepCompleted ? (
-                  <div className="rounded-md border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
+                  <div className="rounded-none border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
                     Chapter Completed - check next chapter
                   </div>
                 ) : (
                   <>
-                    <div className="actions-box rounded-md border border-neutral-800 bg-neutral-950/40 p-3 transition-colors">
+                    <div className="actions-box rounded-none border border-neutral-800 bg-neutral-950/40 p-3 transition-colors">
                       <div className="grid grid-cols-4 gap-2.5 @container">
                         <button
                           onClick={() => {
@@ -558,7 +558,7 @@ export function ProbesPanel({
                         onClick={handleDone}
                         disabled={advancing || isCurrentStepCompleted}
                         title={t('session.markAsDone')}
-                        className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-md bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                        className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                       >
                         {advancing ? (
                           <>

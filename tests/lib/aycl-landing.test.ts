@@ -93,7 +93,7 @@ describe("aycl landing model", () => {
     expect(landing.blockCount).toBe(2);
     expect(landing.map.viewOnly).toBe(true);
     expect(landing.map.canEdit).toBe(false);
-    expect(landing.map.learnerMode).toBe(false);
+    expect(landing.map.learnerMode).toBe(true);
     expect(landing.map.nodes).toHaveLength(2);
     expect(landing.map.nodes[0].title).toMatch(/Positive predictive/i);
     expect(landing.offers.learner.tier).toBe("learner");

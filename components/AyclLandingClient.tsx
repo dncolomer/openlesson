@@ -334,6 +334,7 @@ export function AyclLandingClient({
               onSelectNode={() => {}}
               canEdit={false}
               viewOnly
+              learnerMode
               workspaceId={landing.workspaceId}
               showProgress={false}
               onAddBlock={async () => {}}

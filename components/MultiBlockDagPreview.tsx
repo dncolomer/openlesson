@@ -48,7 +48,7 @@ export function MultiBlockDagPreview({
       data-multi-block-dag-preview
       data-dag-preview-node-count={nodes.length}
       data-dag-preview-edge-count={nextEdges.length}
-      className={`overflow-hidden rounded-md border border-white/10 bg-neutral-950/90 ${className || ""}`}
+      className={`overflow-hidden rounded-none border border-white/10 bg-neutral-950/90 ${className || ""}`}
     >
       <svg
         viewBox={`0 0 ${PREVIEW_W} ${PREVIEW_H}`}

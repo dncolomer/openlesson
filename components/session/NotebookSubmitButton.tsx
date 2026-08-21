@@ -37,7 +37,7 @@ export function NotebookSubmitButton({
       disabled={isSubmitting || disabled}
       title={disabled ? (disabledReason ?? "") : t("whiteboard.submitHint")}
       aria-label={displayLabel}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-none transition-colors"
     >
       {isSubmitting ? (
         <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -146,7 +146,7 @@ export function WorkspaceContextPanel({
     >
       <div className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto md:w-[20rem] lg:w-[22rem]">
         {error ? (
-          <p className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
+          <p className="rounded-none border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
             {error}
           </p>
         ) : null}

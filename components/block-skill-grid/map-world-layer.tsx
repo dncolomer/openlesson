@@ -75,6 +75,7 @@ import {
   normalizeLockUntilBlockIds,
 } from "@/lib/map-ground-rules";
 import type { PlacedBlockRef } from "@/lib/skill-grid-ops";
+import type { MapFogLookup } from "@/lib/map-fog-of-war";
 import {
   BlockCreatorEffectsBadge,
   BlockDependencyLockBadge,
@@ -100,6 +101,7 @@ export function MapWorldLayer({
   handleEmptyCellPointerDown,
   handleEmptyCellPointerMove,
   handleEmptyCellPointerUp,
+  fogLookup,
   generatorPickActive,
   activeLassoShape,
   canEdit,
@@ -164,6 +166,7 @@ export function MapWorldLayer({
   handleEmptyCellPointerDown: (cell: GridCell, e: PointerEvent) => void;
   handleEmptyCellPointerMove: (e: PointerEvent) => void;
   handleEmptyCellPointerUp: (e: PointerEvent) => void;
+  fogLookup: MapFogLookup;
   generatorPickActive: boolean;
   activeLassoShape: LassoShapeKind | null | undefined;
   canEdit: boolean;
@@ -244,11 +247,14 @@ export function MapWorldLayer({
               isUnusable,
               isGeneratorSpark: isGeneratorSparkEmpty,
             });
+            const fog = fogLookup(cell.row, cell.col);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
                 data-skill-cell
                 data-map-cell-kind={isUnusable ? "unusable" : "open"}
+                data-map-fog-fully-visible={fog.fullyVisible ? "true" : "false"}
+                data-map-fog-opacity={String(fog.opacity)}
                 data-generator-target-empty={
                   isGeneratorSparkEmpty ? "true" : undefined
                 }
@@ -260,10 +266,19 @@ export function MapWorldLayer({
                   height: SKILL_GRID_CELL_SIZE,
                 }}
               >
+                {fog.opacity < 1 ? (
+                  <div
+                    aria-hidden
+                    data-map-fog-veil
+                    className="pointer-events-none absolute inset-0 rounded-none bg-[#080808]"
+                    style={{ opacity: 1 - fog.opacity }}
+                  />
+                ) : null}
                 <button
                   type="button"
                   // Keep enabled for empty-drag pan in Learner (!canEdit).
-                  // Authoring (Add) still gated in handleEmptyCellClick via canEdit.
+                  // Authoring (Add) still gated in handleEmptyCellClick via canEdit
+                  // and fully-visible fog (fade/black empties cannot be used to add).
                   disabled={busy || generationPending}
                   data-map-cell-unusable={isUnusable ? "true" : "false"}
                   data-map-cell-selected={emptyHighlight ? "true" : "false"}
@@ -275,6 +290,7 @@ export function MapWorldLayer({
                   data-empty-pan-enabled={
                     !busy && !generationPending ? "true" : "false"
                   }
+                  style={{ opacity: fog.opacity }}
                   onClick={(e) => {
                     // Primary path for empty select / Add (plain + Shift multi).
                     // Empty pan sets suppressEmptyClickRef so this is skipped.
@@ -284,7 +300,7 @@ export function MapWorldLayer({
                   onPointerMove={handleEmptyCellPointerMove}
                   onPointerUp={handleEmptyCellPointerUp}
                   onPointerCancel={handleEmptyCellPointerUp}
-                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
+                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-none border border-dashed transition ${
                     isUnusable
                       ? generationPending
                         ? `${MAP_CELL_UNUSABLE_CLASS} ring-2 ring-white/50 animate-pulse`
@@ -318,6 +334,8 @@ export function MapWorldLayer({
                         : "Unusable ground — shapes paths"
                       : mapExploreOpen
                         ? "Click empty to explore this cell"
+                      : canEdit && !fog.fullyVisible && !activeLassoShape
+                        ? "Hidden by fog — add only on fully visible empty cells · drag a block or use Best spot to reveal"
                       : canEdit
                         ? generatorPickActive
                           ? "Click to select as generator target"
@@ -562,7 +580,7 @@ export function MapWorldLayer({
             const isDynamicUnlockHighlight = dynamicUnlockHighlightIds.has(
               node.id,
             );
-            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition ${
+            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-none border px-2 text-center transition ${
               generationLocked
                 ? "pointer-events-none cursor-not-allowed opacity-60"
                 : `hover:brightness-110 pointer-events-auto ${
@@ -718,7 +736,7 @@ export function MapWorldLayer({
                     );
                     const isLabel =
                       cell.row === labelCell.row && cell.col === labelCell.col;
-                    const radius = 10;
+                    const radius = 0;
                     return (
                       <div
                         key={`block-${node.id}-${cell.row}-${cell.col}`}

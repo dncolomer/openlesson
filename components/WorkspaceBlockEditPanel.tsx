@@ -166,7 +166,7 @@ export function WorkspaceBlockEditPanel({
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
           disabled={disabled}
-          className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-100 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-100 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           placeholder="Block title"
         />
       </label>
@@ -178,13 +178,13 @@ export function WorkspaceBlockEditPanel({
           onChange={(e) => setEditDescription(e.target.value)}
           disabled={disabled}
           rows={4}
-          className="w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+          className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           placeholder="What this block covers…"
         />
       </label>
 
       <label
-        className="flex cursor-pointer items-start gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
+        className="flex cursor-pointer items-start gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
         data-block-edit-starter
       >
         <input
@@ -204,7 +204,7 @@ export function WorkspaceBlockEditPanel({
 
       {/* Practice launch limits — Explore/Drill × Dialog/Solo + Drill durations */}
       <div
-        className="space-y-2.5 rounded-md border border-neutral-800 bg-neutral-950/50 p-2.5"
+        className="space-y-2.5 rounded-none border border-neutral-800 bg-neutral-950/50 p-2.5"
         data-block-edit-practice-options
       >
         <div>
@@ -212,7 +212,7 @@ export function WorkspaceBlockEditPanel({
         </div>
 
         <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
               data-block-edit-allow-explore
@@ -222,7 +222,7 @@ export function WorkspaceBlockEditPanel({
             />
             <span className="text-[11px] text-neutral-200">Explore</span>
           </label>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
               data-block-edit-allow-drill
@@ -239,7 +239,7 @@ export function WorkspaceBlockEditPanel({
           data-block-edit-practice-modalities
           data-block-edit-practice-horizons
         >
-          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
               data-block-edit-allow-dialog
@@ -254,7 +254,7 @@ export function WorkspaceBlockEditPanel({
             />
             <span className="text-[11px] text-neutral-200">With AI</span>
           </label>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
               data-block-edit-allow-solo
@@ -287,7 +287,7 @@ export function WorkspaceBlockEditPanel({
                     data-selected={on ? "true" : "false"}
                     disabled={disabled}
                     onClick={() => toggleDuration(mins)}
-                    className={`h-7 rounded border text-[10px] font-semibold transition disabled:opacity-40 ${
+                    className={`h-7 rounded-none border text-[10px] font-semibold transition disabled:opacity-40 ${
                       on
                         ? "border-white/40 bg-white/10 text-white"
                         : "border-neutral-700 bg-transparent text-neutral-500 hover:border-neutral-500"
@@ -318,7 +318,7 @@ export function WorkspaceBlockEditPanel({
         data-block-edit-save
         disabled={disabled || !editTitle.trim() || !dirty}
         onClick={() => void save()}
-        className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+        className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
       >
         {saving ? "Saving…" : "Save changes"}
       </button>

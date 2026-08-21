@@ -162,7 +162,7 @@ export function MuseTemporalChart({ channelData, isConnected }: MuseTemporalChar
   return (
     <canvas 
       ref={canvasRef} 
-      className="w-full h-48 rounded-lg bg-neutral-900"
+      className="w-full h-48 rounded-none bg-neutral-900"
     />
   );
 }

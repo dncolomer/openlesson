@@ -72,7 +72,7 @@ export function MobileBlockScreen({
       {showDashboardLink ? (
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 bg-white/5 px-6 py-3 text-white transition-all hover:border-neutral-600 hover:bg-white/10"
+          className="inline-flex items-center gap-2 rounded-none border border-neutral-700 bg-white/5 px-6 py-3 text-white transition-all hover:border-neutral-600 hover:bg-white/10"
           data-mobile-block-dashboard
         >
           <svg

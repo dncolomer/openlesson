@@ -12,7 +12,7 @@ import { type ReactNode, useEffect, useRef } from "react";
  *
  * The reference style is lifted from `SessionView`'s end-session modal:
  *   • fullscreen dark overlay with backdrop blur, click-to-dismiss
- *   • centered panel: `bg-neutral-900 border-neutral-800 rounded-2xl`
+ *   • centered panel: `bg-neutral-900 border-neutral-800 rounded-none`
  *   • optional icon pill in the header (destructive/warning/info/success)
  *   • configurable footer: primary + cancel, with an optional tertiary
  *     action rendered full-width above the primary/cancel row (used by
@@ -212,7 +212,7 @@ export function ConfirmDialog({
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-none shadow-2xl overflow-hidden">
         <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
           <div className="flex items-center gap-3">
             <div
@@ -238,7 +238,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onTertiary}
-              className="w-full py-2.5 px-4 text-sm font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2"
             >
               {tertiaryIcon}
               {tertiaryLabel}
@@ -249,7 +249,7 @@ export function ConfirmDialog({
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-xl transition-colors"
+                className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-none transition-colors"
               >
                 {cancelLabel}
               </button>
@@ -259,7 +259,7 @@ export function ConfirmDialog({
               type="button"
               onClick={onConfirm}
               disabled={confirmDisabled || confirmBusy}
-              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${CONFIRM_TONE[tone]}`}
+              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-none transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${CONFIRM_TONE[tone]}`}
             >
               {confirmBusy && <Spinner />}
               {confirmLabel}

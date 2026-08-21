@@ -597,7 +597,7 @@ export function WorkspaceCombineBlocksPane({
           Stack of compact rows with + separators → result strip.
         */}
         <div
-          className="rounded-lg border border-white/10 bg-neutral-950/70 p-2"
+          className="rounded-none border border-white/10 bg-neutral-950/70 p-2"
           data-combine-visual
           data-combine-layout="stack"
         >
@@ -621,11 +621,11 @@ export function WorkspaceCombineBlocksPane({
                     </div>
                   ) : null}
                   <div
-                    className="flex min-w-0 items-start gap-2.5 rounded-md border border-white/15 bg-neutral-900/90 px-2.5 py-2.5"
+                    className="flex min-w-0 items-start gap-2.5 rounded-none border border-white/15 bg-neutral-900/90 px-2.5 py-2.5"
                     data-combine-block-card={block.id}
                     data-combine-marker={marker}
                   >
-                    <span className="mt-0.5 shrink-0 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-neutral-400">
+                    <span className="mt-0.5 shrink-0 rounded-none border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-neutral-400">
                       {marker}
                     </span>
                     <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-neutral-100 line-clamp-2">
@@ -647,7 +647,7 @@ export function WorkspaceCombineBlocksPane({
           </div>
 
           <div
-            className="rounded-md border border-white/25 bg-white/[0.07] px-2.5 py-2 text-center"
+            className="rounded-none border border-white/25 bg-white/[0.07] px-2.5 py-2 text-center"
             data-combine-result
           >
             <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
@@ -664,7 +664,7 @@ export function WorkspaceCombineBlocksPane({
 
         {!contiguous ? (
           <p
-            className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
+            className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
             data-combine-not-contiguous
           >
             Selected blocks must share edges (be contiguous on the map) before they
@@ -686,7 +686,7 @@ export function WorkspaceCombineBlocksPane({
               labels?.promptPlaceholder ||
               "Optional guidance for the merged topic (e.g. how to unify the lessons)…"
             }
-            className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+            className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           />
         </label>
 
@@ -702,7 +702,7 @@ export function WorkspaceCombineBlocksPane({
             data-combine-cancel
             disabled={busy || submitting}
             onClick={onCancel}
-            className="flex-1 rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
+            className="flex-1 rounded-none border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
           >
             {labels?.cancel || "Cancel"}
           </button>
@@ -713,7 +713,7 @@ export function WorkspaceCombineBlocksPane({
               busy || submitting || selected.length < 2 || !contiguous
             }
             onClick={() => void submit()}
-            className="flex-1 rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="flex-1 rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
           >
             {submitting || busy
               ? "Combining…"
@@ -794,7 +794,7 @@ export function WorkspaceCombineBlocksPane({
 
           {bridgeAnchors.length < 2 ? (
             <p
-              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
+              className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
               data-bridge-need-anchors
             >
               Need at least two selected blocks with map positions to draw a
@@ -802,7 +802,7 @@ export function WorkspaceCombineBlocksPane({
             </p>
           ) : bridgeSelection.selected.length === 0 ? (
             <p
-              className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
+              className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] leading-snug text-neutral-300/90"
               data-bridge-no-cells
             >
               No placeable empty cells along the corridor — clear space between
@@ -826,7 +826,7 @@ export function WorkspaceCombineBlocksPane({
               selected.length < 2
             }
             onClick={() => void submitBridge()}
-            className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
           >
             {bridgeSubmitting
               ? "Starting bridge…"
@@ -847,14 +847,14 @@ export function WorkspaceCombineBlocksPane({
         surfaceDataAttr="data-cluster-blocks-drawer"
       >
         <div data-cluster-blocks-pane className="space-y-3">
-          <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-2.5 py-2">
+          <label className="flex items-center gap-2 rounded-none border border-white/10 bg-black/30 px-2.5 py-2">
             <input
               type="checkbox"
               checked={clusterAuto}
               onChange={(e) => setClusterAuto(e.target.checked)}
               disabled={busy || clusterSubmitting}
               data-cluster-count-auto
-              className="h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-900 text-white focus:ring-white/30"
+              className="h-3.5 w-3.5 rounded-none border-neutral-600 bg-neutral-900 text-white focus:ring-white/30"
             />
             <span className="text-[12px] text-neutral-200">
               Let the system decide cluster count
@@ -883,7 +883,7 @@ export function WorkspaceCombineBlocksPane({
                 )
               }
               data-cluster-count-input
-              className="w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              className="w-full rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
           </label>
 
@@ -934,7 +934,7 @@ export function WorkspaceCombineBlocksPane({
               rows={3}
               disabled={busy || clusterSubmitting}
               placeholder="Optional guidance (e.g. group by theory vs practice, or by shared vocabulary)…"
-              className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+              className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
             />
           </label>
 
@@ -954,7 +954,7 @@ export function WorkspaceCombineBlocksPane({
               !onClusterBlocks
             }
             onClick={() => void submitCluster()}
-            className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
           >
             {clusterSubmitting
               ? "Clustering…"
@@ -983,7 +983,7 @@ export function WorkspaceCombineBlocksPane({
         >
           {dagTooManyBlocks ? (
             <p
-              className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-3 text-[12px] leading-relaxed text-neutral-200"
+              className="rounded-none border border-white/15 bg-white/[0.04] px-3 py-3 text-[12px] leading-relaxed text-neutral-200"
               data-dag-too-many-message
             >
               You can only have {MULTI_BLOCK_DAG_MAX_BLOCKS} blocks selected at
@@ -1005,7 +1005,7 @@ export function WorkspaceCombineBlocksPane({
 
               {dagHasCycle ? (
                 <p
-                  className="rounded-md border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
+                  className="rounded-none border border-neutral-600/30 bg-neutral-950/30 px-2.5 py-2 text-[11px] text-neutral-300/90"
                   data-dag-cycle-warning
                 >
                   Draft has a directed cycle. You can still Apply; prefer
@@ -1031,7 +1031,7 @@ export function WorkspaceCombineBlocksPane({
                   !workspaceId
                 }
                 onClick={() => void suggestDag()}
-                className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-none border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-neutral-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {dagSuggesting ? "Suggesting…" : "Suggest DAG"}
               </button>
@@ -1046,7 +1046,7 @@ export function WorkspaceCombineBlocksPane({
                   !onApplyDag
                 }
                 onClick={() => void submitDag()}
-                className="w-full rounded-md bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                className="w-full rounded-none bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
               >
                 {dagSubmitting ? "Applying…" : "Apply"}
               </button>
@@ -1096,7 +1096,7 @@ export function WorkspaceCombineBlocksPane({
               <li
                 key={b.id}
                 data-delete-block-row={b.id}
-                className="rounded border border-white/10 bg-black/20 px-2 py-1.5 text-[12px] text-neutral-200"
+                className="rounded-none border border-white/10 bg-black/20 px-2 py-1.5 text-[12px] text-neutral-200"
               >
                 {b.title || "Untitled"}
               </li>
@@ -1118,7 +1118,7 @@ export function WorkspaceCombineBlocksPane({
               !onDeleteBlocks
             }
             onClick={() => void submitDelete()}
-            className="w-full rounded-md border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-none border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {deleteSubmitting
               ? "Deleting…"

@@ -49,7 +49,7 @@ const markdownComponents: Components = {
   ),
   em: ({ children }) => <em className="italic text-neutral-100">{children}</em>,
   pre: ({ children }) => (
-    <pre className="my-3 overflow-x-auto rounded-md border border-white/10 bg-black/45 p-3 text-left text-[0.85em] leading-relaxed first:mt-0 last:mb-0">
+    <pre className="my-3 overflow-x-auto rounded-none border border-white/10 bg-black/45 p-3 text-left text-[0.85em] leading-relaxed first:mt-0 last:mb-0">
       {children}
     </pre>
   ),
@@ -64,7 +64,7 @@ const markdownComponents: Components = {
     }
     return (
       <code
-        className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.85em] text-neutral-100"
+        className="rounded-none bg-white/10 px-1 py-0.5 font-mono text-[0.85em] text-neutral-100"
         {...props}
       >
         {children}

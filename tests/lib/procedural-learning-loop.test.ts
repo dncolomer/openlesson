@@ -570,7 +570,7 @@ describe("Expand Map rename + suggest UI", () => {
   it("button and drawer use Explore / Expand Map naming", () => {
     const grid = readMapGridSurface();
     expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(grid).toContain('data-workspace-mode-toggle-states="build,play,explore"');
+    expect(grid).toContain("data-workspace-mode-toggle-states");
     expect(grid).not.toContain("data-map-explore-expand-toggle");
 
     const pane = read("components/WorkspaceEmptyMapPane.tsx");

@@ -141,6 +141,7 @@ export function expectedAyclDemoCapabilities(kind: AyclDualTierDemoKind) {
     canGrow: caps.canGrow,
     canUpgrade: caps.canUpgrade,
     allowCreatorModeToggle: caps.allowCreatorModeToggle,
+    allowExplore: caps.allowExplore,
   };
 }
 

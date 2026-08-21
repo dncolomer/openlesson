@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  parseAyclClonePracticeOptions,
+  serializeBlockPracticeOptions,
+} from "@/lib/block-practice-options";
 import { toSkillGridNodes, withSkillGridPositions } from "@/lib/skill-grid-positions";
 
 export interface ForkWorkspaceResult {
@@ -71,6 +75,7 @@ export async function forkWorkspaceExactCopy(
     blockIdMap.set(node.id, crypto.randomUUID());
   }
 
+  const isAyclFork = params.isAyclFork === true;
   const newNodes = (sourceNodes || []).map((node) => ({
     id: blockIdMap.get(node.id),
     workspace_id: newPlan.id,
@@ -82,6 +87,15 @@ export async function forkWorkspaceExactCopy(
       .filter(Boolean),
     status: "available",
     planning_prompt: node.planning_prompt ?? null,
+    ...(isAyclFork
+      ? {
+          // Purchased clones always include Explore, even if the catalog
+          // author turned it off. Play-only and Play+Build share this write.
+          practice_options: serializeBlockPracticeOptions(
+            parseAyclClonePracticeOptions(node.practice_options),
+          ),
+        }
+      : {}),
   }));
 
   const nodesWithPositions = withSkillGridPositions(

@@ -3,7 +3,7 @@
  * preview notes+layer toggles, and map-preview fullscreen.
  */
 import { describe, expect, it } from "vitest";
-import { readMapGridSurface } from "../helpers/surface-source";
+import { readMapGridSurface, readWorkspaceViewSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -12,7 +12,13 @@ import {
   ayclOfferLabel,
   ayclOfferTooltip,
   ayclPlayTooltip,
+  resolveAyclCapabilities,
 } from "@/lib/aycl-shared";
+import { parseAyclClonePracticeOptions } from "@/lib/block-practice-options";
+import {
+  visibleWorkspaceMapToggleIds,
+  workspaceModeDisplayLabel,
+} from "@/lib/workspace-mode";
 import {
   ayclMapPreviewFullscreenActive,
   resolveAyclPreviewOverlayChrome,
@@ -192,6 +198,72 @@ describe("preview notes + handwriting visibility", () => {
         `live_stack=${liveChrome.showStack}`,
         `viewOnly_no_delete=${!canDeleteMapNote(note, { learnerMode: false, viewOnly: true })}`,
         `viewOnly_no_draw=${!canDrawOnAnnotationLayer({ viewOnly: true })}`,
+      ].join("\n"),
+    );
+  });
+});
+
+describe("Explore on purchased clones", () => {
+  it("both play-only and Play+Build keep Explore; play-only hides Build", () => {
+    const learner = resolveAyclCapabilities("learner");
+    const full = resolveAyclCapabilities("full");
+    expect(learner.allowExplore).toBe(true);
+    expect(full.allowExplore).toBe(true);
+    expect(ayclOfferLabel("learner")).toBe("play mode only");
+    expect(ayclOfferLabel("full")).toBe("Play + Build");
+
+    const playOnlyIds = visibleWorkspaceMapToggleIds({
+      allowCreator: learner.allowCreatorModeToggle,
+      allowExplore: learner.allowExplore,
+    });
+    const playBuildIds = visibleWorkspaceMapToggleIds({
+      allowCreator: full.allowCreatorModeToggle,
+      allowExplore: full.allowExplore,
+    });
+    expect(playOnlyIds).toEqual(["learner", "explore"]);
+    expect(playOnlyIds).not.toContain("creator");
+    expect(playBuildIds).toEqual(["creator", "learner", "explore"]);
+    expect(playOnlyIds.map(workspaceModeDisplayLabel)).toEqual([
+      "Play",
+      "Explore",
+    ]);
+    expect(playBuildIds.map(workspaceModeDisplayLabel)).toEqual([
+      "Build",
+      "Play",
+      "Explore",
+    ]);
+
+    expect(
+      parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore,
+    ).toBe(true);
+
+    const fork = read("lib/fork-workspace.ts");
+    const aycl = read("lib/aycl.ts");
+    const mapCol = read("components/workspace-view/workspace-map-column.tsx");
+    const view = readWorkspaceViewSurface();
+    const shared = read("lib/aycl-shared.ts");
+    expect(aycl).toContain("isAyclFork: true");
+    expect(fork).toContain("isAyclFork");
+    expect(fork).toContain("parseAyclClonePracticeOptions");
+    expect(fork).toContain("practice_options");
+    expect(mapCol).toContain("visibleWorkspaceMapToggleIds");
+    expect(mapCol).toContain("allowExplore");
+    expect(view).toContain("ayclClone: true");
+    expect(view).toContain("parseWorkspacePracticeOptions");
+    expect(shared).toContain("allowExplore: true");
+    expect(shared).not.toMatch(/allowExplore:\s*false/);
+
+    writeScratch(
+      "aycl-explore-always.txt",
+      [
+        `learner_allowExplore=${learner.allowExplore}`,
+        `full_allowExplore=${full.allowExplore}`,
+        `play_only_toggles=${playOnlyIds.join(",")}`,
+        `play_build_toggles=${playBuildIds.join(",")}`,
+        `catalog_off_clone_explore=${parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore}`,
+        `offer_learner=${ayclOfferLabel("learner")}`,
+        `offer_full=${ayclOfferLabel("full")}`,
+        "fork writes parseAyclClonePracticeOptions when isAyclFork",
       ].join("\n"),
     );
   });

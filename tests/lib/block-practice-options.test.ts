@@ -17,8 +17,11 @@ import {
   defaultBlockPracticeOptions,
   enabledPracticeLaunchCombos,
   normalizeBlockPracticeOptions,
+  parseAyclClonePracticeOptions,
   parseBlockPracticeOptions,
+  parseWorkspacePracticeOptions,
   practiceOptionsIconKeys,
+  withExplorePracticeEnabled,
   practiceOptionsIsRestricted,
   resolveDefaultPracticeLaunchUi,
   serializeBlockPracticeOptions,
@@ -106,6 +109,25 @@ describe("normalize + allow rules", () => {
       10, 20,
     ]);
 
+    const catalogOff = normalizeBlockPracticeOptions({
+      allow_explore: false,
+      allow_drill: true,
+    });
+    expect(catalogOff.allowExplore).toBe(false);
+    expect(withExplorePracticeEnabled(catalogOff).allowExplore).toBe(true);
+    expect(withExplorePracticeEnabled(catalogOff).allowDrill).toBe(true);
+    expect(parseAyclClonePracticeOptions({ allow_explore: false }).allowExplore).toBe(
+      true,
+    );
+    expect(
+      parseWorkspacePracticeOptions({ allow_explore: false }, { ayclClone: true })
+        .allowExplore,
+    ).toBe(true);
+    expect(
+      parseWorkspacePracticeOptions({ allow_explore: false }, { ayclClone: false })
+        .allowExplore,
+    ).toBe(false);
+
     writeEvidence(
       "block-practice-options.log",
       [
@@ -168,7 +190,8 @@ describe("structural: Edit drawer + launch + map icons", () => {
     expect(practiceBadge).not.toMatch(/:\s*"Timed"/);
     expect(practiceBadge).not.toMatch(/text-(?:sky|violet|emerald|amber)-/);
 
-    expect(learner).toContain("parseBlockPracticeOptions");
+    expect(learner).toContain("parseWorkspacePracticeOptions");
+    expect(learner).toContain("ayclClone");
     expect(learner).toContain("practiceOptions=");
 
     expect(view).toContain("practice_options");

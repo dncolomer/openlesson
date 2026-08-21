@@ -27,6 +27,24 @@ export const WORKSPACE_MAP_TOGGLE_IDS: readonly WorkspaceMapToggleId[] = [
 ] as const;
 
 /**
+ * Under-minimap segments to render.
+ * Play is always present. Explore defaults on (AYCL clones keep it even when
+ * Build is hidden). Build is omitted when allowCreator is false (play-only).
+ */
+export function visibleWorkspaceMapToggleIds(input?: {
+  allowCreator?: boolean;
+  allowExplore?: boolean;
+}): WorkspaceMapToggleId[] {
+  const allowCreator = input?.allowCreator !== false;
+  const allowExplore = input?.allowExplore !== false;
+  const ids: WorkspaceMapToggleId[] = [];
+  if (allowCreator) ids.push("creator");
+  ids.push("learner");
+  if (allowExplore) ids.push("explore");
+  return ids;
+}
+
+/**
  * User-visible labels for the workspace mode toggle (under minimap).
  * Wire/state ids stay `"creator"` | `"learner"` | `"explore"`; display is
  * Build / Play / Explore.

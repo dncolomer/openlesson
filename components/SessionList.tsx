@@ -75,6 +75,7 @@ interface SessionListProps {
   mapExploreOpen?: boolean;
   onMapExploreToggle?: () => void;
   onMapToggle?: (id: "creator" | "learner" | "explore") => void;
+  mapToggleIds?: readonly ("creator" | "learner" | "explore")[];
   /** Build / Play mode toggle under minimap (not in top nav). */
   interactionMode?: "creator" | "learner";
   onInteractionModeChange?: (mode: "creator" | "learner") => void;
@@ -196,6 +197,7 @@ export function SessionList({
   mapExploreOpen = false,
   onMapExploreToggle,
   onMapToggle,
+  mapToggleIds,
   interactionMode = "creator",
   onInteractionModeChange,
   unusableCells = null,
@@ -500,6 +502,7 @@ export function SessionList({
             mapExploreOpen={mapExploreOpen}
             onMapExploreToggle={onMapExploreToggle}
             onMapToggle={onMapToggle}
+            mapToggleIds={mapToggleIds}
             interactionMode={interactionMode}
             onInteractionModeChange={onInteractionModeChange}
             appearingNodeIds={appearingNodeIds}

@@ -12,6 +12,7 @@ import {
   WORKSPACE_MODE_DISPLAY_LABELS,
   nextWorkspaceMapToggle,
   resolveWorkspaceMapToggleId,
+  visibleWorkspaceMapToggleIds,
   workspaceModeDisplayLabel,
 } from "@/lib/workspace-mode";
 import {
@@ -79,6 +80,23 @@ describe("Build / Play / Explore toggle helpers", () => {
       "learner",
       "explore",
     ]);
+    expect(visibleWorkspaceMapToggleIds()).toEqual([
+      "creator",
+      "learner",
+      "explore",
+    ]);
+    expect(
+      visibleWorkspaceMapToggleIds({
+        allowCreator: false,
+        allowExplore: true,
+      }),
+    ).toEqual(["learner", "explore"]);
+    expect(
+      visibleWorkspaceMapToggleIds({
+        allowCreator: true,
+        allowExplore: true,
+      }),
+    ).toEqual(["creator", "learner", "explore"]);
     expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["creator", "learner"]);
 
     expect(
@@ -283,7 +301,8 @@ describe("Explore mode wiring", () => {
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
 
     expect(stack).toContain("WORKSPACE_MAP_TOGGLE_IDS");
-    expect(stack).toContain('data-workspace-mode-toggle-states="build,play,explore"');
+    expect(stack).toContain("data-workspace-mode-toggle-states");
+    expect(stack).toContain("WORKSPACE_MAP_TOGGLE_IDS");
     expect(stack).toContain('workspaceModeDisplayLabel');
     expect(stack).not.toContain("Explore / Expand Map");
     expect(stack).not.toContain("data-map-explore-toggle");

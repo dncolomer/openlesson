@@ -14,7 +14,10 @@ import type { Block, MobileColumn, Workspace } from "@/components/workspace-view
 import type { ProductLaunchOptions } from "@/components/BlockDetailCard";
 import type { BlockCreatorEffects, GeneratorTargetCell } from "@/lib/block-creator-effects";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
-import { parseBlockPracticeOptions, type BlockPracticeOptions } from "@/lib/block-practice-options";
+import {
+  parseWorkspacePracticeOptions,
+  type BlockPracticeOptions,
+} from "@/lib/block-practice-options";
 import type { ExpandSourceIdentity } from "@/lib/expand-block-from-source";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
@@ -316,8 +319,9 @@ export function WorkspaceRightDrawers({
             localContext={detailBlock.local_context}
             blockStatus={detailBlock.status}
             isStart={detailBlock.is_start}
-            practiceOptions={parseBlockPracticeOptions(
+            practiceOptions={parseWorkspacePracticeOptions(
               detailBlock.practice_options,
+              { ayclClone: Boolean(ayclToken) },
             )}
             creatorEffects={parseBlockCreatorEffects(
               detailBlock.creator_effects,

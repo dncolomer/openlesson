@@ -35,6 +35,11 @@ export type AyclCapabilities = {
   /** Interaction mode: learner-tier forces practice; full may toggle. */
   defaultInteractionMode: "learner" | "creator";
   allowCreatorModeToggle: boolean;
+  /**
+   * Map Explore mode (empty-cell search / explore-block).
+   * Always on for purchased clones — both play-only and Play+Build.
+   */
+  allowExplore: boolean;
 };
 
 export function isAyclAccessTier(value: unknown): value is AyclAccessTier {
@@ -159,6 +164,7 @@ export function resolveAyclCapabilities(
       canUpgrade: true,
       defaultInteractionMode: "learner",
       allowCreatorModeToggle: false,
+      allowExplore: true,
     };
   }
   return {
@@ -168,6 +174,7 @@ export function resolveAyclCapabilities(
     canUpgrade: false,
     defaultInteractionMode: "creator",
     allowCreatorModeToggle: true,
+    allowExplore: true,
   };
 }
 

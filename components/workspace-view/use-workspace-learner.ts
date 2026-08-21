@@ -64,8 +64,9 @@ export function useWorkspaceLearner(input: {
   );
 
   const mapNodesWithEffects = useCallback(
-    (raw: WorkspaceBlockApiNode[]) => mapWorkspaceNodes(raw),
-    [],
+    (raw: WorkspaceBlockApiNode[]) =>
+      mapWorkspaceNodes(raw, { ayclClone: Boolean(ayclToken) }),
+    [ayclToken],
   );
 
   /**

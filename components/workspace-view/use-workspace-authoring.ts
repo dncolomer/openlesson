@@ -6,7 +6,7 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { afterClonePaste, type CloneArmState } from "@/lib/clone-block";
 import { buildUpdateBlockPayload } from "@/lib/block-starter-flag";
 import {
-  parseBlockPracticeOptions,
+  parseWorkspacePracticeOptions,
   serializeBlockPracticeOptions,
   type BlockPracticeOptions,
 } from "@/lib/block-practice-options";
@@ -409,7 +409,10 @@ export function useWorkspaceAuthoring(input: {
               }) => ({
                 ...n,
                 local_context: parseBlockLocalContext(n.local_context),
-                practice_options: parseBlockPracticeOptions(n.practice_options),
+                practice_options: parseWorkspacePracticeOptions(
+                  n.practice_options,
+                  { ayclClone: Boolean(ayclToken) },
+                ),
                 creator_effects: parseBlockCreatorEffects(n.creator_effects, {
                   selfBlockId: n.id,
                 }),
@@ -461,7 +464,10 @@ export function useWorkspaceAuthoring(input: {
               }) => ({
                 ...n,
                 local_context: parseBlockLocalContext(n.local_context),
-                practice_options: parseBlockPracticeOptions(n.practice_options),
+                practice_options: parseWorkspacePracticeOptions(
+                  n.practice_options,
+                  { ayclClone: Boolean(ayclToken) },
+                ),
                 creator_effects: parseBlockCreatorEffects(n.creator_effects, {
                   selfBlockId: n.id,
                 }),

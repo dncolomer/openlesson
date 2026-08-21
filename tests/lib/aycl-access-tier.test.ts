@@ -50,6 +50,7 @@ describe("AYCL dual access tiers (pure)", () => {
     expect(caps.canGrow).toBe(false);
     expect(caps.canUpgrade).toBe(true);
     expect(caps.allowCreatorModeToggle).toBe(false);
+    expect(caps.allowExplore).toBe(true);
     expect(caps.defaultInteractionMode).toBe("learner");
     expect(ayclCanUpgradeFromTier("learner")).toBe(true);
   });
@@ -61,6 +62,7 @@ describe("AYCL dual access tiers (pure)", () => {
     expect(caps.canGrow).toBe(true);
     expect(caps.canUpgrade).toBe(false);
     expect(caps.allowCreatorModeToggle).toBe(true);
+    expect(caps.allowExplore).toBe(true);
     expect(ayclCanUpgradeFromTier("full")).toBe(false);
     expect(ayclTierAfterUpgrade()).toBe("full");
   });
@@ -209,6 +211,7 @@ describe("AYCL dual-tier wiring (structural)", () => {
     expect(src).toContain("data-aycl-upgrade-bar");
     expect(src).toContain("startAyclUpgradeCheckout");
     expect(src).toContain("allowCreatorModeToggle");
+    expect(src).toContain("allowExplore");
   });
 
   it("AyclWorkspaceView reuses WorkspaceView and passes tier", () => {

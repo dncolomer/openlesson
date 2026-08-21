@@ -7,7 +7,10 @@ import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { GeneratorTargetCell } from "@/lib/block-creator-effects";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { SupabaseBrowserClient } from "@/lib/supabase/client";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
+import {
+  visibleWorkspaceMapToggleIds,
+  type WorkspaceInteractionMode,
+} from "@/lib/workspace-mode";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS } from "@/lib/workspace-right-pane";
 
@@ -156,6 +159,12 @@ export function WorkspaceMapColumn({
         mapExploreOpen={mapExploreOpen}
         onMapExploreToggle={onMapExploreToggle}
         onMapToggle={onMapToggle}
+        mapToggleIds={visibleWorkspaceMapToggleIds({
+          allowCreator: ayclCapabilities
+            ? ayclCapabilities.allowCreatorModeToggle
+            : true,
+          allowExplore: ayclCapabilities ? ayclCapabilities.allowExplore : true,
+        })}
         interactionMode={interactionMode}
         onInteractionModeChange={
           isAycl &&

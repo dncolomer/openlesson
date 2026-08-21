@@ -17,7 +17,7 @@ import {
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { buildBridgeKnowledgePrompt } from "@/lib/bridge-blocks";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
-import { parseBlockPracticeOptions } from "@/lib/block-practice-options";
+import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import {
@@ -316,8 +316,9 @@ export function useWorkspaceExpandJobs(input: {
                   }) => ({
                     ...n,
                     local_context: parseBlockLocalContext(n.local_context),
-                    practice_options: parseBlockPracticeOptions(
+                    practice_options: parseWorkspacePracticeOptions(
                       n.practice_options,
+                      { ayclClone: Boolean(ayclToken) },
                     ),
                     creator_effects: parseBlockCreatorEffects(
                       n.creator_effects,

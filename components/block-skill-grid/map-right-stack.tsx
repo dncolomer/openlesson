@@ -26,6 +26,7 @@ export function MapRightStack({
   onMapExploreToggle,
   onInteractionModeChange,
   onMapToggle,
+  mapToggleIds,
   mapNotesCount,
   annotationLayers,
   minimapStackRef,
@@ -53,6 +54,8 @@ export function MapRightStack({
   onInteractionModeChange?: (mode: WorkspaceInteractionMode) => void;
   /** Unified 3-state under-minimap handler (Build / Play / Explore). */
   onMapToggle?: (id: WorkspaceMapToggleId) => void;
+  /** Which Build / Play / Explore segments to render. Default: all three. */
+  mapToggleIds?: readonly WorkspaceMapToggleId[];
   mapNotesCount: number;
   annotationLayers: AnnotationLayer[];
   minimapStackRef: RefObject<HTMLDivElement | null>;
@@ -72,6 +75,13 @@ export function MapRightStack({
   handleAnnotationLayerToggle: (layerId: string) => void;
   handleAnnotationLayerDelete: (layerId: string) => void;
 }) {
+  const toggleIds =
+    mapToggleIds && mapToggleIds.length > 0
+      ? mapToggleIds
+      : WORKSPACE_MAP_TOGGLE_IDS;
+  const toggleStates = toggleIds
+    .map((id) => workspaceModeDisplayLabel(id).toLowerCase())
+    .join(",");
   const show =
     (!viewOnly &&
       (mountMapNotes ||
@@ -106,11 +116,11 @@ export function MapRightStack({
           className="flex w-full shrink-0 items-center gap-0.5 rounded-none border border-neutral-700/90 bg-neutral-950/90 p-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm"
           data-workspace-mode-toggle
           data-workspace-mode-under-minimap
-          data-workspace-mode-toggle-states="build,play,explore"
+          data-workspace-mode-toggle-states={toggleStates}
           role="group"
           aria-label="Workspace mode"
         >
-          {WORKSPACE_MAP_TOGGLE_IDS.map((id) => {
+          {toggleIds.map((id) => {
             const interaction: WorkspaceInteractionMode =
               interactionModeProp === "learner" || interactionModeProp === "creator"
                 ? interactionModeProp

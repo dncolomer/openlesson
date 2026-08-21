@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { Block, Workspace } from "@/lib/domain/types";
 import { parseBlockCreatorEffects } from "@/lib/block-creator-effects";
-import { parseBlockPracticeOptions } from "@/lib/block-practice-options";
+import { parseWorkspacePracticeOptions } from "@/lib/block-practice-options";
 import { parseBlockLocalContext } from "@/lib/prompt-workspace-context";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 
@@ -77,11 +77,16 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
   return null;
 }
 
-export function mapWorkspaceNodes(raw: WorkspaceBlockApiNode[]): Block[] {
+export function mapWorkspaceNodes(
+  raw: WorkspaceBlockApiNode[],
+  opts?: { ayclClone?: boolean },
+): Block[] {
   return raw.map((n) => ({
     ...n,
     local_context: parseBlockLocalContext(n.local_context),
-    practice_options: parseBlockPracticeOptions(n.practice_options),
+    practice_options: parseWorkspacePracticeOptions(n.practice_options, {
+      ayclClone: opts?.ayclClone,
+    }),
     creator_effects: parseBlockCreatorEffects(n.creator_effects, {
       selfBlockId: n.id,
     }),

@@ -29,7 +29,7 @@ import {
 import { MultiBlockDagCanvas } from "@/components/MultiBlockDagCanvas";
 import type { ProductLaunchTarget } from "@/lib/product-intent";
 import {
-  parseBlockPracticeOptions,
+  parseWorkspacePracticeOptions,
   type BlockPracticeOptions,
 } from "@/lib/block-practice-options";
 import {
@@ -67,6 +67,7 @@ export function WorkspaceLearnerBlockPane({
   block,
   blocks,
   workspaceId,
+  ayclToken,
   locked = false,
   onLaunchIntent,
   onSavePlanningPrompt,
@@ -403,7 +404,10 @@ export function WorkspaceLearnerBlockPane({
               isLocked={locked}
               showActions={Boolean(onLaunchIntent) && !locked}
               allowTimed
-              practiceOptions={parseBlockPracticeOptions(block.practice_options)}
+              practiceOptions={parseWorkspacePracticeOptions(
+                block.practice_options,
+                { ayclClone: Boolean(ayclToken) },
+              )}
               onLaunchIntent={(target, options) => {
                 void handleLaunch(target, options);
               }}

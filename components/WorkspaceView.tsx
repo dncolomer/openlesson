@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import {
+  mapWorkspaceNodes,
   type Block,
   type Workspace,
   type WorkspaceViewProps,
@@ -93,7 +94,11 @@ export function WorkspaceView({
   const knowledgeSubviewFromUrl = searchParams.get("subview");
   
   const [plan, setPlan] = useState<Workspace | null>(initialPlan || null);
-  const [nodes, setNodes] = useState<Block[]>(initialNodes || []);
+  const [nodes, setNodes] = useState<Block[]>(() =>
+    ayclToken
+      ? mapWorkspaceNodes(initialNodes || [], { ayclClone: true })
+      : initialNodes || [],
+  );
   const [loading, setLoading] = useState(!initialPlan);
   const [error, setError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(
@@ -250,12 +255,7 @@ export function WorkspaceView({
       );
     }
     if (Array.isArray(data.blocks)) {
-      setNodes(
-        data.blocks.map((n: Block & { local_context?: unknown }) => ({
-          ...n,
-          local_context: parseBlockLocalContext(n.local_context),
-        })),
-      );
+      setNodes(mapWorkspaceNodes(data.blocks, { ayclClone: true }));
     }
     if (data.capabilities) {
       setAyclCapabilities(
@@ -373,12 +373,7 @@ export function WorkspaceView({
           setWorkspaceDags(normalizeWorkspaceDags(initialPlan.workspace_dags));
         }
         if (initialNodes) {
-          setNodes(
-            initialNodes.map((n) => ({
-              ...n,
-              local_context: parseBlockLocalContext(n.local_context),
-            })),
-          );
+          setNodes(mapWorkspaceNodes(initialNodes, { ayclClone: true }));
         }
         await refreshAyclWorkspace();
         setLoading(false);

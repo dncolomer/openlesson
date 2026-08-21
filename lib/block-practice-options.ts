@@ -177,6 +177,33 @@ export function parseBlockPracticeOptions(raw: unknown): BlockPracticeOptions {
   return defaultBlockPracticeOptions();
 }
 
+/** Force Explore (ILE) on, keeping other author limits. */
+export function withExplorePracticeEnabled(
+  opts: BlockPracticeOptions | null | undefined,
+): BlockPracticeOptions {
+  const n = normalizeBlockPracticeOptions(opts ?? null);
+  if (n.allowExplore) return n;
+  return { ...n, allowExplore: true };
+}
+
+/**
+ * Practice options on purchased AYCL clones: catalog may have turned Explore
+ * off, but both play-only and Play+Build clones always offer it.
+ */
+export function parseAyclClonePracticeOptions(raw: unknown): BlockPracticeOptions {
+  return withExplorePracticeEnabled(parseBlockPracticeOptions(raw));
+}
+
+/** Parse practice options, forcing Explore when this is an AYCL clone. */
+export function parseWorkspacePracticeOptions(
+  raw: unknown,
+  opts?: { ayclClone?: boolean },
+): BlockPracticeOptions {
+  return opts?.ayclClone
+    ? parseAyclClonePracticeOptions(raw)
+    : parseBlockPracticeOptions(raw);
+}
+
 /** Wire shape for DB / API (snake_case). Writes both new + legacy keys. */
 export function serializeBlockPracticeOptions(
   opts: BlockPracticeOptions,

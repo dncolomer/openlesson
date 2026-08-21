@@ -50,11 +50,13 @@ describe("aycl dual-tier pure eligibility", () => {
     expect(learnerCaps.canGrow).toBe(false);
     expect(learnerCaps.canUpgrade).toBe(true);
     expect(learnerCaps.allowCreatorModeToggle).toBe(false);
+    expect(learnerCaps.allowExplore).toBe(true);
 
     expect(fullCaps.tier).toBe("full");
     expect(fullCaps.canAuthor).toBe(true);
     expect(fullCaps.canGrow).toBe(true);
     expect(fullCaps.canUpgrade).toBe(false);
+    expect(fullCaps.allowExplore).toBe(true);
 
     // Drive shipped entry points directly
     expect(resolveAyclCapabilities("learner").canUpgrade).toBe(true);

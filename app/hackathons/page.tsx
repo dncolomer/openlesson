@@ -12,9 +12,9 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Hackathons · Projects & Community",
+  title: "Community Events · Projects & Community",
   description:
-    "In-person and online hackathons where curious people learn frontier knowledge by doing — lectures, mentors, teams, and demos.",
+    "In-person and online community events where curious people learn frontier knowledge by doing — lectures, mentors, teams, and demos.",
   alternates: {
     canonical: "https://uncertain.systems/hackathons",
   },
@@ -50,7 +50,7 @@ export default function HackathonsPage() {
             Projects & Community
           </p>
           <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
-            Hackathons
+            Community Events
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
             In-person and online events where curious people learn frontier
@@ -85,11 +85,13 @@ export default function HackathonsPage() {
               <div className="space-y-4 p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="border border-neutral-600/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90">
-                    Hackathon
+                    {hackathon.kind}
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                    {hackathon.host}
-                  </span>
+                  {hackathon.host ? (
+                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                      {hackathon.host}
+                    </span>
+                  ) : null}
                 </div>
                 <div>
                   <h2 className="text-xl font-medium leading-tight text-white group-hover:text-zinc-100">
@@ -101,8 +103,8 @@ export default function HackathonsPage() {
                 </div>
                 <div className="flex items-end justify-between gap-3">
                   <div className="space-y-1 text-xs text-zinc-500">
-                    <p>{hackathon.date}</p>
-                    <p>{hackathon.location}</p>
+                    {hackathon.date ? <p>{hackathon.date}</p> : null}
+                    {hackathon.location ? <p>{hackathon.location}</p> : null}
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
                     View event

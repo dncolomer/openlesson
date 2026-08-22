@@ -158,7 +158,7 @@ export default function ProbabilisticComputingHackathonPage() {
                 href="/hackathons"
                 className="transition hover:text-white"
               >
-                Hackathons
+                Community Events
               </Link>
             </li>
             <li className="text-zinc-700">/</li>
@@ -216,7 +216,7 @@ export default function ProbabilisticComputingHackathonPage() {
             href="/hackathons"
             className="inline-flex min-h-11 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
           >
-            All hackathons
+            All community events
           </Link>
         </div>
       </section>

@@ -424,11 +424,12 @@ export function parseAyclExploreLearnSamples(
   };
 }
 
-/** Shared hackathon catalog (listing page + former AYCL tab). */
+/** Shared community-events catalog (listing page + former AYCL tab). */
 export const AYCL_HACKATHONS = [
   {
     id: "pc-hackathon",
     title: "Probabilistic Computing Hackathon",
+    kind: "Hackathon",
     host: "ETH Zurich",
     date: "June 10, 2026",
     location: "Zurich, Switzerland",
@@ -438,5 +439,18 @@ export const AYCL_HACKATHONS = [
     href: "/hackathons/probabilistic-computing",
     image:
       "https://cdn.sanity.io/images/otrk6k1t/production/7ef4d9c0fcf06719cb7ddd7ebdb20b02a2355793-1736x1284.webp?auto=format&fit=max&q=75&w=868",
+  },
+  {
+    id: "ground-state",
+    title: "Ground State - 3 Day Event",
+    kind: "Ground State - 3 Day Event",
+    host: "",
+    date: "",
+    location: "",
+    status: "To be announced" as const,
+    description: "To be Announced soon",
+    href: "/hackathons/ground-state",
+    // In-repo copy of https://ground-state.grok.me/images/hero-chip.jpg
+    image: "/hackathons/ground-state-hero.jpg",
   },
 ] as const;

@@ -665,10 +665,10 @@ describe("Practice Portal structural wiring", () => {
     expect((enCopy.onboardingGuide?.tap?.step2?.body || "").split("\n").length).toBeGreaterThan(2);
     // Live ILE onboarding step2: multi-paragraph Thought Memory / send controls
     expect(enCopy.onboardingGuide?.ile?.step2?.body).toMatch(
-      /Thought Memory keeps every trace|stashed-thoughts pool below/i,
+      /Thought Memory|Submit last Thought|See Older Thoughts/i,
     );
     expect(enCopy.onboardingGuide?.ile?.step2?.bodyProject).toMatch(
-      /System 1|Open the Thoughts tool \(or use Open Thoughts\)/i,
+      /Thought Memory|See Older Thoughts|Submit last Thought/i,
     );
     expect((enCopy.onboardingGuide?.ile?.step2?.body || "").length).toBeGreaterThan(160);
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
@@ -688,7 +688,7 @@ describe("Practice Portal structural wiring", () => {
     expect(blockSimPanel).not.toMatch(/for xAI samples/i);
     expect(blockSimPanel).not.toMatch(/via xAI/i);
     expect(blockSimPanel).not.toMatch(/offline template/i);
-    expect(blockSimPanel).toContain("data-simulation-auto-generate");
+    expect(blockSimPanel).toContain('data-simulation-auto-generate="false"');
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 

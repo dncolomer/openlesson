@@ -228,10 +228,12 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("data-tap-convo-live-split");
     expect(tap).toContain("lg:grid-cols-2");
     expect(tap).toContain('kind="convo-stash"');
-    expect(tap).toContain("ExerciseStashHistory");
+    expect(tap).not.toContain("ExerciseStashHistory");
     expect(tap).toContain("stashedThoughts");
     expect(tap).not.toContain("<ActiveThoughtSlots");
-    expect(tap).not.toContain("ThoughtMemoryPanel");
+    expect(tap).toContain("ThoughtMemoryPanel");
+    expect(tap).toContain("Submit last Thought");
+    expect(tap).toContain("See Older Thoughts");
 
     const map = read("components/tap-score/tap-session-map.tsx");
     expect(map).toContain("learnerMapCellChromeClasses");
@@ -254,7 +256,7 @@ describe("TAP live map wiring", () => {
     expect(client).toContain("onSubmitSoloSolution");
     expect(client).not.toContain("onLoadOtherProblems");
     expect(client).not.toContain("Load other problems");
-    expect(client).toContain("data-exercise-dual-history-fixed");
+    expect(client).toContain("data-exercise-tap-stash-submit");
     expect(client).toContain("data-exercise-tap-live-split");
     expect(client).toContain("data-exercise-tap-map-pane");
     expect(client).toContain("lg:grid-cols-2");
@@ -276,7 +278,7 @@ describe("TAP live map wiring", () => {
       [
         "no formatGridCoordinate on TAP map",
         "no Load other problems",
-        "solo live 50/50 map | stash/solution aesthetic",
+        "solo live 50/50 map | Stash Submit UI aesthetic",
         "fog veil on empty cells",
       ].join("\n"),
     );

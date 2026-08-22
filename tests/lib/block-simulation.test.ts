@@ -7,6 +7,7 @@ import { join } from "node:path";
 import {
   collectBlockContextInfluenceLabels,
   deriveBlockSimulation,
+  emptyBlockSimulation,
   enforceSimulationProbeQuota,
   normalizeSimulationPayload,
   partitionSimulationProbes,
@@ -37,6 +38,12 @@ function read(rel: string) {
 }
 
 describe("deriveBlockSimulation", () => {
+  it("emptyBlockSimulation has no probes", () => {
+    const empty = emptyBlockSimulation();
+    expect(empty.probes).toEqual([]);
+    expect(empty.topics).toEqual([]);
+  });
+
   it("does not seed pure Q/E templates (empty probes until xAI regenerate)", () => {
     const sim = deriveBlockSimulation({
       title: "Bayes rule",
@@ -161,8 +168,9 @@ describe("deriveBlockSimulation", () => {
 
   it("panel does not show pure seed as default Q/E list", () => {
     const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(panel).toContain("deriveBlockSimulation");
+    expect(panel).toContain("emptyBlockSimulation");
     expect(panel).toContain("normalizeSimulationPayload");
-    expect(panel).toMatch(/click Regenerate for xAI|No sample questions yet/i);
+    expect(panel).toMatch(/click Generate|No sample questions yet/i);
+    expect(panel).toContain('data-simulation-auto-generate="false"');
   });
 });

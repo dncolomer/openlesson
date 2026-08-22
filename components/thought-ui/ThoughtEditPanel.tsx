@@ -8,6 +8,8 @@ interface ThoughtEditPanelProps {
   onCancel: () => void;
   onSend: () => void;
   isSending?: boolean;
+  title?: string;
+  submitLabel?: string;
 }
 
 export function ThoughtEditPanel({
@@ -16,6 +18,8 @@ export function ThoughtEditPanel({
   onCancel,
   onSend,
   isSending = false,
+  title = "Edit transcription",
+  submitLabel = "send",
 }: ThoughtEditPanelProps) {
   const canSend = draft.trim().length > 0 && !isSending;
 
@@ -32,10 +36,11 @@ export function ThoughtEditPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="thought-edit-title"
+        data-thought-edit-panel
         className="relative z-10 w-full max-w-lg rounded-none border border-neutral-800 bg-neutral-950 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
       >
         <p id="thought-edit-title" className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-500">
-          Edit transcription
+          {title}
         </p>
         <textarea
           value={draft}
@@ -56,7 +61,7 @@ export function ThoughtEditPanel({
             cancel
           </ThoughtButton>
           <ThoughtButton size="sm" variant="primary" onClick={onSend} disabled={!canSend}>
-            send
+            {submitLabel}
           </ThoughtButton>
         </div>
       </div>

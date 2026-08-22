@@ -9,7 +9,6 @@ import { GrokGrokipediaTool } from "@/components/GrokGrokipediaTool";
 import { LogsTool, type LogEntry } from "@/components/LogsTool";
 import type { TransferHealth } from "@/components/LogsTool";
 import { NotebookSubmitButton } from "@/components/session/NotebookSubmitButton";
-import { ProjectThoughtsDualStack } from "@/components/thought-ui/ProjectThoughtsDualStack";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import type { Tool } from "@/components/ToolsPanel";
 import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
@@ -59,6 +58,8 @@ export type SessionToolPanesProps = {
   onProjectPromote: (thoughtId: string) => void;
   onProjectDemote: (thoughtId: string) => void;
   sessionThoughtHistory: SessionThoughtInterface["thoughts"];
+  onSendThought: SessionThoughtInterface["sendThought"];
+  thoughtIsSending?: boolean;
   stream: MediaStream | null;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museError: string | null;
@@ -118,10 +119,9 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     notebookContent,
     onNotebookChange,
     resolvedSessionMode,
-    activeProjectLists,
-    onProjectPromote,
-    onProjectDemote,
     sessionThoughtHistory,
+    onSendThought,
+    thoughtIsSending,
     stream,
     museStatus,
     museError,
@@ -231,25 +231,17 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
             data-ile-session-mode={resolvedSessionMode}
           >
-            {isProjectMode ? (
-              <ProjectThoughtsDualStack
-                stash={activeProjectLists.stash}
-                submitted={activeProjectLists.submitted}
-                onPromoteToSolution={onProjectPromote}
-                onDemoteToStash={onProjectDemote}
-                locked={chapterThoughtsLocked}
-              />
-            ) : (
-              <ThoughtMemoryPanel
-                className="flex h-full min-h-0 max-h-full flex-col overflow-hidden px-1"
-                listClassName="pr-2"
-                thoughts={sessionThoughtHistory}
-                workspaceId={session.metadata?.workspace_id ?? undefined}
-                sessionId={session.id}
-                insightSurface="ile"
-                allowInsightGeneration={true}
-              />
-            )}
+            <ThoughtMemoryPanel
+              className="flex h-full min-h-0 max-h-full flex-col overflow-hidden px-1"
+              listClassName="pr-2"
+              thoughts={sessionThoughtHistory}
+              workspaceId={session.metadata?.workspace_id ?? undefined}
+              sessionId={session.id}
+              insightSurface="ile"
+              allowInsightGeneration={true}
+              onSendThought={onSendThought}
+              isSending={Boolean(thoughtIsSending) || chapterThoughtsLocked}
+            />
           </div>
         )}
 

@@ -18,7 +18,6 @@ import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
-import { ExerciseTapShell } from "@/components/exercise-tap/ExerciseTapShell";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
@@ -80,7 +79,6 @@ import {
 import {
   buildExercisePromptText,
   emptyExerciseDualLists,
-  demoteExerciseSubmissionToStash,
   promoteExerciseStashToSubmission,
   resolveExercisePromptAfterIntro,
   stashExerciseSpeech,
@@ -360,10 +358,11 @@ export function ExerciseTapClient({
   const logExerciseTrace = useCallback(
     (input: {
       traceType: "system1" | "system2";
-      action: "pause_finalize" | "auto_stash" | "send" | "remove";
+      action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit" | "resend";
       thoughtId?: string;
       chainId?: string;
       text?: string;
+      originalText?: string;
       timestampMs?: number;
     }) => {
       const activeTapSessionId = tapSessionIdRef.current;
@@ -501,20 +500,31 @@ export function ExerciseTapClient({
     [crystallizableText, restartSpeechRecognitionSession, applyPurityHit, logExerciseTrace],
   );
 
-  /** System 2: promote one stashed thought onto the submission stack. */
-  const submitStashThought = useCallback(
-    (thoughtId: string) => {
+  /** Universal Stash Submit sink: system2 send on TAP solo (no Helios, no solution stack UI). */
+  const sendThought = useCallback(
+    async (text: string, thoughtIds: string[] = []) => {
+      const clean = normalize(text);
+      if (!clean) return;
+      const submittedIds = new Set(listsRef.current.submitted.map((item) => item.id));
+      const isResend =
+        thoughtIds.length > 0 && thoughtIds.every((id) => submittedIds.has(id));
+      logExerciseTrace({
+        traceType: "system2",
+        action: isResend ? "resend" : "send",
+        thoughtId: thoughtIds.length === 1 ? thoughtIds[0] : undefined,
+        text: clean,
+      });
+      if (thoughtIds.length === 0) {
+        setLists((current) => {
+          const { lists: next } = submitExerciseSpeechDirect(current, clean);
+          return next;
+        });
+        return;
+      }
       setLists((current) => {
-        const { lists: next, moved } = promoteExerciseStashToSubmission(current, thoughtId);
-        if (moved) {
-          logExerciseTrace({
-            traceType: "system2",
-            action: "send",
-            thoughtId: moved.id,
-            chainId: moved.chainId,
-            text: moved.text,
-            timestampMs: moved.timestamp,
-          });
+        let next = current;
+        for (const id of thoughtIds) {
+          next = promoteExerciseStashToSubmission(next, id).lists;
         }
         return next;
       });
@@ -522,59 +532,24 @@ export function ExerciseTapClient({
     [logExerciseTrace],
   );
 
-  /**
-   * System 2 Enter: with live speech → direct submit to stack;
-   * without live speech → promote latest stash item.
-   */
-  const submitCurrentOrLatestStash = useCallback(() => {
+  const sendCurrentTranscription = useCallback(() => {
     const text = tapHookFormingText(tapThoughtSpeech);
-    if (text) {
-      clearTranscriptionDisplay();
-      restartSpeechRecognitionSession();
-      setLists((current) => {
-        const { lists: next, added } = submitExerciseSpeechDirect(current, text);
-        if (added) {
-          logExerciseTrace({
-            traceType: "system2",
-            action: "send",
-            thoughtId: added.id,
-            chainId: added.chainId,
-            text: added.text,
-            timestampMs: added.timestamp,
-          });
-        }
-        return next;
-      });
-      return;
-    }
-    const latest = listsRef.current.stash[listsRef.current.stash.length - 1];
-    if (latest) submitStashThought(latest.id);
-  }, [
-    crystallizableText,
-    restartSpeechRecognitionSession,
-    logExerciseTrace,
-    submitStashThought,
-  ]);
+    if (!text) return;
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+    void sendThought(text, []);
+  }, [restartSpeechRecognitionSession, sendThought, tapThoughtSpeech]);
 
-  /** System 2 undo → stash: demote Solution Stack back to Stash (thought preserved). */
-  const handleUndoSubmissionToStash = useCallback(
-    (thoughtId: string) => {
-      setLists((current) => {
-        const { lists: next, moved } = demoteExerciseSubmissionToStash(current, thoughtId);
-        if (moved) {
-          logExerciseTrace({
-            traceType: "system2",
-            action: "remove",
-            thoughtId: moved.id,
-            chainId: moved.chainId,
-            text: moved.text,
-          });
-        }
-        return next;
-      });
-    },
-    [logExerciseTrace],
-  );
+  const [editingTranscription, setEditingTranscription] = useState<{
+    draft: string;
+    originalText: string;
+  } | null>(null);
+
+  const beginEditTranscription = useCallback(() => {
+    const text = tapHookFormingText(tapThoughtSpeech);
+    if (!text) return;
+    setEditingTranscription({ draft: text, originalText: text });
+  }, [tapThoughtSpeech]);
 
   const persistActiveSoloLists = useCallback((problems?: TapSoloProblem[]) => {
     const current = problems ?? soloProblemsRef.current;
@@ -900,15 +875,20 @@ export function ExerciseTapClient({
     };
   }, [speechBindings]);
 
-  // Live shortcuts: Del = sys1 stash; Enter = sys2 submit; 1–3 promote stash slots.
+  // Live shortcuts: Del = stash; Enter = send forming text; E = edit.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (phase !== "live" || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (event.key === "Escape" && editingTranscription) {
+        event.preventDefault();
+        setEditingTranscription(null);
+        return;
+      }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
         event.preventDefault();
-        submitCurrentOrLatestStash();
+        sendCurrentTranscription();
         return;
       }
       if (
@@ -921,17 +901,14 @@ export function ExerciseTapClient({
         stashCurrentTranscription();
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
-        const ordered = listsRef.current.stash.slice().reverse();
-        const thought = ordered[Number(event.key) - 1];
-        if (!thought) return;
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
         event.preventDefault();
-        submitStashThought(thought.id);
+        beginEditTranscription();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, submitCurrentOrLatestStash, stashCurrentTranscription, submitStashThought]);
+  }, [phase, sendCurrentTranscription, stashCurrentTranscription, beginEditTranscription, editingTranscription]);
 
   function retryMicrophone() {
     setSpeechError(null);
@@ -963,9 +940,10 @@ export function ExerciseTapClient({
       isPracticeMode={isPracticeMode}
       exerciseText={exerciseText}
       stash={lists.stash}
-      submitted={lists.submitted}
-      submitStashThought={submitStashThought}
-      handleUndoSubmissionToStash={handleUndoSubmissionToStash}
+      thoughtHistory={[...lists.submitted, ...lists.stash].sort(
+        (a, b) => b.timestamp - a.timestamp,
+      )}
+      sendThought={sendThought}
       participantIdentity={participantIdentity}
       remainingSeconds={remainingSeconds}
       sessionPurity={sessionPurity}
@@ -978,7 +956,16 @@ export function ExerciseTapClient({
       transcriptSilenceMs={transcriptSilenceMs}
       retryMicrophone={retryMicrophone}
       stashCurrentTranscription={stashCurrentTranscription}
-      submitCurrentOrLatestStash={submitCurrentOrLatestStash}
+      sendCurrentTranscription={sendCurrentTranscription}
+      beginEditTranscription={beginEditTranscription}
+      editingTranscription={editingTranscription}
+      setEditingTranscription={setEditingTranscription}
+      logExerciseTrace={logExerciseTrace}
+      clearTranscriptionDisplay={clearTranscriptionDisplay}
+      restartSpeechRecognitionSession={restartSpeechRecognitionSession}
+      workspaceId={workspaceId}
+      blockId={blockId}
+      sessionId={sessionId}
       soloProblems={soloProblems}
       activeSoloProblemId={activeSoloProblemId}
       onSelectSoloProblem={selectSoloProblem}

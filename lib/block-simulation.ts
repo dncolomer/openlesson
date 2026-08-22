@@ -314,6 +314,17 @@ export function enforceSimulationProbeQuota(
   ];
 }
 
+export function emptyBlockSimulation(): BlockSimulationResult {
+  return {
+    intent: "",
+    outcome: "",
+    topics: [],
+    probes: [],
+    readiness: [],
+    practiceModes: ["Explore (dialogue)", "Drill (solo exercise)"],
+  };
+}
+
 /**
  * Derive a simulation snapshot from block fields (no LLM).
  * Intent/outcome/topics/readiness only — **no pure Q/E seed**.
@@ -420,14 +431,7 @@ export function normalizeSimulationPayload(
 ): BlockSimulationResult {
   const base = fallback
     ? deriveBlockSimulation(fallback)
-    : {
-        intent: "",
-        outcome: "",
-        topics: [] as string[],
-        probes: [] as SimulationProbe[],
-        readiness: [] as SimulationReadinessItem[],
-        practiceModes: ["Explore (dialogue)", "Drill (solo exercise)"],
-      };
+    : emptyBlockSimulation();
 
   if (!raw || typeof raw !== "object") {
     return { ...base, probes: [] };

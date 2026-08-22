@@ -100,8 +100,9 @@ describe("shipped insight surface wiring", () => {
     expect(thoughtMemory).toContain("allowInsightGeneration");
     expect(thoughtMemory).toContain("resolveInsightSurfaceCapabilities");
     expect(thoughtMemory).toContain("generationEnabled");
-    expect(tapClient).not.toContain("ThoughtMemoryPanel");
-    expect(tapClient).not.toContain('insightSurface="tap"');
+    expect(tapClient).toContain("ThoughtMemoryPanel");
+    expect(tapClient).toContain('insightSurface="tap"');
+    expect(tapClient).toContain("allowInsightGeneration={false}");
     expect(sessionView).toContain('insightSurface="ile"');
     expect(sessionView).toContain("allowInsightGeneration={true}");
   });

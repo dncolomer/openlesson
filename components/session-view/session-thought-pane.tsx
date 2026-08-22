@@ -42,6 +42,7 @@ export type SessionThoughtPaneProps = {
   onSelectChapterFollowUp: (suggestion: ChapterFollowUpSuggestion) => void;
   onProjectStash: (providedText?: string) => void;
   onProjectSubmitToSolution: () => void;
+  onOpenThoughts: () => void;
 };
 
 export function SessionThoughtPane({
@@ -77,6 +78,7 @@ export function SessionThoughtPane({
   onSelectChapterFollowUp,
   onProjectStash,
   onProjectSubmitToSolution,
+  onOpenThoughts,
 }: SessionThoughtPaneProps) {
   return (
     <div className="relative h-full">
@@ -113,6 +115,7 @@ export function SessionThoughtPane({
         onSelectChapterFollowUp={onSelectChapterFollowUp}
         onProjectStash={onProjectStash}
         onProjectSubmitToSolution={onProjectSubmitToSolution}
+        onOpenThoughts={onOpenThoughts}
       />
     </div>
   );

@@ -298,14 +298,14 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(page).toContain("sessionMode");
   });
 
-  it("SessionView Project Mode: no Helios bubbles path; dual-stack Thoughts; Done lock", () => {
+  it("SessionView Project Mode: no Helios bubbles path; conversation Thought Memory; Done lock", () => {
     const view = readSessionViewSurface();
     expect(view).toContain("isProjectMode");
-    expect(view).toContain("ProjectThoughtsDualStack");
+    expect(view).not.toContain("ProjectThoughtsDualStack");
     expect(view).toContain("projectMode={isProjectMode}");
     expect(view).toContain("chapterThoughtsLocked");
-    expect(view).toContain("handleProjectPromote");
-    expect(view).toContain("handleProjectDemote");
+    expect(view).toContain("ThoughtMemoryPanel");
+    expect(view).toContain("onSendThought");
     expect(view).toContain("buildIleChapterDonePowToolData");
     expect(view).toContain("frameIleProjectChapterDescription");
     expect(view).toContain("buildIleChapterDonePowToolData");
@@ -316,16 +316,22 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(helios).toContain("data-ile-project-exercise-prompt");
     expect(helios).toContain("Explore Solo · Exercise");
     expect(helios).not.toContain("Project Mode · Exercise");
-    // DialogueSplit remains for Learning Mode, not Explore Solo live surface
     expect(helios).toContain("DialogueSplit");
-    expect(helios).toContain("projectMode ?");
+    expect(helios).toContain('label="Send"');
+    expect(helios).toContain('label="Stash"');
+    expect(helios).toContain('label="Edit"');
+    expect(helios).not.toContain('label="Solution"');
+    expect(helios).toContain("Submit last Thought");
+    expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("data-ile-last-stash");
+    expect(helios).toContain("sendCurrentTranscription");
+    expect(helios).toContain("stashCurrentTranscription");
 
-    const dual = read("components/thought-ui/ProjectThoughtsDualStack.tsx");
-    expect(dual).toContain("data-ile-thoughts-dual-stack");
-    expect(dual).toContain("ExerciseStashHistory");
-    expect(dual).toContain("ExerciseSubmissionStack");
-    expect(dual).toContain("data-ile-solution-stack-region");
-    expect(dual).toContain("data-ile-stash-stack-region");
+    const panes = read("components/session-view/session-tool-panes.tsx");
+    expect(panes).toContain("ThoughtMemoryPanel");
+    expect(panes).not.toContain("ProjectThoughtsDualStack");
+    expect(panes).toContain('activeTool === "thought-history"');
+    expect(panes).toContain("onSendThought={onSendThought}");
 
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("ileProjectMode");

@@ -521,7 +521,6 @@ export function TapScoreClient({
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
-  const latestThoughts = useMemo(() => stashedThoughts.slice(-3).reverse(), [stashedThoughts]);
   const thoughtHistory = useMemo(() => thoughts.slice().reverse(), [thoughts]);
   function buildThoughtRecord(text: string, currentThoughts: Thought[]): Thought | null {
     const clean = normalize(text);
@@ -872,17 +871,10 @@ export function TapScoreClient({
         beginEditTranscription();
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
-        const thought = latestThoughts[Number(event.key) - 1];
-        if (!thought) return;
-        event.preventDefault();
-        void sendThought(thought.text, [thought.id]);
-        return;
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, stashCurrentTranscription, sendCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, stashCurrentTranscription, sendCurrentTranscription, editingTranscription, crystallizableText]);
 
   endAndScoreRef.current = endSession;
 
@@ -959,7 +951,6 @@ export function TapScoreClient({
       sendCurrentTranscription={sendCurrentTranscription}
       stashCurrentTranscription={stashCurrentTranscription}
       beginEditTranscription={beginEditTranscription}
-      latestThoughts={latestThoughts}
       stashedThoughts={stashedThoughts}
       sendThought={sendThought}
       thoughtHistory={thoughtHistory}

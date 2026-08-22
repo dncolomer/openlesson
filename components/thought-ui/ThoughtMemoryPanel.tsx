@@ -19,6 +19,12 @@ import {
   thoughtSelectionBarTextClass,
   thoughtSelectionCardClass,
 } from "@/components/thought-ui/ThoughtUi";
+import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
+import {
+  beginEditSelectedThoughts,
+  submitEditedThoughtSelection,
+  submitSelectedThoughts,
+} from "@/lib/ile-last-stash";
 import { cn } from "@/lib/utils";
 
 const INSIGHTS_AUTH_MESSAGE = "You need to have a user and be logged in — not available as a guest user.";
@@ -55,6 +61,9 @@ interface ThoughtMemoryPanelProps {
   insightSurface?: InsightSurface;
   /** Explicit override; when omitted, derived from insightSurface (default ile). */
   allowInsightGeneration?: boolean;
+  /** Helios send path for selected thoughts (ILE Thought tool). */
+  onSendThought?: (text: string, thoughtIds: string[]) => void | Promise<void>;
+  isSending?: boolean;
 }
 
 export function ThoughtMemoryPanel({
@@ -67,6 +76,8 @@ export function ThoughtMemoryPanel({
   emptyMessage = "Speak, press Del to stash thoughts, or Enter to send. Every trace appears here.",
   insightSurface = "ile",
   allowInsightGeneration,
+  onSendThought,
+  isSending = false,
 }: ThoughtMemoryPanelProps) {
   const surfaceCaps = resolveInsightSurfaceCapabilities(insightSurface);
   const generationEnabled =
@@ -85,8 +96,14 @@ export function ThoughtMemoryPanel({
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [archivingInsightId, setArchivingInsightId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [selectionEdit, setSelectionEdit] = useState<{
+    draft: string;
+    originalText: string;
+    thoughtIds: string[];
+  } | null>(null);
 
   const insightsAvailable = isAuthenticated === true && generationEnabled;
+  const canSelectThoughts = generationEnabled || Boolean(onSendThought);
 
   useEffect(() => {
     const supabase = createClient();
@@ -392,21 +409,56 @@ export function ThoughtMemoryPanel({
             </div>
           ) : null}
 
-          {generationEnabled && selectedThoughts.length > 0 && (
+          {canSelectThoughts && selectedThoughts.length > 0 && (
             <div className={cn(thoughtSelectionBarClass, "mb-3 shrink-0 flex items-center justify-between gap-2 px-2.5 py-2")}>
               <span className={thoughtSelectionBarTextClass}>{selectedThoughts.length} selected</span>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {onSendThought ? (
+                  <>
+                    <button
+                      type="button"
+                      data-submit-selection
+                      disabled={isSending}
+                      onClick={() => {
+                        void submitSelectedThoughts({
+                          thoughts,
+                          selectedIds,
+                          sendThought: onSendThought,
+                        }).then((result) => {
+                          if (result.submitted) setSelectedIds(new Set());
+                        });
+                      }}
+                      className={cn(thoughtSelectionActionClass, "font-medium")}
+                    >
+                      Submit Selection
+                    </button>
+                    <button
+                      type="button"
+                      data-edit-selection
+                      disabled={isSending}
+                      onClick={() => {
+                        const draft = beginEditSelectedThoughts({ thoughts, selectedIds });
+                        if (draft) setSelectionEdit(draft);
+                      }}
+                      className={cn(thoughtSelectionActionClass, "font-medium")}
+                    >
+                      Edit Selection
+                    </button>
+                  </>
+                ) : null}
                 <button type="button" onClick={() => setSelectedIds(new Set())} className={thoughtSelectionActionClass}>
                   Clear
                 </button>
-                <button
-                  type="button"
-                  disabled={!insightsAvailable || creatingInsight}
-                  onClick={() => void createInsight()}
-                  className={cn(thoughtSelectionActionClass, "font-medium")}
-                >
-                  {creatingInsight ? "Creating…" : "Create insight"}
-                </button>
+                {generationEnabled ? (
+                  <button
+                    type="button"
+                    disabled={!insightsAvailable || creatingInsight}
+                    onClick={() => void createInsight()}
+                    className={cn(thoughtSelectionActionClass, "font-medium")}
+                  >
+                    {creatingInsight ? "Creating…" : "Create insight"}
+                  </button>
+                ) : null}
               </div>
             </div>
           )}
@@ -418,8 +470,8 @@ export function ThoughtMemoryPanel({
               <p className="py-8 text-center text-sm text-neutral-500">No traces match your search.</p>
             ) : (
               filteredThoughts.map((thought) => {
-                const isSelected = generationEnabled && selectedIds.has(thought.id);
-                if (!generationEnabled) {
+                const isSelected = canSelectThoughts && selectedIds.has(thought.id);
+                if (!canSelectThoughts) {
                   return (
                     <article
                       key={thought.id}
@@ -461,6 +513,31 @@ export function ThoughtMemoryPanel({
           </div>
         </div>
       )}
+
+      {selectionEdit ? (
+        <ThoughtEditPanel
+          title="Edit selection"
+          submitLabel="Submit"
+          draft={selectionEdit.draft}
+          onDraftChange={(draft) =>
+            setSelectionEdit((current) => (current ? { ...current, draft } : null))
+          }
+          onCancel={() => setSelectionEdit(null)}
+          onSend={() => {
+            if (!onSendThought || !selectionEdit) return;
+            void submitEditedThoughtSelection({
+              draft: selectionEdit.draft,
+              thoughtIds: selectionEdit.thoughtIds,
+              sendThought: onSendThought,
+            }).then((result) => {
+              if (!result.submitted) return;
+              setSelectionEdit(null);
+              setSelectedIds(new Set());
+            });
+          }}
+          isSending={isSending}
+        />
+      ) : null}
     </div>
   );
 }

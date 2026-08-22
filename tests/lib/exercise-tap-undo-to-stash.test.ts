@@ -54,13 +54,14 @@ describe("demoteExerciseSubmissionToStash", () => {
 });
 
 describe("undo wiring + copy", () => {
-  it("client Undo uses demote helper and sys2 remove trace", () => {
+  it("live TAP solo no longer mounts solution-stack undo; demote helper remains", () => {
     const client = read("components/ExerciseTapClient.tsx");
-    expect(client).toContain("demoteExerciseSubmissionToStash");
-    expect(client).toContain("handleUndoSubmissionToStash");
-    expect(client).toContain('action: "remove"');
-    expect(client).toContain('traceType: "system2"');
-    expect(client).toMatch(/moves it back to Stash|back to Stash|undo → stash/i);
+    const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(client).not.toContain("handleUndoSubmissionToStash");
+    expect(shell).not.toContain("ExerciseSubmissionStack");
+    expect(shell).not.toContain("data-exercise-undo-to-stash");
+    const helper = read("lib/exercise-tap.ts");
+    expect(helper).toContain("demoteExerciseSubmissionToStash");
   });
 
   it("Solution Stack control labels demote to stash (not discard)", () => {

@@ -12,8 +12,7 @@ import { simulationCollectionItemKey } from "@/lib/workspace-simulation-collecti
 
 /**
  * Map multi-select Simulation drawer body: generate probes across the
- * selected blocks and deposit into the workspace Simulation collection
- * (curated on the Sim tab).
+ * selected blocks. Collection add is explicit (not auto-deposit).
  */
 export function WorkspaceMultiBlockSimulationPanel({
   workspaceId,
@@ -105,19 +104,6 @@ export function WorkspaceMultiBlockSimulationPanel({
       }
       setQuestions(allQ);
       setExercises(allE);
-
-      const depositedResult = await collectionAdd.addMany({
-        questions: allQ,
-        exercises: allE,
-      });
-      if (depositedResult.ok) {
-        setDeposited(true);
-      } else {
-        setError(
-          depositedResult.error ||
-            "Generated samples, but could not add them to the curated collection.",
-        );
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generate failed");
     } finally {
@@ -131,6 +117,7 @@ export function WorkspaceMultiBlockSimulationPanel({
       data-multi-block-simulation-pane
       data-simulation-multi-block
       data-simulation-block-count={blockIds.length}
+      data-simulation-auto-deposit="false"
       className="space-y-3"
     >
       <ul

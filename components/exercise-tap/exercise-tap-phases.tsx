@@ -1,6 +1,7 @@
 "use client";
 
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
+import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -27,6 +28,7 @@ import {
   type Phase,
   formatCountdown,
   thoughtButtonClasses,
+  normalize,
 } from "@/lib/tap-score-client-helpers";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +54,9 @@ export function ExerciseTapPhases(props: {
   isPracticeMode: boolean;
   exerciseText: string;
   stash: ExerciseThought[];
-  submitted: ExerciseThought[];
-  submitStashThought: (id: string) => void;
-  handleUndoSubmissionToStash: (id: string) => void;
+  thoughtHistory: ExerciseThought[];
+  sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
+  isSending?: boolean;
   participantIdentity: PowParticipantIdentity | null;
   remainingSeconds: number;
   sessionPurity: number;
@@ -67,7 +69,26 @@ export function ExerciseTapPhases(props: {
   transcriptSilenceMs: number;
   retryMicrophone: () => void;
   stashCurrentTranscription: () => void;
-  submitCurrentOrLatestStash: () => void;
+  sendCurrentTranscription: () => void;
+  beginEditTranscription: () => void;
+  editingTranscription: { draft: string; originalText: string } | null;
+  setEditingTranscription: (
+    next:
+      | { draft: string; originalText: string }
+      | null
+      | ((current: { draft: string; originalText: string } | null) => {
+          draft: string;
+          originalText: string;
+        } | null),
+  ) => void;
+  logExerciseTrace: (input: {
+    traceType: "system1" | "system2";
+    action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit";
+    originalText?: string;
+    text?: string;
+  }) => void;
+  clearTranscriptionDisplay: () => void;
+  restartSpeechRecognitionSession: () => void;
   sessionEndedImpure: boolean;
   resolvedWorkspaceId?: string;
   restartPractice: () => void;
@@ -77,6 +98,9 @@ export function ExerciseTapPhases(props: {
   activeSoloProblemId: string | null;
   onSelectSoloProblem: (id: string) => void;
   onSubmitSoloSolution: () => void;
+  workspaceId?: string;
+  blockId?: string;
+  sessionId?: string;
 }) {
   const {
     phase,
@@ -98,9 +122,9 @@ export function ExerciseTapPhases(props: {
     isPracticeMode,
     exerciseText,
     stash,
-    submitted,
-    submitStashThought,
-    handleUndoSubmissionToStash,
+    thoughtHistory,
+    sendThought,
+    isSending = false,
     participantIdentity,
     remainingSeconds,
     sessionPurity,
@@ -113,7 +137,13 @@ export function ExerciseTapPhases(props: {
     transcriptSilenceMs,
     retryMicrophone,
     stashCurrentTranscription,
-    submitCurrentOrLatestStash,
+    sendCurrentTranscription,
+    beginEditTranscription,
+    editingTranscription,
+    setEditingTranscription,
+    logExerciseTrace,
+    clearTranscriptionDisplay,
+    restartSpeechRecognitionSession,
     sessionEndedImpure,
     restartPractice,
     backToBriefing,
@@ -122,6 +152,9 @@ export function ExerciseTapPhases(props: {
     activeSoloProblemId,
     onSelectSoloProblem,
     onSubmitSoloSolution,
+    workspaceId,
+    blockId,
+    sessionId,
   } = props;
 
   return (
@@ -174,11 +207,11 @@ export function ExerciseTapPhases(props: {
                   }
                   showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
-                  intro="Solo practice. Del stashes; Enter promotes to Solution."
+                  intro="Solo practice. Del stashes; Enter sends; auto-stash fills thought memory."
                   shortcutRows={[
-                    { keys: ["Del"], label: "Stash (System 1)" },
-                    { keys: ["Enter"], label: "To Solution Stack (System 2)" },
-                    { keys: ["1", "2", "3"], label: "Promote stashed slot" },
+                    { keys: ["Del"], label: "Stash" },
+                    { keys: ["Enter"], label: "Send" },
+                    { keys: ["E"], label: "Edit" },
                     { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
                   ]}
                 />
@@ -198,14 +231,17 @@ export function ExerciseTapPhases(props: {
           <ExerciseTapShell
             exerciseText={exerciseText}
             stash={stash}
-            submitted={submitted}
-            onSubmitStashThought={submitStashThought}
-            onRemoveSubmission={handleUndoSubmissionToStash}
+            thoughtHistory={thoughtHistory}
+            sendThought={sendThought}
+            isSending={isSending}
             problems={soloProblems}
             activeProblemId={activeSoloProblemId}
             onSelectProblem={onSelectSoloProblem}
             onSubmitSolution={onSubmitSoloSolution}
             bgImage={bgImage}
+            workspaceId={workspaceId}
+            blockId={blockId}
+            sessionId={sessionId}
             identityBadge={
               isPracticeMode || participantIdentity ? (
                 <div className="flex items-center justify-end gap-2">
@@ -317,16 +353,22 @@ export function ExerciseTapPhases(props: {
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
                     <ThoughtCompactAction
+                      shortcut="↵"
+                      label="Send"
+                      disabled={!crystallizableText}
+                      onClick={() => sendCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
                       shortcut="Del"
                       label="Stash"
                       disabled={!crystallizableText}
                       onClick={() => stashCurrentTranscription()}
                     />
                     <ThoughtCompactAction
-                      shortcut="↵"
-                      label="To solution"
-                      disabled={!crystallizableText && stash.length === 0}
-                      onClick={() => submitCurrentOrLatestStash()}
+                      shortcut="E"
+                      label="Edit"
+                      disabled={!crystallizableText}
+                      onClick={beginEditTranscription}
                     />
                   </div>
                 </div>
@@ -445,6 +487,31 @@ export function ExerciseTapPhases(props: {
           </section>
         )}
       </div>
+
+      {editingTranscription ? (
+        <ThoughtEditPanel
+          draft={editingTranscription.draft}
+          onDraftChange={(draft) =>
+            setEditingTranscription((current) => (current ? { ...current, draft } : null))
+          }
+          onCancel={() => setEditingTranscription(null)}
+          onSend={() => {
+            const draft = normalize(editingTranscription.draft);
+            if (!draft) return;
+            logExerciseTrace({
+              traceType: "system2",
+              action: "edit",
+              originalText: editingTranscription.originalText,
+              text: draft,
+            });
+            setEditingTranscription(null);
+            clearTranscriptionDisplay();
+            restartSpeechRecognitionSession();
+            void sendThought(draft, []);
+          }}
+          isSending={isSending}
+        />
+      ) : null}
     </div>
   );
 }

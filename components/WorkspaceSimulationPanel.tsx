@@ -139,18 +139,6 @@ export function WorkspaceSimulationPanel({
       }
       setQuestions(nextQ);
       setExercises(nextE);
-      const deposited = await collectionAdd.addMany({
-        questions: nextQ,
-        exercises: nextE,
-      });
-      if (deposited.ok && deposited.items.length) {
-        setCollectionItems(deposited.items);
-      } else if (!deposited.ok) {
-        setError(
-          deposited.error ||
-            "Generated samples, but could not add them to the curated collection.",
-        );
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generate failed");
     } finally {
@@ -216,6 +204,7 @@ export function WorkspaceSimulationPanel({
       data-simulation-scope="workspace"
       data-simulation-scope-kind="workspace"
       data-simulation-collection
+      data-simulation-auto-deposit="false"
       className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain p-1 sm:p-2"
     >
       <header className="space-y-1" data-workspace-simulation-header>

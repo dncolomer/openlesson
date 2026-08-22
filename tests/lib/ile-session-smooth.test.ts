@@ -111,7 +111,7 @@ describe("applyIleContextFullAutoStash (shipped ILE apply path)", () => {
     expect(result.projectLists.stash).toHaveLength(0);
   });
 
-  it("Project Mode persists forming text onto the dual-stack stash and clears the bar", () => {
+  it("Project Mode persists forming text into thought-memory like conversation", () => {
     const forming = "project topic ".repeat(30).slice(0, THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
     expect(forming.length).toBe(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
     const result = applyIleContextFullAutoStash({
@@ -122,11 +122,11 @@ describe("applyIleContextFullAutoStash (shipped ILE apply path)", () => {
       nowMs: 77_000,
     });
     expect(result.didStash).toBe(true);
-    expect(result.destination).toBe("project-dual-stash");
+    expect(result.destination).toBe("thought-memory");
     expect(result.formingText).toBe("");
     expect(result.thought?.text).toBe(forming.trim());
-    expect(result.projectLists.stash.map((t) => t.text)).toEqual([forming.trim()]);
-    expect(result.thoughtMemory).toEqual([]);
+    expect(result.thoughtMemory.map((t) => t.text)).toEqual([forming.trim()]);
+    expect(result.projectLists.stash).toHaveLength(0);
 
     writeScratch(
       "ile-context-autostash.txt",

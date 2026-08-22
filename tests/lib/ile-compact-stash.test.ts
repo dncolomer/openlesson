@@ -84,16 +84,19 @@ describe("resolveIleDialogueTurn (shipped ILE speaker helper)", () => {
 });
 
 describe("ILE vs TAP dialogue chrome (shipped source)", () => {
-  it("ILE has no Open Thoughts button and uses the single-avatar helper; TAP live uses the session map", () => {
+  it("ILE compact stash opens Thought tool via See Older Thoughts; TAP live uses the session map", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain("data-open-thoughts");
     expect(helios).not.toContain("Open Thoughts");
-    expect(helios).not.toContain("onOpenThoughts");
+    expect(helios).toContain("onOpenThoughts");
+    expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("Submit last Thought");
     expect(helios).toContain("DialogueSplit");
 
     const view = readSessionViewSurface();
-    expect(view).not.toContain("onOpenThoughts");
+    expect(view).toContain("onOpenThoughts");
     expect(view).toContain("thought-history");
+    expect(view).toContain("openIleThoughtHistoryTool");
 
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     expect(ui).toContain("resolveIleDialogueTurn");
@@ -116,7 +119,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     writeScratch(
       "ile-compact-stash-excerpts.txt",
       [
-        "SessionHeliosPanel: no Open Thoughts / data-open-thoughts",
+        "SessionHeliosPanel: See Older Thoughts / onOpenThoughts (not Open Thoughts)",
         "DialogueSplitIle: resolveIleDialogueTurn, no Helios avatar",
         "TAP live: TapSessionMap + overlay (comic helper unused on live)",
         "Tools rail still has thought-history",

@@ -2498,7 +2498,7 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights.",
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech. Auto-stash also fills thought memory when the bar is full. Submit last Thought sends the newest stash. See Older Thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights. Press E to edit before sending.",
         "titleProject": "Think aloud — stash & solution",
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Explore Solo."
       },
@@ -2530,7 +2530,7 @@
       "step2": {
         "title": "How the interface works",
         "imageAlt": "Selective thought interface",
-        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Enter — send to Helios\n• Del — stash for later\n• 1 / 2 / 3 — send a stashed thought\n• E — edit before sending\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
+        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Enter — send to Helios\n• Del — stash for later\n• Submit last Thought — send the newest auto-stash\n• See Older Thoughts — select, submit, or edit traces\n• E — edit before sending\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
       },
       "step3": {
         "title": "Pick your starting focus",

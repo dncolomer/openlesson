@@ -11,12 +11,8 @@ export function decideIleKeyboardAction(input: {
   mode: IleThoughtKeyboardMode;
   key: string;
 }): IleKeyboardAction {
+  void input.mode;
   const key = input.key;
-  if (input.mode === "project") {
-    if (key === "Enter") return "project_submit";
-    if (key === "Delete" || key === "Backspace") return "project_stash";
-    return "ignore";
-  }
   if (key === "Enter") return "helios_send";
   if (key === "Delete" || key === "Backspace") return "helios_stash";
   return "ignore";

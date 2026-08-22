@@ -84,36 +84,32 @@ describe("trace payload contracts", () => {
 });
 
 describe("structural dual history + wider shell", () => {
-  it("Exercise live UI has stash + submission sections and sys1/sys2 actions", () => {
+  it("Exercise live UI uses universal Stash Submit UI and sys1/sys2 send", () => {
     const client = readExerciseTapSurface();
     expect(client).toContain("stashCurrentTranscription");
-    expect(client).toContain("submitCurrentOrLatestStash");
-    expect(client).toContain("handleUndoSubmissionToStash");
-    expect(client).toContain("demoteExerciseSubmissionToStash");
+    expect(client).toContain("sendCurrentTranscription");
+    expect(client).toContain("sendThought");
+    expect(client).toContain("submitLastStashedThought");
     expect(client).toContain('traceType: "system1"');
     expect(client).toContain('traceType: "system2"');
     expect(client).toContain('action: "send"');
-    expect(client).toContain('action: "remove"');
     expect(client).toContain("h-screen");
     expect(client).not.toContain("max-w-7xl");
     expect(client).not.toContain("DialogueSplit");
+    expect(read("components/ExerciseTapClient.tsx")).not.toContain("ExerciseStashHistory");
+    expect(read("components/exercise-tap/exercise-tap-phases.tsx")).not.toContain(
+      "ExerciseStashHistory",
+    );
 
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(shell).toContain("data-exercise-dual-history");
-    expect(shell).toContain("ExerciseStashHistory");
-    expect(shell).toContain("ExerciseSubmissionStack");
+    expect(shell).toContain("data-exercise-tap-stash-submit");
+    expect(shell).toContain("ThoughtMemoryPanel");
+    expect(shell).toContain("Submit last Thought");
+    expect(shell).toContain("See Older Thoughts");
     expect(shell).toContain("lg:grid-cols-2");
     expect(shell).toContain("data-exercise-tap-live-split");
-
-    expect(read("components/exercise-tap/ExerciseStashHistory.tsx")).toContain(
-      "data-exercise-stash-history",
-    );
-    expect(read("components/exercise-tap/ExerciseSubmissionStack.tsx")).toContain(
-      "data-exercise-submission-history",
-    );
-    expect(read("components/exercise-tap/ExerciseSubmissionStack.tsx")).toContain(
-      "data-exercise-remove-thought",
-    );
+    expect(shell).not.toContain("ExerciseStashHistory");
+    expect(shell).not.toContain("ExerciseSubmissionStack");
   });
 
   it("trace route allowlists system2 remove", () => {

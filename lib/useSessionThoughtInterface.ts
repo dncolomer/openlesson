@@ -6,6 +6,7 @@ import {
   normalizeIleFormingText,
   type IleThoughtMemoryRecord,
 } from "@/lib/ile-context-auto-stash";
+import { selectLastStashedThought } from "@/lib/ile-last-stash";
 
 
 export interface SessionThought {
@@ -423,6 +424,10 @@ export function useSessionThoughtInterface({
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
   const latestThoughts = useMemo(() => stashedThoughts.slice(-3).reverse(), [stashedThoughts]);
+  const lastStashedThought = useMemo(
+    () => selectLastStashedThought(stashedThoughts),
+    [stashedThoughts],
+  );
 
   function buildThoughtRecord(text: string, currentThoughts: SessionThought[]): SessionThought | null {
     return buildIleThoughtMemoryRecord(text, currentThoughts as IleThoughtMemoryRecord[]) as SessionThought | null;
@@ -731,6 +736,7 @@ export function useSessionThoughtInterface({
     sendError,
     stashedThoughts,
     latestThoughts,
+    lastStashedThought,
     sentThoughtIds,
     memoryThoughtIds,
     speechSupported,

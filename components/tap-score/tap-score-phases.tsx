@@ -5,8 +5,13 @@ import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
 import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
 import { tapConvoBlocksFromAssistantTurns } from "@/lib/tap-session-map";
-import { ExerciseStashHistory } from "@/components/exercise-tap/ExerciseStashHistory";
+import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
+import {
+  openOlderThoughtsSurface,
+  selectLastStashedThought,
+  submitLastStashedThought,
+} from "@/lib/ile-last-stash";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -76,7 +81,6 @@ export function TapScorePhases(props: {
   sendCurrentTranscription: () => void;
   stashCurrentTranscription: () => void;
   beginEditTranscription: () => void;
-  latestThoughts: Thought[];
   stashedThoughts: Thought[];
   sendThought: (text: string, thoughtIds: string[]) => void;
   thoughtHistory: Thought[];
@@ -144,6 +148,10 @@ export function TapScorePhases(props: {
     beginEditTranscription,
     stashedThoughts,
     sendThought,
+    thoughtHistory,
+    workspaceId,
+    blockId,
+    sessionId,
     resultsError,
     performanceReport,
     sessionEndedImpure,
@@ -173,6 +181,8 @@ export function TapScorePhases(props: {
     convoBlocks[convoBlocks.length - 1] ??
     null;
   const overlayWaiting = isSending || (isStartingSession && !lastAssistantTurn);
+  const [olderThoughtsOpen, setOlderThoughtsOpen] = useState(false);
+  const lastStash = selectLastStashedThought(stashedThoughts);
 
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
@@ -387,21 +397,75 @@ export function TapScorePhases(props: {
                       </div>
                     </div>
                   </div>
-                  <div className="min-h-0 flex-1 overflow-hidden">
-                    <ExerciseStashHistory
-                      thoughts={stashedThoughts}
-                      onSubmitThought={(thoughtId) => {
-                        const thought = stashedThoughts.find((item) => item.id === thoughtId);
-                        if (!thought) return;
-                        void sendThought(thought.text, [thought.id]);
-                      }}
-                      emptyMessage="Del or silence stashes speech here."
-                      actionLabel="Submit"
-                      actionTitle="Submit this thought"
-                      actionDisabled={isSending}
-                      className="bg-black/35 lg:border-r-0"
-                    />
+                  <div
+                    className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
+                    data-tap-last-stash
+                    data-ile-last-stash
+                  >
+                    {lastStash ? (
+                      <p
+                        data-tap-last-stash-text
+                        data-ile-last-stash-text
+                        className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
+                        title={lastStash.text}
+                      >
+                        {lastStash.text}
+                      </p>
+                    ) : (
+                      <p
+                        data-tap-last-stash-empty
+                        className="text-xs text-neutral-600"
+                      >
+                        No stashed thought
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        data-tap-submit-last-thought
+                        data-ile-submit-last-thought
+                        disabled={!lastStash || isSending}
+                        onClick={() => {
+                          void submitLastStashedThought({
+                            thoughts: stashedThoughts,
+                            sendThought,
+                          });
+                        }}
+                        className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Submit last Thought
+                      </button>
+                      <button
+                        type="button"
+                        data-tap-see-older-thoughts
+                        data-ile-see-older-thoughts
+                        onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
+                        className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                      >
+                        See Older Thoughts
+                      </button>
+                    </div>
                   </div>
+                  {olderThoughtsOpen ? (
+                    <div
+                      className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
+                      data-tap-older-thoughts
+                    >
+                      <ThoughtMemoryPanel
+                        className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
+                        listClassName="pr-1"
+                        thoughts={thoughtHistory}
+                        workspaceId={workspaceId}
+                        blockId={blockId}
+                        sessionId={sessionId}
+                        insightSurface="tap"
+                        allowInsightGeneration={false}
+                        onSendThought={sendThought}
+                        isSending={isSending}
+                        emptyMessage="Speak, press Del to stash thoughts, or Enter to send. Every trace appears here."
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </TapAestheticSection>
             </div>

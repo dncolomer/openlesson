@@ -244,13 +244,21 @@ describe("block simulation generate path", () => {
     expect(route).toContain("modifierPrompt");
   });
 
-  it("block panel auto-generates and deposits to collection", () => {
+  it("block panel does not auto-generate or auto-deposit to collection", () => {
     const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
     const addUi = read("components/SimulationCollectionAddButton.tsx");
-    expect(panel).toContain("data-simulation-auto-generate");
+    expect(panel).toContain('data-simulation-auto-generate="false"');
+    expect(panel).toContain('data-simulation-auto-deposit="false"');
+    expect(panel).not.toContain("depositToCollection");
+    expect(panel).not.toContain("autoRanForBlock");
     expect(panel).toContain("simulation-collection");
     expect(panel).toContain("SimulationCollectionAddButton");
     expect(panel).toContain("addMany");
+    const generateFn = panel.slice(
+      panel.indexOf("const regenerate = useCallback"),
+      panel.indexOf("Reset chrome when block identity"),
+    );
+    expect(generateFn).not.toContain("addMany");
     expect(addUi).toContain("data-simulation-add-to-collection");
     expect(addUi).toContain('action: "deposit"');
     expect(addUi).toContain('action: "create"');
@@ -346,6 +354,13 @@ describe("simulation collection CRUD + modifier", () => {
     expect(panel).toContain('scope: "workspace"');
     expect(panel).toContain("SimulationCollectionAddButton");
     expect(panel).toContain("addMany");
+    expect(panel).toContain('data-simulation-auto-deposit="false"');
+    const workspaceGenerate = panel.slice(
+      panel.indexOf("const generate = async"),
+      panel.indexOf("const saveEdit"),
+    );
+    expect(workspaceGenerate).not.toContain("addMany");
+    expect(workspaceGenerate).not.toContain("collectionAdd.addMany");
     // Block / multi-block pickers removed from the tab
     expect(panel).not.toContain("data-simulation-scope-block");
     expect(panel).not.toContain("data-simulation-multi-block");
@@ -357,6 +372,12 @@ describe("simulation collection CRUD + modifier", () => {
     expect(multi).toContain("SimulationCollectionAddButton");
     expect(multi).toContain("addMany");
     expect(multi).toContain("multi_block");
+    expect(multi).toContain('data-simulation-auto-deposit="false"');
+    const multiGenerate = multi.slice(
+      multi.indexOf("const generate = async"),
+      multi.indexOf("return ("),
+    );
+    expect(multiGenerate).not.toContain("addMany");
 
     const combine = read("components/WorkspaceCombineBlocksPane.tsx");
     expect(combine).toContain("WorkspaceMultiBlockSimulationPanel");

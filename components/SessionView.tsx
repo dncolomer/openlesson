@@ -39,6 +39,7 @@ import {
   resolveIleDurableSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
+import { openIleThoughtHistoryTool } from "@/lib/ile-last-stash";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
@@ -899,6 +900,8 @@ export function SessionView({
             onProjectPromote={handleProjectPromote}
             onProjectDemote={handleProjectDemote}
             sessionThoughtHistory={sessionThoughtHistory}
+            onSendThought={sessionThoughtInterface.sendThought}
+            thoughtIsSending={sessionThoughtInterface.isSending}
             stream={stream}
             museStatus={museStatus}
             museError={museError}
@@ -960,6 +963,10 @@ export function SessionView({
             onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
             onProjectStash={handleProjectStash}
             onProjectSubmitToSolution={handleProjectSubmitToSolution}
+            onOpenThoughts={() => {
+              ensureVisible("tools");
+              openIleThoughtHistoryTool(setActiveTool);
+            }}
           />
         }
       />

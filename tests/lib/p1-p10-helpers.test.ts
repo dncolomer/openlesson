@@ -179,7 +179,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(chat.ok).toBe(true);
     expect(chat.data.message).toBe("ok");
 
-    expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("project_stash");
+    expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");
     expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("helios_send");
 
     expect(
@@ -288,7 +288,8 @@ describe("P1–P10 shipped helpers", () => {
     expect(exercise).toContain("tapTracePayload");
     expect(tapClient).toContain("tapTracePayload");
     expect(sessionView).toContain("postIleSessionChat");
-    expect(sessionView).toContain("decideIleKeyboardAction");
+    expect(sessionView).toContain("onSendThought");
+    expect(sessionView).toContain("ThoughtMemoryPanel");
     expect(sessionView).not.toContain('from "./HeliosChat"');
     expect(stash).toContain("authenticateStashRequest");
     expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");
@@ -320,7 +321,7 @@ describe("P1–P10 shipped helpers", () => {
         "TAP/ILE speech/idle/chat: uploadWorkspaceProofOfWork",
         "TAP shells: TAP_SESSION_RUNTIME_PATHS start/complete + tapTracePayload",
         "TAP LLM miss uses resolveTap*FromLlm fallbacks",
-        "ILE: postIleSessionChat + decideIleKeyboardAction",
+        "ILE: postIleSessionChat + ThoughtMemoryPanel onSendThought",
         "product-auth allowProductWorkspaceLinkAccess/EvalAccess; stash authenticateStashRequest",
       ].join("\n"),
     );

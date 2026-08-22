@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { decideIleKeyboardAction } from "@/lib/ile-keyboard-mode";
 import {
   applyIleProjectThoughtMutation,
   emptyIleProjectDualLists,
@@ -241,18 +240,11 @@ const sessionThoughtInterface = useSessionThoughtInterface({
   speechLang: sessionSpeechLang,
   sessionId,
   onLogTrace: (payload) => {
-    // Project Mode dual-list path owns PoW traces for stash/solution.
-    if (isProjectMode) return;
     logSessionThoughtTrace(payload);
   },
   onSpeechTranscript: (text) => notifySpeechResultRef.current(text),
   onUserActivity: () => bumpUserActivityRef.current(),
   onSendToProbe: async (text) => {
-    if (isProjectMode) {
-      // Never open Helios dialogue path in Project Mode (keyboard Enter still hits this).
-      mutateActiveProjectThoughts({ type: "submit_direct", text });
-      return;
-    }
     setHeliosTurnMode("idle");
     await flushRemainingIlePow();
     await submitHeliosChatMessageNow(text);
@@ -305,28 +297,6 @@ const handleProjectDemote = useCallback(
   },
   [mutateActiveProjectThoughts],
 );
-
-// Project Mode: Del/Enter go to dual stacks (not Helios). Hook keydown still fires send for Enter
-// with onSendToProbe → solution; Del uses hook stash which we skip logging for — intercept Del.
-useEffect(() => {
-  if (!isProjectMode || !powSessionEnabled) return;
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-    const action = decideIleKeyboardAction({
-      mode: "project",
-      key: event.key,
-    });
-    if (action === "project_stash" && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      handleProjectStash();
-    }
-  };
-  window.addEventListener("keydown", handleKeyDown, true);
-  return () => window.removeEventListener("keydown", handleKeyDown, true);
-}, [isProjectMode, powSessionEnabled, handleProjectStash]);
 
   const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
     powSessionEnabled,

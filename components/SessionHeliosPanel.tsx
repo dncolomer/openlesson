@@ -13,8 +13,11 @@ import {
   THOUGHT_BACKGROUND_IMAGES,
 } from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
+import {
+  selectLastStashedThought,
+  submitLastStashedThought,
+} from "@/lib/ile-last-stash";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import {
@@ -70,6 +73,8 @@ interface SessionHeliosPanelProps {
   onSelectChapterFollowUp?: (suggestion: ChapterFollowUpSuggestion) => void;
   onProjectStash?: (text?: string) => void;
   onProjectSubmitToSolution?: () => void;
+  /** Open the ILE Thought tool (`thought-history`). */
+  onOpenThoughts?: () => void;
 }
 
 export function SessionHeliosPanel({
@@ -104,13 +109,13 @@ export function SessionHeliosPanel({
   chapterFollowUpsLoading = false,
   chapterFollowUpsError = null,
   onSelectChapterFollowUp,
-  onProjectStash,
-  onProjectSubmitToSolution,
+  onOpenThoughts,
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
   const [bgImage, setBgImage] = useState("");
   const contextStashInFlightRef = useRef(false);
+  const lastStash = selectLastStashedThought(thought.stashedThoughts);
 
   useEffect(() => {
     const pool = aestheticImages?.length ? aestheticImages : THOUGHT_BACKGROUND_IMAGES;
@@ -150,10 +155,7 @@ export function SessionHeliosPanel({
     if (!result.didStash || !result.thought) return;
 
     contextStashInFlightRef.current = true;
-    if (projectMode && onProjectStash) {
-      thought.clearCurrentTranscription();
-      onProjectStash(result.thought.text);
-    } else if (typeof thought.ingestStashedThought === "function") {
+    if (typeof thought.ingestStashedThought === "function") {
       thought.ingestStashedThought(result.thought);
       thought.clearCurrentTranscription();
     } else {
@@ -173,7 +175,6 @@ export function SessionHeliosPanel({
     thought.thoughts,
     projectMode,
     chapterThoughtsLocked,
-    onProjectStash,
     projectStash,
     projectSolution,
   ]);
@@ -437,64 +438,80 @@ export function SessionHeliosPanel({
                     </button>
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
-                    {projectMode ? (
-                      <>
-                        <ThoughtCompactAction
-                          shortcut="↵"
-                          label="Solution"
-                          disabled={
-                            chapterThoughtsLocked ||
-                            !thought.crystallizableText ||
-                            thought.isSending
-                          }
-                          onClick={() => onProjectSubmitToSolution?.()}
-                        />
-                        <ThoughtCompactAction
-                          shortcut="Del"
-                          label="Stash"
-                          disabled={chapterThoughtsLocked || !thought.crystallizableText}
-                          onClick={() => onProjectStash?.()}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <ThoughtCompactAction
-                          shortcut="↵"
-                          label="Send"
-                          disabled={!thought.crystallizableText || thought.isSending}
-                          onClick={() => void thought.sendCurrentTranscription()}
-                        />
-                        <ThoughtCompactAction
-                          shortcut="Del"
-                          label="Stash"
-                          disabled={!thought.crystallizableText}
-                          onClick={thought.stashCurrentTranscription}
-                        />
-                        <ThoughtCompactAction
-                          shortcut="E"
-                          label="Edit"
-                          disabled={!thought.crystallizableText}
-                          onClick={thought.beginEditTranscription}
-                        />
-                      </>
-                    )}
+                    <ThoughtCompactAction
+                      shortcut="↵"
+                      label="Send"
+                      disabled={
+                        chapterThoughtsLocked ||
+                        !thought.crystallizableText ||
+                        thought.isSending
+                      }
+                      onClick={() => void thought.sendCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="Del"
+                      label="Stash"
+                      disabled={chapterThoughtsLocked || !thought.crystallizableText}
+                      onClick={thought.stashCurrentTranscription}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="E"
+                      label="Edit"
+                      disabled={chapterThoughtsLocked || !thought.crystallizableText}
+                      onClick={thought.beginEditTranscription}
+                    />
                   </div>
                 </div>
                 <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
 
-              {!projectMode ? (
-                <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">
-                    {t("probes.stashedThoughts")}
-                  </p>
-                  <ActiveThoughtSlots
-                    thoughts={thought.latestThoughts}
-                    isSending={thought.isSending}
-                    onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
-                  />
+              <div
+                className="mt-3 border-t border-neutral-900/80 pt-3"
+                data-ile-last-stash
+              >
+                  {lastStash ? (
+                    <p
+                      data-ile-last-stash-text
+                      className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
+                      title={lastStash.text}
+                    >
+                      {lastStash.text}
+                    </p>
+                  ) : (
+                    <p
+                      data-ile-last-stash-empty
+                      className="text-xs text-neutral-600"
+                    >
+                      No stashed thought
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      data-ile-submit-last-thought
+                      disabled={
+                        chapterThoughtsLocked || !lastStash || thought.isSending
+                      }
+                      onClick={() => {
+                        void submitLastStashedThought({
+                          thoughts: thought.stashedThoughts,
+                          sendThought: thought.sendThought,
+                        });
+                      }}
+                      className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Submit last Thought
+                    </button>
+                    <button
+                      type="button"
+                      data-ile-see-older-thoughts
+                      onClick={() => onOpenThoughts?.()}
+                      className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                    >
+                      See Older Thoughts
+                    </button>
+                  </div>
                 </div>
-              ) : null}
             </div>
           </>
         )}

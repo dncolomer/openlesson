@@ -66,8 +66,10 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(flow).toContain('action: isResend ? "resend" : "send"');
 
     const live = readTapScoreSurface();
-    expect(live).toContain("ExerciseStashHistory");
-    expect(live).toContain("sendThought(thought.text, [thought.id])");
+    expect(live).not.toContain("ExerciseStashHistory");
+    expect(live).toContain("submitLastStashedThought");
+    expect(live).toContain("sendThought");
+    expect(live).toContain("ThoughtMemoryPanel");
     expect(live).toContain("stashCurrentTranscription");
     expect(live).toContain("sendCurrentTranscription");
     expect(live).toContain("TapSessionMap");
@@ -80,17 +82,17 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(exercise).toContain('traceType: "system2"');
     expect(exercise).toContain("stashExerciseSpeech");
     expect(exercise).toContain("promoteExerciseStashToSubmission");
-    expect(exercise).toContain("demoteExerciseSubmissionToStash");
     expect(exercise).toContain("postTutoringSessionStart");
     expect(exercise).toContain("postTutoringSessionComplete");
     expect(exercise).toContain("stashCurrentTranscription");
-    expect(exercise).toContain("submitStashThought");
-    expect(exercise).toContain("handleUndoSubmissionToStash");
+    expect(exercise).toContain("sendThought");
+    expect(exercise).toContain("submitLastStashedThought");
     expect(exercise).toContain("TapSessionMap");
-    expect(exercise).toContain("ExerciseStashHistory");
-    expect(exercise).toContain("ExerciseSubmissionStack");
-    expect(exercise).toContain("onSubmitStashThought={submitStashThought}");
-    expect(exercise).toContain("onRemoveSubmission={handleUndoSubmissionToStash}");
+    expect(exercise).toContain("ThoughtMemoryPanel");
+    const soloShell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(soloShell).not.toContain("ExerciseStashHistory");
+    expect(soloShell).not.toContain("ExerciseSubmissionStack");
+    expect(soloShell).toContain("ThoughtMemoryPanel");
 
     writeScratch(
       "tap-pow-wiring.txt",
@@ -102,11 +104,10 @@ describe("TAP live PoW after map/stash UI swap", () => {
         `sys2send=${String(send.traceType)}/${String(send.action)}`,
         `sys2remove=${String(remove.traceType)}/${String(remove.action)}`,
         "convo stash: addThought + tapTracePayload system1",
-        "convo submit: ExerciseStashHistory -> sendThought -> logTapTrace system2 send",
+        "convo submit: submitLastStashedThought -> sendThought -> logTapTrace system2 send",
         "convo start/complete: postTutoringSessionStart/Complete",
         "solo stash: stashExerciseSpeech + logExerciseTrace system1",
-        "solo submit: promote/direct + logExerciseTrace system2 send",
-        "solo remove: demote + logExerciseTrace system2 remove",
+        "solo submit: submitLastStashedThought -> sendThought -> logExerciseTrace system2 send",
         "solo start/complete: postTutoringSessionStart/Complete",
         "handlers still passed into live UI after map/overlay/stash-history swap",
       ].join("\n"),

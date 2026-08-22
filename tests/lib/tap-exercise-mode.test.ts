@@ -373,34 +373,29 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(item).toContain('params.set("minutes"');
   });
 
-  it("Exercise session UI is a separate dual-history shell without DialogueSplit/Helios bubbles", () => {
+  it("Exercise session UI is a separate Stash Submit shell without DialogueSplit/Helios bubbles", () => {
     const client = readExerciseTapSurface();
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    const stash = read("components/exercise-tap/ExerciseStashHistory.tsx");
-    const submission = read("components/exercise-tap/ExerciseSubmissionStack.tsx");
 
     expect(client).toContain("ExerciseTapShell");
     expect(client).toContain("data-exercise-tap-client");
     expect(client).not.toContain("DialogueSplit");
     expect(client).not.toContain("HeliosProbeAvatar");
     expect(client).toContain("stashCurrentTranscription");
-    expect(client).toContain("submitCurrentOrLatestStash");
-    expect(client).toContain("handleUndoSubmissionToStash");
-    expect(client).toContain("demoteExerciseSubmissionToStash");
+    expect(client).toContain("sendCurrentTranscription");
+    expect(client).toContain("sendThought");
     expect(client).toContain('event.key === "Enter"');
     expect(client).toContain('event.key === "Delete"');
     expect(client).toContain("resolveExercisePromptAfterIntro");
     expect(client).toContain("interaction_kind: \"exercise\"");
 
     expect(shell).toContain("data-exercise-tap-shell");
-    expect(shell).toContain("data-exercise-dual-history");
-    expect(shell).toContain("ExerciseStashHistory");
-    expect(shell).toContain("ExerciseSubmissionStack");
+    expect(shell).toContain("data-exercise-tap-stash-submit");
+    expect(shell).toContain("ThoughtMemoryPanel");
+    expect(shell).toContain("Submit last Thought");
+    expect(shell).not.toContain("ExerciseStashHistory");
+    expect(shell).not.toContain("ExerciseSubmissionStack");
     expect(shell).not.toContain("DialogueSplit");
-
-    expect(stash).toContain("data-exercise-stash-history");
-    expect(submission).toContain("data-exercise-submission-history");
-    expect(submission).toContain("data-exercise-remove-thought");
   });
 
   it("start route LLM-authors solo exercise (not template Teach me) for exercise kind", () => {

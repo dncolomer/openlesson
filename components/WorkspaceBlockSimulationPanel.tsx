@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
-  deriveBlockSimulation,
+  emptyBlockSimulation,
   normalizeSimulationPayload,
   partitionSimulationProbes,
   SIMULATION_EXERCISE_COUNT,
@@ -108,7 +108,7 @@ function ProbeList({
 
 /**
  * Simulation drawer: exactly 3 questions + 3 exercises.
- * Auto-generates on open; deposits results into the workspace Simulation collection.
+ * Generate is explicit (no auto-run on open). Collection add is explicit too.
  */
 export function WorkspaceBlockSimulationPanel({
   workspaceId,
@@ -192,13 +192,12 @@ export function WorkspaceBlockSimulationPanel({
   );
 
   const [sim, setSim] = useState<BlockSimulationResult>(() =>
-    deriveBlockSimulation(seedInput),
+    emptyBlockSimulation(),
   );
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modifierPrompt, setModifierPrompt] = useState("");
   const [seedItems, setSeedItems] = useState<SimulationCollectionItem[]>([]);
-  const autoRanForBlock = useRef<string | null>(null);
   const origin = useMemo(
     () => ({ kind: "block" as const, blockId, blockTitle }),
     [blockId, blockTitle],
@@ -227,22 +226,6 @@ export function WorkspaceBlockSimulationPanel({
       cancelled = true;
     };
   }, [workspaceId]);
-
-  const depositToCollection = useCallback(
-    async (result: BlockSimulationResult) => {
-      if (!workspaceId || !result.probes.length) return;
-      const deposited = await addMany({ probes: result.probes });
-      if (deposited.ok && deposited.items.length) {
-        setSeedItems(deposited.items);
-      } else if (!deposited.ok) {
-        setError(
-          deposited.error ||
-            "Generated this block, but could not add it to the curated collection.",
-        );
-      }
-    },
-    [addMany, workspaceId],
-  );
 
   const regenerate = useCallback(async () => {
     if (!workspaceId || regenerating) return;
@@ -282,7 +265,6 @@ export function WorkspaceBlockSimulationPanel({
         throw new Error("No simulation content returned");
       }
       setSim(next);
-      void depositToCollection(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Regenerate failed");
     } finally {
@@ -293,7 +275,6 @@ export function WorkspaceBlockSimulationPanel({
     blockDescription,
     blockId,
     blockTitle,
-    depositToCollection,
     locale,
     localContext,
     modifierPrompt,
@@ -303,19 +284,11 @@ export function WorkspaceBlockSimulationPanel({
     workspaceId,
   ]);
 
-  // Reset chrome when block identity changes; auto-generate once per open.
+  // Reset chrome when block identity changes. Do not auto-generate.
   useEffect(() => {
-    setSim(deriveBlockSimulation(seedInput));
+    setSim(emptyBlockSimulation());
     setError(null);
-    autoRanForBlock.current = null;
-  }, [blockId]); // eslint-disable-line react-hooks/exhaustive-deps -- only reseed on block change
-
-  useEffect(() => {
-    if (!workspaceId || regenerating) return;
-    if (autoRanForBlock.current === blockId) return;
-    autoRanForBlock.current = blockId;
-    void regenerate();
-  }, [blockId, workspaceId, regenerate, regenerating]);
+  }, [blockId]);
 
   const { questions, exercises } = partitionSimulationProbes(sim.probes);
 
@@ -325,7 +298,8 @@ export function WorkspaceBlockSimulationPanel({
       data-block-id={blockId}
       data-simulation-question-count={questions.length}
       data-simulation-exercise-count={exercises.length}
-      data-simulation-auto-generate="true"
+      data-simulation-auto-generate="false"
+      data-simulation-auto-deposit="false"
       className="space-y-3"
     >
       <div className="flex items-center justify-between gap-2">
@@ -341,7 +315,11 @@ export function WorkspaceBlockSimulationPanel({
           onClick={() => void regenerate()}
           className="shrink-0 rounded-none border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {regenerating ? "Generating…" : "Regenerate"}
+          {regenerating
+            ? "Generating…"
+            : sim.probes.length
+              ? "Regenerate"
+              : "Generate"}
         </button>
       </div>
 
@@ -412,7 +390,7 @@ export function WorkspaceBlockSimulationPanel({
           empty={
             regenerating
               ? "Generating questions…"
-              : "No sample questions yet — click Regenerate."
+              : "No sample questions yet — click Generate."
           }
         />
       </div>
@@ -438,7 +416,7 @@ export function WorkspaceBlockSimulationPanel({
           empty={
             regenerating
               ? "Generating exercises…"
-              : "No sample exercises yet."
+              : "No sample exercises yet — click Generate."
           }
         />
       </div>

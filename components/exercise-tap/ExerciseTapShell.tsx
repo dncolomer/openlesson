@@ -1,23 +1,27 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
 import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
-import { ExerciseStashHistory } from "./ExerciseStashHistory";
-import { ExerciseSubmissionStack } from "./ExerciseSubmissionStack";
+import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
+import {
+  openOlderThoughtsSurface,
+  selectLastStashedThought,
+  submitLastStashedThought,
+} from "@/lib/ile-last-stash";
 
 /**
- * Exercise TAP live shell — 50/50 map | stash/solution with aesthetic.
+ * Exercise TAP live shell — 50/50 map | universal Stash Submit UI.
  */
 export function ExerciseTapShell({
   exerciseText,
   stash,
-  submitted,
-  onSubmitStashThought,
-  onRemoveSubmission,
+  thoughtHistory,
+  sendThought,
+  isSending = false,
   speechBar,
   controlStrip,
   identityBadge,
@@ -27,12 +31,15 @@ export function ExerciseTapShell({
   onSubmitSolution,
   solutionSubmitted = false,
   bgImage,
+  workspaceId,
+  blockId,
+  sessionId,
 }: {
   exerciseText: string;
   stash: ExerciseThought[];
-  submitted: ExerciseThought[];
-  onSubmitStashThought: (thoughtId: string) => void;
-  onRemoveSubmission: (thoughtId: string) => void;
+  thoughtHistory: ExerciseThought[];
+  sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
+  isSending?: boolean;
   speechBar: ReactNode;
   controlStrip?: ReactNode;
   identityBadge?: ReactNode;
@@ -42,15 +49,19 @@ export function ExerciseTapShell({
   onSubmitSolution: () => void;
   solutionSubmitted?: boolean;
   bgImage?: string | null;
+  workspaceId?: string;
+  blockId?: string;
+  sessionId?: string;
 }) {
   const active = problems.find((problem) => problem.id === activeProblemId) ?? problems[0];
   const prompt = active?.prompt || exerciseText;
+  const [olderThoughtsOpen, setOlderThoughtsOpen] = useState(false);
+  const lastStash = selectLastStashedThought(stash);
 
   return (
     <section
       data-exercise-tap-shell
-      data-exercise-dual-history
-      data-exercise-dual-history-fixed
+      data-exercise-tap-stash-submit
       className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0b0b0b]"
     >
       <div
@@ -95,20 +106,72 @@ export function ExerciseTapShell({
             {speechBar}
           </div>
           <div
-            data-exercise-dual-history-pane
-            className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden"
+            className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
+            data-tap-last-stash
+            data-exercise-last-stash
           >
-            <ExerciseStashHistory
-              thoughts={stash}
-              onSubmitThought={onSubmitStashThought}
-              className="border-b border-neutral-800/60 bg-black/35 lg:border-r-0"
-            />
-            <ExerciseSubmissionStack
-              thoughts={submitted}
-              onRemove={onRemoveSubmission}
-              className="bg-black/35"
-            />
+            {lastStash ? (
+              <p
+                data-tap-last-stash-text
+                data-exercise-last-stash-text
+                className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
+                title={lastStash.text}
+              >
+                {lastStash.text}
+              </p>
+            ) : (
+              <p className="text-xs text-neutral-600" data-exercise-last-stash-empty>
+                No stashed thought
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                data-tap-submit-last-thought
+                data-exercise-submit-last-thought
+                disabled={!lastStash || isSending}
+                onClick={() => {
+                  void submitLastStashedThought({
+                    thoughts: stash,
+                    sendThought,
+                  });
+                }}
+                className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Submit last Thought
+              </button>
+              <button
+                type="button"
+                data-tap-see-older-thoughts
+                data-exercise-see-older-thoughts
+                onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
+                className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+              >
+                See Older Thoughts
+              </button>
+            </div>
           </div>
+          {olderThoughtsOpen ? (
+            <div
+              className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
+              data-tap-older-thoughts
+              data-exercise-older-thoughts
+            >
+              <ThoughtMemoryPanel
+                className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
+                listClassName="pr-1"
+                thoughts={thoughtHistory}
+                workspaceId={workspaceId}
+                blockId={blockId}
+                sessionId={sessionId}
+                insightSurface="tap"
+                allowInsightGeneration={false}
+                onSendThought={sendThought}
+                isSending={isSending}
+                emptyMessage="Speak, press Del to stash thoughts, or Enter to send. Every trace appears here."
+              />
+            </div>
+          ) : null}
         </TapAestheticSection>
       </div>
     </section>

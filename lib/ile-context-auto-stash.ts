@@ -4,12 +4,10 @@
  * Distinct from TAP silence auto-stash (purity unchanged).
  */
 import {
-  applyIleProjectThoughtMutation,
   emptyIleProjectDualLists,
   isIleChapterThoughtsLocked,
   normalizeIleSessionMode,
   type ExerciseDualLists,
-  type ExerciseThought,
   type IleSessionMode,
 } from "@/lib/ile-mode";
 import {
@@ -63,7 +61,7 @@ export function buildIleThoughtMemoryRecord(
 
 /**
  * Persist forming text when the ILE context bar is at capacity.
- * Learning → thought-memory list. Project → dual-stack stash.
+ * Both Learning and Explore Solo write into thought-memory (conversation stash).
  * Always clears forming text on success. Locked Project chapters are a no-op.
  */
 export function applyIleContextFullAutoStash(input: {
@@ -94,24 +92,6 @@ export function applyIleContextFullAutoStash(input: {
     return empty;
   }
 
-  if (mode === "project") {
-    const mutated = applyIleProjectThoughtMutation(lists, input.chapterStatus, {
-      type: "stash",
-      text: clean,
-      nowMs: input.nowMs,
-    });
-    if (mutated.rejected || !mutated.thought) return empty;
-    const thought = exerciseThoughtToMemoryRecord(mutated.thought);
-    return {
-      didStash: true,
-      formingText: "",
-      destination: "project-dual-stash",
-      thought,
-      thoughtMemory: memory,
-      projectLists: mutated.lists,
-    };
-  }
-
   const record = buildIleThoughtMemoryRecord(clean, memory, input.nowMs);
   if (!record) return empty;
   return {
@@ -121,14 +101,5 @@ export function applyIleContextFullAutoStash(input: {
     thought: record,
     thoughtMemory: [...memory, record],
     projectLists: lists,
-  };
-}
-
-function exerciseThoughtToMemoryRecord(thought: ExerciseThought): IleThoughtMemoryRecord {
-  return {
-    id: thought.id,
-    text: thought.text,
-    timestamp: thought.timestamp,
-    chainId: thought.chainId,
   };
 }

@@ -302,15 +302,18 @@ describe("aycl landing + hackathons structural", () => {
     const grid = readMapGridSurface();
     const nav = read("components/LandingNav.tsx");
     const navbar = read("components/Navbar.tsx");
-    const hackathons = read("app/hackathons/page.tsx");
+    const hackathons = read("app/community-events/page.tsx");
     const lib = read("lib/aycl-landing.ts");
+    const sitemap = read("app/sitemap.ts");
+    const middleware = read("middleware.ts");
 
     // Listing → dedicated landing
     expect(listing).toContain("ayclLandingPath");
     expect(listing).toContain("data-aycl-catalog-landing-link");
     expect(listing).not.toContain('id: "hackathons"');
     expect(listing).not.toContain("HackathonsTab");
-    expect(listing).toContain("/hackathons");
+    expect(listing).toContain("/community-events");
+    expect(listing).not.toContain("/hackathons");
 
     // Landing surface
     expect(landingPage).toContain("AyclLandingClient");
@@ -358,7 +361,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(apiSamples).toMatch(/Failed to generate practice content/);
     expect(apiSamples).toContain("parseAyclExploreLearnSamples");
 
-    // Community Events listing (route stays /hackathons)
+    // Community Events listing lives at /community-events
+    expect(existsSync(join(ROOT, "app/hackathons/page.tsx"))).toBe(false);
     expect(hackathons).toContain("data-hackathons-page");
     expect(hackathons).toContain("Projects & Community");
     expect(hackathons).toContain("AYCL_HACKATHONS");
@@ -368,13 +372,19 @@ describe("aycl landing + hackathons structural", () => {
     expect(hackathons).not.toMatch(/>\s*Hackathon\s*</);
     expect(hackathons).toContain("{hackathon.image}");
     expect(hackathons).toContain("href={hackathon.href}");
-    expect(nav).toMatch(/href:\s*["']\/hackathons["']/);
+    expect(hackathons).toContain("/community-events");
+    expect(hackathons).not.toContain("/hackathons");
+    expect(nav).toMatch(/href:\s*["']\/community-events["']/);
+    expect(nav).not.toMatch(/href:\s*["']\/hackathons["']/);
     expect(nav).toContain('label: "Community Events"');
     expect(nav).not.toContain('label: "Hackathons"');
-    expect(navbar).toMatch(/href:\s*["']\/hackathons["']/);
+    expect(navbar).toMatch(/href:\s*["']\/community-events["']/);
+    expect(navbar).not.toMatch(/href:\s*["']\/hackathons["']/);
     expect(navbar).toContain('label: "Community Events"');
     expect(navbar).not.toContain('label: "Hackathons"');
     expect(listing).toContain("Community Events");
+    expect(middleware).toContain('"/community-events"');
+    expect(middleware).not.toContain('"/hackathons"');
     expect(AYCL_HACKATHONS.length).toBe(2);
 
     const eth = AYCL_HACKATHONS.find((event) => event.id === "pc-hackathon");
@@ -384,11 +394,18 @@ describe("aycl landing + hackathons structural", () => {
     expect(eth).toBeDefined();
     expect(groundState).toBeDefined();
     expect(eth?.kind).toBe("Hackathon");
-    expect(eth?.href).toBe("/hackathons/probabilistic-computing");
+    expect(eth?.href).toBe("/community-events/probabilistic-computing");
     expect(groundState?.kind).toBe("Ground State - 3 Day Event");
     expect(groundState?.title).toBe("Ground State - 3 Day Event");
-    expect(groundState?.href).toBe("/hackathons/ground-state");
+    expect(groundState?.href).toBe("/community-events/ground-state");
     expect(groundState?.image).toBe("/hackathons/ground-state-hero.jpg");
+    for (const event of AYCL_HACKATHONS) {
+      expect(event.href.startsWith("/community-events/")).toBe(true);
+      expect(event.href.includes("hackathons")).toBe(false);
+    }
+    expect(sitemap).toContain(eth!.href);
+    expect(sitemap).toContain(groundState!.href);
+    expect(sitemap).not.toContain("/hackathons/");
 
     const heroPath = join(ROOT, "public", groundState!.image.replace(/^\//, ""));
     expect(existsSync(heroPath), `missing hero ${heroPath}`).toBe(true);
@@ -398,23 +415,29 @@ describe("aycl landing + hackathons structural", () => {
     );
     expect(heroBytes.length).toBeGreaterThan(50_000);
 
-    const groundStatePage = read("app/hackathons/ground-state/page.tsx");
+    const groundStatePage = read("app/community-events/ground-state/page.tsx");
     expect(groundStatePage).toContain("To be Announced soon");
     expect(groundStatePage).toContain(groundState!.href);
-    expect(groundStatePage).toContain('href="/hackathons"');
+    expect(groundStatePage).toContain('href="/community-events"');
+    expect(groundStatePage).not.toContain('href="/hackathons"');
     expect(groundStatePage).toContain("AYCL_HACKATHONS");
     expect(lib).toContain('id: "ground-state"');
     expect(lib).toContain('kind: "Hackathon"');
     expect(lib).toContain('kind: "Ground State - 3 Day Event"');
+    expect(lib).toContain(eth!.href);
+    expect(lib).toContain(groundState!.href);
 
     // Event detail breadcrumbs / CTAs must not point at the removed AYCL tab
-    const pcHackathon = read("app/hackathons/probabilistic-computing/page.tsx");
+    const pcHackathon = read(
+      "app/community-events/probabilistic-computing/page.tsx",
+    );
     expect(pcHackathon).not.toContain("/all-you-can-learn?tab=hackathons");
-    expect(pcHackathon).toMatch(/href=["']\/hackathons["']/);
+    expect(pcHackathon).toMatch(/href=["']\/community-events["']/);
+    expect(pcHackathon).not.toMatch(/href=["']\/hackathons["']/);
     expect(pcHackathon).toContain("Community Events");
     // Breadcrumb + "All community events" both go to the listing
     expect(
-      (pcHackathon.match(/href=["']\/hackathons["']/g) || []).length,
+      (pcHackathon.match(/href=["']\/community-events["']/g) || []).length,
     ).toBeGreaterThanOrEqual(2);
 
     writeEvidence(
@@ -426,13 +449,15 @@ describe("aycl landing + hackathons structural", () => {
         "view_only_map=true",
         "og_route=true",
         "explore_samples_api=true",
-        "hackathons_page=true",
+        "community_events_page=true",
         "nav_community_events=true",
         "pc_hackathon_no_dead_tab=true",
-        "pc_hackathon_links_to_hackathons_index=true",
+        "pc_event_links_to_community_events_index=true",
         "community_events_count=" + AYCL_HACKATHONS.length,
         "eth_kind=" + eth?.kind,
+        "eth_href=" + eth?.href,
         "ground_state_kind=" + groundState?.kind,
+        "ground_state_href=" + groundState?.href,
         "ground_state_image=" + groundState?.image,
       ].join("\n"),
     );

@@ -33,7 +33,7 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/click-moments/",
   "/community",
   "/all-you-can-learn",
-  "/hackathons",
+  "/community-events",
   "/learn/",
 ];
 

@@ -8,14 +8,14 @@ import { standardShareSocialMetadata } from "@/lib/og/standard";
 const EVENT = AYCL_HACKATHONS.find((event) => event.id === "ground-state");
 
 const standardSocial = standardShareSocialMetadata({
-  url: "https://uncertain.systems/hackathons/ground-state",
+  url: "https://uncertain.systems/community-events/ground-state",
 });
 
 export const metadata: Metadata = {
   title: "Ground State - 3 Day Event · Community Events",
   description: "To be Announced soon",
   alternates: {
-    canonical: "https://uncertain.systems/hackathons/ground-state",
+    canonical: "https://uncertain.systems/community-events/ground-state",
   },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
@@ -50,7 +50,7 @@ export default function GroundStateEventPage() {
             <li className="text-zinc-700">/</li>
             <li>
               <Link
-                href="/hackathons"
+                href="/community-events"
                 className="transition hover:text-white"
               >
                 Community Events

@@ -166,7 +166,7 @@ export default function AllYouCanLearnPage() {
               <p className="mt-4 text-[11px] text-zinc-500">
                 Practice-only or full access · upgrade anytime ·{" "}
                 <Link
-                  href="/hackathons"
+                  href="/community-events"
                   className="text-zinc-300 underline decoration-zinc-600 underline-offset-2 transition hover:text-white"
                   data-aycl-hackathons-link
                 >

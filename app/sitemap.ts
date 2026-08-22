@@ -65,13 +65,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/hackathons/probabilistic-computing`,
+      url: `${baseUrl}/community-events/probabilistic-computing`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/hackathons/ground-state`,
+      url: `${baseUrl}/community-events/ground-state`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,

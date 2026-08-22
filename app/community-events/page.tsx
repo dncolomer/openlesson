@@ -8,7 +8,7 @@ import { aestheticImageForId } from "@/lib/aesthetics";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
-  url: "https://uncertain.systems/hackathons",
+  url: "https://uncertain.systems/community-events",
 });
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description:
     "In-person and online community events where curious people learn frontier knowledge by doing — lectures, mentors, teams, and demos.",
   alternates: {
-    canonical: "https://uncertain.systems/hackathons",
+    canonical: "https://uncertain.systems/community-events",
   },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,

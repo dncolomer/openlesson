@@ -8,7 +8,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
 const standardSocial = standardShareSocialMetadata({
-  url: "https://uncertain.systems/hackathons/probabilistic-computing",
+  url: "https://uncertain.systems/community-events/probabilistic-computing",
 });
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description:
     "Past event: a 1-day hackathon at ETH Zurich on probabilistic and thermodynamic computing — Energy-Based Models, THRML, lectures, team builds, and demos. Hosted with Extropic and EFCL.",
   alternates: {
-    canonical: "https://uncertain.systems/hackathons/probabilistic-computing",
+    canonical: "https://uncertain.systems/community-events/probabilistic-computing",
   },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
@@ -155,7 +155,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <li className="text-zinc-700">/</li>
             <li>
               <Link
-                href="/hackathons"
+                href="/community-events"
                 className="transition hover:text-white"
               >
                 Community Events
@@ -213,7 +213,7 @@ export default function ProbabilisticComputingHackathonPage() {
             <ArrowRight size={14} />
           </a>
           <Link
-            href="/hackathons"
+            href="/community-events"
             className="inline-flex min-h-11 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
           >
             All community events

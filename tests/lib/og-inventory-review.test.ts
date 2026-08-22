@@ -210,7 +210,7 @@ describe("OG share inventory (one unsys standard)", () => {
     const tapbench = read("app/tapbench/page.tsx");
     expect(tapbench).toContain("standardShareSocialMetadata");
 
-    const hack = read("app/hackathons/page.tsx");
+    const hack = read("app/community-events/page.tsx");
     expect(hack).toContain("standardShareSocialMetadata");
 
     const skill = read("app/skill-verification/page.tsx");

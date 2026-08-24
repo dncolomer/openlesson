@@ -1,6 +1,7 @@
 "use client";
 
 import { AestheticPicker } from "@/components/AestheticPicker";
+import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import {
@@ -73,6 +74,11 @@ export function SessionWelcomeModal({
           // Phase 1: Language selection (before confirmation)
           if (!languageConfirmed) {
             const isButtonDisabled = planLoading || isPreparing;
+            const confirmBlocked = isIleConfirmSettingsBlocked(
+              chapterPlanStatus,
+              planLoading,
+              isPreparing,
+            );
 
             return (
               <>
@@ -295,8 +301,16 @@ export function SessionWelcomeModal({
 
                 <div className="mt-auto space-y-3">
                 <button
-                  onClick={() => void onConfirmSettings()}
-                                disabled={isButtonDisabled}
+                  type="button"
+                  data-ile-confirm-settings
+                  onClick={() => {
+                    if (isIleConfirmSettingsBlocked(chapterPlanStatus, planLoading, isPreparing)) {
+                      return;
+                    }
+                    void onConfirmSettings();
+                  }}
+                  disabled={confirmBlocked}
+                  aria-busy={chapterPlanStatus === "unknown" || isButtonDisabled}
                   className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                 >
                   {isButtonDisabled ? (

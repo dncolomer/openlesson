@@ -9,6 +9,7 @@ import {
   getWhitepaperExperimentText,
   getWhitepaperFullText,
 } from "@/lib/science/whitepaper-types";
+import { FRISTON_EPISTEMIC_VALUE_CITATION } from "@/lib/science/epistemic-foraging-copy";
 
 export type { WhitepaperSection, ScienceWhitepaper };
 
@@ -112,7 +113,7 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: ScienceWhitepaper = {
       kicker: "Selective thought interface",
       paragraphs: [
         "A TAP session is a timed, scoped episode inside a workspace that defines a knowledge or skill target (for example, a role skill block or a learning goal). A facilitator agent elicits continuous externalization with short prompts—definitions, causal steps, examples, transfer, and repair—without scoring live or lecturing the domain answer. The primary scientific goal of the live session is to maximize genuine thought-trace signal.",
-        "The selective thought interface is central. Learners do not only stream audio into a black box. They produce transcribed thought fragments. For each fragment, they may Stash (retain as System 1 / unsent evidence) or Submit (enter System 2 dialogue participation). Related System 2 actions—edit, skip, select/deselect, resend—capture intentional revision and selection under social and evaluative pressure.",
+        "The selective thought interface is central. Learners do not only stream audio into a black box. They produce transcribed thought fragments. For each fragment, they may Stash (retain as System 1 / unsent evidence) or Submit (enter System 2 dialogue participation). Related System 2 actions—edit, skip, select/deselect, resend—capture intentional revision and selection under social and evaluative pressure. Stash versus Submit is a forage log of that search: which fragments were treated as information worth advancing, rather than a reward channel for a correct final answer (Friston, Rigoli, et al., 2015).",
         "Protocol purity constraints keep the method tool-agnostic: pen-and-paper, mental calculation, or LLM assistance may be present in the environment; the scored object remains the thinking that is externalized and the Stash/Submit decisions around it. The protocol thereby resists the failure mode in which AI-polished finals are mistaken for demonstrated skill, while remaining practical under real AI use.",
       ],
       bullets: [
@@ -225,6 +226,10 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: ScienceWhitepaper = {
       id: "uncertain-systems-method",
       citation:
         "Uncertain Systems. (2026). Think Aloud Protocol surface and selective thought interface (implementation notes): System 1 as spontaneous/stashed crystallized speech; System 2 as deliberate submit/edit/skip/select/resend; both as workspace Proof of Work for later analysis.",
+    },
+    {
+      id: "friston-epistemic-value",
+      citation: FRISTON_EPISTEMIC_VALUE_CITATION,
     },
   ],
 };

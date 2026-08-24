@@ -10,6 +10,7 @@ import {
   getWhitepaperExperimentText,
   getWhitepaperFullText,
 } from "@/lib/science/whitepaper-types";
+import { FRISTON_EPISTEMIC_VALUE_CITATION } from "@/lib/science/epistemic-foraging-copy";
 
 export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH =
   "/science/knowledge-tomography" as const;
@@ -117,6 +118,7 @@ export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER: ScienceWhitepaper = {
         "We define knowledge tomography as methodologies that prompt human as well as agentic entities to try to reproduce their state of knowledge, capturing multi-angle process evidence from which that state can be reconstructed and compared to a target configuration.",
         "Three commitments distinguish the construct. First, the primary act is reproduction: the entity is asked to re-externalize what it holds—definitions, causal structure, procedures, examples, boundary cases, and transfer—not merely to select among options. Second, subjects include both humans and agentic systems; the same family of prompts and scoring ontology should apply so co-evaluation is possible. Third, each elicitation is a projection (a tomographic slice), incomplete alone; designed batteries of prompts yield reconstruction of configuration, gaps, and proximity.",
         "The medical metaphor is deliberate but bounded. We do not claim neural imaging. We claim a measurement program: controlled projections → reconstruction of an unobservable internal configuration (operationalized as knowledge state) → uncertainty estimates and gap maps. Proof of Work (PoW) dual-stream traces, embeddings, and Map of Knowledge regions are engineering substrates that can carry tomographic slices; they are not synonyms for the methodology itself.",
+        "Tomography probes are designed as epistemic actions: they seek information that reduces uncertainty about configuration, not items that maximize a test score (Friston, Rigoli, et al., 2015).",
       ],
       bullets: [
         "Core verb: reproduce (re-externalize) the entity’s state of knowledge under prompt.",
@@ -246,6 +248,10 @@ export const KNOWLEDGE_TOMOGRAPHY_WHITEPAPER: ScienceWhitepaper = {
       id: "knowledge-config",
       citation:
         "Uncertain Systems. (2026). Science thesis: knowledge configuration, proximity as knowing, and learning as transformation (platform science page).",
+    },
+    {
+      id: "friston-epistemic-value",
+      citation: FRISTON_EPISTEMIC_VALUE_CITATION,
     },
   ],
 };

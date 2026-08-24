@@ -10,7 +10,7 @@ Live at [uncertain.systems](https://uncertain.systems)
 
 ## About
 
-Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). The product is a **Human Learning Harness**: uncheatable proof that knowledge is actually held, without a tutor and without a quiz-in-isolation.
+Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). The product is a **Human Learning Harness**: uncheatable proof that knowledge is actually held, without a tutor and without a quiz-in-isolation. The scientific policy underneath it is [epistemic foraging](https://uncertain.systems/science#science-epistemic-foraging): an active search for information that reduces uncertainty, rather than chasing test scores.
 
 Workspaces come in two durable kinds:
 

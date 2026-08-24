@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { trackCtaClick } from "@/lib/analytics";
 import { HERO_PILLAR_PAGES } from "@/lib/seo/use-case-page";
+import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foraging-copy";
 
 const CTA = "Create your Workspace";
 const CTA_HREF = "/workspace/new";
@@ -138,6 +140,17 @@ export default function B2BLandingPage() {
             We score whether people actually hold the knowledge. We optimize routes for the next practice or
             coaching step when gaps show up in the model. We augment by helping you outsource the right type of
             thinking but not the actual learning.
+          </p>
+          <p className="mt-5" data-landing-epistemic-foraging>
+            The harness searches for information that reduces uncertainty about what is held, rather than
+            chasing test scores. That policy is{" "}
+            <Link
+              href={SCIENCE_EPISTEMIC_FORAGING_PATH}
+              className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+            >
+              epistemic foraging
+            </Link>
+            .
           </p>
         </div>
       </section>

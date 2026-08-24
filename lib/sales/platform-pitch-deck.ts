@@ -84,8 +84,9 @@ const PLATFORM_THESIS: SalesSlide[] = [
     // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
     highlights: [
       "We cannot map a brain, biomarkers, or a fancy predictive model. Cognition is too complex to model that way. As a proxy, we watch how they solve problems, turn those signals into a mathematical space, and compare them to regions that correspond to the target knowledge we are validating.",
+      "Epistemic foraging is the policy: we search for information that reduces uncertainty about knowledge configuration, rather than chasing the reward of a correct test answer.",
     ],
-    highlightLabels: ["The Hypothesis"],
+    highlightLabels: ["The Hypothesis", "Epistemic policy"],
     highlightImages: ["/flywire.png"],
     highlightImageAlts: ["Flywire — problem-solving signals mapped into knowledge space"],
     highlightImageSources: ["Source: flywire.ai"],

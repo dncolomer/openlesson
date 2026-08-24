@@ -120,6 +120,20 @@ export default function VisionPage() {
         >
           {VISION_TOMOGRAPHY_INDUCTION_COPY.lead}
         </p>
+        <article
+          className="mt-8 border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6"
+          data-vision-epistemic-foraging
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.eyebrow}
+          </p>
+          <h3 className="mt-2 text-lg font-medium text-white">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.policy.body}
+          </p>
+        </article>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <VisionCard
             eyebrow={VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.eyebrow}
@@ -145,6 +159,14 @@ export default function VisionPage() {
             className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
           >
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.scienceLabel}
+            <ArrowRight size={14} />
+          </Link>
+          <Link
+            href={VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging}
+            data-vision-epistemic-foraging-link
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            {VISION_TOMOGRAPHY_INDUCTION_COPY.links.foragingLabel}
             <ArrowRight size={14} />
           </Link>
           <Link

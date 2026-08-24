@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import {
@@ -17,6 +17,10 @@ import {
   KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
 } from "@/lib/science/knowledge-tomography-whitepaper";
 import { SCIENCE_FEP_COPY } from "@/lib/science/free-energy-principle-copy";
+import {
+  SCIENCE_EPISTEMIC_FORAGING_COPY,
+  SCIENCE_EPISTEMIC_FORAGING_READINGS,
+} from "@/lib/science/epistemic-foraging-copy";
 
 import { standardShareSocialMetadata } from "@/lib/og/standard";
 
@@ -27,7 +31,7 @@ const standardSocial = standardShareSocialMetadata({
 export const metadata: Metadata = {
   title: "Science",
   description:
-    "A holistic model of knowledge: knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
+    "A holistic model of knowledge: epistemic foraging, knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
   alternates: { canonical: "https://uncertain.systems/science" },
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
@@ -219,6 +223,63 @@ export default function SciencePage() {
           <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
             {SCIENCE_FEP_COPY.caveat}
           </p>
+        </article>
+      </section>
+
+      <section
+        id="science-epistemic-foraging"
+        data-science-epistemic-foraging
+        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="science-epistemic-foraging-heading"
+      >
+        <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            {SCIENCE_EPISTEMIC_FORAGING_COPY.eyebrow}
+          </p>
+          <h2
+            id="science-epistemic-foraging-heading"
+            className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
+          >
+            {SCIENCE_EPISTEMIC_FORAGING_COPY.title}
+          </h2>
+          <p className="mt-5 text-base leading-relaxed text-zinc-400 sm:text-lg">
+            {SCIENCE_EPISTEMIC_FORAGING_COPY.definition}
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
+            {SCIENCE_EPISTEMIC_FORAGING_COPY.platform}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-zinc-500 sm:text-base">
+            {SCIENCE_EPISTEMIC_FORAGING_COPY.caveat}
+          </p>
+
+          <div className="mt-8 border-t border-zinc-800 pt-6" data-science-epistemic-foraging-readings>
+            <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              Further reading
+            </p>
+            <ul className="space-y-4">
+              {SCIENCE_EPISTEMIC_FORAGING_READINGS.map((reading) => (
+                <li key={reading.id} className="text-sm leading-relaxed text-zinc-400 sm:text-[15px]">
+                  <a
+                    href={reading.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex max-w-full items-start gap-1.5 text-zinc-200 transition hover:text-white"
+                  >
+                    <span>
+                      {reading.authors} ({reading.year}).{" "}
+                      <span className="font-medium italic">{reading.title}</span>. {reading.venue}.
+                    </span>
+                    <ExternalLink
+                      size={12}
+                      className="mt-1 shrink-0 text-zinc-500 transition group-hover:text-zinc-300"
+                      aria-hidden
+                    />
+                  </a>
+                  <p className="mt-1 text-zinc-500">{reading.why}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </article>
       </section>
 

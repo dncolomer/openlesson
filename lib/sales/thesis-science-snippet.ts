@@ -13,6 +13,10 @@ export const THESIS_SCIENCE_HYPOTHESIS =
 export const THESIS_POW_PROXY_DEFAULT =
   "Proof of Work is the best proxy for that proximity: real artifacts, tool traces, and reasoning under probe measure configuration; quizzes and benchmarks only sample thin output slices.";
 
+/** Shared epistemic-foraging policy line (platform + vertical decks). */
+export const THESIS_EPISTEMIC_POLICY =
+  "Epistemic policy: measurement forages for information about knowledge configuration — TAP, probes, and Proof of Work — rather than chasing test scores, completion rates, or benchmark pass-rates as rewards.";
+
 /**
  * Vertical-adapted science + PoW highlights for the thesis slide.
  * Science stays shared; PoW proxy is framed for the deck's motion.
@@ -28,11 +32,15 @@ export function thesisScienceHighlights(focus: ThesisFocus = "platform"): string
       "Proof of Work is the best proxy for that proximity: probes and scored traces interrupt shallow fluency and replace check-your-knowledge quizzes that never measure configuration under real work.",
   };
 
-  return [THESIS_SCIENCE_HYPOTHESIS, powByFocus[focus]];
+  return [THESIS_SCIENCE_HYPOTHESIS, powByFocus[focus], THESIS_EPISTEMIC_POLICY];
 }
 
 /** Labels paired with thesisScienceHighlights() for UI chrome. */
-export const THESIS_HIGHLIGHT_LABELS = ["Science hypothesis", "Proof of Work proxy"] as const;
+export const THESIS_HIGHLIGHT_LABELS = [
+  "Science hypothesis",
+  "Proof of Work proxy",
+  "Epistemic policy",
+] as const;
 
 /** @deprecated Prefer thesisScienceHighlights. Kept for tests that expect two bullet strings. */
 export const THESIS_SCIENCE_POW_BULLETS = [
@@ -46,6 +54,7 @@ export const THESIS_SCIENCE_POW_ANCHORS = [
   "proximity",
   "Proof of Work",
   "proxy",
+  "epistemic",
 ] as const;
 
 /**

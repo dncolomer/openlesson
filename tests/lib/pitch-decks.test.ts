@@ -681,6 +681,8 @@ describe("pitch deck content (platform only)", () => {
     expect(platformThesis!.highlightImages?.[0]).toBe("/flywire.png");
     expect(platformThesis!.highlightImageSources?.[0]?.toLowerCase()).toMatch(/flywire\.ai/);
     expect(platformThesis!.highlightLabels?.[0]).toMatch(/the hypothesis/i);
+    expect(platformThesis!.highlightLabels?.[1]).toMatch(/epistemic policy/i);
+    expect(platformThesis!.highlights?.[1]?.toLowerCase()).toMatch(/epistemic foraging/);
     expect(publicAssetExists("/flywire.png")).toBe(true);
     expect(deckUi).toContain("data-pitch-highlight-image");
     expect(deckUi).toContain("data-pitch-highlight-source");
@@ -793,6 +795,9 @@ describe("pitch deck content (platform only)", () => {
     expect(platformHighlights.length).toBeGreaterThanOrEqual(3);
     const thesisLabeled = platformHighlights.find((s) => /our thesis/i.test(s.kicker ?? ""));
     expect(thesisLabeled?.highlightLabels?.[0]).toMatch(/the hypothesis/i);
+    expect(thesisLabeled?.highlightLabels).toEqual(
+      expect.arrayContaining(["The Hypothesis", "Epistemic policy"]),
+    );
   });
 
   it("media layout is side-by-side grid; Karpathy media + TAP video media on platform", () => {

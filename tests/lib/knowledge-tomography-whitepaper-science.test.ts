@@ -33,6 +33,8 @@ describe("Knowledge tomography white paper content", () => {
     expect(full.toLowerCase()).toMatch(/knowledge induction/);
     expect(full.toLowerCase()).toMatch(/knowledge tomography/);
     expect(full.toLowerCase()).toMatch(/abstract|method|planned study|planned experiment/);
+    expect(full.toLowerCase()).toMatch(/epistemic actions/);
+    expect(full).toMatch(/Friston/);
 
     expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.sections.some((s) => s.id === "definition")).toBe(true);
     expect(KNOWLEDGE_TOMOGRAPHY_WHITEPAPER.sections.some((s) => s.id === "induction-framing")).toBe(

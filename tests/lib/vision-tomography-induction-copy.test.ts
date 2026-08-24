@@ -31,6 +31,7 @@ describe("vision tomography + induction copy content", () => {
     expect(full.toLowerCase()).toMatch(/human/);
     expect(full.toLowerCase()).toMatch(/agentic/);
     expect(full.toLowerCase()).toMatch(/knowledge induction/);
+    expect(full.toLowerCase()).toMatch(/epistemic foraging/);
   });
 
   it("distinguishes tomography (measure) from induction (transform / long-horizon aim)", () => {
@@ -58,6 +59,9 @@ describe("vision tomography + induction copy content", () => {
     expect(VISION_TOMOGRAPHY_INDUCTION_COPY.tomography.title).not.toEqual(
       VISION_TOMOGRAPHY_INDUCTION_COPY.induction.title,
     );
+    expect(VISION_TOMOGRAPHY_INDUCTION_COPY.policy.title.toLowerCase()).toBe("epistemic foraging");
+    expect(VISION_TOMOGRAPHY_INDUCTION_COPY.policy.body.toLowerCase()).toMatch(/friston/);
+    expect(VISION_TOMOGRAPHY_INDUCTION_COPY.lead.toLowerCase()).toMatch(/epistemic foraging/);
   });
 });
 
@@ -70,6 +74,7 @@ describe("vision page renders tomography + induction block", () => {
     expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_COPY");
     expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS");
     expect(src).toContain("data-vision-tomography-induction");
+    expect(src).toContain("data-vision-epistemic-foraging");
     expect(src).toContain("knowledge-tomography-induction-copy");
 
     // Existing vision entry surface remains
@@ -81,11 +86,16 @@ describe("vision page renders tomography + induction block", () => {
   it("links to science and knowledge tomography paper paths", () => {
     const src = read("app/vision/page.tsx");
     expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.science");
+    expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging");
     expect(src).toContain("VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper");
     expect(src).toContain("data-vision-science-link");
+    expect(src).toContain("data-vision-epistemic-foraging-link");
     expect(src).toContain("data-vision-knowledge-tomography-paper-link");
 
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.science).toBe("/science");
+    expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.epistemicForaging).toBe(
+      "/science#science-epistemic-foraging",
+    );
     expect(VISION_TOMOGRAPHY_INDUCTION_PATHS.knowledgeTomographyPaper).toBe(
       KNOWLEDGE_TOMOGRAPHY_WHITEPAPER_PATH,
     );

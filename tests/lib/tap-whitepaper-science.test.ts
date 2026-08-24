@@ -71,6 +71,8 @@ describe("TAP Stash/Submit white paper content", () => {
     expect(text).toMatch(/stash/);
     expect(text).toMatch(/submit/);
     expect(text).toMatch(/operational/);
+    expect(text).toMatch(/forage log/);
+    expect(text).toMatch(/friston/);
   });
 });
 

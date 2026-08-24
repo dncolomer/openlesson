@@ -52,25 +52,26 @@ describe("TAP solo live Stash Submit chrome", () => {
     const phases = read("components/exercise-tap/exercise-tap-phases.tsx");
     const exercise = readExerciseTapSurface();
 
-    expect(shell).toContain("Submit last Thought");
+    expect(shell).not.toContain("Submit last Thought");
     expect(shell).toContain("See Older Thoughts");
-    expect(shell).toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
+    expect(shell).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(shell).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
     expect(shell).toContain("data-tap-last-stash");
     expect(shell).toContain("selectLastStashedThought");
-    expect(shell).toContain("submitLastStashedThought");
+    expect(shell).not.toContain("submitLastStashedThought");
+    expect(shell).toContain("ImDoneAnsweringControl");
     expect(shell).toContain("sendThought");
     expect(shell).not.toContain("ExerciseSubmissionStack");
     expect(shell).not.toContain("data-exercise-submission-history");
     expect(shell).not.toContain("ExerciseStashHistory");
     expect(shell).not.toContain("data-exercise-dual-history-pane");
 
-    expect(phases).toContain('label="Send"');
+    expect(phases).not.toContain('label="Send"');
     expect(phases).toContain('label="Stash"');
-    expect(phases).toContain('label="Edit"');
+    expect(phases).not.toContain('label="Edit"');
     expect(phases).not.toContain('label="To solution"');
 
-    expect(exercise).toContain("Submit last Thought");
+    expect(exercise).not.toContain("Submit last Thought");
     expect(exercise).toContain("ThoughtMemoryPanel");
 
     writeScratch(
@@ -78,10 +79,10 @@ describe("TAP solo live Stash Submit chrome", () => {
       [
         `Submit last Thought=${shell.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
         `See Older Thoughts=${shell.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
-        `send/stash/edit=${phases.includes('label="Send"') && phases.includes('label="Stash"') && phases.includes('label="Edit"')}`,
+        `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
         `no solution stack=${!shell.includes("ExerciseSubmissionStack")}`,
         `no ExerciseStashHistory=${!shell.includes("ExerciseStashHistory")}`,
-        `submitLastStashedThought=${shell.includes("submitLastStashedThought")}`,
+        `imDone=${shell.includes("ImDoneAnsweringControl")}`,
       ].join("\n"),
     );
   });
@@ -121,15 +122,19 @@ describe("TAP solo older-thoughts Thought Memory", () => {
 });
 
 describe("See Older Thoughts is live on TAP solo chrome", () => {
-  it("opens the older-thoughts surface via the shipped helper", () => {
+  it("toggles the older-thoughts surface via the shipped helper", () => {
     let open = false;
-    openOlderThoughtsSurface((next) => {
-      open = next;
-    });
+    const setOpen = (next: boolean | ((current: boolean) => boolean)) => {
+      open = typeof next === "function" ? next(open) : next;
+    };
+    openOlderThoughtsSurface(setOpen);
     expect(open).toBe(true);
+    openOlderThoughtsSurface(setOpen);
+    expect(open).toBe(false);
 
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
     expect(shell).toContain("openOlderThoughtsSurface(setOlderThoughtsOpen)");
+    expect(shell).toContain("aria-pressed={olderThoughtsOpen}");
   });
 });
 
@@ -142,9 +147,13 @@ describe("universal Stash Submit labels across ILE + TAP", () => {
     const tapSolo = readExerciseTapSurface();
     const session = readSessionViewSurface();
 
-    for (const surface of [ileHelios, tapConvo, tapSolo]) {
-      expect(surface).toContain("Submit last Thought");
+    expect(ileHelios).not.toContain("Submit last Thought");
+    expect(ileHelios).toContain("See Older Thoughts");
+    expect(ileHelios).toContain("ImDoneAnsweringControl");
+    for (const surface of [tapConvo, tapSolo]) {
+      expect(surface).not.toContain("Submit last Thought");
       expect(surface).toContain("See Older Thoughts");
+      expect(surface).toContain("ImDoneAnsweringControl");
     }
     expect(ileMemory).toContain("Submit Selection");
     expect(ileMemory).toContain("Edit Selection");

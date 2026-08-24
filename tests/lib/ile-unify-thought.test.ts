@@ -54,34 +54,30 @@ const OLDEST_TO_NEWEST = [
 describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
   it("Send/Stash/Edit and last-stash labels are not gated off for project/solo", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain('label="Send"');
+    expect(helios).not.toContain('label="Send"');
     expect(helios).toContain('label="Stash"');
-    expect(helios).toContain('label="Edit"');
-    expect(helios).toContain("sendCurrentTranscription");
+    expect(helios).not.toContain('label="Edit"');
     expect(helios).toContain("stashCurrentTranscription");
-    expect(helios).toContain("beginEditTranscription");
     expect(helios).not.toContain('label="Solution"');
     expect(helios).not.toContain("onProjectSubmitToSolution?.()");
     expect(helios).not.toContain("onProjectStash?.()");
-    expect(helios).toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
+    expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(helios).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
     expect(helios).toContain("data-ile-last-stash");
-    expect(helios).toContain("submitLastStashedThought");
+    expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("thought.sendThought");
     expect(helios).not.toContain("{!projectMode ? (");
     const lastStashIdx = helios.indexOf("data-ile-last-stash");
-    const sendIdx = helios.indexOf('label="Send"');
     expect(lastStashIdx).toBeGreaterThan(-1);
-    expect(sendIdx).toBeGreaterThan(-1);
 
     writeScratch(
       "ile-unify-helios-stash.txt",
       [
-        "Send/Stash/Edit un-gated (no Solution compact action)",
+        "Stash/Edit un-gated (no Send compact action)",
         `Submit last Thought=${helios.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
         `See Older Thoughts=${helios.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
         `last-stash=${helios.includes("data-ile-last-stash")}`,
-        `sendPath=submitLastStashedThought + thought.sendThought`,
+        `sendPath=ImDoneAnsweringControl + thought.sendThought`,
         `noProjectSolutionAction=${!helios.includes('label="Solution"')}`,
       ].join("\n"),
     );
@@ -141,9 +137,9 @@ describe("See Older Thoughts reachable in both modes", () => {
     expect(view).toContain("openIleThoughtHistoryTool");
     expect(view).toMatch(/openIleThoughtHistoryTool\(\s*setActiveTool\s*\)/);
 
-    expect(decideIleKeyboardAction({ mode: "project", key: "Enter" })).toBe("helios_send");
+    expect(decideIleKeyboardAction({ mode: "project", key: "Enter" })).toBe("ignore");
     expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");
-    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("helios_send");
+    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("ignore");
     expect(decideIleKeyboardAction({ mode: "helios", key: "Delete" })).toBe("helios_stash");
   });
 });

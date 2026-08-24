@@ -14,7 +14,8 @@ export type IleSystem2Action =
   | "deselect"
   | "resend"
   | "edit"
-  | "remove";
+  | "remove"
+  | "end_of_chain_of_thought";
 
 export interface IleThoughtTracePayload {
   type: "uncertain_systems_ile_thought_trace";

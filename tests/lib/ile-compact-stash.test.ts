@@ -90,7 +90,8 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(helios).not.toContain("Open Thoughts");
     expect(helios).toContain("onOpenThoughts");
     expect(helios).toContain("See Older Thoughts");
-    expect(helios).toContain("Submit last Thought");
+    expect(helios).not.toContain("Submit last Thought");
+    expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("DialogueSplit");
 
     const view = readSessionViewSurface();

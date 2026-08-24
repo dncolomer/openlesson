@@ -52,9 +52,7 @@ export function TapBriefingConfig({
   const { t } = useI18n();
 
   const rows: { keys: string[]; label: string }[] = shortcutRows ?? [
-    { keys: ["Enter"], label: t("tap.briefing.shortcutSend") },
     { keys: ["Del"], label: t("tap.briefing.shortcutStash") },
-    { keys: ["E"], label: t("tap.briefing.shortcutEdit") },
     { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
   ];
 

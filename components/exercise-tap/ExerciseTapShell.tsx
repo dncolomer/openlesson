@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
+import type { IleEndOfChainOfThoughtEvent } from "@/lib/ile-im-done-answering";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
@@ -10,7 +12,6 @@ import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import {
   openOlderThoughtsSurface,
   selectLastStashedThought,
-  submitLastStashedThought,
 } from "@/lib/ile-last-stash";
 
 /**
@@ -23,6 +24,9 @@ export function ExerciseTapShell({
   sendThought,
   isSending = false,
   speechBar,
+  formingText = "",
+  logEndOfChainOfThought,
+  onClearForming,
   controlStrip,
   identityBadge,
   problems,
@@ -41,6 +45,9 @@ export function ExerciseTapShell({
   sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
   isSending?: boolean;
   speechBar: ReactNode;
+  formingText?: string;
+  logEndOfChainOfThought?: (event: IleEndOfChainOfThoughtEvent) => void;
+  onClearForming?: () => void;
   controlStrip?: ReactNode;
   identityBadge?: ReactNode;
   problems: TapSoloProblem[];
@@ -101,9 +108,24 @@ export function ExerciseTapShell({
           {controlStrip}
           <div
             data-exercise-speech-panel
+            data-tap-transcript-container
             className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5"
           >
             {speechBar}
+          </div>
+          <div
+            data-tap-im-done-slot
+            className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
+          >
+            <ImDoneAnsweringControl
+              sessionId={sessionId}
+              thoughts={stash}
+              formingText={formingText}
+              sendThought={sendThought}
+              logEndOfChainOfThought={logEndOfChainOfThought ?? (() => {})}
+              onClearForming={onClearForming}
+              disabled={isSending}
+            />
           </div>
           <div
             className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
@@ -127,25 +149,15 @@ export function ExerciseTapShell({
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                data-tap-submit-last-thought
-                data-exercise-submit-last-thought
-                disabled={!lastStash || isSending}
-                onClick={() => {
-                  void submitLastStashedThought({
-                    thoughts: stash,
-                    sendThought,
-                  });
-                }}
-                className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Submit last Thought
-              </button>
-              <button
-                type="button"
                 data-tap-see-older-thoughts
                 data-exercise-see-older-thoughts
+                aria-pressed={olderThoughtsOpen}
                 onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
-                className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                className={`rounded-none border px-2.5 py-1.5 text-[11px] font-medium transition ${
+                  olderThoughtsOpen
+                    ? "border-white/60 bg-white/10 text-white"
+                    : "border-neutral-600/40 bg-neutral-800/10 text-neutral-200 hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                }`}
               >
                 See Older Thoughts
               </button>
@@ -168,7 +180,7 @@ export function ExerciseTapShell({
                 allowInsightGeneration={false}
                 onSendThought={sendThought}
                 isSending={isSending}
-                emptyMessage="Speak, press Del to stash thoughts, or Enter to send. Every trace appears here."
+                emptyMessage="Speak, press Del to stash thoughts, or I'm done answering to close. Every trace appears here."
               />
             </div>
           ) : null}

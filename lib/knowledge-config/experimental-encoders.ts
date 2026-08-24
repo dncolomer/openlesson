@@ -115,7 +115,7 @@ function systemChannel(row: PowFeatureRow): 1 | 2 | 0 {
   if (action.startsWith("system1") || /crystallize|auto_stash|pause_finalize|stash/.test(action)) {
     return 1;
   }
-  if (action.startsWith("system2") || /submit|send|select|resend|deselect/.test(action)) {
+  if (action.startsWith("system2") || /submit|send|select|resend|deselect|end_of_chain/.test(action)) {
     return 2;
   }
   return 0;

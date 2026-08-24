@@ -47,6 +47,7 @@ import {
   type SpeechRecognitionEventLike,
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
+import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
 import {
   coerceSpokenLocale,
   toSpeechBcp47,
@@ -77,12 +78,12 @@ import {
   resolveTapLiveMinutes,
 } from "@/lib/tap-practice";
 import {
+  applyTapSoloImDoneSend,
   buildExercisePromptText,
   emptyExerciseDualLists,
   promoteExerciseStashToSubmission,
   resolveExercisePromptAfterIntro,
   stashExerciseSpeech,
-  submitExerciseSpeechDirect,
   type ExerciseDualLists,
   type ExerciseThought,
 } from "@/lib/exercise-tap";
@@ -358,7 +359,7 @@ export function ExerciseTapClient({
   const logExerciseTrace = useCallback(
     (input: {
       traceType: "system1" | "system2";
-      action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit" | "resend";
+      action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit" | "resend" | "end_of_chain_of_thought";
       thoughtId?: string;
       chainId?: string;
       text?: string;
@@ -514,20 +515,7 @@ export function ExerciseTapClient({
         thoughtId: thoughtIds.length === 1 ? thoughtIds[0] : undefined,
         text: clean,
       });
-      if (thoughtIds.length === 0) {
-        setLists((current) => {
-          const { lists: next } = submitExerciseSpeechDirect(current, clean);
-          return next;
-        });
-        return;
-      }
-      setLists((current) => {
-        let next = current;
-        for (const id of thoughtIds) {
-          next = promoteExerciseStashToSubmission(next, id).lists;
-        }
-        return next;
-      });
+      setLists((current) => applyTapSoloImDoneSend(current, clean, thoughtIds));
     },
     [logExerciseTrace],
   );
@@ -875,40 +863,27 @@ export function ExerciseTapClient({
     };
   }, [speechBindings]);
 
-  // Live shortcuts: Del = stash; Enter = send forming text; E = edit.
+  // Live shortcuts: Del = stash. Spoken submit is I'm done answering.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (phase !== "live" || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (event.key === "Escape" && editingTranscription) {
+      const spoken = decideSpokenCaptureKeyAction(event);
+      if (spoken === "cancel_edit" && editingTranscription) {
         event.preventDefault();
         setEditingTranscription(null);
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
-        event.preventDefault();
-        sendCurrentTranscription();
-        return;
-      }
-      if (
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        (event.key === "Delete" || event.key === "Backspace")
-      ) {
+      if (spoken === "stash") {
         event.preventDefault();
         stashCurrentTranscription();
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
-        event.preventDefault();
-        beginEditTranscription();
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, sendCurrentTranscription, stashCurrentTranscription, beginEditTranscription, editingTranscription]);
+  }, [phase, stashCurrentTranscription, editingTranscription]);
 
   function retryMicrophone() {
     setSpeechError(null);

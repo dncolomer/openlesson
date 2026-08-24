@@ -83,7 +83,8 @@ export function ExerciseTapPhases(props: {
   ) => void;
   logExerciseTrace: (input: {
     traceType: "system1" | "system2";
-    action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit";
+    action: "pause_finalize" | "auto_stash" | "send" | "remove" | "edit" | "end_of_chain_of_thought";
+    thoughtId?: string;
     originalText?: string;
     text?: string;
   }) => void;
@@ -137,8 +138,6 @@ export function ExerciseTapPhases(props: {
     transcriptSilenceMs,
     retryMicrophone,
     stashCurrentTranscription,
-    sendCurrentTranscription,
-    beginEditTranscription,
     editingTranscription,
     setEditingTranscription,
     logExerciseTrace,
@@ -207,11 +206,9 @@ export function ExerciseTapPhases(props: {
                   }
                   showDurationPicker={!privateToken && !durationLocked}
                   disabled={isStartingSession}
-                  intro="Solo practice. Del stashes; Enter sends; auto-stash fills thought memory."
+                  intro="Solo practice. Del stashes; I'm done answering closes your turn; auto-stash fills thought memory."
                   shortcutRows={[
                     { keys: ["Del"], label: "Stash" },
-                    { keys: ["Enter"], label: "Send" },
-                    { keys: ["E"], label: "Edit" },
                     { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
                   ]}
                 />
@@ -234,6 +231,19 @@ export function ExerciseTapPhases(props: {
             thoughtHistory={thoughtHistory}
             sendThought={sendThought}
             isSending={isSending}
+            formingText={crystallizableText}
+            logEndOfChainOfThought={(event) =>
+              logExerciseTrace({
+                traceType: event.traceType,
+                action: event.action,
+                thoughtId: event.thoughtId,
+                text: event.text,
+              })
+            }
+            onClearForming={() => {
+              clearTranscriptionDisplay();
+              restartSpeechRecognitionSession();
+            }}
             problems={soloProblems}
             activeProblemId={activeSoloProblemId}
             onSelectProblem={onSelectSoloProblem}
@@ -346,29 +356,17 @@ export function ExerciseTapPhases(props: {
                       className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                     />
                   </div>
-                  {speechSupported !== false && !isListening ? (
+                  {speechError && speechSupported !== false && !isListening ? (
                     <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                      {speechError ? "Retry" : "Start"}
+                      Retry
                     </TapThoughtButton>
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
-                    <ThoughtCompactAction
-                      shortcut="↵"
-                      label="Send"
-                      disabled={!crystallizableText}
-                      onClick={() => sendCurrentTranscription()}
-                    />
                     <ThoughtCompactAction
                       shortcut="Del"
                       label="Stash"
                       disabled={!crystallizableText}
                       onClick={() => stashCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="E"
-                      label="Edit"
-                      disabled={!crystallizableText}
-                      onClick={beginEditTranscription}
                     />
                   </div>
                 </div>

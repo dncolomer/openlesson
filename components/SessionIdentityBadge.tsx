@@ -26,7 +26,7 @@ export function SessionIdentityBadge({
           ? `Proof of work is attributed to guest ${identity.guestUserId || "unknown"}`
           : `Proof of work is attributed to signed-in user ${identity.userId || "unknown"}`
       }
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
+      className={`inline-flex items-center gap-1.5 rounded-none border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
         isGuest
           ? "border-neutral-500/35 bg-neutral-950/50 text-neutral-200/90"
           : "border-neutral-600 bg-neutral-900/80 text-neutral-300"

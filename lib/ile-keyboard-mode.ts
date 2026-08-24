@@ -3,6 +3,8 @@
  * and not a setState updater side effect.
  */
 
+import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
+
 export type IleThoughtKeyboardMode = "helios" | "project";
 
 export type IleKeyboardAction = "helios_send" | "helios_stash" | "project_submit" | "project_stash" | "ignore";
@@ -12,8 +14,7 @@ export function decideIleKeyboardAction(input: {
   key: string;
 }): IleKeyboardAction {
   void input.mode;
-  const key = input.key;
-  if (key === "Enter") return "helios_send";
-  if (key === "Delete" || key === "Backspace") return "helios_stash";
+  const spoken = decideSpokenCaptureKeyAction({ key: input.key });
+  if (spoken === "stash") return "helios_stash";
   return "ignore";
 }

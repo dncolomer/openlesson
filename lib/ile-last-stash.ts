@@ -52,9 +52,11 @@ export function openIleThoughtHistoryTool(
   setActiveTool(ILE_THOUGHT_HISTORY_TOOL);
 }
 
-/** TAP conversation has no tools rail — open the in-chrome Thought Memory surface. */
-export function openOlderThoughtsSurface(setOpen: (open: boolean) => void): void {
-  setOpen(true);
+/** TAP has no tools rail — toggle the in-chrome Thought Memory surface. */
+export function openOlderThoughtsSurface(
+  setOpen: (next: boolean | ((open: boolean) => boolean)) => void,
+): void {
+  setOpen((open) => !open);
 }
 
 export async function submitLastStashedThought<T extends IleStashThought>(input: {

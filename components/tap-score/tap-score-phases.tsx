@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
 import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
 import { tapConvoBlocksFromAssistantTurns } from "@/lib/tap-session-map";
@@ -10,7 +11,6 @@ import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import {
   openOlderThoughtsSurface,
   selectLastStashedThought,
-  submitLastStashedThought,
 } from "@/lib/ile-last-stash";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
@@ -104,9 +104,12 @@ export function TapScorePhases(props: {
   ) => void;
   logTapTrace: (input: {
     traceType: "system1" | "system2";
-    action: "crystallize" | "pause_finalize" | "auto_stash" | "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+    action: "crystallize" | "pause_finalize" | "auto_stash" | "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "end_of_chain_of_thought";
+    thoughtId?: string;
+    thoughtIds?: string[];
     originalText?: string;
     text?: string;
+    combined?: boolean;
   }) => void;
   clearTranscriptionDisplay: () => void;
   restartSpeechRecognitionSession: () => void;
@@ -143,9 +146,7 @@ export function TapScorePhases(props: {
     isListening,
     transcriptSilenceMs,
     retryMicrophone,
-    sendCurrentTranscription,
     stashCurrentTranscription,
-    beginEditTranscription,
     stashedThoughts,
     sendThought,
     thoughtHistory,
@@ -348,7 +349,10 @@ export function TapScorePhases(props: {
                       </div>
                     ) : null}
                   </div>
-                  <div className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5">
+                  <div
+                    data-tap-transcript-container
+                    className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5"
+                  >
                     <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                       <div
                         className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
@@ -370,32 +374,46 @@ export function TapScorePhases(props: {
                           className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                         />
                       </div>
-                      {speechSupported !== false && !isListening ? (
+                      {speechError && speechSupported !== false && !isListening ? (
                         <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                          {speechError ? "Retry" : "Start"}
+                          Retry
                         </TapThoughtButton>
                       ) : null}
                       <div className="flex shrink-0 items-center gap-0.5">
-                        <ThoughtCompactAction
-                          shortcut="↵"
-                          label="Send"
-                          disabled={!crystallizableText || isSending}
-                          onClick={() => void sendCurrentTranscription()}
-                        />
                         <ThoughtCompactAction
                           shortcut="Del"
                           label="Stash"
                           disabled={!crystallizableText}
                           onClick={() => stashCurrentTranscription()}
                         />
-                        <ThoughtCompactAction
-                          shortcut="E"
-                          label="Edit"
-                          disabled={!crystallizableText}
-                          onClick={beginEditTranscription}
-                        />
                       </div>
                     </div>
+                  </div>
+                  <div
+                    data-tap-im-done-slot
+                    className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
+                  >
+                    <ImDoneAnsweringControl
+                      sessionId={sessionId}
+                      thoughts={stashedThoughts}
+                      formingText={crystallizableText}
+                      sendThought={sendThought}
+                      logEndOfChainOfThought={(event) =>
+                        logTapTrace({
+                          traceType: event.traceType,
+                          action: event.action,
+                          thoughtId: event.thoughtId,
+                          thoughtIds: event.thoughtIds,
+                          text: event.text,
+                          combined: event.combined,
+                        })
+                      }
+                      onClearForming={() => {
+                        clearTranscriptionDisplay();
+                        restartSpeechRecognitionSession();
+                      }}
+                      disabled={isSending}
+                    />
                   </div>
                   <div
                     className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
@@ -422,25 +440,15 @@ export function TapScorePhases(props: {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        data-tap-submit-last-thought
-                        data-ile-submit-last-thought
-                        disabled={!lastStash || isSending}
-                        onClick={() => {
-                          void submitLastStashedThought({
-                            thoughts: stashedThoughts,
-                            sendThought,
-                          });
-                        }}
-                        className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Submit last Thought
-                      </button>
-                      <button
-                        type="button"
                         data-tap-see-older-thoughts
                         data-ile-see-older-thoughts
+                        aria-pressed={olderThoughtsOpen}
                         onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
-                        className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                        className={`rounded-none border px-2.5 py-1.5 text-[11px] font-medium transition ${
+                          olderThoughtsOpen
+                            ? "border-white/60 bg-white/10 text-white"
+                            : "border-neutral-600/40 bg-neutral-800/10 text-neutral-200 hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                        }`}
                       >
                         See Older Thoughts
                       </button>
@@ -462,7 +470,7 @@ export function TapScorePhases(props: {
                         allowInsightGeneration={false}
                         onSendThought={sendThought}
                         isSending={isSending}
-                        emptyMessage="Speak, press Del to stash thoughts, or Enter to send. Every trace appears here."
+                        emptyMessage="Speak, press Del to stash thoughts, or I'm done answering to close. Every trace appears here."
                       />
                     </div>
                   ) : null}

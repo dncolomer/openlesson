@@ -382,17 +382,17 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(client).not.toContain("DialogueSplit");
     expect(client).not.toContain("HeliosProbeAvatar");
     expect(client).toContain("stashCurrentTranscription");
-    expect(client).toContain("sendCurrentTranscription");
     expect(client).toContain("sendThought");
-    expect(client).toContain('event.key === "Enter"');
-    expect(client).toContain('event.key === "Delete"');
+    expect(client).toContain("decideSpokenCaptureKeyAction");
+    expect(client).not.toContain("sendCurrentTranscription()");
     expect(client).toContain("resolveExercisePromptAfterIntro");
     expect(client).toContain("interaction_kind: \"exercise\"");
 
     expect(shell).toContain("data-exercise-tap-shell");
     expect(shell).toContain("data-exercise-tap-stash-submit");
     expect(shell).toContain("ThoughtMemoryPanel");
-    expect(shell).toContain("Submit last Thought");
+    expect(shell).not.toContain("Submit last Thought");
+    expect(shell).toContain("ImDoneAnsweringControl");
     expect(shell).not.toContain("ExerciseStashHistory");
     expect(shell).not.toContain("ExerciseSubmissionStack");
     expect(shell).not.toContain("DialogueSplit");

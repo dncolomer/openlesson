@@ -30,6 +30,7 @@ const SYSTEM2_ACTIONS = new Set<TapSystem2Action>([
   "resend",
   "edit",
   "remove",
+  "end_of_chain_of_thought",
 ]);
 
 export async function POST(req: NextRequest) {

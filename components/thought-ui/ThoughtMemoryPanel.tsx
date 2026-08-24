@@ -73,7 +73,7 @@ export function ThoughtMemoryPanel({
   sessionId,
   className = "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
   listClassName = "",
-  emptyMessage = "Speak, press Del to stash thoughts, or Enter to send. Every trace appears here.",
+  emptyMessage = "Speak, press Del to stash thoughts, or I'm done answering to close. Every trace appears here.",
   insightSurface = "ile",
   allowInsightGeneration,
   onSendThought,

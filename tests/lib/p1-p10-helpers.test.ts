@@ -180,7 +180,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(chat.data.message).toBe("ok");
 
     expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");
-    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("helios_send");
+    expect(decideIleKeyboardAction({ mode: "helios", key: "Enter" })).toBe("ignore");
 
     expect(
       allowProductWorkspaceLinkAccess({

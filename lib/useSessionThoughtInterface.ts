@@ -7,6 +7,7 @@ import {
   type IleThoughtMemoryRecord,
 } from "@/lib/ile-context-auto-stash";
 import { selectLastStashedThought } from "@/lib/ile-last-stash";
+import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
 
 
 export interface SessionThought {
@@ -25,7 +26,8 @@ export type SessionSystem2Action =
   | "deselect"
   | "resend"
   | "edit"
-  | "remove";
+  | "remove"
+  | "end_of_chain_of_thought";
 
 export type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
@@ -133,7 +135,7 @@ export function formatSpeechTranscriptDisplay({
   if (speechSupported === null) return "Starting microphone…";
   if (!enabled) return "Speech capture off — start the session to listen";
   if (isListening) return "Listening…";
-  return "Mic idle — click Start to listen";
+  return "Mic idle";
 }
 
 export function useSpeechSupported() {
@@ -596,18 +598,20 @@ export function useSessionThoughtInterface({
   }, [enabled, speechLang, speechBindings]);
 
   const sendThought = useCallback(
-    async (text: string, thoughtIds: string[] = []) => {
+    async (text: string, thoughtIds: string[] = [], options?: { skipTrace?: boolean }) => {
       const clean = normalize(text);
       if (!clean || isSending) return;
       const isResend = thoughtIds.length > 0 && thoughtIds.every((id) => sentThoughtIds.has(id));
-      onLogTrace({
-        traceType: "system2",
-        action: isResend ? "resend" : "send",
-        thoughtIds,
-        thoughtId: thoughtIds.length === 1 ? thoughtIds[0] : undefined,
-        text: clean,
-        combined: thoughtIds.length > 1,
-      });
+      if (!options?.skipTrace) {
+        onLogTrace({
+          traceType: "system2",
+          action: isResend ? "resend" : "send",
+          thoughtIds,
+          thoughtId: thoughtIds.length === 1 ? thoughtIds[0] : undefined,
+          text: clean,
+          combined: thoughtIds.length > 1,
+        });
+      }
       onUserActivityRef.current?.();
       setIsSending(true);
       setSendError("");
@@ -682,24 +686,15 @@ export function useSessionThoughtInterface({
       if (event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (event.key === "Escape" && editingTranscription) {
+      const spoken = decideSpokenCaptureKeyAction(event);
+      if (spoken === "cancel_edit" && editingTranscription) {
         event.preventDefault();
         cancelEditTranscription();
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
-        event.preventDefault();
-        void sendCurrentTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === "Delete" || event.key === "Backspace")) {
+      if (spoken === "stash") {
         event.preventDefault();
         stashCurrentTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
-        event.preventDefault();
-        beginEditTranscription();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
@@ -717,9 +712,7 @@ export function useSessionThoughtInterface({
     captureKeys,
     latestThoughts,
     stashCurrentTranscription,
-    sendCurrentTranscription,
     sendThought,
-    beginEditTranscription,
     cancelEditTranscription,
     editingTranscription,
   ]);
@@ -746,6 +739,7 @@ export function useSessionThoughtInterface({
     clearCurrentTranscription,
     sendCurrentTranscription,
     sendThought,
+    logTrace: onLogTrace,
     beginEditTranscription,
     cancelEditTranscription,
     updateEditDraft,

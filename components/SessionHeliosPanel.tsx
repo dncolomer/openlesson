@@ -14,10 +14,8 @@ import {
 } from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
-import {
-  selectLastStashedThought,
-  submitLastStashedThought,
-} from "@/lib/ile-last-stash";
+import { selectLastStashedThought } from "@/lib/ile-last-stash";
+import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import {
@@ -29,6 +27,7 @@ import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
+import { IleHuntAnswersPill } from "@/components/IleHuntAnswersPill";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 interface SessionHeliosPanelProps {
@@ -214,11 +213,15 @@ export function SessionHeliosPanel({
       )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
-        {participantIdentity ? (
-          <div className="flex shrink-0 justify-end">
+        <div
+          className="flex shrink-0 flex-wrap items-center justify-end gap-2"
+          data-ile-identity-row
+        >
+          <IleHuntAnswersPill />
+          {participantIdentity ? (
             <SessionIdentityBadge identity={participantIdentity} />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
         {isInitializing && !hasPlanSteps ? (
           <div className="rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
             {sessionControls && (
@@ -406,7 +409,31 @@ export function SessionHeliosPanel({
               </div>
             )}
 
-            <div className="min-w-0 shrink-0 overflow-hidden rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+            <div className="relative min-w-0 shrink-0" data-ile-transcription-region>
+            <div
+              data-ile-im-done-answering-overlay
+              className="relative z-20 mb-2"
+            >
+              <ImDoneAnsweringControl
+                sessionId={sessionId}
+                thoughts={thought.stashedThoughts}
+                formingText={
+                  typeof thought.getFormingText === "function"
+                    ? thought.getFormingText()
+                    : thought.crystallizableText
+                }
+                sendThought={(text, ids) =>
+                  thought.sendThought(text, ids, { skipTrace: true })
+                }
+                logEndOfChainOfThought={(event) => thought.logTrace(event)}
+                onClearForming={thought.clearCurrentTranscription}
+                disabled={chapterThoughtsLocked || thought.isSending}
+              />
+            </div>
+            <div
+              data-ile-transcription-box
+              className="min-w-0 overflow-hidden rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md"
+            >
               {sessionControls && (
                 <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
                   {sessionControls}
@@ -439,26 +466,10 @@ export function SessionHeliosPanel({
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
                     <ThoughtCompactAction
-                      shortcut="↵"
-                      label="Send"
-                      disabled={
-                        chapterThoughtsLocked ||
-                        !thought.crystallizableText ||
-                        thought.isSending
-                      }
-                      onClick={() => void thought.sendCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
                       shortcut="Del"
                       label="Stash"
                       disabled={chapterThoughtsLocked || !thought.crystallizableText}
                       onClick={thought.stashCurrentTranscription}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="E"
-                      label="Edit"
-                      disabled={chapterThoughtsLocked || !thought.crystallizableText}
-                      onClick={thought.beginEditTranscription}
                     />
                   </div>
                 </div>
@@ -488,22 +499,6 @@ export function SessionHeliosPanel({
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      data-ile-submit-last-thought
-                      disabled={
-                        chapterThoughtsLocked || !lastStash || thought.isSending
-                      }
-                      onClick={() => {
-                        void submitLastStashedThought({
-                          thoughts: thought.stashedThoughts,
-                          sendThought: thought.sendThought,
-                        });
-                      }}
-                      className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Submit last Thought
-                    </button>
-                    <button
-                      type="button"
                       data-ile-see-older-thoughts
                       onClick={() => onOpenThoughts?.()}
                       className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
@@ -512,6 +507,7 @@ export function SessionHeliosPanel({
                     </button>
                   </div>
                 </div>
+            </div>
             </div>
           </>
         )}

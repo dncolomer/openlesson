@@ -232,7 +232,8 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("stashedThoughts");
     expect(tap).not.toContain("<ActiveThoughtSlots");
     expect(tap).toContain("ThoughtMemoryPanel");
-    expect(tap).toContain("Submit last Thought");
+    expect(tap).not.toContain("Submit last Thought");
+    expect(tap).toContain("ImDoneAnsweringControl");
     expect(tap).toContain("See Older Thoughts");
 
     const map = read("components/tap-score/tap-session-map.tsx");

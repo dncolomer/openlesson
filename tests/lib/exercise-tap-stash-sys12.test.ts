@@ -89,7 +89,7 @@ describe("structural dual history + wider shell", () => {
     expect(client).toContain("stashCurrentTranscription");
     expect(client).toContain("sendCurrentTranscription");
     expect(client).toContain("sendThought");
-    expect(client).toContain("submitLastStashedThought");
+    expect(client).toContain("ImDoneAnsweringControl");
     expect(client).toContain('traceType: "system1"');
     expect(client).toContain('traceType: "system2"');
     expect(client).toContain('action: "send"');
@@ -104,7 +104,8 @@ describe("structural dual history + wider shell", () => {
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
     expect(shell).toContain("data-exercise-tap-stash-submit");
     expect(shell).toContain("ThoughtMemoryPanel");
-    expect(shell).toContain("Submit last Thought");
+    expect(shell).not.toContain("Submit last Thought");
+    expect(shell).toContain("ImDoneAnsweringControl");
     expect(shell).toContain("See Older Thoughts");
     expect(shell).toContain("lg:grid-cols-2");
     expect(shell).toContain("data-exercise-tap-live-split");

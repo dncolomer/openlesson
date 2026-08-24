@@ -67,7 +67,7 @@ describe("TAP live PoW after map/stash UI swap", () => {
 
     const live = readTapScoreSurface();
     expect(live).not.toContain("ExerciseStashHistory");
-    expect(live).toContain("submitLastStashedThought");
+    expect(live).toContain("ImDoneAnsweringControl");
     expect(live).toContain("sendThought");
     expect(live).toContain("ThoughtMemoryPanel");
     expect(live).toContain("stashCurrentTranscription");
@@ -86,7 +86,7 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(exercise).toContain("postTutoringSessionComplete");
     expect(exercise).toContain("stashCurrentTranscription");
     expect(exercise).toContain("sendThought");
-    expect(exercise).toContain("submitLastStashedThought");
+    expect(exercise).toContain("ImDoneAnsweringControl");
     expect(exercise).toContain("TapSessionMap");
     expect(exercise).toContain("ThoughtMemoryPanel");
     const soloShell = read("components/exercise-tap/ExerciseTapShell.tsx");
@@ -104,10 +104,10 @@ describe("TAP live PoW after map/stash UI swap", () => {
         `sys2send=${String(send.traceType)}/${String(send.action)}`,
         `sys2remove=${String(remove.traceType)}/${String(remove.action)}`,
         "convo stash: addThought + tapTracePayload system1",
-        "convo submit: submitLastStashedThought -> sendThought -> logTapTrace system2 send",
+        "convo submit: ImDoneAnsweringControl -> sendThought -> logTapTrace end_of_chain_of_thought",
         "convo start/complete: postTutoringSessionStart/Complete",
         "solo stash: stashExerciseSpeech + logExerciseTrace system1",
-        "solo submit: submitLastStashedThought -> sendThought -> logExerciseTrace system2 send",
+        "solo submit: ImDoneAnsweringControl -> sendThought -> logExerciseTrace end_of_chain_of_thought",
         "solo start/complete: postTutoringSessionStart/Complete",
         "handlers still passed into live UI after map/overlay/stash-history swap",
       ].join("\n"),

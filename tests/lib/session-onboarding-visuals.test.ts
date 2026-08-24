@@ -40,9 +40,9 @@ describe("session intro visuals", () => {
 
     const briefing = read("components/TapBriefingConfig.tsx");
     expect(briefing).not.toContain('["1", "2", "3"]');
-    expect(briefing).toContain('["Enter"]');
+    expect(briefing).not.toContain('["Enter"]');
     expect(briefing).toContain('["Del"]');
-    expect(briefing).toContain('["E"]');
+    expect(briefing).not.toContain('["E"]');
 
     const en = JSON.parse(read("messages/en.json")) as {
       onboardingGuide: {
@@ -50,13 +50,15 @@ describe("session intro visuals", () => {
         tap: { step2: { body: string } };
       };
     };
-    expect(en.onboardingGuide.ile.step2.body).toContain("Submit last Thought");
+    expect(en.onboardingGuide.ile.step2.body).toContain("I'm done answering");
+    expect(en.onboardingGuide.ile.step2.body).not.toContain("Submit last Thought");
     expect(en.onboardingGuide.ile.step2.body).toContain("See Older Thoughts");
     expect(en.onboardingGuide.ile.step2.body).toContain("Thought Memory");
     expect(en.onboardingGuide.ile.step2.body).not.toMatch(/Press 1, 2, or 3/);
     expect(en.onboardingGuide.ile.step2.bodyProject).toContain("See Older Thoughts");
     expect(en.onboardingGuide.ile.step2.bodyProject).not.toMatch(/Solution stack/i);
-    expect(en.onboardingGuide.tap.step2.body).toContain("Submit last Thought");
+    expect(en.onboardingGuide.tap.step2.body).toContain("I'm done answering");
+    expect(en.onboardingGuide.tap.step2.body).not.toContain("Submit last Thought");
     expect(en.onboardingGuide.tap.step2.body).toContain("See Older Thoughts");
     expect(en.onboardingGuide.tap.step2.body).not.toMatch(/1 \/ 2 \/ 3/);
 
@@ -74,7 +76,7 @@ describe("session intro visuals", () => {
         "grid_pan=/animations/grid_pan.mp4",
         "speaking=/animations/speaking.mp4",
         "selective_interface=/animations/selective_interface.mp4",
-        "copy=Submit last Thought + See Older Thoughts",
+        "copy=ILE+TAP I'm done answering + See Older Thoughts",
         "no 1-2-3 stash shortcuts in TAP briefing default",
         ...sizes,
       ].join("\n"),

@@ -2612,14 +2612,14 @@
         "title": "Think aloud, then send",
         "titleProject": "Think aloud — stash and send",
         "imageAlt": "Last-thought stash interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech. Auto-stash also fills thought memory when the bar is full. Submit last Thought sends the newest stash. See Older Thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights. Press E to edit before sending.",
-        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or send it.\n\nPress Enter to send. Press Del to stash. Auto-stash fills thought memory. Submit last Thought sends the newest stash. See Older Thoughts opens Thought Memory so you can select, submit, or edit traces. There is no Helios dialogue in Explore Solo."
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Older Thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
+        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash. Auto-stash fills thought memory. When the chain of thought is finished, press I'm done answering. See Older Thoughts opens Thought Memory so you can select, submit, or edit traces. There is no Helios dialogue in Explore Solo."
       },
       "step3": {
         "title": "Depth over speed",
         "titleProject": "Depth over speed",
-        "body": "When you're ready, press Start block. Recording begins and Helios will listen to whatever you send — Enter for the live bar, or Submit last Thought for the newest stash. Take your time — messy thinking is how real learning surfaces.",
-        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise — no Helios conversation bubbles. Use Enter to send, Del to stash, and See Older Thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
+        "body": "When you're ready, press Start block. Recording begins and Helios will listen when you press I'm done answering to close the chain of thought. Take your time — messy thinking is how real learning surfaces.",
+        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise — no Helios conversation bubbles. Use Del to stash, I'm done answering to close the turn, and See Older Thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
@@ -2643,7 +2643,7 @@
       "step2": {
         "title": "How the interface works",
         "imageAlt": "Selective thought interface",
-        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Enter — send to Helios\n• Del — stash for later\n• Submit last Thought — send the newest auto-stash\n• See Older Thoughts — select, submit, or edit traces\n• E — edit before sending\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
+        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Del — stash for later\n• I'm done answering — close your turn\n• See Older Thoughts — select, submit, or edit traces\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
       },
       "step3": {
         "title": "Pick your starting focus",

@@ -50,17 +50,18 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
   it("has last-thought + exact labels; not ExerciseStashHistory", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     const live = readTapScoreSurface();
-    expect(phases).toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
+    expect(phases).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(phases).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
-    expect(phases).toContain("Submit last Thought");
+    expect(phases).not.toContain("Submit last Thought");
     expect(phases).toContain("See Older Thoughts");
     expect(phases).toContain("data-tap-last-stash");
     expect(phases).toContain("data-tap-last-stash-text");
-    expect(phases).toContain('label="Send"');
+    expect(phases).not.toContain('label="Send"');
     expect(phases).toContain('label="Stash"');
-    expect(phases).toContain('label="Edit"');
+    expect(phases).not.toContain('label="Edit"');
     expect(phases).toContain("selectLastStashedThought");
-    expect(phases).toContain("submitLastStashedThought");
+    expect(phases).not.toContain("submitLastStashedThought");
+    expect(phases).toContain("ImDoneAnsweringControl");
     expect(phases).toContain("sendThought");
     expect(live).not.toContain("ExerciseStashHistory");
     expect(live).not.toContain("data-exercise-stash-history");
@@ -69,8 +70,9 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     const exercisePhases = read("components/exercise-tap/exercise-tap-phases.tsx");
     expect(shell).not.toContain("ExerciseStashHistory");
     expect(exercisePhases).not.toContain("ExerciseStashHistory");
-    expect(shell).toContain("Submit last Thought");
+    expect(shell).not.toContain("Submit last Thought");
     expect(shell).toContain("See Older Thoughts");
+    expect(shell).toContain("ImDoneAnsweringControl");
 
     writeScratch(
       "tap-unify-helios-stash.txt",
@@ -78,7 +80,7 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
         `Submit last Thought=${phases.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
         `See Older Thoughts=${phases.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
         `last-stash=${phases.includes("data-tap-last-stash")}`,
-        `send/stash/edit=${phases.includes('label="Send"') && phases.includes('label="Stash"') && phases.includes('label="Edit"')}`,
+        `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
         `no ExerciseStashHistory on TAP convo=${!live.includes("ExerciseStashHistory")}`,
         `no ExerciseStashHistory on TAP solo=${!shell.includes("ExerciseStashHistory")}`,
       ].join("\n"),
@@ -123,16 +125,20 @@ describe("TAP older-thoughts Thought Memory surface", () => {
 });
 
 describe("See Older Thoughts is live on TAP convo chrome", () => {
-  it("opens the older-thoughts surface via the shipped helper", () => {
+  it("toggles the older-thoughts surface via the shipped helper", () => {
     let open = false;
-    openOlderThoughtsSurface((next) => {
-      open = next;
-    });
+    const setOpen = (next: boolean | ((current: boolean) => boolean)) => {
+      open = typeof next === "function" ? next(open) : next;
+    };
+    openOlderThoughtsSurface(setOpen);
     expect(open).toBe(true);
+    openOlderThoughtsSurface(setOpen);
+    expect(open).toBe(false);
 
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(phases).toContain("openOlderThoughtsSurface(setOlderThoughtsOpen)");
     expect(phases).toContain("data-tap-see-older-thoughts");
+    expect(phases).toContain("aria-pressed={olderThoughtsOpen}");
   });
 });
 

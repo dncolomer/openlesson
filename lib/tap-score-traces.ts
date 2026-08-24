@@ -76,7 +76,7 @@ export type TapSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
  * send = promote/submit thought (Exercise submission stack or Helios send);
  * remove = undo a submitted thought from Exercise submission stack (sys2 undo).
  */
-export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "remove";
+export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "remove" | "end_of_chain_of_thought";
 
 export interface TapChatExchangePayload {
   type: "uncertain_systems_tap_chat_exchange";

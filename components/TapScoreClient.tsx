@@ -29,6 +29,7 @@ import {
   type SpeechRecognitionEventLike,
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
+import { decideSpokenCaptureKeyAction } from "@/lib/spoken-thought-shortcut";
 import {
   toSpeechBcp47,
   type SpokenLocale,
@@ -851,30 +852,21 @@ export function TapScoreClient({
       if (phase !== "live" || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (event.key === "Escape" && editingTranscription) {
+      const spoken = decideSpokenCaptureKeyAction(event);
+      if (spoken === "cancel_edit" && editingTranscription) {
         event.preventDefault();
         setEditingTranscription(null);
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
-        event.preventDefault();
-        void sendCurrentTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === "Delete" || event.key === "Backspace")) {
+      if (spoken === "stash") {
         event.preventDefault();
         stashCurrentTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
-        event.preventDefault();
-        beginEditTranscription();
         return;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, stashCurrentTranscription, sendCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, stashCurrentTranscription, editingTranscription]);
 
   endAndScoreRef.current = endSession;
 

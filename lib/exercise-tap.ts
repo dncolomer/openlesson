@@ -263,6 +263,65 @@ export function promoteExerciseStashToSubmission(
 }
 
 /**
+ * Forming leftover after I'm-done composed text (thoughts joined with `\n`, then
+ * `normalize()` collapses newlines to spaces). Compare both sides as normalized
+ * so A+B+forming is not dropped.
+ */
+export function splitTapSoloDoneAnsweringLeftover(input: {
+  composedText: string;
+  promotedThoughts: readonly { text: string }[];
+}): string {
+  const clean = normalize(input.composedText);
+  if (!clean) return "";
+  const promoted = normalize(
+    input.promotedThoughts
+      .map((thought) => String(thought.text || "").trim())
+      .filter(Boolean)
+      .join("\n"),
+  );
+  if (!promoted) return clean;
+  if (clean === promoted) return "";
+  if (clean.startsWith(`${promoted} `)) return clean.slice(promoted.length).trim();
+  return "";
+}
+
+/**
+ * TAP solo I'm-done / sendThought list mutation: promote unflagged stash ids,
+ * then submit leftover live forming so onClearForming does not discard it.
+ */
+export function applyTapSoloImDoneSend(
+  lists: ExerciseDualLists,
+  text: string,
+  thoughtIds: readonly string[] = [],
+  nowMs = Date.now(),
+): ExerciseDualLists {
+  const clean = normalize(text);
+  if (!clean) return lists;
+  if (thoughtIds.length === 0) {
+    return submitExerciseSpeechDirect(lists, clean, nowMs).lists;
+  }
+  const promotedThoughts = thoughtIds
+    .map(
+      (id) =>
+        lists.stash.find((thought) => thought.id === id) ||
+        lists.submitted.find((thought) => thought.id === id),
+    )
+    .filter((thought): thought is ExerciseThought => Boolean(thought));
+  let next = lists;
+  for (const id of thoughtIds) {
+    next = promoteExerciseStashToSubmission(next, id).lists;
+  }
+  const leftover = splitTapSoloDoneAnsweringLeftover({
+    composedText: clean,
+    promotedThoughts,
+  });
+  if (leftover) {
+    next = submitExerciseSpeechDirect(next, leftover, nowMs).lists;
+  }
+  return next;
+}
+
+/**
  * System 2: submit live speech directly onto the submission stack (Enter with live text).
  * Skips the stash surface — equivalent to conversational “send” without a prior Del.
  */

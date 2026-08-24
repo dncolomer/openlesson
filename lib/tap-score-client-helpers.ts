@@ -14,7 +14,7 @@ export interface Thought {
 export type TapTraceType = "system1" | "system2";
 /** pause_finalize = deliberate stash; auto_stash = silence-driven stash (degrades session purity). */
 export type TapSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
-export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "remove" | "end_of_chain_of_thought";
 
 export interface TapChatMessage {
   id: string;

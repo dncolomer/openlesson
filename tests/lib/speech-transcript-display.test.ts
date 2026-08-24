@@ -39,7 +39,7 @@ describe("formatSpeechTranscriptDisplay", () => {
     ).toBe("Listening…");
   });
 
-  it("prompts Start when enabled but mic is idle (not session-off)", () => {
+  it("shows idle when enabled but mic is not listening (not session-off)", () => {
     const label = formatSpeechTranscriptDisplay({
       text: "",
       speechError: null,
@@ -47,7 +47,7 @@ describe("formatSpeechTranscriptDisplay", () => {
       isListening: false,
       enabled: true,
     });
-    expect(label).toMatch(/Start/i);
+    expect(label).toMatch(/idle/i);
     expect(label).not.toMatch(/Speech capture off/i);
   });
 

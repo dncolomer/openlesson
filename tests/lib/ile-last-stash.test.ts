@@ -222,16 +222,17 @@ describe("See Older Thoughts wiring (shipped)", () => {
 });
 
 describe("ILE Helios last-stash surface (shipped source)", () => {
-  it("shows last thought + exact button labels; no 3-slot strip", () => {
+  it("shows last thought + See Older Thoughts; no Submit last Thought on Helios", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
+    expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(helios).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
-    expect(helios).toContain("Submit last Thought");
+    expect(helios).not.toContain("Submit last Thought");
     expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("data-ile-last-stash");
     expect(helios).toContain("data-ile-last-stash-text");
     expect(helios).toContain("selectLastStashedThought");
-    expect(helios).toContain("submitLastStashedThought");
+    expect(helios).not.toContain("submitLastStashedThought");
     expect(helios).toContain("thought.stashedThoughts");
     expect(helios).toContain("thought.sendThought");
     expect(helios).not.toContain("ActiveThoughtSlots");

@@ -34,6 +34,10 @@ export function KnowledgeModelsView({
     globalSelectedRegionId,
     knowledgeGlobalViewMode,
     knowledgeMapScope,
+    importPickerOpen,
+    importRegionOverlay,
+    importableRegions,
+    importedRegions,
     knowledgeRegions,
     loadEmbeddings,
     loadRegionsForOverlay,
@@ -50,6 +54,7 @@ export function KnowledgeModelsView({
     selectableRegionIds,
     selectedRegionIds,
     setEmbSelectedKeys,
+    setImportPickerOpen,
     setGlobalSelectedRegionId,
     setKnowledgeGlobalViewMode,
     setKnowledgeMapScope,
@@ -483,21 +488,104 @@ export function KnowledgeModelsView({
                   <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
                     Regions
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void loadRegionsForOverlay()}
-                    disabled={regionsLoading}
-                    className="shrink-0 text-[11px] text-zinc-500 underline decoration-zinc-700 underline-offset-2 transition hover:text-zinc-200 disabled:opacity-40"
-                    data-region-overlay-refresh
-                  >
-                    {regionsLoading ? "Loading…" : "Refresh"}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImportPickerOpen((o) => !o)}
+                      className="text-[11px] text-zinc-500 underline decoration-zinc-700 underline-offset-2 transition hover:text-zinc-200"
+                      data-region-import-toggle
+                      aria-expanded={importPickerOpen}
+                    >
+                      Import
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void loadRegionsForOverlay()}
+                      disabled={regionsLoading}
+                      className="text-[11px] text-zinc-500 underline decoration-zinc-700 underline-offset-2 transition hover:text-zinc-200 disabled:opacity-40"
+                      data-region-overlay-refresh
+                    >
+                      {regionsLoading ? "Loading…" : "Refresh"}
+                    </button>
+                  </div>
                 </div>
 
                 <div
                   data-region-overlay-body
                   className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 py-1.5"
                 >
+                  {importPickerOpen ? (
+                    <div
+                      className="mb-2 rounded-none border border-zinc-800 bg-black/30 p-1.5"
+                      data-region-import-picker
+                    >
+                      <p className="px-1 pb-1 text-[10px] uppercase tracking-wide text-zinc-500">
+                        From your other workspaces
+                      </p>
+                      {importableRegions.length === 0 ? (
+                        <p className="px-1 text-xs text-zinc-500" data-region-import-empty>
+                          No Knowledge Regions in other workspaces you own.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1" data-region-import-list>
+                          {importableRegions.map((r) => {
+                            const already = importedRegions.some((x) => x.id === r.id);
+                            const hasCentroid =
+                              Array.isArray(r.centroid) && r.centroid.length > 0;
+                            return (
+                              <li key={r.id}>
+                                <button
+                                  type="button"
+                                  disabled={!hasCentroid || already}
+                                  onClick={() => importRegionOverlay(r.id)}
+                                  className="flex w-full items-start gap-2 rounded-none border border-zinc-800 px-2 py-1.5 text-left text-xs text-zinc-300 transition hover:border-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                  data-region-import-item={r.id}
+                                  data-region-import-workspace={r.workspace_id || ""}
+                                >
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium">{r.name}</span>
+                                    <span className="block text-[10px] text-zinc-500">
+                                      {r.workspace_title || "Workspace"}
+                                      {already ? " · imported" : ""}
+                                    </span>
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ) : null}
+                  {importedRegions.length > 0 ? (
+                    <ul className="mb-2 space-y-1" data-region-imported-list>
+                      {importedRegions.map((r) => {
+                        const checked = selectedRegionIds.has(r.id);
+                        return (
+                          <li key={r.id}>
+                            <button
+                              type="button"
+                              onClick={() => toggleRegionOverlay(r.id)}
+                              className={`flex w-full items-start gap-2 rounded-none border px-2.5 py-2 text-left text-xs transition ${
+                                checked
+                                  ? "border-neutral-600/25 bg-neutral-950/20 text-zinc-200"
+                                  : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
+                              }`}
+                              data-region-imported-toggle={r.id}
+                              aria-pressed={checked}
+                            >
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium">{r.name}</span>
+                                <span className="block text-[10px] text-zinc-500">
+                                  Imported · {r.workspace_title || "Workspace"}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                   {regionsLoading && knowledgeRegions.length === 0 ? (
                     <p className="px-1 text-xs text-zinc-500" data-region-overlay-loading>
                       Loading knowledge regions…

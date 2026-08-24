@@ -262,7 +262,12 @@ describe("AYCL marketplace structure (settings + catalog + checkout)", () => {
       path.join(REPO_ROOT, "components/WorkspaceIntegrationPanel.tsx"),
       "utf8",
     );
-    expect(panel).toContain('id: "aycl"');
+    const settingsTabs = fs.readFileSync(
+      path.join(REPO_ROOT, "lib/workspace-settings-tabs.ts"),
+      "utf8",
+    );
+    expect(panel).toContain("settingsSubTabsForKind");
+    expect(settingsTabs).toContain('"aycl"');
     expect(panel).toContain('data-settings-tab-panel="aycl"');
     expect(panel).toContain("WorkspaceAyclMarketplaceSettings");
     expect(settings).toContain("data-workspace-aycl-marketplace-settings");

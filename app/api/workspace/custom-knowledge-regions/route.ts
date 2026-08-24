@@ -8,6 +8,7 @@ import {
   deleteCustomVerificationModel,
   evalSubjectAgainstCustomVerificationModel,
   listCustomVerificationModels,
+  listImportableKnowledgeRegionsForOwner,
   listSubjectsWithKnowledgeConfig,
 } from "@/lib/pow-api/custom-verification-model-store";
 import { CustomVerificationModelError } from "@/lib/knowledge-config/custom-verification-model";
@@ -37,10 +38,27 @@ export async function GET(req: NextRequest) {
       listSubjectsWithKnowledgeConfig(auth.supabase, workspaceId, { baseUrl }),
     ]);
 
+    let importable_models: Awaited<ReturnType<typeof listImportableKnowledgeRegionsForOwner>> = [];
+    const ownerId = auth.persistUserId;
+    if (ownerId) {
+      const { data: ws } = await auth.supabase
+        .from("workspaces")
+        .select("user_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      if (ws && String((ws as { user_id?: string }).user_id || "") === ownerId) {
+        importable_models = await listImportableKnowledgeRegionsForOwner(auth.supabase, {
+          callerUserId: ownerId,
+          currentWorkspaceId: workspaceId,
+        });
+      }
+    }
+
     return NextResponse.json({
       workspace_id: workspaceId,
       models,
       subjects,
+      importable_models,
     });
   } catch (error) {
     console.error("[workspace/custom-knowledge-regions] GET failed:", error);

@@ -28,6 +28,10 @@ import {
   resolveIleSessionModeFromBody,
   type IleSessionMode,
 } from "@/lib/ile-mode";
+import {
+  knowledgeLinkMintDeniedMessage,
+  workspaceAllowsKnowledgeLinkMint,
+} from "@/lib/workspace-kind";
 
 export class CreateIleLinkError extends Error {
   constructor(
@@ -243,7 +247,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
 
   const { data: block, error: blockError } = await supabase
     .from("blocks")
-    .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
+    .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id, workspace_kind)")
     .eq("id", blockId)
     .eq("workspace_id", workspaceId)
     .single();
@@ -258,10 +262,15 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
     user_id: string | null;
     organization_id: string | null;
     guest_user_id: string | null;
+    workspace_kind?: string | null;
   };
 
   if (!canAccessAgentWorkspace(auth, workspace)) {
     throw new CreateIleLinkError("Workspace not found", 404, "workspace_not_found");
+  }
+
+  if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
+    throw new CreateIleLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;

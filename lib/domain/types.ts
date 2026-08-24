@@ -363,6 +363,8 @@ export interface Workspace {
   status: WorkspaceLifecycleStatus;
   created_at?: string;
   user_id?: string;
+  /** Durable shell kind: standard map vs Knowledge Region. */
+  workspace_kind?: "standard" | "knowledge_region";
   description?: string;
   is_public?: boolean;
   is_group?: boolean;

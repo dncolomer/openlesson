@@ -115,6 +115,10 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     path.join(REPO_ROOT, "components/WorkspaceIntegrationPanel.tsx"),
     "utf8",
   );
+  const settingsTabs = fs.readFileSync(
+    path.join(REPO_ROOT, "lib/workspace-settings-tabs.ts"),
+    "utf8",
+  );
   const knowledge = fs.readFileSync(
     path.join(REPO_ROOT, "components/WorkspacePerformancePanel.tsx"),
     "utf8",
@@ -173,24 +177,25 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(subTabs).toContain("data-settings-tablist");
     expect(subTabs).toContain("data-settings-tab");
     expect(subTabs).toContain('role="tablist"');
-    expect(integration).toContain('id: "general"');
-    expect(integration).toContain('id: "regions"');
-    expect(integration).toContain('id: "knowledge-portal"');
-    expect(integration).toContain('id: "guest-links"');
-    expect(integration).toContain('id: "data-studio"');
-    expect(integration).toContain('id: "integrations"');
+    expect(integration).toContain("settingsSubTabsForKind");
+    expect(settingsTabs).toContain('"general"');
+    expect(settingsTabs).toContain('"regions"');
+    expect(settingsTabs).toContain('"knowledge-portal"');
+    expect(settingsTabs).toContain('"guest-links"');
+    expect(settingsTabs).toContain('"data-studio"');
+    expect(settingsTabs).toContain('"integrations"');
     // Settings tab label for guest-links subview is Knowledge Links (i18n).
-    expect(integration).toContain('t("planView.performanceSubTabTap")');
+    expect(settingsTabs).toContain('t?.("planView.performanceSubTabTap")');
     const en = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, "messages/en.json"), "utf8"),
     ) as { planView?: Record<string, string> };
     expect(en.planView?.performanceSubTabTap).toBe("Knowledge Links");
     expect(en.planView?.performanceSubTabTap).not.toMatch(/Guest Links/i);
     // Knowledge Portal tab is adjacent to Knowledge Regions in declared order.
-    const regionsIdx = integration.indexOf('id: "regions"');
-    const portalIdx = integration.indexOf('id: "knowledge-portal"');
-    const guestIdx = integration.indexOf('id: "guest-links"');
-    const dataStudioIdx = integration.indexOf('id: "data-studio"');
+    const regionsIdx = settingsTabs.indexOf('"regions"');
+    const portalIdx = settingsTabs.indexOf('"knowledge-portal"');
+    const guestIdx = settingsTabs.indexOf('"guest-links"');
+    const dataStudioIdx = settingsTabs.indexOf('"data-studio"');
     expect(regionsIdx).toBeGreaterThan(-1);
     expect(portalIdx).toBeGreaterThan(regionsIdx);
     expect(guestIdx).toBeGreaterThan(portalIdx);

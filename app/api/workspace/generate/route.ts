@@ -26,7 +26,9 @@ import {
   composeTemplateCreatePrompt,
   composeTemplateWorkspaceNotes,
   goalFieldsFromPrompt,
+  knowledgeRegionWorkspaceCreateOutcome,
   parseWorkspaceCreateMode,
+  workspaceKindForCreateMode,
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
 
@@ -142,12 +144,17 @@ export async function POST(req: NextRequest) {
           status: "active",
           source_type: "topic",
           notes: "",
+          workspace_kind: workspaceKindForCreateMode("blank"),
         })
         .select()
         .single();
 
       if (planError || !plan) {
-        return jsonError(500, "Failed to create blank workspace");
+        console.error("[workspace/generate] blank insert failed:", planError);
+        return jsonError(
+          500,
+          planError?.message || "Failed to create blank workspace",
+        );
       }
 
       return NextResponse.json({
@@ -155,6 +162,53 @@ export async function POST(req: NextRequest) {
         title: plan.title,
         createMode: blankOutcome.mode,
         blockCount: blankOutcome.blocks.length,
+      });
+    }
+
+    // ── Knowledge Region: zero-block Goals/Knowledge/Settings shell ──
+    if (createMode === "knowledge_region") {
+      const krOutcome = knowledgeRegionWorkspaceCreateOutcome();
+      const billing = await resolveUserBilling(supabase, user.id);
+      if ("error" in billing) {
+        return jsonError(500, billing.error);
+      }
+      const workspaceCheck = await checkWorkspaceCreation(
+        supabase,
+        user.id,
+        billing.userProfile,
+      );
+      if (!workspaceCheck.allowed) {
+        return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
+      }
+
+      const { data: plan, error: planError } = await supabase
+        .from("workspaces")
+        .insert({
+          user_id: user.id,
+          title: "Knowledge Region",
+          root_topic: "Knowledge Region",
+          status: "active",
+          source_type: "topic",
+          notes: "",
+          workspace_kind: krOutcome.workspaceKind,
+        })
+        .select()
+        .single();
+
+      if (planError || !plan) {
+        console.error("[workspace/generate] knowledge region insert failed:", planError);
+        return jsonError(
+          500,
+          planError?.message || "Failed to create knowledge region workspace",
+        );
+      }
+
+      return NextResponse.json({
+        workspaceId: plan.id,
+        title: plan.title,
+        createMode: krOutcome.mode,
+        workspaceKind: krOutcome.workspaceKind,
+        blockCount: krOutcome.blocks.length,
       });
     }
 
@@ -482,6 +536,7 @@ export async function POST(req: NextRequest) {
         source_type: createMode === "template" ? "topic" : "topic",
         notes: goalFields.notes,
         workspace_goal: goalFields.workspace_goal,
+        workspace_kind: workspaceKindForCreateMode(createMode),
       })
       .select()
       .single();

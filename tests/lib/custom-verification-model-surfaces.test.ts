@@ -89,10 +89,12 @@ describe("custom verification model surfaces", () => {
     expect(brain).toContain('data-section="embeddings-projections"');
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
+    const settingsTabs = read("lib/workspace-settings-tabs.ts");
     expect(settings).toContain("<CustomVerificationModelsPanel");
     expect(settings).toContain("Custom Knowledge Regions");
     expect(settings).toContain('data-settings-section="custom-knowledge-regions"');
-    expect(settings).toContain('id: "regions"');
+    expect(settings).toContain("settingsSubTabsForKind");
+    expect(settingsTabs).toContain('"regions"');
     expect(settings).toContain('data-settings-tab-panel="regions"');
     expect(settings).toContain('activeSubview === "regions"');
   });

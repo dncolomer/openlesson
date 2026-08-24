@@ -32,6 +32,7 @@ import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-rig
 import {
   availableWorkspaceSections,
   canAccessPrivilegedWorkspaceSections,
+  defaultWorkspaceSection,
   resolveWorkspaceSectionLayout,
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
@@ -43,6 +44,7 @@ import {
   resolveWorkspaceModeShell,
   type WorkspaceInteractionMode,
 } from "@/lib/workspace-mode";
+import { parseWorkspaceKind } from "@/lib/workspace-kind";
 import {
   isBlockLockedUntilCompleted,
   type MapGroundBlockRef,
@@ -108,7 +110,9 @@ export function WorkspaceView({
   const [isOrgAdmin, setIsOrgAdmin] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(
-    () => sectionFromUrl ?? "workspace",
+    () =>
+      sectionFromUrl ??
+      defaultWorkspaceSection(parseWorkspaceKind(initialPlan?.workspace_kind)),
   );
   /** Creator = authoring (default); Learner = practice map + Knowledge LWM. */
   const [interactionMode, setInteractionMode] =
@@ -523,13 +527,15 @@ export function WorkspaceView({
    * (LWM/embeddings). Always resolve sections through the mode-aware helper —
    * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
    */
+  const workspaceKind = parseWorkspaceKind(plan?.workspace_kind);
   const sectionAuth = useCallback(
     () => ({
       isOwner,
       isOrgAdmin,
       isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+      workspaceKind,
     }),
-    [ayclToken, currentUserId, isOrgAdmin, isOwner],
+    [ayclToken, currentUserId, isOrgAdmin, isOwner, workspaceKind],
   );
 
   useEffect(() => {
@@ -622,13 +628,20 @@ export function WorkspaceView({
     isOrgAdmin,
     // AYCL token holders are "signed in" for Learner Knowledge without a cookie session.
     isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+    workspaceKind,
   });
-  const sectionLayout = resolveWorkspaceSectionLayout(activeSection);
+  const resolvedSection = resolveActiveSectionForMode({
+    mode: interactionMode,
+    requested: activeSection,
+    ...sectionAuth(),
+  });
+  const sectionLayout = resolveWorkspaceSectionLayout(resolvedSection);
   // Mode-aware section list (Learner: workspace+knowledge; Creator: shipped registry).
+  // Knowledge Region never resurrects map / Context / Simulation / DAGs.
   const visibleSections =
     interactionMode === "learner"
       ? modeShell.sections
-      : availableWorkspaceSections({ isOwner, isOrgAdmin });
+      : availableWorkspaceSections({ isOwner, isOrgAdmin, workspaceKind });
   const isLearnerMode = interactionMode === "learner";
   const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
   const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);
@@ -657,6 +670,7 @@ export function WorkspaceView({
           isOwner,
           isOrgAdmin,
           isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+          workspaceKind,
         }),
       );
     }
@@ -692,7 +706,7 @@ export function WorkspaceView({
         ayclUpgradeBusy={ayclUpgradeBusy}
         onUpgrade={startAyclUpgradeCheckout}
         sections={sectionConfig}
-        activeSection={activeSection}
+        activeSection={resolvedSection}
         onSelectSection={selectSection}
         plan={plan}
         interactionMode={interactionMode}

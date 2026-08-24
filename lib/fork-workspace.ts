@@ -62,6 +62,9 @@ export async function forkWorkspaceExactCopy(
       source_type: sourcePlan.source_type ?? null,
       source_url: sourcePlan.source_url ?? null,
       source_summary: sourcePlan.source_summary ?? null,
+      workspace_kind: sourcePlan.workspace_kind === "knowledge_region"
+        ? "knowledge_region"
+        : "standard",
     })
     .select("id")
     .single();

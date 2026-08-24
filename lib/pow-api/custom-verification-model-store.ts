@@ -27,6 +27,10 @@ import {
   userMessage,
 } from "@/lib/xai-client";
 import { loadLatestKnowledgeConfig } from "./knowledge-config-store";
+import {
+  filterImportableKnowledgeRegions,
+  type ImportableKnowledgeRegion,
+} from "@/lib/knowledge-region-import";
 
 export interface CustomVerificationModelRow {
   id: string;
@@ -101,6 +105,53 @@ export async function listCustomVerificationModels(
     return [];
   }
   return (data || []).map((r) => parseRow(r as Record<string, unknown>));
+}
+
+const CUSTOM_MODEL_SELECT =
+  "id, workspace_id, name, description, embedding_model_id, dim, centroid, cohort_cohesion, mean_radius, cosine_threshold, subject_count, subjects, created_by, created_at, updated_at";
+
+/** Regions from other workspaces the caller owns — for embeddings import overlay. */
+export async function listImportableKnowledgeRegionsForOwner(
+  supabase: SupabaseClient,
+  options: { callerUserId: string; currentWorkspaceId: string },
+): Promise<ImportableKnowledgeRegion[]> {
+  const callerUserId = String(options.callerUserId || "").trim();
+  const currentWorkspaceId = String(options.currentWorkspaceId || "").trim();
+  if (!callerUserId || !currentWorkspaceId) return [];
+
+  const { data: owned, error: ownedError } = await supabase
+    .from("workspaces")
+    .select("id, user_id, title, root_topic")
+    .eq("user_id", callerUserId)
+    .neq("id", currentWorkspaceId);
+
+  if (ownedError || !owned || owned.length === 0) return [];
+
+  const ids = owned.map((w) => String((w as { id: string }).id)).filter(Boolean);
+  if (ids.length === 0) return [];
+
+  const { data: rows, error } = await supabase
+    .from("custom_verification_models")
+    .select(CUSTOM_MODEL_SELECT)
+    .in("workspace_id", ids)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("[custom-verification-model-store] importable list failed:", error.message);
+    return [];
+  }
+
+  return filterImportableKnowledgeRegions({
+    callerUserId,
+    currentWorkspaceId,
+    ownedWorkspaces: owned as Array<{
+      id: string;
+      user_id: string;
+      title?: string | null;
+      root_topic?: string | null;
+    }>,
+    regions: (rows || []).map((r) => parseRow(r as Record<string, unknown>)),
+  });
 }
 
 export async function getCustomVerificationModel(

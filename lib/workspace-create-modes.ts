@@ -1,6 +1,6 @@
 /**
- * Pure helpers for workspace create modes (Blank / Template on the UI;
- * Files+Goal remains API-only) and shared AI context assembly.
+ * Pure helpers for workspace create modes (Blank / Template / Knowledge Region
+ * on the UI; Files+Goal remains API-only) and shared AI context assembly.
  */
 
 import {
@@ -8,29 +8,52 @@ import {
   composeWorkspaceSpatialGeneratePrompt,
 } from "@/lib/workspace-spatial-create";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
+import {
+  WORKSPACE_KIND_KNOWLEDGE_REGION,
+  WORKSPACE_KIND_STANDARD,
+  type WorkspaceKind,
+} from "@/lib/workspace-kind";
 
-export type WorkspaceCreateMode = "blank" | "template" | "files_goal";
+export type WorkspaceCreateMode = "blank" | "template" | "files_goal" | "knowledge_region";
 
 /** Modes shown as option cards on `/workspace/new`. Files+Goal is not a UI option. */
 export const UI_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = [
   "blank",
   "template",
+  "knowledge_region",
 ];
 
 export function isUiWorkspaceCreateMode(
   mode: unknown,
 ): mode is Exclude<WorkspaceCreateMode, "files_goal"> {
-  return mode === "blank" || mode === "template";
+  return mode === "blank" || mode === "template" || mode === "knowledge_region";
 }
 
 /** API / agent semantic create only supports Files + Goal Prompt. */
 export const API_WORKSPACE_CREATE_MODES: WorkspaceCreateMode[] = ["files_goal"];
 
 export function parseWorkspaceCreateMode(value: unknown): WorkspaceCreateMode | null {
-  if (value === "blank" || value === "template" || value === "files_goal") return value;
+  if (
+    value === "blank" ||
+    value === "template" ||
+    value === "files_goal" ||
+    value === "knowledge_region"
+  ) {
+    return value;
+  }
   if (value === "files+goal" || value === "filesGoal" || value === "goal") return "files_goal";
   if (value === "from_template" || value === "dantes") return "template";
+  if (value === "knowledge-region" || value === "knowledgeRegion" || value === "kr") {
+    return "knowledge_region";
+  }
   return null;
+}
+
+/** Durable kind persisted on the workspace row for this create mode. */
+export function workspaceKindForCreateMode(mode: WorkspaceCreateMode): WorkspaceKind {
+  return mode === "knowledge_region"
+    ? WORKSPACE_KIND_KNOWLEDGE_REGION
+    : WORKSPACE_KIND_STANDARD;
 }
 
 export function isApiAllowedCreateMode(mode: WorkspaceCreateMode | null | undefined): boolean {
@@ -214,6 +237,22 @@ export function composeAgentFilesGoalPrompt(vars: {
 /** Blank create yields zero blocks — structural outcome for tests and API. */
 export function blankWorkspaceCreateOutcome(): { blocks: []; mode: "blank" } {
   return { blocks: [], mode: "blank" };
+}
+
+/**
+ * Knowledge Region create yields zero blocks and a durable KR kind.
+ * Does not mint a map, questions, exercises, or knowledge links.
+ */
+export function knowledgeRegionWorkspaceCreateOutcome(): {
+  blocks: [];
+  mode: "knowledge_region";
+  workspaceKind: typeof WORKSPACE_KIND_KNOWLEDGE_REGION;
+} {
+  return {
+    blocks: [],
+    mode: "knowledge_region",
+    workspaceKind: WORKSPACE_KIND_KNOWLEDGE_REGION,
+  };
 }
 
 /**

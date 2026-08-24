@@ -23,6 +23,10 @@ import {
   normalizeTapbenchDurationSeconds,
   type TapbenchLinkStatus,
 } from "./tapbench";
+import {
+  knowledgeLinkMintDeniedMessage,
+  workspaceAllowsKnowledgeLinkMint,
+} from "@/lib/workspace-kind";
 
 export class CreateTapbenchLinkError extends Error {
   constructor(
@@ -141,7 +145,7 @@ export async function createWorkspaceTapbenchLink(
 
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, guest_user_id, title, workspace_goal, root_topic")
+    .select("id, user_id, organization_id, guest_user_id, title, workspace_goal, root_topic, workspace_kind")
     .eq("id", workspaceId)
     .single();
 
@@ -151,6 +155,10 @@ export async function createWorkspaceTapbenchLink(
 
   if (!options.skipAccessCheck && !canAccessAgentWorkspace(auth, workspace)) {
     throw new CreateTapbenchLinkError("Workspace not found", 404, "workspace_not_found");
+  }
+
+  if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
+    throw new CreateTapbenchLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
   }
 
   if (blockId) {

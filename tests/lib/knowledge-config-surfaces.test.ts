@@ -305,13 +305,15 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).toContain("loadRegionsForOverlay");
 
     const settings = read("components/WorkspaceIntegrationPanel.tsx");
+    const settingsTabs = read("lib/workspace-settings-tabs.ts");
     expect(settings).toContain("CustomVerificationModelsPanel");
     expect(settings).toContain('data-settings-section="custom-knowledge-regions"');
     expect(settings).toContain("WorkspaceGuestLinksPanel");
     expect(settings).toContain('data-settings-section="guest-tap-ile"');
     expect(settings).toContain('data-settings-layout="tabs"');
-    expect(settings).toContain('id: "regions"');
-    expect(settings).toContain('id: "guest-links"');
+    expect(settings).toContain("settingsSubTabsForKind");
+    expect(settingsTabs).toContain('"regions"');
+    expect(settingsTabs).toContain('"guest-links"');
     // Full width (no max-w-3xl constraint).
     expect(models).not.toContain("max-w-3xl");
     expect(models).toContain("w-full");

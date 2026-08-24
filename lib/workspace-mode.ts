@@ -7,8 +7,10 @@ import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import {
   availableWorkspaceSections,
   canAccessPrivilegedWorkspaceSections,
+  defaultWorkspaceSection,
   resolveActiveSection,
 } from "@/lib/workspace-sections";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
@@ -157,14 +159,28 @@ export type WorkspaceModeShell = {
  * Visible top-level sections for the active interaction mode.
  * Learner: Workspace + Knowledge only (logged-in Knowledge scope).
  * Creator: existing owner/consumer section lists.
+ * Knowledge Region: never resurrects Workspace / Context / Simulation / DAGs.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;
   isOwner?: boolean;
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
+  workspaceKind?: unknown;
 }): WorkspaceSectionKey[] {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
+  if (isKnowledgeRegionWorkspace(input.workspaceKind)) {
+    const kr = availableWorkspaceSections({
+      isOwner: input.isOwner,
+      isOrgAdmin: input.isOrgAdmin,
+      workspaceKind: input.workspaceKind,
+    });
+    if (mode === "learner") {
+      // Learner KR: Knowledge only when logged in; no map tab.
+      return kr.filter((s) => s === "knowledge");
+    }
+    return kr;
+  }
   if (mode === "learner") {
     // Knowledge only when logged in (user-scoped LWM); guests get map only.
     // DAGs tab is Creator-only — never in Learner.
@@ -175,12 +191,14 @@ export function availableSectionsForMode(input: {
   return availableWorkspaceSections({
     isOwner: input.isOwner,
     isOrgAdmin: input.isOrgAdmin,
+    workspaceKind: input.workspaceKind,
   });
 }
 
 /**
  * Resolve active section under mode constraints (drop privileged authoring
- * tabs when switching to Learner).
+ * tabs when switching to Learner). Hidden sections on a Knowledge Region
+ * fall back to Goals, never Workspace.
  */
 export function resolveActiveSectionForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -188,6 +206,7 @@ export function resolveActiveSectionForMode(input: {
   isOwner?: boolean;
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
+  workspaceKind?: unknown;
 }): WorkspaceSectionKey {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
   const allowed = availableSectionsForMode(input);
@@ -196,11 +215,12 @@ export function resolveActiveSectionForMode(input: {
       return resolveActiveSection(input.requested, {
         isOwner: input.isOwner,
         isOrgAdmin: input.isOrgAdmin,
+        workspaceKind: input.workspaceKind,
       });
     }
     return input.requested;
   }
-  return "workspace";
+  return defaultWorkspaceSection(input.workspaceKind);
 }
 
 /** Full shell chrome for Creator or Learner. */
@@ -209,6 +229,7 @@ export function resolveWorkspaceModeShell(input: {
   isOwner?: boolean;
   isOrgAdmin?: boolean;
   isLoggedIn?: boolean;
+  workspaceKind?: unknown;
 }): WorkspaceModeShell {
   const mode = normalizeWorkspaceInteractionMode(input.mode);
   const sections = availableSectionsForMode(input);

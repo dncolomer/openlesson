@@ -25,6 +25,7 @@ import {
   mergeAvailableSubjects,
 } from "@/components/knowledge-panel/knowledge-config-client";
 import type { OverlayDistance } from "@/components/knowledge-panel/types";
+import { assembleSelectedRegionOverlayInputs } from "@/lib/knowledge-region-import";
 
 export function useKnowledgeEmbeddings(input: {
   workspaceId: string;
@@ -50,6 +51,9 @@ export function useKnowledgeEmbeddings(input: {
   const embeddingsShellRef = useRef<HTMLDivElement | null>(null);
 
   const [knowledgeRegions, setKnowledgeRegions] = useState<KnowledgeRegionListItem[]>([]);
+  const [importableRegions, setImportableRegions] = useState<KnowledgeRegionListItem[]>([]);
+  const [importedRegionIds, setImportedRegionIds] = useState<Set<string>>(new Set());
+  const [importPickerOpen, setImportPickerOpen] = useState(false);
   const [selectedRegionIds, setSelectedRegionIds] = useState<Set<string>>(new Set());
   const [regionsLoading, setRegionsLoading] = useState(false);
   const [regionsError, setRegionsError] = useState<string | null>(null);
@@ -163,29 +167,54 @@ export function useKnowledgeEmbeddings(input: {
           typeof data.error === "string" ? data.error : "Could not load knowledge regions",
         );
       }
+      const mapModel = (
+        m: Record<string, unknown>,
+        extras?: Partial<KnowledgeRegionListItem>,
+      ): KnowledgeRegionListItem => ({
+        id: String(m.id),
+        name: String(m.name),
+        description: (m.description as string | null) ?? null,
+        subject_count: Number(m.subject_count) || 0,
+        cosine_threshold: Number(m.cosine_threshold) || 0.5,
+        cohort_cohesion: Number(m.cohort_cohesion) || 0,
+        mean_radius: Number(m.mean_radius) || 0,
+        embedding_model_id: String(m.embedding_model_id || ""),
+        centroid: Array.isArray(m.centroid) ? (m.centroid as number[]) : [],
+        created_at: String(m.created_at || ""),
+        workspace_id: typeof m.workspace_id === "string" ? m.workspace_id : workspaceId,
+        workspace_title:
+          typeof m.workspace_title === "string" ? m.workspace_title : undefined,
+        imported: Boolean(extras?.imported),
+        ...extras,
+      });
       const nextModels = (Array.isArray(data.models) ? data.models : []).map(
-        (m: Record<string, unknown>) =>
-          ({
-            id: String(m.id),
-            name: String(m.name),
-            description: (m.description as string | null) ?? null,
-            subject_count: Number(m.subject_count) || 0,
-            cosine_threshold: Number(m.cosine_threshold) || 0.5,
-            cohort_cohesion: Number(m.cohort_cohesion) || 0,
-            mean_radius: Number(m.mean_radius) || 0,
-            embedding_model_id: String(m.embedding_model_id || ""),
-            centroid: Array.isArray(m.centroid) ? (m.centroid as number[]) : [],
-            created_at: String(m.created_at || ""),
-          }) satisfies KnowledgeRegionListItem,
+        (m: Record<string, unknown>) => mapModel(m, { imported: false }),
       );
+      const nextImportable = (
+        Array.isArray(data.importable_models) ? data.importable_models : []
+      ).map((m: Record<string, unknown>) => mapModel(m, { imported: true }));
       setKnowledgeRegions(nextModels);
-      setSelectedRegionIds((prev) => {
-        const ids = new Set(nextModels.map((r: KnowledgeRegionListItem) => r.id));
-        const next = new Set<string>();
-        for (const id of prev) {
-          if (ids.has(id)) next.add(id);
+      setImportableRegions(nextImportable);
+      const importableIds = new Set(
+        nextImportable.map((r: KnowledgeRegionListItem) => r.id),
+      );
+      setImportedRegionIds((prevImported) => {
+        const keptImported = new Set<string>();
+        for (const id of prevImported) {
+          if (importableIds.has(id)) keptImported.add(id);
         }
-        return next;
+        setSelectedRegionIds((prevSelected) => {
+          const allowed = new Set([
+            ...nextModels.map((r: KnowledgeRegionListItem) => r.id),
+            ...keptImported,
+          ]);
+          const next = new Set<string>();
+          for (const id of prevSelected) {
+            if (allowed.has(id)) next.add(id);
+          }
+          return next;
+        });
+        return keptImported;
       });
     } catch (err) {
       setKnowledgeRegions([]);
@@ -202,6 +231,16 @@ export function useKnowledgeEmbeddings(input: {
   useEffect(() => {
     void loadRegionsForOverlay();
   }, [loadRegionsForOverlay]);
+
+  const importedRegions = useMemo(
+    () => importableRegions.filter((r) => importedRegionIds.has(r.id)),
+    [importableRegions, importedRegionIds],
+  );
+
+  const overlayRegionCatalog = useMemo(
+    () => [...knowledgeRegions, ...importedRegions],
+    [importedRegions, knowledgeRegions],
+  );
 
   useEffect(() => {
     const ids = Array.from(selectedRegionIds);
@@ -222,13 +261,15 @@ export function useKnowledgeEmbeddings(input: {
       const next: Record<string, OverlayDistance> = {};
       await Promise.all(
         ids.map(async (regionId) => {
+          const catalogHit = overlayRegionCatalog.find((r) => r.id === regionId);
+          const targetWorkspaceId = catalogHit?.workspace_id || workspaceId;
           try {
             const res = await fetch("/api/workspace/custom-knowledge-regions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: "knowledge_distance",
-                workspaceId,
+                workspaceId: targetWorkspaceId,
                 regionId,
                 ...(embUserId ? { user_id: embUserId } : {}),
                 ...(embGuestUserId ? { guest_user_id: embGuestUserId } : {}),
@@ -244,7 +285,7 @@ export function useKnowledgeEmbeddings(input: {
                 cosine_distance: NaN,
                 in_region: false,
                 region_name:
-                  knowledgeRegions.find((r) => r.id === regionId)?.name ?? regionId,
+                  overlayRegionCatalog.find((r) => r.id === regionId)?.name ?? regionId,
                 error:
                   typeof data.error === "string" ? data.error : "Distance unavailable",
               };
@@ -264,7 +305,7 @@ export function useKnowledgeEmbeddings(input: {
               in_region: Boolean(kd.in_region),
               region_name:
                 kd.region_name ||
-                knowledgeRegions.find((r) => r.id === regionId)?.name ||
+                overlayRegionCatalog.find((r) => r.id === regionId)?.name ||
                 regionId,
             };
           } catch (err) {
@@ -275,7 +316,7 @@ export function useKnowledgeEmbeddings(input: {
               cosine_distance: NaN,
               in_region: false,
               region_name:
-                knowledgeRegions.find((r) => r.id === regionId)?.name ?? regionId,
+                overlayRegionCatalog.find((r) => r.id === regionId)?.name ?? regionId,
               error: err instanceof Error ? err.message : "Distance unavailable",
             };
           }
@@ -294,23 +335,17 @@ export function useKnowledgeEmbeddings(input: {
     ayclToken,
     embGuestUserId,
     embUserId,
-    knowledgeRegions,
+    overlayRegionCatalog,
     selectedRegionIds,
     workspaceId,
   ]);
 
   const projectedLayout = useMemo(() => {
-    const selected = knowledgeRegions.filter(
-      (r) => selectedRegionIds.has(r.id) && Array.isArray(r.centroid) && r.centroid.length > 0,
-    );
-    const regionInputs = selected.map((r) => ({
-      id: r.id,
-      name: r.name,
-      centroid: r.centroid,
-      mean_radius: r.mean_radius,
-      cosine_threshold: r.cosine_threshold,
-      source: r.description?.includes("[synthetic:grok-4.5]") ? "synthetic:grok-4.5" : "cohort",
-    }));
+    const regionInputs = assembleSelectedRegionOverlayInputs({
+      localRegions: knowledgeRegions,
+      importedRegions,
+      selectedIds: selectedRegionIds,
+    });
 
     const rawPoints = embData?.trajectory.points;
     if (Array.isArray(rawPoints) && rawPoints.length > 0) {
@@ -358,7 +393,7 @@ export function useKnowledgeEmbeddings(input: {
       regions: regionInputs,
       algorithm: projectionAlgorithm,
     });
-  }, [embData, knowledgeRegions, projectionAlgorithm, selectedRegionIds]);
+  }, [embData, importedRegions, knowledgeRegions, projectionAlgorithm, selectedRegionIds]);
 
   const coords = projectedLayout.coords;
   const regionOverlays = projectedLayout.regionOverlays as KnowledgeRegionOverlay2D[];
@@ -397,7 +432,10 @@ export function useKnowledgeEmbeddings(input: {
       vector: s.vector,
       label: s.label,
     }));
-    const selectedRegions = knowledgeRegions.filter(
+    const selectedRegions = [
+      ...knowledgeRegions,
+      ...importedRegions,
+    ].filter(
       (r) =>
         selectedRegionIds.has(r.id) &&
         Array.isArray(r.centroid) &&
@@ -422,6 +460,7 @@ export function useKnowledgeEmbeddings(input: {
     return { regions: laidOut.regions, users: laidOut.userLocations };
   }, [
     embData?.trajectory.points,
+    importedRegions,
     knowledgeRegions,
     selectedRegionIds,
     workspaceId,
@@ -472,10 +511,30 @@ export function useKnowledgeEmbeddings(input: {
       const allOn =
         selectableRegionIds.length > 0 &&
         selectableRegionIds.every((id) => prev.has(id));
-      if (allOn) return new Set();
-      return new Set(selectableRegionIds);
+      const next = new Set(prev);
+      if (allOn) {
+        for (const id of selectableRegionIds) next.delete(id);
+        return next;
+      }
+      for (const id of selectableRegionIds) next.add(id);
+      return next;
     });
   }, [selectableRegionIds]);
+
+  const importRegionOverlay = useCallback((id: string) => {
+    setImportedRegionIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setSelectedRegionIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   const summary = useMemo(() => {
     if (!embData) return null;
@@ -503,6 +562,11 @@ export function useKnowledgeEmbeddings(input: {
     globalSelectedRegionId,
     knowledgeGlobalViewMode,
     knowledgeMapScope,
+    importPickerOpen,
+    importRegionOverlay,
+    importableRegions,
+    importedRegionIds,
+    importedRegions,
     knowledgeRegions,
     loadEmbeddings,
     loadRegionsForOverlay,
@@ -519,6 +583,7 @@ export function useKnowledgeEmbeddings(input: {
     selectableRegionIds,
     selectedRegionIds,
     setEmbSelectedKeys,
+    setImportPickerOpen,
     setGlobalSelectedRegionId,
     setKnowledgeGlobalViewMode,
     setKnowledgeMapScope,

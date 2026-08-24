@@ -31,6 +31,9 @@ export interface KnowledgeRegionListItem {
   embedding_model_id: string;
   centroid: number[];
   created_at: string;
+  workspace_id?: string;
+  workspace_title?: string;
+  imported?: boolean;
 }
 
 interface SubjectRow {

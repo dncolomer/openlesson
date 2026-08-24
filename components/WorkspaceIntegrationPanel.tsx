@@ -16,25 +16,13 @@ import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { readJsonResponse } from "@/lib/read-json-response";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 import type { Workspace } from "@/components/WorkspaceView";
-
-type SettingsSubview =
-  | "general"
-  | "aycl"
-  | "regions"
-  | "knowledge-portal"
-  | "guest-links"
-  | "data-studio"
-  | "integrations";
-
-const SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
-  "general",
-  "aycl",
-  "regions",
-  "knowledge-portal",
-  "guest-links",
-  "data-studio",
-  "integrations",
-];
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import {
+  resolveSettingsSubview,
+  settingsSubTabsForKind,
+  settingsShowsKnowledgeLinks,
+  type SettingsSubview,
+} from "@/lib/workspace-settings-tabs";
 
 interface WorkspaceIntegrationPanelProps {
   workspaceId: string;
@@ -76,12 +64,10 @@ export function WorkspaceIntegrationPanel({
   const { t } = useI18n();
   const [generatingSkill, setGeneratingSkill] = useState(false);
   const [error, setError] = useState("");
-  const [activeSubview, setActiveSubview] = useState<SettingsSubview>(() => {
-    if (initialSubview && (SETTINGS_SUBVIEWS as readonly string[]).includes(initialSubview)) {
-      return initialSubview;
-    }
-    return "general";
-  });
+  const workspaceKind = plan?.workspace_kind;
+  const [activeSubview, setActiveSubview] = useState<SettingsSubview>(() =>
+    resolveSettingsSubview(initialSubview, plan?.workspace_kind),
+  );
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://uncertain.systems";
@@ -89,21 +75,12 @@ export function WorkspaceIntegrationPanel({
   const skillSlug = slugifyIntegrationName(workspaceTitle || planTopic || "workspace");
 
   const subTabs = useMemo(
-    () =>
-      [
-        { id: "general" as const, label: "General" },
-        { id: "aycl" as const, label: "AYCL" },
-        { id: "regions" as const, label: "Knowledge Regions" },
-        {
-          id: "knowledge-portal" as const,
-          label: t("planView.knowledgePortalSettingsTab"),
-        },
-        { id: "guest-links" as const, label: t("planView.performanceSubTabTap") },
-        { id: "data-studio" as const, label: "Data Studio" },
-        { id: "integrations" as const, label: "Integrations" },
-      ] satisfies Array<{ id: SettingsSubview; label: string }>,
-    [t],
+    () => settingsSubTabsForKind(workspaceKind, t),
+    [t, workspaceKind],
   );
+
+  const showKnowledgeLinks = settingsShowsKnowledgeLinks(workspaceKind);
+  const isKnowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
 
   const handleDownloadSkill = async () => {
     setGeneratingSkill(true);
@@ -233,9 +210,9 @@ export function WorkspaceIntegrationPanel({
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">Custom Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or
-                tapbench PoW (mint agent links under Knowledge Links). Overlay them from the
-                Embeddings tab projection.
+                {isKnowledgeRegion
+                  ? "High-validation regions in knowledgecfg-v1-d64. Build regions from workspace PoW (generated elsewhere) and overlay them from the Embeddings tab projection."
+                  : "High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or tapbench PoW (mint agent links under Knowledge Links). Overlay them from the Embeddings tab projection."}
               </p>
             </div>
             <CustomVerificationModelsPanel
@@ -245,7 +222,7 @@ export function WorkspaceIntegrationPanel({
           </section>
         ) : null}
 
-        {activeSubview === "knowledge-portal" ? (
+        {showKnowledgeLinks && activeSubview === "knowledge-portal" ? (
           <section
             className="space-y-3"
             data-settings-section="knowledge-portal"
@@ -267,7 +244,7 @@ export function WorkspaceIntegrationPanel({
           </section>
         ) : null}
 
-        {activeSubview === "guest-links" ? (
+        {showKnowledgeLinks && activeSubview === "guest-links" ? (
           <section
             className="space-y-3"
             data-settings-section="guest-tap-ile"

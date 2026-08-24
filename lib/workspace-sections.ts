@@ -2,7 +2,11 @@
  * Top-level workspace shell sections.
  * Context hosts notes + files; Workspace is map-first with authoring tools.
  * Simulation is an author-facing learner-journey overview (not the map).
+ * Knowledge Region workspaces expose Goals / Knowledge / Settings only.
  */
+
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+
 export type WorkspaceSectionKey =
   | "workspace"
   | "context"
@@ -179,34 +183,41 @@ export function canAccessPrivilegedWorkspaceSections(options: {
   return Boolean(options.isOwner || options.isOrgAdmin);
 }
 
+export type WorkspaceSectionAuth = {
+  isOwner?: boolean;
+  isOrgAdmin?: boolean;
+  workspaceKind?: unknown;
+};
+
+/** Default open tab when none is requested (or a hidden section is requested). */
+export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
+  return isKnowledgeRegionWorkspace(kind) ? "goals" : "workspace";
+}
+
 /**
- * Privileged sections (Knowledge, Settings, Goals): non-privileged callers fall back to Workspace.
- * Context and Simulation are open to all workspace viewers.
+ * Privileged sections (Knowledge, Settings, Goals): non-privileged callers fall
+ * back to the kind default (Workspace, or Goals on a Knowledge Region).
+ * Context and Simulation are open to all standard-workspace viewers.
  * DAGs is owner-only.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
-  options: { isOwner?: boolean; isOrgAdmin?: boolean },
+  options: WorkspaceSectionAuth,
 ): WorkspaceSectionKey {
-  if (
-    (requested === "settings" ||
-      requested === "knowledge" ||
-      requested === "goals") &&
-    !canAccessPrivilegedWorkspaceSections(options)
-  ) {
-    return "workspace";
-  }
-  if (requested === "dags" && !options.isOwner) {
-    return "workspace";
-  }
-  return requested;
+  const allowed = availableWorkspaceSections(options);
+  if (allowed.includes(requested)) return requested;
+  return defaultWorkspaceSection(options.workspaceKind);
 }
 
 /** Top-level sections visible in nav for the current user. */
-export function availableWorkspaceSections(options: {
-  isOwner?: boolean;
-  isOrgAdmin?: boolean;
-}): WorkspaceSectionKey[] {
+export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
+  if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
+    if (canAccessPrivilegedWorkspaceSections(options)) {
+      return ["goals", "knowledge", "settings"];
+    }
+    // KR is owner-facing; consumers have no remaining public tabs.
+    return [];
+  }
   if (canAccessPrivilegedWorkspaceSections(options)) {
     // Nav order: Workspace, DAGs (owner), Goals, Context, Simulation, Knowledge, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];

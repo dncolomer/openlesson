@@ -23,6 +23,7 @@ import {
   AYCL_FULL_PRICE_LABEL,
   AYCL_LEARNER_PRICE_LABEL,
 } from "@/lib/aycl-shared";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -91,7 +92,7 @@ function totalTopicResources(topic: DantesTopic) {
 }
 
 const MODE_CARD_COPY: Record<
-  "blank" | "template",
+  "blank" | "template" | "knowledge_region",
   { title: string; description: string; badge: string; details: string[]; cta: string }
 > = {
   blank: {
@@ -118,6 +119,18 @@ const MODE_CARD_COPY: Record<
     ],
     cta: "Choose a template",
   },
+  knowledge_region: {
+    title: "Knowledge Region",
+    description:
+      "Goals, Knowledge, and Settings only. Proof of work is generated elsewhere — this workspace does not mint questions, exercises, or knowledge links.",
+    badge: "External PoW",
+    details: [
+      "Tabs: Goals, Knowledge, Settings",
+      "No generated map or knowledge links",
+      "Bring your own proof of work",
+    ],
+    cta: "Create knowledge region",
+  },
 };
 
 const AYCL_CARD = {
@@ -137,10 +150,16 @@ const AYCL_CARD = {
 const START_CARD_CLASS =
   "group flex h-full min-h-[22rem] flex-col rounded-none border border-zinc-800 bg-zinc-950/90 p-5 text-left transition hover:border-zinc-500 hover:bg-zinc-900/90 focus:outline-none focus:ring-2 focus:ring-white/30";
 
+const KR_SPAN_CARD_CLASS =
+  "group flex w-full min-h-0 flex-col rounded-none border border-zinc-800 bg-zinc-950/90 p-5 text-left transition hover:border-zinc-500 hover:bg-zinc-900/90 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50 md:flex-row md:items-center md:gap-6";
+
 const MODE_CARDS = UI_WORKSPACE_CREATE_MODES.map((mode) => ({
   mode,
-  ...MODE_CARD_COPY[mode as "blank" | "template"],
+  ...MODE_CARD_COPY[mode as "blank" | "template" | "knowledge_region"],
 }));
+
+const PRIMARY_MODE_CARDS = MODE_CARDS.filter((card) => card.mode !== "knowledge_region");
+const KNOWLEDGE_REGION_CARD = MODE_CARDS.find((card) => card.mode === "knowledge_region")!;
 
 export default function NewWorkspacePage() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -347,6 +366,11 @@ export default function NewWorkspacePage() {
       void handleCreateBlank();
       return;
     }
+    if (next === "knowledge_region") {
+      setMode("knowledge_region");
+      void handleCreateKnowledgeRegion();
+      return;
+    }
     setMode(next);
     setStep(2);
   }
@@ -379,7 +403,41 @@ export default function NewWorkspacePage() {
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to create blank workspace");
+        throw new Error(
+          errorMessageFromBody(payload, "Failed to create blank workspace"),
+        );
+      }
+      const payload = await response.json();
+      trackWorkspaceCreated({ hasFiles: false });
+      router.push(`/workspace/${payload.workspaceId}`);
+      succeeded = true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(resolveWorkspaceCreateOverlay({ succeeded }).busy);
+    }
+  }
+
+  async function handleCreateKnowledgeRegion() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    let succeeded = false;
+    try {
+      if (!(await ensureAuthed())) return;
+      const response = await fetch("/api/workspace/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          createMode: "knowledge_region",
+          topic: "Knowledge Region",
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          errorMessageFromBody(payload, "Failed to create knowledge region workspace"),
+        );
       }
       const payload = await response.json();
       trackWorkspaceCreated({ hasFiles: false });
@@ -425,7 +483,9 @@ export default function NewWorkspacePage() {
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to create workspace from template");
+        throw new Error(
+          errorMessageFromBody(payload, "Failed to create workspace from template"),
+        );
       }
       const payload = await response.json();
       trackWorkspaceCreated({ hasFiles: false });
@@ -489,65 +549,98 @@ export default function NewWorkspacePage() {
 
           {step === 1 && (
             <div
-              className="mx-auto grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4"
+              className="mx-auto flex flex-col gap-3 md:gap-4"
               data-create-mode-cards
+              data-create-layout="3-plus-1"
             >
-              <a
-                href={AYCL_CARD.href}
-                className={START_CARD_CLASS}
-                data-aycl-banner
-                data-create-mode="aycl"
-              >
-                <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  {AYCL_CARD.badge}
-                </span>
-                <h2 className="mt-4 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
-                  {AYCL_CARD.title}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
-                  {AYCL_CARD.description}
-                </p>
-                <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400">
-                  {AYCL_CARD.details.map((line) => (
-                    <li key={line} className="border-l border-zinc-700 pl-2.5">
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-                <span className="mt-5 text-sm font-medium text-white">
-                  {AYCL_CARD.cta} →
-                </span>
-              </a>
-              {MODE_CARDS.map((card) => (
-                <button
-                  key={card.mode}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => selectMode(card.mode)}
-                  className={`${START_CARD_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
-                  data-create-mode={card.mode}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
+                <a
+                  href={AYCL_CARD.href}
+                  className={START_CARD_CLASS}
+                  data-aycl-banner
+                  data-create-mode="aycl"
                 >
                   <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                    {card.badge}
+                    {AYCL_CARD.badge}
                   </span>
                   <h2 className="mt-4 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
-                    {card.title}
+                    {AYCL_CARD.title}
                   </h2>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
-                    {card.description}
+                    {AYCL_CARD.description}
                   </p>
                   <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400">
-                    {card.details.map((line) => (
+                    {AYCL_CARD.details.map((line) => (
                       <li key={line} className="border-l border-zinc-700 pl-2.5">
                         {line}
                       </li>
                     ))}
                   </ul>
                   <span className="mt-5 text-sm font-medium text-white">
-                    {card.cta} →
+                    {AYCL_CARD.cta} →
                   </span>
-                </button>
-              ))}
+                </a>
+                {PRIMARY_MODE_CARDS.map((card) => (
+                  <button
+                    key={card.mode}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => selectMode(card.mode)}
+                    className={`${START_CARD_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
+                    data-create-mode={card.mode}
+                  >
+                    <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                      {card.badge}
+                    </span>
+                    <h2 className="mt-4 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
+                      {card.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
+                      {card.description}
+                    </p>
+                    <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400">
+                      {card.details.map((line) => (
+                        <li key={line} className="border-l border-zinc-700 pl-2.5">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                    <span className="mt-5 text-sm font-medium text-white">
+                      {card.cta} →
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => selectMode("knowledge_region")}
+                className={KR_SPAN_CARD_CLASS}
+                data-create-mode="knowledge_region"
+                data-create-mode-span="knowledge_region"
+              >
+                <div className="min-w-0 md:max-w-sm md:shrink-0">
+                  <span className="inline-block w-fit rounded-none border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    {KNOWLEDGE_REGION_CARD.badge}
+                  </span>
+                  <h2 className="mt-3 text-xl font-medium tracking-tight text-white group-hover:text-zinc-50">
+                    {KNOWLEDGE_REGION_CARD.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-500 group-hover:text-zinc-400">
+                    {KNOWLEDGE_REGION_CARD.description}
+                  </p>
+                </div>
+                <ul className="mt-4 flex flex-1 flex-col gap-2 text-[13px] leading-snug text-zinc-400 md:mt-0 md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:gap-y-2">
+                  {KNOWLEDGE_REGION_CARD.details.map((line) => (
+                    <li key={line} className="border-l border-zinc-700 pl-2.5">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+                <span className="mt-4 shrink-0 text-sm font-medium text-white md:mt-0">
+                  {KNOWLEDGE_REGION_CARD.cta} →
+                </span>
+              </button>
             </div>
           )}
 

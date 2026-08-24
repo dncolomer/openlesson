@@ -36,6 +36,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     source_summary: p.source_summary,
     notes: p.notes,
     cover_image_url: p.cover_image_url,
+    workspace_kind: p.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
     is_group: p.is_group || false,
     is_all_you_can_learn: Boolean(p.is_all_you_can_learn),
   }));
@@ -103,7 +104,7 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
   const { data } = await supabase
     .from("workspaces")
     .select(
-      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, source_type, source_url, source_summary, notes"
+      "id, root_topic, status, created_at, is_public, author_id, user_id, remix_count, original_workspace_id, source_type, source_url, source_summary, notes, workspace_kind"
     )
     .eq("id", workspaceId)
     .single();
@@ -124,6 +125,8 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
     source_url: data.source_url,
     source_summary: data.source_summary,
     notes: data.notes || undefined,
+    workspace_kind:
+      data.workspace_kind === "knowledge_region" ? "knowledge_region" : "standard",
   };
 }
 

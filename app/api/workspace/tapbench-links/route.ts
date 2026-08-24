@@ -13,6 +13,7 @@ import {
 } from "@/lib/pow-api/create-tapbench-link";
 import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
 import { generateTapbenchExercise } from "@/lib/pow-api/tapbench-exercise-generate";
+import { assertWorkspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
 import { listTapbenchLinksPersisted } from "@/lib/pow-api/tapbench-store";
 import type { AuthContext } from "@/lib/pow-api/types";
 
@@ -76,6 +77,16 @@ export async function POST(req: NextRequest) {
       ayclToken: ayclTokenFromBody(body),
     });
     if (!auth.ok) return auth.response;
+
+    const { data: kindRow } = await auth.supabase
+      .from("workspaces")
+      .select("workspace_kind")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    const mintGate = assertWorkspaceAllowsKnowledgeLinkMint(kindRow?.workspace_kind);
+    if (!mintGate.ok) {
+      return jsonError(403, mintGate.error, mintGate.code);
+    }
 
     const blockId =
       typeof body.blockId === "string"

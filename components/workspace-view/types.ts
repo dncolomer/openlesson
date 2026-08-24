@@ -69,6 +69,7 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
     value === "context" ||
     value === "simulation" ||
     value === "dags" ||
+    value === "goals" ||
     value === "knowledge" ||
     value === "settings"
   ) {

@@ -155,6 +155,45 @@ describe("availableWorkspaceSections", () => {
     expect(owner).toContain("dags");
     expect(availableWorkspaceSections({ isOrgAdmin: true })).not.toContain("dags");
   });
+
+  it("Knowledge Region owner sections are Goals / Knowledge / Settings; hidden requests fall back to Goals", () => {
+    expect(
+      availableWorkspaceSections({
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toEqual(["goals", "knowledge", "settings"]);
+    expect(
+      availableWorkspaceSections({
+        isOrgAdmin: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toEqual(["goals", "knowledge", "settings"]);
+    expect(
+      availableWorkspaceSections({
+        isOwner: false,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toEqual([]);
+    expect(
+      resolveActiveSection("workspace", {
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toBe("goals");
+    expect(
+      resolveActiveSection("settings", {
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toBe("settings");
+    expect(
+      resolveActiveSection("context", {
+        isOwner: true,
+        workspaceKind: "knowledge_region",
+      }),
+    ).toBe("goals");
+  });
 });
 
 describe("isWorkspaceLocalTab", () => {

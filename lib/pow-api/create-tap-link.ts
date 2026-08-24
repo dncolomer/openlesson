@@ -31,6 +31,10 @@ import {
   normalizeGuestLinkAccessMode,
   type GuestLinkAccessMode,
 } from "@/lib/guest-link-access";
+import {
+  knowledgeLinkMintDeniedMessage,
+  workspaceAllowsKnowledgeLinkMint,
+} from "@/lib/workspace-kind";
 
 export class CreateTapLinkError extends Error {
   constructor(
@@ -259,12 +263,13 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
     user_id: string | null;
     organization_id: string | null;
     guest_user_id: string | null;
+    workspace_kind?: string | null;
   };
 
   if (blockId) {
     const { data: block, error: blockError } = await supabase
       .from("blocks")
-      .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
+      .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id, workspace_kind)")
       .eq("id", blockId)
       .eq("workspace_id", workspaceId)
       .single();
@@ -279,11 +284,12 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       user_id: string | null;
       organization_id: string | null;
       guest_user_id: string | null;
+      workspace_kind?: string | null;
     };
   } else {
     const { data: workspaceRow, error: workspaceError } = await supabase
       .from("workspaces")
-      .select("id, user_id, organization_id, guest_user_id")
+      .select("id, user_id, organization_id, guest_user_id, workspace_kind")
       .eq("id", workspaceId)
       .single();
 
@@ -296,6 +302,10 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
 
   if (!canAccessAgentWorkspace(auth, workspace)) {
     throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
+  }
+
+  if (!workspaceAllowsKnowledgeLinkMint(workspace.workspace_kind)) {
+    throw new CreateTapLinkError(knowledgeLinkMintDeniedMessage(), 403, "forbidden");
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;

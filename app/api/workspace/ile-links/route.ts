@@ -14,6 +14,7 @@ import {
 import type { AuthContext } from "@/lib/pow-api/types";
 import { guestLinkUrlFromPublicToken } from "@/lib/guest-link-access";
 import { requireProductWorkspaceLinkAuth } from "@/lib/product-workspace-auth";
+import { assertWorkspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
 
 export const runtime = "nodejs";
 
@@ -146,6 +147,16 @@ export async function POST(req: NextRequest) {
         linkId: invalidateLinkId,
       });
       return NextResponse.json({ ile_link: ileLink }, { status: 200 });
+    }
+
+    const { data: kindRow } = await access.supabase
+      .from("workspaces")
+      .select("workspace_kind")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    const mintGate = assertWorkspaceAllowsKnowledgeLinkMint(kindRow?.workspace_kind);
+    if (!mintGate.ok) {
+      return jsonError(403, mintGate.error, mintGate.code);
     }
 
     if (reissueLinkId) {

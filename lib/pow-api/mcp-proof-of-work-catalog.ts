@@ -8,7 +8,7 @@
  * workspace_goal is the outcome field used across score + progress tools.
  */
 
-import { AGENT_TOOL_SURFACE } from "./agent-tool-surface";
+import { AGENT_TOOL_SURFACE, agentToolSurfaceForWorkspace } from "./agent-tool-surface";
 
 export const MCP_PROOF_OF_WORK_TOOL_CATALOG = AGENT_TOOL_SURFACE.map((tool) => ({
   name: tool.name,
@@ -19,6 +19,15 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = AGENT_TOOL_SURFACE.map((tool) => (
   scope: (typeof AGENT_TOOL_SURFACE)[number]["scope"];
   summary: string;
 }>;
+
+/** Workspace-kind catalog for Integration skill/MCP copy. Global tools/list stays unfiltered. */
+export function mcpProofOfWorkCatalogForWorkspace(kind: unknown) {
+  return agentToolSurfaceForWorkspace(kind).map((tool) => ({
+    name: tool.name,
+    scope: tool.scope,
+    summary: tool.summary,
+  }));
+}
 
 export function buildMcpEndpointUrl(origin: string): string {
   const base = origin.replace(/\/$/, "");

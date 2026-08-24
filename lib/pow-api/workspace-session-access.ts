@@ -65,6 +65,7 @@ export interface WorkspaceSessionPlan {
   evaluation_mode?: string | null;
   protocol_config?: unknown;
   external_refs?: unknown;
+  workspace_kind?: string | null;
 }
 
 export interface WorkspaceSessionAccess {
@@ -148,7 +149,7 @@ export async function requireWorkspaceOwnerSession(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
+      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, workspace_kind")
       .eq("id", workspaceId)
       .single(),
   ]);

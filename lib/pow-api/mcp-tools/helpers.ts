@@ -643,6 +643,7 @@ export function withProgressGuidance<T extends Record<string, unknown>>(
     };
     workspaceGoal?: string | null;
     workspaceTitle?: string;
+    workspace_kind?: unknown;
   }
 ): T & {
   uncertain_systems_scope: Record<string, unknown>;
@@ -668,6 +669,7 @@ export function withProgressGuidance<T extends Record<string, unknown>>(
       proof_of_work_artifacts: options.counts.proof_of_work_artifacts,
       blocks: options.counts.blocks,
       has_workspace_goal: Boolean(options.workspaceGoal?.trim()),
+      workspace_kind: options.workspace_kind,
     }),
   };
 }
@@ -688,6 +690,7 @@ export type WorkspaceRow = {
   status: string | null;
   created_at?: string;
   updated_at?: string;
+  workspace_kind?: string | null;
 };
 
 export async function loadWorkspace(
@@ -698,7 +701,7 @@ export async function loadWorkspace(
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at"
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at, workspace_kind"
     )
     .eq("id", workspaceId)
     .single();

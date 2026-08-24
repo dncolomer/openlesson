@@ -10,6 +10,7 @@ import {
   buildMcpOAuthDiscovery,
   buildSkillFileUrl,
 } from "@/lib/pow-api/mcp-proof-of-work-catalog";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 type IntegrationSection = "skill" | "bearer" | "oauth";
 
@@ -23,6 +24,8 @@ type IntegrationQuickAccessProps = {
   showHeader?: boolean;
   sections?: IntegrationSection[];
   skillSection?: ReactNode;
+  /** When Knowledge Region, never advertise global /skill.md (link-mint catalog). */
+  workspaceKind?: unknown;
 };
 
 export function IntegrationQuickAccess({
@@ -35,6 +38,7 @@ export function IntegrationQuickAccess({
   showHeader = true,
   sections = ["skill", "bearer", "oauth"],
   skillSection,
+  workspaceKind,
 }: IntegrationQuickAccessProps) {
   const { t } = useI18n();
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -77,7 +81,8 @@ export function IntegrationQuickAccess({
   const copyLabel = (field: string) =>
     copiedField === field ? t("integrationAccess.copied") : t("common.copy");
 
-  const showSkill = sections.includes("skill");
+  const knowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  const showSkill = sections.includes("skill") && !knowledgeRegion;
   const showBearer = sections.includes("bearer");
   const showOAuth = sections.includes("oauth");
 

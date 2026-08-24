@@ -1,8 +1,8 @@
 # Uncertain Systems
 
-**The AI Tutor That Listens to You Think**
+**A Human Learning Harness — verify without a test.**
 
-Uncertain Systems is an open-source AI tutoring platform built on the Socratic method. Instead of giving answers, it listens to students reason aloud, detects gaps in their thinking in real-time, and asks targeted questions to deepen understanding.
+Uncertain Systems is an open-source platform for knowledge acquisition and knowledge verification. Create a **Verification Workspace**, stream **proof of work**, and score readiness with an **LWM Snapshot**. Agents integrate through the Proof-of-Work API, Snapshot API, TAPBench Stash API, and MCP — the same loop the product UI uses.
 
 Live at [uncertain.systems](https://uncertain.systems)
 
@@ -10,29 +10,33 @@ Live at [uncertain.systems](https://uncertain.systems)
 
 ## About
 
-Uncertain Systems (codename **Socrates**) is built by [Uncertain Systems](https://x.com/uncertainsys) — a project focused on building the open stack for educational technology.
+Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). The product is a **Human Learning Harness**: uncheatable proof that knowledge is actually held, without a tutor and without a quiz-in-isolation.
 
-The core thesis is simple: when you speak your reasoning out loud, gaps become audible — hesitations, contradictions, circular thinking, skipped steps, unexamined assumptions. Uncertain Systems uses LLMs to detect those gaps in real-time and responds not with answers, but with the right question at the right time.
+Workspaces come in two durable kinds:
+
+- **Standard (map)** — blocks on a knowledge map, TAP / ILE practice links, TAPBench agent sessions, and the full PoW → Snapshot loop.
+- **Knowledge Region** — Goals / Knowledge / Settings shell. Proof of work is produced **outside** the map (partner tools, TAPBench Stash). Agents use the **PoW API + TAPBench Stash API**, not guest-link mint.
 
 ## How It Works
 
-1. **Think aloud** — Students speak their reasoning into the microphone while working through a problem or topic
-2. **Gap detection** — Audio is streamed to an LLM that analyzes reasoning quality, scoring gaps on a 0–1 scale
-3. **Socratic probes** — When gaps are detected, the AI generates targeted follow-up questions that expose hidden assumptions and push thinking deeper
-4. **Adaptive planning** — Session plans adjust in real-time based on student progress
+1. **Create a workspace** in the product UI (`/workspace/new`) — blank map, template, or Knowledge Region. Workspace create is UI-only; there is no `POST /workspaces` or MCP `create_workspace`.
+2. **Collect proof of work** — upload tool/screen/video/EEG artifacts (`POST .../proof-of-work`), or buffer via TAPBench Stash then stash/submit (`/api/v3/stash`).
+3. **Snapshot** — call `lwm_snapshot` (REST `POST .../lwm-snapshot`) for a 0–100 LWM Snapshot + GHC, spider markers, gaps, and next actions. Optional world model, knowledge config, distance, and custom regions live under `/api/v3/snapshot`.
+4. **Repeat** — more proof of work improves evaluation. Re-fetch the PoW schema and regenerate the workspace `skill.md` as context grows.
+
+On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge links for human or agent sessions. **Knowledge Region** workspaces do not mint those links; their agent path is PoW capture plus TAPBench Stash.
 
 ## Key Features
 
-- **Audio-first tutoring** — Real-time analysis of spoken reasoning with configurable analysis intervals
-- **Multi-session learning plans** — Directed graph of learning sessions for any topic, visualized with React Flow
-- **Whiteboard canvas** — Built-in drawing tool; AI can analyze drawings for reasoning gaps
-- **Notebook** — Text-based note-taking with AI gap analysis
-- **Helios Chat** — Direct text conversation with Helios, your Socratic companion
-- **Session reports** — AI-generated post-session reports covering gaps, progress, strengths, and next steps
-- **Muse EEG integration** — Real-time brainwave monitoring via Muse headband over Web Bluetooth
-- **Face tracking** — MediaPipe-based engagement and attention signals
-- **Proof-of-Work API** — Full REST API for AI agents to use Uncertain Systems as a skill programmatically
-- **YouTube-based plans** — Generate structured learning plans from YouTube video URLs
+- **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
+- **Knowledge Region workspaces** — Goals / Knowledge / Settings; external PoW; custom knowledge regions and Data Studio
+- **LWM Snapshot** — sole product score strategy (`lwm_snapshot` / `POST .../lwm-snapshot`); GHC is secondary on the same report
+- **Proof-of-Work API + MCP** — REST under `/api/v3/{pow,snapshot,stash}` with JSON-RPC at `/api/mcp` (Bearer or OAuth)
+- **TAPBench Stash** — `buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` for agent PoW
+- **Think Aloud Protocol (TAP) and ILE** — practice sessions on standard workspaces (knowledge-link mint)
+- **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
+- **Muse EEG and face tracking** — optional biosignals on session proof of work
+- **Helios** — Socratic companion in session and workspace chat
 
 ## Tech Stack
 
@@ -97,8 +101,10 @@ Optional:
 | `STRIPE_SECRET_KEY` | Stripe secret key for payments |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
+| `MCP_OAUTH_SECRET` | MCP OAuth signing secret (defaults to service role key in dev) |
+| `SUPABASE_DB_URL` | Session-mode pooler URL for migration scripts |
 
-4. Set up the database by running the schema in `supabase/schema.sql` against your Supabase project.
+4. Set up the database by running the schema in `supabase/schema.sql` against your Supabase project (or apply `supabase/migrations`).
 
 5. Start the development server:
 
@@ -112,44 +118,46 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # 123 API routes (ILE sessions, workspaces, TAP, PoW/Eval API, admin, demo)
-│   ├── session/          # Active ILE tutoring session pages
-│   ├── workspace/        # Workspace & block graph views (/plan/:id redirects here)
-│   ├── tap/              # Think Aloud Protocol (TAP) scoring sessions
+│   ├── api/              # 162 route.ts handlers (workspaces, TAP/ILE, PoW/Snapshot/Stash, MCP, admin)
+│   ├── workspace/        # Workspace views; create at /workspace/new
+│   ├── session/          # ILE tutoring session pages
+│   ├── tap/              # Think Aloud Protocol sessions
+│   ├── tapbench/         # TAPBench agent sessions
 │   ├── dashboard/        # User dashboard & API key management
-│   └── ...               # Other pages (pricing, docs, legal, platform)
-├── components/           # React components (~109 TSX files)
-│   ├── SessionView.tsx   # Core ILE session UI
-│   ├── WorkspaceView.tsx # Workspace block graph
-│   ├── TapScoreClient.tsx # TAP scoring UI
+│   └── docs/             # Interactive Proof-of-Work API reference
+├── components/           # React components (~212 TSX files)
+│   ├── SessionView.tsx   # ILE session UI
+│   ├── WorkspaceView.tsx # Workspace shell (map vs Knowledge Region)
+│   ├── WorkspaceIntegrationPanel.tsx  # Settings → Integration (skill.md + MCP)
 │   └── thought-ui/       # Shared dialogue / thought components
-├── lib/                  # Core libraries (~121 modules)
-│   ├── xai.ts            # LLM orchestration (gap detection, probes, reports)
-│   ├── xai-client.ts     # xAI API client (chat, JSON schema, files)
-│   ├── prompts.ts        # Helios prompt templates
-│   ├── storage.ts        # Supabase session & workspace persistence
-│   ├── pow-api/         # PoW / Snapshot / Stash / MCP libs (/api/v3/{pow,snapshot,stash}, /api/mcp)
-│   ├── tap-score*.ts     # TAP scoring logic
+├── lib/                  # Core libraries (~392 TS modules)
+│   ├── xai.ts            # LLM orchestration
+│   ├── xai-client.ts     # xAI API client
+│   ├── workspace-kind.ts # standard vs knowledge_region
+│   ├── pow-api/          # PoW / Snapshot / Stash / MCP (/api/v3/{pow,snapshot,stash}, /api/mcp)
 │   └── ...
 ├── supabase/             # Database schema & migrations
 ├── tests/lib/            # Vitest unit tests (lib-focused)
-└── public/               # Static assets; skill.md for agent integrations
+└── public/               # Static assets; skill.md for standard-workspace agent integrations
 ```
 
-## Proof-of-Work & Snapshot API (v3)
+## Proof-of-Work, Snapshot, and Stash APIs (v3)
 
 Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
-- List and read existing verification workspaces and blocks
-- Issue Think Aloud Protocol (TAP) and TAPBench (agent) links via `POST .../tap-links` / `POST .../tapbench-links`, poll via GET twins, and score via Snapshot API endpoints
-- Upload proof-of-work artifacts (or buffer via the Stash API), then request LWM Snapshot / world model / knowledge config
-- Connect via MCP (`/api/mcp`, Bearer or OAuth) with **100% parity** to public agent REST under `/api/v3/{pow,snapshot,stash}`
+- List and read existing verification workspaces, blocks, and learning progress
+- Upload proof-of-work artifacts (`POST .../proof-of-work`) and fetch the live PoW schema
+- Request LWM Snapshot / world model / knowledge config (`/api/v3/snapshot`)
+- Buffer agent PoW via TAPBench Stash (`buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` under `/api/v3/stash`)
+- Connect via MCP (`POST /api/mcp`, Bearer or OAuth) with parity to public agent REST
 
-See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md) for full documentation. Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
+On **standard** workspaces, mint TAP and TAPBench knowledge links via `POST .../tap-links` / `POST .../tapbench-links` (MCP `create_tap_link` / `create_tapbench_link`). **Knowledge Region** skill.md and Integration MCP copy omit those mint endpoints — agents there use PoW + Snapshot + TAPBench Stash only. Mint APIs still 403 if called against a Knowledge Region workspace.
+
+See [`public/skill.md`](public/skill.md) (global catalog, includes mint tools for standard workspaces) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
 
 ## Uncertain Systems
 
-Uncertain Systems is developed by **Uncertain Systems**, founded by [Daniel Colomer](https://x.com/uncertainsys). The mission is to build open-source infrastructure for education technology — tools that make deep learning accessible to everyone through AI-guided reasoning.
+Uncertain Systems is developed by **Uncertain Systems**, founded by [Daniel Colomer](https://x.com/uncertainsys). The mission is open infrastructure for verifying knowledge with proof of work — not quizzes in isolation.
 
 - Website: [uncertain.systems](https://uncertain.systems)
 - Twitter/X: [@uncertainsys](https://x.com/uncertainsys)

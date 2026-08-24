@@ -144,6 +144,7 @@ export function enrichProofOfWorkSpecResult(
   workspaceMeta?: {
     title?: string;
     workspace_goal?: string | null;
+    workspace_kind?: unknown;
   }
 ): ProofOfWorkEvalSchemaResult {
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
@@ -193,6 +194,7 @@ export function enrichProofOfWorkSpecResult(
       proof_of_work_artifacts: proofOfWorkCount,
       blocks: blockCount,
       has_workspace_goal: Boolean(workspaceMeta?.workspace_goal?.trim()),
+      workspace_kind: workspaceMeta?.workspace_kind,
     }),
     collection_guidance: [
       result.collection_guidance,
@@ -316,7 +318,7 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, title, evaluation_mode, protocol_config, external_refs, workspace_goal")
+    .select("id, title, evaluation_mode, protocol_config, external_refs, workspace_goal, workspace_kind")
     .eq("id", workspaceId)
     .single();
 
@@ -343,6 +345,7 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
     {
       title: workspace.title || meta.protocol_config.protocol_id,
       workspace_goal: workspace.workspace_goal,
+      workspace_kind: (workspace as { workspace_kind?: unknown }).workspace_kind,
     }
   );
 
@@ -412,6 +415,7 @@ export async function generateWorkspaceProofOfWorkSpec(
     {
       title: workspaceTitle,
       workspace_goal: context.payload.workspace.workspace_goal,
+      workspace_kind: context.payload.workspace.workspace_kind,
     }
   );
 

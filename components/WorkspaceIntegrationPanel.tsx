@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
-import { slugifyIntegrationName } from "@/lib/pow-api/integration-skill";
+import {
+  knowledgeRegionIntegrationCopy,
+  slugifyIntegrationName,
+} from "@/lib/pow-api/integration-skill";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
@@ -285,8 +288,13 @@ export function WorkspaceIntegrationPanel({
                   <h2 className="text-sm font-medium text-white">
                     {t("workspaceIntegration.skillTitle")}
                   </h2>
-                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                    {t("workspaceIntegration.skillSectionDescription")}
+                  <p
+                    className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500"
+                    data-kr-integration-skill={isKnowledgeRegion ? "true" : undefined}
+                  >
+                    {isKnowledgeRegion
+                      ? knowledgeRegionIntegrationCopy().skillDescription
+                      : t("workspaceIntegration.skillSectionDescription")}
                   </p>
                 </div>
                 <Link
@@ -321,6 +329,14 @@ export function WorkspaceIntegrationPanel({
             </section>
 
             <section className="space-y-3" data-settings-section="mcp">
+              {isKnowledgeRegion ? (
+                <p
+                  className="text-xs leading-relaxed text-neutral-500"
+                  data-kr-integration-mcp-note
+                >
+                  {knowledgeRegionIntegrationCopy().mcpNote}
+                </p>
+              ) : null}
               <IntegrationQuickAccess
                 origin={origin}
                 workspaceId={workspaceId}
@@ -328,6 +344,7 @@ export function WorkspaceIntegrationPanel({
                 layout="stack"
                 showHeader
                 sections={["bearer", "oauth"]}
+                workspaceKind={workspaceKind}
               />
             </section>
           </div>

@@ -7,6 +7,9 @@ import {
   buildPerformanceApiPath,
   formatProofOfWorkSpecForSkillPrompt,
 } from "./proof-of-work-integration";
+import { STASH_API_BASE } from "@/lib/api/agent-api-paths";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { formatSkillMcpToolList } from "./agent-tool-surface";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -190,6 +193,26 @@ ${blockLines || "  none"}`;
 ${blockTable || "  No blocks yet."}`;
 }
 
+/** Integration UI copy for Knowledge Region workspaces — PoW + TAPBench Stash, no guest-link mint. */
+export function knowledgeRegionIntegrationCopy(): {
+  skillDescription: string;
+  mcpNote: string;
+} {
+  return {
+    skillDescription:
+      "Download a skill.md for this Knowledge Region workspace. Agents use the Proof-of-Work API (workspace/block/progress read, proof-of-work schema + upload) plus Snapshot (lwm_snapshot, world model, knowledge config/distance/regions) and TAPBench Stash (buffer_proof_of_work / stash_proof_of_work / submit_stashed_proof_of_work under /api/v3/stash).",
+    mcpNote:
+      "MCP JSON-RPC at POST /api/mcp with Bearer auth. For this workspace, instrument PoW capture/schema/upload, Snapshot, and TAPBench Stash. Guest knowledge-link mint is not part of Knowledge Region workspaces.",
+  };
+}
+
+export function formatSkillRestEndpointsLine(kind: unknown): string {
+  if (isKnowledgeRegionWorkspace(kind)) {
+    return `REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill; Snapshot GET world-model, knowledge-config, knowledge-config/trajectory, snapshot-history, custom-knowledge-regions, POST knowledge-distance; TAPBench Stash POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work (buffer_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/stash (stash_proof_of_work), POST ${STASH_API_BASE}/workspaces/{id}/submit (submit_stashed_proof_of_work) (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)`;
+  }
+  return "REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)";
+}
+
 export function buildIntegrationSkillInstructions(
   request: IntegrationSkillRequest,
   workspace: {
@@ -199,6 +222,7 @@ export function buildIntegrationSkillInstructions(
     description?: string | null;
     notes?: string | null;
     workspace_goal?: string | null;
+    workspace_kind?: unknown;
   },
   blocks: Array<{
     id: string;
@@ -237,6 +261,29 @@ export function buildIntegrationSkillInstructions(
   const proofOfWorkSpecSection = proofOfWorkSpec
     ? `\n\nWorkspace proof-of-work specification (use as reference; skill.md must still point to the dynamic API):\n${formatProofOfWorkSpecForSkillPrompt(proofOfWorkSpec)}`
     : "";
+
+  const workspaceKind = workspace.workspace_kind ?? status?.workspace.workspace_kind;
+  const knowledgeRegion = isKnowledgeRegionWorkspace(workspaceKind);
+  const restEndpointsLine = formatSkillRestEndpointsLine(workspaceKind);
+  const mcpToolList = formatSkillMcpToolList(workspaceKind);
+  const krStashSection = knowledgeRegion
+    ? `
+   - **TAPBench Stash (required for Knowledge Region)** — agent proof of work buffers under ${STASH_API_BASE}:
+     - MCP buffer_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work
+     - MCP stash_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/stash
+     - MCP submit_stashed_proof_of_work / REST POST ${STASH_API_BASE}/workspaces/{id}/submit
+   - Snapshot extras: get_world_model, get_knowledge_config, get_knowledge_config_trajectory, knowledge_distance, list_custom_knowledge_regions
+   - Do not document guest knowledge-link mint. This workspace's agent path is PoW API + TAPBench Stash.`
+    : "";
+  const canonicalRefs = knowledgeRegion
+    ? `${request.base_url}/docs/proof-of-work-api`
+    : `${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api`;
+  const checklist = knowledgeRegion
+    ? "fetch proof-of-work spec → honor interruption scheduling → upload proof of work or TAPBench Stash (buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work) → regenerate skill → request LWM Snapshot → repeat as proof of work grows."
+    : "fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request LWM Snapshot → repeat as proof of work grows.";
+  const purposeLine = knowledgeRegion
+    ? "1. Purpose — what this partner agent verifies **given the current Knowledge Region workspace status** and how proof of work + TAPBench Stash + LWM Snapshot fit the workflow."
+    : "1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + LWM Snapshot fit the workflow.";
 
   return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.
 
@@ -279,7 +326,7 @@ Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
 
 Required content:
-1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + LWM Snapshot fit the workflow.
+${purposeLine}
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
    - Principle: evaluation is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and snapshot
@@ -298,10 +345,10 @@ Required content:
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, lwm_snapshot (LWM Snapshot), generate_integration_skill, create_tap_link, list_tap_links, create_tapbench_link, list_tapbench_links
+   - ${restEndpointsLine}
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
    - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
-   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace
+   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace${krStashSection}
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
@@ -315,9 +362,9 @@ Required content:
    - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
    - Reference performance_report_contract from the proof of work spec API for machine-readable contracts
    - Include a full JSON example for lwm-snapshot with score, lwm_snapshot_score, ghc_score, workspace_goal, marker_scores, and at least one gap + next_steps
-10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request LWM Snapshot → repeat as proof of work grows.
+10. Quick integration checklist: ${checklist}
 
-Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api
+Canonical API reference links: ${canonicalRefs}
 
 Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.`;
 }

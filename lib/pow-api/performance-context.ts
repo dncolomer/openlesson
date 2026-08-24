@@ -62,6 +62,7 @@ export interface PerformanceContextPayload {
     notes: string | null;
     workspace_goal: string | null;
     evaluation_mode?: "semantic" | "opaque";
+    workspace_kind?: string | null;
   };
   focus_block_id: string | null;
   generated_at: string;
@@ -125,7 +126,7 @@ export async function buildWorkspacePerformanceContext({
   const { data: workspace } = await supabase
     .from("workspaces")
     .select(
-      "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id"
+      "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id, workspace_kind"
     )
     .eq("id", workspaceId)
     .single();
@@ -212,6 +213,10 @@ export async function buildWorkspacePerformanceContext({
       notes: workspace.notes,
       workspace_goal: workspace.workspace_goal,
       evaluation_mode: evalMeta.evaluation_mode,
+      workspace_kind:
+        typeof (workspace as { workspace_kind?: unknown }).workspace_kind === "string"
+          ? (workspace as { workspace_kind: string }).workspace_kind
+          : null,
     },
     focus_block_id: blockId || null,
     generated_at: new Date().toISOString(),

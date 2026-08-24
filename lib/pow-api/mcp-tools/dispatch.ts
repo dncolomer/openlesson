@@ -329,6 +329,7 @@ export async function callMcpProofOfWorkTool(
             description: workspace.description,
             notes: workspace.notes,
             workspace_goal: workspace.workspace_goal ?? null,
+            workspace_kind: workspace.workspace_kind,
           },
           blocks || [],
           blockId,
@@ -483,6 +484,7 @@ export async function callMcpProofOfWorkTool(
           },
           workspaceGoal: scored.workspace_goal,
           workspaceTitle: workspace.title || workspace.root_topic || "workspace",
+          workspace_kind: workspace.workspace_kind,
         }
       ),
       {

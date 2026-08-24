@@ -9,6 +9,7 @@ import {
   SNAPSHOT_API_BASE,
   STASH_API_BASE,
 } from "@/lib/api/agent-api-paths";
+import { workspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
 import type { ApiKeyScope } from "./types";
 
 export type AgentToolSurfaceEntry = {
@@ -235,6 +236,82 @@ export type AgentToolName = (typeof AGENT_TOOL_SURFACE)[number]["name"];
 
 export function agentToolNames(): AgentToolName[] {
   return AGENT_TOOL_SURFACE.map((t) => t.name);
+}
+
+/** TAP / ILE / TAPBench guest-link mint — omitted from Knowledge Region skill/MCP copy. */
+export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
+  "create_tap_link",
+  "list_tap_links",
+  "create_tapbench_link",
+  "list_tapbench_links",
+] as const satisfies readonly AgentToolName[];
+
+export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
+  "tap-links",
+  "tapbench-links",
+  "ile-links",
+] as const;
+
+/**
+ * Documented MCP tool names in generated skill.md for standard (map) workspaces.
+ * Order is part of the skill prompt; keep this list stable.
+ */
+export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = [
+  "list_workspaces",
+  "get_workspace",
+  "get_learning_progress",
+  "list_blocks",
+  "generate_proof_of_work_schema",
+  "upload_proof_of_work",
+  "lwm_snapshot",
+  "generate_integration_skill",
+  "create_tap_link",
+  "list_tap_links",
+  "create_tapbench_link",
+  "list_tapbench_links",
+] as const satisfies readonly AgentToolName[];
+
+export function isKnowledgeLinkMintToolName(name: string): boolean {
+  return (KNOWLEDGE_LINK_MINT_TOOL_NAMES as readonly string[]).includes(name);
+}
+
+/** Full agent catalog filtered by workspace kind. Standard keeps mint tools; KR omits them. */
+export function agentToolSurfaceForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
+  if (workspaceAllowsKnowledgeLinkMint(kind)) {
+    return [...AGENT_TOOL_SURFACE];
+  }
+  return AGENT_TOOL_SURFACE.filter((t) => !isKnowledgeLinkMintToolName(t.name));
+}
+
+/**
+ * Tools listed in workspace-generated skill.md / recommended MCP copy.
+ * KR: PoW + Snapshot + Stash TAPBench (no guest-link mint).
+ * Standard: the historical documented subset, including TAP/TAPBench mint.
+ */
+export function skillDocumentedToolsForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
+  if (workspaceAllowsKnowledgeLinkMint(kind)) {
+    const allow = new Set<string>(STANDARD_SKILL_DOCUMENTED_TOOL_NAMES);
+    return AGENT_TOOL_SURFACE.filter((t) => allow.has(t.name)).sort(
+      (a, b) =>
+        STANDARD_SKILL_DOCUMENTED_TOOL_NAMES.indexOf(a.name as (typeof STANDARD_SKILL_DOCUMENTED_TOOL_NAMES)[number]) -
+        STANDARD_SKILL_DOCUMENTED_TOOL_NAMES.indexOf(b.name as (typeof STANDARD_SKILL_DOCUMENTED_TOOL_NAMES)[number]),
+    );
+  }
+  return agentToolSurfaceForWorkspace(kind);
+}
+
+export function formatSkillMcpToolList(kind: unknown): string {
+  return skillDocumentedToolsForWorkspace(kind)
+    .map((t) => (t.name === "lwm_snapshot" ? "lwm_snapshot (LWM Snapshot)" : t.name))
+    .join(", ");
+}
+
+export function textExposesKnowledgeLinkMint(text: string): boolean {
+  const hay = text.toLowerCase();
+  return (
+    KNOWLEDGE_LINK_MINT_TOOL_NAMES.some((n) => hay.includes(n.toLowerCase())) ||
+    KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS.some((p) => hay.includes(p.toLowerCase()))
+  );
 }
 
 /** Canonical plan-gate error code for Teams/API plan requirements. */

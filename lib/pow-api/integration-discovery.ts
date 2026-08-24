@@ -6,7 +6,8 @@ import {
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
 } from "./proof-of-work-integration";
-import { POW_API_BASE } from "@/lib/api/agent-api-paths";
+import { POW_API_BASE, STASH_API_BASE } from "@/lib/api/agent-api-paths";
+import { workspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
@@ -187,9 +188,11 @@ export function recommendIntegrationActions(options: {
   blocks: number;
   has_workspace_goal: boolean;
   last_report_score?: number | null;
+  workspace_kind?: unknown;
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
-  const { proof_of_work_artifacts, blocks, has_workspace_goal } = options;
+  const { proof_of_work_artifacts, blocks, has_workspace_goal, workspace_kind } = options;
+  const allowsLinkMint = workspaceAllowsKnowledgeLinkMint(workspace_kind);
 
   if (!has_workspace_goal) {
     actions.push({
@@ -242,12 +245,22 @@ export function recommendIntegrationActions(options: {
     });
   }
 
-  if (proof_of_work_artifacts >= 5 && blocks > 0) {
+  if (allowsLinkMint && proof_of_work_artifacts >= 5 && blocks > 0) {
     actions.push({
       priority: 7,
       mcp_tool: "create_tap_link",
       rest_equivalent: "POST .../blocks/{blockId}/tap-links",
       reason: "Optional Think Aloud Protocol session adds verbal reasoning signal to progress scoring.",
+    });
+  }
+
+  if (!allowsLinkMint) {
+    actions.push({
+      priority: 7,
+      mcp_tool: "buffer_proof_of_work",
+      rest_equivalent: `POST ${STASH_API_BASE}/workspaces/{id}/proof-of-work`,
+      reason:
+        "TAPBench Stash API — buffer then stash_proof_of_work / submit_stashed_proof_of_work. Knowledge Region agent path is PoW capture plus Stash TAPBench.",
     });
   }
 

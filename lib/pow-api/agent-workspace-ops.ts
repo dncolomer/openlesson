@@ -78,7 +78,7 @@ export async function getAgentLearningProgress(
   const { data: workspace, error: wsError } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at",
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at, workspace_kind",
     )
     .eq("id", workspaceId)
     .single();
@@ -132,6 +132,7 @@ export async function getAgentLearningProgress(
       proof_of_work_artifacts: counts.proof_of_work_artifacts,
       blocks: counts.blocks,
       has_workspace_goal: Boolean(workspace.workspace_goal?.trim()),
+      workspace_kind: workspace.workspace_kind,
     }),
     progress_interpretation: {
       lwm_snapshot:

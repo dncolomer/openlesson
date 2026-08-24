@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal")
+      .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, workspace_kind")
       .eq("id", workspaceId)
       .single();
 
@@ -134,6 +134,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             description: workspace.description,
             notes: workspace.notes,
             workspace_goal: workspace.workspace_goal ?? null,
+            workspace_kind: workspace.workspace_kind,
           },
           blocks || [],
           blockId,

@@ -20,6 +20,7 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/portal/",
   "/practice-portal/",
   "/insights/",
+  "/snapshot/",
   "/p/",
   "/quiz/",
   "/oauth/",
@@ -96,6 +97,7 @@ export async function middleware(request: NextRequest) {
     "/portal",
     "/practice-portal",
     "/insights",
+    "/snapshot",
     "/learn",
   ];
   const isPublicRoute = publicRoutes.some((route) =>

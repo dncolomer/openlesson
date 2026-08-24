@@ -67,6 +67,10 @@ export function useKnowledgeLwm(input: {
   const [selectedLwmRunId, setSelectedLwmRunId] = useState<string | null>(null);
   const [lwmDetailTab, setLwmDetailTab] = useState<LwmDetailTab>("profile");
   const [showScoreExplainModal, setShowScoreExplainModal] = useState(false);
+  const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
+  const [publicShareLoading, setPublicShareLoading] = useState(false);
+  const [publicShareError, setPublicShareError] = useState<string | null>(null);
+  const [publicShareCopied, setPublicShareCopied] = useState(false);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -496,6 +500,9 @@ export function useKnowledgeLwm(input: {
 
   useEffect(() => {
     setLwmDetailTab("profile");
+    setPublicShareUrl(null);
+    setPublicShareError(null);
+    setPublicShareCopied(false);
   }, [selectedLwmRun?.id]);
 
   const selectedRunReport = useMemo(() => {
@@ -537,6 +544,60 @@ export function useKnowledgeLwm(input: {
     return null;
   }, [selectedRunReport, displaySnapScore, displayGhcScore, wm?.inferred_goal?.text]);
 
+  const generatePublicShareUrl = useCallback(async () => {
+    if (!selectedLwmRun?.id) return null;
+    setPublicShareLoading(true);
+    setPublicShareError(null);
+    try {
+      const response = await fetch("/api/workspace/snapshot-share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          evalRunHistoryId: selectedLwmRun.id,
+          ...(ayclToken ? { ayclToken } : {}),
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        url?: unknown;
+        error?: unknown;
+      };
+      if (!response.ok) {
+        const err = data.error;
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message || "")
+            : typeof err === "string"
+              ? err
+              : "Failed to generate public URL";
+        throw new Error(message);
+      }
+      const url = typeof data.url === "string" ? data.url.trim() : "";
+      if (!url) throw new Error("No public URL returned");
+      setPublicShareUrl(url);
+      return url;
+    } catch (err) {
+      setPublicShareError(
+        err instanceof Error ? err.message : "Failed to generate public URL",
+      );
+      return null;
+    } finally {
+      setPublicShareLoading(false);
+    }
+  }, [ayclToken, selectedLwmRun?.id, workspaceId]);
+
+  const copyPublicShareUrl = useCallback(async () => {
+    const url = publicShareUrl || (await generatePublicShareUrl());
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setPublicShareCopied(true);
+      window.setTimeout(() => setPublicShareCopied(false), 2000);
+    } catch {
+      setPublicShareCopied(false);
+    }
+  }, [generatePublicShareUrl, publicShareUrl]);
+
   const lwmUpdatedLabel = useMemo(() => {
     const iso = selectedLwmRun?.ran_at || wm?.updated_at || kc?.as_of || null;
     if (!iso) return null;
@@ -556,8 +617,10 @@ export function useKnowledgeLwm(input: {
     adhocGoal,
     availableSubjects,
     closeSnapshotModal,
+    copyPublicShareUrl,
     displayGhcScore,
     displaySnapScore,
+    generatePublicShareUrl,
     generateSnapshot,
     generateSnapshotAll,
     goalCatalog,
@@ -575,6 +638,10 @@ export function useKnowledgeLwm(input: {
     lwmUpdatedLabel,
     lwmUserId,
     openSnapshotModal,
+    publicShareCopied,
+    publicShareError,
+    publicShareLoading,
+    publicShareUrl,
     selectedGoalIds,
     selectedLwmRun,
     selectedRunReport,

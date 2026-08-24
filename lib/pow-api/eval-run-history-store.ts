@@ -227,6 +227,24 @@ export async function listEvalRunHistory(
   return (data || []).map((row) => mapRow(row as Record<string, unknown>));
 }
 
+/** Admin/server lookup of a single archive row by id (no subject filter). */
+export async function getEvalRunHistoryById(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<EvalRunHistoryRow | null> {
+  const rowId = String(id || "").trim();
+  if (!rowId) return null;
+  const { data, error } = await supabase
+    .from("eval_run_history")
+    .select(
+      "id, workspace_id, subject_user_id, subject_guest_user_id, vertical, score, ghc_score, ghc_confidence, report, workspace_goal, evaluated_goals, goals_fingerprint, block_id, source, ran_at, created_at",
+    )
+    .eq("id", rowId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapRow(data as Record<string, unknown>);
+}
+
 /**
  * Resolve which subjects a caller may list for history.
  * Non-admins are forced to their own subject; org admins / owners may pass multi-user filters.

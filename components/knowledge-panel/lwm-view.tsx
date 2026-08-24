@@ -23,6 +23,7 @@ export function KnowledgeLwmView({
     adhocGoal,
     availableSubjects,
     closeSnapshotModal,
+    copyPublicShareUrl,
     displayGhcScore,
     displaySnapScore,
     generateSnapshot,
@@ -41,6 +42,10 @@ export function KnowledgeLwmView({
     lwmUpdatedLabel,
     lwmUserId,
     openSnapshotModal,
+    publicShareCopied,
+    publicShareError,
+    publicShareLoading,
+    publicShareUrl,
     selectedGoalIds,
     selectedLwmRun,
     selectedRunReport,
@@ -375,6 +380,53 @@ export function KnowledgeLwmView({
                                 Scores
                               </p>
                             </button>
+                            {selectedLwmRun ? (
+                              <div
+                                className="flex min-h-[3.25rem] min-w-[8.5rem] flex-col justify-center gap-1"
+                                data-lwm-public-share
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void copyPublicShareUrl();
+                                  }}
+                                  disabled={publicShareLoading}
+                                  title="Generate a public URL for this snapshot and copy it"
+                                  className="flex min-h-[3.25rem] flex-col justify-center rounded-none border border-white/60 bg-transparent px-3 py-2 text-left transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                  data-lwm-generate-public-url
+                                >
+                                  <p className="text-[10px] font-medium text-neutral-400">
+                                    {publicShareCopied
+                                      ? "Copied"
+                                      : publicShareUrl
+                                        ? "Copy"
+                                        : "Generate"}
+                                  </p>
+                                  <p className="text-sm font-semibold leading-tight text-white">
+                                    {publicShareLoading
+                                      ? "Sharing…"
+                                      : "Public URL"}
+                                  </p>
+                                </button>
+                                {publicShareUrl ? (
+                                  <p
+                                    className="max-w-[11rem] truncate font-mono text-[10px] text-neutral-500"
+                                    data-lwm-public-url
+                                    title={publicShareUrl}
+                                  >
+                                    {publicShareUrl}
+                                  </p>
+                                ) : null}
+                                {publicShareError ? (
+                                  <p
+                                    className="max-w-[11rem] text-[10px] text-red-400"
+                                    data-lwm-public-share-error
+                                  >
+                                    {publicShareError}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </div>

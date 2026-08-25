@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { MarketingPageShell } from "@/components/marketing/MarketingChrome";
 import { ENTERPRISE_SETUP_EMAIL, VERIFICATION_PRICING_PATH } from "@/lib/marketing/paths";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
@@ -35,26 +36,48 @@ export default function VerificationPricingPage() {
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <article
             data-testid="verification-deep-project"
-            className="border border-zinc-800 bg-zinc-950/80 p-5 sm:p-6"
+            className="flex min-h-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/80"
           >
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-              {deepProject.eyebrow}
-            </p>
-            <h2 className="mt-2 text-2xl font-medium text-white">Deep Project style assessment</h2>
-            <p className="mt-4 text-4xl font-medium tracking-[-1px] text-white">$10 per assessment</p>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-400">{deepProject.difference}</p>
+            <div className="relative aspect-[16/10] w-full">
+              <Image
+                src={deepProject.image}
+                alt={deepProject.imageAlt}
+                fill
+                className="object-cover grayscale"
+                sizes="(max-width: 1024px) 100vw, 576px"
+              />
+            </div>
+            <div className="flex flex-1 flex-col p-5 sm:p-6">
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                {deepProject.eyebrow}
+              </p>
+              <h2 className="mt-2 text-2xl font-medium text-white">Deep Project style assessment</h2>
+              <p className="mt-4 text-4xl font-medium tracking-[-1px] text-white">$10 per assessment</p>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-400">{deepProject.difference}</p>
+            </div>
           </article>
 
           <article
             data-testid="verification-light-weight"
-            className="border border-zinc-800 bg-zinc-950/80 p-5 sm:p-6"
+            className="flex min-h-0 flex-col overflow-hidden border border-zinc-800 bg-zinc-950/80"
           >
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-              {lightWeight.eyebrow}
-            </p>
-            <h2 className="mt-2 text-2xl font-medium text-white">Light weight verification</h2>
-            <p className="mt-4 text-4xl font-medium tracking-[-1px] text-white">$1 per run</p>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-400">{lightWeight.difference}</p>
+            <div className="relative aspect-[16/10] w-full">
+              <Image
+                src={lightWeight.image}
+                alt={lightWeight.imageAlt}
+                fill
+                className="object-cover grayscale"
+                sizes="(max-width: 1024px) 100vw, 576px"
+              />
+            </div>
+            <div className="flex flex-1 flex-col p-5 sm:p-6">
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                {lightWeight.eyebrow}
+              </p>
+              <h2 className="mt-2 text-2xl font-medium text-white">Light weight verification</h2>
+              <p className="mt-4 text-4xl font-medium tracking-[-1px] text-white">$1 per run</p>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-400">{lightWeight.difference}</p>
+            </div>
           </article>
         </div>
 

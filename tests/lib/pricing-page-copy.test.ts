@@ -79,5 +79,10 @@ describe("verification pricing page source", () => {
     expect(src).not.toContain("/api/stripe/create-checkout");
     expect(VERIFICATION_PRICING_COPY.deepProject.price).toBe("$10 per assessment");
     expect(VERIFICATION_PRICING_COPY.lightWeight.price).toBe("$1 per run");
+    expect(src).toContain("grayscale");
+    expect(src).toContain("deepProject.image");
+    expect(src).toContain("lightWeight.image");
+    expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
   });
 });

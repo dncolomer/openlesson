@@ -28,6 +28,9 @@ export const VERIFICATION_PRICING_COPY = {
     price: `${formatIleSessionPrice()} per assessment`,
     priceAmount: formatIleSessionPrice(),
     unit: "per assessment",
+    image: "/deep-verification.png",
+    imageAlt:
+      "Deep Project verification workspace: chapter grid, project briefing, and think-aloud tools",
     difference:
       "Open-ended, assignment- and project-style verification. Candidates or employees work through a realistic brief with depth — multi-step judgment, artifacts, and proof of work. Use this when the role demands more than a short live probe: take-home replacement, senior screens, or complex cognition. Billed at $10 per assessment.",
   },
@@ -37,6 +40,9 @@ export const VERIFICATION_PRICING_COPY = {
     price: `${formatTapSessionPrice()} per run`,
     priceAmount: formatTapSessionPrice(),
     unit: "per run",
+    image: "/shallow_verification.png",
+    imageAlt:
+      "Light-weight verification TAP session: live thought bar, timer, and a single chapter on the map",
     difference:
       "Live, time-framed verification. A short Think Aloud Protocol run: the person works a scoped scenario on a clock while talking through their thinking. Built for volume — screening, interview stages, quick hard-skill probes. Billed at $1 per run.",
   },

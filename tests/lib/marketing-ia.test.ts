@@ -246,6 +246,12 @@ describe("split pricing + public harness checkout", () => {
       /live|time-framed|think aloud/,
     );
     expect(VERIFICATION_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
+    expect(VERIFICATION_PRICING_COPY.deepProject.image).toBe("/deep-verification.png");
+    expect(VERIFICATION_PRICING_COPY.lightWeight.image).toBe("/shallow_verification.png");
+    expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
+    expect(page).toContain("grayscale");
+    expect(page).not.toContain("/aesthetics/");
   });
 
   it("public checkout price_data is 2499 monthly and 1499 trial — not $99 / $19.99", () => {

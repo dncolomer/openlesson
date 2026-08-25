@@ -5,14 +5,13 @@
  */
 
 import type { Metadata } from "next";
+import { PLATFORM_HERO } from "@/lib/marketing/platform";
 
-/** LP hero H1 — `app/page.tsx`. */
-export const UNSYS_STANDARD_SHARE_TITLE =
-  "A Human Knowledge Platform.";
+/** LP hero H1 — `PLATFORM_HERO.h1` / `app/page.tsx`. */
+export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
 
-/** LP hero body first paragraph — `app/page.tsx`. */
-export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "Uncertain Systems is a Human Knowledge Platform.";
+/** LP hero second paragraph — `PLATFORM_HERO.p2` / `app/page.tsx`. */
+export const UNSYS_STANDARD_SHARE_DESCRIPTION = PLATFORM_HERO.p2;
 
 /** LP hero pill — Human Knowledge Platform */
 export const UNSYS_STANDARD_SHARE_EYEBROW =

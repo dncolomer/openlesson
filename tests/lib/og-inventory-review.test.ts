@@ -13,11 +13,13 @@ import {
 } from "@/lib/og/surfaces";
 import { staticOgAlt } from "@/lib/og/create-static-og";
 import { openGraphImagePathForRoute } from "@/lib/og/paths";
+import { PLATFORM_HERO } from "@/lib/marketing/platform";
 import {
   UNSYS_STANDARD_SHARE,
   UNSYS_STANDARD_SHARE_AESTHETIC,
   UNSYS_STANDARD_SHARE_DESCRIPTION,
   UNSYS_STANDARD_SHARE_TITLE,
+  standardShareSocialMetadata,
 } from "@/lib/og/standard";
 
 const ROOT = join(__dirname, "../..");
@@ -46,6 +48,10 @@ describe("OG share inventory (one unsys standard)", () => {
       [...REQUIRED_SHARE_SURFACE_IDS].sort(),
     );
 
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
+
     for (const s of surfaces) {
       expect(s.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
       expect(s.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
@@ -68,8 +74,13 @@ describe("OG share inventory (one unsys standard)", () => {
   it("quotes LP-derived standard from surfaces + standard modules (not per-page product copy)", () => {
     const src = read("lib/og/surfaces.ts");
     const standard = read("lib/og/standard.ts");
-    expect(standard).toContain("A Human Knowledge Platform.");
-    expect(standard).toContain("Uncertain Systems is a Human Knowledge Platform.");
+    expect(standard).toContain("PLATFORM_HERO.h1");
+    expect(standard).toContain("PLATFORM_HERO.p2");
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe("A Human Knowledge Platform.");
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(
+      "Uncertain Systems is a Human Knowledge Platform.",
+    );
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
     expect(standard).toContain("Human Knowledge Platform");
@@ -184,6 +195,16 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(science).toContain("standardShareSocialMetadata");
     expect(science).not.toContain("/science/opengraph-image");
 
+    const harness = read("app/learning-harness/page.tsx");
+    expect(harness).toContain("standardShareSocialMetadata");
+    expect(harness).toMatch(/openGraph:\s*standardSocial\.openGraph/);
+    expect(harness).toMatch(/twitter:\s*standardSocial\.twitter/);
+
+    const verification = read("app/knowledge-verification/page.tsx");
+    expect(verification).toContain("standardShareSocialMetadata");
+    expect(verification).toMatch(/openGraph:\s*standardSocial\.openGraph/);
+    expect(verification).toMatch(/twitter:\s*standardSocial\.twitter/);
+
     const docs = read("app/docs/proof-of-work-api/layout.tsx");
     expect(docs).toContain("standardShareSocialMetadata");
 
@@ -221,6 +242,24 @@ describe("OG share inventory (one unsys standard)", () => {
 
     // Standard module is the single source of share title/description/image
     expect(UNSYS_STANDARD_SHARE.imagePath).toBe("/opengraph-image");
+    expect(UNSYS_STANDARD_SHARE.aestheticImage).toBe(
+      "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
+    );
+    const social = standardShareSocialMetadata();
+    expect(social.openGraph?.title).toBe(PLATFORM_HERO.h1);
+    expect(social.openGraph?.description).toBe(PLATFORM_HERO.p2);
+    expect(social.twitter?.title).toBe(PLATFORM_HERO.h1);
+    expect(social.twitter?.description).toBe(PLATFORM_HERO.p2);
+    for (const text of [
+      social.openGraph?.title,
+      social.openGraph?.description,
+      social.twitter?.title,
+      social.twitter?.description,
+    ]) {
+      expect(text).not.toMatch(/Learning efficiency for humans & agents/i);
+      expect(text).not.toMatch(/Learning Efficiency for Humans & Agents/);
+      expect(text).not.toMatch(/Optimize learning efficiency for humans and agentic systems/i);
+    }
     expect(existsSync(join(ROOT, "lib/og/standard.ts"))).toBe(true);
   });
 
@@ -231,6 +270,9 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(compose).toContain("siteLabel");
     expect(compose).toContain("composeStandardOgImage");
     expect(compose).toContain("UNSYS_STANDARD_SHARE");
+    expect(compose).toContain("UNSYS_STANDARD_SHARE.title");
+    expect(compose).toContain("UNSYS_STANDARD_SHARE.description");
+    expect(compose).not.toContain("Uncertain Systems is a Human Knowledge Platform.");
     expect(compose).toContain(
       'input.siteLabel?.trim() || "uncertain.systems"',
     );

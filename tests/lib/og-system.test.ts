@@ -20,6 +20,7 @@ import {
   listRequiredShareSurfaces,
   resolveSurfaceAestheticPath,
 } from "@/lib/og/surfaces";
+import { PLATFORM_HERO } from "@/lib/marketing/platform";
 import {
   UNSYS_STANDARD_SHARE,
   UNSYS_STANDARD_SHARE_AESTHETIC,
@@ -158,9 +159,15 @@ describe("OG aesthetic resolution", () => {
 
 describe("Unsys standard share (LP-derived)", () => {
   it("exports LP hero title, description, aesthetics image, and root image path", () => {
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe("A Human Knowledge Platform.");
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(
-      "Uncertain Systems is a Human Knowledge Platform.",
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toContain("Learning Harness");
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toContain("Knowledge Verification");
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/cannot be cheated or faked/i);
+    expect(UNSYS_STANDARD_SHARE_AESTHETIC).toBe(
+      "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
     );
     expect(UNSYS_STANDARD_SHARE_AESTHETIC.startsWith("/aesthetics/")).toBe(true);
     expect(UNSYS_STANDARD_SHARE_IMAGE_PATH).toBe("/opengraph-image");
@@ -203,10 +210,25 @@ describe("Unsys standard share (LP-derived)", () => {
 
   it("standardShareSocialMetadata always points at root opengraph-image with LP copy", () => {
     const social = standardShareSocialMetadata({ url: "https://uncertain.systems/pricing" });
-    expect(social.openGraph?.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
-    expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
-    expect(social.twitter?.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
-    expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(social.openGraph?.title).toBe(PLATFORM_HERO.h1);
+    expect(social.openGraph?.title).toBe("A Human Knowledge Platform.");
+    expect(social.openGraph?.description).toBe(PLATFORM_HERO.p2);
+    expect(social.openGraph?.description).not.toBe(PLATFORM_HERO.p1);
+    expect(social.twitter?.title).toBe(PLATFORM_HERO.h1);
+    expect(social.twitter?.description).toBe(PLATFORM_HERO.p2);
+    expect(social.twitter?.description).not.toBe(PLATFORM_HERO.p1);
+    for (const text of [
+      social.openGraph?.title,
+      social.openGraph?.description,
+      social.twitter?.title,
+      social.twitter?.description,
+      UNSYS_STANDARD_SHARE_TITLE,
+      UNSYS_STANDARD_SHARE_DESCRIPTION,
+    ]) {
+      expect(text).not.toMatch(/Learning efficiency for humans & agents/i);
+      expect(text).not.toMatch(/Learning Efficiency for Humans & Agents/);
+      expect(text).not.toMatch(/Optimize learning efficiency for humans and agentic systems/i);
+    }
     const images = standardShareImages();
     expect(Array.isArray(images)).toBe(true);
     expect(images).toEqual([
@@ -219,6 +241,13 @@ describe("Unsys standard share (LP-derived)", () => {
     ]);
     expect(standardOpenGraph().images).toEqual(images);
     expect(standardTwitter().images).toEqual(["/opengraph-image"]);
+    // PNG overlay may ellipsize P2 at OG_DESCRIPTION_MAX; meta tags keep the full string.
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION.length).toBeGreaterThan(OG_DESCRIPTION_MAX);
+    expect(truncateOgDescription(UNSYS_STANDARD_SHARE_DESCRIPTION).length).toBeLessThanOrEqual(
+      OG_DESCRIPTION_MAX,
+    );
+    expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
   });
 
   it("loadAestheticDataUrl loads the standard share aesthetic", async () => {

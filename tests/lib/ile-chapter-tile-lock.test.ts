@@ -191,7 +191,9 @@ describe("chapter map path wiring", () => {
     ];
     const nodes = sessionStepsToSkillGridNodes(steps);
     expect(nodes[0]?.lock_until_block_ids).toEqual([]);
-    expect(nodes[1]?.lock_until_block_ids).toEqual(["s1"]);
+    expect(nodes[1]?.lock_until_block_ids).toEqual([]);
+    expect(nodes[0]?.next_block_ids).toEqual([]);
+    expect(nodes[1]?.next_block_ids).toEqual([]);
     expect(nodes[0]?.is_start).toBe(true);
 
     writeScratch(
@@ -200,7 +202,7 @@ describe("chapter map path wiring", () => {
         "ChapterMapPanel: suggestMode=chapter",
         "BlockSkillGrid: resolveMapOccupiedTileBadges + ileChapterUnlockHighlightIds",
         "BlockSkillGrid: data-ile-chapter-unlock-highlight",
-        "sessionStepsToSkillGridNodes: lock_until previous chapter",
+        "sessionStepsToSkillGridNodes: no implicit order DAG",
       ].join("\n"),
     );
   });

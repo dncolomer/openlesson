@@ -11,7 +11,11 @@ import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 import { isLowQualityTapbenchExercise, looksLikeTopicOverview } from "@/lib/pow-api/tapbench-exercise-quality";
 import { CHAPTER_LOAD_DURATION_MS } from "@/components/session/sessionViewHelpers";
 import { shouldAllowChapterLoadClick } from "@/lib/chapter-load-control";
-import { isChapterSlotAvailable } from "@/lib/chapter-skill-grid";
+import {
+  appendIleChapterStep,
+  buildSessionPlanStepsUpdate,
+  isChapterSlotAvailable,
+} from "@/lib/chapter-skill-grid";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
 import {
   buildFollowUpChapterDescription,
@@ -337,7 +341,7 @@ useEffect(() => {
             toolAction: "chapter_exercise_upgrade",
             toolData: { stepId, source: "generate-exercise" },
           },
-        );
+        ).catch(() => {});
       }
     } catch {
       /* keep pure framer */
@@ -417,16 +421,10 @@ const persistPlanSteps = useCallback(async (
   updatedPlan: SessionPlan,
   options?: { toolAction?: ToolAction; toolData?: Record<string, unknown> },
 ) => {
+  const payload = buildSessionPlanStepsUpdate(updatedPlan);
+  await updateSessionPlan(updatedPlan.id, payload);
   setSessionPlan(updatedPlan);
   sessionPlanRef.current = updatedPlan;
-  try {
-    await updateSessionPlan(updatedPlan.id, {
-      steps: updatedPlan.steps,
-      currentStepIndex: updatedPlan.currentStepIndex,
-    });
-  } catch (err) {
-    console.warn("[SessionView] Failed to sync plan:", err);
-  }
   if (options?.toolAction) {
     void logToolRef.current?.("session_plan", options.toolAction, options.toolData ?? {});
   }
@@ -439,7 +437,7 @@ const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
       via: "auto_grid_placement",
       stepCount: plan.steps.length,
     },
-  });
+  }).catch(() => {});
 }, [persistPlanSteps]);
 
 const [chapterReloadNonce, setChapterReloadNonce] = useState(0);
@@ -603,23 +601,16 @@ const handleAddChapter = useCallback(async (description: string, position: { row
   if (!isChapterSlotAvailable(currentPlan, position.row, position.col)) {
     throw new Error("That grid slot is already occupied.");
   }
-  const newStep: SessionPlanStep = {
-    id: crypto.randomUUID(),
+  const newStepId = crypto.randomUUID();
+  const updatedPlan = appendIleChapterStep(currentPlan, {
+    id: newStepId,
     description: framed,
-    status: "pending",
-    type: "task",
-    order: currentPlan.steps.length,
-    position_x: position.col,
-    position_y: position.row,
-  };
-  const updatedPlan = {
-    ...currentPlan,
-    steps: [...currentPlan.steps, newStep],
-  };
+    position,
+  });
   await persistPlanSteps(updatedPlan, {
     toolAction: "chapter_add",
     toolData: buildIleChapterAddPowToolData({
-      stepId: newStep.id,
+      stepId: newStepId,
       description: framed,
       position_x: position.col,
       position_y: position.row,

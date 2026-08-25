@@ -26,7 +26,9 @@ function mapStepStatus(status: SessionPlanStep["status"]): string {
   }
 }
 
-/** Map session plan steps to the same node shape used by the workspace block grid. */
+/** Map session plan steps to the same node shape used by the workspace block grid.
+ * ILE chapters are independent tiles — do not synthesize a linear DAG from `order`.
+ */
 export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGridNode[] {
   const sorted = [...steps].sort((a, b) => a.order - b.order);
   return sorted.map((step, index) => ({
@@ -34,11 +36,47 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
     title: step.description,
     status: mapStepStatus(step.status),
     is_start: index === 0,
-    next_block_ids: index < sorted.length - 1 ? [sorted[index + 1].id] : [],
-    lock_until_block_ids: index > 0 ? [sorted[index - 1].id] : [],
+    next_block_ids: [],
+    lock_until_block_ids: [],
     position_x: step.position_x,
     position_y: step.position_y,
   }));
+}
+
+/** Persist payload `updateSessionPlan` writes for ILE chapter add/load/edit. */
+export function buildSessionPlanStepsUpdate(plan: SessionPlan): {
+  steps: SessionPlanStep[];
+  currentStepIndex: number;
+} {
+  return {
+    steps: plan.steps,
+    currentStepIndex: plan.currentStepIndex,
+  };
+}
+
+/** Append a newly created ILE chapter at a grid slot (no DAG wiring). */
+export function appendIleChapterStep(
+  plan: SessionPlan,
+  input: {
+    id: string;
+    description: string;
+    position: { row: number; col: number };
+  },
+): SessionPlan {
+  const description = String(input.description || "").trim();
+  const newStep: SessionPlanStep = {
+    id: input.id,
+    description,
+    status: "pending",
+    type: "task",
+    order: plan.steps.length,
+    position_x: input.position.col,
+    position_y: input.position.row,
+  };
+  return {
+    ...plan,
+    steps: [...plan.steps, newStep],
+  };
 }
 
 /** Assign radial grid coordinates to steps that do not have saved positions yet. */

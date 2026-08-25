@@ -8,6 +8,7 @@ import {
   LEARNING_HARNESS_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
+import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
 
 export const PLATFORM_PHRASE = "Human Knowledge Platform" as const;
 
@@ -23,7 +24,7 @@ export const PLATFORM_PRODUCTS = {
     eyebrow: "FOR HUMANS",
     name: "Learning Harness",
     title: "A Learning Harness for humans",
-    body: "A system for knowledge acquisition. Practice, map, and grow what you hold. All-You-Can-Learn lifetime workspaces live here.",
+    body: HARNESS_PRODUCT_COPY.lead,
     href: LEARNING_HARNESS_PATH,
     cta: "Explore the Learning Harness",
     pricingHref: HARNESS_PRICING_PATH,

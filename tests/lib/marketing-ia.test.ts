@@ -53,6 +53,7 @@ describe("landing: Human Knowledge Platform two-product split", () => {
     expect(corpus.toLowerCase()).toMatch(/without traditional tests/);
     expect(landing).toContain("PLATFORM_PRODUCT_LIST");
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
+    expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/aesthetics/lp-boxes/harness-study-table.jpg");
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/aesthetics/lp-boxes/verification-region-map.jpg");

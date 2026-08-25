@@ -95,25 +95,15 @@ export default function LearningHarnessPage() {
                 <h3 className="mt-2 text-lg font-medium tracking-[-0.4px] text-white">{point.title}</h3>
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-400">{point.body}</p>
                 {point.href && point.linkLabel ? (
-                  point.external ? (
-                    <a
-                      href={point.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                    >
-                      {point.linkLabel}
-                      <ExternalLink size={13} />
-                    </a>
-                  ) : (
-                    <Link
-                      href={point.href}
-                      className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
-                    >
-                      {point.linkLabel}
-                      <ArrowRight size={13} />
-                    </Link>
-                  )
+                  <a
+                    href={point.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                  >
+                    {point.linkLabel}
+                    <ExternalLink size={13} />
+                  </a>
                 ) : null}
               </div>
             </li>

@@ -129,6 +129,8 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(HARNESS_PRODUCT_COPY.points[0].href).toBeNull();
     expect(page).not.toContain("grokipedia.com");
     expect(HARNESS_PRODUCT_COPY.points[2].href).toBe("https://github.com/dncolomer/openlesson");
+    expect(page).toContain("target=\"_blank\"");
+    expect(page).not.toContain("point.external");
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
     }

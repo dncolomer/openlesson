@@ -12,7 +12,7 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Ground State - 3 Day Event · Community Events",
+  title: "Thermosynthesis · Community Events",
   description: "To be Announced soon",
   alternates: {
     canonical: "https://uncertain.systems/community-events/ground-state",
@@ -57,15 +57,15 @@ export default function GroundStateEventPage() {
               </Link>
             </li>
             <li className="text-zinc-700">/</li>
-            <li className="text-zinc-400">Ground State</li>
+            <li className="text-zinc-400">Thermosynthesis</li>
           </ol>
         </nav>
 
         <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          {EVENT?.kind ?? "Ground State - 3 Day Event"}
+          {EVENT?.kind ?? "3 Day Event"}
         </p>
         <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
-          {EVENT?.title ?? "Ground State - 3 Day Event"}
+          {EVENT?.title ?? "Thermosynthesis"}
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-zinc-300 sm:text-xl">
           To be Announced soon

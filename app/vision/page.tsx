@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
@@ -29,17 +29,6 @@ const PARTNERS = [
   { name: "TheWiser.org", href: "https://thewiser.org", label: "Learning and knowledge infrastructure project" },
   { name: "Dantes.io", href: "https://dantes.io", label: "Current client project" },
 ];
-
-const UNSYS_PROGRAM_ID = "GSxEFVkssh6trQ97WZBsMGs1iahdJ6Z2fSPjQ617nKLN";
-const UNSYS_TOKEN_CA = "Dza3Bey5tvyYiPgcGRKoXKU6rNrdoNrWNVmjqePcpump";
-
-const TOKENOMICS_ROWS = [
-  ["Passive Dividends", "Any amount", "Pro-rata USDC each epoch", "3mo (1.1x) / 6mo (1.25x) / 12mo (1.5x)"],
-  ["Referral Partner T1", "1,000,000 UNSYS", "10% lifetime rev-share", "Refer users to earn"],
-  ["Referral Partner T2", "2,000,000 UNSYS", "30% lifetime rev-share", "Refer users to earn"],
-  ["Referral Partner T3", "5,000,000 UNSYS", "50% lifetime rev-share", "Refer users to earn"],
-  ["Data Provider", "5,000,000 UNSYS + data", "80% of own token fees", "Requires admin validation"],
-] as const;
 
 export default function VisionPage() {
   return (
@@ -195,97 +184,6 @@ export default function VisionPage() {
               <p className="mt-2 text-sm text-zinc-500">{partner.label}</p>
             </a>
           ))}
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:pb-16">
-        <SectionHeading
-          eyebrow="SUPPORT"
-          title="Participate in the Uncertain Systems ecosystem."
-        />
-        <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-          We created $UNSYS on Solana so trading fees can help fund this project — staking, revenue sharing,
-          referrals, and data-provider rewards all flow back into the learning automation stack.
-        </p>
-
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <a
-            href="https://staking.uncertain.systems"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
-          >
-            <ExternalLink size={16} />
-            Open staking program
-          </a>
-          <a
-            href={`https://pump.fun/${UNSYS_TOKEN_CA}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border border-zinc-700 bg-zinc-900/80 px-5 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:text-white"
-          >
-            <ExternalLink size={16} />
-            Buy $UNSYS
-          </a>
-          <a
-            href="https://github.com/dncolomer/unsys_staking"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
-          >
-            View contract
-          </a>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Token CA</p>
-            <code className="mt-2 block break-all font-mono text-xs leading-relaxed text-zinc-300 sm:text-sm">
-              {UNSYS_TOKEN_CA}
-            </code>
-          </div>
-          <div className="border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Program</p>
-            <code className="mt-2 block break-all font-mono text-xs leading-relaxed text-zinc-300 sm:text-sm">
-              {UNSYS_PROGRAM_ID}
-            </code>
-          </div>
-        </div>
-
-        <h3 className="mt-12 text-center text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
-          Tokenomics &amp; Rewards
-        </h3>
-        <div className="mt-6 overflow-x-auto border border-zinc-800 bg-zinc-950/70">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr>
-                {["Program", "Stake Required", "You Earn", "Lock / Effort"].map((heading) => (
-                  <th
-                    key={heading}
-                    className="border-b border-zinc-800 bg-zinc-900/60 p-3 text-left font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500"
-                  >
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TOKENOMICS_ROWS.map((row) => (
-                <tr key={row[0]} className="transition hover:bg-zinc-900/40">
-                  {row.map((cell, index) => (
-                    <td
-                      key={cell}
-                      className={`border-b border-zinc-800/80 p-3 ${
-                        index === 0 ? "font-medium text-zinc-200" : "text-zinc-400"
-                      }`}
-                    >
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
 

@@ -57,8 +57,10 @@ describe("TAPBench project landing", () => {
 
   it("is linked from Projects & Community nav (LandingNav + Navbar)", () => {
     const landing = read("components/LandingNav.tsx");
-    expect(landing).toContain('href: "/tapbench"');
-    expect(landing).toContain("TAPBench");
+    const navLinks = read("lib/marketing/nav.ts");
+    expect(landing).toContain("COMMUNITY_LINKS");
+    expect(navLinks).toContain('href: "/tapbench"');
+    expect(navLinks).toContain("TAPBench");
     const nav = read("components/Navbar.tsx");
     expect(nav).toContain('href: "/tapbench"');
     expect(nav).toContain("TAPBench");

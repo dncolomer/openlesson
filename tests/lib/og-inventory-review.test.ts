@@ -68,15 +68,12 @@ describe("OG share inventory (one unsys standard)", () => {
   it("quotes LP-derived standard from surfaces + standard modules (not per-page product copy)", () => {
     const src = read("lib/og/surfaces.ts");
     const standard = read("lib/og/standard.ts");
-    expect(standard).toContain(
-      "A Human Learning Harness. Learn without a tutor. Verify without a test.",
-    );
-    expect(standard).toContain(
-      "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.",
-    );
+    expect(standard).toContain("A Human Knowledge Platform.");
+    expect(standard).toContain("Uncertain Systems is a Human Knowledge Platform.");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
-    expect(standard).toContain("Verification · Optimization · Augmentation");
+    expect(standard).toContain("Human Knowledge Platform");
+    expect(standard).not.toContain("Verification · Optimization · Augmentation");
     expect(standard).toContain("/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg");
     expect(src).toContain("UNSYS_STANDARD_SHARE");
     // Old divergent surface copy must be gone

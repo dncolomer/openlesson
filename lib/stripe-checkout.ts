@@ -3,6 +3,7 @@ import {
   TRIAL_ACCESS_DAYS,
   type PlanId,
 } from "@/lib/plans";
+import { PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES } from "@/lib/pricing/harness-checkout";
 
 export type CheckoutPriceType =
   | "api_metered"
@@ -11,7 +12,7 @@ export type CheckoutPriceType =
   | "rabbit_hole_plays";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
-  return ["api_metered", "trial_3day"].includes(priceType);
+  return (PUBLIC_HARNESS_CHECKOUT_PRICE_TYPES as readonly string[]).includes(priceType);
 }
 
 export function planIdFromPriceType(priceType: string): PlanId {

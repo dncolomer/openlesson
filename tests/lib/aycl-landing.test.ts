@@ -300,7 +300,7 @@ describe("aycl landing + hackathons structural", () => {
       "app/api/aycl/workspaces/[id]/explore-samples/route.ts",
     );
     const grid = readMapGridSurface();
-    const nav = read("components/LandingNav.tsx");
+    const nav = `${read("components/LandingNav.tsx")}\n${read("lib/marketing/nav.ts")}`;
     const navbar = read("components/Navbar.tsx");
     const hackathons = read("app/community-events/page.tsx");
     const lib = read("lib/aycl-landing.ts");
@@ -395,8 +395,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(groundState).toBeDefined();
     expect(eth?.kind).toBe("Hackathon");
     expect(eth?.href).toBe("/community-events/probabilistic-computing");
-    expect(groundState?.kind).toBe("Ground State - 3 Day Event");
-    expect(groundState?.title).toBe("Ground State - 3 Day Event");
+    expect(groundState?.kind).toBe("3 Day Event");
+    expect(groundState?.title).toBe("Thermosynthesis");
     expect(groundState?.href).toBe("/community-events/ground-state");
     expect(groundState?.image).toBe("/hackathons/ground-state-hero.jpg");
     for (const event of AYCL_HACKATHONS) {
@@ -423,7 +423,8 @@ describe("aycl landing + hackathons structural", () => {
     expect(groundStatePage).toContain("AYCL_HACKATHONS");
     expect(lib).toContain('id: "ground-state"');
     expect(lib).toContain('kind: "Hackathon"');
-    expect(lib).toContain('kind: "Ground State - 3 Day Event"');
+    expect(lib).toContain('kind: "3 Day Event"');
+    expect(lib).toContain('title: "Thermosynthesis"');
     expect(lib).toContain(eth!.href);
     expect(lib).toContain(groundState!.href);
 

@@ -5,9 +5,12 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
+  { labelKey: "footer.learningHarness", href: "/learning-harness" },
+  { labelKey: "footer.knowledgeVerification", href: "/knowledge-verification" },
+  { labelKey: "footer.harnessPricing", href: "/pricing" },
+  { labelKey: "footer.verificationPricing", href: "/pricing/verification" },
   { labelKey: "footer.vision", href: "/vision" },
   { labelKey: "footer.science", href: "/science" },
-  { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
 ];
 
@@ -17,7 +20,8 @@ const workspaceLinks = [
 ];
 
 const resourceLinks = [
-  { labelKey: "footer.github", href: "https://github.com/dncolomer/openlesson", external: true },
+  { labelKey: "footer.github", href: "https://github.com/dncolomer/openlesson", external: true as const },
+  { labelKey: "footer.supportThisProject", href: "/support", external: false as const },
 ];
 
 const legalLinks = [

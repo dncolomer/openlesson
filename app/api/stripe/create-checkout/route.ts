@@ -3,12 +3,9 @@ import { jsonError } from "@/lib/api-error-envelope";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
-  API_METERED_PLATFORM_FEE_CENTS,
-  formatIleSessionPrice,
-  formatPowApiCallPrice,
-  formatTapSessionPrice,
-  TRIAL_PRICE_CENTS,
-} from "@/lib/plans";
+  harnessMonthlyCheckoutPriceData,
+  harnessTrialCheckoutPriceData,
+} from "@/lib/pricing/harness-checkout";
 import {
   ayclPurchaseEligibleForUpgrade,
   createPendingAyclPurchase,
@@ -108,27 +105,12 @@ export async function POST(request: NextRequest) {
 
     if (priceTypeResolved === "api_metered") {
       lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: API_METERED_PLATFORM_FEE_CENTS,
-          recurring: { interval: "month" },
-          product_data: {
-            name: "Uncertain Systems API Metered — platform access",
-            description: `Usage billed monthly: ${formatPowApiCallPrice()} per external/API PoW, ${formatTapSessionPrice()} per TAP session, ${formatIleSessionPrice()} per ILE session. TAP/ILE-generated PoW is not billed as API PoW.`,
-          },
-        },
+        price_data: harnessMonthlyCheckoutPriceData(),
         quantity: 1,
       };
     } else if (priceTypeResolved === "trial_3day") {
       lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: TRIAL_PRICE_CENTS,
-          product_data: {
-            name: "Uncertain Systems 3-Day Trial",
-            description: "Full access for 3 days. One-time payment.",
-          },
-        },
+        price_data: harnessTrialCheckoutPriceData(),
         quantity: 1,
       };
     } else if (priceTypeResolved === "all_you_can_learn") {

@@ -6,9 +6,9 @@ const standardSocial = standardShareSocialMetadata({
 });
 
 export const metadata: Metadata = {
-  title: "Pricing - Proof-of-Work Volume | Uncertain Systems",
+  title: "Learning Harness pricing",
   description:
-    "Pay for proof-of-work submissions across every product. Pricing scales with measurement volume and learning world model building.",
+    "Fixed monthly Learning Harness subscription of $24.99, or try unlimited for 3 days for $14.99. All-You-Can-Learn lifetime buys live alongside this plan.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",

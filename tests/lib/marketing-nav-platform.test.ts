@@ -1,12 +1,12 @@
 /**
- * Marketing chrome: Use cases removed; Products → Platform; no product detail routes.
- * Drives real shipped source (LandingNav, Footer, ProductTable, home page, sitemap, redirects).
+ * Marketing chrome: two products in main nav; AYCL not in community; no product-detail /use-cases trees.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { LANDING_PRODUCT_ROWS } from "@/components/ProductTable";
 import { PRODUCTS } from "@/lib/seo/products";
+import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS } from "@/lib/marketing/nav";
 
 const ROOT = join(__dirname, "../..");
 
@@ -29,61 +29,46 @@ function collectPageTsx(dir: string): string[] {
 }
 
 describe("marketing nav and platform rename", () => {
-  it("LandingNav drops Use cases and links Platform to /#platform (desktop + mobile)", () => {
+  it("LandingNav links the two products, not Platform /#platform or Use cases", () => {
     const nav = read("components/LandingNav.tsx");
     expect(nav).not.toMatch(/href=["']\/use-cases/);
     expect(nav).not.toMatch(/>\s*Use cases\s*</);
     expect(nav).not.toMatch(/href=["']\/#products["']/);
     expect(nav).not.toMatch(/>\s*Products\s*</);
-    expect(nav).toContain('href="/#platform"');
-    expect(nav).toMatch(/>\s*Platform\s*</);
-    // Both desktop and mobile should mention Platform
-    expect(nav.split('href="/#platform"').length - 1).toBeGreaterThanOrEqual(2);
+    expect(nav).not.toContain('href="/#platform"');
+    expect(nav).toContain("MAIN_NAV_PRODUCT_LINKS");
+    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.href)).toEqual([
+      "/learning-harness",
+      "/knowledge-verification",
+    ]);
+    expect(nav).toContain("PRICING_NAV_LINKS");
+    expect(nav).not.toContain("Create your Workspace");
+    expect(nav).not.toContain("TrackedCtaLink");
+    expect(MAIN_NAV_PRODUCT_LINKS.map((l) => l.label)).toEqual(["Harness", "Verification"]);
   });
 
-  it("Footer no longer links to /use-cases", () => {
+  it("Footer no longer links to /use-cases and links Support this Project", () => {
     const footer = read("components/Footer.tsx");
     expect(footer).not.toMatch(/href:\s*["']\/use-cases/);
     expect(footer).not.toContain("footer.useCases");
+    expect(footer).toContain('href: "/support"');
   });
 
-  it("home platform section is knowledge visual above THE APPROACH (no product suite table)", () => {
+  it("home is the two-product platform umbrella (no #platform suite, no optimization cards)", () => {
     const page = read("app/page.tsx");
-    expect(page).toContain('id="platform"');
-    expect(page).toContain('eyebrow="PLATFORM"');
-    expect(page).toContain("#platform");
-    expect(page).toContain("See the platform");
-    expect(page).toContain("/knowledgeg2.png");
-    expect(page).toContain("data-landing-knowledge-visual");
-    expect(page).toContain("knowledge distance");
-    expect(page).toContain("custom knowledge regions");
-    expect(page).toContain("private");
-    // Scale is the last content section (after THE APPROACH) with ranking visual
-    expect(page).toContain('id="scale"');
-    expect(page).toContain("data-landing-scale-section");
-    expect(page).toContain("data-landing-ranking-visual");
-    expect(page).toContain("/ranking_app.png");
-    expect(page).toContain("Verify and rank knowledge against your own knowledge regions at scale.");
-    expect(page).toContain("knowledge verification at scale");
-    expect(page).toContain("knowledge regions");
-    expect(page).not.toMatch(/role regions/i);
-    expect(page).not.toMatch(/recruitment at volume|high-volume hiring/i);
-    expect(page).toContain('eyebrow="THE APPROACH"');
-    expect(page).not.toContain("— not a quiz score.");
-    // Platform → approach → scale (last before footer)
-    expect(page.indexOf('id="platform"')).toBeLessThan(page.indexOf('id="approach"'));
-    expect(page.indexOf('id="approach"')).toBeLessThan(page.indexOf('id="scale"'));
-    expect(page.indexOf('id="scale"')).toBeLessThan(page.indexOf("<Footer"));
-    // Ranking asset ships in public/
-    expect(existsSync(join(ROOT, "public/ranking_app.png"))).toBe(true);
-    // Former product-list suite section is gone
+    expect(page).toContain("A Human Knowledge Platform.");
+    expect(page).toContain("PLATFORM_PRODUCT_LIST");
+    expect(page).not.toContain('id="platform"');
+    expect(page).not.toContain('eyebrow="PLATFORM"');
+    expect(page).not.toContain("See the platform");
+    expect(page).not.toContain('id="scale"');
+    expect(page).not.toContain('eyebrow="THE APPROACH"');
     expect(page).not.toContain("A Product Suite for Humans and AI Agents");
     expect(page).not.toContain("ProductTable");
     expect(page).not.toContain('id="products"');
     expect(page).not.toContain('eyebrow="PRODUCTS"');
     expect(page).not.toContain("See the products");
     expect(page).not.toContain("Browse use cases");
-    expect(page).not.toMatch(/Learn more/);
     expect(page).not.toMatch(/href=\{pillar\.path\}/);
   });
 });
@@ -107,7 +92,6 @@ describe("platform suite listing CTAs", () => {
       }
     }
 
-    // Only workspace may keep a CTA
     const withCta = LANDING_PRODUCT_ROWS.filter((r) => r.href || r.ctaLabel);
     expect(withCta.every((r) => r.name === "Workspace")).toBe(true);
   });
@@ -144,11 +128,9 @@ describe("removed public route trees", () => {
     expect(config).toMatch(/source:\s*["']\/platform["']/);
     expect(config).toMatch(/source:\s*["']\/use-cases["']/);
     expect(config).toMatch(/source:\s*["']\/products\/:path\*["']/);
-    // Must not permanently bounce /platform into deleted use-cases hub
     expect(config).not.toMatch(
       /source:\s*["']\/platform["']\s*,\s*destination:\s*["']\/use-cases/,
     );
-    // Destinations for removed surfaces should be home
     expect(config).toMatch(
       /source:\s*["']\/use-cases["']\s*,\s*destination:\s*["']\/["']/,
     );
@@ -161,5 +143,11 @@ describe("removed public route trees", () => {
     const agent = read("app/agent/page.tsx");
     expect(agent).not.toContain("/products/");
     expect(agent).toMatch(/redirect\(\s*["']\/["']\s*\)/);
+  });
+});
+
+describe("community nav does not include AYCL", () => {
+  it("COMMUNITY_LINKS omits All-You-Can-Learn", () => {
+    expect(COMMUNITY_LINKS.map((l) => l.href)).not.toContain("/all-you-can-learn");
   });
 });

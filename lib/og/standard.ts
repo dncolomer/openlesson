@@ -8,19 +8,19 @@ import type { Metadata } from "next";
 
 /** LP hero H1 — `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_TITLE =
-  "A Human Learning Harness. Learn without a tutor. Verify without a test.";
+  "A Human Knowledge Platform.";
 
 /** LP hero body first paragraph — `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.";
+  "Uncertain Systems is a Human Knowledge Platform.";
 
-/** LP hero pill — VERIFICATION . OPTIMIZATION . AUGMENTATION */
+/** LP hero pill — Human Knowledge Platform */
 export const UNSYS_STANDARD_SHARE_EYEBROW =
-  "Verification · Optimization · Augmentation";
+  "Human Knowledge Platform";
 
-/** Footer pill chrome on composed cards (same LP pillars). */
+/** Footer pill chrome on composed cards (two products). */
 export const UNSYS_STANDARD_SHARE_FOOTER =
-  "VERIFICATION · OPTIMIZATION · AUGMENTATION";
+  "LEARNING HARNESS · KNOWLEDGE VERIFICATION";
 
 /** Brand aesthetics image used on the LP hero set. */
 export const UNSYS_STANDARD_SHARE_AESTHETIC =

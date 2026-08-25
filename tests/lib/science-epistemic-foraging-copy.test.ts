@@ -137,23 +137,25 @@ describe("science page renders epistemic foraging copy", () => {
 });
 
 describe("landing approach names foraging without rewriting the hero", () => {
-  it("approach section names epistemic foraging and links to /science", () => {
-    const lp = read("app/page.tsx");
-    expect(lp).toContain('id="approach"');
-    expect(lp).toContain("data-landing-epistemic-foraging");
-    expect(lp).toMatch(/epistemic foraging/i);
-    expect(lp).toContain("SCIENCE_EPISTEMIC_FORAGING_PATH");
-    expect(lp).toContain("A Human Learning Harness.");
-    expect(lp).not.toContain("Epistemic Foraging Platform");
+  it("verification product approach section names epistemic foraging and links to /science", () => {
+    const page = read("app/knowledge-verification/page.tsx");
+    expect(page).toContain('id="approach"');
+    expect(page).toContain("data-landing-epistemic-foraging");
+    expect(page).toMatch(/epistemic foraging/i);
+    expect(page).toContain("foragingHref");
+    expect(page).not.toContain("Epistemic Foraging Platform");
+    const landing = read("app/page.tsx");
+    expect(landing).toContain("A Human Knowledge Platform.");
+    expect(landing).not.toContain('id="approach"');
   });
 });
 
 describe("foraging visitor strings stay affirmative", () => {
   it("science, vision, landing, pitch, and README foraging copy omit Pirolli disclaimers and we-refuse closers", () => {
     const thesis = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
-    const landing = read("app/page.tsx");
-    const landingForageAt = landing.indexOf("data-landing-epistemic-foraging");
-    const landingForage = landing.slice(landingForageAt, landingForageAt + 800);
+    const verification = read("app/knowledge-verification/page.tsx");
+    const landingForageAt = verification.indexOf("data-landing-epistemic-foraging");
+    const landingForage = verification.slice(landingForageAt, landingForageAt + 800);
     const corpus = [
       getScienceEpistemicForagingFullText(),
       getVisionTomographyInductionFullText(),

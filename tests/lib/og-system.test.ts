@@ -158,11 +158,9 @@ describe("OG aesthetic resolution", () => {
 
 describe("Unsys standard share (LP-derived)", () => {
   it("exports LP hero title, description, aesthetics image, and root image path", () => {
-    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(
-      "A Human Learning Harness. Learn without a tutor. Verify without a test.",
-    );
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe("A Human Knowledge Platform.");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(
-      "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.",
+      "Uncertain Systems is a Human Knowledge Platform.",
     );
     expect(UNSYS_STANDARD_SHARE_AESTHETIC.startsWith("/aesthetics/")).toBe(true);
     expect(UNSYS_STANDARD_SHARE_IMAGE_PATH).toBe("/opengraph-image");
@@ -180,12 +178,11 @@ describe("Unsys standard share (LP-derived)", () => {
 
     // LP page still carries the same hero wording (source of truth for copy)
     const lp = fs.readFileSync(path.join(REPO_ROOT, "app/page.tsx"), "utf8");
-    expect(lp).toContain("A Human Learning Harness.");
-    expect(lp).toContain("Learn without a tutor. Verify without a test.");
+    expect(lp).toContain("A Human Knowledge Platform.");
     expect(lp).toContain(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(lp).not.toContain("Beyond benchmarks for AI.");
     expect(lp).not.toContain("Beyond tests for humans.");
-    expect(lp).toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
+    expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
     expect(lp).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
   });
 
@@ -217,7 +214,7 @@ describe("Unsys standard share (LP-derived)", () => {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: expect.stringContaining("A Human Learning Harness"),
+        alt: expect.stringContaining("A Human Knowledge Platform"),
       },
     ]);
     expect(standardOpenGraph().images).toEqual(images);

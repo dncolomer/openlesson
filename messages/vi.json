@@ -89,9 +89,14 @@
     "skillFile": "Agent skill file",
     "createWorkspace": "Create workspace",
     "demo": "Demo",
-    "seoBlurb": "A knowledge workspace with software tools that verify and augment learning for humans and AI agents.",
+    "seoBlurb": "A Human Knowledge Platform: a Learning Harness for humans and Knowledge Verification for enterprise.",
     "vision": "Vision",
-    "science": "Science"
+    "science": "Science",
+    "learningHarness": "Learning Harness",
+    "knowledgeVerification": "Knowledge Verification",
+    "harnessPricing": "Giá Harness",
+    "verificationPricing": "Giá Verification",
+    "supportThisProject": "Support this Project"
   },
   "home": {
     "learn": "Học",

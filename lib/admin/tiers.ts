@@ -4,7 +4,7 @@ import { PLANS, TRIAL_ACCESS_DAYS, isTrialExpiredStatus, normalizePlanId } from 
 /** Admin-assignable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
   { id: "inactive" as const, label: "Inactive", description: "No paid entitlement · use for demotion" },
-  { id: "trial" as const, label: "3-Day Trial", description: "$19.99 one-time · full access for 3 days" },
+  { id: "trial" as const, label: "3-Day Trial", description: "$14.99 one-time · full access for 3 days" },
   {
     id: "api_metered" as const,
     label: "API Metered",

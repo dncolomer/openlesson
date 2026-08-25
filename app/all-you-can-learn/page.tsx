@@ -111,7 +111,7 @@ export default function AllYouCanLearnPage() {
 
       <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <header
-          className="relative mb-6 overflow-hidden rounded-2xl border border-zinc-700/60 bg-zinc-950/70 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
+          className="relative mb-6 overflow-hidden rounded-none border border-zinc-700/60 bg-zinc-950/70 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
           data-aycl-catalog-hero
         >
           <div
@@ -128,7 +128,7 @@ export default function AllYouCanLearnPage() {
           />
 
           <div className="relative px-5 py-7 text-center sm:px-8 sm:py-8">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
+            <p className="mb-3 inline-flex items-center gap-2 rounded-none border border-zinc-700/80 bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-400">
               <span
                 className="h-1.5 w-1.5 rounded-full bg-neutral-900/90 shadow-[0_0_8px_rgba(252,211,77,0.7)]"
                 aria-hidden
@@ -147,12 +147,12 @@ export default function AllYouCanLearnPage() {
                 {ayclCatalogKeyPoints().map((point, index) => (
                   <div
                     key={point}
-                    className="group flex gap-3 rounded-xl border border-zinc-700/70 bg-gradient-to-br from-zinc-900/90 to-zinc-950/90 px-3.5 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-zinc-500/80 hover:from-zinc-900 hover:to-zinc-950"
+                    className="group flex gap-3 rounded-none border border-zinc-700/70 bg-gradient-to-br from-zinc-900/90 to-zinc-950/90 px-3.5 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-zinc-500/80 hover:from-zinc-900 hover:to-zinc-950"
                     data-aycl-catalog-key-point
                     data-aycl-catalog-key-point-index={index}
                   >
                     <span
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-[11px] font-semibold text-zinc-200"
+                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-white/10 bg-white/[0.06] text-[11px] font-semibold text-zinc-200"
                       aria-hidden
                     >
                       {index + 1}
@@ -180,7 +180,7 @@ export default function AllYouCanLearnPage() {
         {/* Marketplace search + category filters */}
         {!loading && workspaces.length > 0 ? (
           <div
-            className="mb-6 space-y-3 rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-4 backdrop-blur-sm"
+            className="mb-6 space-y-3 rounded-none border border-zinc-800/80 bg-zinc-950/60 p-4 backdrop-blur-sm"
             data-aycl-marketplace-filters
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -192,7 +192,7 @@ export default function AllYouCanLearnPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search title, author, category…"
                   data-aycl-marketplace-search
-                  className="w-full rounded-lg border border-zinc-700/80 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+                  className="w-full rounded-none border border-zinc-700/80 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
                 />
               </label>
               <p
@@ -215,7 +215,7 @@ export default function AllYouCanLearnPage() {
                 data-aycl-category-chip-active={
                   categoryFilter === "all" ? "true" : "false"
                 }
-                className={`rounded-full border px-3 py-1 text-xs transition ${
+                className={`rounded-none border px-3 py-1 text-xs transition ${
                   categoryFilter === "all"
                     ? "border-neutral-600/40 bg-neutral-800/15 text-neutral-200"
                     : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
@@ -232,7 +232,7 @@ export default function AllYouCanLearnPage() {
                     onClick={() => setCategoryFilter(cat)}
                     data-aycl-category-chip={cat}
                     data-aycl-category-chip-active={active ? "true" : "false"}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                    className={`rounded-none border px-3 py-1 text-xs transition ${
                       active
                         ? "border-neutral-600/40 bg-neutral-800/15 text-neutral-200"
                         : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
@@ -255,12 +255,12 @@ export default function AllYouCanLearnPage() {
             <LoadingStatusMessage message="Loading" />
           </div>
         ) : workspaces.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm">
+          <div className="rounded-none border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm">
             <p className="text-zinc-400">No learning environments are available yet.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div
-            className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm"
+            className="rounded-none border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm"
             data-aycl-marketplace-empty-filter
           >
             <p className="text-zinc-400">No courses match this filter.</p>
@@ -291,7 +291,7 @@ export default function AllYouCanLearnPage() {
               return (
                 <article
                   key={workspace.id}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
+                  className="group flex flex-col overflow-hidden rounded-none border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
                   data-aycl-catalog-card
                   data-aycl-card-category={workspace.category || ""}
                 >
@@ -373,7 +373,7 @@ export default function AllYouCanLearnPage() {
                         data-aycl-card-price-chips
                       >
                         <span
-                          className="rounded-md border border-zinc-700 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-300"
+                          className="rounded-none border border-zinc-700 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-300"
                           data-aycl-card-price-learner
                           title={ayclOfferTooltip("learner")}
                           data-aycl-offer-tooltip="learner"
@@ -384,7 +384,7 @@ export default function AllYouCanLearnPage() {
                           {learnerOffer.priceLabel}
                         </span>
                         <span
-                          className="rounded-md border border-zinc-600 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-white"
+                          className="rounded-none border border-zinc-600 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-white"
                           data-aycl-card-price-full
                           title={ayclOfferTooltip("full")}
                           data-aycl-offer-tooltip="full"
@@ -449,13 +449,7 @@ export default function AllYouCanLearnPage() {
         )}
 
         <p className="mt-10 text-center text-xs text-zinc-600">
-          Already purchased?{" "}
-          <Link
-            href="/learn"
-            className="text-zinc-400 underline decoration-zinc-700 underline-offset-2 hover:text-white"
-          >
-            Open your lifetime access link
-          </Link>{" "}
+          Already purchased? Use the lifetime access link from your purchase email
           to return to your workspace.
         </p>
       </section>

@@ -159,7 +159,7 @@ describe("aycl compact catalog hero", () => {
     expect(listing).toContain("data-aycl-catalog-key-points");
     expect(listing).toContain("data-aycl-catalog-key-point");
     // Visual polish markers (beyond bare border+list)
-    expect(listing).toMatch(/rounded-2xl/);
+    expect(listing).toMatch(/rounded-none/);
     expect(listing).toMatch(/bg-gradient-to-b|bg-gradient-to-br|blur-3xl/);
     expect(listing).toMatch(/sm:grid-cols-2/);
     expect(listing).toContain("data-aycl-catalog-key-point-index");

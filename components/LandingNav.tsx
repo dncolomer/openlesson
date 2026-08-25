@@ -4,36 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { TrackedCtaLink } from "@/components/TrackedCtaLink";
-
-const CTA = "Create your Workspace";
-const CTA_HREF = "/workspace/new";
-
-const COMMUNITY_LINKS = [
-  { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
-  { href: "/community-events", label: "Community Events" },
-  { href: "/map-of-knowledge", label: "Map of Knowledge" },
-  { href: "/tapbench", label: "TAPBench" },
-] as const;
-
-const TOP_LINKS = [
-  { href: "/vision", label: "Vision" },
-  { href: "/science", label: "Science" },
-] as const;
-
-function PrimaryCta({ compact = false }: { compact?: boolean }) {
-  return (
-    <TrackedCtaLink
-      href={CTA_HREF}
-      label={CTA}
-      location="nav"
-      page="/"
-      className={`inline-flex items-center justify-center rounded-sm bg-white font-medium text-black transition hover:bg-zinc-200 ${
-        compact ? "px-4 py-2 text-sm" : "min-h-12 px-5 py-3 text-sm"
-      }`}
-    />
-  );
-}
+import {
+  COMMUNITY_LINKS,
+  COMMUNITY_NAV_LABEL,
+  MAIN_NAV_PRODUCT_LINKS,
+  PRICING_NAV_LINKS,
+  TOP_LINKS,
+} from "@/lib/marketing/nav";
 
 type LandingNavProps = {
   overlay?: boolean;
@@ -42,18 +19,28 @@ type LandingNavProps = {
 export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false);
+  const [mobilePricingOpen, setMobilePricingOpen] = useState(false);
   const communityRef = useRef<HTMLDivElement>(null);
+  const pricingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!communityOpen) return;
+    if (!communityOpen && !pricingOpen) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!communityRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (communityOpen && !communityRef.current?.contains(target)) {
         setCommunityOpen(false);
+      }
+      if (pricingOpen && !pricingRef.current?.contains(target)) {
+        setPricingOpen(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCommunityOpen(false);
+      if (event.key === "Escape") {
+        setCommunityOpen(false);
+        setPricingOpen(false);
+      }
     };
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -61,7 +48,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [communityOpen]);
+  }, [communityOpen, pricingOpen]);
 
   return (
     <header
@@ -77,12 +64,53 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          <Link href="/#platform" className="transition hover:text-white">
-            Platform
-          </Link>
-          <Link href="/pricing" className="transition hover:text-white">
-            Pricing
-          </Link>
+          {MAIN_NAV_PRODUCT_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="transition hover:text-white">
+              {link.label}
+            </Link>
+          ))}
+
+          <div className="relative" ref={pricingRef}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 transition hover:text-white"
+              aria-expanded={pricingOpen}
+              aria-haspopup="menu"
+              aria-controls="pricing-menu"
+              onClick={() => {
+                setPricingOpen((open) => !open);
+                setCommunityOpen(false);
+              }}
+            >
+              Pricing
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${pricingOpen ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+            {pricingOpen && (
+              <div
+                id="pricing-menu"
+                role="menu"
+                aria-label="Pricing"
+                className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
+              >
+                {PRICING_NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    role="menuitem"
+                    className="block px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                    onClick={() => setPricingOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
           {TOP_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="transition hover:text-white">
               {link.label}
@@ -96,9 +124,12 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               aria-expanded={communityOpen}
               aria-haspopup="menu"
               aria-controls="community-menu"
-              onClick={() => setCommunityOpen((open) => !open)}
+              onClick={() => {
+                setCommunityOpen((open) => !open);
+                setPricingOpen(false);
+              }}
             >
-              Projects & Community
+              {COMMUNITY_NAV_LABEL}
               <ChevronDown
                 size={14}
                 className={`transition-transform ${communityOpen ? "rotate-180" : ""}`}
@@ -109,7 +140,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               <div
                 id="community-menu"
                 role="menu"
-                aria-label="Projects & Community"
+                aria-label={COMMUNITY_NAV_LABEL}
                 className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
               >
                 {COMMUNITY_LINKS.map((link) => (
@@ -132,7 +163,6 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           <Link href="/login" className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white">
             Login
           </Link>
-          <PrimaryCta compact />
         </div>
 
         <button
@@ -148,15 +178,46 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       {mobileOpen && (
         <nav className="mx-auto mt-4 max-w-6xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
+            {MAIN_NAV_PRODUCT_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="block rounded-sm px-2 py-2 text-zinc-300"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
             <li>
-              <Link href="/#platform" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Platform
-              </Link>
-            </li>
-            <li>
-              <Link href="/pricing" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-zinc-300"
+                aria-expanded={mobilePricingOpen}
+                onClick={() => setMobilePricingOpen((open) => !open)}
+              >
                 Pricing
-              </Link>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform ${mobilePricingOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+              {mobilePricingOpen && (
+                <ul className="mb-1 ml-2 space-y-0.5 border-l border-zinc-800 pl-2">
+                  {PRICING_NAV_LINKS.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="block rounded-sm px-2 py-2 text-zinc-400"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
             {TOP_LINKS.map((link) => (
               <li key={link.href}>
@@ -176,7 +237,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                 aria-expanded={mobileCommunityOpen}
                 onClick={() => setMobileCommunityOpen((open) => !open)}
               >
-                Projects & Community
+                {COMMUNITY_NAV_LABEL}
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${mobileCommunityOpen ? "rotate-180" : ""}`}
@@ -203,9 +264,6 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               <Link href="/login" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Login
               </Link>
-            </li>
-            <li className="pt-2">
-              <PrimaryCta compact />
             </li>
           </ul>
         </nav>

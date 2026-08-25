@@ -442,8 +442,8 @@ export const AYCL_HACKATHONS = [
   },
   {
     id: "ground-state",
-    title: "Ground State - 3 Day Event",
-    kind: "Ground State - 3 Day Event",
+    title: "Thermosynthesis",
+    kind: "3 Day Event",
     host: "",
     date: "",
     location: "",

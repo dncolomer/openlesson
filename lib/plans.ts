@@ -32,7 +32,11 @@ export interface PlanDef {
 
 /** One-time trial: full product access for this many days after payment. */
 export const TRIAL_ACCESS_DAYS = 3;
-export const TRIAL_PRICE_CENTS = 1999;
+/** Public Learning Harness 3-day unlimited trial (cents). */
+export const TRIAL_PRICE_CENTS = 1499;
+
+/** Public Learning Harness fixed monthly subscription (cents). */
+export const HARNESS_MONTHLY_PRICE_CENTS = 2499;
 
 /** Token-tier regular: fixed PoW allowance when a valid token is present. */
 export const TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25;
@@ -56,7 +60,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
   trial: {
     id: "trial",
     name: "3-Day Trial",
-    price: "$19.99",
+    price: "$14.99",
     priceAmount: TRIAL_PRICE_CENTS,
     proofOfWorkPerPeriod: null,
     workspacesPerPeriod: null,
@@ -450,6 +454,16 @@ export function formatTapSessionPrice(): string {
 
 export function formatIleSessionPrice(): string {
   return `$${(ILE_SESSION_PRICE_CENTS / 100).toFixed(0)}`;
+}
+
+/** Public Learning Harness monthly sticker ($24.99). */
+export function formatHarnessMonthlyPrice(): string {
+  return `$${(HARNESS_MONTHLY_PRICE_CENTS / 100).toFixed(2)}`;
+}
+
+/** Public Learning Harness 3-day unlimited trial sticker ($14.99). */
+export function formatHarnessTrialPrice(): string {
+  return `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)}`;
 }
 
 /**

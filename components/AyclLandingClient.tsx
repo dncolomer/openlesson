@@ -201,7 +201,7 @@ export function AyclLandingClient({
           )}
           {landing.category ? (
             <span
-              className="mt-3 inline-flex rounded-full border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90"
+              className="mt-3 inline-flex rounded-none border border-neutral-600/30 bg-neutral-800/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/90"
               data-aycl-landing-category
             >
               {landing.category}
@@ -244,7 +244,7 @@ export function AyclLandingClient({
         </div>
 
         <div
-          className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur-sm"
+          className="space-y-3 rounded-none border border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur-sm"
           data-aycl-landing-cta
           data-aycl-complimentary-landing={complimentaryTier || undefined}
         >
@@ -256,7 +256,7 @@ export function AyclLandingClient({
               {error}
             </p>
           ) : null}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+          <div className="rounded-none border border-zinc-800 bg-zinc-900/50 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p
@@ -300,7 +300,7 @@ export function AyclLandingClient({
               {learnerBusy ? "Redirecting…" : ayclOfferCheckoutCta("learner")}
             </button>
           </div>
-          <div className="rounded-lg border border-zinc-700 bg-zinc-900/80 p-3">
+          <div className="rounded-none border border-zinc-700 bg-zinc-900/80 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p
@@ -370,7 +370,7 @@ export function AyclLandingClient({
           className={
             mapIsFullscreen
               ? "fixed inset-0 z-50 h-screen w-screen overflow-hidden rounded-none border-0 bg-zinc-950"
-              : "relative h-[min(28rem,55vh)] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/90"
+              : "relative h-[min(28rem,55vh)] overflow-hidden rounded-none border border-zinc-800 bg-zinc-950/90"
           }
           data-aycl-map-snapshot
           data-map-view-only="true"
@@ -386,7 +386,7 @@ export function AyclLandingClient({
             onClick={() =>
               setMapFullscreen((open) => toggleAyclMapPreviewFullscreen(open))
             }
-            className="absolute left-2 top-2 z-30 rounded-md border border-zinc-700/90 bg-zinc-950/90 px-2 py-1 text-[11px] font-medium text-zinc-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm hover:text-white"
+            className="absolute left-2 top-2 z-30 rounded-none border border-zinc-700/90 bg-zinc-950/90 px-2 py-1 text-[11px] font-medium text-zinc-200 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm hover:text-white"
           >
             {mapIsFullscreen ? "Exit" : "Full screen"}
           </button>
@@ -447,7 +447,7 @@ export function AyclLandingClient({
                 {samples.questions.map((q, i) => (
                   <li
                     key={`q-${i}`}
-                    className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+                    className="rounded-none border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
                     data-aycl-landing-question
                   >
                     {q}
@@ -463,7 +463,7 @@ export function AyclLandingClient({
                 {samples.exercises.map((ex, i) => (
                   <li
                     key={`ex-${i}`}
-                    className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+                    className="rounded-none border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm leading-relaxed text-zinc-300"
                     data-aycl-landing-exercise
                   >
                     {ex}

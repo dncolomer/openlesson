@@ -6,7 +6,11 @@ import {
   planIdFromPriceType,
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
-import { TRIAL_ACCESS_DAYS } from "@/lib/plans";
+import { HARNESS_MONTHLY_PRICE_CENTS, TRIAL_ACCESS_DAYS, TRIAL_PRICE_CENTS } from "@/lib/plans";
+import {
+  harnessMonthlyCheckoutPriceData,
+  harnessTrialCheckoutPriceData,
+} from "@/lib/pricing/harness-checkout";
 
 describe("stripe checkout helpers", () => {
   it("maps price types to plan ids (only trial + api_metered grant paid plans)", () => {
@@ -29,6 +33,14 @@ describe("stripe checkout helpers", () => {
     expect(isGuestCheckoutPriceType("api_metered")).toBe(true);
     expect(isGuestCheckoutPriceType("regular_2026")).toBe(false);
     expect(isGuestCheckoutPriceType("pro_teams")).toBe(false);
+  });
+
+  it("public harness checkout price_data is $24.99/mo and $14.99 trial", () => {
+    expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
+    expect(TRIAL_PRICE_CENTS).toBe(1499);
+    expect(harnessMonthlyCheckoutPriceData().unit_amount).toBe(2499);
+    expect(harnessMonthlyCheckoutPriceData().recurring).toEqual({ interval: "month" });
+    expect(harnessTrialCheckoutPriceData().unit_amount).toBe(1499);
   });
 
   it("builds a trial profile patch with a 3-day window", () => {

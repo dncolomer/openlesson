@@ -1,16 +1,11 @@
 /**
- * Landing hero + sales-path copy: Human Learning Harness, no agentic verification.
- * Drives shipped modules and sources (page, pillar data, OG standard, sales decks).
+ * Landing hero + sales-path copy: Human Knowledge Platform, no agentic verification.
+ * Drives shipped modules and sources (page, OG standard, sales decks).
  */
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  HERO_PILLAR_PAGES,
-  LEARNING_AUGMENTATION_PAGE,
-  LEARNING_OPTIMIZATION_PAGE,
-  LEARNING_VERIFICATION_PAGE,
-} from "@/lib/seo/use-case-page";
+import { PLATFORM_HERO, PLATFORM_PRODUCT_LIST } from "@/lib/marketing/platform";
 import {
   UNSYS_STANDARD_SHARE_DESCRIPTION,
   UNSYS_STANDARD_SHARE_TITLE,
@@ -24,12 +19,8 @@ import { VERIFICATION_PITCH_DECK } from "@/lib/sales/verification-pitch-deck";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
-const H1_LINE_1 = "A Human Learning Harness.";
-const H1_LINE_2 = "Learn without a tutor. Verify without a test.";
-const P1 =
-  "Uncertain Systems is a Human Learning Harness for knowledge acquisition and knowledge verification.";
-const P2 =
-  "Verify knowledge without a test — uncheatable proof that it is actually held. Optimize so people learn faster without a tutor. Our system helps you optimally outsource your knowledge without giving up on your learning.";
+const H1 = "A Human Knowledge Platform.";
+const P1 = "Uncertain Systems is a Human Knowledge Platform.";
 
 const AGENTIC_VERIFICATION_CLAIMS = [
   "agentic verification",
@@ -53,67 +44,48 @@ function walkFiles(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-describe("landing Human Learning Harness copy", () => {
-  it("ships the agreed hero H1, P1, and P2 on the public landing page", () => {
+describe("landing Human Knowledge Platform copy", () => {
+  it("ships the agreed hero H1 and P1 on the public landing page", () => {
     const lp = readRel("app/page.tsx");
-    const lpFlat = lp.replace(/\s+/g, " ");
-    expect(lp).toContain(H1_LINE_1);
-    expect(lp).toContain(H1_LINE_2);
+    expect(lp).toContain(H1);
     expect(lp).toContain(P1);
-    expect(lpFlat).toContain(P2);
+    expect(lp).toContain("Learning Harness");
+    expect(lp).toContain("Knowledge Verification");
+    expect(lp).toMatch(/cannot be cheated or faked/);
     expect(lp).not.toContain("Beyond benchmarks for AI.");
     expect(lp).not.toContain("Beyond tests for humans.");
     expect(lp).not.toContain("three verticals for human and agentic learning");
     expect(lp).not.toMatch(/\bagents?\b/i);
     expect(lp).not.toMatch(/agentic/i);
-    expect(lp).toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
-  });
-
-  it("keeps pillar titles and ships the agreed box bullets from HERO_PILLAR_PAGES", () => {
-    expect(HERO_PILLAR_PAGES).toHaveLength(3);
-    expect(LEARNING_VERIFICATION_PAGE.titleLines).toEqual(["Learning", "Verification"]);
-    expect(LEARNING_OPTIMIZATION_PAGE.titleLines).toEqual(["Learning", "optimization"]);
-    expect(LEARNING_AUGMENTATION_PAGE.titleLines).toEqual(["Learning", "Augmentation"]);
-    expect(LEARNING_VERIFICATION_PAGE.cardSummary).toEqual([
-      "Human Knowledge / Skill Validation which cannot be faked with AI",
-    ]);
-    expect(LEARNING_OPTIMIZATION_PAGE.cardSummary).toEqual([
-      "You don't need an AI tutor, you need a system, a learning harness",
-    ]);
-    expect(LEARNING_AUGMENTATION_PAGE.cardSummary).toEqual([
-      "Outsource your knowledge but don't outsource your learning",
-    ]);
-    expect(HERO_PILLAR_PAGES.map((p) => p.cardSummary)).toEqual([
-      LEARNING_VERIFICATION_PAGE.cardSummary,
-      LEARNING_OPTIMIZATION_PAGE.cardSummary,
-      LEARNING_AUGMENTATION_PAGE.cardSummary,
-    ]);
+    expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
+    expect(PLATFORM_HERO.h1).toBe(H1);
+    expect(PLATFORM_HERO.p1).toBe(P1);
+    expect(PLATFORM_PRODUCT_LIST).toHaveLength(2);
   });
 
   it("contracts OG title to H1 and OG description to P1", () => {
-    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(`${H1_LINE_1} ${H1_LINE_2}`);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(H1);
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(P1);
     const lp = readRel("app/page.tsx");
-    expect(lp).toContain(H1_LINE_1);
-    expect(lp).toContain(H1_LINE_2);
+    expect(lp).toContain(H1);
     expect(lp).toContain(UNSYS_STANDARD_SHARE_DESCRIPTION);
     const standard = readRel("lib/og/standard.ts");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
+    expect(standard).toContain("Human Knowledge Platform");
   });
 
   it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
-    const heroTitle = `${H1_LINE_1} ${H1_LINE_2}`;
     const rootHtml = unsysRootHtmlMetadata();
-    expect(rootHtml.title.default).toBe(heroTitle);
+    expect(rootHtml.title.default).toBe(H1);
     expect(rootHtml.title.default).toBe(UNSYS_STANDARD_SHARE_TITLE);
     expect(rootHtml.description).toBe(P1);
     expect(rootHtml.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
 
     const social = standardShareSocialMetadata({ url: "https://uncertain.systems" });
-    expect(social.openGraph?.title).toBe(heroTitle);
+    expect(social.openGraph?.title).toBe(H1);
     expect(social.openGraph?.description).toBe(P1);
-    expect(social.twitter?.title).toBe(heroTitle);
+    expect(social.twitter?.title).toBe(H1);
     expect(social.twitter?.description).toBe(P1);
 
     const webManifest = manifest();

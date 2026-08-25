@@ -91,7 +91,7 @@ export function resolveIleGrokipediaSearchValue(input: {
 export function openIleWordBoxTool(input: {
   tool: IleWordBoxTool | string;
   query: string | null | undefined;
-  setActiveTool: (tool: string) => void;
+  setActiveTool: (tool: IleWordBoxTool) => void;
   setPrefillQuery: (query: string) => void;
 }): IleWordBoxMenuAction | null {
   const actions = ileWordBoxMenuActions(input.query);
@@ -189,12 +189,16 @@ export function ileWordBoxMenuPosition(input: {
   return { left, top };
 }
 
-function hasClosest(target: EventTarget | null, selector: string): boolean {
+type IleWordBoxClickTarget = {
+  closest?: (selector: string) => unknown;
+} | EventTarget | null;
+
+function hasClosest(target: IleWordBoxClickTarget, selector: string): boolean {
   if (!target || typeof (target as { closest?: unknown }).closest !== "function") {
     return false;
   }
   try {
-    return Boolean((target as Element).closest(selector));
+    return Boolean((target as { closest: (sel: string) => unknown }).closest(selector));
   } catch {
     return false;
   }
@@ -202,7 +206,7 @@ function hasClosest(target: EventTarget | null, selector: string): boolean {
 
 /** Click-away (not a word box, not the menu) clears the bounding-box selection. */
 export function ileWordBoxShouldClearSelection(input: {
-  target: EventTarget | null;
+  target: IleWordBoxClickTarget;
   hasSelection: boolean;
 }): boolean {
   if (!input.hasSelection) return false;

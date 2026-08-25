@@ -100,9 +100,11 @@ describe("classifyIleHeliosTrigger (shipped, from start)", () => {
 
     for (const auto of [idle, speech, interruption]) {
       expect(auto.showOnDialogue).toBe(false);
-      expect(auto.whyHelios).toBe(ILE_HELIOS_WHY_COPY[auto.kind]);
       expect(auto.whyHelios).toBeTruthy();
     }
+    expect(idle.whyHelios).toBe(ILE_HELIOS_WHY_COPY.idle);
+    expect(speech.whyHelios).toBe(ILE_HELIOS_WHY_COPY.speech);
+    expect(interruption.whyHelios).toBe(ILE_HELIOS_WHY_COPY.interruption);
 
     const userApply = applyIleHeliosAutoFire({ kind: "user_send" });
     expect(userApply.applied).toBe(user.showOnDialogue);

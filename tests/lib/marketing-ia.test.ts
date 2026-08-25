@@ -4,7 +4,7 @@
  * Drives shipped sources and modules — no re-implemented copy.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS, PRICING_NAV_LINKS } from "@/lib/marketing/nav";
 import { PLATFORM_HERO, PLATFORM_PRODUCTS, PLATFORM_PHRASE } from "@/lib/marketing/platform";
@@ -55,11 +55,33 @@ describe("landing: Human Knowledge Platform two-product split", () => {
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
     expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
-    expect(PLATFORM_PRODUCTS.harness.image).toBe("/aesthetics/lp-boxes/harness-study-table.jpg");
-    expect(PLATFORM_PRODUCTS.verification.image).toBe("/aesthetics/lp-boxes/verification-region-map.jpg");
-    expect(existsSync(join(ROOT, "public/aesthetics/lp-boxes/harness-study-table.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/aesthetics/lp-boxes/verification-region-map.jpg"))).toBe(true);
+    expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-study-table.jpg");
+    expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-region-map.jpg");
+    expect(existsSync(join(ROOT, "public/lp-boxes/harness-study-table.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/verification-region-map.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
+  });
+
+  it("keeps landing and Harness stills out of the ILE aesthetics library", () => {
+    const aestheticDirs = readdirSync(join(ROOT, "public/aesthetics"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    expect(aestheticDirs).not.toContain("harness-blocks");
+    expect(aestheticDirs).not.toContain("lp-boxes");
+    expect(existsSync(join(ROOT, "public/aesthetics/harness-blocks"))).toBe(false);
+    expect(existsSync(join(ROOT, "public/aesthetics/lp-boxes"))).toBe(false);
+
+    expect(PLATFORM_PRODUCTS.harness.image.startsWith("/aesthetics/")).toBe(false);
+    expect(PLATFORM_PRODUCTS.verification.image.startsWith("/aesthetics/")).toBe(false);
+    for (const point of HARNESS_PRODUCT_COPY.points) {
+      expect(point.image.startsWith("/aesthetics/")).toBe(false);
+      expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
+    }
+
+    const aestheticsApi = read("app/api/aesthetics/route.ts");
+    expect(aestheticsApi).toContain('path.join(process.cwd(), "public", "aesthetics")');
+    expect(aestheticsApi).not.toContain("harness-blocks");
+    expect(aestheticsApi).not.toContain("lp-boxes");
   });
 
   it("drops optimization and augmentation pillars from the landing", () => {

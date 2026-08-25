@@ -28,7 +28,7 @@ export const PLATFORM_PRODUCTS = {
     href: LEARNING_HARNESS_PATH,
     cta: "Explore the Learning Harness",
     pricingHref: HARNESS_PRICING_PATH,
-    image: "/aesthetics/lp-boxes/harness-study-table.jpg",
+    image: "/lp-boxes/harness-study-table.jpg",
     imageAlt: "A Greco-futurist marble study table crowded with books, scrolls, compasses, and drafting tools",
   },
   verification: {
@@ -39,7 +39,7 @@ export const PLATFORM_PRODUCTS = {
     href: KNOWLEDGE_VERIFICATION_PATH,
     cta: "Explore Knowledge Verification",
     pricingHref: VERIFICATION_PRICING_PATH,
-    image: "/aesthetics/lp-boxes/verification-region-map.jpg",
+    image: "/lp-boxes/verification-region-map.jpg",
     imageAlt: "Abstract knowledge map: overlapping circular regions, clustered dots, and bronze metadata plaques on dark marble",
   },
 } as const;

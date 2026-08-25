@@ -17,7 +17,7 @@ export const HARNESS_PRODUCT_COPY = {
       body: "Learning as reducing uncertainty: an active search for information that shrinks what you don't know, instead of optimizing for tests and practice repetition.",
       href: null,
       linkLabel: null,
-      image: "/aesthetics/harness-blocks/policy-cliff-villa.jpg",
+      image: "/harness-blocks/policy-cliff-villa.jpg",
       imageAlt: "Greco-futurist cliffside villa over water at dusk",
     },
     {
@@ -26,7 +26,7 @@ export const HARNESS_PRODUCT_COPY = {
       body: "Everyone wants to learn, but it's easy to fool yourself into feeling like you are. This harness fixes that.",
       href: null,
       linkLabel: null,
-      image: "/aesthetics/harness-blocks/trap-domed-city.jpg",
+      image: "/harness-blocks/trap-domed-city.jpg",
       imageAlt: "Greco-futurist city of marble and turquoise domes",
     },
     {
@@ -35,7 +35,7 @@ export const HARNESS_PRODUCT_COPY = {
       body: "Set it up locally and bring your own key. Stay in control of how you learn. Don't leave yourself at the mercy of model providers.",
       href: "https://github.com/dncolomer/openlesson",
       linkLabel: "GitHub",
-      image: "/aesthetics/harness-blocks/opensource-water-palace.jpg",
+      image: "/harness-blocks/opensource-water-palace.jpg",
       imageAlt: "Greco-futurist palace terraces on water with statues and palms",
     },
   ],

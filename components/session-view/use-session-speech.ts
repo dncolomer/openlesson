@@ -26,6 +26,7 @@ import {
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { TransferHealth } from "@/components/LogsTool";
 
@@ -38,7 +39,7 @@ export type SessionSpeechInput = {
     blockId?: string;
     entryQueryParams?: Record<string, string | string[]>;
   };
-  handlePowInterruption: (interruption: ProofOfWorkApiInterruption | undefined) => void;
+  handlePowInterruption: IlePowInterruptionHandler;
   getWorkspaceId: () => string | undefined;
   sessionRef: { current: Session | null };
   sessionId: string | undefined;
@@ -106,6 +107,20 @@ export function useSessionSpeech(input: SessionSpeechInput) {
 
   const notifySpeechResultRef = useRef<(text: string) => void>(() => {});
 
+const handleIdleInterruption = useCallback(
+  (interruption: ProofOfWorkApiInterruption) => {
+    handlePowInterruption(interruption, "idle");
+  },
+  [handlePowInterruption],
+);
+
+const handleSpeechInterruption = useCallback(
+  (interruption: ProofOfWorkApiInterruption) => {
+    handlePowInterruption(interruption, "speech");
+  },
+  [handlePowInterruption],
+);
+
 const {
   isTranscriptionActive,
   notifySpeechResult,
@@ -114,7 +129,7 @@ const {
 } = useTapSpeechProofOfWork(
   powSessionEnabled,
   ilePowContext,
-  handlePowInterruption,
+  handleSpeechInterruption,
   ILE_POW_API_PATHS.speech,
 );
 
@@ -301,7 +316,7 @@ const handleProjectDemote = useCallback(
   const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
     powSessionEnabled,
     ilePowContext,
-    handlePowInterruption,
+    handleIdleInterruption,
     {
       speechText: sessionThoughtInterface.crystallizableText,
       isTranscriptionActive,

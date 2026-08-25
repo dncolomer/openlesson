@@ -73,9 +73,9 @@ export function ImDoneAnsweringControl({
           formingText,
           sendThought,
           logEndOfChainOfThought,
+          onClearForming,
         }).then((result) => {
           setFlaggedIds(result.flaggedIds);
-          if (result.includesForming) onClearForming?.();
         });
       }}
     />

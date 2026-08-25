@@ -82,6 +82,7 @@ export type SessionToolPanesProps = {
   onClearLogs: () => void;
   isMobile: boolean;
   onLeaveIleTab: (reason: "grok" | "grokipedia") => void;
+  toolPrefillQuery?: string;
 };
 
 export function SessionToolPanes(props: SessionToolPanesProps) {
@@ -144,6 +145,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     onClearLogs,
     isMobile,
     onLeaveIleTab,
+    toolPrefillQuery,
   } = props;
 
   return (
@@ -249,6 +251,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
           <DantesTool
             problem={session.problem}
             activeStepDescription={activeStep?.description}
+            prefillQuery={toolPrefillQuery}
           />
         )}
 
@@ -298,6 +301,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             activeStepDescription={activeStep?.description}
             activeProbes={session?.probes?.filter((probe) => !probe.archived).map((probe) => ({ text: probe.text }))}
             onLeaveIleTab={onLeaveIleTab}
+            prefillQuery={toolPrefillQuery}
           />
         )}
       </div>

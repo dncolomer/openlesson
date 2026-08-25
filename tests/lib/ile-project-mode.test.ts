@@ -323,8 +323,8 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(helios).not.toContain('label="Solution"');
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("See Older Thoughts");
-    expect(helios).toContain("data-ile-last-stash");
+    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).toContain("stashCurrentTranscription");
 
     const panes = read("components/session-view/session-tool-panes.tsx");

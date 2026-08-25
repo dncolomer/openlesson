@@ -8,6 +8,7 @@ import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
+import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
 
 export type SessionThoughtPaneProps = {
   activeChapterKey: string;
@@ -43,6 +44,7 @@ export type SessionThoughtPaneProps = {
   onProjectStash: (providedText?: string) => void;
   onProjectSubmitToSolution: () => void;
   onOpenThoughts: () => void;
+  onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
 };
 
 export function SessionThoughtPane({
@@ -79,6 +81,7 @@ export function SessionThoughtPane({
   onProjectStash,
   onProjectSubmitToSolution,
   onOpenThoughts,
+  onOpenWordBoxTool,
 }: SessionThoughtPaneProps) {
   return (
     <div className="relative h-full">
@@ -116,6 +119,7 @@ export function SessionThoughtPane({
         onProjectStash={onProjectStash}
         onProjectSubmitToSolution={onProjectSubmitToSolution}
         onOpenThoughts={onOpenThoughts}
+        onOpenWordBoxTool={onOpenWordBoxTool}
       />
     </div>
   );

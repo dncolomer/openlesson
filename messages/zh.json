@@ -779,6 +779,7 @@
     "resumeSession": "恢复区块",
     "startSession": "开始区块",
     "notebookPlaceholder": "记下你的想法...",
+    "doneWriting": "我写完了",
     "characters": "{count} 字符",
     "chunksFound": "找到 {count} 个",
     "addModifier": "添加修饰词（例如：'专注于证明'）",
@@ -1495,7 +1496,7 @@
     "clear": "清除",
     "place": "放置",
     "cancelLabel": "取消",
-    "submitToHelios": "Submit to Helios",
+    "submitToHelios": "我画完了",
     "submitting": "Submitting…",
     "submitHint": "Ask the tutor to look at what you've got so far",
     "alreadySubmitted": "No changes since your last submission",
@@ -2503,7 +2504,7 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Older Thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
         "titleProject": "Think aloud — stash & solution",
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Explore Solo."
       },

@@ -11,7 +11,7 @@ export function NotebookSubmitButton({
   onSubmit,
   disabled,
   disabledReason,
-  /** Override default "Submit to Helios" (e.g. Project Mode "To solution"). */
+  /** Override default "I'm Done Writing" (e.g. Project Mode "To solution"). */
   label,
 }: {
   onSubmit: () => Promise<void> | void;
@@ -21,7 +21,7 @@ export function NotebookSubmitButton({
 }) {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const displayLabel = label || t("whiteboard.submitToHelios");
+  const displayLabel = label || t("session.doneWriting");
   const handleClick = async () => {
     if (isSubmitting || disabled) return;
     setIsSubmitting(true);
@@ -37,7 +37,7 @@ export function NotebookSubmitButton({
       disabled={isSubmitting || disabled}
       title={disabled ? (disabledReason ?? "") : t("whiteboard.submitHint")}
       aria-label={displayLabel}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-none transition-colors"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-black bg-white border border-white hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-none transition-colors"
     >
       {isSubmitting ? (
         <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">

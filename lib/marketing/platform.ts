@@ -23,7 +23,7 @@ export const PLATFORM_PRODUCTS = {
   harness: {
     eyebrow: "FOR HUMANS",
     name: "Learning Harness",
-    title: "A Learning Harness for humans",
+    title: "A Learning Harness for Humans",
     body: HARNESS_PRODUCT_COPY.lead,
     href: LEARNING_HARNESS_PATH,
     cta: "Explore the Learning Harness",

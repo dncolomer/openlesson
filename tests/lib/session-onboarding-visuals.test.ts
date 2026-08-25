@@ -52,10 +52,10 @@ describe("session intro visuals", () => {
     };
     expect(en.onboardingGuide.ile.step2.body).toContain("I'm done answering");
     expect(en.onboardingGuide.ile.step2.body).not.toContain("Submit last Thought");
-    expect(en.onboardingGuide.ile.step2.body).toContain("See Older Thoughts");
+    expect(en.onboardingGuide.ile.step2.body).toContain("See Your thoughts");
     expect(en.onboardingGuide.ile.step2.body).toContain("Thought Memory");
     expect(en.onboardingGuide.ile.step2.body).not.toMatch(/Press 1, 2, or 3/);
-    expect(en.onboardingGuide.ile.step2.bodyProject).toContain("See Older Thoughts");
+    expect(en.onboardingGuide.ile.step2.bodyProject).toContain("See Your thoughts");
     expect(en.onboardingGuide.ile.step2.bodyProject).not.toMatch(/Solution stack/i);
     expect(en.onboardingGuide.tap.step2.body).toContain("I'm done answering");
     expect(en.onboardingGuide.tap.step2.body).not.toContain("Submit last Thought");

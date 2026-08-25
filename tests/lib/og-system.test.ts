@@ -41,7 +41,16 @@ import {
   truncateOgText,
   truncateOgTitle,
 } from "@/lib/og/text";
+
 const REPO_ROOT = path.resolve(__dirname, "../..");
+const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6c95ab69b7c0/implementer";
+
+function writeScratch(name: string, body: string) {
+  fs.mkdirSync(SCRATCH, { recursive: true });
+  fs.writeFileSync(path.join(SCRATCH, name), body, "utf8");
+}
 
 describe("OG text helpers", () => {
   it("truncates long titles within OG_TITLE_MAX and appends ellipsis", () => {
@@ -173,7 +182,15 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(UNSYS_STANDARD_SHARE_IMAGE_PATH).toBe("/opengraph-image");
     expect(UNSYS_STANDARD_SHARE.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
     expect(UNSYS_STANDARD_SHARE.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(UNSYS_STANDARD_SHARE.eyebrow).toBe("Human Knowledge Platform");
+    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/LEARNING HARNESS/i);
+    expect(UNSYS_STANDARD_SHARE.footerLabel).toMatch(/KNOWLEDGE VERIFICATION/i);
     expect(UNSYS_STANDARD_SHARE.aestheticImage).toBe(UNSYS_STANDARD_SHARE_AESTHETIC);
+    expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/learning efficiency for humans & agents/i);
+    expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/Beyond benchmarks for AI/i);
+    expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/Beyond benchmarks for AI/i);
+    expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/four products/i);
+    expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/TAP \/ ILE \/ ALE/i);
 
     // Aesthetic file exists on disk
     const onDisk = path.join(
@@ -191,6 +208,21 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(lp).not.toContain("Beyond tests for humans.");
     expect(lp).not.toContain("VERIFICATION . OPTIMIZATION . AUGMENTATION");
     expect(lp).toContain(UNSYS_STANDARD_SHARE_AESTHETIC);
+
+    writeScratch(
+      "og-social-copy.txt",
+      [
+        `title=${UNSYS_STANDARD_SHARE.title}`,
+        `description=${UNSYS_STANDARD_SHARE.description}`,
+        `eyebrow=${UNSYS_STANDARD_SHARE.eyebrow}`,
+        `footer=${UNSYS_STANDARD_SHARE.footerLabel}`,
+        `ogTitle=${standardOpenGraph().title}`,
+        `ogDescription=${standardOpenGraph().description}`,
+        `twitterTitle=${standardTwitter().title}`,
+        `twitterDescription=${standardTwitter().description}`,
+        `cardDescription=${truncateOgDescription(UNSYS_STANDARD_SHARE_DESCRIPTION)}`,
+      ].join("\n"),
+    );
   });
 
   it("unsysRootHtmlMetadata matches LP hero and is what layout emits for title/description", () => {
@@ -241,11 +273,11 @@ describe("Unsys standard share (LP-derived)", () => {
     ]);
     expect(standardOpenGraph().images).toEqual(images);
     expect(standardTwitter().images).toEqual(["/opengraph-image"]);
-    // PNG overlay may ellipsize P2 at OG_DESCRIPTION_MAX; meta tags keep the full string.
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION.length).toBeGreaterThan(OG_DESCRIPTION_MAX);
-    expect(truncateOgDescription(UNSYS_STANDARD_SHARE_DESCRIPTION).length).toBeLessThanOrEqual(
-      OG_DESCRIPTION_MAX,
-    );
+    const cardDescription = truncateOgDescription(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(cardDescription.length).toBeLessThanOrEqual(OG_DESCRIPTION_MAX);
+    expect(cardDescription).toContain("Learning Harness");
+    expect(cardDescription).toContain("Knowledge Verification");
+    expect(cardDescription).toMatch(/cannot be cheated or faked/i);
     expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
   });

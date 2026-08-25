@@ -7,7 +7,7 @@ const standardSocial = standardShareSocialMetadata({
 
 export const metadata: Metadata = {
   title: "Proof-of-Work API Specification - Uncertain Systems",
-  description: "Comprehensive specification for the Uncertain Systems Proof-of-Work API, enabling external AI agents to measure learning efficiency from workspaces, evidence, and TAP sessions.",
+  description: "Comprehensive specification for the Uncertain Systems Proof-of-Work API — workspaces, evidence, and TAP sessions for Knowledge Verification.",
   openGraph: standardSocial.openGraph,
   twitter: standardSocial.twitter,
   robots: {

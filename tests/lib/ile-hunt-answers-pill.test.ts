@@ -1,14 +1,10 @@
 /**
- * ILE hunt-for-answers pill: shipped copy + Helios adjacency; TAP unchanged.
+ * ILE hunt-for-answers pill is gone from Helios; TAP never had it.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readTapScoreSurface, readExerciseTapSurface } from "@/tests/helpers/surface-source";
-import {
-  ILE_HUNT_ANSWERS_PILL_COPY,
-  ileHuntAnswersPillLabel,
-} from "@/lib/ile-hunt-answers-pill";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -26,44 +22,21 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ileHuntAnswersPillLabel (shipped)", () => {
-  it("tells the learner to hunt with any tools including LLMs, and that outsourcing is not cheating", () => {
-    const copy = ileHuntAnswersPillLabel();
-    expect(copy).toBe(ILE_HUNT_ANSWERS_PILL_COPY);
-    expect(copy).toMatch(/hunt for answers/i);
-    expect(copy).toMatch(/even LLMs/i);
-    expect(copy).toContain("Outsourcing knowledge is NOT cheating");
-
-    const pill = read("components/IleHuntAnswersPill.tsx");
-    expect(pill).toContain("ileHuntAnswersPillLabel");
-    expect(pill).toContain("data-ile-hunt-answers-pill");
-    expect(pill).toContain("{copy}");
-    expect(pill).toContain("bg-white");
-  });
-});
-
-describe("ILE Helios mounts the hunt pill next to the identity badge", () => {
-  it("is a sibling of SessionIdentityBadge on the ILE identity row; TAP does not mount it", () => {
+describe("ILE hunt-for-answers pill (removed)", () => {
+  it("is not mounted on ILE Helios or TAP identity rows", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain("IleHuntAnswersPill");
+    expect(helios).not.toContain("IleHuntAnswersPill");
+    expect(helios).not.toContain("data-ile-hunt-answers-pill");
+    expect(helios).not.toContain("Hunt for answers");
+    expect(helios).not.toContain("Outsourcing knowledge is NOT cheating");
     expect(helios).toContain("SessionIdentityBadge");
     expect(helios).toContain("data-ile-identity-row");
-
-    const rowStart = helios.indexOf("data-ile-identity-row");
-    const rowSlice = helios.slice(rowStart, rowStart + 900);
-    expect(rowSlice).toContain("<IleHuntAnswersPill");
-    expect(rowSlice).toContain("<SessionIdentityBadge");
-    const huntIdx = rowSlice.indexOf("<IleHuntAnswersPill");
-    const badgeIdx = rowSlice.indexOf("<SessionIdentityBadge");
-    expect(huntIdx).toBeGreaterThan(-1);
-    expect(badgeIdx).toBeGreaterThan(-1);
-    expect(huntIdx).not.toEqual(badgeIdx);
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     const tapSolo = read("components/exercise-tap/exercise-tap-phases.tsx");
     const tapSurface = readTapScoreSurface();
     const exerciseSurface = readExerciseTapSurface();
-    for (const surface of [tapPhases, tapSolo, tapSurface, exerciseSurface]) {
+    for (const surface of [helios, tapPhases, tapSolo, tapSurface, exerciseSurface]) {
       expect(surface).not.toContain("IleHuntAnswersPill");
       expect(surface).not.toContain("ILE_HUNT_ANSWERS_PILL_COPY");
       expect(surface).not.toContain("data-ile-hunt-answers-pill");
@@ -71,12 +44,15 @@ describe("ILE Helios mounts the hunt pill next to the identity badge", () => {
     expect(tapPhases).toContain("SessionIdentityBadge");
     expect(tapSolo).toContain("SessionIdentityBadge");
 
+    expect(existsSync(join(ROOT, "components/IleHuntAnswersPill.tsx"))).toBe(false);
+    expect(existsSync(join(ROOT, "lib/ile-hunt-answers-pill.ts"))).toBe(false);
+
     writeScratch(
       "ile-hunt-answers-pill.txt",
       [
-        `copy=${ileHuntAnswersPillLabel()}`,
-        "ILE Helios: IleHuntAnswersPill sibling of SessionIdentityBadge on data-ile-identity-row",
+        "ILE Helios: no IleHuntAnswersPill",
         "TAP convo + solo: identity badge only, no hunt pill",
+        "component + copy helper deleted",
       ].join("\n"),
     );
   });

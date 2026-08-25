@@ -52,9 +52,10 @@ const STOP_WORDS = new Set([
 interface DantesToolProps {
   problem: string;
   activeStepDescription?: string;
+  prefillQuery?: string;
 }
 
-export function DantesTool({ problem, activeStepDescription }: DantesToolProps) {
+export function DantesTool({ problem, activeStepDescription, prefillQuery }: DantesToolProps) {
   const [topics, setTopics] = useState<DantesTopic[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsError, setTopicsError] = useState<string | null>(null);
@@ -65,6 +66,11 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
   const [resourcesError, setResourcesError] = useState<string | null>(null);
 
   const learningContext = [problem, activeStepDescription].filter(Boolean).join(" ");
+
+  useEffect(() => {
+    const next = String(prefillQuery || "").trim();
+    if (next) setQuery(next);
+  }, [prefillQuery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +157,7 @@ export function DantesTool({ problem, activeStepDescription }: DantesToolProps) 
         </div>
         <div className="mt-4">
           <input
+            data-ile-dantes-search
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search Dantes topics..."

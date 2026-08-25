@@ -94,6 +94,8 @@ export async function closeIleImDoneAnswering<T extends IleImDoneAnsweringThough
   formingText?: string | null;
   sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
   logEndOfChainOfThought: (event: IleEndOfChainOfThoughtEvent) => void;
+  /** Wipe the live speech bar as soon as the close is collected — do not wait for Helios. */
+  onClearForming?: () => void;
 }): Promise<{
   submitted: boolean;
   ids: string[];
@@ -119,6 +121,7 @@ export async function closeIleImDoneAnswering<T extends IleImDoneAnsweringThough
     includesForming: collected.includesForming,
   });
   input.logEndOfChainOfThought(event);
+  input.onClearForming?.();
   await input.sendThought(collected.text, collected.ids);
 
   return {

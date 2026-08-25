@@ -7,6 +7,7 @@ export const ILE_THOUGHT_HISTORY_TOOL = "thought-history" as const;
 
 export const ILE_SUBMIT_LAST_THOUGHT_LABEL = "Submit last Thought";
 export const ILE_SEE_OLDER_THOUGHTS_LABEL = "See Older Thoughts";
+export const ILE_SEE_YOUR_THOUGHTS_LABEL = "See Your thoughts";
 export const ILE_SUBMIT_SELECTION_LABEL = "Submit Selection";
 export const ILE_EDIT_SELECTION_LABEL = "Edit Selection";
 

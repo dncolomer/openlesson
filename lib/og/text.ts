@@ -1,6 +1,6 @@
 /** Safe max lengths for OG card typography at 1200×630. */
 export const OG_TITLE_MAX = 120;
-export const OG_DESCRIPTION_MAX = 180;
+export const OG_DESCRIPTION_MAX = 240;
 
 /**
  * Truncate text for OG cards. Collapses whitespace and appends an ellipsis

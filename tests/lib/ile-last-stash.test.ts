@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
   ILE_EDIT_SELECTION_LABEL,
-  ILE_SEE_OLDER_THOUGHTS_LABEL,
+  ILE_SEE_YOUR_THOUGHTS_LABEL,
   ILE_SUBMIT_LAST_THOUGHT_LABEL,
   ILE_SUBMIT_SELECTION_LABEL,
   ILE_THOUGHT_HISTORY_TOOL,
@@ -206,7 +206,7 @@ describe("See Older Thoughts wiring (shipped)", () => {
     expect(ILE_THOUGHT_HISTORY_TOOL).toBe("thought-history");
 
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
+    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).toContain("onOpenThoughts");
     expect(helios).toContain("data-ile-see-older-thoughts");
 
@@ -222,22 +222,27 @@ describe("See Older Thoughts wiring (shipped)", () => {
 });
 
 describe("ILE Helios last-stash surface (shipped source)", () => {
-  it("shows last thought + See Older Thoughts; no Submit last Thought on Helios", () => {
+  it("shows See Your thoughts only; no last thought or Submit last Thought on Helios", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(helios).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
+    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("Submit last Thought");
-    expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("See Older Thoughts");
     expect(helios).toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("data-ile-last-stash");
-    expect(helios).toContain("data-ile-last-stash-text");
-    expect(helios).toContain("selectLastStashedThought");
+    expect(helios).not.toContain("data-ile-last-stash");
+    expect(helios).not.toContain("data-ile-last-stash-text");
+    expect(helios).not.toContain("selectLastStashedThought");
     expect(helios).not.toContain("submitLastStashedThought");
-    expect(helios).toContain("thought.stashedThoughts");
     expect(helios).toContain("thought.sendThought");
     expect(helios).not.toContain("ActiveThoughtSlots");
     expect(helios).not.toContain("ACTIVE_THOUGHT_SLOT_COUNT");
     expect(helios).not.toContain("thought.latestThoughts");
+    expect(helios).not.toContain("lastStashedThought");
+
+    const hook = read("lib/useSessionThoughtInterface.ts");
+    expect(hook).not.toContain("lastStashedThought");
+    expect(hook).not.toContain("selectLastStashedThought");
 
     const slots = read("components/thought-ui/ActiveThoughtSlots.tsx");
     expect(slots).toContain("ACTIVE_THOUGHT_SLOT_COUNT");

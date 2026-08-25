@@ -9,7 +9,7 @@ import { useSessionChrome } from "@/components/session-view/use-session-chrome";
 import { useSessionRuntime } from "@/components/session-view/use-session-runtime";
 import { useSessionMutate } from "@/components/session-view/use-session-mutate";
 import { useSessionSpeech } from "@/components/session-view/use-session-speech";
-import { useSessionIdle } from "@/components/session-view/use-session-idle";
+import { useSessionIdle, type IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import { useSessionPhase } from "@/components/session-view/use-session-phase";
 import { useSessionHeliosPrep } from "@/components/session-view/use-session-helios-prep";
 import { LoadingStatusMessage } from "./LoadingStatusMessage";
@@ -19,13 +19,14 @@ import {
 } from "@/lib/session-participant-identity";
 import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat } from "@/lib/session-chat-client";
 import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
+import { closeIleImDoneAnswering } from "@/lib/ile-im-done-answering";
+import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { DEFAULT_INITIAL_CHAPTERS, type InitialChaptersLevel } from "@/lib/initial-chapters";
@@ -40,6 +41,7 @@ import {
   type IleSessionMode,
 } from "@/lib/ile-mode";
 import { openIleThoughtHistoryTool } from "@/lib/ile-last-stash";
+import { openIleWordBoxTool } from "@/lib/ile-word-boxes";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
@@ -260,6 +262,7 @@ export function SessionView({
   });
 
   const [isPreparing, setIsPreparing] = useState(false);
+  const [toolPrefillQuery, setToolPrefillQuery] = useState("");
   const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
   /**
    * Whether a persisted chapter map already exists for this session.
@@ -345,7 +348,7 @@ export function SessionView({
     prevToolRef.current = activeTool;
   }, [activeTool, session?.id, session?.startedAt]);
 
-  const handlePowInterruptionRef = useRef<(interruption: ProofOfWorkApiInterruption | undefined) => void>(() => {});
+  const handlePowInterruptionRef = useRef<IlePowInterruptionHandler>(() => {});
 
   const sessionRef = useRef<Session | null>(null);
   useSessionHeliosPrep({
@@ -729,6 +732,19 @@ export function SessionView({
     ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
     : null;
 
+  const handleCompactDoneAnswering = useCallback(async () => {
+    await closeIleImDoneAnswering({
+      thoughts: sessionThoughtInterface.stashedThoughts,
+      formingText:
+        sessionThoughtInterface.getFormingText?.() ||
+        sessionThoughtInterface.crystallizableText,
+      sendThought: (text, ids) =>
+        sessionThoughtInterface.sendThought(text, ids, { skipTrace: true }),
+      logEndOfChainOfThought: (event) => sessionThoughtInterface.logTrace(event),
+      onClearForming: () => sessionThoughtInterface.clearCurrentTranscription(),
+    });
+  }, [sessionThoughtInterface]);
+
   const {
     notifyLeaveTab,
     openManualPicInPic,
@@ -738,13 +754,21 @@ export function SessionView({
     enabled: Boolean(isRecording && !isPaused),
     isScreenSharing: isScreenCapturing,
     startScreenshare: handleStartScreenCapture,
+    onDoneAnswering: handleCompactDoneAnswering,
     captureStream: stream,
     compact: {
-      chapterLabel: activeStep?.description ?? session?.problem ?? "",
       formingText: sessionThoughtInterface.crystallizableText,
-      transcriptText: lastDialogueAssistantTurn?.content ?? "",
-      isSending: isHeliosAssistantPending,
-      heliosTurnMode,
+      speechDisplay: formatSpeechTranscriptDisplay({
+        text: sessionThoughtInterface.crystallizableText,
+        speechError: sessionThoughtInterface.speechError,
+        speechSupported: sessionThoughtInterface.speechSupported,
+        isListening: sessionThoughtInterface.isListening,
+        enabled: sessionThoughtInterface.speechEnabled,
+      }),
+      speechError: sessionThoughtInterface.speechError,
+      speechSupported: sessionThoughtInterface.speechSupported,
+      isListening: sessionThoughtInterface.isListening,
+      speechEnabled: sessionThoughtInterface.speechEnabled,
       isScreenSharing: isScreenCapturing,
     },
   });
@@ -927,6 +951,7 @@ export function SessionView({
             }}
             isMobile={isMobile}
             onLeaveIleTab={notifyLeaveTab}
+            toolPrefillQuery={toolPrefillQuery}
           />
         }
         right={
@@ -966,6 +991,15 @@ export function SessionView({
             onOpenThoughts={() => {
               ensureVisible("tools");
               openIleThoughtHistoryTool(setActiveTool);
+            }}
+            onOpenWordBoxTool={(action) => {
+              const payload = openIleWordBoxTool({
+                tool: action.tool,
+                query: action.query,
+                setActiveTool,
+                setPrefillQuery: setToolPrefillQuery,
+              });
+              if (payload?.query) ensureVisible("tools");
             }}
           />
         }

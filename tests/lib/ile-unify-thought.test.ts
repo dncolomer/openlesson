@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
   ILE_EDIT_SELECTION_LABEL,
-  ILE_SEE_OLDER_THOUGHTS_LABEL,
+  ILE_SEE_YOUR_THOUGHTS_LABEL,
   ILE_SUBMIT_LAST_THOUGHT_LABEL,
   ILE_SUBMIT_SELECTION_LABEL,
   ILE_THOUGHT_HISTORY_TOOL,
@@ -62,20 +62,19 @@ describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
     expect(helios).not.toContain("onProjectSubmitToSolution?.()");
     expect(helios).not.toContain("onProjectStash?.()");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(helios).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
-    expect(helios).toContain("data-ile-last-stash");
+    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
+    expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("thought.sendThought");
     expect(helios).not.toContain("{!projectMode ? (");
-    const lastStashIdx = helios.indexOf("data-ile-last-stash");
-    expect(lastStashIdx).toBeGreaterThan(-1);
+    expect(helios).toContain("data-ile-see-older-thoughts");
 
     writeScratch(
       "ile-unify-helios-stash.txt",
       [
         "Stash/Edit un-gated (no Send compact action)",
         `Submit last Thought=${helios.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
-        `See Older Thoughts=${helios.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
+        `See Your thoughts=${helios.includes(ILE_SEE_YOUR_THOUGHTS_LABEL)}`,
         `last-stash=${helios.includes("data-ile-last-stash")}`,
         `sendPath=ImDoneAnsweringControl + thought.sendThought`,
         `noProjectSolutionAction=${!helios.includes('label="Solution"')}`,

@@ -47,7 +47,7 @@ describe("ILE Helios-only surface helper", () => {
     expect(idle.kind).toBe("helios");
     expect(reply.kind).toBe("helios");
     expect(sending.kind).toBe("waiting");
-    expect(interrupt.kind).toBe("waiting");
+    expect(interrupt.kind).toBe("helios");
 
     writeScratch(
       "ile-helios-only-surface.txt",
@@ -96,7 +96,8 @@ describe("ILE dialogue UI wiring", () => {
     expect(ileFn).not.toContain("<HeliosProbeAvatar");
     expect(ileFn).not.toContain("<LearnerThoughtAvatar");
     expect(ileFn).toContain('data-ile-dialogue-speaker="helios"');
-    expect(ileFn).toContain("HeliosMarkdown");
+    expect(ileFn).toContain("IleWordBoxText");
+    expect(ileFn).not.toContain("<HeliosMarkdown");
     expect(ileFn).toContain("data-ile-helios-scroll");
     expect(ileFn).toContain("overflow-y-auto");
     expect(ileFn).toContain("flex-1");
@@ -125,7 +126,7 @@ describe("ILE dialogue UI wiring", () => {
         "DialogueSplitIle: Helios-only, no avatar, question fills remaining space",
         "no LearnerThoughtAvatar on ILE path",
         "TAP DialogueSplitComic still mounts both avatars",
-        "Helios bubble: HeliosMarkdown + data-ile-helios-scroll overflow-y-auto",
+        "Helios bubble: IleWordBoxText + data-ile-helios-scroll overflow-y-auto",
         `ileAvatar=${ILE_DIALOGUE_AVATAR_SIZE_CLASS}`,
       ].join("\n"),
     );

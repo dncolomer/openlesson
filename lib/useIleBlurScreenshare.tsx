@@ -38,11 +38,12 @@ import {
 } from "@/lib/ile-compact-window";
 
 export type IleBlurScreenshareCompactProps = {
-  chapterLabel?: string | null;
   formingText?: string | null;
-  transcriptText?: string | null;
-  isSending?: boolean;
-  heliosTurnMode?: string | null;
+  speechDisplay?: string | null;
+  speechError?: string | null;
+  speechSupported?: boolean | null;
+  isListening?: boolean;
+  speechEnabled?: boolean;
   isScreenSharing?: boolean;
 };
 
@@ -50,6 +51,8 @@ export function useIleBlurScreenshare(input: {
   enabled: boolean;
   isScreenSharing: boolean;
   startScreenshare: () => Promise<boolean | void>;
+  /** Existing I'm Done Answering close path (session tab). */
+  onDoneAnswering?: () => void | Promise<void>;
   /** Live getUserMedia stream so Chrome treats the tab as conferencing-eligible. */
   captureStream?: MediaStream | null;
   compact: IleBlurScreenshareCompactProps;
@@ -69,6 +72,8 @@ export function useIleBlurScreenshare(input: {
   sharingRef.current = input.isScreenSharing;
   const startRef = useRef(input.startScreenshare);
   startRef.current = input.startScreenshare;
+  const doneAnsweringRef = useRef(input.onDoneAnswering);
+  doneAnsweringRef.current = input.onDoneAnswering;
   const justOpenedRef = useRef(false);
   const justOpenedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userDismissedRef = useRef(false);
@@ -80,15 +85,19 @@ export function useIleBlurScreenshare(input: {
     }
     compactRootRef.current.render(
       <IleCompactStashWindow
-        chapterLabel={props.chapterLabel}
         formingText={props.formingText}
-        transcriptText={props.transcriptText}
-        isSending={props.isSending}
-        heliosTurnMode={props.heliosTurnMode}
+        speechDisplay={props.speechDisplay}
+        speechError={props.speechError}
+        speechSupported={props.speechSupported}
+        isListening={props.isListening}
+        speechEnabled={props.speechEnabled}
         isScreenSharing={props.isScreenSharing}
         onStartShare={() => {
           void startRef.current();
         }}
+        onDoneAnswering={() => doneAnsweringRef.current?.()}
+        opener={win.opener ?? null}
+        tab={typeof window !== "undefined" ? window : null}
       />,
     );
   }, []);

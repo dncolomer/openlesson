@@ -1,10 +1,21 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
+import {
+  applyIleHeliosAutoFire,
+  ileHeliosTriggerKindFromPowOrigin,
+  type IleHeliosPowOrigin,
+  type IleHeliosTriggerKind,
+} from "@/lib/ile-helios-trigger";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
+
+export type IlePowInterruptionHandler = (
+  interruption: ProofOfWorkApiInterruption | undefined,
+  origin?: IleHeliosPowOrigin,
+) => void;
 
 export type SessionIdleInput = {
   activeChapterKey: string;
@@ -16,7 +27,7 @@ export type SessionIdleInput = {
   ) => void;
   setHeliosTurnMode: (mode: HeliosTurnMode) => void;
   handlePowInterruptionRef: {
-    current: (interruption: ProofOfWorkApiInterruption | undefined) => void;
+    current: IlePowInterruptionHandler;
   };
 };
 
@@ -28,9 +39,13 @@ export function useSessionIdle(input: SessionIdleInput) {
     handlePowInterruptionRef,
   } = input;
 
+  const pendingKindRef = useRef<Exclude<IleHeliosTriggerKind, "user_send">>("interruption");
+
 const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
   useCallback(
     ({ message }) => {
+      const fired = applyIleHeliosAutoFire({ kind: pendingKindRef.current });
+      if (!fired.applied) return;
       const chapterKey = activeChapterKey;
       updateChapterWorkspace(chapterKey, (workspace) => ({
         chatMessages: [
@@ -40,14 +55,15 @@ const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterrup
       }));
       setHeliosTurnMode("interruption");
     },
-    [activeChapterKey, updateChapterWorkspace],
+    [activeChapterKey, updateChapterWorkspace, setHeliosTurnMode],
   ),
 );
 
-const handlePowInterruption = useCallback(
-  (interruption: ProofOfWorkApiInterruption | undefined) => {
+const handlePowInterruption = useCallback<IlePowInterruptionHandler>(
+  (interruption, origin = "other") => {
     if (interruption === undefined) return;
-    applyInterruption(interruption);
+    pendingKindRef.current = ileHeliosTriggerKindFromPowOrigin(origin);
+    applyInterruption(interruption, { origin });
   },
   [applyInterruption],
 );

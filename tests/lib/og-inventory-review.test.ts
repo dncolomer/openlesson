@@ -3,7 +3,7 @@
  * dedicated image routes, and public metadata surfaces.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   OG_SURFACES,
@@ -23,6 +23,14 @@ import {
 } from "@/lib/og/standard";
 
 const ROOT = join(__dirname, "../..");
+const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-6c95ab69b7c0/implementer";
+
+function writeScratch(name: string, body: string) {
+  mkdirSync(SCRATCH, { recursive: true });
+  writeFileSync(join(SCRATCH, name), body, "utf8");
+}
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
@@ -176,6 +184,8 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(layout).toContain("unsysRootHtmlMetadata");
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
+    expect(layout).not.toContain("learning efficiency platform");
+    expect(layout).toContain("Human Knowledge Platform");
     expect(read("app/manifest.ts")).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
     expect(read("app/manifest.ts")).not.toContain(
       "Learning efficiency for humans and agents",
@@ -261,6 +271,21 @@ describe("OG share inventory (one unsys standard)", () => {
       expect(text).not.toMatch(/Optimize learning efficiency for humans and agentic systems/i);
     }
     expect(existsSync(join(ROOT, "lib/og/standard.ts"))).toBe(true);
+
+    writeScratch(
+      "og-social-surfaces.txt",
+      [
+        "layout: standardShareSocialMetadata + unsysRootHtmlMetadata",
+        "surfaces: UNSYS_STANDARD_SHARE title/description/eyebrow from PLATFORM_HERO",
+        "compose: composeStandardOgImage uses UNSYS_STANDARD_SHARE.title + description",
+        `ogTitle=${social.openGraph?.title}`,
+        `ogDescription=${social.openGraph?.description}`,
+        `twitterTitle=${social.twitter?.title}`,
+        "TAP/in-app product copy is not the OG source",
+        `layoutHasEfficiencyPlatform=${layout.includes("learning efficiency platform")}`,
+        `docsOgUsesStandard=${docs.includes("standardShareSocialMetadata")}`,
+      ].join("\n"),
+    );
   });
 
   it("composed card chrome fields remain brand + eyebrow + title + description + footerLabel + siteLabel", () => {

@@ -5,7 +5,7 @@
  */
 
 import type { Metadata } from "next";
-import { PLATFORM_HERO } from "@/lib/marketing/platform";
+import { PLATFORM_HERO, PLATFORM_PHRASE } from "@/lib/marketing/platform";
 
 /** LP hero H1 — `PLATFORM_HERO.h1` / `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
@@ -13,9 +13,8 @@ export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
 /** LP hero second paragraph — `PLATFORM_HERO.p2` / `app/page.tsx`. */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION = PLATFORM_HERO.p2;
 
-/** LP hero pill — Human Knowledge Platform */
-export const UNSYS_STANDARD_SHARE_EYEBROW =
-  "Human Knowledge Platform";
+/** LP hero platform phrase — Human Knowledge Platform */
+export const UNSYS_STANDARD_SHARE_EYEBROW = PLATFORM_PHRASE;
 
 /** Footer pill chrome on composed cards (two products). */
 export const UNSYS_STANDARD_SHARE_FOOTER =

@@ -740,8 +740,11 @@ describe("PiP content height fills the live window (shipped helpers)", () => {
     const surface = read("components/IleCompactStashWindow.tsx");
     expect(surface).toContain("ileCompactRootFillStyle");
     expect(surface).toContain("data-ile-compact-transcript");
-    expect(surface).toContain("data-ile-compact-forming");
     expect(surface).toContain("data-ile-compact-share-cta");
+    expect(surface).toContain("data-ile-compact-done-answering");
+    expect(surface).toContain("data-ile-compact-autostash");
+    expect(surface).not.toContain("data-ile-compact-forming");
+    expect(surface).not.toContain("data-ile-last-stash");
     expect(surface).not.toMatch(/minHeight:\s*280/);
     expect(surface).not.toContain("popup=yes");
 

@@ -831,6 +831,7 @@
     "resumeSession": "Reanudar Bloque",
     "startSession": "Iniciar bloque",
     "notebookPlaceholder": "Anota tus pensamientos...",
+    "doneWriting": "Ya terminé de escribir",
     "characters": "{count} caracteres",
     "chunksFound": "{count} encontrados",
     "addModifier": "Agregar modificador (ej., 'enfocarse en pruebas')",
@@ -1556,7 +1557,7 @@
     "clear": "Limpiar",
     "place": "Colocar",
     "cancelLabel": "Cancelar",
-    "submitToHelios": "Submit to Helios",
+    "submitToHelios": "Ya terminé de dibujar",
     "submitting": "Submitting…",
     "submitHint": "Ask the tutor to look at what you've got so far",
     "alreadySubmitted": "No changes since your last submission",
@@ -2503,7 +2504,7 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Older Thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
         "titleProject": "Think aloud — stash & solution",
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Explore Solo."
       },

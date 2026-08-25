@@ -34,7 +34,7 @@ import {
 import type { LocalContextBuffer } from "@/lib/local-context";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { createScreenCapture } from "@/lib/screen-capture";
-import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import type { Session, ToolAction, ToolName } from "@/lib/storage";
 import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 
@@ -53,7 +53,7 @@ export type SessionRuntimeInput = {
   isPaused: boolean;
   showWelcomePanel: boolean;
   handlePowInterruptionRef: {
-    current: (interruption: ProofOfWorkApiInterruption | undefined) => void;
+    current: IlePowInterruptionHandler;
   };
 };
 

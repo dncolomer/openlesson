@@ -22,7 +22,7 @@ interface ExcalidrawCanvasProps {
   onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
   onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
-  /** Override default "Submit to Helios" label (e.g. Project Mode "To solution"). */
+  /** Override default "I'm Done Drawing" label (e.g. Project Mode "To solution"). */
   submitLabel?: string;
   chapterLabel?: string;
 }
@@ -373,7 +373,7 @@ export function ExcalidrawCanvas({
                 : t("whiteboard.alreadySubmitted")
             }
             aria-label={submitButtonLabel}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-black bg-white border border-white hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
           >
             {isSubmittingToHelios ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">

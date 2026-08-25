@@ -10,7 +10,9 @@ import {
   ileHeliosThinkingLine,
   resolveIleDialogueTurn,
 } from "@/lib/ile-dialogue-turn";
-import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
+import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
+import { processHeliosMarkdown } from "@/lib/helios-markdown";
+import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
 
 export type HeliosTurnMode = "idle" | "responding" | "interruption";
 
@@ -353,7 +355,9 @@ function DialogueSplitComic({
 }
 
 function DialogueSplitIle(
-  props: Omit<Parameters<typeof DialogueSplitComic>[0], "variant">,
+  props: Omit<Parameters<typeof DialogueSplitComic>[0], "variant"> & {
+    onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
+  },
 ) {
   const {
     lastAssistantTurn,
@@ -361,6 +365,7 @@ function DialogueSplitIle(
     isSending,
     heliosTurnMode = "idle",
     error,
+    onOpenWordBoxTool,
   } = props;
   const turn = resolveIleDialogueTurn({
     isSending,
@@ -414,15 +419,11 @@ function DialogueSplitIle(
           data-ile-helios-scroll
           className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain"
         >
-          {lastAssistantTurn ? (
-            <HeliosMarkdown className={`${textClass} text-neutral-100`}>
-              {lastAssistantTurn.content}
-            </HeliosMarkdown>
-          ) : (
-            <HeliosMarkdown className={`${textClass} text-neutral-300`}>
-              {promptText}
-            </HeliosMarkdown>
-          )}
+          <IleWordBoxText
+            className={`${textClass} ${lastAssistantTurn ? "text-neutral-100" : "text-neutral-300"}`}
+            text={processHeliosMarkdown(lastAssistantTurn ? lastAssistantTurn.content : promptText)}
+            onOpenTool={onOpenWordBoxTool}
+          />
           {error ? (
             <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
           ) : null}
@@ -448,6 +449,7 @@ export function DialogueSplit({
   userInitial,
   emptyUserTurnText = "",
   layout = "ile",
+  onOpenWordBoxTool,
 }: {
   lastUserTurn: DialogueMessage | null;
   lastAssistantTurn: DialogueMessage | null;
@@ -459,6 +461,7 @@ export function DialogueSplit({
   emptyUserTurnText?: string;
   /** TAP evaluation uses the same comic layout with panel-friendly typography. */
   layout?: "ile" | "tap";
+  onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
 }) {
   const props = {
     lastUserTurn,
@@ -475,7 +478,7 @@ export function DialogueSplit({
     return <DialogueSplitFramed {...props} />;
   }
 
-  return <DialogueSplitIle {...props} />;
+  return <DialogueSplitIle {...props} onOpenWordBoxTool={onOpenWordBoxTool} />;
 }
 
 export function ThoughtBackgroundLayers({

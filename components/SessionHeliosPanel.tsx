@@ -14,7 +14,7 @@ import {
 } from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
-import { selectLastStashedThought } from "@/lib/ile-last-stash";
+
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
@@ -27,7 +27,9 @@ import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
-import { IleHuntAnswersPill } from "@/components/IleHuntAnswersPill";
+import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
+import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 interface SessionHeliosPanelProps {
@@ -74,6 +76,8 @@ interface SessionHeliosPanelProps {
   onProjectSubmitToSolution?: () => void;
   /** Open the ILE Thought tool (`thought-history`). */
   onOpenThoughts?: () => void;
+  /** Open Grok or Dantes with the word-box selection prefilled. */
+  onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
 }
 
 export function SessionHeliosPanel({
@@ -109,12 +113,12 @@ export function SessionHeliosPanel({
   chapterFollowUpsError = null,
   onSelectChapterFollowUp,
   onOpenThoughts,
+  onOpenWordBoxTool,
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
   const [bgImage, setBgImage] = useState("");
   const contextStashInFlightRef = useRef(false);
-  const lastStash = selectLastStashedThought(thought.stashedThoughts);
 
   useEffect(() => {
     const pool = aestheticImages?.length ? aestheticImages : THOUGHT_BACKGROUND_IMAGES;
@@ -217,7 +221,6 @@ export function SessionHeliosPanel({
           className="flex shrink-0 flex-wrap items-center justify-end gap-2"
           data-ile-identity-row
         >
-          <IleHuntAnswersPill />
           {participantIdentity ? (
             <SessionIdentityBadge identity={participantIdentity} />
           ) : null}
@@ -256,7 +259,10 @@ export function SessionHeliosPanel({
                   <p
                     className="mt-2.5 min-h-0 flex-1 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed"
                   >
-                    {chapterPrompt}
+                    <IleWordBoxText
+                      text={chapterPrompt}
+                      onOpenTool={onOpenWordBoxTool}
+                    />
                   </p>
                   {chapterThoughtsLocked ? (
                     <div
@@ -405,6 +411,7 @@ export function SessionHeliosPanel({
                   error={thought.sendError}
                   userInitial={userInitial}
                   emptyUserTurnText=""
+                  onOpenWordBoxTool={onOpenWordBoxTool}
                 />
               </div>
             )}
@@ -476,36 +483,15 @@ export function SessionHeliosPanel({
                 <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
 
-              <div
-                className="mt-3 border-t border-neutral-900/80 pt-3"
-                data-ile-last-stash
-              >
-                  {lastStash ? (
-                    <p
-                      data-ile-last-stash-text
-                      className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
-                      title={lastStash.text}
-                    >
-                      {lastStash.text}
-                    </p>
-                  ) : (
-                    <p
-                      data-ile-last-stash-empty
-                      className="text-xs text-neutral-600"
-                    >
-                      No stashed thought
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      data-ile-see-older-thoughts
-                      onClick={() => onOpenThoughts?.()}
-                      className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
-                    >
-                      See Older Thoughts
-                    </button>
-                  </div>
+              <div className="mt-3 border-t border-neutral-900/80 pt-3">
+                  <button
+                    type="button"
+                    data-ile-see-older-thoughts
+                    onClick={() => onOpenThoughts?.()}
+                    className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
+                  >
+                    See Your thoughts
+                  </button>
                 </div>
             </div>
             </div>

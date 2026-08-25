@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { openIleExternalLeaveTab, type IleExternalLeaveReason } from "@/lib/ile-blur-screenshare";
+import { resolveIleGrokipediaSearchValue } from "@/lib/ile-word-boxes";
 
 const GROKIPEDIA_HOME = "https://grokipedia.com";
 const GROK_HOME = "https://grok.com";
@@ -23,6 +24,8 @@ interface GrokGrokipediaToolProps {
   activeProbes?: { text: string }[];
   /** ILE leave-tab: start screenshare + compact stash (user-gesture path). */
   onLeaveIleTab?: (reason: IleExternalLeaveReason) => void;
+  /** Word-box selection — prefill Grokipedia and Grok inputs (does not auto-submit). */
+  prefillQuery?: string;
 }
 
 export function GrokGrokipediaTool({
@@ -30,16 +33,22 @@ export function GrokGrokipediaTool({
   activeStepDescription,
   activeProbes = [],
   onLeaveIleTab,
+  prefillQuery,
 }: GrokGrokipediaToolProps) {
   const { t } = useI18n();
-  const [grokipediaQuery, setGrokipediaQuery] = useState(sessionProblem);
-  const [grokQuery, setGrokQuery] = useState("");
+  const [grokipediaQuery, setGrokipediaQuery] = useState(() =>
+    resolveIleGrokipediaSearchValue({ prefillQuery, sessionProblem }),
+  );
+  const [grokQuery, setGrokQuery] = useState(() => String(prefillQuery || "").trim());
   const [grokipediaSuggestions, setGrokipediaSuggestions] = useState<string[]>([]);
   const [grokipediaSuggestionsLoading, setGrokipediaSuggestionsLoading] = useState(false);
 
   useEffect(() => {
-    setGrokipediaQuery(sessionProblem);
-  }, [sessionProblem]);
+    const next = resolveIleGrokipediaSearchValue({ prefillQuery, sessionProblem });
+    setGrokipediaQuery(next);
+    const selection = String(prefillQuery || "").trim();
+    if (selection) setGrokQuery(selection);
+  }, [prefillQuery, sessionProblem]);
 
   const fetchGrokipediaSuggestions = async () => {
     if (!sessionProblem) return;
@@ -105,6 +114,7 @@ export function GrokGrokipediaTool({
         >
           <input
             type="text"
+            data-ile-grokipedia-search
             value={grokipediaQuery}
             onChange={(event) => setGrokipediaQuery(event.target.value)}
             placeholder={t("session.grokipediaSearchPlaceholder")}
@@ -184,6 +194,7 @@ export function GrokGrokipediaTool({
         >
           <input
             type="text"
+            data-ile-grok-search
             value={grokQuery}
             onChange={(event) => setGrokQuery(event.target.value)}
             placeholder="Ask Grok anything about this step..."

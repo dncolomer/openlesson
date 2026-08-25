@@ -64,6 +64,7 @@ describe("landing Human Knowledge Platform copy", () => {
     expect(PLATFORM_HERO.p1).toBe(P1);
     expect(PLATFORM_HERO.p2).toBe(P2);
     expect(PLATFORM_PRODUCT_LIST).toHaveLength(2);
+    expect(PLATFORM_PRODUCT_LIST[0].title).toBe("A Learning Harness for Humans");
   });
 
   it("contracts OG title to H1 and OG description to P2 (not tautological P1)", () => {
@@ -125,6 +126,7 @@ describe("landing Human Knowledge Platform copy", () => {
     expect(layout).toMatch(/twitter:\s*standardSocial\.twitter/);
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
+    expect(layout).not.toContain("learning efficiency platform");
 
     const manifestSrc = readRel("app/manifest.ts");
     expect(manifestSrc).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");

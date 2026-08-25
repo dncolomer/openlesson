@@ -164,6 +164,45 @@ describe("closeIleImDoneAnswering (shipped)", () => {
     expect(collected.text).toBe("");
     expect(collected.ids).toEqual([]);
   });
+
+  it("clears the live transcription before sendThought finishes (not after Helios responds)", async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const pending = closeIleImDoneAnswering({
+      thoughts: [thought("A", "stashed")],
+      formingText: "live close line",
+      sendThought: async (text) => {
+        order.push(`send:${text}`);
+        await gate;
+        order.push("send-done");
+      },
+      logEndOfChainOfThought: () => {
+        order.push("trace");
+      },
+      onClearForming: () => {
+        order.push("clear");
+      },
+    });
+
+    await Promise.resolve();
+    expect(order).toEqual(["trace", "clear", "send:stashed\nlive close line"]);
+    expect(order).not.toContain("send-done");
+
+    release();
+    const result = await pending;
+    expect(result.submitted).toBe(true);
+    expect(result.includesForming).toBe(true);
+    expect(order).toEqual([
+      "trace",
+      "clear",
+      "send:stashed\nlive close line",
+      "send-done",
+    ]);
+  });
 });
 
 describe("TAP solo I'm-done leftover (shipped sendThought path)", () => {
@@ -244,7 +283,7 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(helios).toContain('label="Stash"');
     expect(helios).not.toContain('label="Edit"');
     expect(helios).not.toContain('shortcut="E"');
-    expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("See Your thoughts");
 
     const boxIdx = helios.indexOf("data-ile-transcription-box");
     const overlayIdx = helios.indexOf("data-ile-im-done-answering-overlay");
@@ -255,6 +294,20 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(close).toContain('ILE_END_OF_CHAIN_OF_THOUGHT_ACTION = "end_of_chain_of_thought"');
     expect(close).toContain("collectUnflaggedIleDoneAnsweringPow");
     expect(close).toContain("flagIleDoneAnsweringConsumed");
+    expect(close).toContain("onClearForming");
+    const clearIdx = close.indexOf("input.onClearForming?.()");
+    const sendIdx = close.indexOf("await input.sendThought");
+    expect(clearIdx).toBeGreaterThan(-1);
+    expect(sendIdx).toBeGreaterThan(-1);
+    expect(clearIdx).toBeLessThan(sendIdx);
+
+    expect(button).toContain("onClearForming");
+    const controlClose = button.slice(
+      button.indexOf("closeIleImDoneAnswering"),
+      button.indexOf(".then"),
+    );
+    expect(controlClose).toContain("onClearForming");
+    expect(button).not.toMatch(/\.then\(\(result\) => \{[\s\S]*onClearForming/);
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     const tapShell = read("components/exercise-tap/ExerciseTapShell.tsx");

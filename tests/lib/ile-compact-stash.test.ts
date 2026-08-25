@@ -12,12 +12,17 @@ import {
   resolveIleDialogueTurn,
 } from "@/lib/ile-dialogue-turn";
 import {
+  focusIleCompactOpenerTab,
+  ileCompactAutostashFillRatio,
   ileCompactChapterTitle,
+  ileMiniModeDoneAnsweringLabel,
   ileMiniModeShareCtaLabel,
   resolveIleCompactTranscript,
+  runIleMiniDoneAnswering,
   runIleMiniShareCta,
   shouldShowIleMiniShareCta,
 } from "@/lib/ile-compact-chrome";
+import { thoughtContextFillRatio } from "@/lib/thought-context-auto-stash";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -54,7 +59,7 @@ describe("resolveIleDialogueTurn (shipped ILE speaker helper)", () => {
       heliosTurnMode: "interruption",
     });
     expect(interrupt.speaker).toBe("helios");
-    expect(interrupt.kind).toBe("waiting");
+    expect(interrupt.kind).toBe("helios");
     expect(interrupt.showHeliosAvatar).toBe(false);
     expect(interrupt.showLearnerAvatar).toBe(false);
 
@@ -89,7 +94,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(helios).not.toContain("data-open-thoughts");
     expect(helios).not.toContain("Open Thoughts");
     expect(helios).toContain("onOpenThoughts");
-    expect(helios).toContain("See Older Thoughts");
+    expect(helios).toContain("See Your thoughts");
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("DialogueSplit");
@@ -120,7 +125,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     writeScratch(
       "ile-compact-stash-excerpts.txt",
       [
-        "SessionHeliosPanel: See Older Thoughts / onOpenThoughts (not Open Thoughts)",
+        "SessionHeliosPanel: See Your thoughts / onOpenThoughts (not Open Thoughts)",
         "DialogueSplitIle: resolveIleDialogueTurn, no Helios avatar",
         "TAP live: TapSessionMap + overlay (comic helper unused on live)",
         "Tools rail still has thought-history",
@@ -130,7 +135,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
 });
 
 describe("mini-mode TAP chrome helpers (shipped)", () => {
-  it("share CTA only when not sharing; click starts existing share path; transcript + forming; no stash boxes or ILE label", async () => {
+  it("share CTA only when not sharing; live transcript + autostash fill; I'm Done Answering focuses opener; no last thought", async () => {
     const calls: number[] = [];
     const shown = shouldShowIleMiniShareCta(false);
     const hidden = shouldShowIleMiniShareCta(true);
@@ -158,23 +163,60 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(calls).toEqual([1]);
 
     const cta = ileMiniModeShareCtaLabel();
+    expect(cta).toBe("Share your Screen");
     expect(cta.toLowerCase()).toMatch(/share/);
     expect(cta.toLowerCase()).toMatch(/screen/);
 
-    const waiting = resolveIleCompactTranscript({
-      lastHeliosText: "Walk the recurrence with me.",
-      isSending: true,
-    });
-    expect(waiting.kind).toBe("waiting");
-    expect(waiting.text.toLowerCase()).toMatch(/helios is thinking/);
+    const doneLabel = ileMiniModeDoneAnsweringLabel();
+    expect(doneLabel).toBe("I'm Done Answering");
 
+    const heliosLastTurn = "Walk the recurrence with me.";
+    const forming = "the walk-through of the recurrence";
     const liveTurn = resolveIleCompactTranscript({
-      lastHeliosText: "Walk the recurrence with me.",
-      isSending: false,
-      heliosTurnMode: "idle",
+      formingText: forming,
+      speechDisplay: forming,
+      lastHeliosText: heliosLastTurn,
     });
-    expect(liveTurn.kind).toBe("helios");
-    expect(liveTurn.text).toBe("Walk the recurrence with me.");
+    expect(liveTurn.kind).toBe("live");
+    expect(liveTurn.text).toBe(forming);
+    expect(liveTurn.text).not.toBe(heliosLastTurn);
+    expect(liveTurn.text.toLowerCase()).not.toMatch(/helios is thinking/);
+
+    const listening = resolveIleCompactTranscript({
+      formingText: "",
+      isListening: true,
+      speechEnabled: true,
+      lastHeliosText: heliosLastTurn,
+    });
+    expect(listening.kind).toBe("live");
+    expect(listening.text).toBe("Listening…");
+    expect(listening.text).not.toBe(heliosLastTurn);
+
+    const fill = ileCompactAutostashFillRatio(forming);
+    expect(fill).toBe(thoughtContextFillRatio(forming));
+    expect(ileCompactAutostashFillRatio("a".repeat(200), 400)).toBe(
+      thoughtContextFillRatio("a".repeat(200), 400),
+    );
+
+    const focusCalls: string[] = [];
+    const opener = { focus: () => focusCalls.push("opener") };
+    const tab = { focus: () => focusCalls.push("tab") };
+    expect(focusIleCompactOpenerTab({ opener, tab })).toBe(true);
+    expect(focusCalls).toEqual(["opener"]);
+    focusCalls.length = 0;
+    expect(focusIleCompactOpenerTab({ opener: null, tab })).toBe(true);
+    expect(focusCalls).toEqual(["tab"]);
+
+    let closed = false;
+    const focusedAfterClose = await runIleMiniDoneAnswering({
+      closePath: async () => {
+        closed = true;
+      },
+      opener,
+    });
+    expect(closed).toBe(true);
+    expect(focusedAfterClose).toBe(true);
+    expect(focusCalls).toEqual(["tab", "opener"]);
 
     expect(ileCompactChapterTitle("Recurrence relations")).toBe("Recurrence relations");
     expect(ileCompactChapterTitle("ILE")).toBeNull();
@@ -187,14 +229,29 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(compact).toContain("THOUGHT_BACKGROUND_IMAGES");
     expect(compact).not.toContain("HeliosProbeAvatar");
     expect(compact).toContain("data-ile-compact-transcript");
-    expect(compact).toContain("data-ile-compact-forming");
     expect(compact).toContain("data-ile-compact-share-cta");
-    expect(compact).toContain("<button");
+    expect(compact).toContain("data-ile-compact-done-answering");
+    expect(compact).toContain("data-ile-compact-autostash");
     expect(compact).toContain("ileMiniModeShareCtaLabel");
+    expect(compact).toContain("ileMiniModeDoneAnsweringLabel");
+    expect(compact).toContain("runIleMiniDoneAnswering");
     expect(compact).toContain("onStartShare");
-    expect(compact).not.toContain("CompactList");
+    expect(compact).toContain("onDoneAnswering");
+    expect(compact).toContain("<AutoStashContextBar");
+    expect(compact).not.toContain("<SlidingTranscript");
+    expect(compact).toContain('whiteSpace: "pre-wrap"');
+    expect(compact).toContain('overflowWrap: "anywhere"');
+    expect(compact).toContain('overflowX: "hidden"');
+    expect(compact).not.toContain("data-ile-compact-forming");
+    expect(compact).not.toContain("data-ile-last-stash");
+    expect(compact).not.toContain("data-ile-last-stash-text");
     expect(compact).not.toContain("data-ile-compact-stash-item");
     expect(compact).not.toContain("data-ile-compact-share-note");
+    expect(compact).not.toContain("data-ile-compact-chapter");
+    expect(compact).not.toContain("data-ile-compact-helios");
+    expect(compact).not.toContain("CompactList");
+    expect(compact).not.toContain("See Older Thoughts");
+    expect(compact).not.toContain("No stashed thought");
     expect(compact).not.toMatch(/>\s*ILE\s*</);
     expect(compact).not.toContain('"ILE"');
     expect(compact).not.toContain("'ILE'");
@@ -202,17 +259,33 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(compact).not.toMatch(/background:\s*"#0a0a0a"/);
 
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    expect(hook).toContain("transcriptText={props.transcriptText}");
+    expect(hook).toContain("formingText={props.formingText}");
+    expect(hook).toContain("speechDisplay={props.speechDisplay}");
     expect(hook).toContain("onStartShare");
+    expect(hook).toContain("onDoneAnswering");
     expect(hook).toContain("startRef.current()");
+    expect(hook).toContain("doneAnsweringRef.current");
+    expect(hook).toContain("opener={win.opener ?? null}");
+    expect(hook).not.toContain("transcriptText={props.transcriptText}");
     expect(hook).not.toContain("thoughts={props.thoughts}");
     expect(hook).not.toContain("projectStash={props.projectStash}");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("transcriptText: lastDialogueAssistantTurn");
     expect(view).toContain("formingText: sessionThoughtInterface.crystallizableText");
+    expect(view).toContain("formatSpeechTranscriptDisplay");
+    expect(view).toContain("onDoneAnswering: handleCompactDoneAnswering");
+    expect(view).toContain("closeIleImDoneAnswering");
+    expect(view).toContain("thoughts: sessionThoughtInterface.stashedThoughts");
+    expect(view).not.toContain("transcriptText: lastDialogueAssistantTurn");
     expect(view).not.toContain('?? "ILE"');
-    expect(view).not.toContain("thoughts: sessionThoughtInterface.stashedThoughts");
+    const compactBlockStart = view.indexOf("compact: {");
+    expect(compactBlockStart).toBeGreaterThan(-1);
+    const compactBlock = view.slice(compactBlockStart, view.indexOf("},", compactBlockStart + 10) + 2);
+    expect(compactBlock).toContain("formingText: sessionThoughtInterface.crystallizableText");
+    expect(compactBlock).toContain("speechDisplay: formatSpeechTranscriptDisplay");
+    expect(compactBlock).not.toContain("lastDialogueAssistantTurn");
+    expect(compactBlock).not.toContain("stashedThoughts");
+    expect(compactBlock).not.toContain("chapterLabel");
 
     const layers = read("components/thought-ui/ThoughtUi.tsx");
     expect(layers).toContain("THOUGHT_BACKGROUND_IMAGES");
@@ -223,14 +296,52 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
       "ile-mini-tap-ui-excerpts.txt",
       [
         `cta=${cta}`,
+        `done=${doneLabel}`,
         `showCtaWhenIdle=${shown}`,
         `hideCtaWhenSharing=${hidden}`,
-        `transcriptIdle=${liveTurn.kind}:${liveTurn.text}`,
-        `transcriptWaiting=${waiting.kind}:${waiting.text}`,
+        `transcriptLive=${liveTurn.kind}:${liveTurn.text}`,
+        `transcriptListening=${listening.kind}:${listening.text}`,
+        `autostashFill=${fill}`,
         "bg=ThoughtBackgroundLayers + THOUGHT_BACKGROUND_IMAGES Greco-futurism",
-        "forming=data-ile-compact-forming",
-        "no CompactList / no visible ILE label",
+        "no last thought / no CompactList / no visible ILE label",
         "onStartShare → startRef.current (existing getDisplayMedia path)",
+        "onDoneAnswering → closeIleImDoneAnswering + opener focus",
+      ].join("\n"),
+    );
+    writeScratch(
+      "ile-pip-chrome.txt",
+      [
+        `shareShownWhenIdle=${shown}`,
+        `shareHiddenWhenSharing=${hidden}`,
+        `shareLabel=${cta}`,
+        `doneLabel=${doneLabel}`,
+        `transcriptKind=${liveTurn.kind}`,
+        `transcriptText=${liveTurn.text}`,
+        `transcriptIgnoresHelios=${liveTurn.text !== heliosLastTurn}`,
+        `listeningText=${listening.text}`,
+        `autostashFill=${fill}`,
+        `autostashMatchesMain=${fill === thoughtContextFillRatio(forming)}`,
+        `focusOpenerThenTab=${focusCalls.join(",")}`,
+        `doneAnsweringClosed=${closed}`,
+        `doneAnsweringFocused=${focusedAfterClose}`,
+      ].join("\n"),
+    );
+    writeScratch(
+      "ile-pip-surface.txt",
+      [
+        "IleCompactStashWindow: Share your Screen + I'm Done Answering + data-ile-compact-transcript + data-ile-compact-autostash",
+        "no data-ile-last-stash / data-ile-compact-forming / Helios last-turn",
+        "useIleBlurScreenshare paints formingText + speechDisplay, not lastDialogueAssistantTurn",
+        "SessionView: formatSpeechTranscriptDisplay + closeIleImDoneAnswering + opener/tab focus",
+        `shareCta=${compact.includes("data-ile-compact-share-cta")}`,
+        `doneAnswering=${compact.includes("data-ile-compact-done-answering")}`,
+        `transcript=${compact.includes("data-ile-compact-transcript")}`,
+        `autostash=${compact.includes("data-ile-compact-autostash")}`,
+        `lastStash=${compact.includes("data-ile-last-stash")}`,
+        `formingBox=${compact.includes("data-ile-compact-forming")}`,
+        `heliosBody=${compact.includes("data-ile-compact-helios")}`,
+        `hookSpeechDisplay=${hook.includes("speechDisplay={props.speechDisplay}")}`,
+        `viewHeliosTranscript=${view.includes("transcriptText: lastDialogueAssistantTurn")}`,
       ].join("\n"),
     );
   });

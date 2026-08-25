@@ -3,6 +3,8 @@
  * TAP keeps both comic avatars.
  */
 
+import { classifyIleHeliosTrigger } from "@/lib/ile-helios-trigger";
+
 export type HeliosTurnModeLike = "idle" | "responding" | "interruption" | string;
 
 export type IleDialogueSpeaker = "helios";
@@ -32,7 +34,11 @@ export function isIleHeliosWaitingTurn(input: {
   isSending?: boolean;
   heliosTurnMode?: HeliosTurnModeLike | null;
 }): boolean {
-  return Boolean(input.isSending) || input.heliosTurnMode === "interruption";
+  if (Boolean(input.isSending)) return true;
+  if (input.heliosTurnMode === "interruption") {
+    return classifyIleHeliosTrigger({ kind: "interruption" }).showOnDialogue;
+  }
+  return false;
 }
 
 /** @deprecated Use isIleHeliosWaitingTurn — ILE no longer treats Helios as a second speaker. */

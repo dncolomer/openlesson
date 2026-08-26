@@ -12,11 +12,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
 import {
-  isAllowedProofOfWorkMime,
-  MAX_WORKSPACE_PROOF_OF_WORK_BYTES,
-  normalizeProofOfWorkType,
+  checkProofOfWorkSchema,
   type WorkspaceProofOfWorkType,
-  WORKSPACE_PROOF_OF_WORK_TYPES,
+  WORKSPACE_PROOF_OF_WORK_WIRE_TYPES,
 } from "./workspace-proof-of-work";
 import {
   uploadWorkspaceProofOfWork,
@@ -67,6 +65,7 @@ export interface StashBufferedUnit {
   band_powers: Record<string, number> | null;
   device_name: string | null;
   sample_count: number | null;
+  pow_model_version: string;
   buffered_at: number;
 }
 
@@ -91,12 +90,8 @@ export type StashIngestResult =
   | { ok: true; unit: StashBufferedUnit }
   | { ok: false; code: "validation_error"; message: string };
 
-/** Shared allowed PoW type surface (includes aliases accepted by PoW normalizer). */
-export const STASH_ALLOWED_POW_TYPES = [
-  ...WORKSPACE_PROOF_OF_WORK_TYPES,
-  "screenshot",
-  "screenshots",
-] as const;
+/** Shared allowed PoW type surface — same wire list as the schema check. */
+export const STASH_ALLOWED_POW_TYPES = WORKSPACE_PROOF_OF_WORK_WIRE_TYPES;
 
 export function bufferSubjectId(auth: Pick<AuthContext, "user_id" | "guest_user_id" | "key_id">): string {
   return auth.user_id || auth.guest_user_id || auth.key_id || "anonymous";
@@ -153,54 +148,17 @@ export function clearStashBuffer(workspaceId: string, subjectId: string): void {
  */
 export function parseStashIngestInput(body: StashIngestInput): StashIngestResult {
   const typeRaw = typeof body.type === "string" ? body.type : "";
-  const evidenceType = normalizeProofOfWorkType(body.type);
-  const mimeType = typeof body.mime_type === "string" ? body.mime_type.trim().toLowerCase() : "";
-  const base64 = typeof body.data === "string" ? body.data : "";
-
-  if (!evidenceType) {
+  const schema = checkProofOfWorkSchema({
+    type: body.type,
+    mime_type: body.mime_type,
+    data: body.data,
+    pow_model_version: body.pow_model_version,
+  });
+  if (!schema.ok) {
     return {
       ok: false,
       code: "validation_error",
-      message: "type must be one of: tool, screen, screenshot, video, eeg",
-    };
-  }
-  if (!mimeType || !base64) {
-    return {
-      ok: false,
-      code: "validation_error",
-      message: "mime_type and data (base64) are required",
-    };
-  }
-  if (!isAllowedProofOfWorkMime(evidenceType, mimeType)) {
-    return {
-      ok: false,
-      code: "validation_error",
-      message: `mime_type ${mimeType} is not allowed for type ${evidenceType}`,
-    };
-  }
-
-  let fileBytes: Buffer;
-  try {
-    fileBytes = Buffer.from(base64, "base64");
-  } catch {
-    return {
-      ok: false,
-      code: "validation_error",
-      message: "data must be valid base64 content",
-    };
-  }
-  if (!fileBytes.length) {
-    return {
-      ok: false,
-      code: "validation_error",
-      message: "data must be non-empty base64 content",
-    };
-  }
-  if (fileBytes.length > MAX_WORKSPACE_PROOF_OF_WORK_BYTES) {
-    return {
-      ok: false,
-      code: "validation_error",
-      message: "Proof-of-work file exceeds 10 MB limit",
+      message: schema.message,
     };
   }
 
@@ -211,10 +169,10 @@ export function parseStashIngestInput(body: StashIngestInput): StashIngestResult
 
   const unit: StashBufferedUnit = {
     id: nextUnitId(),
-    type: evidenceType,
-    type_raw: typeRaw || evidenceType,
-    mime_type: mimeType,
-    data: base64,
+    type: schema.type,
+    type_raw: typeRaw || schema.type,
+    mime_type: schema.mime_type,
+    data: schema.data,
     block_id: typeof body.block_id === "string" ? body.block_id : null,
     session_id: typeof body.session_id === "string" ? body.session_id : null,
     file_name: typeof body.file_name === "string" ? body.file_name : undefined,
@@ -228,6 +186,7 @@ export function parseStashIngestInput(body: StashIngestInput): StashIngestResult
         : null,
     device_name: typeof body.device_name === "string" ? body.device_name : null,
     sample_count: typeof body.sample_count === "number" ? body.sample_count : null,
+    pow_model_version: schema.pow_model_version,
     buffered_at: Date.now(),
   };
 
@@ -357,6 +316,7 @@ export function unitToPowUploadInput(
       tool_name: aligned.tool_name,
       tool_action: aligned.tool_action,
       metadata: aligned.metadata,
+      pow_model_version: unit.pow_model_version,
     };
   }
 
@@ -373,6 +333,7 @@ export function unitToPowUploadInput(
     tool_name: unit.tool_name ?? undefined,
     tool_action: unit.tool_action ?? undefined,
     metadata: buildStashDecisionMetadata(decision, unit.metadata, null),
+    pow_model_version: unit.pow_model_version,
   };
 }
 

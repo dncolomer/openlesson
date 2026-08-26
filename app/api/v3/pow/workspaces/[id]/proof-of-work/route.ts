@@ -79,6 +79,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             : null,
         device_name: typeof body.device_name === "string" ? body.device_name : null,
         sample_count: typeof body.sample_count === "number" ? body.sample_count : null,
+        pow_model_version: typeof body.pow_model_version === "string" ? body.pow_model_version : undefined,
         require_existing_session: true,
       },
     );

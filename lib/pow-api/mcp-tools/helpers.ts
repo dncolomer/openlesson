@@ -56,7 +56,11 @@ import {
   getUploadProofOfWorkMeta,
   uploadWorkspaceProofOfWork,
 } from "../upload-workspace-proof-of-work";
-import { countWorkspaceProofOfWorkForPlan } from "../workspace-proof-of-work";
+import {
+  countWorkspaceProofOfWorkForPlan,
+  POW_MODEL_VERSION,
+  WORKSPACE_PROOF_OF_WORK_WIRE_TYPES,
+} from "../workspace-proof-of-work";
 import { loadLearningWorldModel } from "../learning-world-model-store";
 import { resolveEvaluationSubject } from "../evaluation-subject";
 import {
@@ -243,7 +247,11 @@ export const MCP_EVIDENCE_TOOLS = [
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        type: { type: "string", description: "tool | screen | screenshot | video | eeg" },
+        type: {
+          type: "string",
+          enum: [...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES],
+          description: "Stored type or alias. screenshot(s) → screen.",
+        },
         mime_type: { type: "string" },
         data: { type: "string", description: "Base64-encoded payload." },
         block_id: { type: "string" },
@@ -253,6 +261,11 @@ export const MCP_EVIDENCE_TOOLS = [
         tool_action: { type: "string" },
         metadata: { type: "object" },
         timestamp_ms: { type: "number" },
+        pow_model_version: {
+          type: "string",
+          enum: [POW_MODEL_VERSION],
+          description: "Optional. Must match the current PoW model if sent.",
+        },
       },
       required: ["workspace_id", "type", "mime_type", "data"],
       additionalProperties: false,
@@ -553,7 +566,10 @@ export const MCP_EVIDENCE_TOOLS = [
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        type: { type: "string" },
+        type: {
+          type: "string",
+          enum: [...WORKSPACE_PROOF_OF_WORK_WIRE_TYPES],
+        },
         mime_type: { type: "string" },
         data: { type: "string" },
         block_id: { type: "string" },
@@ -563,6 +579,7 @@ export const MCP_EVIDENCE_TOOLS = [
         tool_action: { type: "string" },
         metadata: { type: "object" },
         timestamp_ms: { type: "number" },
+        pow_model_version: { type: "string", enum: [POW_MODEL_VERSION] },
       },
       required: ["workspace_id", "type", "mime_type", "data"],
       additionalProperties: false,

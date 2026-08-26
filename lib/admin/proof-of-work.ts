@@ -21,7 +21,7 @@ export type AdminProofOfWorkDetails = {
 };
 
 export const ADMIN_POW_SELECT =
-  "id, workspace_id, block_id, session_id, proof_of_work_type, file_name, mime_type, file_size, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, band_powers, device_name, sample_count, user_id, guest_user_id, created_by_api_key_id, created_at";
+  "id, workspace_id, block_id, session_id, proof_of_work_type, pow_model_version, file_name, mime_type, file_size, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, band_powers, device_name, sample_count, user_id, guest_user_id, created_by_api_key_id, created_at";
 
 type PowDbRow = {
   id: string;

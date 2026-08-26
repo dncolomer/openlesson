@@ -1,10 +1,14 @@
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IleBufferedScreenshot, IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-work";
+
+/** ILE captures a subset of the shared stored types (no video). */
+export type IleProofOfWorkCaptureType = Extract<WorkspaceProofOfWorkType, "tool" | "screen" | "eeg">;
 
 export interface UploadIleProofOfWorkInput {
   workspaceId: string;
   sessionId: string;
-  type: "tool" | "screen" | "eeg";
+  type: IleProofOfWorkCaptureType;
   mime_type: string;
   data: string;
   file_name?: string;

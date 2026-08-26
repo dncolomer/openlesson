@@ -1,11 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  checkProofOfWorkSchema,
   defaultProofOfWorkFileName,
   insertWorkspaceProofOfWorkRow,
-  isAllowedProofOfWorkMime,
-  MAX_WORKSPACE_PROOF_OF_WORK_BYTES,
-  normalizeProofOfWorkType,
 } from "./workspace-proof-of-work";
 import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
@@ -109,6 +107,7 @@ export interface UploadWorkspaceProofOfWorkInput {
   band_powers?: Record<string, number> | null;
   device_name?: string | null;
   sample_count?: number | null;
+  pow_model_version?: string | null;
   /** When true, missing session_id raises (agent REST strict mode). Default false keeps session soft-resolve. */
   require_existing_session?: boolean;
 }
@@ -139,27 +138,21 @@ export async function uploadWorkspaceProofOfWork(
     plaintext_lint?: { passed: boolean; violations: string[] };
   };
 }> {
-  const evidenceType = normalizeProofOfWorkType(input.type);
-  const mimeType = input.mime_type.trim().toLowerCase();
-  const base64 = input.data;
-
-  if (!evidenceType) {
-    throw new Error("type must be one of: tool, screen, screenshot, video, eeg");
+  const schema = checkProofOfWorkSchema({
+    type: input.type,
+    mime_type: input.mime_type,
+    data: input.data,
+    pow_model_version: input.pow_model_version,
+  });
+  if (!schema.ok) {
+    throw new Error(schema.message);
   }
-  if (!mimeType || !base64) {
-    throw new Error("mime_type and data (base64) are required");
-  }
-  if (!isAllowedProofOfWorkMime(evidenceType, mimeType)) {
-    throw new Error(`mime_type ${mimeType} is not allowed for type ${evidenceType}`);
-  }
+  const evidenceType = schema.type;
+  const mimeType = schema.mime_type;
+  const base64 = schema.data;
+  const powModelVersion = schema.pow_model_version;
 
   const fileBytes = Buffer.from(base64, "base64");
-  if (!fileBytes.length) {
-    throw new Error("data must be non-empty base64 content");
-  }
-  if (fileBytes.length > MAX_WORKSPACE_PROOF_OF_WORK_BYTES) {
-    throw new Error("Proof-of-work file exceeds 10 MB limit");
-  }
 
   const billingUserId = workspace.user_id || auth.user_id;
   if (!billingUserId) {
@@ -264,6 +257,7 @@ export async function uploadWorkspaceProofOfWork(
     block_id: input.block_id || null,
     session_id: finalSessionId,
     proof_of_work_type: evidenceType,
+    pow_model_version: powModelVersion,
     file_name: fileName,
     mime_type: mimeType,
     file_size: fileBytes.length,

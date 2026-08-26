@@ -25,6 +25,7 @@ import {
   formatDualSurfaceGuidance,
   recommendIntegrationActions,
 } from "./integration-discovery";
+import { POW_MODEL_VERSION } from "./workspace-proof-of-work";
 import {
   buildVerticalScoreReportContract,
   type PerformanceReportContract,
@@ -169,6 +170,7 @@ export function enrichProofOfWorkSpecResult(
   return {
     ...result,
     spec_version: EVIDENCE_SPEC_VERSION,
+    pow_model_version: POW_MODEL_VERSION,
     interruption_contract: buildInterruptionContract(),
     predicted_interruption: llmInterruption,
     proof_of_work_spec_api_path: proofOfWorkSpecPath,

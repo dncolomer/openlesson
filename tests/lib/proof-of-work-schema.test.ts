@@ -130,6 +130,7 @@ describe("evidence integration helpers", () => {
     expect(enriched.proof_of_work_spec_api_path).toContain("/proof-of-work-schema");
     expect(enriched.proof_of_work_upload_api_path).toContain("/proof-of-work");
     expect(enriched.spec_version).toBe("1.3");
+    expect(enriched.pow_model_version).toBe("pow-model-v1");
     expect(enriched.interruption_contract).toBeTruthy();
     expect(enriched.performance_report_contract?.marker_scores.visualization).toBe("spider_radar");
     expect(enriched.performance_report_contract?.gap_analysis.gaps_required).toBe(true);

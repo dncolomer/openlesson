@@ -408,6 +408,7 @@ export async function callMcpProofOfWorkTool(
           args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
             ? (args.metadata as Record<string, unknown>)
             : undefined,
+        pow_model_version: typeof args.pow_model_version === "string" ? args.pow_model_version : undefined,
         require_existing_session: true,
       },
     );

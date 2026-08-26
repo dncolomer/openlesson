@@ -7,6 +7,12 @@ import type { PerformanceContextPayload } from "./performance-context";
 import type { PerformanceReportContract } from "./performance-report";
 import type { ProofOfWorkApiInterruption, InterruptionContract } from "./predictive-interruption";
 import { composePrompt } from "@/lib/prompt-kernel/compose";
+import {
+  POW_MODEL_VERSION,
+  PROOF_OF_WORK_MIME_BY_TYPE,
+  WORKSPACE_PROOF_OF_WORK_TYPES,
+  type WorkspaceProofOfWorkType,
+} from "./workspace-proof-of-work";
 
 export interface ProofOfWorkSchemaIntegrationHints {
   tool_name?: string;
@@ -33,7 +39,7 @@ export interface ToolSubmissionSpec {
 }
 
 export interface ProofOfWorkTypeContract {
-  type: "tool" | "screen" | "video" | "eeg";
+  type: WorkspaceProofOfWorkType;
   mime_types: string[];
   when_to_use: string;
 }
@@ -68,7 +74,7 @@ export interface ProofOfWorkEvalSchemaResult {
   rationale: string;
   example_payload: Record<string, unknown>;
   recommended_mime_type: string;
-  recommended_proof_of_work_type: "tool" | "screen" | "video" | "eeg";
+  recommended_proof_of_work_type: WorkspaceProofOfWorkType;
   required_fields?: string[];
   optional_fields?: string[];
   collection_guidance?: string;
@@ -91,6 +97,7 @@ export interface ProofOfWorkEvalSchemaResult {
   /** LLM-predicted interruption for this workspace context (mapped to response interruption). */
   predicted_interruption?: ProofOfWorkApiInterruption;
   spec_version?: string;
+  pow_model_version?: string;
   proof_of_work_spec_api_path?: string;
   proof_of_work_upload_api_path?: string;
   workspace_id?: string;
@@ -116,7 +123,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       recommended_mime_type: { type: "string" },
       recommended_proof_of_work_type: {
         type: "string",
-        enum: ["tool", "screen", "video", "eeg"],
+        enum: [...WORKSPACE_PROOF_OF_WORK_TYPES],
       },
       required_fields: {
         type: "array",
@@ -161,7 +168,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
             items: {
               type: "object",
               properties: {
-                type: { type: "string", enum: ["tool", "screen", "video", "eeg"] },
+                type: { type: "string", enum: [...WORKSPACE_PROOF_OF_WORK_TYPES] },
                 mime_types: { type: "array", items: { type: "string" } },
                 when_to_use: { type: "string" },
               },
@@ -405,8 +412,8 @@ Output rules:
 4. "proof_of_work_upload_contract" must formally describe POST .../proof-of-work:
    - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work"
    - encoding: "base64"
-   - proof_of_work_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
-   - common_fields: proof_of_work_type, data, mime_type, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata
+   - proof_of_work_types: tool (${PROOF_OF_WORK_MIME_BY_TYPE.tool.join(", ")}), screen (${PROOF_OF_WORK_MIME_BY_TYPE.screen.join(", ")}), video (${PROOF_OF_WORK_MIME_BY_TYPE.video.join(", ")}), eeg (${PROOF_OF_WORK_MIME_BY_TYPE.eeg.join(", ")}) with when_to_use guidance. Stored types are ${WORKSPACE_PROOF_OF_WORK_TYPES.join(" | ")}. Model version ${POW_MODEL_VERSION}.
+   - common_fields: type, mime_type, data, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata, pow_model_version
 5. Optimize payloads for the LWM Snapshot endpoint: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each snapshot call returns one primary score (0-100 lwm_snapshot_score), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
 6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/ILE end use this):
    - endpoint_pattern: "POST /api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot"

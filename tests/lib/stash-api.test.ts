@@ -110,6 +110,18 @@ describe("Stash API buffer + stash/submit flush", () => {
     expect(parseStashIngestInput({ type: "tool", mime_type: "image/png", data: "YQ==" }).ok).toBe(
       false,
     );
+    expect(
+      parseStashIngestInput({ type: "speech", mime_type: "application/json", data: sampleToolPayload })
+        .ok,
+    ).toBe(false);
+    expect(
+      parseStashIngestInput({
+        type: "tool",
+        mime_type: "application/json",
+        data: sampleToolPayload,
+        pow_model_version: "pow-model-v2",
+      }).ok,
+    ).toBe(false);
   });
 
   it("buffers ingest units without durable PoW upload until decision", () => {

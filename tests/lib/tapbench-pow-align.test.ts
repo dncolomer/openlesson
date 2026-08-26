@@ -45,6 +45,7 @@ function makeUnit(overrides: Partial<StashBufferedUnit> & { dataObj?: unknown } 
     band_powers: null,
     device_name: null,
     sample_count: null,
+    pow_model_version: "pow-model-v1",
     buffered_at: 1_700_000_000_000,
     ...rest,
   };

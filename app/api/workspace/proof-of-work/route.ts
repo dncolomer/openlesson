@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         tool_name: toolName,
         tool_action: toolAction,
         metadata,
+        pow_model_version: typeof body.pow_model_version === "string" ? body.pow_model_version : undefined,
       },
     );
 

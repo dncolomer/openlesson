@@ -1,4 +1,5 @@
 import type { ToolAction, ToolName } from "@/lib/storage";
+import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-work";
 
 export const ILE_EVIDENCE_THRESHOLDS = {
   transcriptMinChars: 12,
@@ -34,7 +35,7 @@ export interface IleBufferedScreenshot {
   timestampMs: number;
 }
 
-export type IleProofOfWorkUploadKind = "tool" | "eeg";
+export type IleProofOfWorkUploadKind = Extract<WorkspaceProofOfWorkType, "tool" | "eeg">;
 
 export interface IleProofOfWorkUploadItem {
   kind: IleProofOfWorkUploadKind;

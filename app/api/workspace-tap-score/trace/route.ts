@@ -9,7 +9,11 @@ import {
   type TapTraceType,
 } from "@/lib/tap-score-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import {
+  checkProofOfWorkSchema,
+  countWorkspaceProofOfWorkForPlan,
+  insertWorkspaceProofOfWorkRow,
+} from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
@@ -98,7 +102,15 @@ export async function POST(req: NextRequest) {
 
     const fileName = `tap-trace-${traceType}-${action}-${thoughtId || timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
-    const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
+    const schema = checkProofOfWorkSchema({
+      type: "tool",
+      mime_type: "application/json",
+      data: base64,
+    });
+    if (!schema.ok) {
+      return jsonError(400, schema.message);
+    }
+    const uploaded = await uploadFileToXAI(fileName, schema.mime_type, schema.data);
 
     const metadata = stampPoWPracticeFlag(
       stampSourceLinkMetadata(
@@ -118,28 +130,25 @@ export async function POST(req: NextRequest) {
       practice,
     );
 
-    const { data: row, error } = await access.supabase
-      .from("workspace_proof_of_work")
-      .insert({
-        workspace_id: access.workspaceId,
-        block_id: blockId || access.blockId,
-        session_id: focusSessionId || access.focusSessionId,
-        proof_of_work_type: "tool",
-        file_name: fileName,
-        mime_type: "application/json",
-        file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
-        xai_file_id: uploaded.file_id,
-        timestamp_ms: timestampMs,
-        chunk_index: 0,
-        metadata,
-        tool_name: TAP_TRACE_TOOL_NAME,
-        tool_action: `${traceType}:${action}`,
-        user_id: access.guestUserId ? null : access.userId,
-        guest_user_id: access.guestUserId,
-        organization_id: access.organizationId,
-      })
-      .select("id, xai_file_id, timestamp_ms, metadata, tool_action")
-      .single();
+    const { row, error } = await insertWorkspaceProofOfWorkRow(access.supabase, {
+      workspace_id: access.workspaceId,
+      block_id: blockId || access.blockId,
+      session_id: focusSessionId || access.focusSessionId,
+      proof_of_work_type: schema.type,
+      pow_model_version: schema.pow_model_version,
+      file_name: fileName,
+      mime_type: schema.mime_type,
+      file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
+      xai_file_id: uploaded.file_id,
+      timestamp_ms: timestampMs,
+      chunk_index: 0,
+      metadata,
+      tool_name: TAP_TRACE_TOOL_NAME,
+      tool_action: `${traceType}:${action}`,
+      user_id: access.guestUserId ? null : access.userId,
+      guest_user_id: access.guestUserId,
+      organization_id: access.organizationId,
+    });
 
     if (error || !row) {
       return jsonError(500, error?.message || "Failed to store TAP trace");

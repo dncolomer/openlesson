@@ -124,23 +124,19 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
   });
 });
 
-describe("Knowledge Links TAPBench skills download UI", () => {
-  it("exposes download control tied to skills.md next to TAPBench link actions", () => {
-    const ui = readFileSync(
-      join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"),
+describe("Knowledge Links does not host TAPBench skills download", () => {
+  it("workspace TAPBench mint panel is gone; TAP/ILE Knowledge Links stay", () => {
+    expect(existsSync(join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"))).toBe(
+      false,
+    );
+    const guest = readFileSync(
+      join(ROOT, "components/WorkspaceGuestLinksPanel.tsx"),
       "utf8",
     );
-    expect(ui).toContain("data-download-tapbench-skills");
-    expect(ui).toContain("data-tapbench-skills-md");
-    expect(ui).toContain("Download skills.md");
-    expect(ui).toContain("downloadTapbenchSkills");
-    expect(ui).toContain("buildTapbenchSkillsMarkdown");
-    expect(ui).toContain("downloadTapbenchSkillsMarkdown");
-    expect(ui).toContain("TAPBENCH_SKILLS_MD_FILENAME");
-    expect(ui).toContain("skills.md");
-    // Still has copy link alongside download
-    expect(ui).toContain("data-copy-tapbench-link");
-    expect(ui).toContain("data-tapbench-links-list");
+    expect(guest).not.toContain("downloadTapbenchSkillsMarkdown");
+    expect(guest).not.toContain("/api/workspace/tapbench-links");
+    expect(guest).toContain("/api/workspace/tap-links");
+    expect(guest).toContain("/api/workspace/ile-links");
   });
 
   it("ships builder module without alaTAP", () => {

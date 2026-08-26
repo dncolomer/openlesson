@@ -4,7 +4,7 @@ Capture base path: **`/api/v3/pow`**
 Snapshot base path: **`/api/v3/snapshot`**  
 Stash base path: **`/api/v3/stash`** (TAP buffer; TAPBench timed sessions supported)
 
-- **PoW (`/api/v3/pow`)** — list/get workspaces, learning-progress, proof-of-work upload, schema, integration skill, blocks, TAP links, API keys (browser session), org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
+- **PoW (`/api/v3/pow`)** — list/get workspaces, proof-of-work upload, schema, integration skill, blocks, TAP links, API keys (browser session), org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available. Scores live on Snapshot (`lwm_snapshot`).
 - **Snapshot (`/api/v3/snapshot`)** — vertical scores, learning world model, knowledge-config + trajectory, knowledge distance, snapshot-history, custom verification models.
 - **Stash (`/api/v3/stash`)** — temporary PoW buffer, then **stash** (System 1) or **submit** (System 2) flush into regular PoW.
 
@@ -82,7 +82,6 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/workspaces` | `workspaces:read` | `list_workspaces` | List accessible workspaces (`?status=&limit=&offset=`). |
 | `GET` | `/workspaces/{workspace_id}` | `workspaces:read` | `get_workspace` | Workspace metadata + `workspace_goal`. |
-| `GET` | `/workspaces/{workspace_id}/learning-progress` | `workspaces:read` | `get_learning_progress` | One-call progress snapshot (goal, blocks, counts, next actions). |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | `list_blocks` | List available blocks in the workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | `generate_proof_of_work_schema` | Grok-generated JSON Schema for ideal tool proof of work input. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | `generate_integration_skill` | Grok-generated workspace-specific `skill.md`. |
@@ -90,9 +89,6 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | `create_tap_link` | Request a private TAP link (optional body `block_id`). |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | `create_tap_link` | Block-scoped TAP link. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | `list_tap_links` | List TAP links and completion status. |
-| `POST` | `/workspaces/{workspace_id}/tapbench-links` | `tap:write` | `create_tapbench_link` | Mint a TAPBench timed agent session (optional body `block_id`, `duration_seconds` / `minutes`, `exercise`). Returns `session_token`, `url`, `exercise`, timing, `guest_user_id`. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tapbench-links` | `tap:write` | `create_tapbench_link` | Block-scoped TAPBench link. |
-| `GET` | `/workspaces/{workspace_id}/tapbench-links` | `tap:read` | `list_tapbench_links` | List TAPBench links (exercise, remaining time, share URL). |
 | `POST` | `/org/guests` | `org:write` | — | Org admins create guest users (not an MCP tool). |
 | `GET`/`POST`/`DELETE`/`PATCH` | `/keys…` | browser session | — | API key CRUD is browser-session only (not MCP). |
 
@@ -117,15 +113,9 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/workspaces/{workspace_id}/stash` | `workspaces:write` | `stash_proof_of_work` | Flush buffer as System 1 (stash) into regular PoW. TAPBench sessions flag flushed PoW as tapbench pow; expired tokens are rejected. |
 | `POST` | `/workspaces/{workspace_id}/submit` | `workspaces:write` | `submit_stashed_proof_of_work` | Flush buffer as System 2 (submit) into regular PoW. Same TAPBench rules as stash. |
 
-### TAPBench sessions
+### TAPBench
 
-Mint with the agent PoW API (Bearer API key, same scopes as TAP links):
-
-- `POST /api/v3/pow/workspaces/{workspace_id}/tapbench-links` (MCP `create_tapbench_link`) — optional body `block_id`, `duration_seconds` / `minutes`, `exercise`
-- `POST /api/v3/pow/workspaces/{workspace_id}/blocks/{block_id}/tapbench-links` — block-scoped
-- `GET /api/v3/pow/workspaces/{workspace_id}/tapbench-links` (MCP `list_tapbench_links`)
-
-Browser/UI mint remains available at `POST /api/workspace/tapbench-links`. Resolve any token with `GET /api/tapbench/{token}`. Pass `session_token` as `X-Tapbench-Session` (or body field) on Stash routes until `remaining_ms` is 0.
+TAPBench keys and tasks are issued on `/tapbench`, not via TAP/ILE mint APIs. Agent APIs mint TAP (`create_tap_link`) and ILE sessions only. Existing timed session tokens still resolve at `GET /api/tapbench/{token}` / `/tapbench/{token}`; pass `session_token` as `X-Tapbench-Session` on Stash if you have one.
 
 ## Predictive Interruptions (TIM)
 
@@ -266,7 +256,7 @@ Score responses always include:
 
 **Workspace creation is not available via REST or MCP.** `POST /api/v3/pow/workspaces` and the MCP tool `create_workspace` are rejected with `403 forbidden` and a message that create is UI-only.
 
-Create workspaces manually in the product UI at **`/workspace/new`** (blank, template, or files+goal modes). Semantic and opaque evaluation modes still apply to existing workspaces; integrators `list_workspaces` / `get_workspace` / `get_learning_progress` against IDs created in the UI.
+Create workspaces manually in the product UI at **`/workspace/new`** (blank, template, or files+goal modes). Semantic and opaque evaluation modes still apply to existing workspaces; integrators `list_workspaces` / `get_workspace` against IDs created in the UI. Scores: `lwm_snapshot`.
 
 ## Request TAP Link
 

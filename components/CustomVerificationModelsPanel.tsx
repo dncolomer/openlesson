@@ -9,7 +9,7 @@ import {
   regionBuilderSubjectKey,
   type RegionBuilderSubject,
 } from "@/lib/pow-api/region-builder";
-/** Inner sub-tabs: Create region · Browse saved regions (TAPBench links live under Knowledge Links). */
+/** Inner sub-tabs: Create region · Browse saved regions. */
 export type KnowledgeRegionsInnerTab = "create" | "browse-regions";
 
 export const KNOWLEDGE_REGIONS_INNER_TABS: Array<{
@@ -119,40 +119,18 @@ export function CustomVerificationModelsPanel({
     setLoading(true);
     setError(null);
     try {
-      const [regionsRes, tapbenchRes] = await Promise.all([
-        fetch(
-          `/api/workspace/custom-knowledge-regions?workspaceId=${encodeURIComponent(workspaceId)}`,
-        ),
-        fetch(
-          `/api/workspace/tapbench-links?workspaceId=${encodeURIComponent(workspaceId)}`,
-        ),
-      ]);
+      const regionsRes = await fetch(
+        `/api/workspace/custom-knowledge-regions?workspaceId=${encodeURIComponent(workspaceId)}`,
+      );
       const data = await regionsRes.json();
       if (!regionsRes.ok) throw new Error(data.error || "Failed to load custom knowledge regions");
 
-      // Optional list of TAPBench URLs for link-id filter (mint UI lives under Knowledge Links).
-      let urlByLinkId = new Map<string, string>();
-      if (tapbenchRes.ok) {
-        const tb = await tapbenchRes.json();
-        const links = Array.isArray(tb.tapbench_links) ? tb.tapbench_links : [];
-        urlByLinkId = new Map(
-          links
-            .filter((l: { id?: string; url?: string }) => l.id && l.url)
-            .map((l: { id: string; url: string }) => [l.id, l.url] as const),
-        );
-      }
-
       const rawSubjects: SubjectRow[] = Array.isArray(data.subjects) ? data.subjects : [];
       setSubjects(
-        rawSubjects.map((s) => {
-          const linkId = s.source_link_id ?? null;
-          const fromApi = s.source_link_url ?? null;
-          const fromJoin = linkId ? urlByLinkId.get(linkId) ?? null : null;
-          return {
-            ...s,
-            source_link_url: fromApi || fromJoin,
-          };
-        }),
+        rawSubjects.map((s) => ({
+          ...s,
+          source_link_url: s.source_link_url ?? null,
+        })),
       );
       const nextModels = (Array.isArray(data.models) ? data.models : []).map(
         (m: Record<string, unknown>) =>

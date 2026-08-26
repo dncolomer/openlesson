@@ -106,20 +106,12 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         routeRel: "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts",
       },
       {
-        built: powWorkspaceResource(workspaceId, "learning-progress"),
-        routeRel: "app/api/v3/pow/workspaces/[id]/learning-progress/route.ts",
-      },
-      {
         built: powWorkspaceResource(workspaceId, "blocks"),
         routeRel: "app/api/v3/pow/workspaces/[id]/blocks/route.ts",
       },
       {
         built: powWorkspaceResource(workspaceId, "tap-links"),
         routeRel: "app/api/v3/pow/workspaces/[id]/tap-links/route.ts",
-      },
-      {
-        built: powWorkspaceResource(workspaceId, "tapbench-links"),
-        routeRel: "app/api/v3/pow/workspaces/[id]/tapbench-links/route.ts",
       },
       {
         built: snapshotWorkspaceResource(workspaceId, "lwm-snapshot"),
@@ -172,11 +164,22 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).not.toContain("create_workspace");
   });
 
-  it("REST learning-progress route exists as MCP get_learning_progress twin", () => {
-    expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).toContain("get_learning_progress");
+  it("learning-progress and TAPBench mint are not on the agent surface", () => {
+    const mcpNames = MCP_EVIDENCE_TOOLS.map((t) => t.name);
+    expect(mcpNames).not.toContain("get_learning_progress");
+    expect(mcpNames).not.toContain("create_tapbench_link");
+    expect(mcpNames).not.toContain("list_tapbench_links");
     expect(
       existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/learning-progress/route.ts")),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/tapbench-links/route.ts")),
+    ).toBe(false);
+    expect(
+      existsSync(
+        join(ROOT, "app/api/v3/pow/workspaces/[id]/blocks/[blockId]/tapbench-links/route.ts"),
+      ),
+    ).toBe(false);
   });
 
   it("MCP includes eval read + stash tools matching REST", () => {

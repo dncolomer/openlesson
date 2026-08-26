@@ -6,11 +6,6 @@ import {
   parseOpaqueSchemaRequest,
 } from "../proof-of-work-integration";
 import { CreateTapLinkError, createWorkspaceTapLink } from "../create-tap-link";
-import {
-  CreateTapbenchLinkError,
-  createWorkspaceTapbenchLink,
-  listWorkspaceTapbenchLinks,
-} from "../create-tapbench-link";
 import { rejectProgrammaticWorkspaceCreate } from "../workspace-create-ui-only";
 import { runVerticalScore } from "../run-vertical-score";
 import type { ScoreVertical } from "../performance-report";
@@ -48,10 +43,6 @@ import {
   type InterruptionContext,
   withProofOfWorkApiResponse,
 } from "../predictive-interruption";
-import {
-  getAgentLearningProgress,
-  listAgentWorkspaces,
-} from "../agent-workspace-ops";
 import {
   getUploadProofOfWorkMeta,
   uploadWorkspaceProofOfWork,
@@ -118,7 +109,7 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 - **opaque**: privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
 
 ## Start here
-1. list_workspaces or get_learning_progress(workspace_id) — orient on an existing UI-created workspace
+1. list_workspaces or get_workspace(workspace_id) — orient on an existing UI-created workspace
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools)
 3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
 4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_snapshot_history
@@ -142,18 +133,6 @@ export const MCP_EVIDENCE_TOOLS = [
         limit: { type: "number", description: "Max results 1–100. Default 20." },
         offset: { type: "number", description: "Pagination offset. Default 0." },
       },
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "get_learning_progress",
-    description:
-      "One-call learning progress snapshot: workspace_goal, blocks, proof-of-work counts, uncertain_systems_scope, dual REST+MCP evaluation policies, and recommended_next_actions. Call first when orienting mid-session.",
-    inputSchema: {
-      type: "object",
-      properties: { workspace_id: { type: "string", description: "Workspace UUID." } },
-      required: ["workspace_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
@@ -358,52 +337,6 @@ export const MCP_EVIDENCE_TOOLS = [
         show_end_session: {
           type: "boolean",
           description: "When true (default), guest UI shows End Session.",
-        },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "list_tapbench_links",
-    description:
-      "List TAPBench (agent TAP) links for a workspace — exercise, remaining time, share URL, session token. REST: GET .../tapbench-links.",
-    inputSchema: {
-      type: "object",
-      properties: { workspace_id: { type: "string" } },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "create_tapbench_link",
-    description:
-      "Mint a TAPBench timed exercise session for a workspace or block. Returns session_token for Stash/Submit (X-Tapbench-Session). Optional block_id from list_blocks; optional duration_seconds or minutes; optional exercise text. REST: POST .../tapbench-links.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        block_id: {
-          type: "string",
-          description:
-            "Optional. blocks.id UUID from list_blocks. Omit for full-workspace TAPBench exercise.",
-        },
-        duration_seconds: {
-          type: "number",
-          description: "Session length in seconds (60–10800). Default 900 (15m).",
-        },
-        minutes: {
-          type: "number",
-          description: "Session length in minutes (alternative to duration_seconds).",
-        },
-        exercise: {
-          type: "string",
-          description: "Optional explicit exercise text. When omitted, a domain exercise is generated.",
-        },
-        exercise_text: {
-          type: "string",
-          description: "Alias of exercise.",
         },
       },
       required: ["workspace_id"],

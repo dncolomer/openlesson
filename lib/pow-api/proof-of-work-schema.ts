@@ -430,7 +430,7 @@ Output rules:
    - Integrators must **re-fetch** POST .../proof-of-work-schema (REST) or call generate_proof_of_work_schema (MCP) as proof of work accumulates
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
    - Progress tracking uses lwm_snapshot (LWM Snapshot) MCP tool and REST .../lwm-snapshot
-   - get_learning_progress (MCP) orients agents mid-session; REST equivalents remain authoritative in API paths
+   - get_workspace (MCP) orients agents mid-session; lwm_snapshot for scores; REST equivalents remain authoritative in API paths
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.

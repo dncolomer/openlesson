@@ -59,6 +59,70 @@ export async function authenticateStashRequest(
 
   auth = apiAuth.auth;
   supabase = apiAuth.supabase;
+  if (auth.auth_method === "tapbench_key") {
+    const { stashContextFromTapbenchKey } = await import("@/lib/tapbench/pow-auth");
+    const {
+      assertTapbenchGuestForKey,
+      supabaseTapbenchGuestStore,
+      tapbenchGuestIdFromRequest,
+    } = await import("@/lib/tapbench/guests");
+    const fromKey = stashContextFromTapbenchKey(auth, workspaceId);
+    if (!fromKey) {
+      return {
+        ok: false,
+        response: jsonError(
+          403,
+          "This TAPBench key is not issued for this Benchmark Task",
+          "forbidden",
+        ),
+      };
+    }
+    const guestId = tapbenchGuestIdFromRequest(req, body);
+    if (!guestId) {
+      return {
+        ok: false,
+        response: jsonError(
+          400,
+          "Mint a guest and send X-Tapbench-Guest (or guest_user_id) for this run",
+          "validation_error",
+        ),
+      };
+    }
+    try {
+      const guest = await assertTapbenchGuestForKey(
+        supabaseTapbenchGuestStore(supabase),
+        auth.key_id,
+        guestId,
+      );
+      if (guest.stopped_at) {
+        return {
+          ok: false,
+          response: jsonError(
+            409,
+            "This TAPBench guest run has been stopped",
+            "session_stopped",
+          ),
+        };
+      }
+    } catch (err) {
+      const status =
+        err && typeof err === "object" && "status" in err && typeof err.status === "number"
+          ? err.status
+          : 404;
+      const message = err instanceof Error ? err.message : "Unknown TAPBench guest";
+      return {
+        ok: false,
+        response: jsonError(status, message, "guest_not_found"),
+      };
+    }
+    const withGuest: AuthContext = {
+      ...auth,
+      user_id: null,
+      guest_user_id: guestId,
+    };
+    const ctx = stashContextFromTapbenchKey(withGuest, workspaceId);
+    return { ok: true, auth: withGuest, supabase, tapbenchCtx: ctx };
+  }
   const tb = await resolveStashTapbenchFromRequest(req, supabase, {
     body,
     workspaceId,

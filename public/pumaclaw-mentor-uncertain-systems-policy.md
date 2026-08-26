@@ -5,7 +5,7 @@ Add when Mentor mode is active. All Uncertain Systems access is **direct Proof-o
 ## Mentor button — user is mentor type
 
 1. `list_workspaces` — find workspaces owned by **other team members**.
-2. `get_learning_progress` — per relevant workspace: `workspace_goal`, proof-of-work counts, `recommended_next_actions`.
+2. `get_workspace` — per relevant workspace: `workspace_goal` and metadata. Scores live on Snapshot (`lwm_snapshot`).
 3. Call vertical score tools for learning-efficiency snapshots:
    - `lwm_snapshot` / REST `POST .../lwm-snapshot`
   - *(removed as peer type)* — use `lwm_snapshot` (LWM Snapshot)
@@ -14,5 +14,5 @@ Add when Mentor mode is active. All Uncertain Systems access is **direct Proof-o
 ## Mentor button — user is not mentor type
 
 1. `list_workspaces` — resolve **this user's** workspace.
-2. `get_learning_progress` — current `workspace_goal`, proof-of-work volume, recommended next actions.
+2. `get_workspace` — current `workspace_goal` and metadata. Scores: `lwm_snapshot`.
 3. Call vertical score tools for personal learning-efficiency advice: what to practice, what proof of work to collect, what to stop doing.

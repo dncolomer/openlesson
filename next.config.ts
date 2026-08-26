@@ -49,6 +49,12 @@ const nextConfig: NextConfig = {
         destination: "/portal/:token",
         permanent: true,
       },
+      // Results live on /tapbench; do not let /tapbench/results hit [token].
+      {
+        source: "/tapbench/results",
+        destination: "/tapbench",
+        permanent: true,
+      },
     ];
   },
   images: {

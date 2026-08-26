@@ -459,14 +459,10 @@ describe("structural artifacts", () => {
     expect(gen).toContain("blockLocalContext");
     expect(gen).toContain("unusableCells");
 
-    // Primary TAPBench mint path (tapbench-links) must pass inventory/local/unusable.
-    const mint = read("app/api/workspace/tapbench-links/route.ts");
-    expect(mint).toContain("generateTapbenchExercise");
-    expect(mint).toContain("loadWorkspacePromptContext");
-    expect(mint).toContain("blocks: promptCtx.blocks");
-    expect(mint).toContain("blockLocalContext: promptCtx.blockLocalContext");
-    expect(mint).toContain("unusableCells: promptCtx.unusableCells");
-    expect(mint).toContain("focusedBlockId: promptCtx.focusedBlockId");
+    // TAPBench mint is not a workspace API. Exercise generator still takes full context.
+    const tapbenchGen = read("lib/pow-api/tapbench-exercise-generate.ts");
+    expect(tapbenchGen).toContain("blockLocalContext");
+    expect(tapbenchGen).toContain("unusableCells");
 
     // ILE SessionView pure framer + generate-exercise body pass layers.
     const sessionView = readSessionViewSurface();

@@ -277,13 +277,10 @@ describe("structural wiring: attach + prompt assembly", () => {
     );
   });
 
-  it("generate-exercise + tapbench-links routes pass externalResources from hydrate", () => {
+  it("generate-exercise and TAPBench exercise helper pass externalResources from hydrate", () => {
     const gen = read("app/api/generate-exercise/route.ts");
     expect(gen).toContain("externalResources");
     expect(gen).toMatch(/hydrated\?\.externalResources|externalResources:\s*hydrated/);
-    const tap = read("app/api/workspace/tapbench-links/route.ts");
-    expect(tap).toContain("externalResources");
-    expect(tap).toMatch(/promptCtx\.externalResources|externalResources:\s*promptCtx/);
     const domain = read("lib/pow-api/tapbench-exercise-generate.ts");
     expect(domain).toContain("externalResources: input.externalResources");
     const exercise = read("lib/exercise-tap.ts");

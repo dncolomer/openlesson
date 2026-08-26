@@ -285,7 +285,7 @@ describe("collectGuestLinkBrowseStatuses", () => {
 });
 
 describe("WorkspaceGuestLinksPanel browse UI structure", () => {
-  it("exposes Create|Browse only (no TAPBench third tab), search, and kind+status filters", () => {
+  it("exposes Create|Browse only, TAP/ILE filters, no TAPBench mint", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("data-guest-links-inner-tabs");
     expect(panel).toContain('data-guest-links-inner-tab="create"');
@@ -295,21 +295,22 @@ describe("WorkspaceGuestLinksPanel browse UI structure", () => {
     expect(panel).toContain("data-guest-links-filter-kind");
     expect(panel).toContain("data-guest-links-filter-status");
     expect(panel).toContain("data-guest-links-browse-list");
-    expect(panel).toContain('value="tapbench"');
+    expect(panel).not.toContain('value="tapbench"');
+    expect(panel).toContain('value="tap"');
+    expect(panel).toContain('value="ile"');
     expect(panel).toContain("filterGuestLinkBrowseRows");
     expect(panel).toContain("buildGuestLinkBrowseRows");
-    expect(panel).toContain("tapbenchLinks");
+    expect(panel).not.toContain("tapbenchLinks");
   });
 
-  it("create is one primary submit; TAPBench mint folded in; browse keeps invalidate/copy", () => {
+  it("create is one primary TAP/ILE submit; browse keeps invalidate/copy", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("createTapLink");
     expect(panel).toContain("createIleLink");
-    expect(panel).toContain("mintTapbenchLink");
+    expect(panel).not.toContain("mintTapbenchLink");
     expect(panel).toContain("createSelectedLink");
     expect(panel).toContain("data-guest-links-create-submit");
-    expect(panel).toContain("data-create-tapbench-link");
-    // Fewer parallel mint CTAs: single submit, not dual anonymous+member stacks
+    expect(panel).not.toContain("data-create-tapbench-link");
     expect(panel).toContain("data-guest-links-product-select");
     expect(panel).not.toMatch(/onClick=\{\(\) => void createTapLink\("anonymous"\)\}/);
     expect(panel).not.toMatch(/onClick=\{\(\) => void createIleLink\("anonymous"\)\}/);
@@ -320,7 +321,7 @@ describe("WorkspaceGuestLinksPanel browse UI structure", () => {
     expect(panel).toContain("reissueTapLink");
     expect(panel).toContain("reissueIleLink");
     expect(panel).toContain("copyLink");
-    expect(panel).toContain("downloadTapbenchSkills");
+    expect(panel).not.toContain("downloadTapbenchSkills");
   });
 });
 

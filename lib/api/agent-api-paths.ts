@@ -7,6 +7,8 @@
 export const POW_API_BASE = "/api/v3/pow" as const;
 export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 export const STASH_API_BASE = "/api/v3/stash" as const;
+/** TAPBench catalog, goals, keys, skill, and results (live traces go through Stash). */
+export const TAPBENCH_API_BASE = "/api/v3/tapbench" as const;
 
 /** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */
 export const EVAL_API_BASE = SNAPSHOT_API_BASE;

@@ -129,8 +129,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(textExposesKnowledgeLinkMint(standard)).toBe(true);
     expect(standard).toContain("create_tap_link");
     expect(standard).toContain("list_tap_links");
-    expect(standard).toContain("create_tapbench_link");
-    expect(standard).toContain("list_tapbench_links");
+    expect(standard).not.toContain("create_tapbench_link");
+    expect(standard).not.toContain("list_tapbench_links");
     expect(standard).toContain("/skill.md");
 
     const krDoc = skillDocumentedToolsForWorkspace("knowledge_region").map((t) => t.name);
@@ -214,8 +214,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(read("app/api/workspace/ile-links/route.ts")).toContain(
       "assertWorkspaceAllowsKnowledgeLinkMint",
     );
-    expect(read("app/api/workspace/tapbench-links/route.ts")).toContain(
-      "assertWorkspaceAllowsKnowledgeLinkMint",
+    expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
+      false,
     );
 
     const krSkill = buildIntegrationSkillInstructions(SKILL_REQUEST, KR_WORKSPACE, [], null, null);

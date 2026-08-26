@@ -44,6 +44,18 @@ export async function authenticateApiKey(
   requiredScope: ApiKeyScope
 ): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const supabase = await getServiceClient();
+
+  const { isTapbenchKeyMaterial, authenticateTapbenchPowKey } = await import(
+    "@/lib/tapbench/pow-auth"
+  );
+  if (isTapbenchKeyMaterial(apiKey)) {
+    const tap = await authenticateTapbenchPowKey(apiKey, requiredScope, supabase);
+    if (!tap.ok) {
+      return errorResponse(tap.status, tap.code as ApiError["code"], tap.message);
+    }
+    return { auth: tap.auth, supabase };
+  }
+
   const keyHash = await hashApiKey(apiKey);
 
   const { data: keyData, error } = await supabase

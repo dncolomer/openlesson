@@ -11,7 +11,7 @@ Use this skill when an agent needs to work with existing Verification Workspaces
 
 The Proof-of-Work API supports **only** this workflow:
 
-1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` / `get_learning_progress` (REST + MCP). **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
+1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` (REST + MCP). **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload proof of work (`POST .../proof-of-work`) **or** buffer via Stash API then stash/submit.
@@ -135,11 +135,11 @@ Content-Type: application/json
 
 **Tools (100% parity with public agent REST under `/api/v3/{pow,snapshot,stash}`; create is UI-only; key CRUD is browser-session only):**
 
-`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `list_tapbench_links`, `create_tapbench_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_snapshot_history`, `list_custom_knowledge_regions`, `create_custom_knowledge_region`, `eval_custom_knowledge_region`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
+`list_workspaces`, `get_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_snapshot_history`, `list_custom_knowledge_regions`, `create_custom_knowledge_region`, `eval_custom_knowledge_region`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
 
 Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`.
 
-**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` (or Stash buffer tools) and vertical scores. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
+**Partner agents:** call `get_workspace` to orient, then `upload_proof_of_work` (or Stash buffer tools) and `lwm_snapshot`. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
@@ -155,7 +155,7 @@ MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://pro
 
 Programmatic workspace creation is **disabled**. This endpoint returns `403 forbidden` with a message that create is UI-only. MCP `create_workspace` is not in the tool catalog and hard-fails with the same message if called.
 
-**Create workspaces in the product UI** at `/workspace/new` (blank, template, or files+goal). Then use `list_workspaces` / `get_workspace` / `get_learning_progress` with the resulting workspace ID.
+**Create workspaces in the product UI** at `/workspace/new` (blank, template, or files+goal). Then use `list_workspaces` / `get_workspace` with the resulting workspace ID.
 
 **Response `403`:**
 
@@ -183,12 +183,6 @@ Query: `status`, `limit` (1–100, default 20), `offset`.
 ### `GET /api/v3/pow/workspaces/{workspace_id}` — `workspaces:read`
 
 Workspace metadata including `workspace_goal`. MCP: `get_workspace`.
-
----
-
-### `GET /api/v3/pow/workspaces/{workspace_id}/learning-progress` — `workspaces:read`
-
-One-call progress snapshot (goal, blocks, counts, recommended next actions). MCP: `get_learning_progress`.
 
 ---
 

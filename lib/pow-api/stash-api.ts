@@ -93,7 +93,15 @@ export type StashIngestResult =
 /** Shared allowed PoW type surface — same wire list as the schema check. */
 export const STASH_ALLOWED_POW_TYPES = WORKSPACE_PROOF_OF_WORK_WIRE_TYPES;
 
-export function bufferSubjectId(auth: Pick<AuthContext, "user_id" | "guest_user_id" | "key_id">): string {
+export function bufferSubjectId(
+  auth: Pick<AuthContext, "user_id" | "guest_user_id" | "key_id" | "auth_method">,
+): string {
+  if (auth.auth_method === "tapbench_key" && auth.guest_user_id) {
+    return `tapbench-guest:${auth.guest_user_id}`;
+  }
+  if (auth.auth_method === "tapbench_key" && auth.key_id) {
+    return `tapbench-key:${auth.key_id}`;
+  }
   return auth.user_id || auth.guest_user_id || auth.key_id || "anonymous";
 }
 
@@ -287,6 +295,7 @@ export function buildStashDecisionMetadata(
     base.thought_trace = true;
     if (tapbench.guest_user_id) {
       base.guest_user_id = tapbench.guest_user_id;
+      base.tapbench_guest_id = tapbench.guest_user_id;
     }
     if (tapbench.block_id && base.block_id === undefined) {
       base.block_id = tapbench.block_id;

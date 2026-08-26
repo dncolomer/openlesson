@@ -25,7 +25,7 @@ describe("integration-discovery", () => {
     expect(policy.proof_of_work_spec.rest_equivalent).toContain("/proof-of-work-schema");
     expect(policy.upload_proof_of_work?.mcp_tool).toBe("upload_proof_of_work");
     expect(policy.performance.mcp_tool).toBe("lwm_snapshot");
-    expect(policy.progress_snapshot.mcp_tool).toBe("get_learning_progress");
+    expect(policy.progress_snapshot.mcp_tool).toBe("get_workspace");
   });
 
   it("recommends schema before first upload and performance after proof of work exists", () => {
@@ -53,7 +53,8 @@ describe("integration-discovery", () => {
     expect(scope).toContain("REST");
 
     const loop = buildMcpResourceContent("uncertain-systems://proof-of-work-loop", "https://uncertain.systems");
-    expect(loop).toContain("get_learning_progress");
+    expect(loop).toContain("get_workspace");
+    expect(loop).not.toContain("get_learning_progress");
     expect(loop).toContain("continuous_evaluation_mcp");
   });
 });

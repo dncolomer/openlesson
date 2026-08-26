@@ -29,16 +29,6 @@ export const AGENT_TOOL_SURFACE = [
     rest: { method: "GET", path: `${POW_API_BASE}/workspaces` },
   },
   {
-    name: "get_learning_progress",
-    scope: "workspaces:read",
-    summary:
-      "Progress snapshot: workspace_goal, blocks, counts, recommended_next_actions (REST + MCP).",
-    rest: {
-      method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/learning-progress`,
-    },
-  },
-  {
     name: "get_workspace",
     scope: "workspaces:read",
     summary: "Read workspace metadata and workspace_goal.",
@@ -107,26 +97,6 @@ export const AGENT_TOOL_SURFACE = [
     rest: {
       method: "POST",
       path: `${POW_API_BASE}/workspaces/{workspace_id}/tap-links`,
-    },
-  },
-  {
-    name: "list_tapbench_links",
-    scope: "tap:read",
-    summary:
-      "List TAPBench (agent TAP) links for a workspace — exercise, timing, share URL.",
-    rest: {
-      method: "GET",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`,
-    },
-  },
-  {
-    name: "create_tapbench_link",
-    scope: "tap:write",
-    summary:
-      "Mint a TAPBench timed exercise link for a workspace or block (Stash/Submit session token).",
-    rest: {
-      method: "POST",
-      path: `${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`,
     },
   },
   {
@@ -242,8 +212,6 @@ export function agentToolNames(): AgentToolName[] {
 export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
   "create_tap_link",
   "list_tap_links",
-  "create_tapbench_link",
-  "list_tapbench_links",
 ] as const satisfies readonly AgentToolName[];
 
 export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
@@ -259,7 +227,6 @@ export const KNOWLEDGE_LINK_MINT_PATH_FRAGMENTS = [
 export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = [
   "list_workspaces",
   "get_workspace",
-  "get_learning_progress",
   "list_blocks",
   "generate_proof_of_work_schema",
   "upload_proof_of_work",
@@ -267,8 +234,6 @@ export const STANDARD_SKILL_DOCUMENTED_TOOL_NAMES = [
   "generate_integration_skill",
   "create_tap_link",
   "list_tap_links",
-  "create_tapbench_link",
-  "list_tapbench_links",
 ] as const satisfies readonly AgentToolName[];
 
 export function isKnowledgeLinkMintToolName(name: string): boolean {
@@ -286,7 +251,7 @@ export function agentToolSurfaceForWorkspace(kind: unknown): AgentToolSurfaceEnt
 /**
  * Tools listed in workspace-generated skill.md / recommended MCP copy.
  * KR: PoW + Snapshot + Stash TAPBench (no guest-link mint).
- * Standard: the historical documented subset, including TAP/TAPBench mint.
+ * Standard: the historical documented subset, including TAP mint.
  */
 export function skillDocumentedToolsForWorkspace(kind: unknown): AgentToolSurfaceEntry[] {
   if (workspaceAllowsKnowledgeLinkMint(kind)) {

@@ -150,21 +150,20 @@ describe("explicit-only exercise text (no pure shells from title catalog)", () =
   });
 });
 
-describe("mint route wires LLM exercise generation", () => {
-  it("POST handler imports and calls generateTapbenchExercise with full context layers", () => {
-    const route = read("app/api/workspace/tapbench-links/route.ts");
-    expect(route).toContain("generateTapbenchExercise");
-    expect(route).toContain("exercise_source");
-    expect(route).toContain("loadWorkspacePromptContext");
-    expect(route).toContain("blocks: promptCtx.blocks");
-    expect(route).toContain("blockLocalContext: promptCtx.blockLocalContext");
-    expect(route).toContain("unusableCells: promptCtx.unusableCells");
-    expect(route).toContain("focusedBlockId: promptCtx.focusedBlockId");
+describe("TAPBench exercise generator stays available without mint API", () => {
+  it("generateTapbenchExercise module still takes full context layers", () => {
+    const gen = read("lib/pow-api/tapbench-exercise-generate.ts");
+    expect(gen).toContain("blockLocalContext");
+    expect(gen).toContain("unusableCells");
+    expect(gen).toContain("focusedBlockId");
     expect(existsSync(join(ROOT, "lib/pow-api/tapbench-exercise-generate.ts"))).toBe(
       true,
     );
     expect(existsSync(join(ROOT, "lib/pow-api/load-workspace-prompt-context.ts"))).toBe(
       true,
+    );
+    expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
+      false,
     );
   });
 });

@@ -251,7 +251,7 @@ MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /a
 generate_proof_of_work_schema ↔ ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "REST proof-of-work-schema"}
 upload_proof_of_work ↔ ${spec.proof_of_work_upload_api_path || "REST proof of work"}
 lwm_snapshot ↔ REST POST .../lwm-snapshot
-get_learning_progress — one-call progress snapshot + recommended_next_actions
+get_workspace — workspace_goal and metadata; lwm_snapshot for scores
 MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → LWM Snapshot → repeat"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).

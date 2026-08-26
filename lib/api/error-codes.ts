@@ -13,6 +13,7 @@ export const KNOWN_ERROR_CODES = [
   "validation_error",
   "session_expired",
   "session_revoked",
+  "session_stopped",
   "aycl_authoring_required",
   "profile_required",
   "product_access_required",

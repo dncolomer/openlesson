@@ -7,7 +7,7 @@ Add to the Customer Agent system prompt. All Uncertain Systems access is **direc
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
 1. `list_workspaces` — resolve the learner's existing workspace (workspace create is UI-only at `/workspace/new`; do not call `create_workspace`).
-2. `get_learning_progress` — read `workspace_goal`, block map, and proof-of-work counts.
+2. `get_workspace` — read `workspace_goal` and metadata. Scores live on Snapshot (`lwm_snapshot`).
 3. `generate_proof_of_work_schema` — once per workspace (or after major proof-of-work growth).
 
 This setup runs **once per chat start**, not only at phase boundaries. Monitoring begins with the first message of every session.
@@ -15,7 +15,7 @@ This setup runs **once per chat start**, not only at phase boundaries. Monitorin
 ## During the chat
 
 - After each meaningful PumaDoc action or coaching turn, call `upload_proof_of_work` (`type: tool`, `tool_name: pumadoc`).
-- Optionally call `get_learning_progress` after substantial upload batches.
+- Optionally call `lwm_snapshot` after substantial upload batches when a scorecard is needed.
 - Do **not** call vertical score tools or surface scores, gaps, or efficiency messaging mid-chat.
 
 ## When predefined progress phases are complete

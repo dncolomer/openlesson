@@ -58,7 +58,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     notes: [
       "Workspace creation is UI-only (blank, template, or files+goal at /workspace/new).",
       "MCP tool create_workspace is not offered and hard-fails with the same message if called.",
-      "Use list_workspaces / get_workspace / get_learning_progress against UI-created workspace IDs.",
+      "Use list_workspaces / get_workspace against UI-created workspace IDs. Scores: lwm_snapshot.",
     ],
   },
   {

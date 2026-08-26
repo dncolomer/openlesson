@@ -36,8 +36,10 @@ export interface AuthContext {
   is_org_admin: boolean;
   key_id: string;
   scopes: ApiKeyScope[];
-  auth_method?: "api_key" | "oauth";
+  auth_method?: "api_key" | "oauth" | "tapbench_key";
   oauth_client_id?: string;
+  /** Set for TAPBench task keys — PoW is allowed only on this workspace. */
+  tapbench_workspace_id?: string | null;
 }
 
 // --- Error Types ---

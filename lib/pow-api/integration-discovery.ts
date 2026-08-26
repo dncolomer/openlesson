@@ -169,12 +169,12 @@ export function buildContinuousEvaluationMcpPolicy(
       ],
     },
     progress_snapshot: {
-      mcp_tool: "get_learning_progress",
-      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v3/pow/workspaces/${workspaceId} + performance summary`,
+      mcp_tool: "get_workspace",
+      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v3/pow/workspaces/${workspaceId}`,
       purpose:
-        "One-call orientation: workspace_goal, block map, proof-of-work counts, recommended next MCP tool and REST equivalent",
+        "Workspace orientation: workspace_goal and metadata. Scores live on Snapshot API (lwm_snapshot).",
       when_to_call: [
-        "When connecting MCP mid-session and need workspace progress context",
+        "When connecting MCP mid-session and need workspace context",
         "Before choosing between upload_proof_of_work vs lwm_snapshot (LWM Snapshot)",
         "After long idle gaps to re-orient the agent",
       ],
@@ -266,9 +266,9 @@ export function recommendIntegrationActions(options: {
 
   actions.push({
     priority: 8,
-    mcp_tool: "get_learning_progress",
-    rest_equivalent: "Composite progress snapshot",
-    reason: "Re-orient on workspace_goal, counts, and recommended next steps.",
+    mcp_tool: "get_workspace",
+    rest_equivalent: `GET ${POW_API_BASE}/workspaces/{id}`,
+    reason: "Re-orient on workspace_goal. Scores live on lwm_snapshot.",
   });
 
   return actions.sort((a, b) => a.priority - b.priority);
@@ -372,7 +372,7 @@ Progress is **continuous**, not one-time setup.
 - \`report.gap_analysis\` — analysis + product-language next actions
 
 ## Quick orientation
-Call **get_learning_progress** with \`workspace_id\` for a one-shot snapshot and recommended_next_actions.
+Call **get_workspace** with \`workspace_id\` for metadata and workspace_goal. Call **lwm_snapshot** for scores.
 
 Every **generate_proof_of_work_schema** response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
 

@@ -24,7 +24,6 @@ const FORBIDDEN =
 
 const SHELL_PANELS = [
   "components/WorkspaceGuestLinksPanel.tsx",
-  "components/WorkspaceTapbenchLinksPanel.tsx",
   "components/CustomVerificationModelsPanel.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "components/WorkspaceModeSelect.tsx",
@@ -66,11 +65,9 @@ describe("UI monochrome chrome (white outline aesthetic)", () => {
     expect(guest).toContain("data-guest-links-create-submit");
     expect(guest).not.toMatch(/bg-cyan-|bg-blue-/);
 
-    const tb = read("components/WorkspaceTapbenchLinksPanel.tsx");
-    expect(tb).toContain("PRIMARY_CTA_CLASS");
-    expect(tb).toMatch(/bg-white/);
-    expect(tb).toMatch(/text-black/);
-    expect(tb).not.toMatch(/bg-cyan-|bg-blue-/);
+    const landing = read("components/TapbenchLanding.tsx");
+    expect(landing).toMatch(/bg-white|text-white/);
+    expect(landing).not.toMatch(/bg-cyan-|bg-blue-/);
   });
 
   it("LWM generate / score chrome stays neutral-white outline", () => {

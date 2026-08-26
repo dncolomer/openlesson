@@ -1,7 +1,7 @@
 import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
- * Agent TAPBench mint: shipped createWorkspaceTapbenchLink + REST/MCP surface.
- * Drives real create/list helpers (not a re-implemented mint).
+ * TAPBench timed-session helper (not a public mint API).
+ * Keys/tasks mint on /tapbench; TAP/ILE mint stay on workspace APIs.
  */
 import { describe, expect, it, beforeEach } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -17,7 +17,6 @@ import {
   agentToolNames,
 } from "@/lib/pow-api/agent-tool-surface";
 import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-proof-of-work-server";
-import { POW_API_BASE } from "@/lib/api/agent-api-paths";
 import {
   resetAllTapbenchSessionsForTests,
   resolveStoredTapbenchSession,
@@ -25,7 +24,17 @@ import {
 } from "@/lib/pow-api/tapbench";
 import type { AuthContext } from "@/lib/pow-api/types";
 import { createdByApiKeyId } from "@/lib/pow-api/auth";
-import { sessionAuthContext } from "@/app/api/workspace/tapbench-links/route";
+
+function sessionAuthContext(userId: string): AuthContext {
+  return {
+    user_id: userId,
+    guest_user_id: null,
+    organization_id: null,
+    is_org_admin: false,
+    key_id: "",
+    scopes: ["*"],
+  };
+}
 
 const ROOT = join(__dirname, "../..");
 
@@ -449,41 +458,32 @@ describe("createWorkspaceTapbenchLink (shipped agent mint)", () => {
   });
 });
 
-describe("agent REST + MCP surface for TAPBench mint", () => {
-  it("registers create_tapbench_link and list_tapbench_links on AGENT_TOOL_SURFACE with REST paths", () => {
-    const create = AGENT_TOOL_SURFACE.find((t) => t.name === "create_tapbench_link");
-    const list = AGENT_TOOL_SURFACE.find((t) => t.name === "list_tapbench_links");
-    expect(create).toBeDefined();
-    expect(list).toBeDefined();
-    expect(create!.scope).toBe("tap:write");
-    expect(list!.scope).toBe("tap:read");
-    expect(create!.rest.method).toBe("POST");
-    expect(list!.rest.method).toBe("GET");
-    expect(create!.rest.path).toBe(`${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`);
-    expect(list!.rest.path).toBe(`${POW_API_BASE}/workspaces/{workspace_id}/tapbench-links`);
+describe("agent REST + MCP surface omits TAPBench mint", () => {
+  it("does not register create_tapbench_link or list_tapbench_links on AGENT_TOOL_SURFACE", () => {
+    const names = new Set(agentToolNames());
+    expect(names.has("create_tapbench_link")).toBe(false);
+    expect(names.has("list_tapbench_links")).toBe(false);
+    expect(AGENT_TOOL_SURFACE.find((t) => t.name === "create_tapbench_link")).toBeUndefined();
+    expect(AGENT_TOOL_SURFACE.find((t) => t.name === "list_tapbench_links")).toBeUndefined();
   });
 
-  it("MCP_EVIDENCE_TOOLS names match agent surface including TAPBench tools", () => {
+  it("MCP_EVIDENCE_TOOLS names match agent surface without TAPBench mint tools", () => {
     const surface = new Set(agentToolNames());
     const mcp = new Set(MCP_EVIDENCE_TOOLS.map((t) => t.name));
-    expect(surface.has("create_tapbench_link")).toBe(true);
-    expect(surface.has("list_tapbench_links")).toBe(true);
-    expect(mcp.has("create_tapbench_link")).toBe(true);
-    expect(mcp.has("list_tapbench_links")).toBe(true);
+    expect(surface.has("create_tapbench_link")).toBe(false);
+    expect(surface.has("list_tapbench_links")).toBe(false);
+    expect(mcp.has("create_tapbench_link")).toBe(false);
+    expect(mcp.has("list_tapbench_links")).toBe(false);
     expect([...surface].sort()).toEqual([...mcp].sort());
   });
 
-  it("MCP server dispatches create_tapbench_link / list_tapbench_links to shared helpers", () => {
+  it("MCP server does not dispatch create_tapbench_link / list_tapbench_links", () => {
     const src = readMcpSurface();
-    expect(src).toMatch(/createWorkspaceTapbenchLink/);
-    expect(src).toMatch(/listWorkspaceTapbenchLinks/);
-    expect(src).toMatch(/name === "create_tapbench_link"/);
-    expect(src).toMatch(/name === "list_tapbench_links"/);
-    expect(src).toMatch(/requireScope\(auth\.scopes, "tap:write"\)/);
-    expect(src).toMatch(/requireScope\(auth\.scopes, "tap:read"\)/);
+    expect(src).not.toMatch(/name === "create_tapbench_link"/);
+    expect(src).not.toMatch(/name === "list_tapbench_links"/);
   });
 
-  it("ships REST route handlers that call createWorkspaceTapbenchLink", async () => {
+  it("does not ship agent REST route handlers for TAPBench mint", () => {
     const collection = join(
       ROOT,
       "app/api/v3/pow/workspaces/[id]/tapbench-links/route.ts",
@@ -492,42 +492,21 @@ describe("agent REST + MCP surface for TAPBench mint", () => {
       ROOT,
       "app/api/v3/pow/workspaces/[id]/blocks/[blockId]/tapbench-links/route.ts",
     );
-    expect(existsSync(collection)).toBe(true);
-    expect(existsSync(blockScoped)).toBe(true);
-    const colSrc = readFileSync(collection, "utf8");
-    const blockSrc = readFileSync(blockScoped, "utf8");
-    expect(colSrc).toMatch(/export async function GET/);
-    expect(colSrc).toMatch(/export async function POST/);
-    expect(colSrc).toMatch(/authenticateRequest\(req, "tap:write"\)/);
-    expect(colSrc).toMatch(/authenticateRequest\(req, "tap:read"\)/);
-    expect(colSrc).toMatch(/createWorkspaceTapbenchLink/);
-    expect(colSrc).toMatch(/listWorkspaceTapbenchLinks/);
-    expect(blockSrc).toMatch(/export async function POST/);
-    expect(blockSrc).toMatch(/createWorkspaceTapbenchLink/);
-    expect(blockSrc).toMatch(/authenticateRequest\(req, "tap:write"\)/);
-
-    // Real route module exports (same handlers wired to App Router)
-    const col = await import(
-      "@/app/api/v3/pow/workspaces/[id]/tapbench-links/route"
-    );
-    const block = await import(
-      "@/app/api/v3/pow/workspaces/[id]/blocks/[blockId]/tapbench-links/route"
-    );
-    expect(typeof col.POST).toBe("function");
-    expect(typeof col.GET).toBe("function");
-    expect(typeof block.POST).toBe("function");
+    expect(existsSync(collection)).toBe(false);
+    expect(existsSync(blockScoped)).toBe(false);
   });
 
-  it("browser UI mint reuses the same createWorkspaceTapbenchLink core", () => {
-    const ui = readFileSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"), "utf8");
-    expect(ui).toMatch(/createWorkspaceTapbenchLink/);
+  it("does not ship workspace TAPBench mint route", () => {
+    expect(
+      existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts")),
+    ).toBe(false);
   });
 
-  it("Proof-of-Work API docs document agent mint (not only UI path)", () => {
+  it("Proof-of-Work API docs do not document TAPBench mint", () => {
     const docs = readFileSync(join(ROOT, "docs/PROOF_OF_WORK_API.md"), "utf8");
-    expect(docs).toMatch(/tapbench-links/);
-    expect(docs).toMatch(/create_tapbench_link/);
-    expect(docs).toMatch(/list_tapbench_links/);
-    expect(docs).toMatch(/\/api\/v3\/pow\/workspaces\/\{workspace_id\}\/tapbench-links/);
+    expect(docs).not.toMatch(/create_tapbench_link/);
+    expect(docs).not.toMatch(/list_tapbench_links/);
+    expect(docs).not.toMatch(/\/api\/v3\/pow\/workspaces\/\{workspace_id\}\/tapbench-links/);
+    expect(docs).not.toMatch(/\/api\/workspace\/tapbench-links/);
   });
 });

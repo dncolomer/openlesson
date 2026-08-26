@@ -22,14 +22,8 @@ import {
   type GuestLinkBrowseRow,
   type GuestLinkBrowseStatusFilter,
 } from "@/lib/guest-link-browse";
-import {
-  buildTapbenchSkillsMarkdown,
-  downloadTapbenchSkillsMarkdown,
-  TAPBENCH_SKILLS_MD_FILENAME,
-} from "@/lib/pow-api/tapbench-skills-md";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
-import type { TapbenchLinkRow } from "@/components/WorkspaceTapbenchLinksPanel";
 
 interface WorkspaceBlock {
   id: string;
@@ -87,7 +81,6 @@ type CreateProductKind =
   | "drill_solo"
   | "explore_dialog"
   | "explore_solo"
-  | "tapbench"
   /** @deprecated legacy aliases accepted during transition */
   | "timed_explore"
   | "timed_drill"
@@ -121,8 +114,8 @@ interface WorkspaceGuestLinksPanelProps {
 }
 
 /**
- * Owner settings: create and browse shareable practice links.
- * Portal-inspired: Create | Browse only; one create form for TAP/ILE/TAPBench.
+ * Owner settings: create and browse shareable TAP and ILE practice links.
+ * TAPBench keys are issued on /tapbench, not from this API or panel.
  */
 export function WorkspaceGuestLinksPanel({
   workspaceId,
@@ -134,15 +127,14 @@ export function WorkspaceGuestLinksPanel({
   const [blocks, setBlocks] = useState<WorkspaceBlock[]>([]);
   const [tapLinks, setTapLinks] = useState<TapLinkRow[]>([]);
   const [ileLinks, setIleLinks] = useState<IleLinkRow[]>([]);
-  const [tapbenchLinks, setTapbenchLinks] = useState<TapbenchLinkRow[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
-  /** Shared scope block (optional for Drill/TAPBench; required for Explore). */
+  /** Shared scope block (optional for Drill; required for Explore). */
   const [selectedBlockId, setSelectedBlockId] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
-  /** Compact product selector: Explore/Drill × Dialog/Solo + TAPBench. */
+  /** Compact product selector: Explore/Drill × Dialog/Solo. */
   const [createProduct, setCreateProduct] =
     useState<CreateProductKind>("drill_dialog");
   /** anonymous (default) or assigned org member */
@@ -153,7 +145,6 @@ export function WorkspaceGuestLinksPanel({
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
   const [creatingIleLink, setCreatingIleLink] = useState(false);
-  const [mintingTapbench, setMintingTapbench] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [createdLinks, setCreatedLinks] = useState<Record<string, string>>({});
@@ -175,7 +166,6 @@ export function WorkspaceGuestLinksPanel({
     createProduct === "open_ended_drill";
   const isTimedProduct = isDrillProduct;
   const isOpenEndedProduct = isExploreProduct;
-  const isTapbenchProduct = createProduct === "tapbench";
   const drillModalitySolo =
     createProduct === "drill_solo" || createProduct === "timed_drill";
   const exploreModalitySolo =
@@ -183,7 +173,7 @@ export function WorkspaceGuestLinksPanel({
   // Back-compat data hooks for exercise / project mode markers
   const exerciseTap = drillModalitySolo;
   const ileProjectMode = exploreModalitySolo;
-  const creatingBusy = creatingLink || creatingIleLink || mintingTapbench;
+  const creatingBusy = creatingLink || creatingIleLink;
 
   const fieldClass =
     "mt-1 w-full rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
@@ -199,10 +189,8 @@ export function WorkspaceGuestLinksPanel({
       blockTitleById,
       entireWorkspaceLabel: t("planView.tapLinksEntireWorkspace"),
       participantLabelFor: (link) => participantLabel(link, t),
-      tapbenchLinks,
-      tapbenchParticipantLabel: "Agent",
     });
-  }, [blockTitleById, ileLinks, t, tapLinks, tapbenchLinks]);
+  }, [blockTitleById, ileLinks, t, tapLinks]);
 
   const filteredBrowseRows = useMemo(() => {
     return filterGuestLinkBrowseRows(browseRows, {
@@ -222,12 +210,9 @@ export function WorkspaceGuestLinksPanel({
     setLinksLoading(true);
     setLinksError(null);
     try {
-      const [linksRes, ileRes, tbRes, orgRes] = await Promise.all([
+      const [linksRes, ileRes, orgRes] = await Promise.all([
         fetch(`/api/workspace/tap-links?workspaceId=${encodeURIComponent(workspaceId)}`),
         fetch(`/api/workspace/ile-links?workspaceId=${encodeURIComponent(workspaceId)}`),
-        fetch(
-          `/api/workspace/tapbench-links?workspaceId=${encodeURIComponent(workspaceId)}`,
-        ),
         fetch("/api/organization"),
       ]);
 
@@ -236,15 +221,6 @@ export function WorkspaceGuestLinksPanel({
 
       const ileData = await ileRes.json();
       if (!ileRes.ok) throw new Error(ileData.error || t("planView.ileLinksLoadError"));
-
-      const tbData = await tbRes.json().catch(() => ({}));
-      if (tbRes.ok) {
-        setTapbenchLinks(
-          Array.isArray(tbData.tapbench_links) ? tbData.tapbench_links : [],
-        );
-      } else {
-        setTapbenchLinks([]);
-      }
 
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
@@ -353,32 +329,6 @@ export function WorkspaceGuestLinksPanel({
       workspaceId,
     ],
   );
-
-  const mintTapbenchLink = useCallback(async () => {
-    setMintingTapbench(true);
-    setCreateError(null);
-    try {
-      const response = await fetch("/api/workspace/tapbench-links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          minutes,
-          ...(selectedBlockId ? { blockId: selectedBlockId } : {}),
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(errorMessageFromBody(data, "Failed to create TAPBench link"));
-      await loadTapResources();
-      setInnerTab("browse");
-    } catch (error) {
-      setCreateError(
-        error instanceof Error ? error.message : "Failed to create TAPBench link",
-      );
-    } finally {
-      setMintingTapbench(false);
-    }
-  }, [loadTapResources, minutes, selectedBlockId, workspaceId]);
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
   const reissueTapLink = useCallback(
@@ -537,10 +487,6 @@ export function WorkspaceGuestLinksPanel({
   const createSelectedLink = useCallback(async () => {
     const participantType =
       participantMode === "user" && orgMembers.length > 0 ? "user" : "anonymous";
-    if (isTapbenchProduct) {
-      await mintTapbenchLink();
-      return;
-    }
     if (isOpenEndedProduct) {
       await createIleLink(participantType);
       return;
@@ -550,8 +496,6 @@ export function WorkspaceGuestLinksPanel({
     createIleLink,
     createTapLink,
     isOpenEndedProduct,
-    isTapbenchProduct,
-    mintTapbenchLink,
     orgMembers.length,
     participantMode,
   ]);
@@ -662,54 +606,10 @@ export function WorkspaceGuestLinksPanel({
     [t],
   );
 
-  const downloadTapbenchSkills = useCallback(
-    (link: TapbenchLinkRow) => {
-      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
-      const ok = downloadTapbenchSkillsMarkdown({
-        workspace_id: link.workspace_id || workspaceId,
-        block_id: link.block_id,
-        id: link.id,
-        session_token: link.public_token,
-        url: link.url,
-        exercise: link.exercise,
-        duration_seconds: link.duration_seconds,
-        expires_at: link.expires_at,
-        remaining_ms: link.remaining_ms,
-        status: link.status,
-        baseUrl: origin,
-      });
-      if (!ok) {
-        const md = buildTapbenchSkillsMarkdown({
-          workspace_id: link.workspace_id || workspaceId,
-          block_id: link.block_id,
-          id: link.id,
-          session_token: link.public_token,
-          url: link.url,
-          exercise: link.exercise,
-          duration_seconds: link.duration_seconds,
-          expires_at: link.expires_at,
-          remaining_ms: link.remaining_ms,
-          status: link.status,
-          baseUrl: origin,
-        });
-        const a = document.createElement("a");
-        a.href = `data:text/markdown;charset=utf-8,${encodeURIComponent(md)}`;
-        a.download = TAPBENCH_SKILLS_MD_FILENAME;
-        a.setAttribute("data-tapbench-skills-download-anchor", "1");
-        a.click();
-      }
-    },
-    [workspaceId],
-  );
-
   const renderBrowseRow = (link: GuestLinkBrowseRow) => {
     const isRevoked = link.status === "revoked";
     const isTap = link.kind === "tap";
     const isIle = link.kind === "ile";
-    const isTapbench = link.kind === "tapbench";
-    const tbRow = isTapbench
-      ? tapbenchLinks.find((row) => row.id === link.id)
-      : undefined;
     // Prefer durable list URL (public_token); fall back to just-created client memory.
     const listUrl = isTap
       ? tapLinks.find((row) => row.id === link.id)?.url ||
@@ -717,12 +617,11 @@ export function WorkspaceGuestLinksPanel({
       : isIle
         ? ileLinks.find((row) => row.id === link.id)?.url ||
           ileLinks.find((row) => row.id === link.id)?.private_url
-        : link.url || tbRow?.url;
+        : link.url;
     // Revoked links are not copyable (keep expression shape for structural tests).
     const privateUrl = isRevoked ? undefined : listUrl || createdLinks[link.id];
     const busy =
-      invalidating ||
-      (isTap ? creatingLink : isIle ? creatingIleLink : mintingTapbench);
+      invalidating || (isTap ? creatingLink : isIle ? creatingIleLink : false);
     const intent =
       isTap || isIle
         ? productIntentFromGuestLink({
@@ -732,19 +631,14 @@ export function WorkspaceGuestLinksPanel({
               ?.interaction_kind,
           })
         : null;
-    const clusterLabel = isTapbench
-      ? "TAPBench"
-      : intent
-        ? productIntentClusterLabel(intent)
-        : link.kind;
+    const clusterLabel = intent ? productIntentClusterLabel(intent) : link.kind;
 
     return (
       <li
         key={`${link.kind}-${link.id}`}
         data-guest-link-status={link.status}
         data-guest-link-kind={link.kind}
-        data-product-intent-id={intent?.id || (isTapbench ? "tapbench" : undefined)}
-        data-tapbench-link-id={isTapbench ? link.id : undefined}
+        data-product-intent-id={intent?.id}
         className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-neutral-800 px-3 py-2 text-xs"
       >
         <div className="min-w-0 text-neutral-400">
@@ -791,19 +685,8 @@ export function WorkspaceGuestLinksPanel({
               </span>
             ) : null}
           </p>
-          {(isTap || isTapbench) && link.requested_duration_seconds != null ? (
+          {isTap && link.requested_duration_seconds != null ? (
             <p>{Math.round(link.requested_duration_seconds / 60)} min</p>
-          ) : null}
-          {isTapbench && link.detail ? (
-            <p className="mt-0.5 line-clamp-2 text-neutral-300">{link.detail}</p>
-          ) : null}
-          {isTapbench && privateUrl ? (
-            <p
-              className="mt-0.5 break-all font-mono text-[10px] text-neutral-200/90"
-              data-tapbench-link-url
-            >
-              {privateUrl}
-            </p>
           ) : null}
           <p className="font-mono text-[10px] text-neutral-600">{link.id}</p>
         </div>
@@ -842,24 +725,11 @@ export function WorkspaceGuestLinksPanel({
               {t("planView.ileLinksInvalidate")}
             </button>
           ) : null}
-          {isTapbench && tbRow ? (
-            <button
-              type="button"
-              onClick={() => downloadTapbenchSkills(tbRow)}
-              className="rounded-none border border-neutral-800/60 bg-neutral-950/30 px-2.5 py-1.5 text-[11px] text-neutral-300 transition hover:border-white/60"
-              data-download-tapbench-skills
-              data-tapbench-skills-md
-              title={`Download ${TAPBENCH_SKILLS_MD_FILENAME} for agents (Stash/Submit)`}
-            >
-              Download skills.md
-            </button>
-          ) : null}
           {privateUrl ? (
             <button
               type="button"
               onClick={() => void copyLink(link.id, privateUrl)}
               className="rounded-none border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
-              data-copy-tapbench-link={isTapbench ? true : undefined}
             >
               {copiedLinkId === link.id
                 ? t("planView.tapLinksCopied")
@@ -912,17 +782,12 @@ export function WorkspaceGuestLinksPanel({
       label: PRODUCT_INTENT_LABELS.drillSolo,
       hint: PRODUCT_INTENT_LABELS.drillSoloHint,
     },
-    {
-      id: "tapbench",
-      label: "TAPBench",
-      hint: "Timed agent exercise with Stash/Submit session token.",
-    },
   ];
 
   const createDisabled =
     creatingBusy ||
     (isOpenEndedProduct && !selectedBlockId) ||
-    (participantMode === "user" && !selectedMemberId && !isTapbenchProduct);
+    (participantMode === "user" && !selectedMemberId);
 
   return (
     <div className="flex w-full flex-col gap-0" data-settings-section="guest-links">
@@ -942,16 +807,13 @@ export function WorkspaceGuestLinksPanel({
             className="flex flex-col gap-5 p-5 sm:p-6"
             data-guest-links-inner-tab="create"
             data-product-intent="guest-links-create"
-            data-tapbench-mint
-            data-region-tapbench-links
-            data-knowledge-links-tapbench
             role="tabpanel"
           >
             <div>
               <h3 className="text-sm font-medium text-white">Create knowledge link</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Pick a product, scope, and participant — one create action mints the share link
-                (including TAPBench for agents).
+                Pick a product, scope, and participant — one create action mints a TAP or ILE
+                share link.
               </p>
             </div>
 
@@ -1012,7 +874,6 @@ export function WorkspaceGuestLinksPanel({
                   value={selectedBlockId}
                   onChange={(event) => setSelectedBlockId(event.target.value)}
                   className={fieldClass}
-                  data-tapbench-block-select={isTapbenchProduct ? true : undefined}
                 >
                   {isOpenEndedProduct ? (
                     <option value="">{t("planView.ileLinksSelectBlock")}</option>
@@ -1028,13 +889,13 @@ export function WorkspaceGuestLinksPanel({
                 </select>
               </label>
 
-              {isTimedProduct || isTapbenchProduct ? (
+              {isTimedProduct ? (
                 <label className="block text-xs text-neutral-400">
                   {t("planView.tapLinksMinutes")}
                   <input
                     type="number"
-                    min={isTapbenchProduct ? 1 : TAP_LINK_MIN_MINUTES}
-                    max={isTapbenchProduct ? 180 : TAP_LINK_MAX_MINUTES}
+                    min={TAP_LINK_MIN_MINUTES}
+                    max={TAP_LINK_MAX_MINUTES}
                     value={minutes}
                     onChange={(event) =>
                       setMinutes(
@@ -1042,31 +903,28 @@ export function WorkspaceGuestLinksPanel({
                       )
                     }
                     className={fieldClass}
-                    data-tapbench-minutes={isTapbenchProduct ? true : undefined}
                   />
                 </label>
               ) : null}
             </div>
 
-            {!isTapbenchProduct ? (
-              <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 rounded-none border-neutral-700 bg-neutral-900"
-                  checked={showEndSession}
-                  onChange={(e) => setShowEndSession(e.target.checked)}
-                  data-guest-link-show-end-session
-                />
-                <span>
-                  <span className="font-medium text-neutral-300">Show End Session button</span>
-                  <span className="mt-0.5 block text-neutral-500">
-                    Default on. Uncheck to hide End Session on the guest runtime.
-                  </span>
+            <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded-none border-neutral-700 bg-neutral-900"
+                checked={showEndSession}
+                onChange={(e) => setShowEndSession(e.target.checked)}
+                data-guest-link-show-end-session
+              />
+              <span>
+                <span className="font-medium text-neutral-300">Show End Session button</span>
+                <span className="mt-0.5 block text-neutral-500">
+                  Default on. Uncheck to hide End Session on the guest runtime.
                 </span>
-              </label>
-            ) : null}
+              </span>
+            </label>
 
-            {!isTapbenchProduct && orgMembers.length > 0 ? (
+            {orgMembers.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-xs text-neutral-400">
                   Participant
@@ -1111,17 +969,12 @@ export function WorkspaceGuestLinksPanel({
                 onClick={() => void createSelectedLink()}
                 className={primaryBtnClass}
                 data-guest-links-create-submit
-                data-create-tapbench-link={isTapbenchProduct ? true : undefined}
               >
                 {creatingBusy
-                  ? isTapbenchProduct
-                    ? "Creating…"
-                    : isOpenEndedProduct
-                      ? t("planView.ileLinksCreating")
-                      : t("planView.tapLinksCreating")
-                  : isTapbenchProduct
-                    ? "Create TAPBench link"
-                    : "Create link"}
+                  ? isOpenEndedProduct
+                    ? t("planView.ileLinksCreating")
+                    : t("planView.tapLinksCreating")
+                  : "Create link"}
               </button>
             </div>
 
@@ -1174,7 +1027,6 @@ export function WorkspaceGuestLinksPanel({
                   <option value="all">{t("planView.guestLinksFilterKindAll")}</option>
                   <option value="tap">{t("planView.guestLinksFilterKindTap")}</option>
                   <option value="ile">{t("planView.guestLinksFilterKindIle")}</option>
-                  <option value="tapbench">TAPBench</option>
                 </select>
               </label>
               <label className="block text-xs text-neutral-400">
@@ -1252,7 +1104,6 @@ export function WorkspaceGuestLinksPanel({
               <ul
                 className="space-y-2"
                 data-guest-links-browse-list
-                data-tapbench-links-list
               >
                 {filteredBrowseRows.map((row) => renderBrowseRow(row))}
               </ul>

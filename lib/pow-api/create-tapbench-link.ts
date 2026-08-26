@@ -1,9 +1,8 @@
 /**
- * Agent + browser TAPBench link mint — shared service for PoW API and UI.
+ * Timed TAPBench session helper (not a public mint API).
  *
- * Mirrors create-tap-link: workspace access, optional block scope, exercise
- * generation, anonymous guest, persisted link. Agent routes use Bearer API keys
- * (tap:write); browser routes build an AuthContext from the session user.
+ * TAP/ILE mint stay on workspace APIs. TAPBench keys/tasks mint on /tapbench.
+ * This helper still persists/resolves existing timed session tokens.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -259,7 +258,7 @@ export async function createWorkspaceTapbenchLink(
 }
 
 /**
- * List TAPBench links for a workspace (agent GET twin of UI list).
+ * List TAPBench links for a workspace (session store / existing tokens).
  */
 export async function listWorkspaceTapbenchLinks(options: {
   supabase: SupabaseClient;

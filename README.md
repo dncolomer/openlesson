@@ -163,13 +163,13 @@ Requires `XAI_API_KEY` (STT + System 2 inference). Persist also needs Supabase s
 
 Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
-- List and read existing verification workspaces, blocks, and learning progress
+- List and read existing verification workspaces and blocks
 - Upload proof-of-work artifacts (`POST .../proof-of-work`) and fetch the live PoW schema
 - Request LWM Snapshot / world model / knowledge config (`/api/v3/snapshot`)
 - Buffer agent PoW via TAPBench Stash (`buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` under `/api/v3/stash`)
 - Connect via MCP (`POST /api/mcp`, Bearer or OAuth) with parity to public agent REST
 
-On **standard** workspaces, mint TAP and TAPBench knowledge links via `POST .../tap-links` / `POST .../tapbench-links` (MCP `create_tap_link` / `create_tapbench_link`). **Knowledge Region** skill.md and Integration MCP copy omit those mint endpoints — agents there use PoW + Snapshot + TAPBench Stash only. Mint APIs still 403 if called against a Knowledge Region workspace.
+On **standard** workspaces, mint TAP knowledge links via `POST .../tap-links` (MCP `create_tap_link`). Timed TAPBench sessions mint from the workspace UI, not agent REST/MCP. **Knowledge Region** skill.md and Integration MCP copy omit TAP mint — agents there use PoW + Snapshot + TAPBench Stash only. TAP mint still 403 if called against a Knowledge Region workspace.
 
 See [`public/skill.md`](public/skill.md) (global catalog, includes mint tools for standard workspaces) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md). Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api). Download a **workspace-scoped** skill.md from Settings → Integration.
 

@@ -313,7 +313,6 @@ describe("TAPBench surface contracts (routes + UI)", () => {
       "lib/pow-api/tapbench-store.ts",
       "lib/pow-api/stash-tapbench-auth.ts",
       "lib/pow-api/stash-api.ts",
-      "app/api/workspace/tapbench-links/route.ts",
       "app/api/tapbench/[token]/route.ts",
       "app/api/tapbench/[token]/skills/route.ts",
       "app/tapbench/[token]/page.tsx",
@@ -366,7 +365,7 @@ describe("TAPBench surface contracts (routes + UI)", () => {
     }
   });
 
-  it("Knowledge Links hosts TAPBench mint; Regions keeps builder filters", () => {
+  it("Knowledge Links does not mint TAPBench; Regions keeps builder filters", () => {
     const regions = readFileSync(join(ROOT, "components/CustomVerificationModelsPanel.tsx"), "utf8");
     expect(regions).toContain("data-region-builder");
     expect(regions).toContain("data-region-source-filter");
@@ -374,13 +373,17 @@ describe("TAPBench surface contracts (routes + UI)", () => {
     expect(regions).toContain("tapbench");
     expect(regions).toContain("human");
     expect(regions).not.toContain("data-create-tapbench-link");
+    expect(regions).not.toContain("/api/workspace/tapbench-links");
     expect(regions).not.toContain('action: "create_synthetic"');
     expect(regions).not.toContain("data-create-synthetic-region");
     expect(regions).not.toContain("Create from description or files");
     expect(regions).not.toMatch(/alatap|alaTAP/i);
 
-    const links = readFileSync(join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"), "utf8");
-    expect(links).toContain("data-tapbench-mint");
-    expect(links).toContain("data-create-tapbench-link");
+    expect(existsSync(join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"))).toBe(
+      false,
+    );
+    expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
+      false,
+    );
   });
 });

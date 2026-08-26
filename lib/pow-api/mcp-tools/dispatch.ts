@@ -6,11 +6,6 @@ import {
   parseOpaqueSchemaRequest,
 } from "../proof-of-work-integration";
 import { CreateTapLinkError, createWorkspaceTapLink } from "../create-tap-link";
-import {
-  CreateTapbenchLinkError,
-  createWorkspaceTapbenchLink,
-  listWorkspaceTapbenchLinks,
-} from "../create-tapbench-link";
 import { rejectProgrammaticWorkspaceCreate } from "../workspace-create-ui-only";
 import { runVerticalScore } from "../run-vertical-score";
 import type { ScoreVertical } from "../performance-report";
@@ -49,7 +44,6 @@ import {
   withProofOfWorkApiResponse,
 } from "../predictive-interruption";
 import {
-  getAgentLearningProgress,
   listAgentWorkspaces,
 } from "../agent-workspace-ops";
 import {
@@ -117,19 +111,6 @@ export async function callMcpProofOfWorkTool(
       { workspace },
       { endpoint: "get_workspace", workspace_id: workspaceId }
     );
-  }
-
-  if (name === "get_learning_progress") {
-    requireScope(auth.scopes, "workspaces:read");
-    const workspaceId = stringArg(args, "workspace_id");
-    if (!workspaceId) throw new Error("workspace_id is required.");
-    const progress = await getAgentLearningProgress(supabase, auth, workspaceId, origin);
-    const { counts, workspace_row: _ws, ...payload } = progress;
-    return await evidenceToolResult(payload, {
-      endpoint: "get_learning_progress",
-      workspace_id: workspaceId,
-      proof_of_work_artifacts: counts.proof_of_work_artifacts,
-    });
   }
 
   if (name === "create_workspace") {
@@ -373,6 +354,10 @@ export async function callMcpProofOfWorkTool(
 
   if (name === "upload_proof_of_work") {
     requireScope(auth.scopes, "workspaces:write");
+    if (auth.auth_method === "tapbench_key") {
+      const { TAPBENCH_STASH_ONLY_MESSAGE } = await import("@/lib/tapbench/constants");
+      throw new Error(TAPBENCH_STASH_ONLY_MESSAGE);
+    }
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
 
@@ -557,64 +542,6 @@ export async function callMcpProofOfWorkTool(
       );
     } catch (error) {
       if (error instanceof CreateTapLinkError) throw new Error(error.message);
-      throw error;
-    }
-  }
-
-  if (name === "list_tapbench_links") {
-    requireScope(auth.scopes, "tap:read");
-    const workspaceId = stringArg(args, "workspace_id");
-    if (!workspaceId) throw new Error("workspace_id is required.");
-    try {
-      const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
-      const listed = await listWorkspaceTapbenchLinks({
-        supabase,
-        auth,
-        workspaceId,
-        baseUrl: appBase,
-      });
-      return await evidenceToolResult(listed, {
-        endpoint: "list_tapbench_links",
-        workspace_id: workspaceId,
-      });
-    } catch (error) {
-      if (error instanceof CreateTapbenchLinkError) throw new Error(error.message);
-      throw error;
-    }
-  }
-
-  if (name === "create_tapbench_link") {
-    requireScope(auth.scopes, "tap:write");
-    const workspaceId = stringArg(args, "workspace_id");
-    const blockId = stringArg(args, "block_id") || null;
-    if (!workspaceId) throw new Error("workspace_id is required.");
-
-    try {
-      const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
-      const tapbenchLink = await createWorkspaceTapbenchLink({
-        supabase,
-        auth,
-        workspaceId,
-        blockId,
-        body: args,
-        baseUrl: appBase,
-      });
-      return await evidenceToolResult(
-        {
-          workspace_id: workspaceId,
-          tapbench_link: tapbenchLink,
-          session_token: tapbenchLink.session_token,
-          url: tapbenchLink.url,
-          exercise_source: tapbenchLink.exercise_source,
-        },
-        {
-          endpoint: "create_tapbench_link",
-          workspace_id: workspaceId,
-          block_id: blockId,
-        },
-      );
-    } catch (error) {
-      if (error instanceof CreateTapbenchLinkError) throw new Error(error.message);
       throw error;
     }
   }

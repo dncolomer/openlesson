@@ -348,7 +348,7 @@ ${purposeLine}
    - ${restEndpointsLine}
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): ${mcpToolList}
    - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
-   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace${krStashSection}
+   - Recommend get_workspace / generate_proof_of_work_schema first; use lwm_snapshot for scores${krStashSection}
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints

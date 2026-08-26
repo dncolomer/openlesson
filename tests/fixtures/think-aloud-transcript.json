@@ -1,0 +1,18 @@
+{
+  "duration": 8,
+  "text": "force is mass times acceleration so the answer is F equals ma",
+  "words": [
+    { "text": "force", "start": 0.4, "end": 0.7 },
+    { "text": "is", "start": 0.7, "end": 0.85 },
+    { "text": "mass", "start": 0.9, "end": 1.2 },
+    { "text": "times", "start": 1.25, "end": 1.5 },
+    { "text": "acceleration", "start": 1.55, "end": 2.2 },
+    { "text": "so", "start": 5.0, "end": 5.2 },
+    { "text": "the", "start": 5.25, "end": 5.35 },
+    { "text": "answer", "start": 5.4, "end": 5.7 },
+    { "text": "is", "start": 5.75, "end": 5.9 },
+    { "text": "F", "start": 6.0, "end": 6.15 },
+    { "text": "equals", "start": 6.2, "end": 6.5 },
+    { "text": "ma", "start": 6.55, "end": 6.9 }
+  ]
+}

@@ -118,28 +118,46 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # 162 route.ts handlers (workspaces, TAP/ILE, PoW/Snapshot/Stash, MCP, admin)
+│   ├── api/              # REST/MCP routes (workspaces, TAP/ILE, PoW/Snapshot/Stash, admin)
 │   ├── workspace/        # Workspace views; create at /workspace/new
 │   ├── session/          # ILE tutoring session pages
 │   ├── tap/              # Think Aloud Protocol sessions
 │   ├── tapbench/         # TAPBench agent sessions
 │   ├── dashboard/        # User dashboard & API key management
 │   └── docs/             # Interactive Proof-of-Work API reference
-├── components/           # React components (~212 TSX files)
+├── components/           # React components
 │   ├── SessionView.tsx   # ILE session UI
 │   ├── WorkspaceView.tsx # Workspace shell (map vs Knowledge Region)
-│   ├── WorkspaceIntegrationPanel.tsx  # Settings → Integration (skill.md + MCP)
 │   └── thought-ui/       # Shared dialogue / thought components
-├── lib/                  # Core libraries (~392 TS modules)
-│   ├── xai.ts            # LLM orchestration
+├── lib/                  # Product runtime (PoW, TAP/ILE, xAI, maps, billing)
+│   ├── pow-api/          # PoW / Snapshot / Stash / MCP
 │   ├── xai-client.ts     # xAI API client
-│   ├── workspace-kind.ts # standard vs knowledge_region
-│   ├── pow-api/          # PoW / Snapshot / Stash / MCP (/api/v3/{pow,snapshot,stash}, /api/mcp)
-│   └── ...
+│   └── workspace-kind.ts # standard vs knowledge_region
+├── utilities/            # Operator CLIs (not product features) — see utilities/README.md
+│   └── import-think-aloud-pow/
+├── scripts/              # Ops: migrations, seeds, e2e, one-off backfills
+├── docs/                 # Design notes and API docs
 ├── supabase/             # Database schema & migrations
-├── tests/lib/            # Vitest unit tests (lib-focused)
+├── tests/                # Vitest (tests/lib mirrors lib/; tests/utilities mirrors utilities/)
 └── public/               # Static assets; skill.md for standard-workspace agent integrations
 ```
+
+`utilities/` vs `scripts/`: new operator tools (think-aloud import, TAPBench helpers) go in `utilities/<name>/`. `scripts/` is ops automation (DB, CI, seeds). Product code stays in `app/`, `components/`, and `lib/`.
+
+## Operator utilities
+
+These are **not** TAP/ILE/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
+
+### Import think-aloud PoW (ILE Explore Solo)
+
+Turns a think-aloud video or audio file into ILE Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
+
+```bash
+npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id>
+npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id> --dry-run
+```
+
+Requires `XAI_API_KEY` (STT + System 2 inference). Persist also needs Supabase service-role env. Video stills need `ffmpeg`; without it, traces still write. Full flags: `npm run import:think-aloud-pow -- --help`.
 
 ## Proof-of-Work, Snapshot, and Stash APIs (v3)
 

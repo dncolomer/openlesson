@@ -1,6 +1,7 @@
 /**
  * Settings subtabs by workspace kind.
- * Knowledge Region: Knowledge Regions, Data Studio, Integration only.
+ * Knowledge Region: General (name/description), Knowledge Regions, Data Studio, Integration.
+ * No AYCL / Knowledge Portal / Knowledge Links mint on KR.
  */
 
 import {
@@ -28,6 +29,7 @@ export const ALL_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
 ];
 
 export const KNOWLEDGE_REGION_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
+  "general",
   "regions",
   "data-studio",
   "integrations",
@@ -39,8 +41,8 @@ export function availableSettingsSubviews(kind: unknown): readonly SettingsSubvi
     : ALL_SETTINGS_SUBVIEWS;
 }
 
-export function defaultSettingsSubview(kind: unknown): SettingsSubview {
-  return isKnowledgeRegionWorkspace(kind) ? "regions" : "general";
+export function defaultSettingsSubview(_kind?: unknown): SettingsSubview {
+  return "general";
 }
 
 export function resolveSettingsSubview(

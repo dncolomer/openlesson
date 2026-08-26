@@ -207,10 +207,22 @@ describe("Knowledge Region shell", () => {
     expect(resolveActiveSection("settings", { isOwner: false })).toBe("workspace");
 
     const krTabs = availableSettingsSubviews("knowledge_region");
-    expect([...krTabs]).toEqual(["regions", "data-studio", "integrations"]);
-    expect(defaultSettingsSubview("knowledge_region")).toBe("regions");
-    expect(resolveSettingsSubview("general", "knowledge_region")).toBe("regions");
-    expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("regions");
+    expect([...krTabs]).toEqual(["general", "regions", "data-studio", "integrations"]);
+    expect(defaultSettingsSubview("knowledge_region")).toBe("general");
+    expect(resolveSettingsSubview("general", "knowledge_region")).toBe("general");
+    expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("general");
+    const identitySettings = readFileSync(
+      join(ROOT, "components/WorkspaceIdentitySettings.tsx"),
+      "utf8",
+    );
+    const integrationPanel = readFileSync(
+      join(ROOT, "components/WorkspaceIntegrationPanel.tsx"),
+      "utf8",
+    );
+    expect(identitySettings).toContain("workspace-settings-title");
+    expect(identitySettings).toContain("workspace-settings-description");
+    expect(integrationPanel).toContain("WorkspaceIdentitySettings");
+    expect(integrationPanel).toContain('activeSubview === "general"');
     expect(settingsSubviewLabel("integrations", "knowledge_region")).toBe("Integration");
     expect(settingsSubviewLabel("regions", "knowledge_region")).toBe("Knowledge Regions");
     expect(settingsSubviewLabel("data-studio", "knowledge_region")).toBe("Data Studio");

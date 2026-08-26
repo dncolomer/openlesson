@@ -110,6 +110,29 @@ export function emptyLearningWorldModel(
   };
 }
 
+function asBlockCoverage(
+  value: unknown,
+): LearningWorldModelV0["exploration"]["block_coverage"] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item) => ({
+      block_id: typeof item.block_id === "string" ? item.block_id : "",
+      depth:
+        item.depth === "solid" || item.depth === "shallow" || item.depth === "none"
+          ? item.depth
+          : "none",
+      evidence_refs: Array.isArray(item.evidence_refs)
+        ? item.evidence_refs.filter((ref): ref is string => typeof ref === "string")
+        : [],
+    }));
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 /** Merge a partial delta into a base model; returns a new object. */
 export function mergeLearningWorldModelDelta(
   base: LearningWorldModelV0,
@@ -126,18 +149,26 @@ export function mergeLearningWorldModelDelta(
       : base.inferred_goal,
     exploration: delta.exploration
       ? {
-          block_coverage: delta.exploration.block_coverage ?? base.exploration.block_coverage,
-          pathways_touched: delta.exploration.pathways_touched ?? base.exploration.pathways_touched,
-          blind_spots: delta.exploration.blind_spots ?? base.exploration.blind_spots,
+          block_coverage: asBlockCoverage(
+            delta.exploration.block_coverage ?? base.exploration.block_coverage,
+          ),
+          pathways_touched: asStringArray(
+            delta.exploration.pathways_touched ?? base.exploration.pathways_touched,
+          ),
+          blind_spots: asStringArray(delta.exploration.blind_spots ?? base.exploration.blind_spots),
         }
       : base.exploration,
     learning_profile: delta.learning_profile
       ? {
-          strengths: delta.learning_profile.strengths ?? base.learning_profile.strengths,
-          friction_patterns:
+          strengths: asStringArray(
+            delta.learning_profile.strengths ?? base.learning_profile.strengths,
+          ),
+          friction_patterns: asStringArray(
             delta.learning_profile.friction_patterns ?? base.learning_profile.friction_patterns,
-          preferred_modalities:
+          ),
+          preferred_modalities: asStringArray(
             delta.learning_profile.preferred_modalities ?? base.learning_profile.preferred_modalities,
+          ),
           temporal_patterns: {
             ...base.learning_profile.temporal_patterns,
             ...(delta.learning_profile.temporal_patterns ?? {}),
@@ -146,8 +177,12 @@ export function mergeLearningWorldModelDelta(
       : base.learning_profile,
     evidence_appetite: delta.evidence_appetite
       ? {
-          want_more: delta.evidence_appetite.want_more ?? base.evidence_appetite.want_more,
-          saturated: delta.evidence_appetite.saturated ?? base.evidence_appetite.saturated,
+          want_more: asStringArray(
+            delta.evidence_appetite.want_more ?? base.evidence_appetite.want_more,
+          ),
+          saturated: asStringArray(
+            delta.evidence_appetite.saturated ?? base.evidence_appetite.saturated,
+          ),
         }
       : base.evidence_appetite,
     scores_snapshot: delta.scores_snapshot

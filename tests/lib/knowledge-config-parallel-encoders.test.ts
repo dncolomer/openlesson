@@ -37,6 +37,7 @@ import { updateLearnerStateAfterScore } from "@/lib/pow-api/learner-state-engine
 import {
   emptyLearningWorldModel,
   mergeLearningWorldModelDelta,
+  type LearningWorldModelDelta,
 } from "@/lib/prompt-kernel/world-model";
 import { createLearnerStateMockDb } from "../helpers/mock-supabase-learner-state";
 import {
@@ -409,6 +410,69 @@ describe("dual-write on score path (no backfill)", () => {
     const v1 = encodeAndMeasureVelocity(fixtureInput(), null);
     const ptr = knowledgeConfigPointerFromEmbedding(v1);
     expect(ptr.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+  });
+
+  it("updateLearnerStateAfterScore still writes knowledge config when block_coverage is prose", async () => {
+    const db = createLearnerStateMockDb();
+    const auth: AuthContext = {
+      user_id: "learner-kr",
+      guest_user_id: null,
+      organization_id: "org-1",
+      is_org_admin: false,
+      key_id: "key-1",
+      scopes: ["workspaces:read"],
+    };
+    const report: VerticalScoreReport = {
+      vertical: "verification",
+      score: 74,
+      workspace_goal: "Formalize a lemma",
+      ghc_score: 40,
+      ghc_confidence: "medium",
+      marker_scores: [],
+      summary: "ok",
+      strengths: [],
+      growth_areas: [],
+      gap_analysis: {
+        summary: "gaps",
+        gaps: [],
+        next_steps: { directions: [], events: [] },
+      },
+      suggestions: [],
+      confidence: "developing",
+      world_model_delta: {
+        exploration: {
+          block_coverage:
+            "No named blocks; pathway coverage is a single live formalization episode",
+          pathways_touched: [],
+          blind_spots: [],
+        },
+      } as unknown as LearningWorldModelDelta,
+    };
+
+    const result = await updateLearnerStateAfterScore({
+      supabase: db,
+      workspaceId: "ws-kr-prose-coverage",
+      auth,
+      report,
+      vertical: "verification",
+      proofOfWork: [
+        {
+          type: "tool",
+          tool_name: "ile-thought-trace",
+          tool_action: "system1:pause_finalize",
+          timestamp_ms: 1000,
+          metadata: { thought_trace: true },
+        },
+      ],
+      totalBlocks: 0,
+      trigger: "score",
+    });
+
+    expect(result.knowledgeConfig?.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+    expect(isKnowledgeConfigVector(result.knowledgeConfig?.vector)).toBe(true);
+    expect(db._state.snapshots.some((s) => s.embedding_model_id === KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID)).toBe(
+      true,
+    );
   });
 });
 

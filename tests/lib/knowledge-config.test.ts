@@ -96,6 +96,29 @@ describe("knowledgecfg-v1-d64", () => {
     expect(a.pow_event_count).toBe(3);
   });
 
+  it("encodes when LWM exploration.block_coverage is a prose string", () => {
+    const wm = emptyLearningWorldModel("ws-kr");
+    (wm.exploration as { block_coverage: unknown }).block_coverage =
+      "No named blocks; pathway coverage is a single live formalization episode";
+    const embedding = encodeKnowledgeConfig({
+      workspaceId: "ws-kr",
+      totalBlocks: 0,
+      powRows: [
+        {
+          proof_of_work_type: "tool",
+          timestamp_ms: 1000,
+          tool_name: "ile-thought-trace",
+          tool_action: "system1:pause_finalize",
+          metadata: { thought_trace: true },
+        },
+      ],
+      worldModel: wm,
+    });
+    expect(isKnowledgeConfigVector(embedding.vector)).toBe(true);
+    expect(embedding.dim).toBe(KNOWLEDGE_CONFIG_DIM);
+    expect(embedding.pow_event_count).toBe(1);
+  });
+
   it("moves when scores improve", () => {
     const baseRows = [
       {

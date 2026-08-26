@@ -9,7 +9,12 @@
  */
 
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
-import type { KnowledgeConfigEncodeInput, PowFeatureRow } from "./encoder";
+import {
+  asBlockCoverageList,
+  asNamedList,
+  type KnowledgeConfigEncodeInput,
+  type PowFeatureRow,
+} from "./encoder";
 import type { KnowledgeConfigEmbedding } from "./types";
 import {
   KNOWLEDGE_CONFIG_CONTENT_D256_DIM,
@@ -255,13 +260,13 @@ function lwmText(wm: LearningWorldModelV0 | null | undefined): string {
   if (!wm) return "";
   const parts = [
     wm.inferred_goal?.text || "",
-    ...(wm.learning_profile?.strengths || []),
-    ...(wm.learning_profile?.friction_patterns || []),
-    ...(wm.learning_profile?.preferred_modalities || []),
-    ...(wm.evidence_appetite?.want_more || []),
-    ...(wm.evidence_appetite?.saturated || []),
-    ...(wm.exploration?.blind_spots || []),
-    ...(wm.exploration?.pathways_touched || []),
+    ...asNamedList(wm.learning_profile?.strengths).map(String),
+    ...asNamedList(wm.learning_profile?.friction_patterns).map(String),
+    ...asNamedList(wm.learning_profile?.preferred_modalities).map(String),
+    ...asNamedList(wm.evidence_appetite?.want_more).map(String),
+    ...asNamedList(wm.evidence_appetite?.saturated).map(String),
+    ...asNamedList(wm.exploration?.blind_spots).map(String),
+    ...asNamedList(wm.exploration?.pathways_touched).map(String),
   ];
   return parts.join(" ");
 }
@@ -276,7 +281,7 @@ function confidenceFromInput(input: KnowledgeConfigEncodeInput): number {
   const volume = clip01(Math.log1p(n) / Math.log1p(30));
   const scoreBoost = hasScores ? 0.25 : 0;
   const coverageBoost =
-    clip01((input.worldModel?.exploration.block_coverage.length ?? 0) / 4) * 0.2;
+    clip01(asBlockCoverageList(input.worldModel?.exploration?.block_coverage).length / 4) * 0.2;
   const texts = collectSystemChannelTexts(input.powRows);
   const textBoost = texts.all.length > 0 ? 0.1 : 0;
   return clip01(volume * 0.5 + scoreBoost + coverageBoost + textBoost);
@@ -298,7 +303,8 @@ function buildStruct96(input: KnowledgeConfigEncodeInput): number[] {
   const scores = wm?.scores_snapshot;
   const rows = input.powRows;
   const n = rows.length;
-  const totalBlocks = Math.max(1, input.totalBlocks ?? wm?.exploration.block_coverage.length ?? 1);
+  const coverage = asBlockCoverageList(wm?.exploration?.block_coverage);
+  const totalBlocks = Math.max(1, input.totalBlocks ?? coverage.length ?? 1);
 
   const typeCounts = { tool: 0, screen: 0, video: 0, eeg: 0, other: 0 };
   const blockIds = new Set<string>();
@@ -329,7 +335,6 @@ function buildStruct96(input: KnowledgeConfigEncodeInput): number[] {
 
   const denom = Math.max(1, n);
   const temporal = temporalFeatures(timestamps);
-  const coverage = wm?.exploration.block_coverage ?? [];
   const meanDepth =
     coverage.length === 0
       ? blockIds.size > 0
@@ -340,13 +345,13 @@ function buildStruct96(input: KnowledgeConfigEncodeInput): number[] {
     (coverage.length ? coverage.filter((c) => c.depth !== "none").length : blockIds.size) /
       totalBlocks,
   );
-  const blindSpotDensity = clip01((wm?.exploration.blind_spots.length ?? 0) / 8);
-  const pathwayDensity = clip01((wm?.exploration.pathways_touched.length ?? 0) / 12);
-  const strengthDensity = clip01((wm?.learning_profile.strengths.length ?? 0) / 8);
-  const frictionDensity = clip01((wm?.learning_profile.friction_patterns.length ?? 0) / 8);
-  const modalityDensity = clip01((wm?.learning_profile.preferred_modalities.length ?? 0) / 6);
-  const wantMore = clip01((wm?.evidence_appetite.want_more.length ?? 0) / 6);
-  const saturated = clip01((wm?.evidence_appetite.saturated.length ?? 0) / 6);
+  const blindSpotDensity = clip01(asNamedList(wm?.exploration?.blind_spots).length / 8);
+  const pathwayDensity = clip01(asNamedList(wm?.exploration?.pathways_touched).length / 12);
+  const strengthDensity = clip01(asNamedList(wm?.learning_profile?.strengths).length / 8);
+  const frictionDensity = clip01(asNamedList(wm?.learning_profile?.friction_patterns).length / 8);
+  const modalityDensity = clip01(asNamedList(wm?.learning_profile?.preferred_modalities).length / 6);
+  const wantMore = clip01(asNamedList(wm?.evidence_appetite?.want_more).length / 6);
+  const saturated = clip01(asNamedList(wm?.evidence_appetite?.saturated).length / 6);
   const goalConf = clip01(wm?.inferred_goal.confidence ?? 0);
   const avgDwell = wm?.learning_profile.temporal_patterns.avg_dwell_ms;
   const dwellUnit =

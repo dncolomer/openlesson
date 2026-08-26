@@ -38,6 +38,8 @@ export {
 } from "./math";
 
 export {
+  asBlockCoverageList,
+  asNamedList,
   emptyKnowledgeConfig,
   encodeKnowledgeConfig,
   projectKnowledgeConfigTo2D,

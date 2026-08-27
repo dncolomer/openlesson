@@ -29,9 +29,10 @@ describe("TAPBench project landing", () => {
     const page = read("app/tapbench/page.tsx");
     const landing = read("components/TapbenchLanding.tsx");
     const experiment = read("components/TapbenchExperimentTutorial.tsx");
+    const intro = read("components/TapbenchResultsIntro.tsx");
     const shell = read("components/TapbenchShell.tsx");
     const table = read("components/TapbenchResultsTable.tsx");
-    const surface = `${page}\n${landing}\n${experiment}\n${shell}\n${table}`;
+    const surface = `${page}\n${landing}\n${experiment}\n${intro}\n${shell}\n${table}`;
     expect(page).toContain("TapbenchLanding");
     expect(page).toContain("loadTapbenchLandingData");
     expect(shell).toContain("LandingNav");
@@ -47,11 +48,19 @@ describe("TAPBench project landing", () => {
     expect(experiment).not.toContain("data-tapbench-how-to");
     expect(experiment).not.toContain("How to");
     expect(landing).toContain("TapbenchExperimentTutorial");
+    expect(landing).toContain("TapbenchResultsIntro");
+    expect(landing).toContain("data-tapbench-tabs");
+    expect(landing).toContain('data-tapbench-tab="results"');
+    expect(landing).toContain('data-tapbench-tab="experiment"');
+    expect(intro).toContain("data-tapbench-results-intro");
+    expect(intro).toContain("data-tapbench-video-placeholder");
+    expect(intro).toContain("/tapbench/experiment-tap.jpg");
+    expect(intro).not.toContain("How to");
+    expect(intro).not.toContain("data-tapbench-how-to");
     expect(experiment).toContain("data-tapbench-experiment");
-    expect(experiment).toContain('className="mt-14 w-full"');
+    expect(experiment).toContain('className="w-full"');
     expect(experiment).not.toContain("max-w-3xl");
     expect(landing).toContain('data-tapbench-landing-results');
-    expect(landing).toContain("mt-10 w-full");
     expect(experiment).toContain("data-tapbench-experiment-tutorial");
     expect(experiment).toContain("data-tapbench-experiment-snippet");
     expect(surface).not.toContain("data-tapbench-experiment-step");
@@ -100,7 +109,7 @@ describe("TAPBench project landing", () => {
     expect(landing).not.toContain("data-tapbench-run-form");
     expect(landing).not.toContain("Host a TAPBench Task");
     expect(landing).not.toContain("data-tapbench-landing-cta");
-    const withoutComments = `${landing}\n${experiment}`
+    const withoutComments = `${landing}\n${experiment}\n${intro}`
       .split("\n")
       .filter((l) => !l.trim().startsWith("*") && !l.trim().startsWith("//"))
       .join("\n");

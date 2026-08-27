@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TapbenchShell } from "@/components/TapbenchShell";
 import { TapbenchResultsTable } from "@/components/TapbenchResultsTable";
+import { TapbenchResultsIntro } from "@/components/TapbenchResultsIntro";
 import { TapbenchExperimentTutorial } from "@/components/TapbenchExperimentTutorial";
 import { TAPBENCH_API_BASE } from "@/lib/tapbench/constants";
 import type { TapbenchTask } from "@/lib/tapbench/catalog";
@@ -30,10 +31,25 @@ export function TapbenchLanding(props: {
   const [keys, setKeys] = useState<StoredTapbenchKeys>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [tab, setTab] = useState<"results" | "experiment">("results");
 
   useEffect(() => {
     setKeys(loadStoredTapbenchKeys());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (hash === "experiment") setTab("experiment");
+  }, []);
+
+  const selectTab = (next: "results" | "experiment") => {
+    setTab(next);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.hash = next === "experiment" ? "experiment" : "results";
+    window.history.replaceState(null, "", url.toString());
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -136,28 +152,74 @@ export function TapbenchLanding(props: {
         <h1 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">TAPBench</h1>
       </header>
 
-      <section
-        className="mt-10 w-full"
-        data-tapbench-landing-results
-        id="results"
+      <div
+        className="mt-8 flex w-full gap-1 border-b border-zinc-800"
+        data-tapbench-tabs
+        role="tablist"
+        aria-label="TAPBench"
       >
-        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">Results</h2>
-        <TapbenchResultsTable
-          tasks={tasks}
-          regions={regions}
-          busyId={busyId}
-          empty="None"
-          onIssueKey={(id) => void getKey(id)}
-          onDownloadSkill={(id) => void downloadSkill(id)}
-        />
-        {status ? (
-          <p className="mt-3 text-xs text-zinc-400" data-tapbench-key-status>
-            {status}
-          </p>
-        ) : null}
-      </section>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "results"}
+          className={`px-3 py-2 text-xs uppercase tracking-wide ${
+            tab === "results"
+              ? "border-b border-white text-white"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+          onClick={() => selectTab("results")}
+          data-tapbench-tab="results"
+        >
+          Results
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "experiment"}
+          className={`px-3 py-2 text-xs uppercase tracking-wide ${
+            tab === "experiment"
+              ? "border-b border-white text-white"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+          onClick={() => selectTab("experiment")}
+          data-tapbench-tab="experiment"
+        >
+          Experiment
+        </button>
+      </div>
 
-      <TapbenchExperimentTutorial />
+      {tab === "results" ? (
+        <section
+          className="mt-8 w-full"
+          data-tapbench-landing-results
+          id="results"
+          role="tabpanel"
+        >
+          <TapbenchResultsIntro />
+          <div className="mt-10">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Leaderboard
+            </h2>
+            <TapbenchResultsTable
+              tasks={tasks}
+              regions={regions}
+              busyId={busyId}
+              empty="None"
+              onIssueKey={(id) => void getKey(id)}
+              onDownloadSkill={(id) => void downloadSkill(id)}
+            />
+            {status ? (
+              <p className="mt-3 text-xs text-zinc-400" data-tapbench-key-status>
+                {status}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : (
+        <div className="mt-8 w-full" role="tabpanel" id="experiment">
+          <TapbenchExperimentTutorial />
+        </div>
+      )}
     </TapbenchShell>
   );
 }

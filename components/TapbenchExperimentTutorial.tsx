@@ -10,11 +10,11 @@ function Snippet(props: { children: string }) {
 }
 
 /**
- * Developer tutorial for the TAPBench experiment. Lives under Results.
+ * Developer tutorial for the TAPBench experiment. Lives on the Experiment tab.
  */
 export function TapbenchExperimentTutorial() {
   return (
-    <section className="mt-14 w-full" data-tapbench-experiment>
+    <section className="w-full" data-tapbench-experiment>
       <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
         Experiment
       </h2>

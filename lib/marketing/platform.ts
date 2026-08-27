@@ -29,8 +29,8 @@ export const PLATFORM_PRODUCTS = {
     href: LEARNING_HARNESS_PATH,
     cta: "Explore",
     pricingHref: HARNESS_PRICING_PATH,
-    image: "/lp-boxes/harness-study-table.jpg",
-    imageAlt: "A Greco-futurist marble study table crowded with books, scrolls, compasses, and drafting tools",
+    image: "/lp-boxes/harness-books.jpg",
+    imageAlt: "A small cluster of antique books and a compass on an empty abstract background",
   },
   verification: {
     eyebrow: "FOR ENTERPRISE",
@@ -40,8 +40,8 @@ export const PLATFORM_PRODUCTS = {
     href: KNOWLEDGE_VERIFICATION_PATH,
     cta: "Explore",
     pricingHref: VERIFICATION_PRICING_PATH,
-    image: "/lp-boxes/verification-lab-table.jpg",
-    imageAlt: "Greco-futurist marble table set as a chemical lab with bottles, test tubes, and testing instruments",
+    image: "/lp-boxes/verification-bottles.jpg",
+    imageAlt: "A small cluster of experimental bottles and test tubes on an empty abstract background",
   },
   tapbench: {
     eyebrow: "FOR SCIENCE",
@@ -50,8 +50,8 @@ export const PLATFORM_PRODUCTS = {
     body: "TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge in configuration space.",
     href: TAPBENCH_PATH,
     cta: "Explore",
-    image: "/lp-boxes/tapbench-maps-desk.jpg",
-    imageAlt: "Greco-futurist marble table covered with rolled and unfolded maps, a star chart, and cartography tools",
+    image: "/lp-boxes/tapbench-maps.jpg",
+    imageAlt: "A small cluster of maps, a compass, and a magnifying glass on an empty abstract background",
   },
 } as const;
 

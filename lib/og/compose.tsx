@@ -5,7 +5,8 @@ import { getOgSurface, type OgSurface } from "@/lib/og/surfaces";
 import { truncateOgDescription, truncateOgTitle } from "@/lib/og/text";
 
 export const OG_SIZE = { width: 1200, height: 630 } as const;
-export const OG_CONTENT_TYPE = "image/png";
+export const OG_CONTENT_TYPE = "image/jpeg";
+const OG_JPEG_MAX_BYTES = 1_000_000;
 
 export type ComposeOgImageInput = {
   title: string;
@@ -196,7 +197,7 @@ function cardJsx(options: {
  * Shared OG compositor: aesthetics background + brand chrome + dynamic text.
  * All public opengraph-image entrypoints should call this (or a thin wrapper).
  */
-export async function composeOgImage(input: ComposeOgImageInput): Promise<ImageResponse> {
+export async function composeOgImage(input: ComposeOgImageInput): Promise<Response> {
   const seed = input.aestheticSeed ?? input.title;
   const aestheticPath = resolveOgAestheticPath({
     preferred: input.aestheticPath,
@@ -211,7 +212,7 @@ export async function composeOgImage(input: ComposeOgImageInput): Promise<ImageR
   const footerLabel = input.footerLabel?.trim() || "Uncertain Systems";
   const siteLabel = input.siteLabel?.trim() || "uncertain.systems";
 
-  return new ImageResponse(
+  const png = new ImageResponse(
     cardJsx({
       title,
       description,
@@ -223,13 +224,29 @@ export async function composeOgImage(input: ComposeOgImageInput): Promise<ImageR
     }),
     { width: OG_SIZE.width, height: OG_SIZE.height },
   );
+  return toShareJpeg(png);
+}
+
+async function toShareJpeg(png: ImageResponse): Promise<Response> {
+  const sharp = (await import("sharp")).default;
+  const raw = Buffer.from(await png.arrayBuffer());
+  let jpeg = await sharp(raw).jpeg({ quality: 78, mozjpeg: true }).toBuffer();
+  if (jpeg.byteLength >= OG_JPEG_MAX_BYTES) {
+    jpeg = await sharp(raw).jpeg({ quality: 62, mozjpeg: true }).toBuffer();
+  }
+  return new Response(new Uint8Array(jpeg), {
+    headers: {
+      "Content-Type": OG_CONTENT_TYPE,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
 }
 
 /**
  * The one unsys standard share card (LP title/text + aesthetics).
  * Prefer this for all public opengraph-image entrypoints.
  */
-export async function composeStandardOgImage(): Promise<ImageResponse> {
+export async function composeStandardOgImage(): Promise<Response> {
   return composeOgImage({
     title: UNSYS_STANDARD_SHARE.title,
     description: UNSYS_STANDARD_SHARE.description,
@@ -245,7 +262,7 @@ export async function composeStandardOgImage(): Promise<ImageResponse> {
 export async function composeOgImageFromSurface(
   surface: OgSurface,
   _overrides: Partial<ComposeOgImageInput> = {},
-): Promise<ImageResponse> {
+): Promise<Response> {
   // Surfaces are registered for inventory only; share cards always use the unsys standard.
   void surface;
   void _overrides;
@@ -255,7 +272,7 @@ export async function composeOgImageFromSurface(
 export async function composeOgImageForSurfaceId(
   surfaceId: string,
   overrides: Partial<ComposeOgImageInput> = {},
-): Promise<ImageResponse> {
+): Promise<Response> {
   // Keep surface lookup so unknown ids still throw; card content is always standard.
   getOgSurface(surfaceId);
   void overrides;

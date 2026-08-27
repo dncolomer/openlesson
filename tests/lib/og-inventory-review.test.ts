@@ -57,8 +57,8 @@ describe("OG share inventory (one unsys standard)", () => {
     );
 
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p2);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Human Knowledge Platform/);
 
     for (const s of surfaces) {
       expect(s.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
@@ -83,12 +83,9 @@ describe("OG share inventory (one unsys standard)", () => {
     const src = read("lib/og/surfaces.ts");
     const standard = read("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
-    expect(standard).toContain("PLATFORM_HERO.p2");
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe("A Human Knowledge Platform.");
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(
-      "Uncertain Systems is a Human Knowledge Platform.",
-    );
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Human Knowledge Platform/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p2);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
     expect(standard).toContain("Human Knowledge Platform");
@@ -140,6 +137,7 @@ describe("OG share inventory (one unsys standard)", () => {
 
     // Static surfaces use createStaticOgImageHandler / staticOgAlt → standard card
     expect(read("app/opengraph-image.tsx")).toContain('staticOgAlt("home")');
+    expect(read("app/opengraph-image.tsx")).toContain('runtime = "nodejs"');
     expect(read("app/pricing/opengraph-image.tsx")).toContain(
       'createStaticOgImageHandler("pricing")',
     );
@@ -257,9 +255,9 @@ describe("OG share inventory (one unsys standard)", () => {
     );
     const social = standardShareSocialMetadata();
     expect(social.openGraph?.title).toBe(PLATFORM_HERO.h1);
-    expect(social.openGraph?.description).toBe(PLATFORM_HERO.p2);
+    expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(social.twitter?.title).toBe(PLATFORM_HERO.h1);
-    expect(social.twitter?.description).toBe(PLATFORM_HERO.p2);
+    expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     for (const text of [
       social.openGraph?.title,
       social.openGraph?.description,

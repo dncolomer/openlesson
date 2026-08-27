@@ -5,6 +5,7 @@ import {
   staticOgAlt,
 } from "@/lib/og/create-static-og";
 
+export const runtime = "nodejs";
 export const alt = staticOgAlt("home");
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;

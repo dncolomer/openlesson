@@ -5,6 +5,7 @@ import {
 } from "@/lib/og/compose";
 import { standardShareAlt } from "@/lib/og/standard";
 
+export const runtime = "nodejs";
 export const alt = standardShareAlt();
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;

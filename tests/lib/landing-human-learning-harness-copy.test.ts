@@ -71,21 +71,22 @@ describe("landing Human Knowledge Platform copy", () => {
     expect(PLATFORM_PRODUCT_LIST.map((p) => p.cta)).toEqual(["Explore", "Explore", "Explore"]);
   });
 
-  it("contracts OG title to H1 and OG description to P2 (not tautological P1)", () => {
+  it("contracts OG title to H1 and share description to Human Knowledge Platform, not product split", () => {
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(H1);
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(P2);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toBe(PLATFORM_HERO.p2);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(P1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toContain("Learning Harness");
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toContain("Knowledge Verification");
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(P2);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Human Knowledge Platform/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Learning Harness");
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toContain("Knowledge Verification");
     expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/cannot be cheated or faked/i);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION.length).toBeGreaterThanOrEqual(120);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION.length).toBeLessThanOrEqual(200);
     const lp = readRel("app/page.tsx");
     expect(lp).toContain(H1);
-    expect(lp).toContain(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(lp).toContain(P2);
     const standard = readRel("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
-    expect(standard).toContain("PLATFORM_HERO.p2");
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
     expect(standard).toContain("Human Knowledge Platform");
@@ -93,19 +94,20 @@ describe("landing Human Knowledge Platform copy", () => {
 
   it("root HTML, OG, Twitter, JSON-LD, and manifest share the LP hero (not old efficiency copy)", () => {
     const rootHtml = unsysRootHtmlMetadata();
-    expect(rootHtml.title.default).toBe(H1);
-    expect(rootHtml.title.default).toBe(UNSYS_STANDARD_SHARE_TITLE);
-    expect(rootHtml.description).toBe(P2);
+    expect(rootHtml.title.default).toBe("Uncertain Systems builds a Human Knowledge Platform");
+    expect(rootHtml.title.default.length).toBeGreaterThanOrEqual(50);
+    expect(rootHtml.title.default.length).toBeLessThanOrEqual(60);
     expect(rootHtml.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(rootHtml.description).not.toBe(P1);
+    expect(rootHtml.description).not.toBe(P2);
 
     const social = standardShareSocialMetadata({ url: "https://uncertain.systems" });
     expect(social.openGraph?.title).toBe(H1);
-    expect(social.openGraph?.description).toBe(P2);
-    expect(social.openGraph?.description).not.toBe(P1);
+    expect(social.openGraph?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(social.openGraph?.description).not.toBe(P2);
     expect(social.twitter?.title).toBe(H1);
-    expect(social.twitter?.description).toBe(P2);
-    expect(social.twitter?.description).not.toBe(P1);
+    expect(social.twitter?.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
+    expect(social.twitter?.description).not.toBe(P2);
     for (const text of [
       social.openGraph?.title,
       social.openGraph?.description,
@@ -118,8 +120,9 @@ describe("landing Human Knowledge Platform copy", () => {
     }
 
     const webManifest = manifest();
-    expect(webManifest.description).toBe(P2);
+    expect(webManifest.description).toBe(UNSYS_STANDARD_SHARE_DESCRIPTION);
     expect(webManifest.description).not.toBe(P1);
+    expect(webManifest.description).not.toBe(P2);
 
     const layout = readRel("app/layout.tsx");
     expect(layout).toContain("unsysRootHtmlMetadata");

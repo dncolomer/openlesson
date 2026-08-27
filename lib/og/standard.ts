@@ -1,24 +1,34 @@
 /**
  * Single Uncertain Systems (“unsys”) social share standard.
- * Title/description match the public landing page hero; image is aesthetics-backed.
+ * Social copy stays on Human Knowledge Platform (not product split).
  * All public OG/Twitter metadata and opengraph-image entrypoints should use this.
  */
 
 import type { Metadata } from "next";
 import { PLATFORM_HERO, PLATFORM_PHRASE } from "@/lib/marketing/platform";
 
-/** LP hero H1 — `PLATFORM_HERO.h1` / `app/page.tsx`. */
+/** Social card title — Human Knowledge Platform, not product split. */
 export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
 
-/** LP hero second paragraph — `PLATFORM_HERO.p2` / `app/page.tsx`. */
-export const UNSYS_STANDARD_SHARE_DESCRIPTION = PLATFORM_HERO.p2;
+/**
+ * SERP `<title>` (50–60 characters). og/twitter titles stay on
+ * `UNSYS_STANDARD_SHARE_TITLE`.
+ */
+export const UNSYS_STANDARD_HTML_TITLE =
+  "Uncertain Systems builds a Human Knowledge Platform" as const;
+
+/**
+ * Share + meta description: Human Knowledge Platform, no product split.
+ * Length is 120–160 for SERP and under ~200 for X.
+ */
+export const UNSYS_STANDARD_SHARE_DESCRIPTION =
+  "Uncertain Systems is a Human Knowledge Platform. Confirm knowledge is actually held without tests, with results that cannot be cheated or faked." as const;
 
 /** LP hero platform phrase — Human Knowledge Platform */
 export const UNSYS_STANDARD_SHARE_EYEBROW = PLATFORM_PHRASE;
 
-/** Footer pill chrome on composed cards (two products). */
-export const UNSYS_STANDARD_SHARE_FOOTER =
-  "LEARNING HARNESS · KNOWLEDGE VERIFICATION";
+/** Footer pill chrome on composed cards. */
+export const UNSYS_STANDARD_SHARE_FOOTER = "HUMAN KNOWLEDGE PLATFORM";
 
 /** Brand aesthetics image used on the LP hero set. */
 export const UNSYS_STANDARD_SHARE_AESTHETIC =
@@ -124,7 +134,7 @@ export function unsysRootHtmlMetadata(): {
 } {
   return {
     title: {
-      default: UNSYS_STANDARD_SHARE_TITLE,
+      default: UNSYS_STANDARD_HTML_TITLE,
       template: UNSYS_ROOT_TITLE_TEMPLATE,
     },
     description: UNSYS_STANDARD_SHARE_DESCRIPTION,

@@ -64,6 +64,10 @@ interface ThoughtMemoryPanelProps {
   /** Helios send path for selected thoughts (ILE Thought tool). */
   onSendThought?: (text: string, thoughtIds: string[]) => void | Promise<void>;
   isSending?: boolean;
+  /** TAP: save an individual thought locally (no Helios submit). Speech keeps running. */
+  onEditThought?: (thought: ThoughtMemoryEntry, nextText: string) => void;
+  /** TAP: delete an individual thought locally and record System 2 PoW. */
+  onDeleteThought?: (thought: ThoughtMemoryEntry) => void;
 }
 
 export function ThoughtMemoryPanel({
@@ -78,6 +82,8 @@ export function ThoughtMemoryPanel({
   allowInsightGeneration,
   onSendThought,
   isSending = false,
+  onEditThought,
+  onDeleteThought,
 }: ThoughtMemoryPanelProps) {
   const surfaceCaps = resolveInsightSurfaceCapabilities(insightSurface);
   const generationEnabled =
@@ -103,7 +109,17 @@ export function ThoughtMemoryPanel({
   } | null>(null);
 
   const insightsAvailable = isAuthenticated === true && generationEnabled;
-  const canSelectThoughts = generationEnabled || Boolean(onSendThought);
+  const canManageThoughts = Boolean(onEditThought || onDeleteThought);
+  const canSelectThoughts = !canManageThoughts && (generationEnabled || Boolean(onSendThought));
+  const [itemEdit, setItemEdit] = useState<{
+    id: string;
+    draft: string;
+    originalText: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!canManageThoughts) setItemEdit(null);
+  }, [canManageThoughts]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -287,7 +303,9 @@ export function ThoughtMemoryPanel({
         </div>
         <p className="mt-1 text-xs text-neutral-500">
           {mode === "memory"
-            ? generationEnabled
+            ? canManageThoughts
+              ? "Edit or delete individual thoughts. Keep speaking — new thoughts still come in."
+              : generationEnabled
               ? "Search traces, click cards to select, then bookmark or autosuggest insights."
               : "Search and review thought traces from this session."
             : workspaceId
@@ -471,6 +489,48 @@ export function ThoughtMemoryPanel({
             ) : (
               filteredThoughts.map((thought) => {
                 const isSelected = canSelectThoughts && selectedIds.has(thought.id);
+                if (canManageThoughts) {
+                  return (
+                    <article
+                      key={thought.id}
+                      data-tap-thought-item={thought.id}
+                      className="rounded-none border-b border-neutral-800/80 py-4 last:border-b-0"
+                    >
+                      <p className="mb-2 text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</p>
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-100">
+                        {thought.text}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {onEditThought ? (
+                          <button
+                            type="button"
+                            data-tap-edit-thought={thought.id}
+                            onClick={() =>
+                              setItemEdit({
+                                id: thought.id,
+                                draft: thought.text,
+                                originalText: thought.text,
+                              })
+                            }
+                            className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2 py-1 text-[11px] font-medium text-neutral-100 transition hover:border-neutral-500"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                        {onDeleteThought ? (
+                          <button
+                            type="button"
+                            data-tap-delete-thought={thought.id}
+                            onClick={() => onDeleteThought(thought)}
+                            className="rounded-none border border-neutral-800 bg-transparent px-2 py-1 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                }
                 if (!canSelectThoughts) {
                   return (
                     <article
@@ -513,6 +573,29 @@ export function ThoughtMemoryPanel({
           </div>
         </div>
       )}
+
+      {itemEdit ? (
+        <ThoughtEditPanel
+          title="Edit thought"
+          submitLabel="Save"
+          placeholder="Edit this thought. Keep speaking — new thoughts still come in."
+          draft={itemEdit.draft}
+          onDraftChange={(draft) =>
+            setItemEdit((current) => (current ? { ...current, draft } : null))
+          }
+          onCancel={() => setItemEdit(null)}
+          onSend={() => {
+            if (!onEditThought || !itemEdit) return;
+            const thought = thoughts.find((entry) => entry.id === itemEdit.id);
+            if (!thought) {
+              setItemEdit(null);
+              return;
+            }
+            onEditThought(thought, itemEdit.draft);
+            setItemEdit(null);
+          }}
+        />
+      ) : null}
 
       {selectionEdit ? (
         <ThoughtEditPanel

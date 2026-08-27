@@ -10,6 +10,7 @@ interface ThoughtEditPanelProps {
   isSending?: boolean;
   title?: string;
   submitLabel?: string;
+  placeholder?: string;
 }
 
 export function ThoughtEditPanel({
@@ -20,6 +21,7 @@ export function ThoughtEditPanel({
   isSending = false,
   title = "Edit transcription",
   submitLabel = "send",
+  placeholder = "Refine your transcription before sending to Helios...",
 }: ThoughtEditPanelProps) {
   const canSend = draft.trim().length > 0 && !isSending;
 
@@ -53,7 +55,7 @@ export function ThoughtEditPanel({
           }}
           rows={6}
           className="w-full resize-y rounded-none border border-neutral-800 bg-black px-3 py-2 text-sm leading-relaxed text-neutral-100 outline-none transition focus:border-neutral-600"
-          placeholder="Refine your transcription before sending to Helios..."
+          placeholder={placeholder}
           autoFocus
         />
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2">

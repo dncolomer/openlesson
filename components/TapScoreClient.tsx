@@ -73,6 +73,12 @@ import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
+import {
+  applyTapThoughtLocalDelete,
+  applyTapThoughtLocalEdit,
+  composeTapThoughtDeletePow,
+  composeTapThoughtEditPow,
+} from "@/lib/tap-thought-memory";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -539,6 +545,27 @@ export function TapScoreClient({
     };
   }
 
+  function editStashedThought(thought: Thought, nextText: string) {
+    const result = applyTapThoughtLocalEdit(thoughts, thought.id, nextText);
+    if (!result.next) return;
+    logTapTrace(composeTapThoughtEditPow({
+      thoughtId: thought.id,
+      originalText: result.previous?.text || thought.text,
+      text: result.next.text,
+    }));
+    setThoughts(result.thoughts);
+  }
+
+  function deleteStashedThought(thought: Thought) {
+    const result = applyTapThoughtLocalDelete(thoughts, thought.id);
+    if (!result.removed) return;
+    logTapTrace(composeTapThoughtDeletePow({
+      thoughtId: thought.id,
+      text: result.removed.text,
+    }));
+    setThoughts(result.thoughts);
+  }
+
   function addThought(text: string, system1Action: TapSystem1Action = "pause_finalize") {
     // Auto-stash is silence-driven; do not treat it as positive user activity for idle PoW.
     if (system1Action !== "auto_stash") {
@@ -945,6 +972,8 @@ export function TapScoreClient({
       beginEditTranscription={beginEditTranscription}
       stashedThoughts={stashedThoughts}
       sendThought={sendThought}
+      onEditThought={editStashedThought}
+      onDeleteThought={deleteStashedThought}
       thoughtHistory={thoughtHistory}
       workspaceId={workspaceId}
       blockId={blockId}

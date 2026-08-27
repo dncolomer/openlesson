@@ -79,9 +79,9 @@ describe("ILE leftover chrome is gone from live sources", () => {
     lines.push("stripIleConceptMarkDelimiters allowed for leftover ==term==");
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
-    expect(tapPhases).toContain("data-tap-last-stash");
-    expect(tapPhases).toContain("selectLastStashedThought");
-    lines.push("TAP last-stash unchanged");
+    expect(tapPhases).toContain("data-tap-thought-memory-always");
+    expect(tapPhases).not.toContain("data-tap-last-stash");
+    lines.push("TAP Thought Memory always on");
 
     writeScratch("ile-dead-code.txt", lines.join("\n"));
   });

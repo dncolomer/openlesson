@@ -53,11 +53,11 @@ describe("TAP solo live Stash Submit chrome", () => {
     const exercise = readExerciseTapSurface();
 
     expect(shell).not.toContain("Submit last Thought");
-    expect(shell).toContain("See Older Thoughts");
+    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
     expect(shell).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(shell).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
-    expect(shell).toContain("data-tap-last-stash");
-    expect(shell).toContain("selectLastStashedThought");
+    expect(shell).not.toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
+    expect(shell).not.toContain("data-tap-last-stash");
+    expect(shell).not.toContain("selectLastStashedThought");
     expect(shell).not.toContain("submitLastStashedThought");
     expect(shell).toContain("ImDoneAnsweringControl");
     expect(shell).toContain("sendThought");
@@ -78,7 +78,7 @@ describe("TAP solo live Stash Submit chrome", () => {
       "tap-solo-unify-stash.txt",
       [
         `Submit last Thought=${shell.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
-        `See Older Thoughts=${shell.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
+        `See / Edit gone=${!shell.includes("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL")}`,
         `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
         `no solution stack=${!shell.includes("ExerciseSubmissionStack")}`,
         `no ExerciseStashHistory=${!shell.includes("ExerciseStashHistory")}`,
@@ -89,52 +89,47 @@ describe("TAP solo live Stash Submit chrome", () => {
 });
 
 describe("TAP solo older-thoughts Thought Memory", () => {
-  it("opens ThoughtMemoryPanel with Submit/Edit Selection and thought-edit prompt", () => {
+  it("opens ThoughtMemoryPanel with per-thought edit/delete, not multi-select submit", () => {
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const edit = read("components/thought-ui/ThoughtEditPanel.tsx");
 
-    expect(shell).toContain("openOlderThoughtsSurface");
-    expect(shell).toContain("data-exercise-see-older-thoughts");
+    expect(shell).not.toContain("openOlderThoughtsSurface");
+    expect(shell).not.toContain("data-exercise-see-older-thoughts");
+    expect(shell).toContain("data-tap-thought-memory-always");
     expect(shell).toContain("data-exercise-older-thoughts");
     expect(shell).toContain("ThoughtMemoryPanel");
     expect(shell).toContain('insightSurface="tap"');
-    expect(shell).toContain("onSendThought={sendThought}");
-    expect(memory).toContain("Submit Selection");
-    expect(memory).toContain("Edit Selection");
-    expect(memory).toContain(ILE_SUBMIT_SELECTION_LABEL);
-    expect(memory).toContain(ILE_EDIT_SELECTION_LABEL);
-    expect(memory).toContain("ThoughtEditPanel");
+    expect(shell).not.toContain("onSendThought={sendThought}");
+    expect(shell).toContain("onEditThought={thoughtsLocked ? undefined : onEditThought}");
+    expect(shell).toContain("onDeleteThought={thoughtsLocked ? undefined : onDeleteThought}");
+    expect(memory).toContain("data-tap-edit-thought");
+    expect(memory).toContain("data-tap-delete-thought");
+    expect(memory).toContain('submitLabel="Save"');
     expect(edit).toContain("<textarea");
     expect(edit).toContain("submitLabel");
 
     writeScratch(
       "tap-solo-unify-thought-tool.txt",
       [
-        "See Older Thoughts=openOlderThoughtsSurface -> data-exercise-older-thoughts",
-        "ThoughtMemoryPanel insightSurface=tap onSendThought=sendThought",
-        `Submit Selection=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
-        `Edit Selection=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
-        "edit prompt=ThoughtEditPanel textarea + submit",
+        "Thought Memory always on TAP solo (no See / Edit toggle)",
+        "ThoughtMemoryPanel insightSurface=tap onEditThought/onDeleteThought",
+        `Submit Selection still ILE-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
+        `Edit Selection still ILE-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
+        "TAP item edit=ThoughtEditPanel Save, no Helios submit",
       ].join("\n"),
     );
   });
 });
 
-describe("See Older Thoughts is live on TAP solo chrome", () => {
-  it("toggles the older-thoughts surface via the shipped helper", () => {
-    let open = false;
-    const setOpen = (next: boolean | ((current: boolean) => boolean)) => {
-      open = typeof next === "function" ? next(open) : next;
-    };
-    openOlderThoughtsSurface(setOpen);
-    expect(open).toBe(true);
-    openOlderThoughtsSurface(setOpen);
-    expect(open).toBe(false);
-
+describe("Thought Memory is always on TAP solo chrome", () => {
+  it("mounts ThoughtMemoryPanel without a See / Edit toggle", () => {
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
-    expect(shell).toContain("openOlderThoughtsSurface(setOlderThoughtsOpen)");
-    expect(shell).toContain("aria-pressed={olderThoughtsOpen}");
+    expect(shell).toContain("data-tap-thought-memory-always");
+    expect(shell).toContain("<ThoughtMemoryPanel");
+    expect(shell).not.toContain("openOlderThoughtsSurface");
+    expect(shell).not.toContain("olderThoughtsOpen");
+    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
   });
 });
 
@@ -153,7 +148,9 @@ describe("universal Stash Submit labels across ILE + TAP", () => {
     expect(ileHelios).toContain("ImDoneAnsweringControl");
     for (const surface of [tapConvo, tapSolo]) {
       expect(surface).not.toContain("Submit last Thought");
-      expect(surface).toContain("See Older Thoughts");
+      expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
+      expect(surface).toContain("data-tap-thought-memory-always");
+      expect(surface).not.toContain("See Older Thoughts");
       expect(surface).toContain("ImDoneAnsweringControl");
     }
     expect(ileMemory).toContain("Submit Selection");

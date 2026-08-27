@@ -9,9 +9,11 @@ import { tapConvoBlocksFromAssistantTurns } from "@/lib/tap-session-map";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import {
-  openOlderThoughtsSurface,
-  selectLastStashedThought,
-} from "@/lib/ile-last-stash";
+  TAP_IM_DONE_CONFIRM_BODY,
+  TAP_IM_DONE_CONFIRM_CANCEL,
+  TAP_IM_DONE_CONFIRM_CONFIRM,
+  TAP_IM_DONE_CONFIRM_TITLE,
+} from "@/lib/tap-thought-memory";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
@@ -77,6 +79,8 @@ export function TapScorePhases(props: {
   beginEditTranscription: () => void;
   stashedThoughts: Thought[];
   sendThought: (text: string, thoughtIds: string[]) => void;
+  onEditThought: (thought: Thought, nextText: string) => void;
+  onDeleteThought: (thought: Thought) => void;
   thoughtHistory: Thought[];
   workspaceId?: string;
   blockId?: string;
@@ -98,7 +102,7 @@ export function TapScorePhases(props: {
   ) => void;
   logTapTrace: (input: {
     traceType: "system1" | "system2";
-    action: "crystallize" | "pause_finalize" | "auto_stash" | "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "end_of_chain_of_thought";
+    action: "crystallize" | "pause_finalize" | "auto_stash" | "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "remove" | "end_of_chain_of_thought";
     thoughtId?: string;
     thoughtIds?: string[];
     originalText?: string;
@@ -141,6 +145,8 @@ export function TapScorePhases(props: {
     stashCurrentTranscription,
     stashedThoughts,
     sendThought,
+    onEditThought,
+    onDeleteThought,
     thoughtHistory,
     workspaceId,
     blockId,
@@ -174,8 +180,6 @@ export function TapScorePhases(props: {
     convoBlocks[convoBlocks.length - 1] ??
     null;
   const overlayWaiting = isSending || (isStartingSession && !lastAssistantTurn);
-  const [olderThoughtsOpen, setOlderThoughtsOpen] = useState(false);
-  const lastStash = selectLastStashedThought(stashedThoughts);
 
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
@@ -362,67 +366,33 @@ export function TapScorePhases(props: {
                         restartSpeechRecognitionSession();
                       }}
                       disabled={isSending}
+                      confirmClose={{
+                        title: TAP_IM_DONE_CONFIRM_TITLE,
+                        body: TAP_IM_DONE_CONFIRM_BODY,
+                        confirmLabel: TAP_IM_DONE_CONFIRM_CONFIRM,
+                        cancelLabel: TAP_IM_DONE_CONFIRM_CANCEL,
+                      }}
                     />
                   </div>
                   <div
-                    className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
-                    data-tap-last-stash
-                    data-ile-last-stash
+                    className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
+                    data-tap-older-thoughts
+                    data-tap-thought-memory-always
                   >
-                    {lastStash ? (
-                      <p
-                        data-tap-last-stash-text
-                        data-ile-last-stash-text
-                        className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
-                        title={lastStash.text}
-                      >
-                        {lastStash.text}
-                      </p>
-                    ) : (
-                      <p
-                        data-tap-last-stash-empty
-                        className="text-xs text-neutral-600"
-                      >
-                        No stashed thought
-                      </p>
-                    )}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        data-tap-see-older-thoughts
-                        data-ile-see-older-thoughts
-                        aria-pressed={olderThoughtsOpen}
-                        onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
-                        className={`rounded-none border px-2.5 py-1.5 text-[11px] font-medium transition ${
-                          olderThoughtsOpen
-                            ? "border-white/60 bg-white/10 text-white"
-                            : "border-neutral-600/40 bg-neutral-800/10 text-neutral-200 hover:border-neutral-500/60 hover:bg-neutral-800/20"
-                        }`}
-                      >
-                        See Older Thoughts
-                      </button>
-                    </div>
+                    <ThoughtMemoryPanel
+                      className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
+                      listClassName="pr-1"
+                      thoughts={thoughtHistory}
+                      workspaceId={workspaceId}
+                      blockId={blockId}
+                      sessionId={sessionId}
+                      insightSurface="tap"
+                      allowInsightGeneration={false}
+                      onEditThought={onEditThought}
+                      onDeleteThought={onDeleteThought}
+                      emptyMessage="Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
+                    />
                   </div>
-                  {olderThoughtsOpen ? (
-                    <div
-                      className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
-                      data-tap-older-thoughts
-                    >
-                      <ThoughtMemoryPanel
-                        className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
-                        listClassName="pr-1"
-                        thoughts={thoughtHistory}
-                        workspaceId={workspaceId}
-                        blockId={blockId}
-                        sessionId={sessionId}
-                        insightSurface="tap"
-                        allowInsightGeneration={false}
-                        onSendThought={sendThought}
-                        isSending={isSending}
-                        emptyMessage="Speak, press Del to stash thoughts, or I'm done answering to close. Every trace appears here."
-                      />
-                    </div>
-                  ) : null}
                 </div>
               </TapAestheticSection>
             </div>

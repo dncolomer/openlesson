@@ -2649,7 +2649,7 @@
       "step2": {
         "title": "How the interface works",
         "imageAlt": "Selective thought interface",
-        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Del — stash for later\n• I'm done answering — close your turn\n• See Older Thoughts — select, submit, or edit traces\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
+        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Del — stash for later\n• Thought Memory — edit or delete individual thoughts while you keep speaking\n• I'm done answering — close your turn (you can still edit or delete first)\n\nStay speaking. After 5 seconds of silence, thoughts auto-stash. At zero purity, the session is invalidated."
       },
       "step3": {
         "title": "Pick your starting focus",
@@ -2663,7 +2663,7 @@
   },
   "tap": {
     "briefing": {
-      "intro": "Speak freely. Choose a session length and conversation language, then start when you're ready.",
+      "intro": "Speak freely. Pick length and language, then start.",
       "sessionLength": "Session length",
       "minutes": "{minutes} minutes",
       "conversationLanguage": "Conversation language",

@@ -51,15 +51,15 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     const live = readTapScoreSurface();
     expect(phases).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(phases).toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
+    expect(phases).not.toContain(ILE_SEE_OLDER_THOUGHTS_LABEL);
     expect(phases).not.toContain("Submit last Thought");
-    expect(phases).toContain("See Older Thoughts");
-    expect(phases).toContain("data-tap-last-stash");
-    expect(phases).toContain("data-tap-last-stash-text");
+    expect(phases).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
+    expect(phases).not.toContain("data-tap-last-stash");
+    expect(phases).not.toContain("data-tap-see-older-thoughts");
     expect(phases).not.toContain('label="Send"');
     expect(phases).toContain('label="Stash"');
     expect(phases).not.toContain('label="Edit"');
-    expect(phases).toContain("selectLastStashedThought");
+    expect(phases).not.toContain("selectLastStashedThought");
     expect(phases).not.toContain("submitLastStashedThought");
     expect(phases).toContain("ImDoneAnsweringControl");
     expect(phases).toContain("sendThought");
@@ -71,15 +71,15 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
     expect(shell).not.toContain("ExerciseStashHistory");
     expect(exercisePhases).not.toContain("ExerciseStashHistory");
     expect(shell).not.toContain("Submit last Thought");
-    expect(shell).toContain("See Older Thoughts");
+    expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
     expect(shell).toContain("ImDoneAnsweringControl");
 
     writeScratch(
       "tap-unify-helios-stash.txt",
       [
         `Submit last Thought=${phases.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
-        `See Older Thoughts=${phases.includes(ILE_SEE_OLDER_THOUGHTS_LABEL)}`,
-        `last-stash=${phases.includes("data-tap-last-stash")}`,
+        `See / Edit gone=${!phases.includes("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL")}`,
+        `always-on memory=${phases.includes("data-tap-thought-memory-always")}`,
         `stash=${phases.includes('label="Stash"')} editChip=${phases.includes('label="Edit"')}`,
         `no ExerciseStashHistory on TAP convo=${!live.includes("ExerciseStashHistory")}`,
         `no ExerciseStashHistory on TAP solo=${!shell.includes("ExerciseStashHistory")}`,
@@ -89,56 +89,47 @@ describe("TAP conversation live stash chrome (shipped source)", () => {
 });
 
 describe("TAP older-thoughts Thought Memory surface", () => {
-  it("opens ThoughtMemoryPanel with Submit/Edit Selection and thought-edit prompt", () => {
+  it("opens ThoughtMemoryPanel with per-thought edit/delete, not multi-select submit", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     const edit = read("components/thought-ui/ThoughtEditPanel.tsx");
 
-    expect(phases).toContain("openOlderThoughtsSurface");
-    expect(phases).toContain("data-tap-see-older-thoughts");
+    expect(phases).not.toContain("openOlderThoughtsSurface");
+    expect(phases).not.toContain("data-tap-see-older-thoughts");
+    expect(phases).toContain("data-tap-thought-memory-always");
     expect(phases).toContain("data-tap-older-thoughts");
     expect(phases).toContain("ThoughtMemoryPanel");
     expect(phases).toContain('insightSurface="tap"');
-    expect(phases).toContain("onSendThought={sendThought}");
-    expect(memory).toContain(ILE_SUBMIT_SELECTION_LABEL);
-    expect(memory).toContain(ILE_EDIT_SELECTION_LABEL);
-    expect(memory).toContain("Submit Selection");
-    expect(memory).toContain("Edit Selection");
-    expect(memory).toContain("submitSelectedThoughts");
-    expect(memory).toContain("beginEditSelectedThoughts");
-    expect(memory).toContain("submitEditedThoughtSelection");
-    expect(memory).toContain("ThoughtEditPanel");
+    expect(phases).not.toContain("onSendThought={sendThought}");
+    expect(phases).toContain("onEditThought={onEditThought}");
+    expect(phases).toContain("onDeleteThought={onDeleteThought}");
+    expect(memory).toContain("data-tap-edit-thought");
+    expect(memory).toContain("data-tap-delete-thought");
+    expect(memory).toContain('submitLabel="Save"');
     expect(edit).toContain("<textarea");
     expect(edit).toContain("submitLabel");
 
     writeScratch(
       "tap-unify-thought-tool.txt",
       [
-        "See Older Thoughts=openOlderThoughtsSurface -> data-tap-older-thoughts",
-        "ThoughtMemoryPanel insightSurface=tap onSendThought=sendThought",
-        `Submit Selection=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
-        `Edit Selection=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
-        "edit prompt=ThoughtEditPanel textarea + submit",
+        "Thought Memory always on TAP convo (no See / Edit toggle)",
+        "ThoughtMemoryPanel insightSurface=tap onEditThought/onDeleteThought",
+        `Submit Selection still ILE-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
+        `Edit Selection still ILE-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
+        "TAP item edit=ThoughtEditPanel Save, no Helios submit",
       ].join("\n"),
     );
   });
 });
 
-describe("See Older Thoughts is live on TAP convo chrome", () => {
-  it("toggles the older-thoughts surface via the shipped helper", () => {
-    let open = false;
-    const setOpen = (next: boolean | ((current: boolean) => boolean)) => {
-      open = typeof next === "function" ? next(open) : next;
-    };
-    openOlderThoughtsSurface(setOpen);
-    expect(open).toBe(true);
-    openOlderThoughtsSurface(setOpen);
-    expect(open).toBe(false);
-
+describe("Thought Memory is always on TAP convo chrome", () => {
+  it("mounts ThoughtMemoryPanel without a See / Edit toggle", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
-    expect(phases).toContain("openOlderThoughtsSurface(setOlderThoughtsOpen)");
-    expect(phases).toContain("data-tap-see-older-thoughts");
-    expect(phases).toContain("aria-pressed={olderThoughtsOpen}");
+    expect(phases).toContain("data-tap-thought-memory-always");
+    expect(phases).toContain("<ThoughtMemoryPanel");
+    expect(phases).not.toContain("openOlderThoughtsSurface");
+    expect(phases).not.toContain("olderThoughtsOpen");
+    expect(phases).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
   });
 });
 

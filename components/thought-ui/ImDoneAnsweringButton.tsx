@@ -43,6 +43,7 @@ export function ImDoneAnsweringControl({
   onClearForming,
   disabled,
   sessionId,
+  confirmClose,
 }: {
   thoughts: readonly IleImDoneAnsweringThought[];
   formingText?: string | null;
@@ -51,8 +52,15 @@ export function ImDoneAnsweringControl({
   onClearForming?: () => void;
   disabled?: boolean;
   sessionId?: string;
+  confirmClose?: {
+    title: string;
+    body: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+  };
 }) {
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(() => new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const unflagged = collectUnflaggedIleDoneAnsweringPow({
     thoughts,
     flaggedIds,
@@ -63,21 +71,71 @@ export function ImDoneAnsweringControl({
     setFlaggedIds(new Set());
   }, [sessionId]);
 
+  const runClose = () => {
+    setConfirmOpen(false);
+    void closeIleImDoneAnswering({
+      thoughts,
+      flaggedIds,
+      formingText,
+      sendThought,
+      logEndOfChainOfThought,
+      onClearForming,
+    }).then((result) => {
+      setFlaggedIds(result.flaggedIds);
+    });
+  };
+
   return (
-    <ImDoneAnsweringButton
-      disabled={disabled || !unflagged.text}
-      onClick={() => {
-        void closeIleImDoneAnswering({
-          thoughts,
-          flaggedIds,
-          formingText,
-          sendThought,
-          logEndOfChainOfThought,
-          onClearForming,
-        }).then((result) => {
-          setFlaggedIds(result.flaggedIds);
-        });
-      }}
-    />
+    <>
+      <ImDoneAnsweringButton
+        disabled={disabled || !unflagged.text}
+        onClick={() => {
+          if (confirmClose) {
+            setConfirmOpen(true);
+            return;
+          }
+          runClose();
+        }}
+      />
+      {confirmOpen && confirmClose ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" data-tap-im-done-confirm>
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            onClick={() => setConfirmOpen(false)}
+            aria-label={confirmClose.cancelLabel || "Cancel"}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tap-im-done-confirm-title"
+            className="relative z-10 w-full max-w-md rounded-none border border-neutral-800 bg-neutral-950 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+          >
+            <p id="tap-im-done-confirm-title" className="text-lg font-medium text-neutral-100">
+              {confirmClose.title}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-neutral-300">{confirmClose.body}</p>
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                data-tap-im-done-confirm-cancel
+                onClick={() => setConfirmOpen(false)}
+                className="rounded-none border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+              >
+                {confirmClose.cancelLabel || "Cancel"}
+              </button>
+              <button
+                type="button"
+                data-tap-im-done-confirm-submit
+                onClick={runClose}
+                className="rounded-none border border-transparent bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-neutral-200"
+              >
+                {confirmClose.confirmLabel || "I'm done answering"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

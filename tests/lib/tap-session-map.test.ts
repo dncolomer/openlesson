@@ -234,7 +234,8 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("ThoughtMemoryPanel");
     expect(tap).not.toContain("Submit last Thought");
     expect(tap).toContain("ImDoneAnsweringControl");
-    expect(tap).toContain("See Older Thoughts");
+    expect(tap).toContain("data-tap-thought-memory-always");
+    expect(tap).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
 
     const map = read("components/tap-score/tap-session-map.tsx");
     expect(map).toContain("learnerMapCellChromeClasses");

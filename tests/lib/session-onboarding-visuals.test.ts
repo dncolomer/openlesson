@@ -61,7 +61,7 @@ describe("session intro visuals", () => {
     expect(en.onboardingGuide.ile.step2.bodyProject).not.toMatch(/Solution stack/i);
     expect(en.onboardingGuide.tap.step2.body).toContain("I'm done answering");
     expect(en.onboardingGuide.tap.step2.body).not.toContain("Submit last Thought");
-    expect(en.onboardingGuide.tap.step2.body).toContain("See Older Thoughts");
+    expect(en.onboardingGuide.tap.step2.body).toContain("Thought Memory");
     expect(en.onboardingGuide.tap.step2.body).not.toMatch(/1 \/ 2 \/ 3/);
 
     const sizes = CLIPS.map((rel) => {
@@ -78,7 +78,7 @@ describe("session intro visuals", () => {
         "grid_pan=/animations/grid_pan.mp4",
         "speaking=/animations/speaking.mp4",
         "selective_interface=/animations/selective_interface.mp4",
-        "copy=ILE+TAP I'm done answering + See Older Thoughts",
+        "copy=ILE+TAP I'm done answering + TAP Thought Memory always on",
         "no 1-2-3 stash shortcuts in TAP briefing default",
         ...sizes,
       ].join("\n"),

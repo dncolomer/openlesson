@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import type { IleEndOfChainOfThoughtEvent } from "@/lib/ile-im-done-answering";
 import type { ExerciseThought } from "@/lib/exercise-tap";
@@ -10,9 +10,12 @@ import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import {
-  openOlderThoughtsSurface,
-  selectLastStashedThought,
-} from "@/lib/ile-last-stash";
+  TAP_IM_DONE_CONFIRM_BODY,
+  TAP_IM_DONE_CONFIRM_CANCEL,
+  TAP_IM_DONE_CONFIRM_CONFIRM,
+  TAP_IM_DONE_CONFIRM_TITLE,
+  isTapExerciseThoughtMemoryLocked,
+} from "@/lib/tap-thought-memory";
 
 /**
  * Exercise TAP live shell — 50/50 map | universal Stash Submit UI.
@@ -22,6 +25,8 @@ export function ExerciseTapShell({
   stash,
   thoughtHistory,
   sendThought,
+  onEditThought,
+  onDeleteThought,
   isSending = false,
   speechBar,
   formingText = "",
@@ -41,6 +46,8 @@ export function ExerciseTapShell({
   stash: ExerciseThought[];
   thoughtHistory: ExerciseThought[];
   sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
+  onEditThought: (thought: ExerciseThought, nextText: string) => void;
+  onDeleteThought: (thought: ExerciseThought) => void;
   isSending?: boolean;
   speechBar: ReactNode;
   formingText?: string;
@@ -58,8 +65,7 @@ export function ExerciseTapShell({
 }) {
   const active = problems.find((problem) => problem.id === activeProblemId) ?? problems[0];
   const prompt = active?.prompt || exerciseText;
-  const [olderThoughtsOpen, setOlderThoughtsOpen] = useState(false);
-  const lastStash = selectLastStashedThought(stash);
+  const thoughtsLocked = isTapExerciseThoughtMemoryLocked(active);
 
   return (
     <section
@@ -119,65 +125,39 @@ export function ExerciseTapShell({
               logEndOfChainOfThought={logEndOfChainOfThought ?? (() => {})}
               onClearForming={onClearForming}
               disabled={isSending}
+              confirmClose={{
+                title: TAP_IM_DONE_CONFIRM_TITLE,
+                body: TAP_IM_DONE_CONFIRM_BODY,
+                confirmLabel: TAP_IM_DONE_CONFIRM_CONFIRM,
+                cancelLabel: TAP_IM_DONE_CONFIRM_CANCEL,
+              }}
             />
           </div>
           <div
-            className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2.5"
-            data-tap-last-stash
-            data-exercise-last-stash
+            className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
+            data-tap-older-thoughts
+            data-exercise-older-thoughts
+            data-tap-thought-memory-always
+            data-tap-thoughts-locked={thoughtsLocked ? "true" : "false"}
           >
-            {lastStash ? (
-              <p
-                data-tap-last-stash-text
-                data-exercise-last-stash-text
-                className="line-clamp-3 text-sm leading-relaxed text-neutral-200"
-                title={lastStash.text}
-              >
-                {lastStash.text}
-              </p>
-            ) : (
-              <p className="text-xs text-neutral-600" data-exercise-last-stash-empty>
-                No stashed thought
-              </p>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                data-tap-see-older-thoughts
-                data-exercise-see-older-thoughts
-                aria-pressed={olderThoughtsOpen}
-                onClick={() => openOlderThoughtsSurface(setOlderThoughtsOpen)}
-                className={`rounded-none border px-2.5 py-1.5 text-[11px] font-medium transition ${
-                  olderThoughtsOpen
-                    ? "border-white/60 bg-white/10 text-white"
-                    : "border-neutral-600/40 bg-neutral-800/10 text-neutral-200 hover:border-neutral-500/60 hover:bg-neutral-800/20"
-                }`}
-              >
-                See Older Thoughts
-              </button>
-            </div>
+            <ThoughtMemoryPanel
+              className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
+              listClassName="pr-1"
+              thoughts={thoughtHistory}
+              workspaceId={workspaceId}
+              blockId={blockId}
+              sessionId={sessionId}
+              insightSurface="tap"
+              allowInsightGeneration={false}
+              onEditThought={thoughtsLocked ? undefined : onEditThought}
+              onDeleteThought={thoughtsLocked ? undefined : onDeleteThought}
+              emptyMessage={
+                thoughtsLocked
+                  ? "This problem is done. Thoughts are read-only."
+                  : "Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
+              }
+            />
           </div>
-          {olderThoughtsOpen ? (
-            <div
-              className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
-              data-tap-older-thoughts
-              data-exercise-older-thoughts
-            >
-              <ThoughtMemoryPanel
-                className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
-                listClassName="pr-1"
-                thoughts={thoughtHistory}
-                workspaceId={workspaceId}
-                blockId={blockId}
-                sessionId={sessionId}
-                insightSurface="tap"
-                allowInsightGeneration={false}
-                onSendThought={sendThought}
-                isSending={isSending}
-                emptyMessage="Speak, press Del to stash thoughts, or I'm done answering to close. Every trace appears here."
-              />
-            </div>
-          ) : null}
         </TapAestheticSection>
       </div>
     </section>

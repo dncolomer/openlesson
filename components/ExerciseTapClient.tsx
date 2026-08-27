@@ -84,6 +84,13 @@ import {
   type ExerciseThought,
 } from "@/lib/exercise-tap";
 import {
+  applyTapExerciseThoughtDelete,
+  applyTapExerciseThoughtEdit,
+  composeTapThoughtDeletePow,
+  composeTapThoughtEditPow,
+  isTapExerciseThoughtMemoryLocked,
+} from "@/lib/tap-thought-memory";
+import {
   cloneTapSoloLists,
   markTapSoloProblemSubmitted,
   seedTapSoloProblems,
@@ -495,6 +502,45 @@ export function ExerciseTapClient({
       autoStashInFlightRef.current = false;
     },
     [crystallizableText, restartSpeechRecognitionSession, applyPurityHit, logExerciseTrace],
+  );
+
+  const editStashedThought = useCallback(
+    (thought: ExerciseThought, nextText: string) => {
+      const active = soloProblemsRef.current.find((problem) => problem.id === activeSoloProblemIdRef.current);
+      if (isTapExerciseThoughtMemoryLocked(active)) return;
+      setLists((current) => {
+        const result = applyTapExerciseThoughtEdit(current, thought.id, nextText);
+        if (!result.next) return current;
+        logExerciseTrace(
+          composeTapThoughtEditPow({
+            thoughtId: thought.id,
+            originalText: result.previous?.text || thought.text,
+            text: result.next.text,
+          }),
+        );
+        return result.lists;
+      });
+    },
+    [logExerciseTrace],
+  );
+
+  const deleteStashedThought = useCallback(
+    (thought: ExerciseThought) => {
+      const active = soloProblemsRef.current.find((problem) => problem.id === activeSoloProblemIdRef.current);
+      if (isTapExerciseThoughtMemoryLocked(active)) return;
+      setLists((current) => {
+        const result = applyTapExerciseThoughtDelete(current, thought.id);
+        if (!result.removed) return current;
+        logExerciseTrace(
+          composeTapThoughtDeletePow({
+            thoughtId: thought.id,
+            text: result.removed.text,
+          }),
+        );
+        return result.lists;
+      });
+    },
+    [logExerciseTrace],
   );
 
   /** Universal Stash Submit sink: system2 send on TAP solo (no Helios, no solution stack UI). */
@@ -915,6 +961,8 @@ export function ExerciseTapClient({
         (a, b) => b.timestamp - a.timestamp,
       )}
       sendThought={sendThought}
+      onEditThought={editStashedThought}
+      onDeleteThought={deleteStashedThought}
       participantIdentity={participantIdentity}
       remainingSeconds={remainingSeconds}
       sessionPurity={sessionPurity}

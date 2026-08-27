@@ -50,6 +50,8 @@ export function ExerciseTapPhases(props: {
   stash: ExerciseThought[];
   thoughtHistory: ExerciseThought[];
   sendThought: (text: string, thoughtIds: string[]) => void | Promise<void>;
+  onEditThought: (thought: ExerciseThought, nextText: string) => void;
+  onDeleteThought: (thought: ExerciseThought) => void;
   isSending?: boolean;
   participantIdentity: PowParticipantIdentity | null;
   remainingSeconds: number;
@@ -119,6 +121,8 @@ export function ExerciseTapPhases(props: {
     stash,
     thoughtHistory,
     sendThought,
+    onEditThought,
+    onDeleteThought,
     isSending = false,
     participantIdentity,
     remainingSeconds,
@@ -218,6 +222,8 @@ export function ExerciseTapPhases(props: {
             stash={stash}
             thoughtHistory={thoughtHistory}
             sendThought={sendThought}
+            onEditThought={onEditThought}
+            onDeleteThought={onDeleteThought}
             isSending={isSending}
             formingText={crystallizableText}
             logEndOfChainOfThought={(event) => {

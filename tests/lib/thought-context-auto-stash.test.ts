@@ -48,8 +48,8 @@ describe("thought-context-auto-stash helpers", () => {
   });
 });
 
-describe("TAP + ILE mount Auto-stash context bar", () => {
-  it("shared bar label and surfaces wire context stash without purity", () => {
+describe("TAP + ILE hide Auto-stash context bar HUD", () => {
+  it("surfaces keep context-full auto-stash without mounting the progress bar", () => {
     expect(AUTO_STASH_CONTEXT_LABEL).toBe("Auto-stash context");
 
     const bar = fs.readFileSync(
@@ -62,14 +62,10 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     expect(bar).toContain("data-auto-stash-context-track");
     expect(bar).toContain("animate-pulse");
     expect(bar).toContain("thoughtContextBarToneClass");
-    // Same vertical geometry as purity markers (label + h-7 content)
-    expect(bar).toContain("flex-col gap-1");
-    expect(bar).toContain("h-7");
-    expect(bar).not.toContain("mb-1 flex items-center justify-between");
 
     const tap = readTapScoreSurface();
-    expect(tap).toContain("AutoStashContextBar");
-    expect(tap).toContain('data-surface="tap"');
+    expect(tap).not.toContain("AutoStashContextBar");
+    expect(tap).not.toContain('data-surface="tap"');
     expect(tap).toContain("fromContext");
     expect(tap).toContain("shouldAutoStashOnContextFull");
     // Context path must not call applyPurityHit
@@ -81,30 +77,17 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     // Silence purity path still present
     expect(tap).toContain("shouldAutoStashOnSilence");
     expect(tap).toContain("applyPurityHit");
-    // No misaligned self-end/padding wrapper around the bar
-    expect(tap).not.toMatch(/self-end pb-0\.5[\s\S]{0,80}AutoStashContextBar/);
+    expect(tap).toContain("data-tap-live-control-strip");
+    expect(tap).toContain("data-tap-end-session");
+    expect(tap).not.toContain("data-tap-session-purity");
 
     const ile = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
-    expect(ile).toContain("AutoStashContextBar");
-    expect(ile).toContain('data-surface="ile"');
+    expect(ile).not.toContain("AutoStashContextBar");
+    expect(ile).not.toContain('data-surface="ile"');
     expect(ile).toContain("shouldAutoStashOnContextFull");
     expect(ile).toContain("stashCurrentTranscription");
     expect(ile).toContain("applyIleContextFullAutoStash");
     expect(ile).toContain("getFormingText");
-
-    // TAP strip order: purity → Auto-stash context bar → End session
-    const purityIdx = tap.indexOf("data-tap-session-purity");
-    const barIdx = tap.lastIndexOf("<AutoStashContextBar");
-    const endIdx = tap.indexOf("data-tap-end-session");
-    expect(purityIdx).toBeGreaterThan(-1);
-    expect(barIdx).toBeGreaterThan(purityIdx);
-    expect(endIdx).toBeGreaterThan(barIdx);
-    expect(tap).toContain("data-tap-live-control-strip");
-
-    // ILE bar remains with transcript chrome
-    const ileBarJsx = ile.lastIndexOf("<AutoStashContextBar");
-    const ileTranscript = ile.lastIndexOf("<SlidingTranscript");
-    expect(ileBarJsx).toBeGreaterThan(ileTranscript);
-    expect(ileBarJsx - ileTranscript).toBeLessThan(4500);
+    expect(ile).toContain("<SlidingTranscript");
   });
 });

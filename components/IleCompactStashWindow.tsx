@@ -2,16 +2,14 @@
 
 /**
  * Always-on-top mini window: Share your Screen, I'm Done Answering,
- * live forming/speech transcript, and autostash progress bar.
+ * and live forming/speech transcript.
  */
 
-import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import {
   THOUGHT_BACKGROUND_IMAGES,
   ThoughtBackgroundLayers,
 } from "@/components/thought-ui/ThoughtUi";
 import {
-  ileCompactAutostashFillRatio,
   ileMiniModeDoneAnsweringLabel,
   ileMiniModeShareCtaLabel,
   resolveIleCompactTranscript,
@@ -63,7 +61,6 @@ export function IleCompactStashWindow({
     isListening,
     speechEnabled,
   });
-  const autostashFill = ileCompactAutostashFillRatio(forming);
 
   return (
     <div
@@ -71,7 +68,6 @@ export function IleCompactStashWindow({
       data-ile-compact-anchor="bottom-right"
       data-ile-compact-always-on-top="true"
       data-ile-compact-tap
-      data-ile-compact-autostash-fill={String(autostashFill)}
       style={{
         position: "relative",
         boxSizing: "border-box",
@@ -116,10 +112,6 @@ export function IleCompactStashWindow({
           }}
         >
           {transcript.text || "\u00a0"}
-        </div>
-
-        <div data-ile-compact-autostash style={{ flexShrink: 0 }}>
-          <AutoStashContextBar data-surface="ile" text={forming} />
         </div>
 
         <button

@@ -10,8 +10,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getIlePostSessionPath } from "@/lib/storage";
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
-import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
-import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
@@ -68,9 +66,7 @@ import {
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
   shouldEvaluateSessionPurity,
-  shouldFadeLiveBar,
   shouldPenalizeEmptyBarSilence,
-  transcriptFadeOpacity,
   TAP_SILENCE_AUTO_STASH_MS,
 } from "@/lib/tap-session-purity";
 import {
@@ -590,12 +586,12 @@ export function ExerciseTapClient({
       const silence = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silence);
       const hasText = Boolean(tapHookFormingText(tapThoughtSpeech));
-      if (shouldAutoStashOnSilence(silence, hasText) && !autoStashInFlightRef.current) {
+      if (shouldAutoStashOnSilence(silence, hasText, TAP_SILENCE_AUTO_STASH_MS) && !autoStashInFlightRef.current) {
         autoStashInFlightRef.current = true;
         stashCurrentTranscription({ auto: true });
         return;
       }
-      if (shouldPenalizeEmptyBarSilence(silence, hasText) && !autoStashInFlightRef.current) {
+      if (shouldPenalizeEmptyBarSilence(silence, hasText, TAP_SILENCE_AUTO_STASH_MS) && !autoStashInFlightRef.current) {
         autoStashInFlightRef.current = true;
         applyPurityHit();
         lastSpeechActivityAtRef.current = Date.now();
@@ -949,6 +945,7 @@ export function ExerciseTapClient({
       resolvedWorkspaceId={resolvedWorkspaceId}
       restartPractice={() => {
         isEndingRef.current = false;
+        setSessionEndedImpure(false);
         setIsPracticeMode(false);
         isPracticeModeRef.current = false;
         setError("");

@@ -37,7 +37,7 @@ describe("Exercise TAP briefing uses shared intro", () => {
     expect(config).toContain("data-tap-briefing-config");
     expect(config).toContain("tap.briefing.sessionLength");
     expect(config).toContain("tap.briefing.conversationLanguage");
-    expect(config).toContain("tap.briefing.keyboardShortcuts");
+    expect(config).not.toContain("tap.briefing.keyboardShortcuts");
 
     const conversational = readTapScoreSurface();
     expect(conversational).toContain("SessionOnboardingGuide");

@@ -742,7 +742,8 @@ describe("PiP content height fills the live window (shipped helpers)", () => {
     expect(surface).toContain("data-ile-compact-transcript");
     expect(surface).toContain("data-ile-compact-share-cta");
     expect(surface).toContain("data-ile-compact-done-answering");
-    expect(surface).toContain("data-ile-compact-autostash");
+    expect(surface).not.toContain("data-ile-compact-autostash");
+    expect(surface).not.toContain("<AutoStashContextBar");
     expect(surface).not.toContain("data-ile-compact-forming");
     expect(surface).not.toContain("data-ile-last-stash");
     expect(surface).not.toMatch(/minHeight:\s*280/);

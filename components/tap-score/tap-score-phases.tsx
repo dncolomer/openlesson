@@ -13,7 +13,6 @@ import {
   selectLastStashedThought,
 } from "@/lib/ile-last-stash";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
-import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
@@ -28,11 +27,6 @@ import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages"
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
-import {
-  TAP_SESSION_PURITY_MAX,
-  shouldFadeLiveBar,
-  transcriptFadeOpacity,
-} from "@/lib/tap-session-purity";
 import {
   type Phase,
   type Thought,
@@ -137,14 +131,12 @@ export function TapScorePhases(props: {
     messages,
     isSending,
     remainingSeconds,
-    sessionPurity,
     crystallizableText,
     showEndSession,
     endSession,
     speechError,
     speechSupported,
     isListening,
-    transcriptSilenceMs,
     retryMicrophone,
     stashCurrentTranscription,
     stashedThoughts,
@@ -278,74 +270,37 @@ export function TapScorePhases(props: {
                 className="min-h-0 min-w-0"
               >
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                  {participantIdentity || isPracticeMode ? (
-                    <div className="flex shrink-0 items-center justify-end gap-2 border-b border-neutral-800/60 bg-black/35 px-3 py-1.5">
-                      {isPracticeMode ? (
-                        <TapPracticePill label={t("tap.practice.bannerKicker")} />
-                      ) : null}
-                      <SessionIdentityBadge identity={participantIdentity} />
-                    </div>
-                  ) : null}
                   <div
-                    className="flex w-full shrink-0 flex-wrap items-end justify-between gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
+                    className="flex w-full shrink-0 items-center gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
                     data-tap-live-control-strip
                   >
-                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4 sm:gap-5">
-                      <div className="flex shrink-0 flex-col gap-1">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-2">
                         <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
                           Time left
                         </div>
                         <div
-                          className={`flex h-7 items-center font-mono text-lg leading-none tabular-nums tracking-tight ${
+                          className={`font-mono text-lg leading-none tabular-nums tracking-tight ${
                             remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
                           }`}
                         >
                           {formatCountdown(remainingSeconds)}
                         </div>
                       </div>
-                      <div
-                        className="flex shrink-0 flex-col gap-1"
-                        data-tap-session-purity
-                        aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}
-                      >
-                        <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                          {t("tap.live.sessionPurity")}
+                      {showEndSession ? (
+                        <div className="flex shrink-0 items-center" data-tap-end-session>
+                          <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
+                            End session
+                          </TapThoughtButton>
                         </div>
-                        <div className="flex h-7 items-center gap-1.5">
-                          {Array.from({ length: TAP_SESSION_PURITY_MAX }, (_, index) => {
-                            const filled = index < sessionPurity;
-                            return (
-                              <span
-                                key={index}
-                                className={`h-2.5 w-2.5 shrink-0 rounded-full border transition-colors ${
-                                  filled
-                                    ? sessionPurity === 1
-                                      ? "border-neutral-600/80 bg-neutral-300"
-                                      : "border-emerald-400/70 bg-emerald-400"
-                                    : "border-neutral-700 bg-transparent"
-                                }`}
-                                aria-hidden
-                              />
-                            );
-                          })}
-                          <span
-                            className={`ml-0.5 font-mono text-sm leading-none tabular-nums ${
-                              sessionPurity <= 1 ? "text-neutral-300" : "text-neutral-400"
-                            }`}
-                          >
-                            {sessionPurity}/{TAP_SESSION_PURITY_MAX}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="min-w-[8rem] max-w-md flex-1">
-                        <AutoStashContextBar data-surface="tap" text={crystallizableText} />
-                      </div>
+                      ) : null}
                     </div>
-                    {showEndSession ? (
-                      <div className="flex h-[calc(0.625rem+0.25rem+1.75rem)] shrink-0 flex-wrap items-end gap-2" data-tap-end-session>
-                        <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                          End session
-                        </TapThoughtButton>
+                    {participantIdentity || isPracticeMode ? (
+                      <div className="ml-auto flex shrink-0 items-center gap-2">
+                        {isPracticeMode ? (
+                          <TapPracticePill label={t("tap.practice.bannerKicker")} />
+                        ) : null}
+                        <SessionIdentityBadge identity={participantIdentity} />
                       </div>
                     ) : null}
                   </div>
@@ -355,13 +310,7 @@ export function TapScorePhases(props: {
                   >
                     <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                       <div
-                        className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
-                        style={{
-                          opacity: shouldFadeLiveBar(transcriptSilenceMs)
-                            ? transcriptFadeOpacity(transcriptSilenceMs)
-                            : 1,
-                        }}
-                        data-tap-transcript-fade
+                        className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300"
                       >
                         <SlidingTranscript
                           text={formatSpeechTranscriptDisplay({
@@ -492,7 +441,7 @@ export function TapScorePhases(props: {
             />
           </section>
         )}
-        {phase === "practice_done" ? (
+        {phase === "practice_done" && !sessionEndedImpure ? (
           <section
             className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
             data-tap-practice-done
@@ -517,8 +466,7 @@ export function TapScorePhases(props: {
             </TapThoughtButton>
           </section>
         ) : null}
-        {phase === "results" ? (
-          sessionEndedImpure ? (
+        {(phase === "results" || phase === "practice_done") && sessionEndedImpure ? (
             <section
               className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
               data-tap-session-impure
@@ -534,12 +482,17 @@ export function TapScorePhases(props: {
                 variant="primary"
                 className="mt-8"
                 data-tap-impure-retry
-                onClick={() => window.location.reload()}
+                onClick={
+                  phase === "practice_done"
+                    ? restartBriefingFlow
+                    : () => window.location.reload()
+                }
               >
                 {t("tap.postSession.impureTryAgain")}
               </TapThoughtButton>
             </section>
-          ) : privateToken ? (
+        ) : phase === "results" ? (
+          privateToken ? (
             <section
               className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
               data-tap-session-thank-you

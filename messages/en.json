@@ -2663,16 +2663,10 @@
   },
   "tap": {
     "briefing": {
-      "intro": "Speak freely. Shortcuts below.",
+      "intro": "Speak freely. Choose a session length and conversation language, then start when you're ready.",
       "sessionLength": "Session length",
       "minutes": "{minutes} minutes",
       "conversationLanguage": "Conversation language",
-      "keyboardShortcuts": "Keyboard shortcuts",
-      "shortcutSend": "Send",
-      "shortcutStash": "Stash",
-      "shortcutEdit": "Edit",
-      "shortcutSendStashed": "Send stashed 1–3",
-      "shortcutSilence": "5s silence → auto-stash",
       "topicsLoading": "Generating starting topics…"
     },
     "live": {
@@ -2690,7 +2684,7 @@
       "saving": "Saving practice proof of work…",
       "doneKicker": "Practice complete",
       "doneTitle": "Practice session is done",
-      "doneBody": "Your practice PoW was stored and flagged as Practice PoW — even if you stopped early or purity hit zero. You can practice again anytime, or pick a topic for a scored session.",
+      "doneBody": "Your practice PoW was stored and flagged as Practice PoW — even if you stopped early. You can practice again anytime, or pick a topic for a scored session.",
       "restart": "Restart flow"
     },
     "postSession": {
@@ -2703,12 +2697,12 @@
       "thankYouBody": "Your Proof of Work data has been stored.",
       "exploreUncertainSystems": "Explore Uncertain Systems",
       "impureTitle": "Session Invalidated",
-      "impureBody": "This session was closed because session purity reached zero.\n\nWhy: purity tracks continuous think-aloud engagement. Long silence on the live bar fades the transcript and auto-stashes it — each auto-stash (or empty-bar silence after a stash) lowers purity. At zero, the session ends and all Proof of Work from it is stored and flagged as low quality / impure.\n\nHow to fix on the next try: keep speaking into the live bar; stash with Del when you pause intentionally; send or promote thoughts before long silences; use Practice First if you want a warm-up without scoring pressure.\n\nWant to try again?",
+      "impureBody": "This session was invalidated because you remained silent for too long.\n\nYou can start again. Remember to think out loud the whole time — including while reading the question(s).\n\nIf you want, you can do a practice run before starting a new run. There is no limit on attempts. You can try as many times as you need.",
       "impureTryAgain": "Try again"
     },
     "welcome": {
       "greeting": "Hi, I'm {name}.",
-      "panelIntro": "Welcome to the Think Aloud Protocol. This is a timed demonstration: you explain what you learned while I listen, then I ask Socratic follow-ups to surface gaps and strengths.\n\nHow it works: speak out loud — your transcription accumulates in the bar. Press Enter to send directly, Del to stash into the pool below, or E to edit before sending. I respond under my avatar with one question at a time. Thought Memory keeps every trace for resend or bookmarking.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
+      "panelIntro": "Welcome to the Think Aloud Protocol. This is a timed demonstration: you explain what you learned while I listen, then I ask Socratic follow-ups to surface gaps and strengths.\n\nHow it works: speak out loud — your transcription accumulates in the bar. Stash thoughts as you go, then press I'm done answering to close your turn. I respond under my avatar with one question at a time. Thought Memory keeps every trace for resend or bookmarking.\n\nSession length and conversation language are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
       "callToAction": "When you're ready, press Play. The timer starts, and I'll open with a specific question about what you learned here.",
       "play": "Play",
       "starting": "Starting…",

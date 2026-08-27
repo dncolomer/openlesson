@@ -119,8 +119,8 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(client).not.toContain("data-tap-practice-first");
     // Full live mechanics still present on the shared live phase
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
-    expect(client).toContain("data-tap-session-purity");
-    expect(client).toContain("data-tap-transcript-fade");
+    expect(client).not.toContain("data-tap-session-purity");
+    expect(client).not.toContain("data-tap-transcript-fade");
     expect(client).toMatch(/phase:\s*"live"|setPhase\("live"\)/);
     expect(client).toMatch(/phase:\s*"practice_done"|setPhase\("practice_done"\)/);
 

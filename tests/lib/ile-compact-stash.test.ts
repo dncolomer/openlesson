@@ -231,13 +231,13 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(compact).toContain("data-ile-compact-transcript");
     expect(compact).toContain("data-ile-compact-share-cta");
     expect(compact).toContain("data-ile-compact-done-answering");
-    expect(compact).toContain("data-ile-compact-autostash");
+    expect(compact).not.toContain("data-ile-compact-autostash");
+    expect(compact).not.toContain("<AutoStashContextBar");
     expect(compact).toContain("ileMiniModeShareCtaLabel");
     expect(compact).toContain("ileMiniModeDoneAnsweringLabel");
     expect(compact).toContain("runIleMiniDoneAnswering");
     expect(compact).toContain("onStartShare");
     expect(compact).toContain("onDoneAnswering");
-    expect(compact).toContain("<AutoStashContextBar");
     expect(compact).not.toContain("<SlidingTranscript");
     expect(compact).toContain('whiteSpace: "pre-wrap"');
     expect(compact).toContain('overflowWrap: "anywhere"');
@@ -329,7 +329,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     writeScratch(
       "ile-pip-surface.txt",
       [
-        "IleCompactStashWindow: Share your Screen + I'm Done Answering + data-ile-compact-transcript + data-ile-compact-autostash",
+        "IleCompactStashWindow: Share your Screen + I'm Done Answering + data-ile-compact-transcript",
         "no data-ile-last-stash / data-ile-compact-forming / Helios last-turn",
         "useIleBlurScreenshare paints formingText + speechDisplay, not lastDialogueAssistantTurn",
         "SessionView: formatSpeechTranscriptDisplay + closeIleImDoneAnswering + opener/tab focus",
@@ -337,6 +337,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
         `doneAnswering=${compact.includes("data-ile-compact-done-answering")}`,
         `transcript=${compact.includes("data-ile-compact-transcript")}`,
         `autostash=${compact.includes("data-ile-compact-autostash")}`,
+        `autostashBar=${compact.includes("<AutoStashContextBar")}`,
         `lastStash=${compact.includes("data-ile-last-stash")}`,
         `formingBox=${compact.includes("data-ile-compact-forming")}`,
         `heliosBody=${compact.includes("data-ile-compact-helios")}`,

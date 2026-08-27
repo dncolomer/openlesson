@@ -17,7 +17,6 @@ import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
-import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
@@ -480,7 +479,6 @@ export function SessionHeliosPanel({
                     />
                   </div>
                 </div>
-                <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">

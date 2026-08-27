@@ -39,9 +39,11 @@ describe("session intro visuals", () => {
     expect(guide).not.toContain("rounded-xl");
 
     const briefing = read("components/TapBriefingConfig.tsx");
+    expect(briefing).not.toContain("tap.briefing.keyboardShortcuts");
+    expect(briefing).not.toContain("ThoughtShortcutChord");
     expect(briefing).not.toContain('["1", "2", "3"]');
     expect(briefing).not.toContain('["Enter"]');
-    expect(briefing).toContain('["Del"]');
+    expect(briefing).not.toContain('["Del"]');
     expect(briefing).not.toContain('["E"]');
 
     const en = JSON.parse(read("messages/en.json")) as {

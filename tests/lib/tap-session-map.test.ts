@@ -247,7 +247,8 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("currentId={convoBlocks[convoBlocks.length - 1]?.id");
 
     const overlay = read("components/tap-score/tap-turn-overlay.tsx");
-    expect(overlay).toContain("data-tap-submit-solution");
+    expect(overlay).not.toContain("data-tap-submit-solution");
+    expect(overlay).not.toContain("Submit solution");
     expect(overlay).not.toContain("Load other problems");
     expect(overlay).not.toContain("data-tap-load-other-problems");
 
@@ -255,6 +256,8 @@ describe("TAP live map wiring", () => {
     expect(client).toContain("seedTapSoloProblems");
     expect(client).toContain("onSelectSoloProblem");
     expect(client).toContain("onSubmitSoloSolution");
+    expect(client).toContain("logEndOfChainOfThought");
+    expect(client).toContain("onSubmitSoloSolution()");
     expect(client).not.toContain("onLoadOtherProblems");
     expect(client).not.toContain("Load other problems");
     expect(client).toContain("data-exercise-tap-stash-submit");

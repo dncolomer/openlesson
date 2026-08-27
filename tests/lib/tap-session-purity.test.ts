@@ -113,11 +113,14 @@ describe("tap-session-purity helpers", () => {
 });
 
 describe("TAP client wires purity UX (not ILE)", () => {
-  it("TapScoreClient implements silence fade, purity UI, auto_stash, and impure retry", () => {
+  it("TapScoreClient implements silence auto_stash and impure retry without HUD fade/dots", () => {
     const client = readTapScoreSurface();
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
-    expect(client).toContain("data-tap-session-purity");
-    expect(client).toContain("data-tap-transcript-fade");
+    expect(client).not.toContain("data-tap-session-purity");
+    expect(client).not.toContain("data-tap-transcript-fade");
+    expect(client).not.toContain("shouldFadeLiveBar");
+    expect(client).not.toContain("transcriptFadeOpacity(");
+    expect(client).not.toContain("<AutoStashContextBar");
     expect(client).toContain("data-tap-session-impure");
     expect(client).toContain('auto_stash');
     expect(client).toContain("sessionQuality");
@@ -136,15 +139,18 @@ describe("TAP client wires purity UX (not ILE)", () => {
       tap: { postSession: { impureTitle: string; impureBody: string; impureTryAgain: string } };
     };
     expect(en.tap.postSession.impureTitle).toBe("Session Invalidated");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("session purity");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("auto-stash");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("why:");
-    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("how to fix");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("silent for too long");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("think out loud");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("practice run");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("no limit");
     expect(en.tap.postSession.impureTryAgain).toBe("Try again");
     // Dedicated impure results branch (not generic thank-you)
     expect(client).toContain("sessionEndedImpure");
     expect(client).toContain("data-tap-session-impure");
     expect(client).toContain("data-tap-impure-retry");
+    // Practice purity-close uses the same invalidated copy, not practice-done.
+    expect(client).toContain('phase === "practice_done" && !sessionEndedImpure');
+    expect(client).toContain('(phase === "results" || phase === "practice_done") && sessionEndedImpure');
   });
 
   it("Exercise TAP shows the same Session Invalidated screen on purity close", () => {
@@ -156,6 +162,12 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(exercise).toContain("tap.postSession.impureTryAgain");
     expect(exercise).toContain("data-tap-impure-retry");
     expect(exercise).toContain("setSessionEndedImpure(impure)");
+    expect(exercise).not.toContain("data-tap-session-purity");
+    expect(exercise).not.toContain("data-tap-transcript-fade");
+    expect(exercise).not.toContain("<AutoStashContextBar");
+    // Practice purity-close uses the same invalidated copy, not practice-done.
+    expect(exercise).toContain('phase === "practice_done" && !sessionEndedImpure');
+    expect(exercise).toContain('(phase === "results" || phase === "practice_done") && sessionEndedImpure');
   });
 
   it("trace route accepts auto_stash and complete flags session PoW impure", () => {

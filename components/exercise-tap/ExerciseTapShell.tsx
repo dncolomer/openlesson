@@ -32,8 +32,6 @@ export function ExerciseTapShell({
   problems,
   activeProblemId,
   onSelectProblem,
-  onSubmitSolution,
-  solutionSubmitted = false,
   bgImage,
   workspaceId,
   blockId,
@@ -53,8 +51,6 @@ export function ExerciseTapShell({
   problems: TapSoloProblem[];
   activeProblemId: string | null;
   onSelectProblem: (id: string) => void;
-  onSubmitSolution: () => void;
-  solutionSubmitted?: boolean;
   bgImage?: string | null;
   workspaceId?: string;
   blockId?: string;
@@ -88,8 +84,6 @@ export function ExerciseTapShell({
                 kind="solo"
                 kicker={active?.title || "Exercise"}
                 body={prompt}
-                onSubmitSolution={onSubmitSolution}
-                solutionSubmitted={Boolean(active?.solutionSubmitted || solutionSubmitted)}
               />
             }
           />

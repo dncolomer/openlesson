@@ -1,14 +1,11 @@
 "use client";
 
 /**
- * Shared TAP briefing config column (workspace label, duration, language, shortcuts).
+ * Shared TAP briefing config column (workspace label, duration, language).
  * Used by conversational TapScoreClient and ExerciseTapClient intro screens.
  */
 import { useI18n } from "@/lib/i18n";
-import {
-  ThoughtButton,
-  ThoughtShortcutChord,
-} from "@/components/thought-ui/ThoughtUi";
+import { ThoughtButton } from "@/components/thought-ui/ThoughtUi";
 import {
   spokenLanguageNames,
   spokenLocales,
@@ -33,10 +30,6 @@ export function TapBriefingConfig({
    * When set, replaces the default conversational briefing intro paragraph.
    */
   intro,
-  /**
-   * When set, replaces default keyboard shortcut rows (Exercise may omit Helios-send).
-   */
-  shortcutRows,
 }: {
   workspaceTitle: string;
   minutes: number;
@@ -47,14 +40,8 @@ export function TapBriefingConfig({
   disabled?: boolean;
   kicker?: string;
   intro?: string;
-  shortcutRows?: { keys: string[]; label: string }[];
 }) {
   const { t } = useI18n();
-
-  const rows: { keys: string[]; label: string }[] = shortcutRows ?? [
-    { keys: ["Del"], label: t("tap.briefing.shortcutStash") },
-    { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
-  ];
 
   return (
     <div
@@ -118,20 +105,6 @@ export function TapBriefingConfig({
             </ThoughtButton>
           ))}
         </div>
-      </div>
-
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">
-          {t("tap.briefing.keyboardShortcuts")}
-        </p>
-        <ul className="mt-3 space-y-2.5 text-sm text-neutral-400">
-          {rows.map((row) => (
-            <li key={row.label} className="flex flex-wrap items-center gap-2">
-              <ThoughtShortcutChord keys={row.keys} />
-              <span>{row.label}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );

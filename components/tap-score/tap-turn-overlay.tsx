@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
-import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 
 export function TapTurnOverlay({
   kind,
@@ -11,8 +10,6 @@ export function TapTurnOverlay({
   waiting = false,
   waitingText = "Helios is thinking",
   markdown = false,
-  onSubmitSolution,
-  solutionSubmitted = false,
   extra,
 }: {
   kind: "dialog" | "solo";
@@ -21,8 +18,6 @@ export function TapTurnOverlay({
   waiting?: boolean;
   waitingText?: string;
   markdown?: boolean;
-  onSubmitSolution?: () => void;
-  solutionSubmitted?: boolean;
   extra?: ReactNode;
 }) {
   return (
@@ -64,20 +59,6 @@ export function TapTurnOverlay({
             </div>
           </>
         )}
-
-        {kind === "solo" ? (
-          <div className="mt-3" data-tap-solo-overlay-actions>
-            <TapThoughtButton
-              size="sm"
-              variant="primary"
-              className="w-full"
-              data-tap-submit-solution
-              onClick={() => onSubmitSolution?.()}
-            >
-              {solutionSubmitted ? "Solution submitted" : "Submit solution"}
-            </TapThoughtButton>
-          </div>
-        ) : null}
         {extra}
       </div>
     </div>

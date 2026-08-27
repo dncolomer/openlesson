@@ -111,7 +111,7 @@ export function TapbenchWorkspaceDetail(props: {
                 </tbody>
               </table>
               <p className="border-t border-zinc-800 px-3 py-2 text-[11px] text-zinc-500">
-                Ranked by 64D L2 from the tapbench@uncertain.systems latest snapshot.
+                Ranked by 64D L2 from the tapbench@uncertain.systems human pin.
               </p>
             </div>
           )}

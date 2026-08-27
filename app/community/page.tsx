@@ -12,7 +12,7 @@ export default function CommunityPage() {
     <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
       <Navbar />
 
-      <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
             {t('communityPlans.title')}

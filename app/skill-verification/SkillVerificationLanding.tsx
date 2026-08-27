@@ -109,7 +109,7 @@ export function SkillVerificationLanding() {
       <LandingNav />
 
       {/* Hero */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           HARD SKILL VERIFICATION · HIRING AT SCALE
         </div>
@@ -158,7 +158,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Problem / ICP */}
-      <section id="who" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-2 sm:pb-10">
+      <section id="who" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 pt-2 sm:pb-10">
         <SectionHeading
           eyebrow="WHO IT'S FOR"
           title="When hard-skill verification is the bottleneck."
@@ -187,7 +187,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Products overview strip */}
-      <section id="products" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="products" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <SectionHeading
           eyebrow="TWO VERIFICATION PRODUCTS"
           title="Screen fast. Sample deep. Same measurement stack."
@@ -211,7 +211,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Skill Check deep dive */}
-      <section id="skill-check" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="skill-check" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <div className="grid items-start gap-8 md:grid-cols-2 md:gap-10 lg:gap-12">
           <div className="min-w-0">
             <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -263,7 +263,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Take-Home deep dive */}
-      <section id="take-home" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="take-home" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <div className="grid items-start gap-8 md:grid-cols-2 md:gap-10 lg:gap-12">
           <div className="min-w-0 md:order-2">
             <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -314,7 +314,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Funnel */}
-      <section id="funnel" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="funnel" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <SectionHeading
           eyebrow="HIRING FUNNEL"
           title="Where each product sits in the process."
@@ -337,7 +337,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* Scale visual band */}
-      <section id="scale" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="scale" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             VERIFICATION AT SCALE
@@ -355,7 +355,7 @@ export function SkillVerificationLanding() {
       </section>
 
       {/* CTA */}
-      <section id="cta" className="relative z-10 mx-auto max-w-6xl px-6 pb-12 sm:pb-16">
+      <section id="cta" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 sm:pb-16">
         <div className="border border-zinc-800 bg-zinc-950/80 p-8 sm:p-10">
           <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             NEXT STEP

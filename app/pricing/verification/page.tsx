@@ -22,7 +22,7 @@ export default function VerificationPricingPage() {
 
   return (
     <MarketingPageShell>
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
         <div className="mb-8 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
           {VERIFICATION_PRICING_COPY.eyebrow}
         </div>

@@ -22,6 +22,14 @@ import { parseJsonResponse } from "@/lib/tapbench/parse-json-response";
 
 type IssuedKey = { workspace_id: string; tapbench_key: string; task_title: string };
 
+type TapbenchTab = "tapbench" | "results" | "experiment";
+
+const TABS: { id: TapbenchTab; label: string }[] = [
+  { id: "tapbench", label: "TAPBench" },
+  { id: "results", label: "ScoreBoard" },
+  { id: "experiment", label: "How to run" },
+];
+
 export function TapbenchLanding(props: {
   initialTasks: TapbenchTask[];
   initialRegions?: TapbenchPublicRegion[];
@@ -31,7 +39,7 @@ export function TapbenchLanding(props: {
   const [keys, setKeys] = useState<StoredTapbenchKeys>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const [tab, setTab] = useState<"results" | "experiment">("results");
+  const [tab, setTab] = useState<TapbenchTab>("tapbench");
 
   useEffect(() => {
     setKeys(loadStoredTapbenchKeys());
@@ -40,14 +48,17 @@ export function TapbenchLanding(props: {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
-    if (hash === "experiment") setTab("experiment");
+    if (hash === "scoreboard" || hash === "results") setTab("results");
+    else if (hash === "howto" || hash === "how-to" || hash === "how-to-run" || hash === "experiment") {
+      setTab("experiment");
+    } else if (hash === "tapbench") setTab("tapbench");
   }, []);
 
-  const selectTab = (next: "results" | "experiment") => {
+  const selectTab = (next: TapbenchTab) => {
     setTab(next);
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    url.hash = next === "experiment" ? "experiment" : "results";
+    url.hash = next === "results" ? "scoreboard" : next === "experiment" ? "howto" : next;
     window.history.replaceState(null, "", url.toString());
   };
 
@@ -150,6 +161,10 @@ export function TapbenchLanding(props: {
           TAPBENCH
         </div>
         <h1 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">TAPBench</h1>
+        <p className="mt-2 text-sm text-zinc-400 sm:text-base">
+          TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge
+          in configuration space.
+        </p>
       </header>
 
       <div
@@ -158,36 +173,30 @@ export function TapbenchLanding(props: {
         role="tablist"
         aria-label="TAPBench"
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "results"}
-          className={`px-3 py-2 text-xs uppercase tracking-wide ${
-            tab === "results"
-              ? "border-b border-white text-white"
-              : "text-zinc-500 hover:text-zinc-300"
-          }`}
-          onClick={() => selectTab("results")}
-          data-tapbench-tab="results"
-        >
-          Results
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "experiment"}
-          className={`px-3 py-2 text-xs uppercase tracking-wide ${
-            tab === "experiment"
-              ? "border-b border-white text-white"
-              : "text-zinc-500 hover:text-zinc-300"
-          }`}
-          onClick={() => selectTab("experiment")}
-          data-tapbench-tab="experiment"
-        >
-          Experiment
-        </button>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={`px-3 py-2 text-xs uppercase tracking-wide ${
+              tab === item.id
+                ? "border-b border-white text-white"
+                : "text-zinc-500 hover:text-zinc-300"
+            }`}
+            onClick={() => selectTab(item.id)}
+            data-tapbench-tab={item.id}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
+      {tab === "tapbench" ? (
+        <section className="mt-8 w-full" data-tapbench-landing-about role="tabpanel" id="tapbench">
+          <TapbenchResultsIntro />
+        </section>
+      ) : null}
       {tab === "results" ? (
         <section
           className="mt-8 w-full"
@@ -195,31 +204,26 @@ export function TapbenchLanding(props: {
           id="results"
           role="tabpanel"
         >
-          <TapbenchResultsIntro />
-          <div className="mt-10">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-              Leaderboard
-            </h2>
-            <TapbenchResultsTable
-              tasks={tasks}
-              regions={regions}
-              busyId={busyId}
-              empty="None"
-              onIssueKey={(id) => void getKey(id)}
-              onDownloadSkill={(id) => void downloadSkill(id)}
-            />
-            {status ? (
-              <p className="mt-3 text-xs text-zinc-400" data-tapbench-key-status>
-                {status}
-              </p>
-            ) : null}
-          </div>
+          <TapbenchResultsTable
+            tasks={tasks}
+            regions={regions}
+            busyId={busyId}
+            empty="None"
+            onIssueKey={(id) => void getKey(id)}
+            onDownloadSkill={(id) => void downloadSkill(id)}
+          />
+          {status ? (
+            <p className="mt-3 text-xs text-zinc-400" data-tapbench-key-status>
+              {status}
+            </p>
+          ) : null}
         </section>
-      ) : (
+      ) : null}
+      {tab === "experiment" ? (
         <div className="mt-8 w-full" role="tabpanel" id="experiment">
           <TapbenchExperimentTutorial />
         </div>
-      )}
+      ) : null}
     </TapbenchShell>
   );
 }

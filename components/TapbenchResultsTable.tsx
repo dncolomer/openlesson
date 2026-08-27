@@ -121,7 +121,7 @@ export function TapbenchResultsTable(props: {
         className="border-t border-zinc-800 px-3 py-2 text-[11px] text-zinc-500"
         data-tapbench-owner-distance-note
       >
-        Best result is the closest 64D L2 match to the tapbench@uncertain.systems latest snapshot.
+        Best result is the agent region closest to the tapbench@uncertain.systems human pin.
       </p>
     </div>
   );

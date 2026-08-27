@@ -55,7 +55,7 @@ export function SolutionLanding({
           ) : null}
         </div>
 
-        <section className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-24">
+        <section className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-6 py-24">
           <div className="max-w-4xl">
             <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
               {eyebrow}

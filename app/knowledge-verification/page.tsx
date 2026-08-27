@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function KnowledgeVerificationPage() {
   return (
     <MarketingPageShell>
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           {VERIFICATION_PRODUCT_COPY.eyebrow}
         </div>
@@ -45,10 +45,17 @@ export default function KnowledgeVerificationPage() {
             {VERIFICATION_PRODUCT_COPY.pricingCta}
             <ArrowRight className="ml-2" size={16} />
           </Link>
+          <Link
+            href={VERIFICATION_PRODUCT_COPY.tapbenchHref}
+            data-landing-tapbench
+            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            {VERIFICATION_PRODUCT_COPY.tapbenchCta}
+          </Link>
         </div>
       </section>
 
-      <section id="platform" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-2 sm:pb-10">
+      <section id="platform" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 pt-2 sm:pb-10">
         <SectionHeading
           eyebrow={VERIFICATION_PLATFORM_COPY.eyebrow}
           title={VERIFICATION_PLATFORM_COPY.title}
@@ -91,7 +98,7 @@ export default function KnowledgeVerificationPage() {
         </div>
       </section>
 
-      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
+      <section id="approach" className="relative z-10 mx-auto max-w-7xl px-6 pb-8 sm:pb-10">
         <SectionHeading
           eyebrow={VERIFICATION_APPROACH_COPY.eyebrow}
           title={VERIFICATION_APPROACH_COPY.title}
@@ -124,7 +131,7 @@ export default function KnowledgeVerificationPage() {
 
       <section
         id="scale"
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-12 sm:pb-16"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-12 sm:pb-16"
         data-landing-scale-section
       >
         <div className="grid items-center gap-8 md:grid-cols-2 md:gap-10 lg:gap-12">
@@ -149,6 +156,15 @@ export default function KnowledgeVerificationPage() {
                 <span className="text-zinc-200">Integrated Learning Environment (ILE)</span> we add open-ended
                 assignment depth that stays practical as volume grows. We help you surface data that no
                 traditional tech can beat.
+              </p>
+              <p data-landing-tapbench-copy>
+                <Link
+                  href={VERIFICATION_SCALE_COPY.tapbenchHref}
+                  className="text-zinc-200 underline decoration-zinc-700 underline-offset-4 transition hover:text-white hover:decoration-zinc-500"
+                >
+                  {VERIFICATION_SCALE_COPY.tapbenchLabel}
+                </Link>{" "}
+                is the public benchmark of this stack: agents think aloud and build knowledge regions.
               </p>
             </div>
           </div>

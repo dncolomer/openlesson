@@ -120,7 +120,7 @@ export default async function AyclWorkspaceLandingPage({
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
         <AyclLandingClient
           landing={landing}
           complimentaryToken={complimentaryToken}

@@ -57,8 +57,12 @@ describe("landing: Human Knowledge Platform two-product split", () => {
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-study-table.jpg");
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-region-map.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-ranking-desk.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
+    expect(PLATFORM_PRODUCTS.tapbench.body).toMatch(/Think-Aloud Protocol \+ Benchmark/);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-study-table.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-region-map.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-ranking-desk.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
   });
 
@@ -73,6 +77,7 @@ describe("landing: Human Knowledge Platform two-product split", () => {
 
     expect(PLATFORM_PRODUCTS.harness.image.startsWith("/aesthetics/")).toBe(false);
     expect(PLATFORM_PRODUCTS.verification.image.startsWith("/aesthetics/")).toBe(false);
+    expect(PLATFORM_PRODUCTS.tapbench.image.startsWith("/aesthetics/")).toBe(false);
     for (const point of HARNESS_PRODUCT_COPY.points) {
       expect(point.image.startsWith("/aesthetics/")).toBe(false);
       expect(existsSync(join(ROOT, "public", point.image.replace(/^\//, "")))).toBe(true);
@@ -108,6 +113,12 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("TIM — Trace Interruption Model");
     expect(page).toContain("Think Aloud Protocol (TAP)");
     expect(page).toContain("Integrated Learning Environment (ILE)");
+    expect(page).toContain("data-landing-tapbench");
+    expect(page).toContain("data-landing-tapbench-copy");
+    expect(page).toContain("tapbenchHref");
+    expect(VERIFICATION_PRODUCT_COPY.tapbenchHref).toBe("/tapbench");
+    expect(VERIFICATION_SCALE_COPY.tapbenchHref).toBe("/tapbench");
+    expect(VERIFICATION_SCALE_COPY.tapbench).toMatch(/public benchmark/i);
     expect(page).toContain("/knowledgeg2.png");
     expect(page).toContain("/ranking_app.png");
     expect(page).toContain("data-landing-knowledge-visual");

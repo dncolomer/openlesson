@@ -128,7 +128,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-10 pb-16 sm:pt-12">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href="/sales"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"

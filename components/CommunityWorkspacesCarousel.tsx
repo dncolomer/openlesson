@@ -100,7 +100,7 @@ export function CommunityPlansCarousel({ fillHeight = false }: CommunityPlansCar
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className={fillHeight ? "w-full h-full flex flex-col min-w-0" : "w-full max-w-6xl mx-auto px-4 sm:px-6"}
+      className={fillHeight ? "w-full h-full flex flex-col min-w-0" : "w-full max-w-7xl mx-auto px-4 sm:px-6"}
     >
       {/* Banner frame — fills available height when side-by-side, otherwise
           uses a cinematic 16:7/16:6 aspect ratio. */}

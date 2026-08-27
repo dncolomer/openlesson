@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 export default function SupportThisProjectPage() {
   return (
     <MarketingPageShell>
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-16 sm:pt-16 sm:pb-20">
         <SectionHeading eyebrow={SUPPORT_COPY.eyebrow} title="Support this Project" />
         <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
           {SUPPORT_COPY.lead}

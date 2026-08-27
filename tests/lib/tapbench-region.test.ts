@@ -113,7 +113,7 @@ describe("TAPBench public regions", () => {
     expect(table).not.toContain("data-tapbench-col-filter");
     expect(table).not.toContain("data-tapbench-pagination");
     expect(landing).toContain("TapbenchResultsTable");
-    expect(experiment).toContain("name</span> is the public Results label");
+    expect(experiment).toContain("You can name it; ScoreBoard shows that name");
     expect(landing).not.toContain("/tapbench/results");
   });
 });

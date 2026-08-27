@@ -21,7 +21,7 @@ export function ScienceWhitepaperPage({ paper }: ScienceWhitepaperPageProps) {
     >
       <LandingNav />
 
-      <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-20 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
         <Link
           href="/science"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"

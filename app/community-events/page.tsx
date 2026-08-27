@@ -44,7 +44,7 @@ export default function HackathonsPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
         <header className="mb-10 text-center">
           <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             Projects & Community

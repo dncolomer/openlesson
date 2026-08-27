@@ -44,7 +44,7 @@ export default function VisionPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
           Automating Human Learning
         </h1>
@@ -72,7 +72,7 @@ export default function VisionPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
         <div className="grid gap-6 md:grid-cols-3">
           <VisionCard
             eyebrow="Problem"
@@ -95,7 +95,7 @@ export default function VisionPage() {
       <section
         id="knowledge-tomography-induction"
         data-vision-tomography-induction
-        className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12"
+        className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12"
         aria-labelledby="vision-tomography-induction-heading"
       >
         <SectionHeading
@@ -169,7 +169,7 @@ export default function VisionPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
         <SectionHeading eyebrow="WHO TRUSTS US" title="Current projects using Uncertain Systems work." />
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {PARTNERS.map((partner) => (

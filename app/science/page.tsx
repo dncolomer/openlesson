@@ -83,7 +83,7 @@ export default function SciencePage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           SCIENCE
         </div>
@@ -103,7 +103,7 @@ export default function SciencePage() {
           data-science-pitch-slide={PLATFORM_THESIS_SLIDE_INDEX}
           data-science-slide-kicker={thesisSlide.kicker ?? ""}
           aria-labelledby="science-thesis-heading"
-          className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+          className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         >
           <article className="border border-zinc-800 bg-zinc-950/75 p-6 backdrop-blur-sm sm:p-8">
             {thesisSlide.kicker ? (
@@ -201,7 +201,7 @@ export default function SciencePage() {
       <section
         id="science-free-energy"
         data-science-free-energy
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         aria-labelledby="science-fep-heading"
       >
         <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
@@ -229,7 +229,7 @@ export default function SciencePage() {
       <section
         id="science-epistemic-foraging"
         data-science-epistemic-foraging
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         aria-labelledby="science-epistemic-foraging-heading"
       >
         <article className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8">
@@ -283,7 +283,7 @@ export default function SciencePage() {
         </article>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
         <div className="space-y-6">
           {PRINCIPLES.map((principle) => (
             <article
@@ -308,7 +308,7 @@ export default function SciencePage() {
       <section
         id="research"
         data-science-research
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-10 sm:pb-12"
         aria-labelledby="science-research-heading"
       >
         <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Research</div>
@@ -366,7 +366,7 @@ export default function SciencePage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pb-16">
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 sm:p-8">
           <p className="text-base leading-relaxed text-zinc-400">
             This model drives everything we build — from learning verification and think-aloud protocol today,

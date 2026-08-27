@@ -6,6 +6,7 @@ import {
   HARNESS_PRICING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
+  TAPBENCH_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
@@ -42,9 +43,20 @@ export const PLATFORM_PRODUCTS = {
     image: "/lp-boxes/verification-region-map.jpg",
     imageAlt: "Abstract knowledge map: overlapping circular regions, clustered dots, and bronze metadata plaques on dark marble",
   },
+  tapbench: {
+    eyebrow: "FOR SCIENCE",
+    name: "TAPBench",
+    title: "Knowledge Mapping",
+    body: "TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge in configuration space.",
+    href: TAPBENCH_PATH,
+    cta: "Explore TAPBench",
+    image: "/lp-boxes/tapbench-ranking-desk.jpg",
+    imageAlt: "Greco-futurist marble measurement desk with brass instruments, gauges, and drafting tools",
+  },
 } as const;
 
 export const PLATFORM_PRODUCT_LIST = [
   PLATFORM_PRODUCTS.harness,
   PLATFORM_PRODUCTS.verification,
+  PLATFORM_PRODUCTS.tapbench,
 ] as const;

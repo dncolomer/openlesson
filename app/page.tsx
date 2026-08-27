@@ -33,7 +33,7 @@ export default function B2BLandingPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="w-full">
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
             HUMAN KNOWLEDGE PLATFORM
@@ -47,7 +47,7 @@ export default function B2BLandingPage() {
               A Learning Harness for humans, and Knowledge Verification for companies that need to verify Human Knowledge without traditional tests and exams — with the guarantee that results cannot be cheated or faked.
             </p>
           </div>
-          <div className="mt-6 grid w-full gap-4 sm:grid-cols-2 lg:gap-5">
+          <div className="mt-6 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             {PLATFORM_PRODUCT_LIST.map((product) => (
               <ProductSplitCard key={product.href} product={product} />
             ))}
@@ -75,7 +75,7 @@ function ProductSplitCard({
           alt={product.imageAlt}
           fill
           className="object-cover grayscale"
-          sizes="(max-width: 640px) 100vw, 576px"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
         />
       </div>
       <div className="flex flex-1 flex-col p-6 sm:p-7 lg:p-8">
@@ -95,12 +95,14 @@ function ProductSplitCard({
             {product.cta}
             <ArrowRight className="ml-2" size={16} />
           </TrackedCtaLink>
-          <Link
-            href={product.pricingHref}
-            className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
-          >
-            Pricing
-          </Link>
+          {"pricingHref" in product && product.pricingHref ? (
+            <Link
+              href={product.pricingHref}
+              className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            >
+              Pricing
+            </Link>
+          ) : null}
         </div>
       </div>
     </article>

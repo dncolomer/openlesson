@@ -144,7 +144,7 @@ export default function ProbabilisticComputingHackathonPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 pt-10 pb-8 sm:px-6 sm:pt-14 sm:pb-10">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pt-10 pb-8 sm:px-6 sm:pt-14 sm:pb-10">
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">
           <ol className="flex flex-wrap items-center gap-2">
             <li>
@@ -222,7 +222,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* About */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <SectionLabel>About the event</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Educational deep-dive plus real hackathon.
@@ -271,7 +271,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Agenda */}
-      <section id="agenda" className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section id="agenda" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <SectionLabel>Agenda</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Started at 12:30.
@@ -291,7 +291,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Winners */}
-      <section id="winners" className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section id="winners" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <SectionLabel>Results</SectionLabel>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -336,7 +336,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Lifetime packages for winners */}
-      <section id="lifetime" className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section id="lifetime" className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <SectionLabel>Study the winners</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">
           Lifetime access packages
@@ -383,7 +383,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Prep material */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <div className="overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm">
           <div className="grid md:grid-cols-2">
             <div
@@ -417,7 +417,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Technology + education context */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-zinc-800/90 bg-zinc-950/75 p-6 backdrop-blur-sm">
             <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -492,7 +492,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Sponsors */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <SectionLabel>Sponsors and partners</SectionLabel>
         <h2 className="mt-3 text-2xl font-medium tracking-[-0.8px] text-white">Supported by</h2>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -512,7 +512,7 @@ export default function ProbabilisticComputingHackathonPage() {
       </section>
 
       {/* Closed registration */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 pb-16 sm:px-6">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 pb-16 sm:px-6">
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-6 backdrop-blur-sm sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>

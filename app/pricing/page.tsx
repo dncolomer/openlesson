@@ -128,7 +128,7 @@ function PricingPageContent() {
       <div className="fixed inset-0 bg-black/78" />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
-        <section className="mx-auto w-full max-w-6xl flex-1 px-6 py-16 sm:py-20">
+        <section className="mx-auto w-full max-w-7xl flex-1 px-6 py-16 sm:py-20">
           <div className="mb-8 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {HARNESS_PRICING_COPY.eyebrow}
           </div>

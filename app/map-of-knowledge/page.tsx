@@ -35,7 +35,7 @@ export default function MapOfKnowledgePage() {
       <LandingNav />
 
       {/* Compact header so the map sits near the top */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-6 pb-4 sm:pt-8 sm:pb-5">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-6 pb-4 sm:pt-8 sm:pb-5">
         <div className="mb-2 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           THE MAP OF KNOWLEDGE
         </div>
@@ -51,7 +51,7 @@ export default function MapOfKnowledgePage() {
         </p>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-20">
         <MapOfKnowledgeClient />
       </section>
 

@@ -2,6 +2,7 @@ import {
   HARNESS_PRICING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
+  TAPBENCH_PATH,
   VERIFICATION_PRICING_PATH,
 } from "@/lib/marketing/paths";
 
@@ -19,7 +20,7 @@ export const PRICING_NAV_LINKS = [
 export const COMMUNITY_LINKS = [
   { href: "/community-events", label: "Community Events" },
   { href: "/map-of-knowledge", label: "The Map of Knowledge" },
-  { href: "/tapbench", label: "TAPBench" },
+  { href: TAPBENCH_PATH, label: "TAPBench" },
 ] as const;
 
 export const COMMUNITY_NAV_LABEL = "Projects" as const;

@@ -63,8 +63,11 @@ describe("landing Human Knowledge Platform copy", () => {
     expect(PLATFORM_HERO.h1).toBe(H1);
     expect(PLATFORM_HERO.p1).toBe(P1);
     expect(PLATFORM_HERO.p2).toBe(P2);
-    expect(PLATFORM_PRODUCT_LIST).toHaveLength(2);
+    expect(PLATFORM_PRODUCT_LIST).toHaveLength(3);
     expect(PLATFORM_PRODUCT_LIST[0].title).toBe("A Learning Harness for Humans");
+    expect(PLATFORM_PRODUCT_LIST[2].title).toBe("Knowledge Mapping");
+    expect(PLATFORM_PRODUCT_LIST[2].eyebrow).toBe("FOR SCIENCE");
+    expect(PLATFORM_PRODUCT_LIST[2].href).toBe("/tapbench");
   });
 
   it("contracts OG title to H1 and OG description to P2 (not tautological P1)", () => {

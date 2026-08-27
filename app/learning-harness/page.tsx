@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export default function LearningHarnessPage() {
   return (
     <MarketingPageShell>
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-14 pb-10 sm:pt-16 sm:pb-12">
         <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
           {HARNESS_PRODUCT_COPY.eyebrow}
         </div>
@@ -66,13 +66,13 @@ export default function LearningHarnessPage() {
       </section>
 
       <section
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-2 sm:pb-10"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-8 pt-2 sm:pb-10"
         data-harness-screenshots
       >
         <HarnessScreenshotCarousel screenshots={HARNESS_PRODUCT_COPY.screenshots} />
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
         <ul className="grid gap-4 md:grid-cols-3" data-harness-points>
           {HARNESS_PRODUCT_COPY.points.map((point) => (
             <li
@@ -113,7 +113,7 @@ export default function LearningHarnessPage() {
 
       <section
         id="all-you-can-learn"
-        className="relative z-10 mx-auto max-w-6xl px-6 pb-16 sm:pb-20"
+        className="relative z-10 mx-auto max-w-7xl px-6 pb-16 sm:pb-20"
         data-harness-aycl
       >
         <SectionHeading

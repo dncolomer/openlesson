@@ -109,7 +109,7 @@ export default function AllYouCanLearnPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <header
           className="relative mb-6 overflow-hidden rounded-none border border-zinc-700/60 bg-zinc-950/70 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-md"
           data-aycl-catalog-hero

@@ -40,7 +40,7 @@ export const PLATFORM_PRODUCTS = {
     href: KNOWLEDGE_VERIFICATION_PATH,
     cta: "Explore Knowledge Verification",
     pricingHref: VERIFICATION_PRICING_PATH,
-    image: "/lp-boxes/verification-region-map.jpg",
+    image: "/lp-boxes/verification-lab-table.jpg",
     imageAlt: "Greco-futurist marble table set as a chemical lab with bottles, test tubes, and testing instruments",
   },
   tapbench: {
@@ -50,7 +50,7 @@ export const PLATFORM_PRODUCTS = {
     body: "TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge in configuration space.",
     href: TAPBENCH_PATH,
     cta: "Explore TAPBench",
-    image: "/lp-boxes/tapbench-ranking-desk.jpg",
+    image: "/lp-boxes/tapbench-maps-desk.jpg",
     imageAlt: "Greco-futurist marble table covered with rolled and unfolded maps, a star chart, and cartography tools",
   },
 } as const;

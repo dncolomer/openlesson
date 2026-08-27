@@ -56,13 +56,13 @@ describe("landing: Human Knowledge Platform two-product split", () => {
     expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
     expect(PLATFORM_PRODUCTS.harness.image).toBe("/lp-boxes/harness-study-table.jpg");
-    expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-region-map.jpg");
-    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-ranking-desk.jpg");
+    expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-lab-table.jpg");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps-desk.jpg");
     expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
     expect(PLATFORM_PRODUCTS.tapbench.body).toMatch(/Think-Aloud Protocol \+ Benchmark/);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-study-table.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/lp-boxes/verification-region-map.jpg"))).toBe(true);
-    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-ranking-desk.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/verification-lab-table.jpg"))).toBe(true);
+    expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps-desk.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
   });
 

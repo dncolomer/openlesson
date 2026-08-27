@@ -41,7 +41,7 @@ export const PLATFORM_PRODUCTS = {
     cta: "Explore Knowledge Verification",
     pricingHref: VERIFICATION_PRICING_PATH,
     image: "/lp-boxes/verification-region-map.jpg",
-    imageAlt: "Abstract knowledge map: overlapping circular regions, clustered dots, and bronze metadata plaques on dark marble",
+    imageAlt: "Greco-futurist marble table set as a chemical lab with bottles, test tubes, and testing instruments",
   },
   tapbench: {
     eyebrow: "FOR SCIENCE",
@@ -51,7 +51,7 @@ export const PLATFORM_PRODUCTS = {
     href: TAPBENCH_PATH,
     cta: "Explore TAPBench",
     image: "/lp-boxes/tapbench-ranking-desk.jpg",
-    imageAlt: "Greco-futurist marble measurement desk with brass instruments, gauges, and drafting tools",
+    imageAlt: "Greco-futurist marble table covered with rolled and unfolded maps, a star chart, and cartography tools",
   },
 } as const;
 

@@ -68,6 +68,7 @@ describe("landing Human Knowledge Platform copy", () => {
     expect(PLATFORM_PRODUCT_LIST[2].title).toBe("Knowledge Mapping");
     expect(PLATFORM_PRODUCT_LIST[2].eyebrow).toBe("FOR SCIENCE");
     expect(PLATFORM_PRODUCT_LIST[2].href).toBe("/tapbench");
+    expect(PLATFORM_PRODUCT_LIST.map((p) => p.cta)).toEqual(["Explore", "Explore", "Explore"]);
   });
 
   it("contracts OG title to H1 and OG description to P2 (not tautological P1)", () => {

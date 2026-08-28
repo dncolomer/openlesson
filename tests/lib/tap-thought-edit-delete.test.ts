@@ -127,6 +127,9 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
 
     expect(memory).toContain("data-tap-edit-thought");
     expect(memory).toContain("data-tap-delete-thought");
+    expect(memory).toContain("T extends ThoughtMemoryEntry");
+    expect(memory).toContain("onEditThought?: (thought: T, nextText: string) => void");
+    expect(memory).toContain("onDeleteThought?: (thought: T) => void");
     expect(memory).toContain('submitLabel="Save"');
     expect(memory).toContain("Keep speaking");
     expect(memory).toContain("!canManageThoughts && (generationEnabled || Boolean(onSendThought))");

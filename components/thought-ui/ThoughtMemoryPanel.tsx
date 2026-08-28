@@ -45,8 +45,8 @@ function formatThoughtTime(timestamp: number) {
   return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(timestamp));
 }
 
-interface ThoughtMemoryPanelProps {
-  thoughts: ThoughtMemoryEntry[];
+interface ThoughtMemoryPanelProps<T extends ThoughtMemoryEntry = ThoughtMemoryEntry> {
+  thoughts: T[];
   workspaceId?: string;
   blockId?: string;
   sessionId?: string;
@@ -65,12 +65,12 @@ interface ThoughtMemoryPanelProps {
   onSendThought?: (text: string, thoughtIds: string[]) => void | Promise<void>;
   isSending?: boolean;
   /** TAP: save an individual thought locally (no Helios submit). Speech keeps running. */
-  onEditThought?: (thought: ThoughtMemoryEntry, nextText: string) => void;
+  onEditThought?: (thought: T, nextText: string) => void;
   /** TAP: delete an individual thought locally and record System 2 PoW. */
-  onDeleteThought?: (thought: ThoughtMemoryEntry) => void;
+  onDeleteThought?: (thought: T) => void;
 }
 
-export function ThoughtMemoryPanel({
+export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryEntry>({
   thoughts,
   workspaceId,
   blockId,
@@ -84,7 +84,7 @@ export function ThoughtMemoryPanel({
   isSending = false,
   onEditThought,
   onDeleteThought,
-}: ThoughtMemoryPanelProps) {
+}: ThoughtMemoryPanelProps<T>) {
   const surfaceCaps = resolveInsightSurfaceCapabilities(insightSurface);
   const generationEnabled =
     allowInsightGeneration !== undefined ? allowInsightGeneration : surfaceCaps.allowInsightGeneration;

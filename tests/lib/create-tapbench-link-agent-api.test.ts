@@ -460,16 +460,24 @@ describe("createWorkspaceTapbenchLink (shipped agent mint)", () => {
 
 describe("agent REST + MCP surface omits TAPBench mint", () => {
   it("does not register create_tapbench_link or list_tapbench_links on AGENT_TOOL_SURFACE", () => {
-    const names = new Set(agentToolNames());
+    const names = new Set<string>(agentToolNames());
     expect(names.has("create_tapbench_link")).toBe(false);
     expect(names.has("list_tapbench_links")).toBe(false);
-    expect(AGENT_TOOL_SURFACE.find((t) => t.name === "create_tapbench_link")).toBeUndefined();
-    expect(AGENT_TOOL_SURFACE.find((t) => t.name === "list_tapbench_links")).toBeUndefined();
+    expect(
+      (AGENT_TOOL_SURFACE as ReadonlyArray<{ name: string }>).find(
+        (t) => t.name === "create_tapbench_link",
+      ),
+    ).toBeUndefined();
+    expect(
+      (AGENT_TOOL_SURFACE as ReadonlyArray<{ name: string }>).find(
+        (t) => t.name === "list_tapbench_links",
+      ),
+    ).toBeUndefined();
   });
 
   it("MCP_EVIDENCE_TOOLS names match agent surface without TAPBench mint tools", () => {
-    const surface = new Set(agentToolNames());
-    const mcp = new Set(MCP_EVIDENCE_TOOLS.map((t) => t.name));
+    const surface = new Set<string>(agentToolNames());
+    const mcp = new Set<string>(MCP_EVIDENCE_TOOLS.map((t) => t.name));
     expect(surface.has("create_tapbench_link")).toBe(false);
     expect(surface.has("list_tapbench_links")).toBe(false);
     expect(mcp.has("create_tapbench_link")).toBe(false);

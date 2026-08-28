@@ -104,6 +104,7 @@ export function BlockSkillGrid({
   canEdit: canEditProp,
   learnerMode = false,
   viewOnly = false,
+  showMinimap = true,
   learnerScopeId = null,
   cloneArmed = false,
   cloneSourceBlockId = null,
@@ -965,6 +966,7 @@ export function BlockSkillGrid({
         onPointerUp: endDrag,
       }}
       minimap={{
+        hidden: showMinimap === false,
         clusterCount: minimapGraph.clusters.length,
         totalBlocks: minimapTileView.totalBlocks,
         tiles: minimapTileView.tiles,
@@ -980,6 +982,7 @@ export function BlockSkillGrid({
         viewOnly,
         mountMapNotes,
         overlayPersist,
+        minimapHidden: showMinimap === false,
         workspaceId,
         onMapExploreToggle,
         onMapToggle,

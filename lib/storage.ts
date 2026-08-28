@@ -98,10 +98,13 @@ export {
   sessionPlanHasChapters,
   sessionPlanHasChaptersFromRow,
   sessionPlanHasChaptersQuery,
+  sessionPlanChaptersStatus,
+  sessionPlanChaptersStatusFromResult,
   SESSION_PLAN_HAS_CHAPTERS_SELECT,
   SESSION_PLAN_EMPTY_STEPS_JSON,
   updateSessionPlan,
 } from "@/lib/storage/session-plans";
+export type { SessionPlanChaptersStatus } from "@/lib/storage/session-plans";
 
 export {
   saveWithDedupString,

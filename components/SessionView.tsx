@@ -49,6 +49,7 @@ const EMPTY_ENTRY_QUERY_PARAMS: Record<string, string | string[]> = Object.freez
 
 export function SessionView({
   sessionId,
+  resumeSession = false,
   ayclToken,
   ileToken,
   showEndSession = true,
@@ -57,6 +58,8 @@ export function SessionView({
   sessionMode: sessionModeProp,
 }: {
   sessionId: string;
+  /** Opened from Previous Sessions — continue stored chapters, no density picker. */
+  resumeSession?: boolean;
   ayclToken?: string;
   /** Private token for guest ILE practice links (`/ile/session/{token}`). */
   ileToken?: string;
@@ -272,7 +275,7 @@ export function SessionView({
    * - empty: no chapters yet → size picker is interactive
    * - exists: chapters present → size picker grayed + regenerate checkbox
    */
-  const [chapterPlanStatus, setChapterPlanStatus] = useState<"unknown" | "empty" | "exists">("unknown");
+  const [chapterPlanStatus, setChapterPlanStatus] = useState<"unknown" | "empty" | "exists" | "failed">("unknown");
   /** When a chapter set already exists, keep size controls grayed until user opts in. */
   const [regenerateChapters, setRegenerateChapters] = useState(false);
 
@@ -841,6 +844,10 @@ export function SessionView({
           onContinueWithoutInference={handleContinueWithoutInference}
           onReadyStart={handleWelcomeReadyStart}
           hasSessionPlan={Boolean(sessionPlan)}
+          sessionId={session.id}
+          sessionStartedAt={session.startedAt}
+          sessionPlan={sessionPlan}
+          resumeSession={resumeSession}
         />
       )}
 

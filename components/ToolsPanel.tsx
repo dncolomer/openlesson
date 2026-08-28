@@ -215,14 +215,12 @@ export function ToolsPanel({
         {onBackToDashboard && (
           <button
             type="button"
+            data-save-and-exit
             onClick={onBackToDashboard}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
-            title={t('session.backToDashboard')}
+            className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
+            title={t("session.saveAndExit")}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>{t('session.backToDashboard')}</span>
+            <span>{t("session.saveAndExit")}</span>
           </button>
         )}
       </div>

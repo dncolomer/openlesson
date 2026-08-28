@@ -56,6 +56,8 @@ export interface BlockSkillGridProps {
   canEdit: boolean;
   learnerMode?: boolean;
   viewOnly?: boolean;
+  /** When false, hide the overlay minimap and keep the live map. Default true. */
+  showMinimap?: boolean;
   learnerScopeId?: string | null;
   cloneArmed?: boolean;
   cloneSourceBlockId?: string | null;

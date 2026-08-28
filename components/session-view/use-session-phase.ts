@@ -12,7 +12,6 @@ import {
   resetSessionProbes,
   resumeSession,
   saveSession,
-  sessionPlanHasChapters,
   toggleProbeFocused,
   updateSessionStatus,
   type Session,
@@ -25,6 +24,13 @@ import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference"
 import { LocalContextBuffer } from "@/lib/local-context";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import { readErrorResponse } from "@/components/session/sessionViewHelpers";
+import {
+  chapterStatusAfterHydrate,
+  createForceFromChapterStatus,
+  fetchSessionPlanChaptersStatus,
+  fetchWelcomeChapterSnapshot,
+} from "@/lib/session-plan-chapters-status";
+import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { IleSessionMode } from "@/lib/ile-mode";
@@ -194,6 +200,21 @@ useEffect(() => {
 useEffect(() => {
   let cancelled = false;
   async function load() {
+    // Cheap existence check starts immediately — do not wait on session
+    // fetch, objectives generation, or full-plan hydrate to leave "unknown".
+    const chapterStatusPromise = fetchWelcomeChapterSnapshot(
+      sessionId,
+      guestAccessBody,
+    );
+    void chapterStatusPromise.then((snapshot) => {
+      if (cancelled) return;
+      setChapterPlanStatus(snapshot.status);
+      if (snapshot.plan && (snapshot.plan.steps?.length ?? 0) > 0) {
+        setSessionPlan(snapshot.plan);
+        sessionPlanRef.current = snapshot.plan;
+      }
+    });
+
     const s =
       guestAccessKind === "aycl" && ayclToken
         ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
@@ -219,62 +240,74 @@ useEffect(() => {
         setIsPaused(true);
       }
       
-      // Load objectives from session or generate new ones
-      let loadedObjectives: string[] = [];
-      if (s.objectives && s.objectives.length > 0) {
-        loadedObjectives = s.objectives;
-      } else {
-        try {
-          const objRes = await fetch("/api/generate-objectives", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              problem: s.problem,
-              ...guestAccessBody,
-            }),
-          });
-          if (!cancelled && objRes.ok) {
-            const { objectives: generatedObjectives } = await objRes.json();
-            if (generatedObjectives && generatedObjectives.length > 0) {
-              loadedObjectives = generatedObjectives;
-            }
-          }
-        } catch { /* objectives are optional */ }
-      }
-      if (loadedObjectives.length > 0) {
-        setObjectives(loadedObjectives);
-        // Initialize all objectives with blue status
-        setObjectiveStatuses(loadedObjectives.map(() => "blue"));
-      }
-
-      // Load or create session plan - but wait for language confirmation first
-      setPlanLoading(true);
       setPlanError(null);
-      setChapterPlanStatus("unknown");
       setRegenerateChapters(false);
-      try {
-        // Cheap existence check — do not download full steps JSON just to
-        // set chapterPlanStatus. Hydrate the map only when chapters exist.
-        const hasChapters = await sessionPlanHasChapters(s.id);
-        if (hasChapters) {
-          const existingPlan = await getSessionPlan(s.id);
-          if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
-            setSessionPlan(existingPlan);
-            sessionPlanRef.current = existingPlan;
-            if (!cancelled) setChapterPlanStatus("exists");
-          } else if (!cancelled) {
-            setChapterPlanStatus("empty");
-          }
-        } else if (!cancelled) {
-          setChapterPlanStatus("empty");
+
+      const objectivesPromise = (async () => {
+        let loadedObjectives: string[] = [];
+        if (s.objectives && s.objectives.length > 0) {
+          loadedObjectives = s.objectives;
+        } else {
+          try {
+            const objRes = await fetch("/api/generate-objectives", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                problem: s.problem,
+                ...guestAccessBody,
+              }),
+            });
+            if (!cancelled && objRes.ok) {
+              const { objectives: generatedObjectives } = await objRes.json();
+              if (generatedObjectives && generatedObjectives.length > 0) {
+                loadedObjectives = generatedObjectives;
+              }
+            }
+          } catch { /* objectives are optional */ }
         }
-        // Don't create new plan here - wait for user to confirm language first
+        if (loadedObjectives.length > 0 && !cancelled) {
+          setObjectives(loadedObjectives);
+          setObjectiveStatuses(loadedObjectives.map(() => "blue"));
+        }
+      })();
+
+      setPlanLoading(true);
+      try {
+        const snapshot = await chapterStatusPromise;
+        if (cancelled) return;
+        let status = snapshot.status;
+        let existingPlan = snapshot.plan;
+        if (snapshot.plan && (snapshot.plan.steps?.length ?? 0) > 0) {
+          setSessionPlan(snapshot.plan);
+          sessionPlanRef.current = snapshot.plan;
+        }
+        // Browser hydrate is best-effort; API plan is preferred.
+        if (status === "exists" && !(existingPlan?.steps?.length)) {
+          try {
+            existingPlan = await getSessionPlan(s.id);
+            if (
+              !cancelled &&
+              existingPlan &&
+              (existingPlan.steps?.length ?? 0) > 0
+            ) {
+              setSessionPlan(existingPlan);
+              sessionPlanRef.current = existingPlan;
+            }
+          } catch (err) {
+            console.warn("Session plan hydrate failed:", err);
+          }
+        }
+        if (!cancelled) {
+          setChapterPlanStatus(chapterStatusAfterHydrate(status, existingPlan));
+        }
       } catch (err) {
-        console.warn("Session plan loading failed:", err);
-        if (!cancelled) setChapterPlanStatus("empty");
+        console.warn("Session plan existence check failed:", err);
+        if (!cancelled) setChapterPlanStatus("failed");
       } finally {
         if (!cancelled) setPlanLoading(false);
       }
+
+      await objectivesPromise;
 
       // Fire opening probe (now uses session plan context if available) - but only if session already has probes
       // Opening probe generation is now handled after language confirmation
@@ -745,21 +778,33 @@ if (guestAccessKind === "aycl" && ayclToken) {
   }
 }
 
-const hasExistingChapters = await sessionPlanHasChapters(session.id);
-let newPlan: SessionPlan | null = null;
-// Keep regenerate checkbox stable even if sessionPlan state lags.
-if (hasExistingChapters) {
-  setChapterPlanStatus("exists");
-} else {
-  setChapterPlanStatus("empty");
+const chapterStatus = await fetchSessionPlanChaptersStatus(
+  session.id,
+  guestAccessBody,
+);
+setChapterPlanStatus(chapterStatus);
+const forceDecision = createForceFromChapterStatus(
+  chapterStatus,
+  ileWelcomeShowsRegenerate(chapterStatus) ? regenerateChapters : false,
+);
+if (forceDecision.action === "abort") {
+  setPlanError(
+    "Could not check for existing chapters. Existing chapters were not replaced.",
+  );
+  return;
 }
+const hasExistingChapters = chapterStatus === "exists";
+let newPlan: SessionPlan | null = null;
 const shouldReuseExisting = hasExistingChapters && !regenerateChapters;
 if (shouldReuseExisting) {
   if (tutoringLanguage === "en") {
-    const existingPlan = await getSessionPlan(session.id);
-    if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
-      newPlan = existingPlan;
+    if (!guestAccessKind) {
+      const existingPlan = await getSessionPlan(session.id);
+      if (existingPlan && (existingPlan.steps?.length ?? 0) > 0) {
+        newPlan = existingPlan;
+      }
     }
+    // ILE/AYCL: skip browser SELECT; create with force:false returns the stored plan.
   } else {
     const translateRes = await fetch("/api/session-plan/translate", {
       method: "POST",
@@ -798,7 +843,7 @@ if (!newPlan) {
       objectives,
       planningPrompt: session.planningPrompt,
       // Only force-replace when user opted in or no chapters exist.
-      force: hasExistingChapters ? regenerateChapters : true,
+      force: forceDecision.force,
       tutoringLanguage,
       initialChapters,
       sessionMode: resolvedSessionMode,

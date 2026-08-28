@@ -45,6 +45,7 @@ export function MapRightStack({
   handleAnnotationLayerSelect,
   handleAnnotationLayerToggle,
   handleAnnotationLayerDelete,
+  minimapHidden = false,
 }: {
   viewOnly: boolean;
   mountMapNotes: boolean;
@@ -74,6 +75,8 @@ export function MapRightStack({
   handleAnnotationLayerSelect: (layerId: string) => void;
   handleAnnotationLayerToggle: (layerId: string) => void;
   handleAnnotationLayerDelete: (layerId: string) => void;
+  /** Sit at the top-right when the overlay minimap is hidden. */
+  minimapHidden?: boolean;
 }) {
   const toggleIds =
     mapToggleIds && mapToggleIds.length > 0
@@ -104,7 +107,7 @@ export function MapRightStack({
       data-map-notes-mode={learnerMode ? "learner" : "creator"}
       className="pointer-events-auto absolute right-2 z-20 flex flex-col gap-1"
       style={{
-        top: 8 + MINIMAP_FRAME_HEIGHT + 8,
+        top: minimapHidden ? 8 : 8 + MINIMAP_FRAME_HEIGHT + 8,
         width: MINIMAP_FRAME_WIDTH,
       }}
       onPointerDown={(e) => e.stopPropagation()}

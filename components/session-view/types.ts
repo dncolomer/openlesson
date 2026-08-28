@@ -2,6 +2,7 @@ import type { AestheticPackage } from "@/lib/aesthetics";
 import type { InitProgress } from "@/lib/local-inference";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
+import type { SessionPlan } from "@/lib/domain/types";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type {
@@ -17,7 +18,7 @@ export type SessionViewTranslate = (
 
 export type GuestAccessKind = "aycl" | "ile" | null;
 
-export type ChapterPlanStatus = "unknown" | "empty" | "exists";
+export type ChapterPlanStatus = "unknown" | "empty" | "exists" | "failed";
 
 export type PrepStage = "plan" | "model" | "done";
 
@@ -86,4 +87,8 @@ export type SessionWelcomeModalProps = {
   onContinueWithoutInference: () => void;
   onReadyStart: () => Promise<void> | void;
   hasSessionPlan: boolean;
+  sessionId?: string | null;
+  sessionStartedAt?: string | null;
+  sessionPlan?: SessionPlan | null;
+  resumeSession?: boolean;
 };

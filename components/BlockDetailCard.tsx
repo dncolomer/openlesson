@@ -71,6 +71,10 @@ type BlockDetailCardProps = {
   promptSection?: ReactNode;
   highlighted?: boolean;
   highlightOpacity?: number;
+  /** ILE (non-TAP) Start label. TAP copy stays `Start · N min`. */
+  ileStartLabel?: string;
+  onSeePreviousSessions?: () => void;
+  seePreviousSessionsLabel?: string;
 };
 
 const HERO_RING_CLASS: Record<ProgressRing, string> = {
@@ -237,6 +241,9 @@ export function BlockDetailCard({
   promptSection,
   highlighted,
   highlightOpacity = 1,
+  ileStartLabel,
+  onSeePreviousSessions,
+  seePreviousSessionsLabel,
 }: BlockDetailCardProps) {
   const { t } = useI18n();
   const practiceLimits = useMemo(
@@ -508,9 +515,24 @@ export function BlockDetailCard({
         </div>
       ) : null}
 
+      {onSeePreviousSessions ? (
+        <button
+          type="button"
+          data-see-previous-sessions
+          disabled={isStarting || isLocked}
+          onClick={() => onSeePreviousSessions()}
+          className="mt-3 w-full rounded-none border border-white/25 bg-transparent px-3 py-2.5 text-xs font-semibold tracking-tight text-white transition hover:border-white/45 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {seePreviousSessionsLabel || "See Previous Sessions"}
+        </button>
+      ) : null}
+
       <button
         type="button"
         data-launch-start
+        data-start-new-session={
+          resolvedTarget.product !== "tap" && ileStartLabel ? "true" : undefined
+        }
         data-resolved-intent-id={resolvedTarget.id}
         disabled={isStarting || isLocked || !canStart}
         onClick={(e) => launch(resolvedTarget, e)}
@@ -520,7 +542,7 @@ export function BlockDetailCard({
           ? t("sessionItem.starting")
           : resolvedTarget.product === "tap"
             ? `Start · ${durationMinutes} min`
-            : "Start"}
+            : ileStartLabel || "Start"}
       </button>
     </div>
   ) : null;

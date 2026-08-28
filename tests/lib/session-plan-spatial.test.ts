@@ -318,7 +318,7 @@ describe("create surface wiring (structural)", () => {
     expect(viewSrc).toContain("chapterPlanStatus");
     expect(viewSrc).toContain("hasExistingChapters");
     expect(viewSrc).toContain("shouldReuseExisting");
-    expect(viewSrc).toContain("sessionPlanHasChapters");
+    expect(viewSrc).toContain("fetchSessionPlanChaptersStatus");
   });
 
   it("force create generates before deleting so regenerate failure keeps chapters", () => {

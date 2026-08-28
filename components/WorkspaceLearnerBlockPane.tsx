@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   buildLearnerDagView,
   type LearnerDagView,
@@ -37,6 +38,16 @@ import {
   parseBlockCreatorEffects,
   type BlockCreatorEffects,
 } from "@/lib/block-creator-effects";
+import {
+  PREVIOUS_SESSIONS_DRAWER_ID,
+  SEE_PREVIOUS_SESSIONS_LABEL,
+  START_NEW_SESSION_LABEL,
+  continueIleSessionHref,
+  fetchBlockPreviousSessions,
+  ileLaunchInsertsNewSession,
+  previousSessionsDrawerShouldLoad,
+  type BlockPreviousSession,
+} from "@/lib/block-previous-sessions";
 
 export type LearnerBlockRef = {
   id: string;
@@ -167,7 +178,16 @@ export function WorkspaceLearnerBlockPane({
     initialLearnerDoneProgress,
   );
   const [powSummary, setPowSummary] = useState<LearnerPowSummary | null>(null);
+  const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
+  const [openDrawerId, setOpenDrawerId] = useState<string | null>("practice");
+  const [previousSessions, setPreviousSessions] = useState<
+    BlockPreviousSession[]
+  >([]);
+  const [previousSessionsLoading, setPreviousSessionsLoading] = useState(false);
+  const [previousSessionsError, setPreviousSessionsError] = useState<
+    string | null
+  >(null);
   const [planningPrompt, setPlanningPrompt] = useState(
     () => String(block.planning_prompt || ""),
   );
@@ -352,9 +372,52 @@ export function WorkspaceLearnerBlockPane({
         : "dependencies"
       : "practice";
 
+  useEffect(() => {
+    setOpenDrawerId(defaultOpenId);
+  }, [defaultOpenId, block.id]);
+
+  useEffect(() => {
+    if (!previousSessionsDrawerShouldLoad(openDrawerId) || locked) return;
+    let cancelled = false;
+    setPreviousSessionsLoading(true);
+    setPreviousSessionsError(null);
+    void fetchBlockPreviousSessions(
+      workspaceId,
+      block.id,
+      ayclToken ? { ayclToken } : {},
+    )
+      .then((sessions) => {
+        if (cancelled) return;
+        setPreviousSessions(sessions);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPreviousSessionsError(
+          err instanceof Error ? err.message : "Failed to list sessions",
+        );
+        setPreviousSessions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviousSessionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ayclToken, block.id, locked, openDrawerId, workspaceId]);
+
+  const continueSession = useCallback(
+    (sessionId: string) => {
+      if (locked || ileLaunchInsertsNewSession("continue")) return;
+      router.push(continueIleSessionHref(sessionId));
+    },
+    [locked, router],
+  );
+
   return (
     <WorkspaceRightPaneDrawerGroup
       defaultOpenId={defaultOpenId}
+      openId={openDrawerId}
+      onOpenIdChange={setOpenDrawerId}
       data-workspace-right-pane="learner_practice"
       data-learner-block-pane
       data-learner-block-id={block.id}
@@ -411,9 +474,64 @@ export function WorkspaceLearnerBlockPane({
               onLaunchIntent={(target, options) => {
                 void handleLaunch(target, options);
               }}
+              ileStartLabel={START_NEW_SESSION_LABEL}
+              seePreviousSessionsLabel={SEE_PREVIOUS_SESSIONS_LABEL}
+              onSeePreviousSessions={() => {
+                setOpenDrawerId(PREVIOUS_SESSIONS_DRAWER_ID);
+              }}
               promptSection={promptSection}
             />
           </div>
+        </div>
+      </WorkspaceRightPaneDrawer>
+
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId={PREVIOUS_SESSIONS_DRAWER_ID}
+        title={SEE_PREVIOUS_SESSIONS_LABEL}
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-previous-sessions-drawer"
+      >
+        <div data-previous-sessions-list className="space-y-2">
+          {previousSessionsLoading ? (
+            <p className="text-[11px] text-neutral-500">Loading sessions…</p>
+          ) : null}
+          {previousSessionsError ? (
+            <p className="text-[11px] text-rose-300">{previousSessionsError}</p>
+          ) : null}
+          {!previousSessionsLoading &&
+          !previousSessionsError &&
+          previousSessions.length === 0 ? (
+            <p className="text-[11px] text-neutral-500">
+              No previous sessions for this block.
+            </p>
+          ) : null}
+          {previousSessions.map((entry) => (
+            <div
+              key={entry.sessionId}
+              data-previous-session-row
+              data-session-id={entry.sessionId}
+              data-session-started={entry.startedAt}
+              className="rounded-none border border-neutral-800 bg-neutral-950/70 px-2.5 py-2"
+            >
+              <p className="truncate font-mono text-[11px] text-neutral-200">
+                {entry.sessionId}
+              </p>
+              <p className="mt-0.5 text-[10px] text-neutral-500">
+                {entry.startedAt}
+              </p>
+              <button
+                type="button"
+                data-continue-session
+                disabled={locked}
+                onClick={() => continueSession(entry.sessionId)}
+                className="mt-2 w-full rounded-none bg-white px-2 py-1.5 text-[11px] font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-40"
+              >
+                Continue
+              </button>
+            </div>
+          ))}
         </div>
       </WorkspaceRightPaneDrawer>
 

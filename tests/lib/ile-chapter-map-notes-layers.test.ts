@@ -35,6 +35,7 @@ import {
   MINIMAP_FRAME_WIDTH_PREV,
 } from "@/lib/map-minimap-clusters";
 
+
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
@@ -156,6 +157,7 @@ describe("ILE chapter-map chrome (shipped source + frame constants)", () => {
     expect(grid).toContain("data-learner-map-notes-toolbar");
     expect(grid).toContain("data-annotation-layers-stack");
     expect(grid).toContain("data-learner-note-add");
+    expect(grid).toContain("minimapHidden");
     expect(chapter).toContain('suggestMode="chapter"');
     expect(chapter).toContain("sessionId={sessionId}");
     expect(chapter).toContain("BlockSkillGrid");
@@ -166,6 +168,23 @@ describe("ILE chapter-map chrome (shipped source + frame constants)", () => {
         "ChapterMapPanel: BlockSkillGrid suggestMode=chapter sessionId",
         "BlockSkillGrid: overlayPersist chapter scope + notes/layers chrome",
       ].join("\n"),
+    );
+  });
+
+  it("continue welcome preview does not mount notes or drawing layers", () => {
+    const preview = read("components/session-view/ile-continue-map-preview.tsx");
+    expect(preview).toContain("viewOnly");
+    expect(preview).toContain("showMinimap={false}");
+    expect(preview).not.toContain("sessionId=");
+    expect(preview).not.toContain("suggestMode=");
+    expect(preview).not.toContain("ileContinueMapOverlayInput");
+    expect(preview).not.toContain("learnerScopeId");
+
+    writeScratch(
+      "ile-continue-preview-notes-layers.txt",
+      ["IleContinueMapPreview: chapters only — no notes or drawing layers"].join(
+        "\n",
+      ),
     );
   });
 

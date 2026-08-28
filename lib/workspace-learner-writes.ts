@@ -5,6 +5,7 @@
 
 export const WORKSPACE_LEARNER_LAUNCH_PATH = "/api/workspace/learner-launch";
 export const WORKSPACE_LEARNER_PROMPT_PATH = "/api/workspace/learner-prompt";
+export { WORKSPACE_BLOCK_SESSIONS_PATH } from "@/lib/block-previous-sessions";
 
 export function buildLearnerLaunchBody(input: {
   workspaceId: string;

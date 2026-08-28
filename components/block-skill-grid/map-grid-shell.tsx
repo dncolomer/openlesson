@@ -16,7 +16,7 @@ export type MapGridShellProps = {
   rail: ComponentProps<typeof MapToolRail>;
   world: ComponentProps<typeof MapWorldLayer>;
   gestures: ComponentProps<typeof MapGestureOverlays>;
-  minimap: ComponentProps<typeof MapMinimapChrome>;
+  minimap: ComponentProps<typeof MapMinimapChrome> & { hidden?: boolean };
   right: ComponentProps<typeof MapRightStack>;
   jobs: ComponentProps<typeof MapJobIndicators>;
   status: ComponentProps<typeof MapStatusBar>;
@@ -64,7 +64,7 @@ export function MapGridShell({
       data-annotation-layers={String(world.annotationLayers.length)}
       data-annotation-drawing={gestures.annotationDrawingActive ? "true" : "false"}
       data-clone-armed={rail.cloneArmed ? "true" : "false"}
-      data-map-minimap="true"
+      data-map-minimap={minimap.hidden ? "false" : "true"}
     >
       <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
         <MapToolRail {...rail} />
@@ -95,7 +95,20 @@ export function MapGridShell({
           onPointerCancel={chrome.onPointerUp}
         >
           <MapGestureOverlays {...gestures} />
-          <MapMinimapChrome {...minimap} />
+          {minimap.hidden ? null : (
+            <MapMinimapChrome
+              clusterCount={minimap.clusterCount}
+              totalBlocks={minimap.totalBlocks}
+              tiles={minimap.tiles}
+              labels={minimap.labels}
+              viewportRect={minimap.viewportRect}
+              onTilePointerDown={minimap.onTilePointerDown}
+              onClusterPointerDown={minimap.onClusterPointerDown}
+              onViewportPointerDown={minimap.onViewportPointerDown}
+              onViewportPointerMove={minimap.onViewportPointerMove}
+              onViewportPointerUp={minimap.onViewportPointerUp}
+            />
+          )}
           <MapRightStack {...right} />
           <MapJobIndicators {...jobs} />
 

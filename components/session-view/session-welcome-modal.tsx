@@ -1,8 +1,16 @@
 "use client";
 
 import { AestheticPicker } from "@/components/AestheticPicker";
+import { ChapterMiniMap } from "@/components/ChapterMiniMap";
+import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
+import { dummyDensityCells } from "@/lib/ile-chapter-mini-map";
+import {
+  ileWelcomeShowsContinuePreview,
+  ileWelcomeShowsRegenerate,
+  ileWelcomeShowsSizePicker,
+} from "@/lib/ile-welcome-chapters";
 import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import {
   coerceSpokenLocale,
@@ -34,12 +42,16 @@ export function SessionWelcomeModal({
   webGPUAvailable,
   planError,
   modelLoadError,
-  modelLoadProgress,
-  prepStage,
+  modelLoadProgress: _modelLoadProgress,
+  prepStage: _prepStage,
   onConfirmSettings,
   onContinueWithoutInference,
   onReadyStart,
   hasSessionPlan,
+  sessionId,
+  sessionStartedAt,
+  sessionPlan,
+  resumeSession = false,
 }: SessionWelcomeModalProps) {
   return (
     <div
@@ -49,40 +61,30 @@ export function SessionWelcomeModal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
       <div className="relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-900 shadow-[0_32px_100px_rgba(0,0,0,0.65)]">
         <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-neutral-800/15 via-neutral-800 to-neutral-900 sm:h-16 sm:w-16">
-                <span className="font-serif text-2xl text-neutral-200 sm:text-3xl">H</span>
-              </div>
-              <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_28px_rgba(245,158,11,0.1)]" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
-                {t("session.welcomeTitle")}
-              </h2>
-              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-400">
-                {t("session.welcomeMessage")}
-              </p>
-            </div>
-          </div>
+          <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
+            {t("session.welcomeTitle")}
+          </h2>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-400">
+            {t("session.welcomeMessage")}
+          </p>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
+        <div className="flex min-h-0 flex-1 flex-col">
         {(() => {
           const isSessionReady = hasSessionPlan && !planLoading;
 
           // Phase 1: Language selection (before confirmation)
           if (!languageConfirmed) {
-            const isButtonDisabled = planLoading || isPreparing;
+            const isButtonDisabled = isPreparing;
             const confirmBlocked = isIleConfirmSettingsBlocked(
               chapterPlanStatus,
-              planLoading,
               isPreparing,
             );
 
             return (
               <>
-                <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 lg:items-start">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
+                <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 lg:items-stretch">
                   {/* Left column: language + aesthetics */}
                   <div className="min-w-0 space-y-5">
                     <div>
@@ -116,125 +118,215 @@ export function SessionWelcomeModal({
                   </div>
 
                   {/* Right column: chapter map size + primary CTA */}
-                  <div className="min-w-0 flex flex-col">
+                  <div className="flex min-h-0 min-w-0 flex-col lg:h-full">
                 {/* Initial chapters — interactive only when no chapter set exists
                     (or user opts in to regenerate). Status is persisted-plan aware
                     so the regenerate checkbox does not flicker/disappear. */}
                 {(() => {
-                  const hasExistingChapters = chapterPlanStatus === "exists";
+                  const welcomeExtras = {
+                    resume: resumeSession,
+                    stepCount: sessionPlan?.steps?.length ?? 0,
+                  };
+                  const showSizePicker = ileWelcomeShowsSizePicker(
+                    chapterPlanStatus,
+                    welcomeExtras,
+                  );
+                  const showContinuePreview = ileWelcomeShowsContinuePreview(
+                    chapterPlanStatus,
+                    welcomeExtras,
+                  );
+                  const showRegenerate = ileWelcomeShowsRegenerate(
+                    chapterPlanStatus,
+                    welcomeExtras,
+                  );
                   const statusUnknown = chapterPlanStatus === "unknown";
-                  const chaptersLocked =
-                    statusUnknown || (hasExistingChapters && !regenerateChapters);
-                  const chaptersDisabled = isButtonDisabled || chaptersLocked;
+                  const statusFailed = chapterPlanStatus === "failed";
+                  const completedCount = (sessionPlan?.steps || []).filter(
+                    (step) => step.status === "completed",
+                  ).length;
 
                   return (
                     <div
-                      className={`mb-5 transition-colors ${
-                        chaptersLocked
-                          ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
-                          : ""
-                      }`}
+                      className={
+                        showContinuePreview
+                          ? "flex min-h-0 flex-1 flex-col"
+                          : "mb-5"
+                      }
                     >
-                      <div className="mb-2.5 flex items-center justify-between gap-2">
-                        <label
-                          className={`block text-[11px] font-medium uppercase tracking-[0.12em] ${
-                            chaptersLocked ? "text-neutral-600" : "text-neutral-500"
-                          }`}
-                        >
-                          {t("session.initialChapters")}
-                        </label>
-                        {statusUnknown ? (
-                          <span className="text-[10px] text-neutral-600">
-                            {t("session.initialChaptersChecking")}
-                          </span>
-                        ) : hasExistingChapters ? (
-                          <span className="text-[10px] text-neutral-600">
-                            {t("session.initialChaptersExisting")}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div
-                        className={`grid grid-cols-3 gap-2.5 ${chaptersLocked ? "opacity-40 pointer-events-none" : ""}`}
-                      >
-                        {INITIAL_CHAPTERS_LEVELS.map((level) => {
-                          const selected = initialChapters === level;
-                          const titleKey =
-                            level === "narrow"
-                              ? "session.initialChaptersNarrow"
-                              : level === "mid"
-                                ? "session.initialChaptersMid"
-                                : "session.initialChaptersBroad";
-                          const descKey =
-                            level === "narrow"
-                              ? "session.initialChaptersNarrowDesc"
-                              : level === "mid"
-                                ? "session.initialChaptersMidDesc"
-                                : "session.initialChaptersBroadDesc";
-                          return (
-                            <button
-                              key={level}
-                              type="button"
-                              onClick={() => onInitialChaptersChange(level)}
-                              disabled={chaptersDisabled}
-                              className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
-                                selected && !chaptersLocked
-                                  ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
-                                  : "border-neutral-800 bg-neutral-950 hover:border-neutral-600 disabled:hover:border-neutral-800"
-                              } ${isButtonDisabled && !chaptersLocked ? "opacity-50" : ""}`}
-                            >
-                              <span
-                                className={`block text-xs font-medium leading-tight ${
-                                  chaptersLocked ? "text-neutral-500" : "text-neutral-200"
-                                }`}
-                              >
-                                {t(titleKey)}
-                              </span>
-                              <span className="mt-1.5 block text-[11px] leading-snug text-neutral-500">
-                                {t(descKey)}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {statusUnknown && (
+                      {showContinuePreview ? (
                         <div
-                          className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                          role="status"
-                          aria-live="polite"
+                          data-ile-continue-welcome
+                          className="flex min-h-0 flex-1 flex-col"
                         >
-                          <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
-                          <span className="min-w-0">
-                            <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                              {t("session.initialChaptersLoading")}
-                            </span>
-                            <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                              {t("session.initialChaptersLoadingDesc")}
-                            </span>
-                          </span>
+                          <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                            {t("session.continueSession")}
+                          </label>
+                          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4 pb-0">
+                          <p className="text-[11px] leading-relaxed text-neutral-400">
+                            {t("session.continueSessionDesc")}
+                          </p>
+                          <dl className="mt-3 shrink-0 space-y-1.5 text-[11px]">
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-neutral-500">
+                                {t("session.continueSessionId")}
+                              </dt>
+                              <dd
+                                data-continue-session-id
+                                className="truncate font-mono text-neutral-300"
+                              >
+                                {sessionId || sessionPlan?.sessionId || ""}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-neutral-500">
+                                {t("session.continueSessionStarted")}
+                              </dt>
+                              <dd data-continue-session-started className="text-neutral-300">
+                                {sessionStartedAt || ""}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-neutral-500">
+                                {t("session.continueSessionChapters")}
+                              </dt>
+                              <dd className="text-neutral-300">
+                                {sessionPlan?.steps?.length ?? 0}
+                                {completedCount > 0 ? ` · ${completedCount} done` : ""}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div
+                            data-ile-continue-map-align="aesthetics"
+                            className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]"
+                          >
+                            <IleContinueMapPreview steps={sessionPlan?.steps} />
+                          </div>
+                          </div>
                         </div>
-                      )}
-                      {hasExistingChapters && (
-                        <label
-                          className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 transition-colors hover:border-neutral-700 ${
-                            isButtonDisabled ? "pointer-events-none opacity-50" : ""
+                      ) : (
+                        <div
+                          className={`transition-colors ${
+                            !showSizePicker
+                              ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
+                              : ""
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={regenerateChapters}
-                            disabled={isButtonDisabled}
-                            onChange={(e) => onRegenerateChaptersChange(e.target.checked)}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
-                          />
-                          <span className="min-w-0">
-                            <span className="block text-xs font-medium text-neutral-200 leading-tight">
-                              {t("session.regenerateChapters")}
-                            </span>
-                            <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                              {t("session.regenerateChaptersDesc")}
-                            </span>
-                          </span>
-                        </label>
+                          <div className="mb-2.5 flex items-center justify-between gap-2">
+                            <label className="block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                              {t("session.initialChapters")}
+                            </label>
+                            {statusUnknown ? (
+                              <span className="text-[10px] text-neutral-600">
+                                {t("session.initialChaptersChecking")}
+                              </span>
+                            ) : statusFailed ? (
+                              <span className="text-[10px] text-neutral-600">
+                                {t("session.initialChaptersFailed")}
+                              </span>
+                            ) : null}
+                          </div>
+                          {showSizePicker ? (
+                            <div className="grid grid-cols-3 gap-2.5">
+                              {INITIAL_CHAPTERS_LEVELS.map((level) => {
+                                const selected = initialChapters === level;
+                                const titleKey =
+                                  level === "narrow"
+                                    ? "session.initialChaptersNarrow"
+                                    : level === "mid"
+                                      ? "session.initialChaptersMid"
+                                      : "session.initialChaptersBroad";
+                                const descKey =
+                                  level === "narrow"
+                                    ? "session.initialChaptersNarrowDesc"
+                                    : level === "mid"
+                                      ? "session.initialChaptersMidDesc"
+                                      : "session.initialChaptersBroadDesc";
+                                return (
+                                  <button
+                                    key={level}
+                                    type="button"
+                                    data-density-level={level}
+                                    onClick={() => onInitialChaptersChange(level)}
+                                    disabled={isButtonDisabled}
+                                    className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
+                                      selected
+                                        ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
+                                        : "border-neutral-800 bg-neutral-950 hover:border-neutral-600 disabled:hover:border-neutral-800"
+                                    } ${isButtonDisabled ? "opacity-50" : ""}`}
+                                  >
+                                    <span className="block text-xs font-medium leading-tight text-neutral-200">
+                                      {t(titleKey)}
+                                    </span>
+                                    <span className="mt-1.5 block text-[11px] leading-snug text-neutral-500">
+                                      {t(descKey)}
+                                    </span>
+                                    <div className="mt-2">
+                                      <ChapterMiniMap
+                                        cells={dummyDensityCells(level)}
+                                        dummy
+                                        density={level}
+                                      />
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                          {statusUnknown && (
+                            <div
+                              className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                              role="status"
+                              aria-live="polite"
+                            >
+                              <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
+                                  {t("session.initialChaptersLoading")}
+                                </span>
+                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                  {t("session.initialChaptersLoadingDesc")}
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                          {statusFailed && (
+                            <div
+                              className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                              role="status"
+                            >
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
+                                  {t("session.initialChaptersFailed")}
+                                </span>
+                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                  {t("session.initialChaptersFailedDesc")}
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                          {showRegenerate ? (
+                            <label
+                              className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 ${
+                                isButtonDisabled ? "pointer-events-none opacity-50" : ""
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={regenerateChapters}
+                                disabled={isButtonDisabled}
+                                onChange={(e) =>
+                                  onRegenerateChaptersChange(e.target.checked)
+                                }
+                                className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-neutral-200 leading-tight">
+                                  {t("session.regenerateChapters")}
+                                </span>
+                              </span>
+                            </label>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                   );
@@ -293,18 +385,32 @@ export function SessionWelcomeModal({
                   </div>
                 </button>
 
-                {planError && !isPreparing && (
+                  </div>
+                </div>
+                </div>
+                <div
+                  data-ile-confirm-settings-footer
+                  className="shrink-0 border-t border-neutral-800/70 px-6 py-4 sm:px-8"
+                >
+                {(planError || modelLoadError) && (
                   <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-none">
-                    <p className="text-xs text-red-400 leading-relaxed">{planError}</p>
+                    <p className="text-xs text-red-400 leading-relaxed">{planError || modelLoadError}</p>
                   </div>
                 )}
-
-                <div className="mt-auto space-y-3">
+                {modelLoadError && (
+                  <button
+                    type="button"
+                    onClick={onContinueWithoutInference}
+                    className="mb-3 w-full py-2 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
+                  >
+                    {t("session.continueWithoutBrowserInference")}
+                  </button>
+                )}
                 <button
                   type="button"
                   data-ile-confirm-settings
                   onClick={() => {
-                    if (isIleConfirmSettingsBlocked(chapterPlanStatus, planLoading, isPreparing)) {
+                    if (isIleConfirmSettingsBlocked(chapterPlanStatus, isPreparing)) {
                       return;
                     }
                     void onConfirmSettings();
@@ -314,102 +420,12 @@ export function SessionWelcomeModal({
                   className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                 >
                   {isButtonDisabled ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t('session.preparing')}
-                    </>
-                  ) : t('session.confirmSettings')}
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : t("session.confirmSettings")}
                 </button>
-
-                {/* Inline loading progress */}
-                {isPreparing && (
-                  <div className="space-y-2">
-                    {/* Plan prep row */}
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-none bg-neutral-950 border border-neutral-800">
-                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
-                        prepStage !== "plan"
-                          ? 'bg-neutral-100 text-neutral-900'
-                          : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
-                      }`}>
-                        {prepStage !== "plan" ? (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        ) : '01'}
-                      </div>
-                      <span className={`flex-1 text-xs ${prepStage !== "plan" ? 'text-neutral-500' : 'text-neutral-300'}`}>
-                        {prepStage === "plan" ? t('session.preparingPlan') : t('session.planReady')}
-                      </span>
-                      {prepStage === "plan" && (
-                        <div className="w-3.5 h-3.5 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                      )}
-                    </div>
-
-                    {localInferenceEnabled && (
-                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-none bg-neutral-950 border border-neutral-800">
-                        <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono tabular-nums ${
-                          prepStage === "done"
-                            ? 'bg-neutral-100 text-neutral-900'
-                            : prepStage === "model"
-                              ? 'bg-neutral-800 text-neutral-300 border border-neutral-700'
-                              : 'bg-neutral-900 text-neutral-600 border border-neutral-800'
-                        }`}>
-                          {prepStage === "done" ? (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                          ) : '02'}
-                        </div>
-                        <span className={`flex-1 text-xs ${
-                          prepStage === "done" ? 'text-neutral-500' : prepStage === "model" ? 'text-neutral-300' : 'text-neutral-600'
-                        }`}>
-                          {prepStage === "done" ? t('session.localModelLoaded') : prepStage === "model" ? t('session.loadingLocalModel') : t('session.loadLocalModel')}
-                        </span>
-                        {prepStage === "model" && !modelLoadProgress && (
-                          <div className="w-3.5 h-3.5 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Progress bar (only during model download) */}
-                    {prepStage === "model" && modelLoadProgress && (
-                      <div className="px-3 pt-1">
-                        <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-neutral-300 rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${modelLoadProgress.progress}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between mt-1.5">
-                          <span className="text-[10px] text-neutral-500">
-                            {modelLoadProgress.loaded && modelLoadProgress.total
-                              ? `${(modelLoadProgress.loaded / 1024 / 1024).toFixed(0)} / ${(modelLoadProgress.total / 1024 / 1024).toFixed(0)} MB`
-                              : t('session.downloading')}
-                          </span>
-                          <span className="text-[10px] text-neutral-500 font-mono tabular-nums">{modelLoadProgress.progress}%</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Errors */}
-                    {(planError || modelLoadError) && (
-                      <div className="px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-none">
-                        <p className="text-xs text-red-400 leading-relaxed">{planError || modelLoadError}</p>
-                      </div>
-                    )}
-
-                    {/* Cancel for model loading errors */}
-                    {modelLoadError && (
-                      <button
-                        onClick={onContinueWithoutInference}
-                        className="w-full py-2 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
-                      >
-                        {t('session.continueWithoutBrowserInference')}
-                      </button>
-                    )}
-                  </div>
-                )}
-                </div>
-                  </div>
                 </div>
               </>
             );
@@ -420,7 +436,7 @@ export function SessionWelcomeModal({
           // them into the in-panel tutor welcome. Otherwise arm capture
           // immediately so Helios speech is not stuck "off".
           return (
-            <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 py-6 text-center sm:min-h-[14rem]">
+            <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-6 py-6 text-center sm:min-h-[14rem] sm:px-8">
               <p className="max-w-lg text-sm leading-relaxed text-neutral-400">
                 {t("session.welcomeMessage")}
               </p>

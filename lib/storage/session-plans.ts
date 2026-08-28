@@ -142,14 +142,51 @@ export function sessionPlanHasChaptersQuery(supabaseClient: any, sessionId: stri
     .not("steps", "eq", SESSION_PLAN_EMPTY_STEPS_JSON);
 }
 
+/** Cheap existence outcome. Query `error` is `failed`, never “no chapters”. */
+export type SessionPlanChaptersStatus = "exists" | "empty" | "failed";
+
+/**
+ * Interpret a cheap existence query. Successful no-row and empty-`steps`
+ * shells are `empty`. Transport / PostgREST `error` is `failed`.
+ */
+export function sessionPlanChaptersStatusFromResult(result: {
+  data: unknown;
+  error: unknown;
+}): SessionPlanChaptersStatus {
+  if (result.error) return "failed";
+  if (!result.data) return "empty";
+  return sessionPlanHasChaptersFromRow(result.data) ? "exists" : "empty";
+}
+
+/**
+ * Cheap existence lookup. `supabaseClient` is required so callers (API
+ * `guardSessionRoute`) cannot silently fall back to the browser anon client.
+ */
+export async function sessionPlanChaptersStatus(
+  sessionId: string,
+  supabaseClient: any,
+): Promise<SessionPlanChaptersStatus> {
+  if (!supabaseClient) return "failed";
+  try {
+    const { data, error } = await sessionPlanHasChaptersQuery(
+      supabaseClient,
+      sessionId,
+    ).maybeSingle();
+    return sessionPlanChaptersStatusFromResult({ data, error });
+  } catch {
+    return "failed";
+  }
+}
+
 export async function sessionPlanHasChapters(
   sessionId: string,
   supabaseClient?: any,
 ): Promise<boolean> {
-  const supabase = supabaseClient || createClient();
-  const { data, error } = await sessionPlanHasChaptersQuery(supabase, sessionId).maybeSingle();
-  if (error || !data) return false;
-  return sessionPlanHasChaptersFromRow(data);
+  const status = await sessionPlanChaptersStatus(
+    sessionId,
+    supabaseClient || createClient(),
+  );
+  return status === "exists";
 }
 
 export async function updateSessionPlan(

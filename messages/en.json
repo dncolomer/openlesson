@@ -2612,20 +2612,20 @@
       "step1": {
         "title": "Tools & Chapters",
         "imageAlt": "Tools panel and chapter blocks",
-        "body": "Your block is organized as Chapters on a spatial grid — pan, zoom, and place steps where they belong. Open any chapter to work through it with Helios.\n\nThe Tools strip gives you Notebook, Canvas, Thought Memory, Grokipedia, and more. Chapters are living documents: you can edit and expand them freely during the session, even while paused."
+        "body": "Your block is organized as Chapters on a spatial grid — pan, zoom, and place steps where they belong. Open any chapter to work through it.\n\nThe Tools strip gives you Notebook, Canvas, Thought Memory, Grokipedia, and more. Chapters are living documents: you can edit and expand them freely during the session, even while paused."
       },
       "step2": {
         "title": "Think aloud, then send",
         "titleProject": "Think aloud — stash and send",
         "imageAlt": "Thought memory interface",
         "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
-        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash. Auto-stash fills thought memory. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory so you can select, submit, or edit traces. There is no Helios dialogue in Explore Solo."
+        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash. Auto-stash fills thought memory. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory so you can select, submit, or edit traces."
       },
       "step3": {
         "title": "Depth over speed",
         "titleProject": "Depth over speed",
-        "body": "When you're ready, press Start block. Recording begins and Helios will listen when you press I'm done answering to close the chain of thought. Take your time — messy thinking is how real learning surfaces.",
-        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise — no Helios conversation bubbles. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
+        "body": "When you're ready, press Start block. Recording begins. Press I'm done answering to close the chain of thought. Take your time — messy thinking is how real learning surfaces.",
+        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
@@ -2643,8 +2643,8 @@
       "step1": {
         "title": "What you'll do",
         "imageAlt": "Think Aloud Protocol overview",
-        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved.",
-        "highlight": "Thinking out loud also means reading the question out loud. It’s easier if you imagine you’re explaining this to someone — or recording a live stream for an online audience."
+        "body": "Your job is to think out loud for the whole timed session — including while you read each question. Speak as you reason.\n\nWhen you finish a chain of thought, press I'm done answering to close your turn. Stay speaking: five seconds of silence auto-stashes your words, and too much silence invalidates the session.\n\nWhen the timer ends, your proof of work is saved.",
+        "highlight": "Thinking out loud also means reading the question out loud. Imagine you’re explaining this to someone — or recording a live stream — so you keep talking through the whole turn."
       },
       "step2": {
         "title": "How the interface works",
@@ -2653,7 +2653,7 @@
       },
       "step3": {
         "title": "Pick your starting focus",
-        "body": "Choose a starting angle. The timer begins and Helios opens with that topic’s question.",
+        "body": "Choose a starting angle. The timer begins with that topic’s question.",
         "quoteText": "The expert in anything was once a beginner who refused to give up.",
         "quoteAuthor": "",
         "start": "Play",

@@ -647,30 +647,26 @@ describe("Practice Portal structural wiring", () => {
     const enCopy = JSON.parse(read("messages/en.json")) as {
       tap?: { briefing?: { intro?: string }; welcome?: { panelIntro?: string } };
       onboardingGuide?: {
-        tap?: { step2?: { title?: string; body?: string } };
+        tap?: { step1?: { title?: string; body?: string; highlight?: string } };
         ile?: {
-          step2?: { body?: string; bodyProject?: string };
           step1?: { body?: string };
+          step3?: { start?: string };
         };
       };
       welcome?: { panelIntro?: string };
     };
     expect(enCopy.tap?.briefing?.intro).toBeTruthy();
     expect((enCopy.tap?.briefing?.intro || "").length).toBeLessThan(80);
-    // Live TAP SessionOnboardingGuide step2: full interface tutorial (not microcopy stub)
-    expect(enCopy.onboardingGuide?.tap?.step2?.title).toMatch(/How the interface works/i);
-    expect(enCopy.onboardingGuide?.tap?.step2?.body).toMatch(
-      /Stay speaking\. After 5 seconds|session is invalidated/i,
-    );
-    expect((enCopy.onboardingGuide?.tap?.step2?.body || "").split("\n").length).toBeGreaterThan(2);
-    // Live ILE onboarding step2: multi-paragraph Thought Memory / send controls
-    expect(enCopy.onboardingGuide?.ile?.step2?.body).toMatch(
-      /Thought Memory|Submit last Thought|See Older Thoughts/i,
-    );
-    expect(enCopy.onboardingGuide?.ile?.step2?.bodyProject).toMatch(
-      /Thought Memory|See Older Thoughts|Submit last Thought/i,
-    );
-    expect((enCopy.onboardingGuide?.ile?.step2?.body || "").length).toBeGreaterThan(160);
+    // Live TAP remaining first slide: learner job (think out loud, close a turn, stay speaking)
+    expect(enCopy.onboardingGuide?.tap?.step1?.title).toMatch(/What you'll do/i);
+    expect(enCopy.onboardingGuide?.tap?.step1?.body).toMatch(/think out loud/i);
+    expect(enCopy.onboardingGuide?.tap?.step1?.body).toMatch(/I'm done answering/);
+    expect(enCopy.onboardingGuide?.tap?.step1?.body).toMatch(/Stay speaking/i);
+    expect(enCopy.onboardingGuide?.tap?.step1?.body).not.toMatch(/^Think out loud on a timer\./);
+    expect((enCopy.onboardingGuide?.tap?.step1?.body || "").length).toBeGreaterThan(180);
+    // Live ILE remaining first + last slides (step2 thought-interface tutorial is not the live intro)
+    expect(enCopy.onboardingGuide?.ile?.step1?.body).toMatch(/Chapters on a spatial grid/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/Start block/i);
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);

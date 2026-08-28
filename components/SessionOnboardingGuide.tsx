@@ -12,7 +12,7 @@ export type SessionOnboardingGuideProps = {
   language?: string;
   /** Sidebar card (TAP briefing) vs centered float (Helios panel). */
   presentation?: "sidebar" | "floating";
-  /** When true, step 3 shows a primary start/play control. */
+  /** When true, the last slide shows a primary start/play control. */
   showStartAction?: boolean;
   onStart?: () => void;
   isStarting?: boolean;
@@ -21,23 +21,19 @@ export type SessionOnboardingGuideProps = {
    * no Helios dialogue). Learning Mode keeps the default ILE strings.
    */
   projectMode?: boolean;
-  /** TAP-only: replaces the default step-3 play button (e.g. topic cards). */
+  /** TAP-only: replaces the default last-slide play button (e.g. topic cards). */
   renderStep3Action?: () => ReactNode;
-  /** TAP-only: hide the quote block on step 3 when showing topic cards. */
+  /** TAP-only: hide the quote block on the last slide when showing topic cards. */
   hideStep3Quote?: boolean;
   /** Optional hero image for step 1 (TAP placeholder; overrides ILE video if set). */
   stepImages?: [string | undefined, string | undefined];
   /** Optional override for ILE step 1 grid-pan clip. */
   step1VideoSrc?: string;
-  /** Optional override for step 2 thought-interface clip. */
-  step2VideoSrc?: string;
   className?: string;
 };
 
-const STEP_COUNT = 3;
 const STEP1_ILE_GRID_PAN_VIDEO = "/animations/grid_pan.mp4";
 const STEP1_TAP_SPEAKING_VIDEO = "/animations/speaking.mp4";
-const STEP2_THOUGHT_INTERFACE_VIDEO = "/animations/selective_interface.mp4";
 
 function OnboardingQuote({ text, author }: { text: string; author?: string }) {
   const attribution = author?.trim();
@@ -154,7 +150,6 @@ export function SessionOnboardingGuide({
   hideStep3Quote = false,
   stepImages,
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
-  step2VideoSrc = STEP2_THOUGHT_INTERFACE_VIDEO,
   className = "",
 }: SessionOnboardingGuideProps) {
   const [step, setStep] = useState(0);
@@ -173,18 +168,18 @@ export function SessionOnboardingGuide({
   };
 
   /** Prefer Project Mode body when present; fall back to Learning Mode copy. */
-  const stepBody = (stepKey: "step2" | "step3") => {
+  const lastStepBody = () => {
     if (variant === "ile" && projectMode) {
-      return ttOptional(`${stepKey}.bodyProject`) ?? tt(`${stepKey}.body`);
+      return ttOptional("step3.bodyProject") ?? tt("step3.body");
     }
-    return tt(`${stepKey}.body`);
+    return tt("step3.body");
   };
 
-  const stepTitle = (stepKey: "step2" | "step3") => {
+  const lastStepTitle = () => {
     if (variant === "ile" && projectMode) {
-      return ttOptional(`${stepKey}.titleProject`) ?? tt(`${stepKey}.title`);
+      return ttOptional("step3.titleProject") ?? tt("step3.title");
     }
-    return tt(`${stepKey}.title`);
+    return tt("step3.title");
   };
 
   type GuideSlide =
@@ -225,23 +220,17 @@ export function SessionOnboardingGuide({
       highlight: ttOptional("step1.highlight"),
     },
     {
-      kind: "visual",
-      title: stepTitle("step2"),
-      body: stepBody("step2"),
-      imageAlt: tt("step2.imageAlt"),
-      videoSrc: step2VideoSrc,
-      highlight: ttOptional("step2.highlight"),
-    },
-    {
       kind: "closing",
-      title: stepTitle("step3"),
-      body: stepBody("step3"),
+      title: lastStepTitle(),
+      body: lastStepBody(),
       quoteText: tt("step3.quoteText"),
       quoteAuthor: tt("step3.quoteAuthor"),
     },
   ];
 
-  const isLastStep = step === STEP_COUNT - 1;
+  const slideCount = steps.length;
+  const lastSlideIndex = slideCount - 1;
+  const isLastStep = step === lastSlideIndex;
   const startLabel = isStarting ? tt("step3.starting") : tt("step3.start");
   const isFloating = presentation === "floating";
 
@@ -266,7 +255,7 @@ export function SessionOnboardingGuide({
             <h3 className="mt-1 text-sm font-medium text-neutral-100">{tt("title")}</h3>
           </div>
           <div className="flex items-center gap-1.5" aria-label={tt("progressLabel")}>
-            {Array.from({ length: STEP_COUNT }, (_, index) => (
+            {Array.from({ length: slideCount }, (_, index) => (
               <button
                 key={index}
                 type="button"
@@ -322,8 +311,8 @@ export function SessionOnboardingGuide({
                 </aside>
               ) : null}
 
-              {index === 2 && renderStep3Action ? renderStep3Action() : null}
-              {index === 2 && showStartAction && !renderStep3Action ? (
+              {index === lastSlideIndex && renderStep3Action ? renderStep3Action() : null}
+              {index === lastSlideIndex && showStartAction && !renderStep3Action ? (
                 <button
                   type="button"
                   onClick={onStart}
@@ -374,12 +363,12 @@ export function SessionOnboardingGuide({
           {tt("back")}
         </button>
         <span className="font-mono text-[10px] tabular-nums text-neutral-600">
-          {step + 1} / {STEP_COUNT}
+          {step + 1} / {slideCount}
         </span>
         {!isLastStep ? (
           <button
             type="button"
-            onClick={() => setStep((current) => Math.min(STEP_COUNT - 1, current + 1))}
+            onClick={() => setStep((current) => Math.min(lastSlideIndex, current + 1))}
             className="inline-flex items-center gap-1.5 rounded-none border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-100 transition hover:border-neutral-500 hover:bg-neutral-800"
           >
             {tt("next")}

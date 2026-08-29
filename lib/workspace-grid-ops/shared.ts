@@ -82,10 +82,18 @@ export type GridOp =
 export interface AiBlockPayload {
   title: string;
   description: string;
+  keyword?: string;
+  icon?: string;
 }
 
 export interface AiSplitPayload {
-  parts?: Array<{ index?: number; title?: string; description?: string }>;
+  parts?: Array<{
+    index?: number;
+    title?: string;
+    description?: string;
+    keyword?: string;
+    icon?: string;
+  }>;
 }
 
 export async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string) {

@@ -21,6 +21,12 @@ function isMissingPositionColumnError(error: { message?: string; code?: string }
   );
 }
 
+function isMissingMapGlyphColumnError(error: { message?: string; code?: string } | null): boolean {
+  if (!error?.message) return false;
+  const msg = error.message.toLowerCase();
+  return msg.includes("map_keyword") || msg.includes("map_icon");
+}
+
 export async function insertGeneratedWorkspaceBlocks(
   supabase: SupabaseClient,
   workspaceId: string,
@@ -32,6 +38,7 @@ export async function insertGeneratedWorkspaceBlocks(
 
   const blockIdMap = new Map<string, string>();
   let omitPositions = false;
+  let omitMapGlyph = false;
   const insertErrors: string[] = [];
 
   for (const block of blocks) {
@@ -42,6 +49,8 @@ export async function insertGeneratedWorkspaceBlocks(
       is_start: block.is_start === true,
       next_block_ids: [] as string[],
       status: "available",
+      map_keyword: block.map_keyword ?? null,
+      map_icon: block.map_icon ?? null,
     };
 
     const withPositions = {
@@ -50,27 +59,37 @@ export async function insertGeneratedWorkspaceBlocks(
       position_y: block.position_y ?? null,
     };
 
+    const stripGlyph = <T extends Record<string, unknown>>(row: T) => {
+      const { map_keyword: _k, map_icon: _i, ...rest } = row;
+      return rest;
+    };
+
     let data: { id: string } | null = null;
     let error: { message?: string; code?: string } | null = null;
 
-    if (!omitPositions) {
-      const result = await supabase.from("blocks").insert(withPositions).select("id").single();
-      data = result.data;
-      error = result.error;
-      if (error && isMissingPositionColumnError(error)) {
-        omitPositions = true;
-        console.warn(
-          "[insert-workspace-blocks] position columns missing; inserting without grid coords",
-          error.message,
-        );
-        const retry = await supabase.from("blocks").insert(baseRow).select("id").single();
-        data = retry.data;
-        error = retry.error;
-      }
-    } else {
-      const result = await supabase.from("blocks").insert(baseRow).select("id").single();
-      data = result.data;
-      error = result.error;
+    const payload = omitPositions ? baseRow : withPositions;
+    const toInsert = omitMapGlyph ? stripGlyph(payload) : payload;
+
+    const result = await supabase.from("blocks").insert(toInsert).select("id").single();
+    data = result.data;
+    error = result.error;
+    if (error && !omitPositions && isMissingPositionColumnError(error)) {
+      omitPositions = true;
+      console.warn(
+        "[insert-workspace-blocks] position columns missing; inserting without grid coords",
+        error.message,
+      );
+      const retryRow = omitMapGlyph ? stripGlyph(baseRow) : baseRow;
+      const retry = await supabase.from("blocks").insert(retryRow).select("id").single();
+      data = retry.data;
+      error = retry.error;
+    }
+    if (error && !omitMapGlyph && isMissingMapGlyphColumnError(error)) {
+      omitMapGlyph = true;
+      const retryRow = omitPositions ? stripGlyph(baseRow) : stripGlyph(withPositions);
+      const retry = await supabase.from("blocks").insert(retryRow).select("id").single();
+      data = retry.data;
+      error = retry.error;
     }
 
     if (error || !data) {

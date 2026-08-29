@@ -163,6 +163,8 @@ describe("resolveClonePasteTarget", () => {
         description: "Rate of change",
         planning_prompt: "Use tangent intuition",
         local_context: { notes: "n" },
+        map_keyword: "Derivatives",
+        map_icon: "Sigma",
         is_start: true,
       },
       target: { row: 7, col: 9 },
@@ -180,5 +182,7 @@ describe("resolveClonePasteTarget", () => {
     expect(payload.span_h).toBe(1);
     expect(payload.shape_cells).toBeNull();
     expect(payload.status).toBe("available");
+    expect(payload.map_keyword).toBe("Derivatives");
+    expect(payload.map_icon).toBe("Sigma");
   });
 });

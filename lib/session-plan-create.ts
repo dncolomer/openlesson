@@ -12,6 +12,11 @@ import {
 import { applyIleChapterModeInstructions } from "@/lib/ile-chapter-depth";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { RequestType, SessionPlanStep } from "@/lib/domain/types";
+import {
+  blockMapGlyphDbFields,
+  composeBlockMapGlyphJsonInstruction,
+  randFromSeed,
+} from "@/lib/block-map-glyph";
 
 const VALID_STEP_TYPES = new Set<RequestType>([
   "question",
@@ -44,6 +49,9 @@ export interface RawSessionPlanStep {
   status?: SessionPlanStep["status"];
   position_x?: unknown;
   position_y?: unknown;
+  keyword?: unknown;
+  map_keyword?: unknown;
+  map_icon?: unknown;
 }
 
 export interface NormalizedCreatePlan {
@@ -87,7 +95,12 @@ export function composeSessionPlanCreatePrompt(
     .replaceAll("{max_steps}", String(mapInfo.band.max))
     .replaceAll("{spatial_map_layout_rules}", SPATIAL_MAP_LAYOUT_RULES);
 
-  return applyIleChapterModeInstructions(filled, vars.sessionMode);
+  return [
+    applyIleChapterModeInstructions(filled, vars.sessionMode),
+    composeBlockMapGlyphJsonInstruction(),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function parseGridCoord(value: unknown): number | undefined {
@@ -140,12 +153,24 @@ export function normalizeSessionPlanCreateSteps(
       position_y = undefined;
     }
 
+    const id = step.id || `step_${idx + 1}_${seed}`;
+    const glyph = blockMapGlyphDbFields(
+      {
+        keyword: step.keyword ?? step.map_keyword,
+        map_icon: step.map_icon,
+        title: description,
+      },
+      description,
+      randFromSeed(id),
+    );
     const result: SessionPlanStep = {
-      id: step.id || `step_${idx + 1}_${seed}`,
+      id,
       type,
       description,
       order: typeof step.order === "number" && Number.isFinite(step.order) ? step.order : idx + 1,
       status: step.status || "pending",
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     };
 
     if (position_x != null && position_y != null) {
@@ -180,6 +205,8 @@ export type PersistablePlanStep = {
   position_x?: number;
   position_y?: number;
   status?: SessionPlanStep["status"];
+  map_keyword?: string | null;
+  map_icon?: string | null;
 };
 
 /**
@@ -194,12 +221,24 @@ export function toPersistedCreatePlanSteps(
   return steps.map((step, idx) => {
     const typeRaw = (step.type || "question") as RequestType;
     const type = VALID_STEP_TYPES.has(typeRaw) ? typeRaw : "question";
+    const id = step.id || `step_${idx + 1}_${seed}`;
+    const glyph = blockMapGlyphDbFields(
+      {
+        keyword: step.map_keyword,
+        map_icon: step.map_icon,
+        title: step.description,
+      },
+      step.description,
+      randFromSeed(id),
+    );
     const persisted: SessionPlanStep = {
-      id: step.id || `step_${idx + 1}_${seed}`,
+      id,
       description: step.description,
       status: idx === 0 ? "in_progress" : "pending",
       type,
       order: step.order ?? idx + 1,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     };
     if (step.position_x != null && step.position_y != null) {
       persisted.position_x = step.position_x;

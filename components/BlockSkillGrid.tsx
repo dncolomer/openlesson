@@ -63,6 +63,7 @@ import {
 } from "@/lib/map-self-progress";
 import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
 import { type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import { resolveMapBlockPeek } from "@/lib/block-map-peek";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
 import { normalizeSpan, parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
 import {
@@ -132,6 +133,7 @@ export function BlockSkillGrid({
 }: BlockSkillGridProps) {
   /** View-only public maps: no authoring, select, notes, or annotation tools. */
   const canEdit = canEditProp && !viewOnly;
+  const [peekBlockId, setPeekBlockId] = useState<string | null>(null);
   const unusableKeys = useMemo(
     () => unusableCellKeySet(unusableCells || []),
     [unusableCells],
@@ -403,6 +405,10 @@ export function BlockSkillGrid({
     isAdding,
     localBusy,
   });
+
+  useEffect(() => {
+    if (peekBlockId && !nodesById.has(peekBlockId)) setPeekBlockId(null);
+  }, [peekBlockId, nodesById]);
 
   const extraRevealCells = useMemo(() => {
     const cells = [...selectedEmptyCells];
@@ -691,6 +697,7 @@ export function BlockSkillGrid({
     onGeneratorEmptyToggle,
     dynamicPickActive,
     onDynamicBlockToggle,
+    onPeekBlock: setPeekBlockId,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -1102,6 +1109,10 @@ export function BlockSkillGrid({
         onPointerDown: handlePointerDown,
         onPointerMove: handlePointerMove,
         onPointerUp: endDrag,
+      }}
+      peek={{
+        block: resolveMapBlockPeek(displayNodes, peekBlockId),
+        onClose: () => setPeekBlockId(null),
       }}
     />
   );

@@ -90,6 +90,8 @@ export async function forkWorkspaceExactCopy(
       .filter(Boolean),
     status: "available",
     planning_prompt: node.planning_prompt ?? null,
+    map_keyword: node.map_keyword ?? null,
+    map_icon: node.map_icon ?? null,
     ...(isAyclFork
       ? {
           // Purchased clones always include Explore, even if the catalog

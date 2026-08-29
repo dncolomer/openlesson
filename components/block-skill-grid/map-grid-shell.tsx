@@ -11,6 +11,8 @@ import { MapJobIndicators } from "@/components/block-skill-grid/map-job-indicato
 import { MapGestureOverlays } from "@/components/block-skill-grid/map-gesture-overlays";
 import { MapWorldLayer } from "@/components/block-skill-grid/map-world-layer";
 import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
+import { MapBlockPeekModal } from "@/components/block-skill-grid/map-block-peek-modal";
+import type { MapBlockPeek } from "@/lib/block-map-peek";
 
 export type MapGridShellProps = {
   rail: ComponentProps<typeof MapToolRail>;
@@ -30,6 +32,10 @@ export type MapGridShellProps = {
     onPointerMove: (e: PointerEvent<HTMLDivElement>) => void;
     onPointerUp: (e: PointerEvent<HTMLDivElement>) => void;
   };
+  peek?: {
+    block: MapBlockPeek | null;
+    onClose: () => void;
+  };
 };
 
 export function MapGridShell({
@@ -42,6 +48,7 @@ export function MapGridShell({
   status,
   forms,
   chrome,
+  peek,
 }: MapGridShellProps) {
   const activeLassoShape = world.activeLassoShape;
   return (
@@ -133,6 +140,7 @@ export function MapGridShell({
           </div>
 
           <MapStatusBar {...status} />
+          <MapBlockPeekModal peek={peek?.block ?? null} onClose={peek?.onClose ?? (() => {})} />
         </div>
       </div>
 

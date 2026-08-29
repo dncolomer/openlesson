@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
+import { blockMapGlyphDbFields, composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
 
 interface NodeData {
@@ -86,7 +87,7 @@ ${preservedCompleted.map((n: { title: string; description?: string }) => `- ${n.
 Return ONLY valid JSON (no markdown) with this structure:
 {
   "nodes": [
-    { "id": "a", "title": "Node Title", "description": "Why this matters", "is_start": true/false, "next": ["b", "c"] }
+    { "id": "a", "title": "Node Title", "description": "Why this matters", "keyword": "Foundations", "is_start": true/false, "next": ["b", "c"] }
   ]
 }
 
@@ -98,7 +99,8 @@ Rules:
 - Create branching paths (1 to many connections allowed)
 - Keep titles concise (3-8 words)
 - Descriptions: 1 sentence explaining the concept
-- Include 3-8 nodes total`;
+- Include 3-8 nodes total
+- ${composeBlockMapGlyphJsonInstruction()}`;
 
     const response = await callXaiJSON<PlanData>(
       [userMessage(prompt)],
@@ -138,6 +140,7 @@ Rules:
           is_start: nodeData.is_start || false,
           next_block_ids: [],
           status: "available",
+          ...blockMapGlyphDbFields(nodeData, nodeData.title),
         })
         .select()
         .single();

@@ -126,6 +126,10 @@ describe("sessionStepsToSkillGridNodes (shipped)", () => {
     expect(first?.lock_until_block_ids).toEqual([]);
     expect(first?.next_block_ids).not.toEqual(["ch-new"]);
     expect(added?.lock_until_block_ids).not.toEqual(["ch-a"]);
+    expect(added?.map_keyword).toBeTruthy();
+    expect(added?.map_icon).toMatch(/^g\d+$/);
+    expect(first?.map_keyword).toBeTruthy();
+    expect(first?.map_icon).toMatch(/^g\d+$/);
 
     const mapper = read("lib/chapter-skill-grid.ts");
     expect(mapper).not.toContain("sorted[index + 1].id");

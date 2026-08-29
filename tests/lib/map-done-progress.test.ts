@@ -249,7 +249,10 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(badges).toContain("data-map-cell-done-tick");
     expect(badges).toContain("data-map-cell-self-progress-gear");
     expect(grid).toContain("workedOn: itemWorkedOn");
-    expect(grid).not.toMatch(/from "lucide-react"/);
+    // Tick/gear stay inline SVGs; Lucide is only the workspace keyword icon.
+    expect(badges).not.toMatch(/from "lucide-react"/);
+    expect(grid).toContain("from \"lucide-react\"");
+    expect(grid).toContain("BlockMapGlyphIcon");
 
     expect(view).toContain("recordMapItemWorkedOn");
     expect(view).toContain("onMarkDone");

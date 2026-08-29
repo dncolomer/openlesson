@@ -59,6 +59,7 @@ interface NodeData {
   next?: string[];
   position_x?: number;
   position_y?: number;
+  keyword?: string;
 }
 
 interface PlanData {
@@ -81,13 +82,17 @@ const PLAN_JSON_SCHEMA = {
             id: { type: "string", description: "Short ID like 'a', 'b', 'c'" },
             title: { type: "string", description: "Node title (3-8 words)" },
             description: { type: "string", description: "1 sentence explaining the concept" },
+            keyword: {
+              type: "string",
+              description: "Single map-tile word (2-18 letters, no spaces)",
+            },
             is_start: { type: "boolean" },
             next: { type: "array", items: { type: "string" } },
             position_x: { type: "integer", description: "Grid column (may be negative); start at 0" },
             position_y: { type: "integer", description: "Grid row (may be negative); start at 0" },
           },
           // Positions preferred but optional — normalize + radial backfill handle gaps.
-          required: ["id", "title", "description", "is_start"],
+          required: ["id", "title", "description", "keyword", "is_start"],
           additionalProperties: false,
         },
       },

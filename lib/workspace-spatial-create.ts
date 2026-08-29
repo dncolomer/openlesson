@@ -9,6 +9,11 @@ import {
   SPATIAL_MAP_LAYOUT_RULES,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import {
+  BLOCK_MAP_GLYPH_JSON_SHAPE,
+  blockMapGlyphDbFields,
+  composeBlockMapGlyphJsonInstruction,
+} from "@/lib/block-map-glyph";
 
 /** Reasonable grid extent so a bad LLM value cannot explode layout. */
 const POSITION_CLAMP = 24;
@@ -21,6 +26,8 @@ export interface WorkspaceBlockRef {
   next?: string[];
   position_x?: number;
   position_y?: number;
+  map_keyword?: string;
+  map_icon?: string;
 }
 
 export interface RawWorkspaceBlock {
@@ -31,6 +38,10 @@ export interface RawWorkspaceBlock {
   next?: unknown;
   position_x?: unknown;
   position_y?: unknown;
+  keyword?: unknown;
+  icon?: unknown;
+  map_keyword?: unknown;
+  map_icon?: unknown;
 }
 
 export interface WorkspaceSpatialPromptVars {
@@ -88,6 +99,7 @@ Return ONLY JSON:
       "id": "a",
       "title": "Block title",
       "description": "What the learner should demonstrate",
+      "keyword": "Foundations",
       "is_start": true,
       "next": ["b", "c"],
       "position_x": 0,
@@ -103,7 +115,8 @@ Rules:
 - Exactly one start block with is_start=true at (0, 0).
 - next: array of child block ids (0–3). Prefer branching: at least one block with 2+ next when count allows; explore some arms deeper.
 - Include at least one block with a negative position_x or position_y (multi-quadrant).
-- Sparse paths are preferred over a filled rectangle.${extra}`;
+- Sparse paths are preferred over a filled rectangle.
+- ${composeBlockMapGlyphJsonInstruction()}${extra}`;
 }
 
 /**
@@ -137,6 +150,7 @@ Return JSON with this structure:
       "id": "a",
       "title": "Node Title",
       "description": "Why this matters",
+      "keyword": "Foundations",
       "is_start": true,
       "next": ["b", "c"],
       "position_x": 0,
@@ -147,6 +161,7 @@ Return JSON with this structure:
 
 Rules:
 - Include ${mapInfo.band.min} to ${mapInfo.band.max} nodes total (prefer about ${mapInfo.band.target}).
+- Each node must include a keyword (${BLOCK_MAP_GLYPH_JSON_SHAPE} fields). ${composeBlockMapGlyphJsonInstruction()}
 - The top-level "title" must be a catchy, memorable name for the plan (like a course name or book title). NOT just "Learning X". Be creative.
 - Each node is a distinct learning session
 - Use single-letter or short IDs for referencing
@@ -197,12 +212,15 @@ export function normalizeGeneratedWorkspaceBlocks(
       .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
       .map((n) => n.trim());
 
+    const glyph = blockMapGlyphDbFields(block, title || `Block ${idx + 1}`);
     const result: WorkspaceBlockRef = {
       id,
       title: title || `Block ${idx + 1}`,
       description,
       is_start,
       next,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     };
     if (position_x != null && position_y != null) {
       result.position_x = position_x;

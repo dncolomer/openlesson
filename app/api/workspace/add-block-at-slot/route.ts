@@ -30,10 +30,13 @@ import {
   composeAddBlockAtSlotSystemMessage,
   composeJourneyGraphPromptSnippet,
 } from "@/lib/workspace-authoring-prompt-context";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 
 interface AddBlockResponse {
   title: string;
   description: string;
+  keyword?: string;
+  icon?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -291,6 +294,10 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       }
     }
 
+    const glyph = blockMapGlyphDbFields(
+      aiResponse.data,
+      aiResponse.data.title.trim(),
+    );
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
       title: aiResponse.data.title.trim(),
@@ -303,6 +310,8 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
       status: "available",
       position_x: col,
       position_y: row,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
       ...(local_context ? { local_context } : {}),
       ...(creatorEffectsWire ? { creator_effects: creatorEffectsWire } : {}),
     };
@@ -316,7 +325,7 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
     // Graceful fallback if optional columns not migrated yet
     if (
       insertError &&
-      /local_context|creator_effects|schema cache/i.test(insertError.message || "")
+      /local_context|creator_effects|map_keyword|map_icon|schema cache/i.test(insertError.message || "")
     ) {
       let retryPayload = { ...insertPayload };
       if (/creator_effects/i.test(insertError.message || "")) {
@@ -327,10 +336,16 @@ Create exactly one learning block that belongs at this grid slot. The topic shou
         const { local_context: _lc, ...rest } = retryPayload;
         retryPayload = rest;
       }
+      if (/map_keyword|map_icon/i.test(insertError.message || "")) {
+        const { map_keyword: _mk, map_icon: _mi, ...rest } = retryPayload;
+        retryPayload = rest;
+      }
       if (/schema cache/i.test(insertError.message || "")) {
         const {
           local_context: _lc,
           creator_effects: _ce,
+          map_keyword: _mk,
+          map_icon: _mi,
           ...rest
         } = insertPayload;
         retryPayload = rest;

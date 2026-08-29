@@ -5,20 +5,50 @@ import {
   type MapCellStatusIcon,
 } from "@/lib/map-cell-chrome";
 import type { BlockCreatorEffectKey } from "@/lib/block-creator-effects";
+import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
 
-/** Occupied tiles: title + tick when Done, gear when this user has worked on it. */
+/** Occupied tiles: keyword + 3×3 square mark (solid on workspace, outline on TAP/ILE). */
 export function MapCellStatusGlyph({
   status,
   showProgress,
   title,
   statusIcon = null,
+  keyword = null,
+  icon = null,
+  labelMode = "title",
+  glyphVariant = "solid",
 }: {
   status: string;
   showProgress: boolean;
   title: string;
   statusIcon?: MapCellStatusIcon;
+  keyword?: string | null;
+  icon?: string | null;
+  labelMode?: "title" | "glyph";
+  glyphVariant?: "solid" | "outline";
 }) {
   const resolved = statusIcon ?? resolveMapCellStatusIcon(status, showProgress);
+  if (labelMode === "glyph") {
+    return (
+      <span
+        className="flex max-w-full flex-col items-center gap-1"
+        data-map-cell-glyph
+        data-map-cell-keyword={keyword || undefined}
+      >
+        <BlockMapGlyphIcon
+          name={icon}
+          className="h-8 w-8 shrink-0"
+          variant={glyphVariant}
+        />
+        <span
+          className="max-w-full truncate text-[11px] font-medium leading-tight"
+          data-map-cell-status="keyword"
+        >
+          {keyword || title}
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="flex max-w-full flex-col items-center gap-0.5">
       {resolved === "tick" ? (

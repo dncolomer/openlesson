@@ -237,7 +237,13 @@ describe("block-effect-generation prompts", () => {
         { title: "  T  ", description: " D " },
         { title: "fallback" },
       ),
-    ).toEqual({ title: "T", description: "D" });
+    ).toMatchObject({ title: "T", description: "D" });
+    const normalized = normalizeEffectGenerationResult(
+      { title: "  T  ", description: " D " },
+      { title: "fallback" },
+    );
+    expect(normalized.keyword).toBe("T");
+    expect(normalized.icon).toBeTruthy();
   });
 });
 

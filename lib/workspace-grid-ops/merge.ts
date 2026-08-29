@@ -71,6 +71,7 @@ import {
   serializeBlockCreatorEffects,
   validateBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 
 export async function handle_merge(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -163,6 +164,10 @@ export async function handle_merge(ctx: GridOpContext): Promise<Response | null>
       await supabase.from("blocks").update({ next_block_ids: rewritten }).eq("id", node.id);
     }
 
+    const glyph = blockMapGlyphDbFields(
+      aiResponse.data,
+      aiResponse.data.title.trim(),
+    );
     const mergeUpdate: Record<string, unknown> = {
       title: aiResponse.data.title.trim(),
       description: aiResponse.data.description?.trim() || "",
@@ -172,12 +177,19 @@ export async function handle_merge(ctx: GridOpContext): Promise<Response | null>
       span_h: footprint.span_h,
       shape_cells: freeform.shape_cells,
       is_start: targets.some((t) => t.is_start) || false,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     };
     let { error: mergeErr } = await supabase.from("blocks").update(mergeUpdate).eq("id", keepId);
-    if (mergeErr && /shape_cells|schema cache/i.test(mergeErr.message || "")) {
+    if (mergeErr && /shape_cells|map_keyword|map_icon|schema cache/i.test(mergeErr.message || "")) {
       const { shape_cells: _sc, ...withoutShape } = mergeUpdate;
-      const retry = await supabase.from("blocks").update(withoutShape).eq("id", keepId);
+      let retry = await supabase.from("blocks").update(withoutShape).eq("id", keepId);
       mergeErr = retry.error;
+      if (mergeErr && /map_keyword|map_icon|schema cache/i.test(mergeErr.message || "")) {
+        const { map_keyword: _mk, map_icon: _mi, ...withoutGlyph } = withoutShape;
+        retry = await supabase.from("blocks").update(withoutGlyph).eq("id", keepId);
+        mergeErr = retry.error;
+      }
     }
     if (mergeErr) {
       return jsonError(500, "Failed to update merged block");

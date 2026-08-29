@@ -78,6 +78,7 @@ describe("session plan create prompt composition", () => {
     expect(narrowPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.narrow.target));
     expect(narrowPrompt).toMatch(/position_x=0,\s*position_y=0|\(0,\s*0\)|position_x=0/);
     expect(narrowPrompt).toMatch(/negative/i);
+    expect(narrowPrompt).toMatch(/keyword/);
     expect(narrowPrompt).toMatch(/branch/i);
     expect(narrowPrompt).toMatch(/sparse|non-rectilinear|not a filled/i);
     expect(narrowPrompt).not.toContain("{initial_chapters_level}");

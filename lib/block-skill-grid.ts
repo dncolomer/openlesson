@@ -37,6 +37,10 @@ export interface SkillGridNode {
    * Raw JSON or parsed BlockCreatorEffects.
    */
   creator_effects?: unknown;
+  /** Single-word map-tile label (shown instead of the truncated title). */
+  map_keyword?: string | null;
+  /** Lucide icon name from the workspace map catalog. */
+  map_icon?: string | null;
 }
 
 /**

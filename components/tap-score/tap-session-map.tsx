@@ -15,6 +15,8 @@ import {
 } from "@/lib/tap-session-map";
 import { learnerMapCellChromeClasses } from "@/lib/workspace-learner-chrome";
 import { cn } from "@/lib/utils";
+import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import { MapCellStatusGlyph } from "@/components/block-skill-grid/map-tile-badges";
 
 export function TapSessionMap({
   blocks,
@@ -131,6 +133,11 @@ export function TapSessionMap({
                 const dimmed =
                   Boolean(block.done) ||
                   (Boolean(currentId) && block.id !== currentId);
+                const glyph = resolveBlockMapGlyph({
+                  map_keyword: block.map_keyword,
+                  map_icon: block.map_icon,
+                  title: block.title,
+                });
                 return (
                   <button
                     key={key}
@@ -142,7 +149,7 @@ export function TapSessionMap({
                     onClick={() => onSelect?.(block.id)}
                     style={{ width: SKILL_GRID_CELL_SIZE, height: SKILL_GRID_CELL_SIZE }}
                     className={cn(
-                      "flex flex-col items-start justify-end overflow-hidden rounded-none border p-1.5 text-left",
+                      "flex flex-col items-center justify-center overflow-hidden rounded-none border p-1.5 text-center",
                       learnerMapCellChromeClasses({
                         status: "available",
                         selected: selected && !dimmed,
@@ -151,9 +158,15 @@ export function TapSessionMap({
                         "border-neutral-800 bg-neutral-950/40 text-neutral-600 opacity-25 grayscale",
                     )}
                   >
-                    <span className="line-clamp-4 text-[10px] leading-tight text-neutral-100">
-                      {block.title}
-                    </span>
+                    <MapCellStatusGlyph
+                      status="available"
+                      showProgress={false}
+                      title={block.title}
+                      keyword={glyph.keyword}
+                      icon={glyph.icon}
+                      labelMode="glyph"
+                      glyphVariant="outline"
+                    />
                   </button>
                 );
               }

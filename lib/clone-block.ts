@@ -152,6 +152,8 @@ export type CloneSourceFields = {
   description?: string | null;
   planning_prompt?: string | null;
   local_context?: unknown;
+  map_keyword?: string | null;
+  map_icon?: string | null;
   /** Copied only when explicitly requested; default false on clone. */
   is_start?: boolean | null;
 };
@@ -170,6 +172,8 @@ export type CloneInsertPayload = {
   span_w: number;
   span_h: number;
   shape_cells: null;
+  map_keyword: string | null;
+  map_icon: string | null;
 };
 
 /**
@@ -199,6 +203,15 @@ export function buildCloneInsertPayload(input: {
   const local =
     input.source.local_context != null ? input.source.local_context : null;
 
+  const mapKeyword =
+    typeof input.source.map_keyword === "string"
+      ? input.source.map_keyword.trim() || null
+      : null;
+  const mapIcon =
+    typeof input.source.map_icon === "string"
+      ? input.source.map_icon.trim() || null
+      : null;
+
   return {
     title,
     description,
@@ -214,6 +227,8 @@ export function buildCloneInsertPayload(input: {
     span_w: 1,
     span_h: 1,
     shape_cells: null,
+    map_keyword: mapKeyword,
+    map_icon: mapIcon,
   };
 }
 

@@ -216,6 +216,8 @@ export async function POST(req: NextRequest) {
         status: "available",
         position_x: cell.col,
         position_y: cell.row,
+        map_keyword: result.keyword,
+        map_icon: result.icon,
       };
 
       const { data: newNode, error: insertError } = await supabase
@@ -306,6 +308,8 @@ export async function POST(req: NextRequest) {
       .update({
         title: result.title,
         description: result.description,
+        map_keyword: result.keyword,
+        map_icon: result.icon,
       })
       .eq("id", blockId)
       .eq("workspace_id", workspaceId);

@@ -239,6 +239,9 @@ describe("TAP live map wiring", () => {
 
     const map = read("components/tap-score/tap-session-map.tsx");
     expect(map).toContain("learnerMapCellChromeClasses");
+    expect(map).toContain("MapCellStatusGlyph");
+    expect(map).toContain('glyphVariant="outline"');
+    expect(map).toContain("resolveBlockMapGlyph");
     expect(map).toContain("tapSessionMapCenterOnOrigin");
     expect(map).toContain("data-tap-session-block-dimmed");
     expect(map).toContain("opacity-25");

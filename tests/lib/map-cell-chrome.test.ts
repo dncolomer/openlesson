@@ -164,7 +164,8 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(badges).toContain('fillRule="evenodd"');
     expect(grid).not.toMatch(/>\s*Busy\s*</);
     expect(grid).not.toContain("data-generator-busy-label");
-    expect(grid).not.toMatch(/from "lucide-react"/);
+    expect(badges).not.toMatch(/from "lucide-react"/);
+    expect(grid).toContain("from \"lucide-react\"");
     expect(grid).not.toContain("data-map-cell-status=\"in_progress\"");
     expect(grid).not.toContain("data-map-cell-status=\"completed\"");
     expect(grid).not.toMatch(/border-emerald-500|bg-emerald-950|border-amber-400\/55 bg-amber-950/);

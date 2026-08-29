@@ -17,6 +17,8 @@ interface BlockRef {
   position_y?: number | null;
   span_w?: number | null;
   span_h?: number | null;
+  map_keyword?: string | null;
+  map_icon?: string | null;
 }
 
 interface DbBlock {
@@ -29,6 +31,8 @@ interface DbBlock {
   position_y?: number | null;
   span_w?: number | null;
   span_h?: number | null;
+  map_keyword?: string | null;
+  map_icon?: string | null;
 }
 
 /** Grid column/row for every node using the same rules as the skill grid UI. */
@@ -54,6 +58,8 @@ export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
     const raw = node as DbBlock & {
       description?: string;
       shape_cells?: unknown;
+      map_keyword?: string | null;
+      map_icon?: string | null;
     };
     let shape_cells: Array<{ dr: number; dc: number }> | null | undefined;
     if (Array.isArray(raw.shape_cells)) {
@@ -81,6 +87,8 @@ export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
       span_w: node.span_w ?? undefined,
       span_h: node.span_h ?? undefined,
       shape_cells: shape_cells ?? undefined,
+      map_keyword: raw.map_keyword ?? node.map_keyword ?? undefined,
+      map_icon: raw.map_icon ?? node.map_icon ?? undefined,
     };
   });
 }
@@ -107,6 +115,8 @@ export function skillGridNodesFromRefs(
         position_y: ref.position_y ?? undefined,
         span_w: ref.span_w ?? undefined,
         span_h: ref.span_h ?? undefined,
+        map_keyword: ref.map_keyword ?? undefined,
+        map_icon: ref.map_icon ?? undefined,
       },
     ];
   });

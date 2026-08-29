@@ -99,12 +99,12 @@ describe("ILE chapter tile badges", () => {
       hasEffects: true,
       generatorBusy: true,
     });
-    expect(workspace.showLock).toBe(true);
-    expect(workspace.showStarter).toBe(true);
-    expect(workspace.showPractice).toBe(true);
-    expect(workspace.showLocalContext).toBe(true);
-    expect(workspace.showEffects).toBe(true);
-    expect(workspace.showGeneratorBusy).toBe(true);
+    expect(workspace.showLock).toBe(false);
+    expect(workspace.showStarter).toBe(false);
+    expect(workspace.showPractice).toBe(false);
+    expect(workspace.showLocalContext).toBe(false);
+    expect(workspace.showEffects).toBe(false);
+    expect(workspace.showGeneratorBusy).toBe(false);
 
     expect(chapterHasDagLockChrome(chapters[0]!, chapters)).toBe(false);
     expect(chapterHasDagLockChrome(chapters[1]!, chapters)).toBe(true);

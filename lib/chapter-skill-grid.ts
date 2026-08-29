@@ -5,6 +5,7 @@ import {
 } from "@/lib/block-skill-grid";
 import { getSkillGridPositions } from "@/lib/skill-grid-positions";
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
+import { blockMapGlyphForLabel, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 
 export function isChapterSlotAvailable(plan: SessionPlan, row: number, col: number) {
   const nodes = sessionStepsToSkillGridNodes(plan.steps);
@@ -31,16 +32,25 @@ function mapStepStatus(status: SessionPlanStep["status"]): string {
  */
 export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGridNode[] {
   const sorted = [...steps].sort((a, b) => a.order - b.order);
-  return sorted.map((step, index) => ({
-    id: step.id,
-    title: step.description,
-    status: mapStepStatus(step.status),
-    is_start: index === 0,
-    next_block_ids: [],
-    lock_until_block_ids: [],
-    position_x: step.position_x,
-    position_y: step.position_y,
-  }));
+  return sorted.map((step, index) => {
+    const glyph = resolveBlockMapGlyph({
+      map_keyword: step.map_keyword,
+      map_icon: step.map_icon,
+      title: step.description,
+    });
+    return {
+      id: step.id,
+      title: step.description,
+      status: mapStepStatus(step.status),
+      is_start: index === 0,
+      next_block_ids: [],
+      lock_until_block_ids: [],
+      position_x: step.position_x,
+      position_y: step.position_y,
+      map_keyword: glyph.keyword,
+      map_icon: glyph.icon,
+    };
+  });
 }
 
 /** Persist payload `updateSessionPlan` writes for ILE chapter add/load/edit. */
@@ -64,6 +74,7 @@ export function appendIleChapterStep(
   },
 ): SessionPlan {
   const description = String(input.description || "").trim();
+  const glyph = blockMapGlyphForLabel(description, input.id);
   const newStep: SessionPlanStep = {
     id: input.id,
     description,
@@ -72,6 +83,8 @@ export function appendIleChapterStep(
     order: plan.steps.length,
     position_x: input.position.col,
     position_y: input.position.row,
+    map_keyword: glyph.map_keyword,
+    map_icon: glyph.map_icon,
   };
   return {
     ...plan,

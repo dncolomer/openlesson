@@ -155,8 +155,8 @@ describe("Build / Play / Explore toggle helpers", () => {
       isStart: true,
       exploreActive: false,
     });
-    expect(occupiedBuild.showLock).toBe(true);
-    expect(occupiedBuild.showStarter).toBe(true);
+    expect(occupiedBuild.showLock).toBe(false);
+    expect(occupiedBuild.showStarter).toBe(false);
 
     expect(
       resolveEmptyCellMarker({

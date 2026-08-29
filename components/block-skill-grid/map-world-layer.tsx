@@ -85,6 +85,7 @@ import {
   BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
+import { DEFAULT_BLOCK_MAP_ICON, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 
 export function MapWorldLayer({
@@ -683,6 +684,26 @@ export function MapWorldLayer({
               description: node.description,
               contentGenerated: dynamicGeneratedSet.has(node.id),
             });
+            const isChapterSurface = suggestMode === "chapter";
+            const mapGlyph = resolveBlockMapGlyph({
+              map_keyword: node.map_keyword,
+              map_icon: node.map_icon,
+              title: node.title,
+            });
+            const glyphKeyword = mapTitle === "?" ? "?" : mapGlyph.keyword;
+            const glyphIcon = mapTitle === "?" ? DEFAULT_BLOCK_MAP_ICON : mapGlyph.icon;
+            const statusGlyph = (
+              <MapCellStatusGlyph
+                status={node.status}
+                showProgress={showProgress}
+                title={mapTitle}
+                statusIcon={chapterStatusIcon}
+                keyword={glyphKeyword}
+                icon={glyphIcon}
+                labelMode="glyph"
+                glyphVariant={isChapterSurface ? "outline" : "solid"}
+              />
+            );
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
@@ -785,7 +806,11 @@ export function MapWorldLayer({
                                 : undefined
                           }
                           onClick={(e) => handleCellSelect(node.id, e)}
-                          onDoubleClick={() => handleBlockDoubleClick(node.id)}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleBlockDoubleClick(node.id);
+                          }}
                           onPointerDown={(e) =>
                             handleBlockPointerDown(node.id, nodeCell, e)
                           }
@@ -866,12 +891,7 @@ export function MapWorldLayer({
                         >
                           {isLabel ? (
                             <>
-                              <MapCellStatusGlyph
-                                status={node.status}
-                                showProgress={showProgress}
-                                title={mapTitle}
-                                statusIcon={chapterStatusIcon}
-                              />
+                              {statusGlyph}
                               {learnerLockedLabel}
                               {practiceBadge}
                               {effectBadge}
@@ -967,7 +987,11 @@ export function MapWorldLayer({
                         : undefined
                   }
                   onClick={(e) => handleCellSelect(node.id, e)}
-                  onDoubleClick={() => handleBlockDoubleClick(node.id)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleBlockDoubleClick(node.id);
+                  }}
                   onPointerDown={(e) => handleBlockPointerDown(node.id, nodeCell, e)}
                   onPointerMove={
                     canDragBlocks && !generationLocked
@@ -1006,12 +1030,7 @@ export function MapWorldLayer({
                               : node.title
                   }
                 >
-                  <MapCellStatusGlyph
-                    status={node.status}
-                    showProgress={showProgress}
-                    title={mapTitle}
-                    statusIcon={chapterStatusIcon}
-                  />
+                  {statusGlyph}
                   {learnerLockedLabel}
                   {practiceBadge}
                   {effectBadge}

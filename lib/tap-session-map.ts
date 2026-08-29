@@ -13,6 +13,7 @@ import {
 } from "@/lib/exercise-tap";
 import { MAP_FOG_BASE_RADIUS, MAP_FOG_FADE_BAND } from "@/lib/map-fog-of-war";
 import type { TapStartingTopic } from "@/lib/tap-score";
+import { blockMapGlyphForLabel } from "@/lib/block-map-glyph";
 
 export type TapSessionMapKind = "convo" | "exercise";
 
@@ -24,6 +25,8 @@ export type TapSessionMapBlock = {
   prompt: string;
   kind: TapSessionMapKind;
   done?: boolean;
+  map_keyword?: string | null;
+  map_icon?: string | null;
 };
 
 export type TapSoloProblem = TapSessionMapBlock & {
@@ -153,13 +156,17 @@ export function tapConvoBlocksFromAssistantTurns(
     const cell = nextTapMapCell(occupied);
     occupied.push(cell);
     const prompt = String(turn.content || "");
+    const title = tapBlockTitleFromPrompt(prompt, "Question");
+    const glyph = blockMapGlyphForLabel(title, turn.id);
     blocks.push({
       id: turn.id,
       row: cell.row,
       col: cell.col,
-      title: tapBlockTitleFromPrompt(prompt, "Question"),
+      title,
       prompt,
       kind: "convo",
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     });
   }
   return blocks;
@@ -185,16 +192,21 @@ export function seedTapSoloProblems(input: {
   startedTopicId?: string | null;
 }): { placed: TapSoloProblem[]; pool: TapStartingTopic[] } {
   const prompt = String(input.exerciseText || "").trim();
+  const firstId = input.startedTopicId || "tap-solo-start";
+  const title = tapBlockTitleFromPrompt(prompt, "Exercise");
+  const glyph = blockMapGlyphForLabel(title, firstId);
   const first: TapSoloProblem = {
-    id: input.startedTopicId || "tap-solo-start",
+    id: firstId,
     row: 0,
     col: 0,
-    title: tapBlockTitleFromPrompt(prompt, "Exercise"),
+    title,
     prompt,
     kind: "exercise",
     lists: emptyExerciseDualLists(),
     solutionSubmitted: false,
     sourceId: input.startedTopicId || null,
+    map_keyword: glyph.map_keyword,
+    map_icon: glyph.map_icon,
   };
   const usedIds = new Set<string>([first.id]);
   if (first.sourceId) usedIds.add(first.sourceId);
@@ -219,19 +231,23 @@ export function appendTapSoloProblem(
 ): TapSoloProblem[] {
   if (placed.some((block) => block.id === input.id)) return placed;
   const cell = nextTapMapCell(placed);
+  const title = input.title || tapBlockTitleFromPrompt(input.prompt, "Exercise");
+  const glyph = blockMapGlyphForLabel(title, input.id);
   return [
     ...placed,
     {
       id: input.id,
       row: cell.row,
       col: cell.col,
-      title: input.title || tapBlockTitleFromPrompt(input.prompt, "Exercise"),
+      title,
       prompt: String(input.prompt || "").trim(),
       kind: "exercise",
       lists: emptyExerciseDualLists(),
       solutionSubmitted: false,
       done: false,
       sourceId: input.sourceId ?? null,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
     },
   ];
 }

@@ -23,6 +23,7 @@ import {
   userMessage,
   type ResponsesInputContent,
 } from "./xai-client";
+import { blockMapGlyphForLabel } from "@/lib/block-map-glyph";
 import { transcribeAudioBase64 } from "./xai-stt";
 import { getPrompt, type UserPrompts } from "./prompts";
 import { getInitialChaptersBand } from "./initial-chapters";
@@ -453,6 +454,8 @@ export interface SessionPlanStep {
   status?: "pending" | "in_progress" | "completed" | "skipped";
   position_x?: number;
   position_y?: number;
+  map_keyword?: string | null;
+  map_icon?: string | null;
 }
 
 export interface CreateSessionPlanResult {
@@ -695,13 +698,23 @@ export async function updateSessionPlanLLM(options: {
 
   // Filter out steps with empty descriptions from LLM response.
   // If all steps end up empty, treat as if plan didn't change (don't overwrite good data).
-  let updatedSteps: SessionPlanStep[] | undefined = parsed.updated_steps?.map((step: SessionPlanStep, idx: number) => ({
-    id: step.id || `step_${idx + 1}_${Date.now()}`,
-    type: step.type || "question",
-    description: step.description || "",
-    order: step.order || idx + 1,
-    status: step.status || "pending",
-  }));
+  let updatedSteps: SessionPlanStep[] | undefined = parsed.updated_steps?.map((step: SessionPlanStep, idx: number) => {
+    const id = step.id || `step_${idx + 1}_${Date.now()}`;
+    const description = step.description || "";
+    const glyph =
+      step.map_keyword && step.map_icon
+        ? { map_keyword: step.map_keyword, map_icon: step.map_icon }
+        : blockMapGlyphForLabel(description, id);
+    return {
+      id,
+      type: step.type || "question",
+      description,
+      order: step.order || idx + 1,
+      status: step.status || "pending",
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
+    };
+  });
 
   let planChanged = parsed.plan_changed || false;
   if (updatedSteps) {

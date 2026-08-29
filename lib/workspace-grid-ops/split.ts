@@ -61,6 +61,7 @@ import {
   resolveWorkspaceDagForMutation,
 } from "@/lib/workspace-dags";
 import { buildCloneInsertPayload } from "@/lib/clone-block";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 import { isCellOccupied } from "@/lib/block-skill-grid";
 import {
   normalizeBlockPracticeOptions,
@@ -150,13 +151,19 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
         },
       );
 
-      const named = new Map<number, { title: string; description: string }>();
+      const named = new Map<
+        number,
+        { title: string; description: string; map_keyword: string; map_icon: string }
+      >();
       if (aiResponse.success && Array.isArray(aiResponse.data?.parts)) {
         for (const part of aiResponse.data.parts) {
           if (typeof part?.index !== "number" || !part.title?.trim()) continue;
+          const glyph = blockMapGlyphDbFields(part, part.title.trim());
           named.set(part.index, {
             title: part.title.trim(),
             description: part.description?.trim() || "",
+            map_keyword: glyph.map_keyword,
+            map_icon: glyph.map_icon,
           });
         }
       }
@@ -164,6 +171,12 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
       // Keep first cell on original block; create new blocks for remaining
       const [first, ...rest] = parts;
       const firstName = named.get(0);
+      const firstGlyph = firstName
+        ? {
+            map_keyword: firstName.map_keyword,
+            map_icon: firstName.map_icon,
+          }
+        : blockMapGlyphDbFields({}, target.title);
       await supabase
         .from("blocks")
         .update({
@@ -174,15 +187,22 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           shape_cells: null,
           title: firstName?.title || target.title,
           description: firstName?.description || target.description || "",
+          map_keyword: firstGlyph.map_keyword,
+          map_icon: firstGlyph.map_icon,
         })
         .eq("id", target.id);
 
       for (let i = 0; i < rest.length; i++) {
         const part = rest[i];
         const name = named.get(i + 1);
+        const partTitle =
+          name?.title || `${target.title} · ${part.position_y},${part.position_x}`;
+        const partGlyph = name
+          ? { map_keyword: name.map_keyword, map_icon: name.map_icon }
+          : blockMapGlyphDbFields({}, partTitle);
         await supabase.from("blocks").insert({
           workspace_id: workspaceId,
-          title: name?.title || `${target.title} · ${part.position_y},${part.position_x}`,
+          title: partTitle,
           description: name?.description || target.description || "",
           is_start: false,
           next_block_ids: [],
@@ -191,6 +211,8 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
           position_y: part.position_y,
           span_w: 1,
           span_h: 1,
+          map_keyword: partGlyph.map_keyword,
+          map_icon: partGlyph.map_icon,
         });
       }
     }

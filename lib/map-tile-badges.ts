@@ -1,6 +1,7 @@
 /**
  * Occupied-tile badge visibility for workspace block maps vs ILE chapter maps.
- * Chapter tiles keep only DAG-lock chrome; workspace keeps the full suite.
+ * Workspace tiles show keyword + Lucide icon only (no occupancy modifiers).
+ * Chapter tiles keep only DAG-lock chrome.
  */
 
 export type MapTileBadgeSurface = "block" | "chapter";
@@ -51,14 +52,8 @@ export function resolveMapOccupiedTileBadges(input: {
       showLock: Boolean(input.hasDagLock),
     };
   }
-  return {
-    showLock: Boolean(input.hasDagLock),
-    showStarter: Boolean(input.isStart),
-    showPractice: Boolean(input.hasPractice),
-    showLocalContext: Boolean(input.hasLocalContext),
-    showEffects: Boolean(input.hasEffects),
-    showGeneratorBusy: Boolean(input.generatorBusy),
-  };
+  // Workspace occupied tiles: keyword + catalog icon only.
+  return { ...HIDDEN_OCCUPIED_BADGES };
 }
 
 /** Empty-cell glyph: Build plus, Explore search, otherwise none. */

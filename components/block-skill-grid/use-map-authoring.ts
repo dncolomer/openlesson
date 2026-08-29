@@ -162,6 +162,7 @@ export function useMapAuthoring(input: {
   onGeneratorEmptyToggle?: (cell: { row: number; col: number }) => void;
   dynamicPickActive: boolean;
   onDynamicBlockToggle?: (blockId: string) => void;
+  onPeekBlock?: (blockId: string) => void;
   suppressBlockClickRef: { current: boolean };
   suppressEmptyClickRef: { current: boolean };
   generationLockedBlockIdsRef: { current: Set<string> };
@@ -250,6 +251,7 @@ export function useMapAuthoring(input: {
     onGeneratorEmptyToggle,
     dynamicPickActive,
     onDynamicBlockToggle,
+    onPeekBlock,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -422,11 +424,9 @@ export function useMapAuthoring(input: {
   const handleBlockDoubleClick = useCallback(
     (blockId: string) => {
       if (generationLockedBlockIdsRef.current.has(blockId)) return;
-      commitSelection(
-        nextWorkspaceMapSelection({ type: "open_block", blockId }),
-      );
+      onPeekBlock?.(blockId);
     },
-    [commitSelection],
+    [onPeekBlock],
   );
 
   const resolveCellFromClient = useCallback(

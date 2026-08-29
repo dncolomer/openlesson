@@ -3,6 +3,11 @@
  * so new blocks respect existing DAGs, not only spatial neighbors.
  */
 
+import {
+  BLOCK_MAP_GLYPH_JSON_SHAPE,
+  composeBlockMapGlyphJsonInstruction,
+} from "@/lib/block-map-glyph";
+
 function cleanId(id: unknown): string {
   return String(id ?? "").trim();
 }
@@ -100,14 +105,16 @@ export function composeAddBlockAtSlotSystemMessage(
       "You create a single knowledge-bridge learning block for a workspace skill grid slot.",
       "This block sits on a straight bridge path between selected topics — frame it as a connecting idea, transition, prerequisite link, shared foundation, or comparison that helps a learner move between those concepts.",
       "Do not invent an isolated unrelated topic.",
-      'Return JSON only: { "title": "...", "description": "..." }.',
+      `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
       "Title: 4-14 words. Description: 1-3 sentences.",
+      composeBlockMapGlyphJsonInstruction(),
     ].join(" ");
   }
   return [
     "You create a single learning block for a workspace skill grid slot.",
-    "Return JSON only: { \"title\": \"...\", \"description\": \"...\" }.",
+    `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-14 words. Description: 1-3 sentences.",
     "Honor spatial neighbors and any journey/DAG edges provided in the user message.",
+    composeBlockMapGlyphJsonInstruction(),
   ].join(" ");
 }

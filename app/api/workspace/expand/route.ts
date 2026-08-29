@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
+import { blockMapGlyphDbFields, composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 
 interface NodeData {
   id: string;
@@ -67,7 +68,7 @@ Expand the topic "${node.title}" with 2-4 follow-up learning sessions as a direc
 Return ONLY valid JSON:
 {
   "nodes": [
-    { "id": "a", "title": "Session Title", "description": "Why this matters", "next": ["b"] }
+    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Foundations", "next": ["b"] }
   ]
 }
 
@@ -77,7 +78,8 @@ Rules:
 - Use simple IDs (a, b, c...) for referencing
 - next: array of IDs this node points to (can create chains or branches)
 - Keep titles concise (3-8 words)
-- Descriptions: 1 sentence`;
+- Descriptions: 1 sentence
+- ${composeBlockMapGlyphJsonInstruction()}`;
 
     const response = await callXaiJSON<PlanData>(
       [userMessage(prompt)],
@@ -110,6 +112,7 @@ Rules:
           is_start: false,
           next_block_ids: [],
           status: "available",
+          ...blockMapGlyphDbFields(nodeData, nodeData.title),
         })
         .select()
         .single();

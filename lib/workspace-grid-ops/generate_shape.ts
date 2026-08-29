@@ -71,6 +71,7 @@ import {
   serializeBlockCreatorEffects,
   validateBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
+import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
 
 export async function handle_generate_shape(ctx: GridOpContext): Promise<Response | null> {
   const {
@@ -233,6 +234,10 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
           ? Boolean((body as { isStart?: boolean }).isStart)
           : undefined;
 
+    const glyph = blockMapGlyphDbFields(
+      aiResponse.data,
+      aiResponse.data.title.trim(),
+    );
     const insertPayload: Record<string, unknown> = {
       workspace_id: workspaceId,
       title: aiResponse.data.title.trim(),
@@ -248,6 +253,8 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       span_w: footprint.span_w,
       span_h: footprint.span_h,
       shape_cells: shapeCells,
+      map_keyword: glyph.map_keyword,
+      map_icon: glyph.map_icon,
       ...(local_context ? { local_context } : {}),
     };
 
@@ -257,30 +264,52 @@ export async function handle_generate_shape(ctx: GridOpContext): Promise<Respons
       .select()
       .single();
 
-    // Graceful fallback if span/shape/local_context columns not migrated yet
+    // Graceful fallback if span/shape/local_context/glyph columns not migrated yet
     if (
       insertError &&
-      /span_w|span_h|shape_cells|local_context|schema cache/i.test(insertError.message || "")
+      /span_w|span_h|shape_cells|local_context|map_keyword|map_icon|schema cache/i.test(insertError.message || "")
     ) {
-      const { span_w: _sw, span_h: _sh, shape_cells: _sc, local_context: _lc, ...rest } =
+      const {
+        span_w: _sw,
+        span_h: _sh,
+        shape_cells: _sc,
+        local_context: _lc,
+        map_keyword: _mk,
+        map_icon: _mi,
+        ...rest
+      } =
         insertPayload;
+      const glyphMissing = /map_keyword|map_icon/i.test(insertError.message || "");
+      const glyphFields = glyphMissing
+        ? {}
+        : { map_keyword: glyph.map_keyword, map_icon: glyph.map_icon };
       let retryPayload: Record<string, unknown> = {
         ...rest,
         span_w: footprint.span_w,
         span_h: footprint.span_h,
         ...(local_context ? { local_context } : {}),
+        ...glyphFields,
       };
       let retry = await supabase.from("blocks").insert(retryPayload).select().single();
       if (retry.error && /span_w|span_h|schema cache/i.test(retry.error.message || "")) {
         retryPayload = {
           ...rest,
           ...(local_context ? { local_context } : {}),
+          ...glyphFields,
         };
         retry = await supabase.from("blocks").insert(retryPayload).select().single();
       }
       if (retry.error && /local_context|schema cache/i.test(retry.error.message || "")) {
         const { local_context: __lc, ...withoutLocal } = retryPayload;
         retry = await supabase.from("blocks").insert(withoutLocal).select().single();
+      }
+      if (retry.error && /map_keyword|map_icon|schema cache/i.test(retry.error.message || "")) {
+        const {
+          map_keyword: __mk,
+          map_icon: __mi,
+          ...stripped
+        } = retryPayload;
+        retry = await supabase.from("blocks").insert(stripped).select().single();
       }
       newNode = retry.data;
       insertError = retry.error;

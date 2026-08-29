@@ -3,6 +3,12 @@
  * Dynamic (on unlock), Generator (targets on done).
  */
 
+import {
+  BLOCK_MAP_GLYPH_JSON_SHAPE,
+  blockMapGlyphDbFields,
+  composeBlockMapGlyphJsonInstruction,
+} from "@/lib/block-map-glyph";
+
 export type EffectGenerationMode =
   | "dynamic"
   | "generator_cell"
@@ -18,6 +24,8 @@ export type EffectGenerationBlockRef = {
 export type EffectGenerationResult = {
   title: string;
   description: string;
+  keyword: string;
+  icon: string;
 };
 
 function clean(s: unknown): string {
@@ -28,8 +36,9 @@ function clean(s: unknown): string {
 export function composeEffectGenerationSystemMessage(): string {
   return [
     "You generate focused learning-block titles and descriptions for a skill map.",
-    "Return JSON only: { \"title\": string, \"description\": string }.",
+    `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: concise topic name (≤ 80 chars). Description: 1–3 sentences of assessable scope for Explore/Drill practice.",
+    composeBlockMapGlyphJsonInstruction(),
     "Ground hard in the provided framing, learner history, and map context. Do not invent unrelated domains.",
   ].join(" ");
 }
@@ -120,14 +129,23 @@ export function normalizeEffectGenerationResult(
   const fbTitle = clean(fallback?.title) || "Generated topic";
   const fbDesc = clean(fallback?.description) || "";
   if (!raw || typeof raw !== "object") {
-    return { title: fbTitle, description: fbDesc };
+    const glyph = blockMapGlyphDbFields({}, fbTitle);
+    return {
+      title: fbTitle,
+      description: fbDesc,
+      keyword: glyph.map_keyword,
+      icon: glyph.map_icon,
+    };
   }
   const o = raw as Record<string, unknown>;
   const title = clean(o.title) || fbTitle;
   const description = clean(o.description) || fbDesc;
+  const glyph = blockMapGlyphDbFields(o, title);
   return {
     title: title.slice(0, 120),
     description: description.slice(0, 2000),
+    keyword: glyph.map_keyword,
+    icon: glyph.map_icon,
   };
 }
 

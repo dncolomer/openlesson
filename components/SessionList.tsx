@@ -454,8 +454,8 @@ export function SessionList({
     [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId],
   );
 
-  // Block detail opens in the workspace right pane (parent). Map stays free of
-  // map-covering modal/dialog chrome; double-click → onExpandedNodeIdChange.
+  // Block detail opens in the workspace right pane (parent).
+  // Double-click peeks title + description in a map-centered overlay.
   return (
     <div className="relative flex h-full flex-col overflow-hidden p-2.5" data-session-list>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">

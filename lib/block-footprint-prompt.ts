@@ -3,6 +3,11 @@
  * Cell count relative to a 1×1 single block indicates ILE/TAP topical breadth.
  */
 
+import {
+  BLOCK_MAP_GLYPH_JSON_SHAPE,
+  composeBlockMapGlyphJsonInstruction,
+} from "@/lib/block-map-glyph";
+
 export function blockFootprintCellCount(spanW: number, spanH: number): number {
   const w = Math.max(1, Math.floor(Number(spanW) || 1));
   const h = Math.max(1, Math.floor(Number(spanH) || 1));
@@ -86,8 +91,9 @@ export function composeMergeBlockSystemMessage(): string {
   return [
     "You merge learning blocks into one larger skill-grid topic.",
     "Grid size encodes ILE/TAP breadth: multi-cell results are broader than 1×1 singles.",
-    'Return JSON only: { "title": "...", "description": "..." }.',
+    `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-16 words. Description: 2-4 sentences that reflect the broader merged scope.",
+    composeBlockMapGlyphJsonInstruction(),
   ].join(" ");
 }
 
@@ -147,8 +153,9 @@ export function composeGenerateShapeBlockSystemMessage(): string {
   return [
     "You create a single learning block for a skill-grid region.",
     "Footprint cell count vs 1×1 encodes ILE/TAP topical breadth — match title and description to that breadth.",
-    'Return JSON only: { "title": "...", "description": "..." }.',
+    `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-14 words. Description: 1-3 sentences.",
+    composeBlockMapGlyphJsonInstruction(),
   ].join(" ");
 }
 
@@ -245,7 +252,7 @@ export function composeSplitBlockUserPrompt(input: {
     `Each result is a 1×1 baseline unit — narrower than the source (~1/${sourceCells} of its ILE/TAP breadth). Titles must be distinct focused subtopics that together reconstruct the parent scope.`,
     `Parts to name:`,
     partLines,
-    `Return JSON: { "parts": [ { "index": 0, "title": "...", "description": "..." }, ... ] } with one entry per part index.`,
+    `Return JSON: { "parts": [ { "index": 0, "title": "...", "description": "...", "keyword": "..." }, ... ] } with one entry per part index.`,
   ];
   if (input.languageNote?.trim()) parts.push(input.languageNote.trim());
   return parts.filter(Boolean).join("\n\n");
@@ -255,7 +262,8 @@ export function composeSplitBlockSystemMessage(): string {
   return [
     "You split a broad multi-cell learning block into focused 1×1 ILE/TAP units.",
     "Each part must be narrower than the parent; together they cover the parent scope.",
-    'Return JSON only: { "parts": [ { "index": number, "title": string, "description": string } ] }.',
+    'Return JSON only: { "parts": [ { "index": number, "title": string, "description": string, "keyword": string } ] }.',
     "Title: 3-12 words each. Description: 1-2 sentences each.",
+    composeBlockMapGlyphJsonInstruction(),
   ].join(" ");
 }

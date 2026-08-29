@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { toSkillGridNodes, withSkillGridPositions } from "@/lib/skill-grid-positions";
+import { blockMapGlyphDbFields, composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 
 interface NodeData {
   id: string;
@@ -91,6 +92,8 @@ export async function POST(
         workspace_id: newPlan.id,
         title: node.title,
         description: node.description,
+        map_keyword: node.map_keyword ?? null,
+        map_icon: node.map_icon ?? null,
         is_start: node.is_start || false,
         next_block_ids: (node.next_block_ids || [])
           .map((id: string) => blockIdMap.get(id))
@@ -178,7 +181,7 @@ IMPORTANT: Create a completely fresh plan tailored to the user's needs. The new 
 Return ONLY valid JSON (no markdown) with this structure:
 {
   "nodes": [
-    { "id": "a", "title": "Session Title", "description": "Why this matters", "is_start": true/false, "next": ["b"] }
+    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Foundations", "is_start": true/false, "next": ["b"] }
   ]
 }
 
@@ -188,7 +191,8 @@ Rules:
 - next: array of IDs this node points to
 - Keep titles concise (3-8 words)
 - Descriptions: 1 sentence explaining the concept
-- Include 3-10 nodes total`;
+- Include 3-10 nodes total
+- ${composeBlockMapGlyphJsonInstruction()}`;
 
     const response = await callXaiJSON<PlanData>(
       [userMessage(prompt)],
@@ -244,6 +248,7 @@ Rules:
       is_start: node.is_start || false,
       next_block_ids: (node.next || []).filter((id: string) => blockIdMap.has(id)).map((id: string) => blockIdMap.get(id)),
       status: "available",
+      ...blockMapGlyphDbFields(node, node.title),
     }));
 
     const nodesToInsert = withSkillGridPositions(

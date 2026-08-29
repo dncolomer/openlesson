@@ -124,6 +124,14 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
             : null,
         local_context:
           (source as { local_context?: unknown }).local_context ?? null,
+        map_keyword:
+          typeof (source as { map_keyword?: unknown }).map_keyword === "string"
+            ? String((source as { map_keyword?: string }).map_keyword)
+            : null,
+        map_icon:
+          typeof (source as { map_icon?: unknown }).map_icon === "string"
+            ? String((source as { map_icon?: string }).map_icon)
+            : null,
       },
       target: { row, col },
     });
@@ -147,6 +155,8 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
       ...(built.local_context != null
         ? { local_context: built.local_context }
         : {}),
+      ...(built.map_keyword ? { map_keyword: built.map_keyword } : {}),
+      ...(built.map_icon ? { map_icon: built.map_icon } : {}),
     };
 
     let { data: newNode, error: insertError } = await supabase
@@ -157,7 +167,7 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
 
     if (
       insertError &&
-      /span_w|span_h|shape_cells|local_context|planning_prompt|lock_until|schema cache/i.test(
+      /span_w|span_h|shape_cells|local_context|planning_prompt|lock_until|map_keyword|map_icon|schema cache/i.test(
         insertError.message || "",
       )
     ) {
@@ -168,6 +178,8 @@ export async function handle_clone_block(ctx: GridOpContext): Promise<Response |
         local_context: _lc,
         planning_prompt: _pp,
         lock_until_block_ids: _lu,
+        map_keyword: _mk,
+        map_icon: _mi,
         ...rest
       } = insertPayload;
       let retryPayload: Record<string, unknown> = { ...rest };

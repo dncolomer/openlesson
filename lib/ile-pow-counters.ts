@@ -6,6 +6,7 @@ import {
   normalizeProofOfWorkType,
   type WorkspaceProofOfWorkType,
 } from "@/lib/pow-api/workspace-proof-of-work";
+import { isExcludedFromSnapshotPoW } from "@/lib/pow-api/pow-quality";
 
 export const ILE_POW_COUNTER_TYPES = ["tool", "screen", "video", "eeg"] as const;
 export type IlePowCounterType = (typeof ILE_POW_COUNTER_TYPES)[number];
@@ -67,6 +68,7 @@ export function countIlePowByType(
   for (const item of artifacts) {
     const type = artifactType(item);
     if (!type) continue;
+    if (type === "eeg" && isExcludedFromSnapshotPoW(item.metadata)) continue;
     counts[type] += 1;
   }
   return counts;

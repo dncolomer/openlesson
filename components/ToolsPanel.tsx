@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { ILE_OPEN_PIC_IN_PIC_LABEL } from "@/lib/ile-compact-window";
 import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
+import { museEegPreviewLabel, museEegPreviewState } from "@/lib/muse-eeg-quality";
 
 const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 
@@ -596,15 +597,19 @@ function EEGMiniStatus({
   museChannelData?: Map<string, number[]>;
 }) {
   const isStreaming = museStatus === "streaming";
-  const activeChannels = EEG_CHANNELS.filter((channel) => (museChannelData?.get(channel)?.length ?? 0) > 0).length;
-  const inferredQuality = activeChannels >= 4 ? "good" : activeChannels >= 2 ? "fair" : "poor";
-  const quality = isStreaming ? (museDeviceStatus?.signalQuality || inferredQuality) : "poor";
-  const label = !isStreaming ? "EEG off" : quality === "good" ? "EEG good" : quality === "fair" ? "EEG fair" : "EEG poor";
-  const textColor = quality === "good" ? "text-green-400" : quality === "fair" ? "text-neutral-300" : "text-red-400";
-  const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-neutral-200" : "bg-red-400";
+  const preview = museEegPreviewState(museStatus, museDeviceStatus);
+  const quality = preview === "off" ? "poor" : preview === "checking" ? "poor" : preview;
+  const label = museEegPreviewLabel(preview);
+  const textColor = quality === "good" ? "text-green-400" : quality === "fair" ? "text-neutral-300" : preview === "checking" ? "text-neutral-300" : "text-red-400";
+  const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-neutral-200" : preview === "checking" ? "bg-neutral-200" : "bg-red-400";
 
   return (
-    <div className="flex items-center gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
+    <div
+      className="flex items-center gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2 py-1"
+      data-muse-eeg-preview={preview}
+      data-muse-calibration={String(preview === "good" || preview === "fair")}
+      title="EEG health: green/fair means calibrated on-head contact, checking means still scoring, red means poor/off."
+    >
       <div className="flex items-center gap-2 shrink-0">
         <div className={`w-1.5 h-1.5 rounded-full ${isStreaming ? `${dotColor} animate-pulse` : "bg-neutral-700"}`} />
         <span className={`text-[10px] uppercase tracking-wide ${isStreaming ? textColor : "text-neutral-600"}`}>{label}</span>
@@ -612,17 +617,20 @@ function EEGMiniStatus({
       <div className="ml-auto flex items-center justify-end gap-1">
         {EEG_CHANNELS.map((channel) => {
           const samples = museChannelData?.get(channel)?.length ?? 0;
+          const channelStatus = museDeviceStatus?.channelStatuses?.[channel];
           const channelQuality = museDeviceStatus?.electrodeQuality?.[channel];
           const isActive = samples > 0;
-          const isGood = typeof channelQuality === "number" ? channelQuality > 0.5 : isActive;
-          const isFair = typeof channelQuality === "number" ? channelQuality > 0.2 && channelQuality <= 0.5 : false;
+          const isGood = channelStatus === "good" || (typeof channelQuality === "number" ? channelQuality > 0.5 : false);
+          const isFair = channelStatus === "fair" || (typeof channelQuality === "number" ? channelQuality > 0.2 && channelQuality <= 0.5 : false);
           const color = !isStreaming || !isActive
             ? "bg-neutral-700"
             : isGood
               ? "bg-green-400"
               : isFair
                 ? "bg-neutral-200"
-                : "bg-red-400";
+                : museDeviceStatus?.contactEvaluated
+                  ? "bg-red-400"
+                  : "bg-neutral-400";
           return (
             <div key={channel} className="flex items-center gap-0.5" title={`${channel}: ${isActive ? `${samples} recent samples` : "no recent samples"}`}>
               <div className={`h-1 w-1 rounded-full ${color}`} />

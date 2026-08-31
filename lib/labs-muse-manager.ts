@@ -286,6 +286,9 @@ export class LabsMuseManager {
       electrodeQuality: this.client.electrodeQuality,
       signalQuality: this.client.signalQuality,
       firmware: this.client.deviceInfo.firmware,
+      contactEvaluated: this.client.contactEvaluated,
+      calibrationPassed: this.client.calibrationPassed,
+      channelStatuses: this.client.channelStatuses,
     };
   }
 

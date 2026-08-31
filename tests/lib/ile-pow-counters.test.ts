@@ -47,6 +47,12 @@ describe("countIlePowByType (session-global)", () => {
     expect(countIlePowByType(grown).eeg).toBe(2);
     expect(countIlePowByType(grown).tool).toBe(counts.tool);
 
+    const withImpure = appendIlePowCounterArtifact(grown, {
+      type: "eeg",
+      metadata: { impure: true, quality: "impure", calibration_passed: false },
+    });
+    expect(countIlePowByType(withImpure).eeg).toBe(2);
+
     writeScratch(
       "ile-pow-counters-excerpts.txt",
       JSON.stringify({ zeros: emptyIlePowTypeCounts(), mixed: counts, total: ilePowCounterTotal(counts) }),

@@ -5,6 +5,7 @@ import { MuseTemporalChart } from "./MuseTemporalChart";
 import { FaceTracker, FacialDataPoint } from "./FaceTracker";
 import { useI18n } from "../lib/i18n";
 import type { DeviceStatus } from "../lib/muse-athena";
+import { EEG_QUALITY_CHANNELS, museEegPreviewState } from "../lib/muse-eeg-quality";
 
 interface DataInputToolProps {
   isRecording: boolean;
@@ -89,6 +90,26 @@ export function DataInputTool({
   };
 
   const isMuseConnected = museStatus === "connected" || museStatus === "streaming";
+  const eegPreview = museEegPreviewState(museStatus, museDeviceStatus ?? null);
+  const eegReady = eegPreview === "good" || eegPreview === "fair";
+  const contactLabel =
+    eegPreview === "off"
+      ? t("dataInput.waitingForSignal")
+      : eegPreview === "checking"
+        ? t("dataInput.checkingContact")
+        : eegPreview === "poor"
+          ? t("dataInput.poorContact")
+          : t("dataInput.calibrated");
+  const contactColor =
+    eegPreview === "good"
+      ? "text-green-400"
+      : eegPreview === "fair"
+        ? "text-neutral-300"
+        : eegPreview === "checking"
+          ? "text-neutral-300"
+          : eegPreview === "poor"
+            ? "text-red-400"
+            : "text-neutral-500";
 
   return (
     <div className="flex flex-col h-full bg-neutral-900">
@@ -170,12 +191,18 @@ export function DataInputTool({
                 </span>
               </div>
               
-              {bandPowers && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-500">{t('dataInput.signal')}:</span>
+              {isMuseConnected && (
+                <div className="flex items-center justify-between text-xs" data-muse-calibration={String(eegReady)}>
+                  <span className="text-neutral-500">{t("dataInput.contact")}:</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-green-400">{t('dataInput.receivingData')}</span>
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        eegReady ? "bg-green-400 animate-pulse" : eegPreview === "checking" ? "bg-neutral-400 animate-pulse" : "bg-red-400"
+                      }`}
+                    />
+                    <span className={contactColor} data-muse-signal-quality={eegPreview}>
+                      {contactLabel}
+                    </span>
                   </div>
                 </div>
               )}
@@ -186,22 +213,46 @@ export function DataInputTool({
                     <span className="text-neutral-500">Battery: </span>
                     <span className="text-neutral-300">{museDeviceStatus.battery || 0}%</span>
                   </div>
-                  <div className="rounded-none bg-neutral-800/40 p-2">
+                  <div className="rounded-none bg-neutral-800/40 p-2" data-muse-eeg-ready={String(eegReady)}>
                     <span className="text-neutral-500">Quality: </span>
                     <span className={
+                      !museDeviceStatus.contactEvaluated ? "text-neutral-400" :
                       museDeviceStatus.signalQuality === "good" ? "text-green-400" :
                       museDeviceStatus.signalQuality === "fair" ? "text-neutral-300" :
                       "text-red-400"
-                    }>{museDeviceStatus.signalQuality}</span>
+                    }>{museDeviceStatus.contactEvaluated ? museDeviceStatus.signalQuality : "checking"}</span>
                   </div>
                 </div>
               )}
-              
-              {!bandPowers && isMuseConnected && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-500">{t('dataInput.signal')}:</span>
-                  <span className="text-neutral-300">{t('dataInput.waitingForSignal')}</span>
+
+              {museStatus === "streaming" && (
+                <div className="flex flex-wrap gap-1">
+                  {EEG_QUALITY_CHANNELS.map((channel) => {
+                    const status = museDeviceStatus?.channelStatuses?.[channel];
+                    const quality = museDeviceStatus?.electrodeQuality?.[channel] ?? 0;
+                    const tone =
+                      status === "good" || quality > 0.5
+                        ? "text-green-400 border-green-500/30"
+                        : status === "fair" || quality > 0.2
+                          ? "text-neutral-300 border-neutral-600/40"
+                          : "text-red-400 border-red-500/30";
+                    return (
+                      <span
+                        key={channel}
+                        className={`text-[9px] uppercase tracking-wide px-1.5 py-0.5 border rounded-none ${tone}`}
+                        data-muse-channel-quality={channel}
+                      >
+                        {channel} {status ?? "poor"}
+                      </span>
+                    );
+                  })}
                 </div>
+              )}
+
+              {isMuseConnected && (
+                <p className="text-[10px] text-neutral-500" data-muse-eeg-pow={eegReady ? "ready" : "blocked"}>
+                  {eegReady ? t("dataInput.eegEvidenceReady") : t("dataInput.eegEvidenceBlocked")}
+                </p>
               )}
             </div>
 

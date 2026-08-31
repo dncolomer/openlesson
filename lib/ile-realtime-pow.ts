@@ -1,13 +1,24 @@
-import type { ToolAction, ToolName } from "@/lib/storage";
 import {
+  buildGatedIleEegUploadItem,
+  buildIleEegUploadItem,
   hashIlePowContent,
   ILE_EVIDENCE_THRESHOLDS,
-  type IleBufferedEegChunk,
+  isCountableIleEegChunk,
+  isCountableIleEegPow,
+  scoreIleEegChunk,
   type IleBufferedToolEvent,
   type IleProofOfWorkUploadItem,
 } from "@/lib/ile-evidence-buffer";
 
-export { ILE_EVIDENCE_THRESHOLDS, hashIlePowContent };
+export {
+  ILE_EVIDENCE_THRESHOLDS,
+  hashIlePowContent,
+  buildIleEegUploadItem,
+  buildGatedIleEegUploadItem,
+  isCountableIleEegChunk,
+  isCountableIleEegPow,
+  scoreIleEegChunk,
+};
 
 /** Debounce canvas/notebook uploads so rapid edits do not flood the PoW API. */
 export const ILE_POW_DEBOUNCE_MS = 4_000;
@@ -86,32 +97,6 @@ export function buildIleFacialUploadItem(
     toolName: "facial",
     toolAction: "facial_batch",
     metadata: { point_count: data.length },
-  };
-}
-
-export function buildIleEegUploadItem(sessionId: string, chunk: IleBufferedEegChunk): IleProofOfWorkUploadItem {
-  const sampleCount = totalIleEegSamples(chunk.channels);
-  return {
-    kind: "eeg",
-    mimeType: "application/json",
-    fileName: `ile-eeg-${chunk.timestampMs}.json`,
-    payload: JSON.stringify({
-      session_id: sessionId,
-      channels: chunk.channels,
-      band_powers: chunk.bandPowers,
-      sample_rate_hz: chunk.sampleRateHz,
-      started_at_ms: chunk.startedAtMs,
-      ended_at_ms: chunk.endedAtMs,
-      sample_counts: chunk.sampleCounts,
-      device_status: chunk.deviceStatus,
-      device_name: chunk.deviceName,
-      timestamp_ms: chunk.timestampMs,
-    }),
-    timestampMs: chunk.timestampMs,
-    bandPowers: chunk.bandPowers,
-    deviceName: chunk.deviceName ?? null,
-    sampleCount,
-    metadata: { sample_count: sampleCount },
   };
 }
 

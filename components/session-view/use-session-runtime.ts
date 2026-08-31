@@ -12,6 +12,10 @@ import {
   computeBandPowers,
   createEmptyTransferHealth,
 } from "@/components/session/sessionViewHelpers";
+import {
+  eegChannelsFromMap,
+  scoreEegContactWindow,
+} from "@/lib/muse-eeg-quality";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import { appendIlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
@@ -21,7 +25,7 @@ import {
 } from "@/lib/ile-proof-of-work-client";
 import {
   buildIleCanvasUploadItem,
-  buildIleEegUploadItem,
+  buildGatedIleEegUploadItem,
   buildIleFacialUploadItem,
   buildIleNotebookUploadItem,
   buildIleToolEventUploadItem,
@@ -235,6 +239,22 @@ const handleConnectMuse = async () => {
     }, 100);
 
     bandIntervalRef.current = setInterval(() => {
+      const window = eegChannelsFromMap(eegBufferRef.current);
+      const contact = scoreEegContactWindow(window);
+      const prev = museDeviceStatusRef.current;
+      const next: DeviceStatus = {
+        battery: prev?.battery ?? museClientRef.current?.battery ?? 0,
+        firmware: prev?.firmware ?? museClientRef.current?.deviceInfo?.firmware,
+        electrodeQuality: contact.electrodeQuality,
+        signalQuality: contact.overall,
+        contactEvaluated: contact.evaluated,
+        calibrationPassed: contact.calibrationPassed,
+        channelStatuses: contact.channelStatuses,
+      };
+      museDeviceStatusRef.current = next;
+      setMuseDeviceStatus(next);
+      museClientRef.current?.applyContactScore?.(contact);
+
       const af7 = eegBufferRef.current.get("AF7");
       const af8 = eegBufferRef.current.get("AF8");
       if (!af7 || af7.length < 256 || !af8 || af8.length < 256) return;
@@ -316,6 +336,7 @@ const uploadPowItem = useCallback(
         type: item.kind,
         tool_name: item.toolName,
         tool_action: item.toolAction,
+        metadata: item.metadata ?? null,
       });
       if (result.interruption) {
         handlePowInterruptionRef.current(
@@ -400,7 +421,7 @@ const tryUploadPendingEegChunk = useCallback(
     const sampleCount = totalIleEegSamples(channels);
     if (!meetsEegUploadThreshold(sampleCount, force)) return;
 
-    const item = buildIleEegUploadItem(currentSession.id, {
+    const item = buildGatedIleEegUploadItem(currentSession.id, {
       channels,
       bandPowers: bandPowersRef.current,
       sampleRateHz: EEG_SAMPLE_RATE_HZ,
@@ -414,6 +435,7 @@ const tryUploadPendingEegChunk = useCallback(
       timestampMs: eegLastSampleMsRef.current ?? Date.now(),
     });
     clearConsumedEegSamples(channels);
+    if (!item) return;
     void uploadPowItem(item, "eeg");
   },
   [clearConsumedEegSamples, consumePendingEegSamples, uploadPowItem],

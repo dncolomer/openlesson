@@ -1,5 +1,12 @@
 import type { ToolAction, ToolName } from "@/lib/storage";
 import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-work";
+import {
+  isCountableEegContact,
+  resolveEegBandPowers,
+  scoreEegContactWindow,
+  type EegContactScore,
+} from "@/lib/muse-eeg-quality";
+import { isExcludedFromSnapshotPoW } from "@/lib/pow-api/pow-quality";
 
 export const ILE_EVIDENCE_THRESHOLDS = {
   transcriptMinChars: 12,
@@ -59,6 +66,83 @@ export interface IleEvidenceDrainResult {
 
 function totalEegSamples(channels: Record<string, number[]>): number {
   return Object.values(channels).reduce((sum, samples) => sum + samples.length, 0);
+}
+
+export function scoreIleEegChunk(chunk: IleBufferedEegChunk): EegContactScore {
+  return scoreEegContactWindow(chunk.channels);
+}
+
+export function isCountableIleEegChunk(chunk: IleBufferedEegChunk): boolean {
+  return isCountableEegContact(scoreIleEegChunk(chunk));
+}
+
+export function isCountableIleEegPow(item: IleProofOfWorkUploadItem): boolean {
+  return item.kind === "eeg" && !isExcludedFromSnapshotPoW(item.metadata);
+}
+
+/**
+ * Build an EEG PoW item with quality + band powers on payload and metadata.
+ * Poor / uncalibrated windows are marked impure so snapshot and counters skip them.
+ */
+export function buildIleEegUploadItem(sessionId: string, chunk: IleBufferedEegChunk): IleProofOfWorkUploadItem {
+  const sampleCount = totalEegSamples(chunk.channels);
+  const contact = scoreIleEegChunk(chunk);
+  const countable = isCountableEegContact(contact);
+  const bandPowers = resolveEegBandPowers(chunk.channels, chunk.bandPowers);
+  const metadata: Record<string, unknown> = {
+    sample_count: sampleCount,
+    signal_quality: contact.overall,
+    calibration_passed: contact.calibrationPassed,
+    contact_evaluated: contact.evaluated,
+    electrode_quality: contact.electrodeQuality,
+    channel_statuses: contact.channelStatuses,
+    band_powers: bandPowers,
+  };
+  if (!countable) {
+    metadata.impure = true;
+    metadata.quality = "impure";
+  }
+
+  return {
+    kind: "eeg",
+    mimeType: "application/json",
+    fileName: `ile-eeg-${chunk.timestampMs}.json`,
+    payload: JSON.stringify({
+      session_id: sessionId,
+      channels: chunk.channels,
+      band_powers: bandPowers,
+      sample_rate_hz: chunk.sampleRateHz,
+      started_at_ms: chunk.startedAtMs,
+      ended_at_ms: chunk.endedAtMs,
+      sample_counts: chunk.sampleCounts,
+      device_status: chunk.deviceStatus,
+      device_name: chunk.deviceName,
+      timestamp_ms: chunk.timestampMs,
+      signal_quality: contact.overall,
+      calibration_passed: contact.calibrationPassed,
+      contact_evaluated: contact.evaluated,
+      electrode_quality: contact.electrodeQuality,
+      channel_statuses: contact.channelStatuses,
+    }),
+    timestampMs: chunk.timestampMs,
+    bandPowers,
+    deviceName: chunk.deviceName ?? null,
+    sampleCount,
+    metadata,
+  };
+}
+
+/**
+ * Countable EEG PoW only. Poor or uncalibrated windows return null and must
+ * not increment the session EEG counter or be uploaded as scored evidence.
+ */
+export function buildGatedIleEegUploadItem(
+  sessionId: string,
+  chunk: IleBufferedEegChunk,
+): IleProofOfWorkUploadItem | null {
+  const item = buildIleEegUploadItem(sessionId, chunk);
+  if (!isCountableIleEegPow(item)) return null;
+  return item;
 }
 
 export function hashIlePowContent(value: string): string {
@@ -218,29 +302,8 @@ export class IleEvidenceBuffer {
     if (eegReady.length > 0) {
       this.eegChunks = this.eegChunks.filter((chunk) => totalEegSamples(chunk.channels) < eegMin);
       for (const chunk of eegReady) {
-        const sampleCount = totalEegSamples(chunk.channels);
-        uploads.push({
-          kind: "eeg",
-          mimeType: "application/json",
-          fileName: `ile-eeg-${chunk.timestampMs}.json`,
-          payload: JSON.stringify({
-            session_id: sessionId,
-            channels: chunk.channels,
-            band_powers: chunk.bandPowers,
-            sample_rate_hz: chunk.sampleRateHz,
-            started_at_ms: chunk.startedAtMs,
-            ended_at_ms: chunk.endedAtMs,
-            sample_counts: chunk.sampleCounts,
-            device_status: chunk.deviceStatus,
-            device_name: chunk.deviceName,
-            timestamp_ms: chunk.timestampMs,
-          }),
-          timestampMs: chunk.timestampMs,
-          bandPowers: chunk.bandPowers,
-          deviceName: chunk.deviceName ?? null,
-          sampleCount,
-          metadata: { sample_count: sampleCount },
-        });
+        const item = buildGatedIleEegUploadItem(sessionId, chunk);
+        if (item) uploads.push(item);
       }
     }
 

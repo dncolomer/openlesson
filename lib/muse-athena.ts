@@ -4,6 +4,12 @@
 // https://github.com/Amused-EEG/amused-py
 // ============================================
 
+import {
+  EEG_QUALITY_CHANNELS,
+  scoreEegContactWindow,
+  type EegContactScore,
+} from "./muse-eeg-quality";
+
 // BLE GATT UUIDs
 const MUSE_SERVICE = 0xfe8d;
 const CONTROL_CHAR = "273e0001-4c4d-454d-96be-f03bac821358";
@@ -71,6 +77,11 @@ export interface DeviceStatus {
   electrodeQuality: Record<string, number>; // channel -> quality 0-1
   signalQuality: "good" | "fair" | "poor";
   firmware?: string;
+  /** True after a sample window has been scored (not merely connected). */
+  contactEvaluated?: boolean;
+  /** Enough on-head, non-rail channels — streaming alone is not a pass. */
+  calibrationPassed?: boolean;
+  channelStatuses?: Record<string, "good" | "fair" | "poor">;
 }
 
 export interface DeviceInfo {
@@ -213,6 +224,10 @@ export class MuseAthenaClient {
   private _deviceInfo: DeviceInfo = {};
   private _lastSignalQuality: DeviceStatus["signalQuality"] = "poor";
   private _electrodeQuality: Record<string, number> = {};
+  private _channelStatuses: Record<string, DeviceStatus["signalQuality"]> = {};
+  private _calibrationPassed = false;
+  private _contactEvaluated = false;
+  private qualityBuffer: Map<string, number[]> = new Map();
 
   // Callbacks
   private onEEGCallbacks: ((sample: EEGSample) => void)[] = [];
@@ -245,6 +260,18 @@ export class MuseAthenaClient {
 
   get signalQuality(): DeviceStatus["signalQuality"] {
     return this._lastSignalQuality;
+  }
+
+  get calibrationPassed(): boolean {
+    return this._calibrationPassed;
+  }
+
+  get contactEvaluated(): boolean {
+    return this._contactEvaluated;
+  }
+
+  get channelStatuses(): Record<string, DeviceStatus["signalQuality"]> {
+    return this._channelStatuses;
   }
 
   get battery(): number {
@@ -455,6 +482,7 @@ export class MuseAthenaClient {
     this.server = null;
     this.controlChar = null;
     this.sensorChar = null;
+    this.resetContactQuality();
     this.setStatus("disconnected");
   }
 
@@ -463,6 +491,7 @@ export class MuseAthenaClient {
     this.server = null;
     this.controlChar = null;
     this.sensorChar = null;
+    this.resetContactQuality();
     this.setStatus("disconnected");
     this.onDisconnectedCallbacks.forEach((cb) => cb());
   }
@@ -512,7 +541,7 @@ export class MuseAthenaClient {
         const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
         if (json.fw) this._deviceInfo.firmware = json.fw;
         if (json.bp) this._deviceInfo.battery = json.bp;
-        this.updateSignalQuality();
+        this.emitDeviceStatus();
       }
     } catch {
       // Not JSON, ignore
@@ -534,6 +563,7 @@ export class MuseAthenaClient {
 
         if (Object.keys(eeg).length > 0) {
           const sample: EEGSample = { timestamp: now, channels: eeg };
+          this.ingestEegForQuality(eeg);
           this.onEEGCallbacks.forEach((cb) => cb(sample));
         }
 
@@ -560,6 +590,7 @@ export class MuseAthenaClient {
         const { eeg } = decodePacketDF(data);
         if (Object.keys(eeg).length > 0) {
           const sample: EEGSample = { timestamp: now, channels: eeg };
+          this.ingestEegForQuality(eeg);
           this.onEEGCallbacks.forEach((cb) => cb(sample));
         }
         break;
@@ -570,39 +601,65 @@ export class MuseAthenaClient {
         const fnirs = decodePacketE0(data);
         if (fnirs) {
           this.onFNIRSCallbacks.forEach((cb) => cb(fnirs));
-          this.updateSignalQuality();
+          this.emitDeviceStatus();
         }
         break;
       }
     }
   }
 
-  private updateSignalQuality(): void {
-    const eegChannels = ["TP9", "AF7", "AF8", "TP10", "FPz", "AUX_R", "AUX_L"];
-    
-    let goodChannels = 0;
-    for (const ch of eegChannels) {
-      const q = this._electrodeQuality[ch] ?? 0;
-      if (q > 0.5) goodChannels++;
+  private ingestEegForQuality(channels: Record<string, number[]>): void {
+    for (const [ch, samples] of Object.entries(channels)) {
+      const existing = this.qualityBuffer.get(ch) ?? [];
+      existing.push(...samples);
+      this.qualityBuffer.set(
+        ch,
+        existing.length > 256 ? existing.slice(-256) : existing,
+      );
     }
-    
-    const overall = goodChannels >= 5 ? "good" : goodChannels >= 3 ? "fair" : "poor";
-    this._lastSignalQuality = overall;
-    
+    const window: Record<string, number[]> = {};
+    for (const ch of EEG_QUALITY_CHANNELS) {
+      window[ch] = this.qualityBuffer.get(ch) ?? [];
+    }
+    this.applyContactScore(scoreEegContactWindow(window));
+  }
+
+  applyContactScore(score: EegContactScore): void {
+    this._electrodeQuality = { ...score.electrodeQuality };
+    this._channelStatuses = { ...score.channelStatuses };
+    this._lastSignalQuality = score.overall;
+    this._calibrationPassed = score.calibrationPassed;
+    this._contactEvaluated = score.evaluated;
+    this.emitDeviceStatus();
+  }
+
+  private emitDeviceStatus(): void {
     const status: DeviceStatus = {
       battery: this._deviceInfo.battery ?? 0,
       electrodeQuality: { ...this._electrodeQuality },
-      signalQuality: overall,
+      signalQuality: this._lastSignalQuality,
       firmware: this._deviceInfo.firmware,
+      contactEvaluated: this._contactEvaluated,
+      calibrationPassed: this._calibrationPassed,
+      channelStatuses: { ...this._channelStatuses },
     };
-    
+
     this.onDeviceStatusCallbacks.forEach((cb) => cb(status));
     this.onSignalQualityCallbacks.forEach((cb) => cb(status));
   }
 
   updateElectrodeQuality(channel: string, quality: number): void {
     this._electrodeQuality[channel] = Math.max(0, Math.min(1, quality));
-    this.updateSignalQuality();
+    this.emitDeviceStatus();
+  }
+
+  private resetContactQuality(): void {
+    this.qualityBuffer.clear();
+    this._electrodeQuality = {};
+    this._channelStatuses = {};
+    this._lastSignalQuality = "poor";
+    this._calibrationPassed = false;
+    this._contactEvaluated = false;
   }
 
   private async writeCommand(cmd: Uint8Array): Promise<void> {

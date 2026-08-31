@@ -3,7 +3,7 @@
  * forming a thought (pending live bar text and/or active transcription).
  */
 
-export type TapInterruptionOrigin = "idle" | "speech" | "other";
+export type TapInterruptionOrigin = "idle" | "speech" | "other" | "chapter_done";
 
 export type FormingThoughtState = {
   /** Non-empty live transcription bar (not yet sent/stashed). */

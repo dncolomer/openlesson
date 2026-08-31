@@ -6,6 +6,11 @@ import {
 import { getSkillGridPositions } from "@/lib/skill-grid-positions";
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
 import { blockMapGlyphForLabel, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import {
+  ILE_CHAPTER_SOURCE_TIM,
+  displayChapterMapIcon,
+  isTimUnopenedChapter,
+} from "@/lib/ile-tim-chapter-complete";
 
 export function isChapterSlotAvailable(plan: SessionPlan, row: number, col: number) {
   const nodes = sessionStepsToSkillGridNodes(plan.steps);
@@ -48,7 +53,7 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
       position_x: step.position_x,
       position_y: step.position_y,
       map_keyword: glyph.keyword,
-      map_icon: glyph.icon,
+      map_icon: isTimUnopenedChapter(step) ? displayChapterMapIcon(step) : glyph.icon,
     };
   });
 }
@@ -71,10 +76,15 @@ export function appendIleChapterStep(
     id: string;
     description: string;
     position: { row: number; col: number };
+    source?: SessionPlanStep["source"];
+    sourceStepId?: string | null;
+    timUnopened?: boolean;
+    map_icon?: string | null;
   },
 ): SessionPlan {
   const description = String(input.description || "").trim();
   const glyph = blockMapGlyphForLabel(description, input.id);
+  const timSourced = input.source === ILE_CHAPTER_SOURCE_TIM;
   const newStep: SessionPlanStep = {
     id: input.id,
     description,
@@ -84,7 +94,18 @@ export function appendIleChapterStep(
     position_x: input.position.col,
     position_y: input.position.row,
     map_keyword: glyph.map_keyword,
-    map_icon: glyph.map_icon,
+    map_icon: timSourced
+      ? displayChapterMapIcon({
+          id: input.id,
+          description,
+          map_icon: input.map_icon ?? glyph.map_icon,
+          source: ILE_CHAPTER_SOURCE_TIM,
+          tim_unopened: input.timUnopened !== false,
+        })
+      : input.map_icon ?? glyph.map_icon,
+    source: input.source ?? "learner",
+    source_step_id: input.sourceStepId ?? null,
+    tim_unopened: timSourced ? input.timUnopened !== false : false,
   };
   return {
     ...plan,

@@ -3,6 +3,7 @@ import { ILE_CHAT_TOOL_NAME, ILE_IDLE_TOOL_NAME, ILE_SPEECH_TOOL_NAME, ILE_TRACE
 import { TAP_CHAT_TOOL_NAME, TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 import { TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";
 import { TAP_SPEECH_TOOL_NAME } from "@/lib/tap-speech-proof-of-work";
+import { isIleChapterDonePow } from "@/lib/ile-tim-chapter-complete";
 
 export function resolvePowInterruptionContext(input: {
   workspaceId: string;
@@ -31,6 +32,9 @@ export function resolvePowInterruptionContext(input: {
   } else if (toolName === TAP_SPEECH_TOOL_NAME || toolName === ILE_SPEECH_TOOL_NAME) {
     endpoint = toolName === ILE_SPEECH_TOOL_NAME ? "upload_ile_speech" : "upload_tap_speech";
     tapAction = toolAction || null;
+  } else if (isIleChapterDonePow(toolName, toolAction)) {
+    endpoint = "upload_ile_chapter_done";
+    tapAction = toolAction || "chapter_done";
   }
 
   if (!endpoint) return null;

@@ -41,6 +41,7 @@ import {
 import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
   MAP_CELL_GENERATION_PENDING_CLASS,
+  MAP_CELL_TIM_UNOPENED_CLASS,
   MAP_CELL_UNUSABLE_CLASS,
   ileChapterCellChrome,
   isMapCellDoneStatus,
@@ -85,7 +86,7 @@ import {
   BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
-import { DEFAULT_BLOCK_MAP_ICON, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import { DEFAULT_BLOCK_MAP_ICON, isTimExploreMapIcon, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 
 export function MapWorldLayer({
@@ -581,6 +582,7 @@ export function MapWorldLayer({
             const isDynamicUnlockHighlight = dynamicUnlockHighlightIds.has(
               node.id,
             );
+            const timUnopened = isTimExploreMapIcon(node.map_icon);
             const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-none border px-2 text-center transition ${
               generationLocked
                 ? "pointer-events-none cursor-not-allowed opacity-60"
@@ -605,7 +607,7 @@ export function MapWorldLayer({
                   ? "opacity-100 scale-100 shadow-[0_0_14px_rgba(255,255,255,0.12)]"
                   : "opacity-0 scale-95"
                 : ""
-            }`;
+            } ${timUnopened ? MAP_CELL_TIM_UNOPENED_CLASS : ""}`;
             const hasOptimisticGeometry = Boolean(optimisticPlacements[node.id]);
             const tileTransition = {
               // No ease when live-dragging or holding optimistic settle — feels instant.
@@ -775,6 +777,8 @@ export function MapWorldLayer({
                         <button
                           type="button"
                           data-block-id={node.id}
+                          data-tim-unopened={timUnopened ? "true" : undefined}
+                          data-tim-explore-icon={timUnopened ? "true" : undefined}
                           data-map-cell-done={itemDone ? "true" : undefined}
                           data-map-cell-self-progress={
                             itemWorkedOn && !itemDone ? "true" : undefined
@@ -955,6 +959,8 @@ export function MapWorldLayer({
                 <button
                   type="button"
                   data-block-id={node.id}
+                  data-tim-unopened={timUnopened ? "true" : undefined}
+                  data-tim-explore-icon={timUnopened ? "true" : undefined}
                   data-map-cell-done={itemDone ? "true" : undefined}
                   data-map-cell-self-progress={
                     itemWorkedOn && !itemDone ? "true" : undefined

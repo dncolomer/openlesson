@@ -37,6 +37,10 @@ export const MAP_CELL_TARGET_CLASS = MAP_CELL_SELECTED_CLASS;
 export const MAP_CELL_NEUTRAL_CLASS =
   "border-neutral-700/80 bg-neutral-950/75 text-neutral-100";
 
+/** Unopened TIM-sourced ILE chapter — explore tile, slight pulse so the map feels alive. */
+export const MAP_CELL_TIM_UNOPENED_CLASS =
+  "border-white/35 bg-neutral-950/80 shadow-[0_0_10px_rgba(255,255,255,0.08)] animate-pulse";
+
 /**
  * Mark-as-Done tile (workspace + ILE chapter): white fill/border plus a tick.
  * Selection still adds the existing white-ring language on top.

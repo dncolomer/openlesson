@@ -102,8 +102,14 @@ export interface SessionPlanStep {
   position_y?: number;
   /** Two-word map-tile label (shown instead of the truncated title). */
   map_keyword?: string | null;
-  /** 3×3 occupancy mark (`g{bits}`) for TAP/ILE tiles. */
+  /** 3×3 occupancy mark (`g{bits}`) or TIM-explore icon for unopened TIM chapters. */
   map_icon?: string | null;
+  /** Who placed this chapter on the ILE map. */
+  source?: "plan" | "learner" | "tim_chapter_complete" | null;
+  /** Completed chapter that spawned a TIM expansion. */
+  source_step_id?: string | null;
+  /** TIM-sourced chapters start unopened (explore icon) until the learner opens them. */
+  tim_unopened?: boolean;
 }
 
 export interface SessionPlan {

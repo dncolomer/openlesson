@@ -32,7 +32,10 @@ import {
   type IlePowCounterArtifact,
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
-import { normalizeExternalResourceList } from "@/lib/workspace-external-resources";
+import {
+  normalizeExternalResourceList,
+  type WorkspaceExternalResource,
+} from "@/lib/workspace-external-resources";
 
 export const runtime = "nodejs";
 
@@ -132,7 +135,7 @@ export async function POST(req: NextRequest) {
       .map((draft) => toIleGatherExternalCreate(draft, meta))
       .filter((row): row is NonNullable<typeof row> => row != null);
 
-    let persisted = [];
+    let persisted: WorkspaceExternalResource[] = [];
     if (workspaceId && creates.length > 0) {
       const rows = creates.map((normalized, i) => ({
         workspace_id: workspaceId,

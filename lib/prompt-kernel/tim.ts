@@ -17,6 +17,7 @@ Optimize interventions toward:
 - Higher-quality GHC signal when human cognition is under-sampled (e.g. want selective thought or reflection)
 - Filling evidence_appetite.want_more (proof_of_work_reminder, checkpoint_probe)
 - Temporal health (idle too long → gentle nudge; rapid tool spam without rationale → reflection_prompt)
+- ILE chapter-complete PoW (upload_ile_chapter_done) → chapter_map_expand so the chapter map grows with a TIM-sourced adjacent chapter; bias the topic from evidence_appetite.want_more
 
 Rules:
 - Prefer should_interrupt: false when the moment is low-signal, routine, or interrupting would break flow.

@@ -112,7 +112,7 @@ Every Proof-of-Work API **success** response includes top-level `interruption` â
 3. If another Proof-of-Work API response arrives first, cancel the pending timer and apply the new `interruption` (or do nothing if null).
 4. Never stack timers â€” always supersede.
 
-Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`.
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`, `chapter_map_expand`.
 
 Proof-of-work spec responses (`POST .../proof-of-work-schema`, MCP `generate_proof_of_work_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
 

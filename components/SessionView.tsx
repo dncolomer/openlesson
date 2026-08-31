@@ -475,6 +475,7 @@ export function SessionView({
     fetchChapterFollowUps,
     handleSelectChapterFollowUp,
     handleMarkChapterDone,
+    handleTimChapterMapExpansion,
     chapterFollowUpsById,
     chapterFollowUpsLoadingId,
     chapterFollowUpsErrorById,
@@ -527,6 +528,7 @@ export function SessionView({
     updateChapterWorkspace,
     setHeliosTurnMode,
     handlePowInterruptionRef,
+    onChapterMapExpand: handleTimChapterMapExpansion,
   });
 
   const submitHeliosChatMessageNow = useCallback(async (

@@ -37,6 +37,7 @@ import type { LocalContextBuffer } from "@/lib/local-context";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { createScreenCapture } from "@/lib/screen-capture";
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
+import { ilePowInterruptionOriginFromTool } from "@/lib/ile-tim-chapter-complete";
 import type { Session, ToolAction, ToolName } from "@/lib/storage";
 import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 
@@ -317,7 +318,10 @@ const uploadPowItem = useCallback(
         tool_action: item.toolAction,
       });
       if (result.interruption) {
-        handlePowInterruptionRef.current(result.interruption);
+        handlePowInterruptionRef.current(
+          result.interruption,
+          ilePowInterruptionOriginFromTool(item.toolName, item.toolAction),
+        );
       }
     }
   },

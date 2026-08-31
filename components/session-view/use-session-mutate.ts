@@ -16,6 +16,12 @@ import {
   buildSessionPlanStepsUpdate,
   isChapterSlotAvailable,
 } from "@/lib/chapter-skill-grid";
+import {
+  ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS,
+  applyChapterCompleteTimExpansionToPlan,
+  revealTimChapterIconOnPlan,
+} from "@/lib/ile-tim-chapter-complete";
+import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interruption";
 import { planIleChapterClose } from "@/lib/ile-chapter-close-review";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
@@ -439,6 +445,74 @@ const persistPlanSteps = useCallback(async (
   }
 }, []);
 
+useEffect(() => {
+  const plan = sessionPlanRef.current;
+  const step = plan?.steps?.[activeChapterIndexRef.current];
+  if (!plan || !step) return;
+  const revealed = revealTimChapterIconOnPlan(plan, step.id);
+  if (!revealed.changed) return;
+  void persistPlanSteps(revealed.plan);
+}, [activeChapterKey, persistPlanSteps, activeChapterIndexRef, sessionPlanRef]);
+
+const handleTimChapterMapExpansion = useCallback(
+  async (interruption: PredictiveInterruption) => {
+    const currentPlan = sessionPlanRef.current;
+    if (!currentPlan) return;
+    const makeId = (index: number) =>
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `tim-chapter-${Date.now()}-${index}`;
+    const newStepIds = Array.from({ length: ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS }, (_, index) => makeId(index));
+    const result = applyChapterCompleteTimExpansionToPlan({
+      plan: currentPlan,
+      interruption,
+      newStepIds,
+      sessionMode: resolvedSessionMode,
+    });
+    if (!result || result.added.length === 0) return;
+    let plan = result.plan;
+    const added = result.added.map((step) => {
+      if (!isProjectMode) return step;
+      const framed = frameIleProjectChapterDescription(step.description);
+      return framed === step.description ? step : { ...step, description: framed };
+    });
+    if (isProjectMode) {
+      const byId = new Map(added.map((step) => [step.id, step]));
+      plan = {
+        ...plan,
+        steps: plan.steps.map((step) => byId.get(step.id) ?? step),
+      };
+    }
+    const first = added[0];
+    await persistPlanSteps(plan, {
+      toolAction: "chapter_add",
+      toolData: buildIleChapterAddPowToolData({
+        stepId: first.id,
+        description: first.description,
+        position_x: first.position_x ?? 0,
+        position_y: first.position_y ?? 0,
+        sessionMode: resolvedSessionMode,
+        exercise: isProjectMode,
+        sourceTopic: first.description,
+        via: "tim_chapter_complete",
+      }),
+    });
+    for (const extra of added.slice(1)) {
+      void logToolRef.current?.("session_plan", "chapter_add", buildIleChapterAddPowToolData({
+        stepId: extra.id,
+        description: extra.description,
+        position_x: extra.position_x ?? 0,
+        position_y: extra.position_y ?? 0,
+        sessionMode: resolvedSessionMode,
+        exercise: isProjectMode,
+        sourceTopic: extra.description,
+        via: "tim_chapter_complete",
+      }));
+    }
+  },
+  [isProjectMode, persistPlanSteps, resolvedSessionMode],
+);
+
 const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
   void persistPlanSteps(plan, {
     toolAction: "chapter_position",
@@ -477,7 +551,10 @@ const handleLoadChapter = useCallback(async (index: number) => {
     if (i === index && s.status === "pending") return { ...s, status: "in_progress" as const };
     return s;
   });
-  const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: index };
+  const updatedPlan = revealTimChapterIconOnPlan(
+    { ...currentPlan, steps: updatedSteps, currentStepIndex: index },
+    step.id,
+  ).plan;
   await persistPlanSteps(updatedPlan, { toolAction, toolData });
   handleActiveChapterIndexChange(index);
 
@@ -855,6 +932,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
     fetchChapterFollowUps,
     handleSelectChapterFollowUp,
     handleMarkChapterDone,
+    handleTimChapterMapExpansion,
     chapterFollowUpsById,
     chapterFollowUpsLoadingId,
     chapterFollowUpsErrorById,

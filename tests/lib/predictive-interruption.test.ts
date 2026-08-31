@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  TIM_INTERVENTION_TYPE_CATALOG,
   buildInterruptionContract,
   normalizePredictedInterruption,
   predictInterruption,
@@ -97,6 +98,8 @@ describe("predictive-interruption", () => {
     const contract = buildInterruptionContract();
     expect(contract.empty_value).toBeNull();
     expect(contract.intervention_types).toContain("reflection_prompt");
+    expect(contract.intervention_types).toContain("chapter_map_expand");
+    expect(contract.intervention_types).toEqual([...TIM_INTERVENTION_TYPE_CATALOG]);
     expect(contract.consumer_obligations.length).toBeGreaterThan(2);
     expect(contract.supersession_rule).toContain("replaces");
     expect(contract.description).toMatch(/Trace Interruption Model \(TIM\)/);

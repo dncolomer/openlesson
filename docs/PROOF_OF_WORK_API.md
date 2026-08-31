@@ -151,7 +151,11 @@ Every Proof-of-Work API success response (REST and MCP) includes a top-level `in
 
 `POST .../proof-of-work-schema` responses also include `interruption_contract` (machine-readable TIM spec) and may include LLM-authored `predicted_interruption` in the generated spec. Proof-of-work spec version is **1.3**.
 
-Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`.
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`, `chapter_map_expand`.
+
+ILE chapter-complete (`session_plan` / `chapter_done`) is Proof of Work on `upload_ile_chapter_done`. TIM predicts `chapter_map_expand` with 1–3 `chapter_suggestions` (biased by learning-world `evidence_appetite.want_more`). ILE applies that interruption on a dedicated map timer so idle/speech PoW cannot supersede it, and places adjacent TIM-sourced chapters (explore icon until opened).
+
+Intervention **types** are a fixed catalog. `consumer_action` is a free-form integrator hint, not a closed enum.
 
 MCP resource: `uncertain-systems://predictive-interruptions`
 

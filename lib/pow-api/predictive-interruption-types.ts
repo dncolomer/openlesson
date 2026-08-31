@@ -1,10 +1,27 @@
+/**
+ * Fixed TIM intervention-type catalog. Consumers must handle these values;
+ * unknown types normalize to `reflection_prompt`. This is the closed enum.
+ * `consumer_action` is a free-form snake_case hint (not a closed catalog).
+ */
+export const TIM_INTERVENTION_TYPE_CATALOG = [
+  "reflection_prompt",
+  "checkpoint_probe",
+  "coaching_nudge",
+  "proof_of_work_reminder",
+  "performance_review",
+  "chapter_map_expand",
+] as const;
+
 /** Trace Interruption Model (TIM) — intervention types a consumer may trigger toward the user. */
-export type InterruptionInterventionType =
-  | "reflection_prompt"
-  | "checkpoint_probe"
-  | "coaching_nudge"
-  | "proof_of_work_reminder"
-  | "performance_review";
+export type InterruptionInterventionType = (typeof TIM_INTERVENTION_TYPE_CATALOG)[number];
+
+export interface InterruptionChapterSuggestion {
+  topic: string;
+  title: string;
+  description: string;
+  /** ILE chapter that produced the chapter-complete PoW. */
+  source_step_id?: string | null;
+}
 
 export interface InterruptionIntervention {
   type: InterruptionInterventionType;
@@ -12,9 +29,13 @@ export interface InterruptionIntervention {
   message: string;
   /** Why this intervention is predicted at this moment. */
   rationale?: string;
-  /** Machine-oriented hint for the consumer system (e.g. call_lwm_snapshot). */
+  /** Machine-oriented hint for the consumer system (e.g. call_lwm_snapshot, expand_chapter_map). */
   consumer_action?: string;
   block_id?: string | null;
+  /** When type is chapter_map_expand: first chapter to place (compat with a 1-item list). */
+  chapter_suggestion?: InterruptionChapterSuggestion | null;
+  /** When type is chapter_map_expand: one or more adjacent chapters to place at once. */
+  chapter_suggestions?: InterruptionChapterSuggestion[] | null;
 }
 
 export interface PredictiveInterruption {
@@ -47,6 +68,7 @@ export type ProofOfWorkApiEndpoint =
   | "upload_ile_chat"
   | "upload_ile_idle"
   | "upload_ile_speech"
+  | "upload_ile_chapter_done"
   | "lwm_snapshot"
   | "list_tap_links"
   | "create_tap_link"

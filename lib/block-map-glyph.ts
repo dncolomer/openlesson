@@ -9,8 +9,16 @@ export const BLOCK_MAP_CELL_COUNT = BLOCK_MAP_GRID_SIZE * BLOCK_MAP_GRID_SIZE;
 /** Non-empty 3×3 occupancy masks: bits 1..511. */
 export const BLOCK_MAP_PATTERN_MAX = (1 << BLOCK_MAP_CELL_COUNT) - 1;
 
+/** TIM-sourced ILE chapter that has not been opened yet (explore/map glyph). */
+export const TIM_EXPLORE_MAP_ICON = "tim-explore" as const;
+export type TimExploreMapIcon = typeof TIM_EXPLORE_MAP_ICON;
+
 /** `g{bits}` — bits is a 9-bit occupancy mask (1 = filled cell). */
-export type BlockMapIconName = `g${number}`;
+export type BlockMapIconName = `g${number}` | TimExploreMapIcon;
+
+export function isTimExploreMapIcon(value: unknown): value is TimExploreMapIcon {
+  return value === TIM_EXPLORE_MAP_ICON;
+}
 
 /** 2×2 in the top-left of the 3×3 (cells 0,1,3,4). */
 export const DEFAULT_BLOCK_MAP_ICON: BlockMapIconName = "g27";
@@ -61,6 +69,7 @@ export function encodeBlockMapPattern(bits: number): BlockMapIconName | null {
 }
 
 export function blockMapPatternBits(name: BlockMapIconName): number {
+  if (isTimExploreMapIcon(name)) return 0;
   return Number(name.slice(1));
 }
 
@@ -131,6 +140,7 @@ export function isBlockMapIconName(value: unknown): value is BlockMapIconName {
 
 export function parseBlockMapIconName(raw: unknown): BlockMapIconName | null {
   const s = clean(raw);
+  if (s === TIM_EXPLORE_MAP_ICON) return TIM_EXPLORE_MAP_ICON;
   const m = PATTERN_RE.exec(s);
   if (!m) return null;
   return encodeBlockMapPattern(Number(m[1]));

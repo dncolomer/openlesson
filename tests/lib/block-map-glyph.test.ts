@@ -46,6 +46,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
       false,
     ]);
     expect(parseBlockMapIconName("g186")).toBe("g186");
+    expect(parseBlockMapIconName("tim-explore")).toBe("tim-explore");
     expect(parseBlockMapIconName("Square")).toBeNull();
     expect(parseBlockMapIconName("Cube")).toBeNull();
     expect(parseBlockMapIconName("g0")).toBeNull();
@@ -76,6 +77,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(normalizeBlockMapKeyword("Lemmas", "Proofs")).toBe("Lemmas Proofs");
     expect(normalizeBlockMapKeyword(null, "")).toBe("Topic");
     expect(normalizeBlockMapIcon("g27", "X")).toBe("g27");
+    expect(normalizeBlockMapIcon("tim-explore", "X")).toBe("tim-explore");
     expect(isBlockMapIconName(normalizeBlockMapIcon("flask-conical", "Optics"))).toBe(
       true,
     );

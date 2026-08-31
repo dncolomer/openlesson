@@ -269,6 +269,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
                   "coaching_nudge",
                   "proof_of_work_reminder",
                   "performance_review",
+                  "chapter_map_expand",
                 ],
               },
               message: { type: "string" },
@@ -437,7 +438,7 @@ Output rules:
 11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
-   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot).
+   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot), chapter_map_expand (ILE chapter-complete → grow the chapter map).
    - Ground predictions in workspace blocks, eval definition, proof-of-work history, evidence appetite, and collection_guidance — not generic coaching.
    - The consumer schedules the intervention after delay_ms unless any later Proof-of-Work API response supersedes it.
 

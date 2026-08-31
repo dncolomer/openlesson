@@ -7,7 +7,7 @@
  * TAP idle/interruption UX does not use this helper.
  */
 
-export type IleHeliosPowOrigin = "idle" | "speech" | "other";
+export type IleHeliosPowOrigin = "idle" | "speech" | "other" | "chapter_done";
 
 export type IleHeliosTriggerKind = "user_send" | "idle" | "speech" | "interruption";
 

@@ -303,6 +303,7 @@ describe("ILE gather resources", () => {
     expect(ILE_GATHER_SESSION_PERSIST_SELECT).not.toMatch(/workspace_id/);
 
     const api = read("app/api/ile/gather-resources/route.ts");
+    expect(api).toContain("let persisted: WorkspaceExternalResource[] = []");
     expect(api).toContain("resolveIleGatherPersistWorkspaceId");
     expect(api).toContain("ILE_GATHER_SESSION_PERSIST_SELECT");
     expect(api).toContain(".select(ILE_GATHER_SESSION_PERSIST_SELECT)");

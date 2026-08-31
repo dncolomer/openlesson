@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import type {
+  PredictiveInterruption,
+  ProofOfWorkApiInterruption,
+} from "@/lib/pow-api/predictive-interruption";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import {
   applyIleHeliosAutoFire,
@@ -9,6 +12,10 @@ import {
   type IleHeliosPowOrigin,
   type IleHeliosTriggerKind,
 } from "@/lib/ile-helios-trigger";
+import {
+  createIleMapInterruptionScheduler,
+  isChapterMapExpandInterruption,
+} from "@/lib/ile-tim-chapter-complete";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
 
@@ -29,6 +36,7 @@ export type SessionIdleInput = {
   handlePowInterruptionRef: {
     current: IlePowInterruptionHandler;
   };
+  onChapterMapExpand?: (interruption: PredictiveInterruption) => void;
 };
 
 export function useSessionIdle(input: SessionIdleInput) {
@@ -37,9 +45,18 @@ export function useSessionIdle(input: SessionIdleInput) {
     updateChapterWorkspace,
     setHeliosTurnMode,
     handlePowInterruptionRef,
+    onChapterMapExpand,
   } = input;
 
   const pendingKindRef = useRef<Exclude<IleHeliosTriggerKind, "user_send">>("interruption");
+  const onChapterMapExpandRef = useRef(onChapterMapExpand);
+  onChapterMapExpandRef.current = onChapterMapExpand;
+
+  const mapSchedulerRef = useRef(
+    createIleMapInterruptionScheduler((interruption) => {
+      onChapterMapExpandRef.current?.(interruption);
+    }),
+  );
 
 const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
   useCallback(
@@ -62,6 +79,10 @@ const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterrup
 const handlePowInterruption = useCallback<IlePowInterruptionHandler>(
   (interruption, origin = "other") => {
     if (interruption === undefined) return;
+    if (isChapterMapExpandInterruption(interruption)) {
+      mapSchedulerRef.current.apply(interruption);
+      return;
+    }
     pendingKindRef.current = ileHeliosTriggerKindFromPowOrigin(origin);
     applyInterruption(interruption, { origin });
   },
@@ -71,6 +92,8 @@ const handlePowInterruption = useCallback<IlePowInterruptionHandler>(
 useEffect(() => {
   handlePowInterruptionRef.current = handlePowInterruption;
 }, [handlePowInterruption, handlePowInterruptionRef]);
+
+useEffect(() => () => mapSchedulerRef.current.clear(), []);
 
   return {
     handlePowInterruption,

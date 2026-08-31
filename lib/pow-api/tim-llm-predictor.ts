@@ -1,4 +1,5 @@
 import type { TimFeatureEnvelopeV1 } from "./tim-feature-envelope";
+import { TIM_INTERVENTION_TYPE_CATALOG } from "./predictive-interruption-types";
 import { TIM_SYSTEM_ROLE } from "@/lib/prompt-kernel/tim";
 import { WORKSPACE_ONTOLOGY_COMPACT } from "@/lib/prompt-kernel/ontology";
 import {
@@ -42,13 +43,7 @@ const TIM_LLM_SCHEMA = {
       },
       intervention_type: {
         type: "string",
-        enum: [
-          "reflection_prompt",
-          "checkpoint_probe",
-          "coaching_nudge",
-          "proof_of_work_reminder",
-          "performance_review",
-        ],
+        enum: [...TIM_INTERVENTION_TYPE_CATALOG],
         description: "Category of intervention for the consumer system.",
       },
       message: {
@@ -101,7 +96,7 @@ ${TIM_SYSTEM_ROLE}`),
 Feature envelope (schema_version ${features.schema_version}):
 ${JSON.stringify(compact, null, 2)}
 
-Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, or fill evidence_appetite.want_more right now.`),
+Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, fill evidence_appetite.want_more, or (for ILE chapter-complete events) grow the chapter map with chapter_map_expand.`),
   ];
 }
 

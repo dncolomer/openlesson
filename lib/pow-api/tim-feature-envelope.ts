@@ -1,7 +1,8 @@
 import type { PerformanceReport } from "./performance-report";
-import type {
-  InterruptionInterventionType,
-  ProofOfWorkApiEndpoint,
+import {
+  TIM_INTERVENTION_TYPE_CATALOG,
+  type InterruptionInterventionType,
+  type ProofOfWorkApiEndpoint,
 } from "./predictive-interruption-types";
 import {
   learningWorldModelForTim,
@@ -75,11 +76,7 @@ export interface TimFeatureEnvelopeV1 {
 }
 
 export const DEFAULT_TIM_INTERVENTION_TYPES: InterruptionInterventionType[] = [
-  "reflection_prompt",
-  "checkpoint_probe",
-  "coaching_nudge",
-  "proof_of_work_reminder",
-  "performance_review",
+  ...TIM_INTERVENTION_TYPE_CATALOG,
 ];
 
 function summarizeReportForTim(
@@ -146,7 +143,7 @@ export function buildTimFeatureEnvelope(
     performance_summary: summarizeReportForTim(context.report),
     policy: {
       allowed_intervention_types: DEFAULT_TIM_INTERVENTION_TYPES,
-      min_delay_ms: 15_000,
+      min_delay_ms: context.endpoint === "upload_ile_chapter_done" ? 2_000 : 15_000,
       max_delay_ms: 600_000,
     },
   };

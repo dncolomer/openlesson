@@ -2,6 +2,7 @@ import type { ProofOfWorkApiInterruption } from "./predictive-interruption-types
 import { normalizePredictedInterruption } from "./tim-normalize";
 import type { TimFeatureEnvelopeV1 } from "./tim-feature-envelope";
 import { predictRawFromFeaturesWithLlm } from "./tim-llm-predictor";
+import { predictIleChapterCompleteInterruption } from "@/lib/ile-tim-chapter-complete";
 
 /**
  * Pluggable Trace Interruption Model backend.
@@ -29,6 +30,9 @@ export function getTimProvider(): TimProvider {
 export const defaultGrokTimProvider: TimProvider = {
   id: "builtin-grok",
   async predict(features: TimFeatureEnvelopeV1): Promise<ProofOfWorkApiInterruption> {
+    if (features.event.endpoint === "upload_ile_chapter_done") {
+      return predictIleChapterCompleteInterruption(features, predictRawFromFeaturesWithLlm);
+    }
     const raw = await predictRawFromFeaturesWithLlm(features);
     if (!raw?.should_interrupt) {
       return null;

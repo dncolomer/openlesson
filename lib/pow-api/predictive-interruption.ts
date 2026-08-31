@@ -12,13 +12,15 @@ export type {
   ProofOfWorkApiInterruption,
   ProofOfWorkApiEndpoint,
 } from "./predictive-interruption-types";
+export { TIM_INTERVENTION_TYPE_CATALOG } from "./predictive-interruption-types";
 export { normalizePredictedInterruption } from "./tim-normalize";
 
-import type {
-  InterruptionInterventionType,
-  PredictiveInterruption,
-  ProofOfWorkApiEndpoint,
-  ProofOfWorkApiInterruption,
+import {
+  TIM_INTERVENTION_TYPE_CATALOG,
+  type InterruptionInterventionType,
+  type PredictiveInterruption,
+  type ProofOfWorkApiEndpoint,
+  type ProofOfWorkApiInterruption,
 } from "./predictive-interruption-types";
 
 export interface InterruptionContract {
@@ -110,19 +112,13 @@ export function buildInterruptionContract(): InterruptionContract {
       interruption_id: "Stable id for deduplication and supersession tracking.",
       delay_ms: "Non-negative milliseconds before the consumer should trigger the intervention.",
       intervention:
-        "type (reflection_prompt | checkpoint_probe | coaching_nudge | proof_of_work_reminder | performance_review), message, optional rationale, consumer_action, optional block_id.",
+        "type (fixed catalog: reflection_prompt | checkpoint_probe | coaching_nudge | proof_of_work_reminder | performance_review | chapter_map_expand), message, optional rationale, consumer_action (free-form hint), optional block_id, optional chapter_suggestion / chapter_suggestions.",
       confidence: "low | medium | high — how strongly TIM predicts this intervention.",
       predicted_at: "ISO-8601 timestamp when the prediction was issued.",
     },
     supersession_rule:
       "Any subsequent Proof-of-Work API response replaces the previous pending interruption. A new non-null interruption cancels the prior timer; null means no new intervention is predicted from that response.",
-    intervention_types: [
-      "reflection_prompt",
-      "checkpoint_probe",
-      "coaching_nudge",
-      "proof_of_work_reminder",
-      "performance_review",
-    ],
+    intervention_types: [...TIM_INTERVENTION_TYPE_CATALOG],
     example_active: DEFAULT_EXAMPLE,
     example_empty: null,
   };

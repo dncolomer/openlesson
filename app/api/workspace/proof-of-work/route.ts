@@ -9,6 +9,8 @@ import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
 import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import { loadLearningWorldModel } from "@/lib/pow-api/learning-world-model-store";
+import { isIleChapterDonePow } from "@/lib/ile-tim-chapter-complete";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -94,6 +96,18 @@ export async function POST(req: NextRequest) {
       speech_transcript:
         typeof metadata.transcript_snapshot === "string" ? metadata.transcript_snapshot : null,
     });
+
+    if (interruptionContext && isIleChapterDonePow(toolName, toolAction)) {
+      try {
+        const loaded = await loadLearningWorldModel(access.supabase, workspaceId, {
+          user_id: access.auth.user_id,
+          guest_user_id: access.auth.guest_user_id,
+        });
+        interruptionContext.learning_world_model = loaded.model;
+      } catch {
+        /* TIM still predicts from chapter-complete metadata when LWM is missing. */
+      }
+    }
 
     const payload = interruptionContext
       ? await withProofOfWorkApiResponse(

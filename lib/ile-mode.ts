@@ -358,6 +358,8 @@ export function buildIleChapterDonePowToolData(input: {
   reviewCanClose?: boolean | null;
 }): Record<string, unknown> {
   return {
+    event: "chapter_done",
+    tool_action: "chapter_done",
     stepIndex: input.stepIndex,
     stepId: input.stepId,
     stepDescription: (input.stepDescription || "").slice(0, 120),

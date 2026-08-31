@@ -666,7 +666,7 @@ describe("Practice Portal structural wiring", () => {
     expect((enCopy.onboardingGuide?.tap?.step1?.body || "").length).toBeGreaterThan(180);
     // Live ILE remaining first + last slides (step2 thought-interface tutorial is not the live intro)
     expect(enCopy.onboardingGuide?.ile?.step1?.body).toMatch(/Chapters on a spatial grid/i);
-    expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/Start block/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);

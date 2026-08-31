@@ -659,5 +659,6 @@ const handleStopScreenCapture = useCallback(() => {
     handleStopScreenCapture,
     sessionPowArtifacts,
     sessionPowArtifactsRef,
+    recordSessionPowArtifact,
   };
 }

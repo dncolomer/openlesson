@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import {
+  mergeIleGatherPlannedResources,
+  filterPlannedResourcesForIleBlock,
+} from "@/lib/ile-gather-resources";
+import {
+  normalizeExternalResourceList,
+  type WorkspaceExternalResource,
+} from "@/lib/workspace-external-resources";
 
 interface PlanFile {
   id: string;
@@ -13,6 +21,10 @@ interface PlanFile {
 
 interface WorkspaceResourcesPanelProps {
   workspaceId: string;
+  blockId?: string | null;
+  gatheredResources?: WorkspaceExternalResource[];
+  ayclToken?: string;
+  ileToken?: string;
 }
 
 function FileTypeIcon({ mimeType }: { mimeType: string }) {
@@ -43,21 +55,49 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function WorkspaceResourcesPanel({ workspaceId }: WorkspaceResourcesPanelProps) {
+export function WorkspaceResourcesPanel({
+  workspaceId,
+  blockId = null,
+  gatheredResources = [],
+  ayclToken,
+}: WorkspaceResourcesPanelProps) {
   const { t } = useI18n();
   const [files, setFiles] = useState<PlanFile[]>([]);
+  const [fetchedResources, setFetchedResources] = useState<WorkspaceExternalResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/workspace/files?workspaceId=${workspaceId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.files) setFiles(data.files);
+    const qs = new URLSearchParams({ workspaceId });
+    if (ayclToken) qs.set("ayclToken", ayclToken);
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/workspace/files?workspaceId=${workspaceId}`).then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/workspace/external-resources?${qs.toString()}`).then((r) => r.json()).catch(() => ({})),
+    ])
+      .then(([fileData, resourceData]) => {
+        if (cancelled) return;
+        if (Array.isArray(fileData.files)) setFiles(fileData.files);
+        setFetchedResources(normalizeExternalResourceList(resourceData.resources || []));
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [workspaceId]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, ayclToken]);
+
+  const planned = useMemo(
+    () =>
+      mergeIleGatherPlannedResources({
+        fetched: fetchedResources,
+        local: gatheredResources,
+        blockId,
+      }),
+    [fetchedResources, gatheredResources, blockId],
+  );
+  const scopedPlanned = filterPlannedResourcesForIleBlock(planned, blockId);
 
   const handleDownload = async (file: PlanFile) => {
     setDownloadingId(file.id);
@@ -99,7 +139,7 @@ export function WorkspaceResourcesPanel({ workspaceId }: WorkspaceResourcesPanel
           <div className="flex items-center justify-center py-8 text-neutral-600 text-xs">
             {t('common.loading')}
           </div>
-        ) : files.length === 0 ? (
+        ) : files.length === 0 && scopedPlanned.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-12 text-neutral-600">
             <svg className="w-6 h-6 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
@@ -108,6 +148,24 @@ export function WorkspaceResourcesPanel({ workspaceId }: WorkspaceResourcesPanel
           </div>
         ) : (
           <div className="space-y-1">
+            {scopedPlanned.map((resource) => (
+              <a
+                key={resource.id}
+                data-ile-gather-planned
+                data-ile-gather-block={blockId || undefined}
+                href={resource.url}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-none text-left hover:bg-neutral-800/60 transition-colors group"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-neutral-300 truncate group-hover:text-white transition-colors">
+                    {resource.title}
+                  </p>
+                  <p className="text-[10px] text-neutral-600 truncate">{resource.url}</p>
+                </div>
+              </a>
+            ))}
             {files.map((file) => (
               <button
                 key={file.id}

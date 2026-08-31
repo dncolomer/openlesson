@@ -2,6 +2,12 @@
 
 import { addExpandProgressFraction, type AddExpandJob } from "@/lib/add-block-range-density";
 import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-clusters";
+import {
+  ileGatherJobShowsFinishLink,
+  ileGatherProgressFraction,
+  ILE_GATHER_RESOURCES_TOOL,
+  type IleGatherJob,
+} from "@/lib/ile-gather-resources";
 
 type MapSaveJob = {
   id: string;
@@ -15,6 +21,8 @@ export function MapJobIndicators({
   clusterMapJob,
   expandJobs,
   onAbortExpandJob,
+  gatherJobs,
+  onOpenGatherResources,
   minimapStackHeight,
   mountMapNotes,
 }: {
@@ -26,6 +34,8 @@ export function MapJobIndicators({
   } | null;
   expandJobs?: readonly AddExpandJob[] | null;
   onAbortExpandJob?: (jobId: string) => void;
+  gatherJobs?: readonly IleGatherJob[] | null;
+  onOpenGatherResources?: () => void;
   minimapStackHeight: number;
   mountMapNotes: boolean;
 }) {
@@ -225,6 +235,77 @@ export function MapJobIndicators({
                   <p className="text-[10px] text-red-300/90" data-map-expand-job-error>
                     {job.error}
                   </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {Array.isArray(gatherJobs) && gatherJobs.length > 0 ? (
+        <div
+          data-ile-gather-jobs
+          data-ile-gather-job-count={gatherJobs.length}
+          className="pointer-events-auto absolute right-2 z-20 flex max-h-[min(40vh,16rem)] flex-col gap-1.5 overflow-y-auto"
+          style={{
+            top:
+              stackTop +
+              (mapSaveJobs.length > 0 ? mapSaveJobs.length * 52 + 8 : 0) +
+              (clusterMapJob?.active ? 56 : 0) +
+              (Array.isArray(expandJobs) && expandJobs.length > 0
+                ? expandJobs.length * 72 + 8
+                : 0),
+            width: MINIMAP_FRAME_WIDTH,
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {gatherJobs.map((job) => {
+            const fraction = ileGatherProgressFraction(job);
+            const running = job.status === "running";
+            const finish = ileGatherJobShowsFinishLink(job);
+            return (
+              <div
+                key={job.id}
+                data-ile-gather-progress
+                data-ile-gather-job={job.id}
+                data-ile-gather-job-status={job.status}
+                className="rounded-none border border-white/15 bg-neutral-950/95 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              >
+                <div className="mb-1 flex items-start justify-between gap-1.5">
+                  <p className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-100">
+                    {job.label}
+                  </p>
+                  <span className="shrink-0 font-mono text-[10px] text-neutral-300">
+                    {job.completed}/{job.total}
+                  </span>
+                </div>
+                <div
+                  className="mb-1.5 h-1.5 w-full overflow-hidden rounded-none bg-neutral-800"
+                  role="progressbar"
+                  aria-valuenow={job.completed}
+                  aria-valuemin={0}
+                  aria-valuemax={job.total}
+                  aria-label={job.label}
+                  data-ile-gather-progress-bar
+                >
+                  <div
+                    className="h-full rounded-none bg-white transition-[width] duration-300 ease-out"
+                    data-ile-gather-progress-fill
+                    style={{ width: `${Math.round(fraction * 100)}%` }}
+                  />
+                </div>
+                {finish ? (
+                  <button
+                    type="button"
+                    data-ile-gather-open-resources
+                    data-ile-gather-open-tool={ILE_GATHER_RESOURCES_TOOL}
+                    onClick={() => onOpenGatherResources?.()}
+                    className="w-full rounded-none border border-white/50 bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:bg-neutral-100"
+                  >
+                    Open resources
+                  </button>
+                ) : running ? null : job.error ? (
+                  <p className="text-[10px] text-red-300/90">{job.error}</p>
                 ) : null}
               </div>
             );

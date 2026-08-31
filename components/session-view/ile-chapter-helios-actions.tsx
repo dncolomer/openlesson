@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { Check, Pencil, Pickaxe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { ThoughtButton } from "@/components/thought-ui/ThoughtUi";
 
@@ -18,6 +19,12 @@ export type IleChapterHeliosActionsProps = {
   onUpdateChapter: (stepId: string, description: string) => Promise<void>;
   closeReviewBlocked?: boolean;
   closeReviewReason?: string | null;
+  onGatherResources?: () => void;
+  gatherBusy?: boolean;
+  gatherWarning?: string | null;
+  onDismissGatherWarning?: () => void;
+  /** Spoken-turn close — rendered in the Actions grid, owned by Helios. */
+  doneAnswering?: ReactNode;
 };
 
 export function IleChapterHeliosActions({
@@ -34,6 +41,11 @@ export function IleChapterHeliosActions({
   onUpdateChapter,
   closeReviewBlocked = false,
   closeReviewReason = null,
+  onGatherResources,
+  gatherBusy = false,
+  gatherWarning = null,
+  onDismissGatherWarning,
+  doneAnswering,
 }: IleChapterHeliosActionsProps) {
   const { t } = useI18n();
   const guestAccessBody = ayclToken
@@ -88,17 +100,57 @@ export function IleChapterHeliosActions({
     }
   }, [chapterId, editDraft, onUpdateChapter, savingEdit]);
 
-  if (!chapterId || chapterIndex < 0) return null;
+  if (!chapterId || chapterIndex < 0) {
+    if (!doneAnswering) return null;
+    return (
+      <div
+        data-ile-chapter-actions
+        data-ile-chapter-helios-actions
+        className="shrink-0 border-t border-neutral-800 pt-2"
+      >
+        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+          Actions
+        </p>
+        {doneAnswering}
+      </div>
+    );
+  }
 
   return (
-    <div data-ile-chapter-helios-actions className="shrink-0">
+    <div
+      data-ile-chapter-actions
+      data-ile-chapter-helios-actions
+      className="shrink-0 border-t border-neutral-800 pt-2"
+    >
+      <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+        Actions
+      </p>
+      {gatherWarning ? (
+        <div
+          data-ile-gather-warning
+          className="mb-1.5 rounded-none border border-neutral-600 bg-neutral-900/80 p-2"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-300">
+            {t("chapterMap.gatherInsufficientTitle")}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-neutral-400">{gatherWarning}</p>
+          <button
+            type="button"
+            data-ile-gather-warning-dismiss
+            className="mt-2 w-full rounded-none border border-neutral-500 bg-neutral-800 px-2 py-1.5 text-[11px] font-medium text-neutral-100 hover:bg-neutral-700"
+            onClick={() => onDismissGatherWarning?.()}
+          >
+            {t("chapterMap.gatherWarningConfirm")}
+          </button>
+        </div>
+      ) : null}
       {editing ? (
         <div className="space-y-2">
           <input
             value={editPrompt}
             onChange={(e) => setEditPrompt(e.target.value)}
             placeholder={t("chapterMap.editPromptPlaceholder")}
-            className="w-full rounded-none border border-neutral-700 bg-black/60 px-2 py-1.5 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none"
+            className="w-full rounded-none border border-neutral-700 bg-black/60 px-2 py-1 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none"
           />
           <button
             type="button"
@@ -125,12 +177,12 @@ export function IleChapterHeliosActions({
           <textarea
             value={editDraft}
             onChange={(e) => setEditDraft(e.target.value)}
-            rows={3}
+            rows={2}
             className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-2 py-1.5 text-sm text-neutral-200 focus:border-neutral-500 focus:outline-none"
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             <ThoughtButton
-              size="lg"
+              size="md"
               className="w-full"
               onClick={() => {
                 setEditing(false);
@@ -140,7 +192,7 @@ export function IleChapterHeliosActions({
               {t("chapterMap.cancel")}
             </ThoughtButton>
             <ThoughtButton
-              size="lg"
+              size="md"
               className="w-full"
               disabled={!editDraft.trim() || savingEdit}
               onClick={() => void saveEdit()}
@@ -148,34 +200,50 @@ export function IleChapterHeliosActions({
               {savingEdit ? "…" : t("chapterMap.save")}
             </ThoughtButton>
           </div>
+          {doneAnswering}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             <ThoughtButton
-              size="lg"
-              className="h-12 w-full text-sm"
+              size="md"
+              className="w-full gap-1.5"
               onClick={() => {
                 setEditing(true);
                 setEditDraft(chapterDescription);
               }}
             >
+              <Pencil className="size-3.5 shrink-0" aria-hidden />
               {t("chapterMap.edit")}
             </ThoughtButton>
             <ThoughtButton
-              size="lg"
-              className="h-12 w-full text-sm"
+              size="md"
+              className="w-full gap-1.5"
               disabled={
                 chapterIndex !== activeChapterIndex
                 || chapterCompleted
               }
               onClick={() => onChapterDone()}
             >
+              <Check className="size-3.5 shrink-0" aria-hidden />
               {t("chapterMap.complete")}
             </ThoughtButton>
+            {onGatherResources ? (
+              <ThoughtButton
+                size="md"
+                className="w-full gap-1.5"
+                data-ile-gather-resources
+                disabled={gatherBusy}
+                onClick={() => onGatherResources()}
+              >
+                <Pickaxe className="size-3.5 shrink-0" aria-hidden />
+                {gatherBusy ? t("chapterMap.gatheringResources") : t("chapterMap.gatherResources")}
+              </ThoughtButton>
+            ) : null}
+            {doneAnswering ? <div className="min-w-0">{doneAnswering}</div> : null}
           </div>
           {closeReviewBlocked ? (
-            <div className="mt-2 rounded-none border border-neutral-700 bg-neutral-950/90 p-2" data-ile-chapter-close-blocked>
+            <div className="mt-1.5 rounded-none border border-neutral-700 bg-neutral-950/90 p-2" data-ile-chapter-close-blocked>
               <p className="text-xs leading-relaxed text-neutral-400">
                 {closeReviewReason || "Session proof of work is not enough to close this chapter."}
               </p>

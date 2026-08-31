@@ -59,7 +59,6 @@ export type SessionChromeProps = {
   onCloseHelios: () => void;
   introOpen: boolean;
   introWidget: ReactNode;
-  onCloseIntro: () => void;
   voiceBar: ReactNode;
   powCounts: IlePowTypeCounts;
   participantIdentity?: PowParticipantIdentity | null;
@@ -106,7 +105,6 @@ export function SessionChrome({
   onCloseHelios,
   introOpen,
   introWidget,
-  onCloseIntro,
   voiceBar,
   powCounts,
   participantIdentity = null,
@@ -171,17 +169,6 @@ export function SessionChrome({
             data-ile-intro-widget
             className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex h-[min(88vh,44rem)] w-[min(40rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95"
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-2 py-1">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">Intro</span>
-              <button
-                type="button"
-                data-ile-intro-widget-close
-                onClick={onCloseIntro}
-                className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
-              >
-                ✕
-              </button>
-            </div>
             <div className="min-h-0 flex-1 overflow-hidden">{introWidget}</div>
           </div>
         ) : null}

@@ -28,6 +28,8 @@ function writeScratch(name: string, body: string) {
 type EnOnboarding = {
   onboardingGuide: {
     ile: {
+      kicker: string;
+      title: string;
       step1: { title: string; body: string };
       step2: { title: string; body: string; bodyProject: string };
       step3: { title: string; body: string; bodyProject: string; start: string; highlight: string };
@@ -122,16 +124,27 @@ describe("session intro visuals", () => {
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.title);
 
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step1.title);
+    expect(ileLearningText).toContain(en.onboardingGuide.ile.kicker);
+    expect(ileLearningText).toContain(en.onboardingGuide.ile.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.start);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.highlight);
-    expect(ileLearningText).toMatch(/speaking your thoughts out loud/i);
-    expect(ileLearningText).toMatch(/using tools to explore the map/i);
+    expect(ileLearningHtml).toContain("data-onboarding-start");
+    expect(ileLearningHtml).not.toContain("data-ile-intro-widget-close");
+    expect(ileLearningText).not.toMatch(/Start block/i);
+    expect(en.onboardingGuide.ile.step3.start).toBe("Start");
+    expect(ileLearningText).toMatch(/speak your thoughts out loud/i);
+    expect(ileLearningText).toMatch(/use tools to explore the map/i);
+    expect(ileLearningText).toMatch(/win by completing chapters/i);
+    expect(ileLearningText).toMatch(/map can be further built/i);
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step2.title);
 
     expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step1.title);
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.start);
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.highlight);
+    expect(ileProjectHtml).toContain("data-onboarding-start");
+    expect(ileProjectText).toMatch(/win by completing chapters/i);
+    expect(ileProjectText).toMatch(/map can be further built/i);
     expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step2.title);
 
     expect(tapBody).toMatch(/think out loud/i);
@@ -200,7 +213,7 @@ describe("session intro visuals", () => {
         "tapSlideCount=2 ileSlideCount=1",
         "thoughtInterfaceTutorial=gone",
         "tapModes=conversational+exercise lastSlide=topic-cards/Play",
-        "ileModes=learning+project lastSlide=Start block",
+        "ileModes=learning+project lastSlide=Start",
         `tapTitles=${en.onboardingGuide.tap.step1.title} | ${en.onboardingGuide.tap.step3.title}`,
         `ileTitle=${en.onboardingGuide.ile.step3.title}`,
       ].join("\n") + "\n",

@@ -38,8 +38,8 @@ import { SessionChrome } from "@/components/session-view/session-chrome";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
 import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { countIlePowByType } from "@/lib/ile-pow-counters";
 import { isIleMapOverlayTool } from "@/lib/ile-map-chrome";
+import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
 import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
@@ -417,6 +417,7 @@ export function SessionView({
     handleStopScreenCapture,
     sessionPowArtifacts,
     sessionPowArtifactsRef,
+    recordSessionPowArtifact,
   } = useSessionRuntime({
     sessionRef,
     sessionId: session?.id,
@@ -433,6 +434,33 @@ export function SessionView({
     isPaused,
     showWelcomePanel,
     handlePowInterruptionRef,
+  });
+
+  const sessionBlockId =
+    typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined;
+  const {
+    availableCounts,
+    gatherJobs,
+    gatherWarning,
+    gatherBusy,
+    gatheredResources,
+    onGatherResources,
+    dismissGatherWarning,
+    openGatheredResources,
+  } = useIleGatherResources({
+    sessionId: session?.id,
+    workspaceId:
+      typeof session?.metadata?.workspace_id === "string"
+        ? session.metadata.workspace_id
+        : undefined,
+    blockId: sessionBlockId,
+    chapterId: activeStep?.id,
+    chapterDescription: activeStep?.description || "",
+    artifacts: sessionPowArtifacts,
+    recordSessionPowArtifact,
+    onOpenResources: () => setActiveTool("plan-resources"),
+    ileToken,
+    ayclToken,
   });
 
   const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
@@ -834,6 +862,10 @@ export function SessionView({
               onUpdateChapter: handleUpdateChapter,
               closeReviewBlocked: Boolean(chapterCloseReview && !chapterCloseReview.canClose),
               closeReviewReason: chapterCloseReview?.reason ?? null,
+              onGatherResources,
+              gatherBusy,
+              gatherWarning,
+              onDismissGatherWarning: dismissGatherWarning,
             }
           : null
       }
@@ -983,13 +1015,12 @@ export function SessionView({
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
-        powCounts={countIlePowByType(sessionPowArtifacts)}
+        powCounts={availableCounts}
         participantIdentity={participantIdentity}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
         introOpen={showWelcomePanel}
-        onCloseIntro={() => { void handleWelcomePlay(); }}
         introWidget={
           <SessionOnboardingGuide
             key={welcomeOpenNonce}
@@ -1041,6 +1072,8 @@ export function SessionView({
               ileToken ||
               "local"
             }
+            gatherJobs={gatherJobs}
+            onOpenGatherResources={openGatheredResources}
           />
         }
         toolOverlay={
@@ -1052,6 +1085,8 @@ export function SessionView({
             sessionPlan={sessionPlan}
             ayclToken={ayclToken}
             ileToken={ileToken}
+            gatherBlockId={sessionBlockId}
+            gatheredResources={gatheredResources}
             locale={locale}
             planLoading={planLoading}
             activeChapterIndex={activeChapterIndex}

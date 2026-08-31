@@ -91,6 +91,8 @@ export function BlockSkillGrid({
   dynamicContentGeneratedIds = null,
   expandJobs = null,
   onAbortExpandJob,
+  gatherJobs = null,
+  onOpenGatherResources,
   clusterMapJob = null,
   selectiveExplanationActive = false,
   selectiveExplanationPolygon = null,
@@ -1022,6 +1024,8 @@ export function BlockSkillGrid({
         clusterMapJob,
         expandJobs,
         onAbortExpandJob,
+        gatherJobs,
+        onOpenGatherResources,
         minimapStackHeight,
         mountMapNotes,
       }}

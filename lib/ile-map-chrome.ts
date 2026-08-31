@@ -9,7 +9,7 @@ export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
 /** Clearance above the full-width voice bar (tools widget + chapter inspector). */
 export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-24";
 
-export const ILE_HELIOS_WIDGET_WIDTH_PX = 440;
+export const ILE_HELIOS_WIDGET_WIDTH_PX = 520;
 
 export const ILE_MAP_OVERLAY_TOOLS = [
   "canvas",

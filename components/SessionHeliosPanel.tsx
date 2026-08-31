@@ -190,8 +190,7 @@ export function SessionHeliosPanel({
         </div>
       )}
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
-        {chapterActions ? <IleChapterHeliosActions {...chapterActions} /> : null}
+      <div className="relative z-10 flex h-full min-h-0 flex-col p-3">
         {isInitializing && !hasPlanSteps ? (
           <div className="rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
             {sessionControls && (
@@ -362,7 +361,7 @@ export function SessionHeliosPanel({
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-[42vh] flex-1 flex-col" data-helios-bubbles="visible">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-helios-bubbles="visible">
                 <DialogueSplit
                   lastUserTurn={lastUserTurn}
                   lastAssistantTurn={lastAssistantTurn}
@@ -383,33 +382,44 @@ export function SessionHeliosPanel({
               </div>
             )}
 
-            <div className="relative min-w-0 shrink-0">
-            <div
-              data-ile-im-done-answering-overlay
-              className="relative z-20 mb-2"
-            >
-              <ImDoneAnsweringControl
-                sessionId={sessionId}
-                thoughts={thought.stashedThoughts}
-                formingText={
-                  typeof thought.getFormingText === "function"
-                    ? thought.getFormingText()
-                    : thought.crystallizableText
-                }
-                sendThought={(text, ids) =>
-                  thought.sendThought(text, ids, { skipTrace: true })
-                }
-                logEndOfChainOfThought={(event) => thought.logTrace(event)}
-                onClearForming={thought.clearCurrentTranscription}
-                disabled={chapterThoughtsLocked || thought.isSending}
-              />
-            </div>
+            <IleChapterHeliosActions
+              {...(chapterActions ?? {
+                chapterId: null,
+                chapterIndex: -1,
+                chapterDescription: "",
+                chapterCompleted: false,
+                activeChapterIndex: -1,
+                onChapterDone: () => {},
+                onUpdateChapter: async () => {},
+              })}
+              doneAnswering={
+                <div
+                  data-ile-im-done-answering-overlay
+                  className="relative z-20 min-w-0"
+                >
+                  <ImDoneAnsweringControl
+                    sessionId={sessionId}
+                    thoughts={thought.stashedThoughts}
+                    formingText={
+                      typeof thought.getFormingText === "function"
+                        ? thought.getFormingText()
+                        : thought.crystallizableText
+                    }
+                    sendThought={(text, ids) =>
+                      thought.sendThought(text, ids, { skipTrace: true })
+                    }
+                    logEndOfChainOfThought={(event) => thought.logTrace(event)}
+                    onClearForming={thought.clearCurrentTranscription}
+                    disabled={chapterThoughtsLocked || thought.isSending}
+                  />
+                </div>
+              }
+            />
             {sessionControls ? (
-              <div className="mb-2 flex w-full flex-col items-center gap-2">
+              <div className="mt-2 flex w-full shrink-0 flex-col items-center gap-2">
                 {sessionControls}
               </div>
             ) : null}
-            </div>
           </>
         )}
       </div>

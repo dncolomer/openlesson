@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MessageCircle } from "lucide-react";
 import {
   closeIleImDoneAnswering,
   collectUnflaggedIleDoneAnsweringPow,
@@ -28,8 +29,9 @@ export function ImDoneAnsweringButton({
       title="I'm done answering"
       disabled={disabled}
       onClick={onClick}
-      className="w-full rounded-none border-2 border-neutral-900 bg-white px-4 py-2.5 text-[13px] font-semibold tracking-[0.04em] text-neutral-900 outline outline-1 outline-offset-2 outline-white/70 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex w-full items-center justify-center gap-1.5 rounded-none border-2 border-neutral-900 bg-white px-4 py-2.5 text-[13px] font-semibold tracking-[0.04em] text-neutral-900 outline outline-1 outline-offset-2 outline-white/70 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
     >
+      <MessageCircle className="size-3.5 shrink-0" aria-hidden />
       I'm done answering
     </button>
   );

@@ -10,6 +10,7 @@ import {
   ensureChapterGridPositions,
   sessionStepsToSkillGridNodes,
 } from "@/lib/chapter-skill-grid";
+import type { IleGatherJob } from "@/lib/ile-gather-resources";
 
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
@@ -23,6 +24,8 @@ interface ChapterMapPanelProps {
   onAddChapter: (description: string, position: { row: number; col: number }) => Promise<void>;
   onEnsurePositions?: (plan: SessionPlan) => void;
   learnerScopeId?: string | null;
+  gatherJobs?: readonly IleGatherJob[] | null;
+  onOpenGatherResources?: () => void;
 }
 
 export function ChapterMapPanel({
@@ -37,6 +40,8 @@ export function ChapterMapPanel({
   onAddChapter,
   onEnsurePositions,
   learnerScopeId = null,
+  gatherJobs = null,
+  onOpenGatherResources,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -133,6 +138,8 @@ export function ChapterMapPanel({
         followCell={activeCell}
         onAddBlock={handleAddAtCell}
         labels={gridLabels}
+        gatherJobs={gatherJobs}
+        onOpenGatherResources={onOpenGatherResources}
       />
     </div>
   );

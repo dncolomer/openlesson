@@ -11,6 +11,7 @@ import { NotebookSubmitButton } from "@/components/session/NotebookSubmitButton"
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import type { Tool } from "@/components/ToolsPanel";
 import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
+import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { Session, SessionPlan, SessionPlanStep } from "@/lib/storage";
@@ -77,6 +78,8 @@ export type SessionToolPanesProps = {
   isMobile: boolean;
   onLeaveIleTab: (reason: "grok" | "grokipedia") => void;
   toolPrefillQuery?: string;
+  gatherBlockId?: string | null;
+  gatheredResources?: WorkspaceExternalResource[];
 };
 
 export function SessionToolPanes(props: SessionToolPanesProps) {
@@ -85,6 +88,8 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     activeTool,
     shouldBlockTools,
     session,
+    ayclToken,
+    ileToken,
     isRecording,
     activeStep,
     whiteboardData,
@@ -126,6 +131,8 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     isMobile,
     onLeaveIleTab,
     toolPrefillQuery,
+    gatherBlockId = null,
+    gatheredResources = [],
   } = props;
 
   return (
@@ -244,7 +251,13 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
         )}
         {activeTool === "plan-resources" && session?.metadata?.workspace_id && !isMobile && (
           <div className="h-full overflow-hidden">
-            <WorkspaceResourcesPanel workspaceId={session.metadata.workspace_id as string} />
+            <WorkspaceResourcesPanel
+              workspaceId={session.metadata.workspace_id as string}
+              blockId={gatherBlockId}
+              gatheredResources={gatheredResources}
+              ayclToken={ayclToken}
+              ileToken={ileToken}
+            />
           </div>
         )}
         {activeTool === "grokipedia" && (

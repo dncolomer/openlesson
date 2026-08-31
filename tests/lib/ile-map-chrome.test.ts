@@ -57,6 +57,16 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(view).toContain("heliosOpen={heliosWidgetOpen}");
     expect(view).toContain("introOpen={showWelcomePanel}");
     expect(chrome).toContain("data-ile-intro-widget");
+    expect(chrome).not.toContain("data-ile-intro-widget-close");
+    expect(chrome).not.toContain(">Briefing</span>");
+    expect(chrome).not.toContain(">Intro</span>");
+    const introWidgetIdx = chrome.indexOf("data-ile-intro-widget");
+    const heliosOpenIdx = chrome.indexOf("{heliosOpen ? (");
+    expect(introWidgetIdx).toBeGreaterThan(-1);
+    expect(heliosOpenIdx).toBeGreaterThan(introWidgetIdx);
+    expect(chrome.slice(introWidgetIdx, heliosOpenIdx)).not.toContain("✕");
+    expect(chrome).not.toContain("onCloseIntro");
+    expect(view).not.toContain("onCloseIntro");
     expect(chrome).toContain("h-[min(88vh,44rem)]");
     expect(view).toContain("<SessionOnboardingGuide");
     expect(helios).not.toContain("SessionOnboardingGuide");
@@ -72,7 +82,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(frame).toContain("data-ile-helios-widget");
     expect(frame).toContain(">Chapter</span>");
     expect(chrome).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
-    expect(ILE_HELIOS_WIDGET_WIDTH_PX).toBeGreaterThan(400);
+    expect(ILE_HELIOS_WIDGET_WIDTH_PX).toBeGreaterThanOrEqual(520);
 
     expect(chrome).not.toContain("ResizablePane");
     expect(chrome).not.toContain("session-split-tools-helios");
@@ -161,6 +171,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-24");
     const heliosActions = read("components/session-view/ile-chapter-helios-actions.tsx");
     expect(heliosActions).toContain("data-ile-chapter-helios-actions");
+    expect(heliosActions).toContain("data-ile-chapter-actions");
     expect(heliosActions).toContain('t("chapterMap.complete")');
     expect(heliosActions).not.toContain('t("chapterMap.reloadChapter")');
     expect(heliosActions).not.toContain('t("chapterMap.loadChapter")');

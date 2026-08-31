@@ -1609,7 +1609,12 @@
     "probes": "{count, plural, other {# 个探针}}",
     "hasWork": "有笔记",
     "editPromptPlaceholder": "描述如何改写这一章…",
-    "editSuggest": "建议改写"
+    "editSuggest": "建议改写",
+    "gatherResources": "Gather resources",
+    "gatheringResources": "Gathering…",
+    "gatherInsufficientTitle": "Not enough Proof of Resources / Proof of Work",
+    "gatherWarningConfirm": "OK",
+    "gatherOpenResources": "Open resources"
   },
   "heliosChat": {
     "assistant": "Helios",
@@ -2505,8 +2510,8 @@
   },
   "onboardingGuide": {
     "ile": {
-      "kicker": "What to expect",
-      "title": "Your Project Workspace",
+      "kicker": "Mission briefing",
+      "title": "Command the map",
       "progressLabel": "Onboarding steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
@@ -2525,15 +2530,15 @@
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them."
       },
       "step3": {
-        "title": "You drive the session",
-        "highlight": "You control this session mostly by speaking your thoughts out loud and by using tools to explore the map.",
-        "body": "Talk as you work — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Press I'm done answering to close a chain of thought. Take your time — messy thinking is how real learning surfaces.",
-        "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
-        "quoteAuthor": "Abigail Adams",
-        "start": "Start block",
-        "starting": "Starting…",
-        "titleProject": "You drive the session",
-        "bodyProject": "Talk as you work each chapter exercise — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces."
+        "title": "Explore the map",
+        "highlight": "Speak your thoughts out loud and use tools to explore the map. Fog lifts as you scout. You win by completing chapters — and this map can be further built.",
+        "body": "Commander, this map is yours. Fog covers uncharted ground. Pan, zoom, and scout — double-click a chapter to move in.\n\nYou win by completing chapters. That is the objective. Finish them to hold the field.\n\nThe map can be further built. Add, edit, and expand chapters as you learn. Territory grows with you.\n\nPress Start. Recording begins. Talk as you work. I'm done answering closes a turn. Complete wins the chapter.",
+        "quoteText": "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.",
+        "quoteAuthor": "Sun Tzu",
+        "start": "Start",
+        "starting": "Deploying…",
+        "titleProject": "Explore the map",
+        "bodyProject": "Commander, each chapter is an exercise on this map. Fog covers uncharted ground. Pan, zoom, and scout — double-click to move in.\n\nYou win by completing chapters. That is the objective. Finish them to hold the field.\n\nThe map can be further built. Add, edit, and expand chapters as you learn. Territory grows with you.\n\nPress Start. Recording begins. Talk as you work. Del stashes. I'm done answering closes a turn. Complete wins the chapter."
       }
     },
     "tap": {

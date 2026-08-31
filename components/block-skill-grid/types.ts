@@ -1,4 +1,5 @@
 import type { AddExpandJob } from "@/lib/add-block-range-density";
+import type { IleGatherJob } from "@/lib/ile-gather-resources";
 import type { GridCell, SkillGridNode } from "@/lib/block-skill-grid";
 import type { UnusableCell } from "@/lib/map-ground-rules";
 import type { StretchHandle } from "@/lib/skill-grid-ops";
@@ -30,6 +31,8 @@ export interface BlockSkillGridProps {
   dynamicContentGeneratedIds?: ReadonlySet<string> | readonly string[] | null;
   expandJobs?: readonly AddExpandJob[] | null;
   onAbortExpandJob?: (jobId: string) => void;
+  gatherJobs?: readonly IleGatherJob[] | null;
+  onOpenGatherResources?: () => void;
   clusterMapJob?: {
     active: boolean;
     progress: number;

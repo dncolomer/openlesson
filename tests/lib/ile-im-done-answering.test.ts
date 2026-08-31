@@ -265,6 +265,7 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(button).toContain("I'm done answering");
     expect(button).toContain("data-ile-im-done-answering");
     expect(button).toContain("bg-white");
+    expect(button).toContain("MessageCircle");
     expect(button).not.toContain("<svg");
     expect(button).not.toContain("data-ile-im-done-answering-shape");
     expect(button).not.toMatch(/A52 52/);
@@ -275,6 +276,8 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(helios).not.toContain("data-ile-transcription-box");
     expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).toContain("data-ile-im-done-answering-overlay");
+    expect(helios).toContain("doneAnswering");
+    expect(helios).not.toContain("min-h-[42vh]");
     expect(helios).not.toContain("absolute inset-x-0 bottom-0");
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).not.toContain("data-ile-submit-last-thought");

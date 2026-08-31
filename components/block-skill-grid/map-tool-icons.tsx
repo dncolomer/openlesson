@@ -138,7 +138,7 @@ export function ToolIcon({
   id: BlockMapToolId;
   lassoShape?: LassoShapeKind;
 }) {
-  const common = "h-4 w-4";
+  const common = "h-3.5 w-3.5";
   switch (id) {
     case "select":
       return (

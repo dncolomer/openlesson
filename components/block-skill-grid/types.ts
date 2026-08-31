@@ -74,6 +74,8 @@ export interface BlockSkillGridProps {
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;
+  /** Occupied-cell double-click. When set, peek is skipped so ILE can open Helios. */
+  onNodeDoubleClick?: (nodeId: string) => void;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   onGridOp?: (payload: {
     op: "generate_shape" | "merge" | "split" | "move" | "resize" | "update_block" | "delete_block";

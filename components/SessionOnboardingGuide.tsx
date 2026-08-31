@@ -198,6 +198,7 @@ export function SessionOnboardingGuide({
         body: string;
         quoteText: string;
         quoteAuthor: string;
+        highlight?: string | null;
       };
 
   const step1ImageSrc = stepImages?.[0];
@@ -209,24 +210,29 @@ export function SessionOnboardingGuide({
         ? STEP1_TAP_SPEAKING_VIDEO
         : undefined;
 
-  const steps: GuideSlide[] = [
-    {
-      kind: "visual",
-      title: tt("step1.title"),
-      body: tt("step1.body"),
-      imageAlt: tt("step1.imageAlt"),
-      imageSrc: step1ImageSrc,
-      videoSrc: step1Video,
-      highlight: ttOptional("step1.highlight"),
-    },
-    {
-      kind: "closing",
-      title: lastStepTitle(),
-      body: lastStepBody(),
-      quoteText: tt("step3.quoteText"),
-      quoteAuthor: tt("step3.quoteAuthor"),
-    },
-  ];
+  const closingSlide: GuideSlide = {
+    kind: "closing",
+    title: lastStepTitle(),
+    body: lastStepBody(),
+    quoteText: tt("step3.quoteText"),
+    quoteAuthor: tt("step3.quoteAuthor"),
+    highlight: ttOptional("step3.highlight"),
+  };
+  const steps: GuideSlide[] =
+    variant === "ile"
+      ? [closingSlide]
+      : [
+          {
+            kind: "visual",
+            title: tt("step1.title"),
+            body: tt("step1.body"),
+            imageAlt: tt("step1.imageAlt"),
+            imageSrc: step1ImageSrc,
+            videoSrc: step1Video,
+            highlight: ttOptional("step1.highlight"),
+          },
+          closingSlide,
+        ];
 
   const slideCount = steps.length;
   const lastSlideIndex = slideCount - 1;
@@ -254,20 +260,22 @@ export function SessionOnboardingGuide({
             </p>
             <h3 className="mt-1 text-sm font-medium text-neutral-100">{tt("title")}</h3>
           </div>
-          <div className="flex items-center gap-1.5" aria-label={tt("progressLabel")}>
-            {Array.from({ length: slideCount }, (_, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => setStep(index)}
-                aria-label={tt("goToStep", { step: index + 1 })}
-                aria-current={step === index ? "step" : undefined}
-                className={`h-1.5 rounded-full transition-all ${
-                  step === index ? "w-6 bg-neutral-200" : "w-1.5 bg-neutral-700 hover:bg-neutral-500"
-                }`}
-              />
-            ))}
-          </div>
+          {slideCount > 1 ? (
+            <div className="flex items-center gap-1.5" aria-label={tt("progressLabel")}>
+              {Array.from({ length: slideCount }, (_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setStep(index)}
+                  aria-label={tt("goToStep", { step: index + 1 })}
+                  aria-current={step === index ? "step" : undefined}
+                  className={`h-1.5 rounded-full transition-all ${
+                    step === index ? "w-6 bg-neutral-200" : "w-1.5 bg-neutral-700 hover:bg-neutral-500"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -299,7 +307,7 @@ export function SessionOnboardingGuide({
               <p className="mt-2 text-sm leading-relaxed text-neutral-400 whitespace-pre-line">
                 {slide.body}
               </p>
-              {slide.kind === "visual" && slide.highlight ? (
+              {slide.highlight ? (
                 <aside
                   className="mt-4 rounded-none border border-neutral-500/35 bg-neutral-800/10 px-3.5 py-3 text-sm leading-relaxed text-neutral-50/95"
                   data-onboarding-highlight
@@ -312,42 +320,47 @@ export function SessionOnboardingGuide({
               ) : null}
 
               {index === lastSlideIndex && renderStep3Action ? renderStep3Action() : null}
-              {index === lastSlideIndex && showStartAction && !renderStep3Action ? (
-                <button
-                  type="button"
-                  onClick={onStart}
-                  disabled={isStarting}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-none bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
-                >
-                  {isStarting ? (
-                    <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg className="size-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                  <span>{startLabel}</span>
-                </button>
-              ) : null}
             </div>
           ))}
         </div>
       </div>
 
+      {showStartAction && !renderStep3Action && isLastStep ? (
+        <div className="shrink-0 border-t border-neutral-800/70 px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            data-onboarding-start
+            onClick={onStart}
+            disabled={isStarting}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
+          >
+            {isStarting ? (
+              <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg className="size-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+            <span>{startLabel}</span>
+          </button>
+        </div>
+      ) : null}
+
+      {slideCount > 1 ? (
       <div
         className={`shrink-0 flex items-center justify-between gap-3 px-5 py-4 sm:px-6 ${
           isFloating ? "border-t border-white/10" : "border-t border-neutral-800/70"
@@ -378,6 +391,7 @@ export function SessionOnboardingGuide({
           <div className="w-[72px]" aria-hidden />
         )}
       </div>
+      ) : null}
     </div>
   );
 

@@ -3,20 +3,18 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { formatSpeechTranscriptDisplay, type SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
+import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import {
   ThoughtBackgroundLayers,
-  ThoughtCompactAction,
   DialogueSplit,
   type DialogueMessage,
   type HeliosTurnMode,
   THOUGHT_BACKGROUND_IMAGES,
 } from "@/components/thought-ui/ThoughtUi";
-import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
-import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
@@ -25,9 +23,12 @@ import {
 import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
 import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+import {
+  IleChapterHeliosActions,
+  type IleChapterHeliosActionsProps,
+} from "@/components/session-view/ile-chapter-helios-actions";
 
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
@@ -42,11 +43,6 @@ interface SessionHeliosPanelProps {
   isInitializing?: boolean;
   isChapterLoading?: boolean;
   loadingChapterLabel?: string | null;
-  showWelcome?: boolean;
-  onWelcomePlay?: () => void;
-  isStartingSession?: boolean;
-  /** Bumped when Help re-opens the guide so slides reset to step 1. */
-  welcomeResetKey?: number;
   sessionId: string;
   ttsLanguage?: string;
   tutorName?: string;
@@ -73,10 +69,11 @@ interface SessionHeliosPanelProps {
   onSelectChapterFollowUp?: (suggestion: ChapterFollowUpSuggestion) => void;
   onProjectStash?: (text?: string) => void;
   onProjectSubmitToSolution?: () => void;
-  /** Open the ILE Thought tool (`thought-history`). */
-  onOpenThoughts?: () => void;
   /** Open Grok or Dantes with the word-box selection prefilled. */
   onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
+  chapterActions?: IleChapterHeliosActionsProps | null;
+  /** PiP clone — skip auto-stash so the live Chapter widget owns side effects. */
+  replica?: boolean;
 }
 
 export function SessionHeliosPanel({
@@ -90,10 +87,6 @@ export function SessionHeliosPanel({
   isInitializing = false,
   isChapterLoading = false,
   loadingChapterLabel = null,
-  showWelcome = false,
-  onWelcomePlay,
-  isStartingSession = false,
-  welcomeResetKey = 0,
   sessionId,
   ttsLanguage,
   tutorName = "Helios",
@@ -111,8 +104,9 @@ export function SessionHeliosPanel({
   chapterFollowUpsLoading = false,
   chapterFollowUpsError = null,
   onSelectChapterFollowUp,
-  onOpenThoughts,
   onOpenWordBoxTool,
+  chapterActions = null,
+  replica = false,
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
@@ -127,6 +121,7 @@ export function SessionHeliosPanel({
   // Thought context capacity auto-stash (ILE has no purity clock).
   // Reads live forming text (ref) so a full bar actually persists.
   useEffect(() => {
+    if (replica) return;
     if (!isSessionActive || !thought.speechEnabled || chapterThoughtsLocked) {
       contextStashInFlightRef.current = false;
       return;
@@ -179,28 +174,8 @@ export function SessionHeliosPanel({
     chapterThoughtsLocked,
     projectStash,
     projectSolution,
+    replica,
   ]);
-
-  if (showWelcome) {
-    return (
-      <div className="relative h-full overflow-hidden bg-[#0a0a0a]">
-        <ThoughtBackgroundLayers bgImage={bgImage} dimStrength="medium" />
-        <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
-          <SessionOnboardingGuide
-            key={welcomeResetKey}
-            variant="ile"
-            presentation="floating"
-            language={ttsLanguage}
-            showStartAction
-            projectMode={projectMode}
-            onStart={() => onWelcomePlay?.()}
-            isStarting={isStartingSession}
-          />
-        </div>
-        {aestheticName && <div className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700">{aestheticName}</div>}
-      </div>
-    );
-  }
 
   return (
     <div className="relative h-full overflow-hidden bg-[#0a0a0a]">
@@ -216,14 +191,7 @@ export function SessionHeliosPanel({
       )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 p-3">
-        <div
-          className="flex shrink-0 flex-wrap items-center justify-end gap-2"
-          data-ile-identity-row
-        >
-          {participantIdentity ? (
-            <SessionIdentityBadge identity={participantIdentity} />
-          ) : null}
-        </div>
+        {chapterActions ? <IleChapterHeliosActions {...chapterActions} /> : null}
         {isInitializing && !hasPlanSteps ? (
           <div className="rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
             {sessionControls && (
@@ -415,7 +383,7 @@ export function SessionHeliosPanel({
               </div>
             )}
 
-            <div className="relative min-w-0 shrink-0" data-ile-transcription-region>
+            <div className="relative min-w-0 shrink-0">
             <div
               data-ile-im-done-answering-overlay
               className="relative z-20 mb-2"
@@ -436,62 +404,11 @@ export function SessionHeliosPanel({
                 disabled={chapterThoughtsLocked || thought.isSending}
               />
             </div>
-            <div
-              data-ile-transcription-box
-              className="min-w-0 overflow-hidden rounded-none border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md"
-            >
-              {sessionControls && (
-                <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
-                  {sessionControls}
-                </div>
-              )}
-              <div className="flex min-w-0 flex-col gap-2">
-                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                    <SlidingTranscript
-                      text={formatSpeechTranscriptDisplay({
-                        text: thought.crystallizableText,
-                        speechError: thought.speechError,
-                        speechSupported: thought.speechSupported,
-                        isListening: thought.isListening,
-                        enabled: thought.speechEnabled,
-                      })}
-                      className={`w-full ${thought.speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
-                    />
-                  </div>
-                  {thought.speechEnabled &&
-                  thought.speechSupported !== false &&
-                  !thought.isListening ? (
-                    <button
-                      type="button"
-                      onClick={() => void thought.retryMicrophone()}
-                      className="shrink-0 rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
-                    >
-                      {thought.speechError ? "Retry" : "Start"}
-                    </button>
-                  ) : null}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <ThoughtCompactAction
-                      shortcut="Del"
-                      label="Stash"
-                      disabled={chapterThoughtsLocked || !thought.crystallizableText}
-                      onClick={thought.stashCurrentTranscription}
-                    />
-                  </div>
-                </div>
+            {sessionControls ? (
+              <div className="mb-2 flex w-full flex-col items-center gap-2">
+                {sessionControls}
               </div>
-
-              <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                  <button
-                    type="button"
-                    data-ile-see-older-thoughts
-                    onClick={() => onOpenThoughts?.()}
-                    className="rounded-none border border-neutral-600/40 bg-neutral-800/10 px-2.5 py-1.5 text-[11px] font-medium text-neutral-200 transition hover:border-neutral-500/60 hover:bg-neutral-800/20"
-                  >
-                    See Your thoughts
-                  </button>
-                </div>
-            </div>
+            ) : null}
             </div>
           </>
         )}

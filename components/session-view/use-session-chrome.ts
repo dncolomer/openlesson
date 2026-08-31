@@ -21,7 +21,6 @@ export function useSessionChrome(input: {
     activeTool,
     setActiveTool,
     prevToolRef,
-    resizablePaneRef,
     paneVisibility,
     setPaneVisibility,
     applyPaneVisibility,
@@ -118,7 +117,7 @@ export function useSessionChrome(input: {
               return { collapsedSide: null as null | "left" | "right" };
             }
           };
-          const layout = readLayout("session-split-tools-helios");
+          const layout = readLayout("session-overlay-tools-helios");
           helpPreviousLayoutRef.current = {
             outer: layout,
             inner: layout,
@@ -162,7 +161,6 @@ export function useSessionChrome(input: {
     activeTool,
     setActiveTool,
     prevToolRef,
-    resizablePaneRef,
     paneVisibility,
     setPaneVisibility,
     applyPaneVisibility,

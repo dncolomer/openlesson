@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import type { ChatMessage, PendingChatMessage } from "@/components/HeliosChat";
 import type { SessionPlan } from "@/lib/domain/types";
+import type { ChapterWorkspace } from "@/components/session/sessionViewHelpers";
 import {
-  createChapterWorkspace,
-  type ChapterWorkspace,
-} from "@/components/session/sessionViewHelpers";
+  applyIleSessionContextWrite,
+  createIleSessionContext,
+  ileLegacyChapterWorkspacesStorageKey,
+  ileSessionContextStorageKey,
+  parseIleSessionContextStored,
+  type IleSessionContext,
+} from "@/lib/ile-session-global-context";
 
 export function useSessionChapterWorkspaces(
   sessionId: string,
@@ -18,7 +23,7 @@ export function useSessionChapterWorkspaces(
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterLoadingIndex, setChapterLoadingIndex] = useState<number | null>(null);
   const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
-  const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
+  const [sessionContext, setSessionContext] = useState<IleSessionContext>(createIleSessionContext);
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
 
   useEffect(() => {
@@ -26,15 +31,18 @@ export function useSessionChapterWorkspaces(
     activeChapterIndexRef.current = 0;
     planInitializedRef.current = false;
     chapterFocusSinceRef.current = { 0: Date.now() };
-    setChapterWorkspaces({});
+    setSessionContext(createIleSessionContext());
     setChapterWorkspacesLoaded(false);
   }, [sessionId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const stored = window.sessionStorage.getItem(`uncertain-systems:${sessionId}:chapter-workspaces`);
-      if (stored) setChapterWorkspaces(JSON.parse(stored));
+      const stored =
+        window.sessionStorage.getItem(ileSessionContextStorageKey(sessionId)) ||
+        window.sessionStorage.getItem(ileLegacyChapterWorkspacesStorageKey(sessionId));
+      const parsed = parseIleSessionContextStored(stored);
+      if (parsed) setSessionContext(parsed);
     } catch {
       /* Ignore corrupt local workspace snapshots. */
     } finally {
@@ -47,13 +55,13 @@ export function useSessionChapterWorkspaces(
     if (typeof window === "undefined") return;
     try {
       window.sessionStorage.setItem(
-        `uncertain-systems:${sessionId}:chapter-workspaces`,
-        JSON.stringify(chapterWorkspaces)
+        ileSessionContextStorageKey(sessionId),
+        JSON.stringify(sessionContext),
       );
     } catch {
       /* Session storage can fail on quota, especially with canvas data. */
     }
-  }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
+  }, [sessionContext, chapterWorkspacesLoaded, sessionId]);
 
   useEffect(() => {
     if (!sessionPlan?.steps?.length || planInitializedRef.current) return;
@@ -75,7 +83,7 @@ export function useSessionChapterWorkspaces(
 
   const activeStep = sessionPlan?.steps?.[activeChapterIndex];
   const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
-  const activeWorkspace = chapterWorkspaces[activeChapterKey] ?? createChapterWorkspace();
+  const activeWorkspace = sessionContext;
 
   const updateChapterWorkspace = useCallback(
     (
@@ -84,11 +92,7 @@ export function useSessionChapterWorkspaces(
         | Partial<ChapterWorkspace>
         | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)
     ) => {
-      setChapterWorkspaces((prev) => {
-        const current = prev[chapterKey] ?? createChapterWorkspace();
-        const patch = typeof update === "function" ? update(current) : update;
-        return { ...prev, [chapterKey]: { ...current, ...patch } };
-      });
+      setSessionContext((prev) => applyIleSessionContextWrite(prev, chapterKey, update));
     },
     []
   );
@@ -148,6 +152,27 @@ export function useSessionChapterWorkspaces(
     [updateActiveChapterWorkspace]
   );
 
+  const chapterWorkspaces = useMemo(
+    (): Record<string, ChapterWorkspace> => ({ [activeChapterKey]: sessionContext }),
+    [activeChapterKey, sessionContext],
+  );
+
+  const setChapterWorkspaces = useCallback(
+    (
+      value:
+        | Record<string, ChapterWorkspace>
+        | ((prev: Record<string, ChapterWorkspace>) => Record<string, ChapterWorkspace>),
+    ) => {
+      setSessionContext((prev) => {
+        const asRecord = { [activeChapterKey]: prev };
+        const next = typeof value === "function" ? value(asRecord) : value;
+        const first = Object.values(next)[0];
+        return first ?? prev;
+      });
+    },
+    [activeChapterKey],
+  );
+
   return {
     activeChapterIndex,
     setActiveChapterIndex,
@@ -179,5 +204,6 @@ export function useSessionChapterWorkspaces(
     setNotebookContent,
     setCanvasDirtyForHelios,
     setNotebookDirtyForHelios,
+    sessionContext,
   };
 }

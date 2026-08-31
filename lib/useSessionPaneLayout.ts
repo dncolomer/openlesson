@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { ResizablePaneHandle } from "@/components/ResizablePane";
 import type { Tool } from "@/components/ToolsPanel";
 
 export type PaneVis = { tools: boolean; tutor: boolean; plan: boolean };
@@ -9,7 +8,6 @@ export type PaneVis = { tools: boolean; tutor: boolean; plan: boolean };
 export function useSessionPaneLayout() {
   const [activeTool, setActiveTool] = useState<Tool>("chapters");
   const prevToolRef = useRef<Tool | null>(null);
-  const resizablePaneRef = useRef<ResizablePaneHandle>(null);
   const [paneVisibility, setPaneVisibility] = useState<PaneVis>({
     tools: true,
     tutor: true,
@@ -20,13 +18,6 @@ export function useSessionPaneLayout() {
     next = { ...next, tutor: true };
     if (!next.tools && !next.tutor && !next.plan) return;
     setPaneVisibility(next);
-    if (!next.tools) {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-    } else if (!next.tutor) {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
-    } else {
-      resizablePaneRef.current?.setLayout({ collapsedSide: null });
-    }
   }, []);
 
   const ensureVisible = useCallback(
@@ -47,7 +38,6 @@ export function useSessionPaneLayout() {
     activeTool,
     setActiveTool,
     prevToolRef,
-    resizablePaneRef,
     paneVisibility,
     setPaneVisibility,
     applyPaneVisibility,

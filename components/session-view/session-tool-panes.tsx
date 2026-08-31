@@ -1,6 +1,5 @@
 "use client";
 
-import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { DataInputTool } from "@/components/DataInputTool";
 import { DantesTool } from "@/components/DantesTool";
 import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
@@ -32,11 +31,6 @@ export type SessionToolPanesProps = {
   planLoading: boolean;
   activeChapterIndex: number;
   chapterLoadingIndex: number | null;
-  onLoadChapter: (index: number) => void;
-  onChapterDone: () => void;
-  onAddChapter: (description: string, position: { row: number; col: number }) => Promise<void>;
-  onUpdateChapter: (stepId: string, description: string) => Promise<void>;
-  onEnsurePositions: (plan: SessionPlan) => void;
   isRecording: boolean;
   activeStep: SessionPlanStep | undefined;
   participantIdentity: PowParticipantIdentity | null;
@@ -91,22 +85,8 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     activeTool,
     shouldBlockTools,
     session,
-    sessionPlan,
-    ayclToken,
-    ileToken,
-    locale,
-    planLoading,
-    activeChapterIndex,
-    chapterLoadingIndex,
-    onLoadChapter,
-    onChapterDone,
-    onAddChapter,
-    onUpdateChapter,
-    onEnsurePositions,
     isRecording,
     activeStep,
-    participantIdentity,
-    activeChapterKey,
     whiteboardData,
     whiteboardSceneData,
     onCanvasChange,
@@ -149,42 +129,14 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
   } = props;
 
   return (
-    <div className="flex flex-col min-w-0 p-4 overflow-hidden h-full relative">
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden p-3">
       {shouldBlockTools && !["data-input", "help", "logs", "chapters"].includes(activeTool) && (
         <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
       )}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {activeTool === "chapters" && (
-          <div className="h-full overflow-hidden rounded-none border border-neutral-800">
-            <ChapterMapPanel
-              plan={sessionPlan}
-              sessionId={session.id}
-              ayclToken={ayclToken}
-              ileToken={ileToken}
-              locale={locale}
-              loading={planLoading}
-              activeChapterIndex={activeChapterIndex}
-              loadingChapterIndex={chapterLoadingIndex}
-              onLoadChapter={onLoadChapter}
-              onChapterDone={onChapterDone}
-              onAddChapter={onAddChapter}
-              onUpdateChapter={onUpdateChapter}
-              onEnsurePositions={onEnsurePositions}
-              isSessionActive={isRecording}
-              isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
-              learnerScopeId={
-                participantIdentity?.userId ||
-                participantIdentity?.guestUserId ||
-                ayclToken ||
-                ileToken ||
-                "local"
-              }
-            />
-          </div>
-        )}
         <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
           <ExcalidrawCanvas
-            key={activeChapterKey}
+            key={session.id}
             initialData={whiteboardData || undefined}
             initialSceneData={whiteboardSceneData}
             onCanvasChange={onCanvasChange}

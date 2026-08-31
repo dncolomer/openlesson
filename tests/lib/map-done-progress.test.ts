@@ -229,7 +229,7 @@ describe("self-progress persist helper", () => {
 describe("workspace Mark as Done + tile glyphs", () => {
   it("workspace pane marks Done; both maps render tick/gear from the chrome mapper", () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
-    const chapter = read("components/ChapterMapPanel.tsx");
+    const chapter = read("components/session-view/ile-chapter-helios-actions.tsx");
     const grid = readMapGridSurface();
     const view = readWorkspaceViewSurface();
 
@@ -237,8 +237,8 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(pane).toContain("Mark as Done");
     expect(pane).toContain("onMarkDone");
     expect(chapter).toContain("onChapterDone");
-    expect(chapter).toContain('t("chapterMap.markDone")');
-    expect(chapter).toContain("learnerScopeId");
+    expect(chapter).toContain('t("chapterMap.complete")');
+    expect(read("components/ChapterMapPanel.tsx")).toContain("learnerScopeId");
 
     expect(grid).toContain("ileChapterCellChrome");
     expect(grid).toContain("resolveOccupiedMapTileChrome");
@@ -262,7 +262,7 @@ describe("workspace Mark as Done + tile glyphs", () => {
       "map-done-progress-excerpts.txt",
       [
         "WorkspaceLearnerBlockPane: data-learner-mark-done + Mark as Done",
-        "ChapterMapPanel: onChapterDone + chapterMap.markDone + learnerScopeId",
+        "IleChapterHeliosActions: onChapterDone + chapterMap.complete",
         "BlockSkillGrid: ileChapterCellChrome + resolveOccupiedMapTileChrome + tick/gear glyphs",
         "WorkspaceView: recordMapItemWorkedOn on launch + onMarkDone",
       ].join("\n"),

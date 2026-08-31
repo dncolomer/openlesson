@@ -4,14 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { ThoughtButton } from "@/components/thought-ui/ThoughtUi";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { buildSkillGridLayout } from "@/lib/block-skill-grid";
 import {
   ensureChapterGridPositions,
   sessionStepsToSkillGridNodes,
 } from "@/lib/chapter-skill-grid";
-import { resolveChapterLoadControl } from "@/lib/chapter-load-control";
 
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
@@ -21,15 +19,9 @@ interface ChapterMapPanelProps {
   locale?: string;
   loading?: boolean;
   activeChapterIndex: number;
-  loadingChapterIndex?: number | null;
-  onLoadChapter: (index: number) => void;
-  onChapterDone: () => void;
+  onChapterDoubleClick?: (stepId: string) => void;
   onAddChapter: (description: string, position: { row: number; col: number }) => Promise<void>;
-  onUpdateChapter: (stepId: string, description: string) => Promise<void>;
   onEnsurePositions?: (plan: SessionPlan) => void;
-  isSessionActive: boolean;
-  isCurrentStepCompleted?: boolean;
-  /** Per-user key for self-progress persist (signed-in / guest / token). */
   learnerScopeId?: string | null;
 }
 
@@ -41,30 +33,14 @@ export function ChapterMapPanel({
   locale = "en",
   loading = false,
   activeChapterIndex,
-  loadingChapterIndex = null,
-  onLoadChapter,
-  onChapterDone,
+  onChapterDoubleClick,
   onAddChapter,
-  onUpdateChapter,
   onEnsurePositions,
-  isSessionActive,
-  isCurrentStepCompleted = false,
   learnerScopeId = null,
 }: ChapterMapPanelProps) {
-  const guestAccessBody = ayclToken
-    ? { ayclToken }
-    : ileToken
-      ? { ileToken }
-      : {};
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [editPrompt, setEditPrompt] = useState("");
-  const [editSuggestions, setEditSuggestions] = useState<string[]>([]);
-  const [suggestingEdit, setSuggestingEdit] = useState(false);
 
   const steps = plan?.steps ?? [];
   const nodes = useMemo(() => sessionStepsToSkillGridNodes(steps), [steps]);
@@ -72,14 +48,6 @@ export function ChapterMapPanel({
 
   const activeStep = steps[activeChapterIndex];
   const activeCell = activeStep ? placements.get(activeStep.id) ?? null : null;
-
-  const selectedStep = selectedStepId ? steps.find((s) => s.id === selectedStepId) : null;
-  const selectedIndex = selectedStep ? steps.findIndex((s) => s.id === selectedStep.id) : -1;
-  const loadControl = resolveChapterLoadControl({
-    selectedIndex,
-    activeChapterIndex,
-    loadingChapterIndex,
-  });
 
   useEffect(() => {
     if (!plan?.steps.length) return;
@@ -91,46 +59,6 @@ export function ChapterMapPanel({
     if (!activeStep) return;
     setSelectedStepId(activeStep.id);
   }, [activeStep?.id]);
-
-  const suggestEdit = useCallback(async () => {
-    if (!sessionId || !editingId || suggestingEdit) return;
-    setSuggestingEdit(true);
-    try {
-      const response = await fetch("/api/workspace/suggest-chapter-edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          stepId: editingId,
-          currentDescription: editDraft,
-          prompt: editPrompt,
-          locale,
-          ...guestAccessBody,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to suggest");
-      setEditSuggestions((data.suggestions || []).slice(0, 3));
-    } catch {
-      setEditSuggestions([]);
-    } finally {
-      setSuggestingEdit(false);
-    }
-  }, [ayclToken, ileToken, editDraft, editPrompt, editingId, locale, sessionId, suggestingEdit]);
-
-  const saveEdit = useCallback(async () => {
-    if (!editingId || savingEdit) return;
-    const trimmed = editDraft.trim();
-    if (!trimmed) return;
-    setSavingEdit(true);
-    try {
-      await onUpdateChapter(editingId, trimmed);
-      setEditingId(null);
-      setEditDraft("");
-    } finally {
-      setSavingEdit(false);
-    }
-  }, [editDraft, editingId, onUpdateChapter, savingEdit]);
 
   const handleAddAtCell = useCallback(
     async (description: string, position: { row: number; col: number }) => {
@@ -188,6 +116,10 @@ export function ChapterMapPanel({
         selectedNodeId={selectedStepId}
         focusedNodeId={activeStep?.id ?? null}
         onSelectNode={setSelectedStepId}
+        onNodeDoubleClick={(nodeId) => {
+          setSelectedStepId(nodeId);
+          onChapterDoubleClick?.(nodeId);
+        }}
         canEdit
         showProgress
         isAdding={adding}
@@ -202,132 +134,6 @@ export function ChapterMapPanel({
         onAddBlock={handleAddAtCell}
         labels={gridLabels}
       />
-
-      {selectedStep && selectedIndex >= 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/95 to-transparent pt-8">
-          <div className="pointer-events-auto mx-3 mb-3 rounded-none border border-neutral-700/80 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur-md">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-neutral-400">
-                {(() => {
-                  const cell = placements.get(selectedStep.id);
-                  return cell
-                    ? `Chapter ${cell.row},${cell.col}`
-                    : t("chapterMap.chapterLabel", { number: selectedIndex + 1 });
-                })()}
-              </p>
-              <button
-                type="button"
-                onClick={() => setSelectedStepId(null)}
-                className="shrink-0 rounded-none px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-900 hover:text-neutral-400"
-              >
-                ✕
-              </button>
-            </div>
-
-            {editingId === selectedStep.id ? (
-              <div className="space-y-2">
-                <input
-                  value={editPrompt}
-                  onChange={(e) => setEditPrompt(e.target.value)}
-                  placeholder={t("chapterMap.editPromptPlaceholder")}
-                  className="w-full rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={!sessionId || suggestingEdit}
-                  onClick={() => void suggestEdit()}
-                  className="text-[11px] text-neutral-400 underline underline-offset-2 hover:text-neutral-200 disabled:opacity-40"
-                >
-                  {suggestingEdit ? t("chapterMap.gridSuggesting") : t("chapterMap.editSuggest")}
-                </button>
-                {editSuggestions.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    {editSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => setEditDraft(suggestion)}
-                        className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 hover:border-neutral-500"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <textarea
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  rows={3}
-                  className="w-full resize-none rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-neutral-200 focus:border-neutral-500 focus:outline-none"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <ThoughtButton
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setEditingId(null);
-                      setEditDraft("");
-                    }}
-                  >
-                    {t("chapterMap.cancel")}
-                  </ThoughtButton>
-                  <ThoughtButton
-                    size="sm"
-                    variant="primary"
-                    className="w-full"
-                    disabled={!editDraft.trim() || savingEdit}
-                    onClick={() => void saveEdit()}
-                  >
-                    {savingEdit ? "…" : t("chapterMap.save")}
-                  </ThoughtButton>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="line-clamp-3 text-sm leading-relaxed text-neutral-300">{selectedStep.description}</p>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <ThoughtButton
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setEditingId(selectedStep.id);
-                      setEditDraft(selectedStep.description);
-                    }}
-                  >
-                    {t("chapterMap.edit")}
-                  </ThoughtButton>
-                  <ThoughtButton
-                    size="sm"
-                    className="w-full"
-                    disabled={loadControl.disabled}
-                    onClick={() => onLoadChapter(selectedIndex)}
-                  >
-                    {loadingChapterIndex === selectedIndex
-                      ? "…"
-                      : loadControl.isActiveChapter
-                        ? t("chapterMap.reloadChapter")
-                        : t("chapterMap.loadChapter")}
-                  </ThoughtButton>
-                  <ThoughtButton
-                    size="sm"
-                    variant="primary"
-                    className="w-full"
-                    disabled={
-                      selectedIndex !== activeChapterIndex
-                      || selectedStep.status === "completed"
-                      || selectedStep.status === "skipped"
-                      || isCurrentStepCompleted
-                    }
-                    onClick={onChapterDone}
-                  >
-                    {t("chapterMap.markDone")}
-                  </ThoughtButton>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

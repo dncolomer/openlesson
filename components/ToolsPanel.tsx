@@ -108,7 +108,67 @@ function ToolIcon({ id }: { id: Tool }) {
   }
 }
 
-const bottomTools: Tool[] = ["help", "data-input", "logs"];
+const utilityTools: Tool[] = ["help", "data-input", "logs"];
+
+export function VoiceBarUtilityRow({
+  activeTool,
+  onToolChange,
+  onBackToDashboard,
+  errorNotification = false,
+}: {
+  activeTool: Tool | null;
+  onToolChange: (tool: Tool) => void;
+  onBackToDashboard?: () => void;
+  errorNotification?: boolean;
+}) {
+  const { t } = useI18n();
+  const getToolLabel = (id: Tool): string => {
+    switch (id) {
+      case "help": return t("tools.help");
+      case "data-input": return t("tools.dataInput");
+      case "logs": return t("tools.logs");
+      default: return id;
+    }
+  };
+
+  return (
+    <div data-ile-voice-utility className="flex justify-end">
+      <div className="inline-grid grid-cols-4 gap-1">
+      {utilityTools.map((toolId) => (
+        <button
+          key={toolId}
+          type="button"
+          onClick={() => onToolChange(toolId)}
+          className={`flex h-8 w-full items-center justify-center gap-1 rounded-none px-2 text-[11px] font-medium ${
+            activeTool === toolId
+              ? "border border-neutral-600 bg-neutral-700/70 text-white"
+              : "border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+          }`}
+        >
+          <ToolIcon id={toolId} />
+          <span className="truncate">{getToolLabel(toolId)}</span>
+          {toolId === "logs" && errorNotification ? (
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
+          ) : null}
+        </button>
+      ))}
+      {onBackToDashboard ? (
+        <button
+          type="button"
+          data-save-and-exit
+          onClick={onBackToDashboard}
+          className="flex h-8 w-full items-center justify-center rounded-none bg-neutral-100 px-2 text-[11px] font-semibold text-neutral-900 hover:bg-white"
+          title={t("session.saveAndExit")}
+        >
+          <span className="truncate">{t("session.saveAndExit")}</span>
+        </button>
+      ) : (
+        <span />
+      )}
+      </div>
+    </div>
+  );
+}
 
 export function ToolsPanel({ 
   activeTool, onToolChange, problem, className = "", errorNotification = false,
@@ -141,12 +201,22 @@ export function ToolsPanel({
     }
   };
 
+  const toolCellClass = (isActive = false, isDisabled = false) =>
+    `flex h-[3.25rem] min-w-0 w-full flex-col items-center justify-center gap-0.5 rounded-none px-1 text-[10px] font-medium leading-tight transition-all ${
+      isDisabled
+        ? "cursor-not-allowed border border-neutral-800/30 bg-neutral-800/30 text-neutral-600"
+        : isActive
+          ? "border border-neutral-600 bg-neutral-700/70 text-white"
+          : "border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+    }`;
+
   return (
-    <div className={`w-52 shrink-0 flex flex-col p-3 bg-neutral-900/50 border-r border-neutral-800 ${className}`}>
-      <div className="flex flex-col gap-1">
-        <div className="text-[10px] uppercase tracking-wider font-medium text-neutral-500 mb-1 px-1">
-          {t('tools.tools')}
-        </div>
+    <div
+      data-ile-tools-widget
+      data-ile-tools-layout="compact"
+      className={`pointer-events-auto flex w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] shrink-0 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95 p-1.5 ${className}`}
+    >
+      <div data-ile-tools-grid className="grid grid-cols-4 auto-rows-[3.25rem] gap-1">
         {mainTools.map((toolId) => {
           const isDisabled = disabledTools.includes(toolId);
           return (
@@ -154,81 +224,208 @@ export function ToolsPanel({
             key={toolId}
             onClick={() => !isDisabled && onToolChange(toolId)}
             disabled={isDisabled}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all ${
-              isDisabled
-                ? "bg-neutral-800/30 text-neutral-600 border border-neutral-800/30 cursor-not-allowed"
-                : activeTool === toolId
-                ? "bg-neutral-700/70 text-white border border-neutral-600"
-                : "bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
-            }`}
+            className={toolCellClass(activeTool === toolId, isDisabled)}
           >
             <ToolIcon id={toolId} />
-            <span>{getToolLabel(toolId)}</span>
+            <span className="min-w-0 max-w-full truncate px-0.5">{getToolLabel(toolId)}</span>
             {toolId === "logs" && errorNotification && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
             )}
           </button>
           );
         })}
-      </div>
-
-      <SensorStrip
-        audioActive={isRecording && !isPaused}
-        webcamActive={isWebcamEnabled}
-        museStatus={museStatus}
-        museDeviceStatus={museDeviceStatus}
-        museChannelData={museChannelData}
-      />
-
-      <div className="flex flex-col gap-1 pt-3 border-t border-neutral-800">
         {showOpenPicInPic && onOpenPicInPic ? (
           <button
             type="button"
             data-ile-open-pic-in-pic
             onClick={onOpenPicInPic}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            className={toolCellClass()}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
             </svg>
-            <span>{ILE_OPEN_PIC_IN_PIC_LABEL}</span>
+            <span className="min-w-0 max-w-full truncate px-0.5">{ILE_OPEN_PIC_IN_PIC_LABEL}</span>
           </button>
         ) : null}
-        {bottomTools.map((toolId) => (
-          <button
-            key={toolId}
-            onClick={() => onToolChange(toolId)}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-none text-sm font-medium transition-all ${
-              activeTool === toolId
-                ? "bg-neutral-700/70 text-white border border-neutral-600"
-                : "bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
-            }`}
-          >
-            <ToolIcon id={toolId} />
-            <span>{getToolLabel(toolId)}</span>
-            {toolId === "logs" && errorNotification && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            )}
-          </button>
-        ))}
-
-        {onBackToDashboard && (
-          <button
-            type="button"
-            data-save-and-exit
-            onClick={onBackToDashboard}
-            className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white"
-            title={t("session.saveAndExit")}
-          >
-            <span>{t("session.saveAndExit")}</span>
-          </button>
-        )}
       </div>
     </div>
   );
 }
 
-function SensorStrip({
+const sensorWidgetShell =
+  "pointer-events-auto relative w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95";
+
+function SensorPreviewOffButton({
+  onTurnOff,
+  testId,
+}: {
+  onTurnOff: () => void;
+  testId: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-ile-sensor-off={testId}
+      onClick={onTurnOff}
+      className="absolute right-1 top-1 z-10 rounded-none border border-neutral-600 bg-neutral-950/90 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-200 hover:border-neutral-400 hover:text-white"
+    >
+      Turn off
+    </button>
+  );
+}
+
+export function WebcamMiniPreview({
+  onTurnOff,
+}: {
+  onTurnOff?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    navigator.mediaDevices
+      ?.getUserMedia({ video: { width: 320, height: 180 }, audio: false })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch((error) => {
+        console.warn("Webcam preview failed:", error);
+      });
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, []);
+
+  return (
+    <div
+      data-ile-webcam-preview
+      className={sensorWidgetShell}
+      title="Live webcam preview"
+    >
+      {onTurnOff ? <SensorPreviewOffButton onTurnOff={onTurnOff} testId="webcam" /> : null}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="h-14 w-full object-cover opacity-80 grayscale"
+      />
+    </div>
+  );
+}
+
+export function EegMiniPreview({
+  museChannelData,
+}: {
+  museChannelData?: Map<string, number[]>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, w, h);
+
+    const lane = h / EEG_CHANNELS.length;
+    EEG_CHANNELS.forEach((channel, idx) => {
+      const samples = museChannelData?.get(channel) ?? [];
+      const y0 = idx * lane;
+      ctx.strokeStyle = "rgba(163,163,163,0.2)";
+      ctx.beginPath();
+      ctx.moveTo(0, y0 + lane / 2);
+      ctx.lineTo(w, y0 + lane / 2);
+      ctx.stroke();
+      if (samples.length < 2) return;
+      const slice = samples.slice(-80);
+      const min = Math.min(...slice);
+      const max = Math.max(...slice);
+      const range = max - min || 1;
+      ctx.strokeStyle = "rgba(229,229,229,0.85)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      slice.forEach((value, i) => {
+        const x = (i / (slice.length - 1)) * w;
+        const y = y0 + lane - ((value - min) / range) * lane;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    });
+  }, [museChannelData]);
+
+  return (
+    <div
+      data-ile-eeg-preview
+      className={sensorWidgetShell}
+      title="Live EEG"
+    >
+      <canvas ref={canvasRef} className="h-16 w-full grayscale" />
+    </div>
+  );
+}
+
+export function ScreenShareMiniPreview({
+  stream,
+  onTurnOff,
+}: {
+  stream: MediaStream | null;
+  onTurnOff?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.srcObject = stream;
+    if (stream) void video.play().catch(() => undefined);
+    return () => {
+      video.srcObject = null;
+    };
+  }, [stream]);
+
+  return (
+    <div
+      data-ile-screenshare-preview
+      className={sensorWidgetShell}
+      title="Live screenshare"
+    >
+      {onTurnOff ? <SensorPreviewOffButton onTurnOff={onTurnOff} testId="screenshare" /> : null}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="h-14 w-full object-cover opacity-80 grayscale"
+      />
+    </div>
+  );
+}
+
+export function SensorStrip({
   audioActive,
   webcamActive,
   museStatus,
@@ -242,55 +439,16 @@ function SensorStrip({
   museChannelData?: Map<string, number[]>;
 }) {
   return (
-    <div className="mt-auto mb-2 space-y-1.5">
-      {webcamActive && <WebcamMiniPreview />}
+    <div
+      data-ile-signal-strip
+      className="flex flex-wrap items-center gap-1.5"
+    >
       <AudioMiniMeter active={audioActive} />
       <WebcamMiniStatus active={webcamActive} />
       <EEGMiniStatus
         museStatus={museStatus}
         museDeviceStatus={museDeviceStatus}
         museChannelData={museChannelData}
-      />
-    </div>
-  );
-}
-
-function WebcamMiniPreview() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    navigator.mediaDevices?.getUserMedia({ video: { width: 320, height: 180 }, audio: false })
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      })
-      .catch((error) => {
-        console.warn("Sidebar webcam preview failed:", error);
-      });
-
-    return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      if (videoRef.current) videoRef.current.srcObject = null;
-    };
-  }, []);
-
-  return (
-    <div className="overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/70 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]" title="Live webcam preview">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className="aspect-video w-full object-cover opacity-80 grayscale"
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SlidingTranscriptProps {
   text: string;
@@ -11,14 +11,24 @@ interface SlidingTranscriptProps {
 export function SlidingTranscript({ text, className = "" }: SlidingTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevTextRef = useRef("");
+  const [overflowing, setOverflowing] = useState(false);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (text !== prevTextRef.current) {
-      el.scrollLeft = el.scrollWidth;
-      prevTextRef.current = text;
-    }
+
+    const update = () => {
+      if (text !== prevTextRef.current) {
+        el.scrollLeft = el.scrollWidth;
+        prevTextRef.current = text;
+      }
+      setOverflowing(el.scrollWidth > el.clientWidth + 1);
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [text]);
 
   return (
@@ -29,10 +39,13 @@ export function SlidingTranscript({ text, className = "" }: SlidingTranscriptPro
       >
         <span className="inline-block whitespace-nowrap text-left">{text || "\u00a0"}</span>
       </div>
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent"
-        aria-hidden
-      />
+      {overflowing ? (
+        <div
+          data-ile-transcript-fade
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent"
+          aria-hidden
+        />
+      ) : null}
     </div>
   );
 }

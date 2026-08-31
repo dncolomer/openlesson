@@ -63,11 +63,17 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(icons).not.toContain("Cube");
   });
 
-  it("normalizes a single keyword; hashes unknown icons into a 3×3 pattern", () => {
+  it("normalizes two keywords; hashes unknown icons into a 3×3 pattern", () => {
     expect(normalizeBlockMapKeyword("  linear-algebra extra ", "Fallback")).toBe(
-      "Linear-algebra",
+      "Linear-algebra Extra",
     );
-    expect(normalizeBlockMapKeyword("", "Fourier Transforms")).toBe("Fourier");
+    expect(normalizeBlockMapKeyword("", "Fourier Transforms")).toBe(
+      "Fourier Transforms",
+    );
+    expect(normalizeBlockMapKeyword("Optics", "Geometric optics")).toBe(
+      "Geometric Optics",
+    );
+    expect(normalizeBlockMapKeyword("Lemmas", "Proofs")).toBe("Lemmas Proofs");
     expect(normalizeBlockMapKeyword(null, "")).toBe("Topic");
     expect(normalizeBlockMapIcon("g27", "X")).toBe("g27");
     expect(isBlockMapIconName(normalizeBlockMapIcon("flask-conical", "Optics"))).toBe(
@@ -81,10 +87,10 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
       "Proofs",
       () => 0,
     );
-    expect(glyph.map_keyword).toBe("Lemmas");
+    expect(glyph.map_keyword).toBe("Lemmas Proofs");
     expect(glyph.map_icon).toBe("g1");
     const other = blockMapGlyphDbFields({}, "Binary Search Trees", () => 0.99);
-    expect(other.map_keyword).toBe("Binary");
+    expect(other.map_keyword).toBe("Binary Search");
     expect(other.map_icon).toBe(
       `g${1 + Math.floor(0.99 * BLOCK_MAP_PATTERN_MAX)}`,
     );
@@ -94,19 +100,21 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
   it("resolves stored 3×3 patterns; hashes unknown names", () => {
     expect(
       resolveBlockMapGlyph({
-        map_keyword: "Optics",
+        map_keyword: "Wave Optics",
         map_icon: "g27",
         title: "Geometric optics",
       }),
-    ).toEqual({ keyword: "Optics", icon: "g27" });
+    ).toEqual({ keyword: "Wave Optics", icon: "g27" });
     const derived = resolveBlockMapGlyph({ title: "Organic chemistry lab" });
-    expect(derived.keyword).toBe("Organic");
+    expect(derived.keyword).toBe("Organic Chemistry");
     expect(isBlockMapIconName(derived.icon)).toBe(true);
   });
 
   it("generation prompts ask for keyword only (pattern is server-assigned)", () => {
     const instruction = composeBlockMapGlyphJsonInstruction();
     expect(instruction).toMatch(/keyword/);
+    expect(instruction).toMatch(/exactly two map words/i);
+    expect(instruction).not.toMatch(/exactly one map word/i);
     expect(instruction).toMatch(/random 3×3 rearrangement/i);
     expect(composeGenerateShapeBlockSystemMessage()).toContain("keyword");
     expect(composeGenerateShapeBlockSystemMessage()).toMatch(/Do not pick an icon/);
@@ -144,6 +152,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(grid).toContain('labelMode="glyph"');
     expect(grid).toContain('glyphVariant={isChapterSurface ? "outline" : "solid"}');
     expect(grid).toContain("data-map-cell-status=\"keyword\"");
+    expect(grid).toContain("line-clamp-2");
     expect(grid).toContain("BlockMapGlyphIcon");
     expect(grid).toContain("resolveBlockMapGlyph");
     expect(grid).toContain('data-block-map-grid="3x3"');

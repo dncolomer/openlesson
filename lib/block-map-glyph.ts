@@ -1,6 +1,6 @@
 /**
- * Workspace map-tile glyph: one keyword + a 3×3 rearrangement of solid squares.
- * Keyword is generated with the block; the mark is a random occupancy of a
+ * Workspace map-tile glyph: two keywords + a 3×3 rearrangement of solid squares.
+ * Keywords are generated with the block; the mark is a random occupancy of a
  * 3×3 grid (not topic-matched). Displayed instead of the truncated title.
  */
 
@@ -20,26 +20,37 @@ export type BlockMapGlyph = {
   icon: BlockMapIconName;
 };
 
-const KEYWORD_MAX = 18;
+const KEYWORD_COUNT = 2;
+const KEYWORD_MAX = 28;
 const PATTERN_RE = /^g(\d+)$/;
 
 function clean(s: unknown): string {
   return String(s ?? "").trim();
 }
 
-function firstToken(s: string): string {
+function keywordTokens(s: string): string[] {
   const stripped = s
     .replace(/[_/\\]+/g, " ")
     .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
     .trim();
-  if (!stripped) return "";
-  const token = stripped.split(/\s+/)[0] || "";
-  return token.replace(/^-+|-+$/g, "").slice(0, KEYWORD_MAX);
+  if (!stripped) return [];
+  return stripped
+    .split(/\s+/)
+    .map((token) => token.replace(/^-+|-+$/g, ""))
+    .filter(Boolean);
 }
 
 function capitalizeKeyword(token: string): string {
   if (!token) return token;
   return token.charAt(0).toUpperCase() + token.slice(1);
+}
+
+function formatKeywordPhrase(tokens: string[]): string {
+  const words = tokens.slice(0, KEYWORD_COUNT).map(capitalizeKeyword);
+  if (words.length === 0) return "";
+  const phrase = words.join(" ");
+  if (phrase.length <= KEYWORD_MAX) return phrase;
+  return phrase.slice(0, KEYWORD_MAX).trim().replace(/-+$/g, "");
 }
 
 export function encodeBlockMapPattern(bits: number): BlockMapIconName | null {
@@ -81,7 +92,7 @@ export function randFromSeed(seed: string): () => number {
 }
 
 /**
- * Keyword from the label + a 3×3 pattern.
+ * Two-word keyword from the label + a 3×3 pattern.
  * Pass `seed` (stable id) so reconstructed TAP/ILE tiles do not flicker.
  */
 export function blockMapGlyphForLabel(
@@ -129,10 +140,19 @@ export function normalizeBlockMapKeyword(
   raw: unknown,
   fallbackTitle?: string | null,
 ): string {
-  const fromRaw = capitalizeKeyword(firstToken(clean(raw)));
-  if (fromRaw.length >= 1) return fromRaw;
-  const fromTitle = capitalizeKeyword(firstToken(clean(fallbackTitle)));
-  return fromTitle || "Topic";
+  const fromRaw = keywordTokens(clean(raw));
+  if (fromRaw.length >= KEYWORD_COUNT) return formatKeywordPhrase(fromRaw);
+  const fromTitle = keywordTokens(clean(fallbackTitle));
+  if (fromTitle.length >= KEYWORD_COUNT) return formatKeywordPhrase(fromTitle);
+  if (fromRaw.length === 1) {
+    const extra = fromTitle.find(
+      (token) => token.toLowerCase() !== fromRaw[0].toLowerCase(),
+    );
+    if (extra) return formatKeywordPhrase([fromRaw[0], extra]);
+    return formatKeywordPhrase(fromRaw);
+  }
+  if (fromTitle.length >= 1) return formatKeywordPhrase(fromTitle);
+  return "Topic";
 }
 
 /** Keep a stored 3×3 pattern; otherwise a stable hash into the grid. */
@@ -156,7 +176,7 @@ export function normalizeBlockMapGlyph(
 
 /**
  * Columns written to `blocks` on create.
- * Keyword from the model (or title fallback); icon is a random 3×3 occupancy.
+ * Two-word keyword from the model (or title fallback); icon is a random 3×3 occupancy.
  */
 export function blockMapGlyphDbFields(
   raw: unknown,
@@ -194,17 +214,17 @@ export function resolveBlockMapGlyph(input: {
   };
 }
 
-/** Prompt instruction: keyword only — 3×3 mark is assigned server-side. */
+/** Prompt instruction: two keywords — 3×3 mark is assigned server-side. */
 export function composeBlockMapGlyphJsonInstruction(): string {
   return [
-    'Also return "keyword" (exactly one map word, 2–18 characters, no spaces).',
-    "Keyword is the tile label shown on the map instead of the full title.",
+    'Also return "keyword" (exactly two map words, 4–28 characters, one space, no punctuation).',
+    "Keyword is the two-word tile label shown on the map instead of the full title.",
     "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (workspace: filled; TAP/ILE: outlines).",
   ].join(" ");
 }
 
 export const BLOCK_MAP_GLYPH_JSON_SHAPE =
-  '{ "title": "...", "description": "...", "keyword": "..." }';
+  '{ "title": "...", "description": "...", "keyword": "Two Words" }';
 
 /** Regex fragment for missing-column retries. */
 export const BLOCK_MAP_GLYPH_COLUMN_ERROR_RE = /map_keyword|map_icon/;

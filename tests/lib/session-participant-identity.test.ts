@@ -90,8 +90,8 @@ describe("guest-link + map attribution wiring", () => {
     expect(tap).toContain("SessionIdentityBadge");
     expect(ile).toContain("participantIdentity={participantIdentity}");
     const chrome = fs.readFileSync(path.join(ROOT, "components/session-view/session-chrome.tsx"), "utf8");
-    expect(chrome).not.toContain("SessionIdentityBadge");
+    expect(chrome).toContain("SessionIdentityBadge");
     const helios = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
-    expect(helios).toContain("SessionIdentityBadge");
+    expect(helios).not.toContain("SessionIdentityBadge");
   });
 });

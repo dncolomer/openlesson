@@ -197,7 +197,7 @@ describe("shipped send/edit handlers", () => {
 });
 
 describe("See Older Thoughts wiring (shipped)", () => {
-  it("switches the session tool to thought-history", () => {
+  it("thought-history helper still maps to the Thoughts tool; Helios has no See Your thoughts button", () => {
     const tools: string[] = [];
     openIleThoughtHistoryTool((tool) => {
       tools.push(tool);
@@ -206,28 +206,27 @@ describe("See Older Thoughts wiring (shipped)", () => {
     expect(ILE_THOUGHT_HISTORY_TOOL).toBe("thought-history");
 
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
-    expect(helios).toContain("onOpenThoughts");
-    expect(helios).toContain("data-ile-see-older-thoughts");
+    expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
+    expect(helios).not.toContain("onOpenThoughts");
+    expect(helios).not.toContain("data-ile-see-older-thoughts");
 
     const pane = read("components/session-view/session-thought-pane.tsx");
-    expect(pane).toContain("onOpenThoughts={onOpenThoughts}");
+    expect(pane).not.toContain("onOpenThoughts");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("openIleThoughtHistoryTool");
-    expect(view).toContain("onOpenThoughts");
-    expect(view).toMatch(/openIleThoughtHistoryTool\(\s*setActiveTool\s*\)/);
+    expect(view).not.toContain("openIleThoughtHistoryTool");
+    expect(view).not.toContain("onOpenThoughts");
     expect(view).toContain('activeTool === "thought-history"');
   });
 });
 
 describe("ILE Helios last-stash surface (shipped source)", () => {
-  it("shows See Your thoughts only; no last thought or Submit last Thought on Helios", () => {
+  it("has no last thought or Submit last Thought on Helios", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
+    expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("Submit last Thought");
-    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("See Older Thoughts");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).not.toContain("data-ile-last-stash");

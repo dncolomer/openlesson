@@ -5,8 +5,10 @@
  * Popup is only for browsers with no Document PiP API.
  */
 
-export const ILE_COMPACT_WINDOW_WIDTH = 360;
-export const ILE_COMPACT_WINDOW_HEIGHT = 440;
+/** Match the live Chapter widget width. */
+export const ILE_COMPACT_WINDOW_WIDTH = 440;
+/** Tall enough to show Helios dialogue + I'm done answering like the widget. */
+export const ILE_COMPACT_WINDOW_HEIGHT = 640;
 
 export type IleCompactWindowKind = "document-pip" | "popup";
 

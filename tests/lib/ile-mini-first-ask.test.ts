@@ -142,16 +142,17 @@ describe("mini auto-open wiring", () => {
     expect(view).not.toContain("miniFirstAskVisible");
 
     const labelIdx = tools.indexOf("ILE_OPEN_PIC_IN_PIC_LABEL");
-    const helpIdx = tools.indexOf("bottomTools.map");
     expect(labelIdx).toBeGreaterThan(-1);
-    expect(labelIdx).toBeLessThan(helpIdx);
+    expect(tools).toContain("VoiceBarUtilityRow");
+    const voice = read("components/session-view/ile-voice-bar.tsx");
+    expect(voice).toContain("VoiceBarUtilityRow");
 
     writeScratch(
       "ile-mini-first-ask-excerpts.txt",
       [
         "decideIleMiniAutoOpen: no Document PiP → hide (no first-leave ask)",
         "useIleBlurScreenshare: leave skips auto-open; openManualPicInPic is the gesture",
-        "ToolsPanel: open pic-in-pic sits above Help",
+        "ToolsPanel: open pic-in-pic; Help/Data/Logs/Exit live on the voice bar",
       ].join("\n"),
     );
   });

@@ -89,6 +89,7 @@ describe("UI i18n surface keys resolve in en.json", () => {
     const required = [
       "chapterMap.editPromptPlaceholder",
       "chapterMap.editSuggest",
+      "chapterMap.complete",
       "common.signIn",
       "dashboard.noApiKeysYet",
       "probes.pressToToggle",

@@ -93,16 +93,16 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain("data-open-thoughts");
     expect(helios).not.toContain("Open Thoughts");
-    expect(helios).toContain("onOpenThoughts");
-    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("onOpenThoughts");
+    expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("DialogueSplit");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("onOpenThoughts");
+    expect(view).not.toContain("onOpenThoughts");
     expect(view).toContain("thought-history");
-    expect(view).toContain("openIleThoughtHistoryTool");
+    expect(view).not.toContain("openIleThoughtHistoryTool");
 
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     expect(ui).toContain("resolveIleDialogueTurn");
@@ -125,7 +125,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     writeScratch(
       "ile-compact-stash-excerpts.txt",
       [
-        "SessionHeliosPanel: See Your thoughts / onOpenThoughts (not Open Thoughts)",
+        "SessionHeliosPanel: no See Your thoughts; Thoughts stays a tools-grid item",
         "DialogueSplitIle: resolveIleDialogueTurn, no Helios avatar",
         "TAP live: TapSessionMap + overlay (comic helper unused on live)",
         "Tools rail still has thought-history",
@@ -225,67 +225,45 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(ileCompactChapterTitle(null)).toBeNull();
 
     const compact = read("components/IleCompactStashWindow.tsx");
-    expect(compact).toContain("ThoughtBackgroundLayers");
-    expect(compact).toContain("THOUGHT_BACKGROUND_IMAGES");
+    expect(compact).toContain("IleChapterPipFrame");
     expect(compact).not.toContain("HeliosProbeAvatar");
-    expect(compact).toContain("data-ile-compact-transcript");
-    expect(compact).toContain("data-ile-compact-share-cta");
-    expect(compact).toContain("data-ile-compact-done-answering");
+    expect(compact).not.toContain("data-ile-compact-transcript");
+    expect(compact).not.toContain("data-ile-compact-share-cta");
     expect(compact).not.toContain("data-ile-compact-autostash");
     expect(compact).not.toContain("<AutoStashContextBar");
-    expect(compact).toContain("ileMiniModeShareCtaLabel");
-    expect(compact).toContain("ileMiniModeDoneAnsweringLabel");
-    expect(compact).toContain("runIleMiniDoneAnswering");
-    expect(compact).toContain("onStartShare");
-    expect(compact).toContain("onDoneAnswering");
     expect(compact).not.toContain("<SlidingTranscript");
-    expect(compact).toContain('whiteSpace: "pre-wrap"');
-    expect(compact).toContain('overflowWrap: "anywhere"');
-    expect(compact).toContain('overflowX: "hidden"');
-    expect(compact).not.toContain("data-ile-compact-forming");
     expect(compact).not.toContain("data-ile-last-stash");
-    expect(compact).not.toContain("data-ile-last-stash-text");
-    expect(compact).not.toContain("data-ile-compact-stash-item");
-    expect(compact).not.toContain("data-ile-compact-share-note");
-    expect(compact).not.toContain("data-ile-compact-chapter");
-    expect(compact).not.toContain("data-ile-compact-helios");
     expect(compact).not.toContain("CompactList");
     expect(compact).not.toContain("See Older Thoughts");
-    expect(compact).not.toContain("No stashed thought");
     expect(compact).not.toMatch(/>\s*ILE\s*</);
-    expect(compact).not.toContain('"ILE"');
-    expect(compact).not.toContain("'ILE'");
-    expect(compact).not.toContain("Thought stash");
-    expect(compact).not.toMatch(/background:\s*"#0a0a0a"/);
+
+    const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
+    expect(frame).toContain("data-ile-helios-widget");
+    expect(frame).toContain(">Chapter</span>");
+    expect(frame).toContain("ileCompactRootFillStyle");
+    expect(frame).toContain('data-ile-compact-stash={compact ? "true" : undefined}');
 
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    expect(hook).toContain("formingText={props.formingText}");
-    expect(hook).toContain("speechDisplay={props.speechDisplay}");
-    expect(hook).toContain("onStartShare");
-    expect(hook).toContain("onDoneAnswering");
-    expect(hook).toContain("startRef.current()");
-    expect(hook).toContain("doneAnsweringRef.current");
-    expect(hook).toContain("opener={win.opener ?? null}");
-    expect(hook).not.toContain("transcriptText={props.transcriptText}");
-    expect(hook).not.toContain("thoughts={props.thoughts}");
-    expect(hook).not.toContain("projectStash={props.projectStash}");
+    expect(hook).toContain("createRoot");
+    expect(hook).toContain("paintCompact");
+    expect(hook).toContain("IleCompactStashWindow");
+    expect(hook).toContain("renderCompactRef");
+    expect(hook).not.toContain("createPortal");
+    expect(hook).not.toContain("compactHost");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("formingText: sessionThoughtInterface.crystallizableText");
-    expect(view).toContain("formatSpeechTranscriptDisplay");
+    expect(view).toContain("renderCompact: () => renderChapterThoughtPane(true)");
+    expect(view).toContain("renderChapterThoughtPane(false)");
+    expect(view).toContain("replica={replica}");
     expect(view).toContain("onDoneAnswering: handleCompactDoneAnswering");
     expect(view).toContain("closeIleImDoneAnswering");
-    expect(view).toContain("thoughts: sessionThoughtInterface.stashedThoughts");
+    expect(view).not.toContain("createPortal");
     expect(view).not.toContain("transcriptText: lastDialogueAssistantTurn");
     expect(view).not.toContain('?? "ILE"');
-    const compactBlockStart = view.indexOf("compact: {");
-    expect(compactBlockStart).toBeGreaterThan(-1);
-    const compactBlock = view.slice(compactBlockStart, view.indexOf("},", compactBlockStart + 10) + 2);
-    expect(compactBlock).toContain("formingText: sessionThoughtInterface.crystallizableText");
-    expect(compactBlock).toContain("speechDisplay: formatSpeechTranscriptDisplay");
-    expect(compactBlock).not.toContain("lastDialogueAssistantTurn");
-    expect(compactBlock).not.toContain("stashedThoughts");
-    expect(compactBlock).not.toContain("chapterLabel");
+
+    const helios = read("components/SessionHeliosPanel.tsx");
+    expect(helios).toContain("replica");
+    expect(helios).toContain("if (replica) return;");
 
     const layers = read("components/thought-ui/ThoughtUi.tsx");
     expect(layers).toContain("THOUGHT_BACKGROUND_IMAGES");
@@ -302,10 +280,9 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
         `transcriptLive=${liveTurn.kind}:${liveTurn.text}`,
         `transcriptListening=${listening.kind}:${listening.text}`,
         `autostashFill=${fill}`,
-        "bg=ThoughtBackgroundLayers + THOUGHT_BACKGROUND_IMAGES Greco-futurism",
+        "PiP paints IleChapterPipFrame + replica SessionThoughtPane",
         "no last thought / no CompactList / no visible ILE label",
-        "onStartShare → startRef.current (existing getDisplayMedia path)",
-        "onDoneAnswering → closeIleImDoneAnswering + opener focus",
+        "createRoot in PiP document → Chapter widget clone",
       ].join("\n"),
     );
     writeScratch(
@@ -329,19 +306,15 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     writeScratch(
       "ile-pip-surface.txt",
       [
-        "IleCompactStashWindow: Share your Screen + I'm Done Answering + data-ile-compact-transcript",
-        "no data-ile-last-stash / data-ile-compact-forming / Helios last-turn",
-        "useIleBlurScreenshare paints formingText + speechDisplay, not lastDialogueAssistantTurn",
-        "SessionView: formatSpeechTranscriptDisplay + closeIleImDoneAnswering + opener/tab focus",
-        `shareCta=${compact.includes("data-ile-compact-share-cta")}`,
-        `doneAnswering=${compact.includes("data-ile-compact-done-answering")}`,
-        `transcript=${compact.includes("data-ile-compact-transcript")}`,
+        "IleCompactStashWindow: IleChapterPipFrame wraps replica Chapter widget",
+        "no data-ile-last-stash / data-ile-compact-forming",
+        "useIleBlurScreenshare createRoot paints renderCompact Chapter clone",
+        `chapterFrame=${frame.includes("data-ile-helios-widget")}`,
+        `paint=${hook.includes("createRoot")}`,
+        `replica=${view.includes("renderChapterThoughtPane(true)")}`,
         `autostash=${compact.includes("data-ile-compact-autostash")}`,
-        `autostashBar=${compact.includes("<AutoStashContextBar")}`,
         `lastStash=${compact.includes("data-ile-last-stash")}`,
-        `formingBox=${compact.includes("data-ile-compact-forming")}`,
-        `heliosBody=${compact.includes("data-ile-compact-helios")}`,
-        `hookSpeechDisplay=${hook.includes("speechDisplay={props.speechDisplay}")}`,
+        `hookPaint=${hook.includes("paintCompact")}`,
         `viewHeliosTranscript=${view.includes("transcriptText: lastDialogueAssistantTurn")}`,
       ].join("\n"),
     );

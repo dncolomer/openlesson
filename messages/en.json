@@ -1560,6 +1560,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "edit": "Edit",
+    "complete": "Complete",
     "markDone": "Mark done",
     "done": "Done",
     "skip": "Skip",
@@ -2630,10 +2631,11 @@
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash. Auto-stash fills thought memory. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory so you can select, submit, or edit traces."
       },
       "step3": {
-        "title": "Depth over speed",
-        "titleProject": "Depth over speed",
-        "body": "When you're ready, press Start block. Recording begins. Press I'm done answering to close the chain of thought. Take your time — messy thinking is how real learning surfaces.",
-        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
+        "title": "You drive the session",
+        "titleProject": "You drive the session",
+        "highlight": "You control this session mostly by speaking your thoughts out loud and by using tools to explore the map.",
+        "body": "Talk as you work — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Press I'm done answering to close a chain of thought. Take your time — messy thinking is how real learning surfaces.",
+        "bodyProject": "Talk as you work each chapter exercise — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",

@@ -272,7 +272,8 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(button).not.toContain('label="Send"');
 
     expect(helios).toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("data-ile-transcription-box");
+    expect(helios).not.toContain("data-ile-transcription-box");
+    expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).toContain("data-ile-im-done-answering-overlay");
     expect(helios).not.toContain("absolute inset-x-0 bottom-0");
     expect(helios).not.toContain("Submit last Thought");
@@ -280,16 +281,17 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(helios).not.toContain("submitLastStashedThought");
     expect(helios).not.toContain('label="Send"');
     expect(helios).not.toContain('shortcut="↵"');
-    expect(helios).toContain('label="Stash"');
+    expect(helios).not.toContain('label="Stash"');
+    expect(helios).not.toContain("ThoughtCompactAction");
     expect(helios).not.toContain('label="Edit"');
     expect(helios).not.toContain('shortcut="E"');
-    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("See Your thoughts");
 
-    const boxIdx = helios.indexOf("data-ile-transcription-box");
     const overlayIdx = helios.indexOf("data-ile-im-done-answering-overlay");
-    expect(boxIdx).toBeGreaterThan(-1);
     expect(overlayIdx).toBeGreaterThan(-1);
-    expect(overlayIdx).toBeLessThan(boxIdx);
+    const voice = read("components/session-view/ile-voice-bar.tsx");
+    expect(voice).toContain("data-ile-transcription-box");
+    expect(voice).toContain("<SlidingTranscript");
 
     expect(close).toContain('ILE_END_OF_CHAIN_OF_THOUGHT_ACTION = "end_of_chain_of_thought"');
     expect(close).toContain("collectUnflaggedIleDoneAnsweringPow");
@@ -335,6 +337,50 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
         "no SVG bump",
         "no Submit last Thought on ILE or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",
+      ].join("\n"),
+    );
+  });
+});
+
+describe("I'm done answering vs chapter Complete (shipped split)", () => {
+  it("turn close sends speech; Complete marks the chapter and never sends thoughts", () => {
+    const actions = read("components/session-view/ile-chapter-helios-actions.tsx");
+    const helios = read("components/SessionHeliosPanel.tsx");
+    const mutate = read("components/session-view/use-session-mutate.ts");
+    const close = read("lib/ile-im-done-answering.ts");
+    const doneFn = mutate.slice(mutate.indexOf("const handleMarkChapterDone"));
+
+    expect(actions).toContain('t("chapterMap.complete")');
+    expect(actions).toContain("onChapterDone()");
+    expect(actions).not.toContain("closeIleImDoneAnswering");
+    expect(actions).not.toContain("sendThought");
+    expect(actions).not.toContain("I'm done answering");
+    expect(actions).not.toContain("ImDoneAnswering");
+
+    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).toContain("IleChapterHeliosActions");
+    const actionsIdx = helios.indexOf("<IleChapterHeliosActions");
+    const doneIdx = helios.indexOf("<ImDoneAnsweringControl");
+    expect(actionsIdx).toBeGreaterThan(-1);
+    expect(doneIdx).toBeGreaterThan(actionsIdx);
+
+    expect(doneFn).toContain('toolAction: "chapter_done"');
+    expect(doneFn).toContain("planIleChapterClose");
+    expect(doneFn).not.toContain("closeIleImDoneAnswering");
+    expect(doneFn).not.toContain("sendThought");
+
+    expect(close).toContain("end_of_chain_of_thought");
+    expect(close).toContain("sendThought");
+    expect(close).not.toContain("chapter_done");
+    expect(close).not.toContain("handleMarkChapterDone");
+    expect(close).not.toContain("status: \"completed\"");
+
+    writeScratch(
+      "ile-done-vs-complete.txt",
+      [
+        "I'm done answering = close spoken turn (sendThought + end_of_chain_of_thought)",
+        "Complete = mark chapter done after session PoW review (chapter_done)",
+        "handlers do not call each other",
       ].join("\n"),
     );
   });

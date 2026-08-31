@@ -93,18 +93,15 @@ describe("resolveChapterLoadControl (shipped helper)", () => {
 });
 
 describe("chapter-map load control wiring (shipped source)", () => {
-  it("panel keeps the load button enabled on the active chapter and still calls onLoadChapter", () => {
-    const panel = read("components/ChapterMapPanel.tsx");
+  it("Helios actions omit load/reload; SessionView still loads from the map", () => {
+    const panel = read("components/session-view/ile-chapter-helios-actions.tsx");
     const view = readSessionViewSurface();
 
-    expect(panel).toContain("resolveChapterLoadControl");
-    expect(panel).toContain("loadControl.disabled");
-    expect(panel).toContain("loadControl.isActiveChapter");
-    expect(panel).toContain('t("chapterMap.reloadChapter")');
-    expect(panel).toContain('t("chapterMap.loadChapter")');
-    expect(panel).toContain("onClick={() => onLoadChapter(selectedIndex)}");
-    expect(panel).not.toContain("selectedIndex === activeChapterIndex || loadingChapterIndex");
-    expect(view).toContain("onLoadChapter={handleLoadChapter}");
+    expect(panel).not.toContain("resolveChapterLoadControl");
+    expect(panel).not.toContain('t("chapterMap.reloadChapter")');
+    expect(panel).not.toContain('t("chapterMap.loadChapter")');
+    expect(panel).not.toContain("onLoadChapter");
+    expect(view).toContain("handleLoadChapter");
     expect(view).toContain("shouldAllowChapterLoadClick");
     expect(view).not.toContain("if (index === activeChapterIndex) return");
     expect(view).toContain("buildIleChapterLoadPowToolData");
@@ -119,8 +116,8 @@ describe("chapter-map load control wiring (shipped source)", () => {
         `activeLabel=${CHAPTER_RELOAD_LABEL}`,
         `otherLabel=${CHAPTER_LOAD_LABEL}`,
         "disabled=in-flight only (active chapter stays enabled)",
-        "ChapterMapPanel: loadControl.disabled + onLoadChapter(selectedIndex)",
-        "SessionView: onLoadChapter={handleLoadChapter}",
+        "IleChapterHeliosActions: no load/reload button",
+        "SessionView: map still calls handleLoadChapter",
       ].join("\n"),
     );
   });

@@ -678,7 +678,10 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     expect(hook).toContain("shouldAutoOpenIleMiniOnLeave");
     expect(hook).toContain("shouldKeepIleManualPopupOnReturn");
     expect(hook).toContain("openManualPicInPic");
+    expect(hook).toContain("paintCompact");
     expect(hook).toContain("IleCompactStashWindow");
+    expect(hook).toContain("createRoot");
+    expect(hook).not.toContain("compactHost");
     expect(hook).not.toContain("openIleAlwaysOnTopWindow");
     const applyStart = hook.indexOf("const applyDecision");
     const applyEnd = hook.indexOf("const openCompactFromGesture");
@@ -691,7 +694,8 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     const view = readSessionViewSurface();
     expect(tools).toContain("ILE_OPEN_PIC_IN_PIC_LABEL");
     expect(tools).toContain("data-ile-open-pic-in-pic");
-    expect(tools.indexOf("ILE_OPEN_PIC_IN_PIC_LABEL")).toBeLessThan(tools.indexOf("bottomTools.map"));
+    expect(tools).toContain("VoiceBarUtilityRow");
+    expect(tools.indexOf("data-ile-open-pic-in-pic")).toBeGreaterThan(tools.indexOf("VoiceBarUtilityRow"));
     expect(view).toContain("showOpenPicInPic={showManualPicInPic}");
     expect(view).toContain("onOpenPicInPic={openManualPicInPic}");
 
@@ -737,17 +741,17 @@ describe("PiP content height fills the live window (shipped helpers)", () => {
     expect(compactLib).toContain("doc.body.style.height = fill.body.height");
     expect(compactLib).toContain("invokeIleDocumentPipRequestWindow");
 
-    const surface = read("components/IleCompactStashWindow.tsx");
+    const surface = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(surface).toContain("ileCompactRootFillStyle");
-    expect(surface).toContain("data-ile-compact-transcript");
-    expect(surface).toContain("data-ile-compact-share-cta");
-    expect(surface).toContain("data-ile-compact-done-answering");
+    expect(surface).toContain("data-ile-helios-widget");
     expect(surface).not.toContain("data-ile-compact-autostash");
     expect(surface).not.toContain("<AutoStashContextBar");
     expect(surface).not.toContain("data-ile-compact-forming");
     expect(surface).not.toContain("data-ile-last-stash");
     expect(surface).not.toMatch(/minHeight:\s*280/);
     expect(surface).not.toContain("popup=yes");
+    const pipShell = read("components/IleCompactStashWindow.tsx");
+    expect(pipShell).toContain("IleChapterPipFrame");
 
     writeScratch(
       "ile-pip-height-excerpts.txt",

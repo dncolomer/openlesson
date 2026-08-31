@@ -270,8 +270,8 @@ describe("applyIleLeaveFocusPolicy (shipped ILE leave-focus helper)", () => {
     expect(features).toMatch(/height=440/);
     expect(features).toMatch(/left=1544/);
     expect(features).toMatch(/top=584/);
-    expect(ILE_COMPACT_WINDOW_WIDTH).toBe(360);
-    expect(ILE_COMPACT_WINDOW_HEIGHT).toBe(440);
+    expect(ILE_COMPACT_WINDOW_WIDTH).toBe(440);
+    expect(ILE_COMPACT_WINDOW_HEIGHT).toBe(640);
 
     const fakePip = {
       document: { documentElement: { style: {} as CSSStyleDeclaration }, body: { style: {} as CSSStyleDeclaration } },
@@ -362,7 +362,10 @@ describe("ILE leave-focus wiring (shipped source)", () => {
     const hook = read("lib/useIleBlurScreenshare.tsx");
     expect(hook).toContain("readIleTabFocusedFromDocument");
     expect(hook).toContain("openIleCompactPopupWindow");
+    expect(hook).toContain("paintCompact");
     expect(hook).toContain("IleCompactStashWindow");
+    expect(hook).toContain("createRoot");
+    expect(hook).not.toContain("compactHost");
     expect(hook).toContain("visibilitychange");
     expect(hook).toContain("startScreenshare");
     expect(hook).not.toContain("shouldRequestIlePopupOnLeave");
@@ -380,13 +383,13 @@ describe("ILE leave-focus wiring (shipped source)", () => {
     expect(capture).toContain("NotAllowedError");
 
     const compact = read("components/IleCompactStashWindow.tsx");
-    expect(compact).toContain("data-ile-compact-stash");
-    expect(compact).toContain('data-ile-compact-anchor="bottom-right"');
-    expect(compact).toContain("data-ile-compact-always-on-top");
-    expect(compact).toContain("ileMiniModeShareCtaLabel");
-    expect(compact).toContain("data-ile-compact-share-cta");
-    expect(compact).toContain("<button");
+    expect(compact).toContain("IleChapterPipFrame");
     expect(compact).not.toContain("CompactList");
+    const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
+    expect(frame).toContain("data-ile-compact-stash");
+    expect(frame).toContain("data-ile-helios-widget");
+    expect(view).toContain("renderCompact: () => renderChapterThoughtPane(true)");
+    expect(view).not.toContain("createPortal");
     expect(view).toContain("handleStartScreenCapture");
     const policy = read("lib/ile-blur-screenshare.ts");
     expect(policy).toContain("never auto-opens getDisplayMedia");

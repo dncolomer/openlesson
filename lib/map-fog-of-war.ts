@@ -26,7 +26,7 @@ export type MapFogCellVisibility = {
 export type MapFogLookup = (row: number, col: number) => MapFogCellVisibility;
 
 /** Chebyshev radius around an isolated occupied cell that is fully visible. */
-export const MAP_FOG_BASE_RADIUS = 2;
+export const MAP_FOG_BASE_RADIUS = 1;
 
 /** Extra rings of partial opacity beyond the full-visible radius. */
 export const MAP_FOG_FADE_BAND = 1;

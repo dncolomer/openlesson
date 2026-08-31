@@ -100,7 +100,7 @@ export interface SessionPlanStep {
   position_x?: number;
   /** Grid row in the chapter map (same convention as workspace blocks). */
   position_y?: number;
-  /** Single-word map-tile label (shown instead of the truncated title). */
+  /** Two-word map-tile label (shown instead of the truncated title). */
   map_keyword?: string | null;
   /** 3×3 occupancy mark (`g{bits}`) for TAP/ILE tiles. */
   map_icon?: string | null;

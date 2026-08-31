@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { IleCompactStashWindow } from "@/components/IleCompactStashWindow";
+import { I18nProvider } from "@/lib/i18n";
 import {
   decideIleMiniAutoOpen,
   isIleAwayFromTab,
@@ -32,7 +33,6 @@ import {
   openIleCompactPopupWindow,
   shouldAutoOpenIleMiniOnLeave,
   shouldKeepIleManualPopupOnReturn,
-  shouldOpenIlePopupFromButton,
   shouldShowIleOpenPicInPicButton,
   type IleCompactWindowHandle,
 } from "@/lib/ile-compact-window";
@@ -56,6 +56,8 @@ export function useIleBlurScreenshare(input: {
   /** Live getUserMedia stream so Chrome treats the tab as conferencing-eligible. */
   captureStream?: MediaStream | null;
   compact: IleBlurScreenshareCompactProps;
+  /** Chapter widget clone painted inside the PiP / popup document. */
+  renderCompact?: () => ReactNode;
 }): {
   notifyLeaveTab: (reason: IleLeaveFocusReason) => void;
   openManualPicInPic: () => void;
@@ -65,6 +67,8 @@ export function useIleBlurScreenshare(input: {
   const compactRootRef = useRef<Root | null>(null);
   const compactPropsRef = useRef(input.compact);
   compactPropsRef.current = input.compact;
+  const renderCompactRef = useRef(input.renderCompact);
+  renderCompactRef.current = input.renderCompact;
 
   const enabledRef = useRef(input.enabled);
   enabledRef.current = input.enabled;
@@ -79,26 +83,15 @@ export function useIleBlurScreenshare(input: {
   const userDismissedRef = useRef(false);
 
   const paintCompact = useCallback((win: Window) => {
-    const props = compactPropsRef.current;
     if (!compactRootRef.current) {
       compactRootRef.current = createRoot(win.document.body);
     }
     compactRootRef.current.render(
-      <IleCompactStashWindow
-        formingText={props.formingText}
-        speechDisplay={props.speechDisplay}
-        speechError={props.speechError}
-        speechSupported={props.speechSupported}
-        isListening={props.isListening}
-        speechEnabled={props.speechEnabled}
-        isScreenSharing={props.isScreenSharing}
-        onStartShare={() => {
-          void startRef.current();
-        }}
-        onDoneAnswering={() => doneAnsweringRef.current?.()}
-        opener={win.opener ?? null}
-        tab={typeof window !== "undefined" ? window : null}
-      />,
+      <I18nProvider>
+        <IleCompactStashWindow>
+          {renderCompactRef.current?.() ?? null}
+        </IleCompactStashWindow>
+      </I18nProvider>,
     );
   }, []);
 
@@ -150,7 +143,6 @@ export function useIleBlurScreenshare(input: {
           justOpened: justOpenedRef.current,
         });
         if (verdict === "ignore") return;
-        // user_dismissed or chrome_auto_closed: this window is gone — next leave must requestWindow.
         userDismissedRef.current = true;
         try {
           compactRootRef.current?.unmount();
@@ -175,7 +167,6 @@ export function useIleBlurScreenshare(input: {
     const openerHidden = typeof document !== "undefined" ? document.hidden : undefined;
     const pipOnly = shouldUseIleDocumentPipOnly();
     if (!shouldAutoOpenIleMiniOnLeave({ documentPipSupported: pipOnly })) {
-      // No Meet-style PiP: leave/visibility must not open, ask, or close a popup.
       if (isIleCompactWindowLive(compactRef.current) && !userDismissedRef.current) {
         paintCompact(compactRef.current!.window);
       }
@@ -340,7 +331,7 @@ export function useIleBlurScreenshare(input: {
     const handle = compactRef.current;
     if (!handle || handle.window.closed) return;
     paintCompact(handle.window);
-  }, [input.compact, paintCompact]);
+  }, [input.compact, input.renderCompact, paintCompact]);
 
   useEffect(() => () => hideCompact({ destroy: true }), [hideCompact]);
 

@@ -16,6 +16,8 @@ import {
   buildSessionPlanStepsUpdate,
   isChapterSlotAvailable,
 } from "@/lib/chapter-skill-grid";
+import { planIleChapterClose } from "@/lib/ile-chapter-close-review";
+import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
 import {
   buildFollowUpChapterDescription,
@@ -86,6 +88,11 @@ export type SessionMutateInput = {
   setIsPaused: (v: boolean) => void;
   setShowPlanCompleteModal: (v: boolean) => void;
   chapterDialoguePrompt: string;
+  sessionPowArtifactsRef: { current: IlePowCounterArtifact[] };
+  setChapterCloseReview: (review: {
+    canClose: boolean;
+    reason: string;
+  } | null) => void;
 };
 
 export function useSessionMutate(input: SessionMutateInput) {
@@ -118,6 +125,8 @@ export function useSessionMutate(input: SessionMutateInput) {
     setIsPaused,
     setShowPlanCompleteModal,
     chapterDialoguePrompt,
+    sessionPowArtifactsRef,
+    setChapterCloseReview,
   } = input;
 
   const [chapterFollowUpsById, setChapterFollowUpsById] = useState<
@@ -761,13 +770,28 @@ useEffect(() => {
   fetchChapterFollowUps,
 ]);
 
-const handleMarkChapterDone = useCallback(async () => {
+const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolean }) => {
   const currentPlan = sessionPlanRef.current;
   if (!currentPlan?.steps?.length) return;
 
   const idx = activeChapterIndexRef.current;
   const step = currentPlan.steps[idx];
   if (!step || step.status === "completed" || step.status === "skipped") return;
+
+  const artifacts = sessionPowArtifactsRef.current;
+  const planned = planIleChapterClose({
+    artifacts,
+    chapter: { id: step.id, description: step.description },
+    closeOverride: Boolean(opts?.closeOverride),
+  });
+  if (!planned.close) {
+    setChapterCloseReview({
+      canClose: planned.review.canClose,
+      reason: planned.review.reason,
+    });
+    return;
+  }
+  setChapterCloseReview(null);
 
   const updatedSteps = currentPlan.steps.map((s, i) =>
     i === idx ? { ...s, status: "completed" as const } : s,
@@ -778,21 +802,15 @@ const handleMarkChapterDone = useCallback(async () => {
     currentStepIndex: idx,
   };
 
-  // Project Mode: Done is terminal + PoW only — never interface evaluation/score.
-  const toolData = isProjectMode
-    ? buildIleChapterDonePowToolData({
-        stepIndex: idx,
-        stepId: step.id,
-        stepDescription: step.description,
-        via: "chapter_map_mark_done",
-        sessionMode: resolvedSessionMode,
-      })
-    : {
-        stepIndex: idx,
-        stepId: step.id,
-        stepDescription: step.description?.slice(0, 120),
-        via: "chapter_map_mark_done",
-      };
+  const toolData = buildIleChapterDonePowToolData({
+    stepIndex: idx,
+    stepId: step.id,
+    stepDescription: step.description,
+    via: "chapter_map_mark_done",
+    sessionMode: resolvedSessionMode,
+    closeOverride: planned.closeOverride,
+    reviewCanClose: planned.review.canClose,
+  });
 
   await persistPlanSteps(updatedPlan, {
     toolAction: "chapter_done",
@@ -821,6 +839,8 @@ const handleMarkChapterDone = useCallback(async () => {
   isProjectMode,
   resolvedSessionMode,
   fetchChapterFollowUps,
+  sessionPowArtifactsRef,
+  setChapterCloseReview,
 ]);
 
 

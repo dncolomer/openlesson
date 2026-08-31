@@ -84,7 +84,7 @@ const PLAN_JSON_SCHEMA = {
             description: { type: "string", description: "1 sentence explaining the concept" },
             keyword: {
               type: "string",
-              description: "Single map-tile word (2-18 letters, no spaces)",
+              description: "Two-word map-tile label (4-28 characters, one space)",
             },
             is_start: { type: "boolean" },
             next: { type: "array", items: { type: "string" } },

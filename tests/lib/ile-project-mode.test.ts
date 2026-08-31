@@ -318,12 +318,13 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(helios).not.toContain("Project Mode · Exercise");
     expect(helios).toContain("DialogueSplit");
     expect(helios).not.toContain('label="Send"');
-    expect(helios).toContain('label="Stash"');
+    expect(helios).not.toContain('label="Stash"');
+    expect(helios).not.toContain("ThoughtCompactAction");
     expect(helios).not.toContain('label="Edit"');
     expect(helios).not.toContain('label="Solution"');
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("See Your thoughts");
+    expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).toContain("stashCurrentTranscription");
 

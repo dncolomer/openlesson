@@ -12,6 +12,8 @@ import {
   computeBandPowers,
   createEmptyTransferHealth,
 } from "@/components/session/sessionViewHelpers";
+import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import { appendIlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 import {
   uploadIleEvidenceItem,
@@ -112,6 +114,15 @@ const notebookPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null
 const bandPowersRef = useRef(bandPowers);
 const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
 const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
+const [sessionPowArtifacts, setSessionPowArtifacts] = useState<IlePowCounterArtifact[]>([]);
+const sessionPowArtifactsRef = useRef<IlePowCounterArtifact[]>([]);
+const recordSessionPowArtifact = useCallback((artifact: IlePowCounterArtifact) => {
+  sessionPowArtifactsRef.current = appendIlePowCounterArtifact(
+    sessionPowArtifactsRef.current,
+    artifact,
+  );
+  setSessionPowArtifacts(sessionPowArtifactsRef.current);
+}, []);
 const whiteboardDataRef = useRef(whiteboardData);
 const notebookContentRef = useRef(notebookContent);
 const museStatusRef = useRef(museStatus);
@@ -299,11 +310,18 @@ const uploadPowItem = useCallback(
       entryQueryParams,
     );
     recordTransferEvent(channel, result.ok, result.error);
-    if (result.ok && result.interruption) {
-      handlePowInterruptionRef.current(result.interruption);
+    if (result.ok) {
+      recordSessionPowArtifact({
+        type: item.kind,
+        tool_name: item.toolName,
+        tool_action: item.toolAction,
+      });
+      if (result.interruption) {
+        handlePowInterruptionRef.current(result.interruption);
+      }
     }
   },
-  [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
+  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, entryQueryParams],
 );
 
 const uploadScreenshotPow = useCallback(
@@ -322,12 +340,13 @@ const uploadScreenshotPow = useCallback(
     recordTransferEvent("screenshots", result.ok, result.error);
     if (result.ok) {
       setScreenshotCount((count) => count + 1);
+      recordSessionPowArtifact({ type: "screen" });
       if (result.interruption) {
         handlePowInterruptionRef.current(result.interruption);
       }
     }
   },
-  [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
+  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, ileToken, entryQueryParams],
 );
 
 const tryUploadFacialBatch = useCallback(
@@ -638,5 +657,7 @@ const handleStopScreenCapture = useCallback(() => {
     ilePowContext,
     handleStartScreenCapture,
     handleStopScreenCapture,
+    sessionPowArtifacts,
+    sessionPowArtifactsRef,
   };
 }

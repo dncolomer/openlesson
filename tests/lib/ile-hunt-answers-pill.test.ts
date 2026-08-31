@@ -29,8 +29,11 @@ describe("ILE hunt-for-answers pill (removed)", () => {
     expect(helios).not.toContain("data-ile-hunt-answers-pill");
     expect(helios).not.toContain("Hunt for answers");
     expect(helios).not.toContain("Outsourcing knowledge is NOT cheating");
-    expect(helios).toContain("SessionIdentityBadge");
-    expect(helios).toContain("data-ile-identity-row");
+    expect(helios).not.toContain("SessionIdentityBadge");
+    expect(helios).not.toContain("data-ile-identity-row");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(chrome).toContain("SessionIdentityBadge");
+    expect(chrome).toContain("data-ile-identity-row");
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     const tapSolo = read("components/exercise-tap/exercise-tap-phases.tsx");

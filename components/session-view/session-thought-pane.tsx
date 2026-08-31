@@ -9,6 +9,7 @@ import type { SpokenLocale } from "@/lib/tutoring-languages";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
+import type { IleChapterHeliosActionsProps } from "@/components/session-view/ile-chapter-helios-actions";
 
 export type SessionThoughtPaneProps = {
   activeChapterKey: string;
@@ -26,10 +27,6 @@ export type SessionThoughtPaneProps = {
   isChapterLoading: boolean;
   loadingChapterLabel: string | null;
   hasPlanSteps: boolean;
-  showWelcome: boolean;
-  onWelcomePlay: () => void;
-  isStartingSession: boolean;
-  welcomeResetKey: number;
   sessionId: string;
   ttsLanguage: SpokenLocale;
   selectedAesthetic: AestheticPackage | undefined;
@@ -43,8 +40,9 @@ export type SessionThoughtPaneProps = {
   onSelectChapterFollowUp: (suggestion: ChapterFollowUpSuggestion) => void;
   onProjectStash: (providedText?: string) => void;
   onProjectSubmitToSolution: () => void;
-  onOpenThoughts: () => void;
   onOpenWordBoxTool?: (action: IleWordBoxMenuAction) => void;
+  chapterActions?: IleChapterHeliosActionsProps | null;
+  replica?: boolean;
 };
 
 export function SessionThoughtPane({
@@ -63,10 +61,6 @@ export function SessionThoughtPane({
   isChapterLoading,
   loadingChapterLabel,
   hasPlanSteps,
-  showWelcome,
-  onWelcomePlay,
-  isStartingSession,
-  welcomeResetKey,
   sessionId,
   ttsLanguage,
   selectedAesthetic,
@@ -80,8 +74,9 @@ export function SessionThoughtPane({
   onSelectChapterFollowUp,
   onProjectStash,
   onProjectSubmitToSolution,
-  onOpenThoughts,
   onOpenWordBoxTool,
+  chapterActions = null,
+  replica = false,
 }: SessionThoughtPaneProps) {
   return (
     <div className="relative h-full">
@@ -98,10 +93,6 @@ export function SessionThoughtPane({
         isChapterLoading={isChapterLoading}
         loadingChapterLabel={loadingChapterLabel}
         hasPlanSteps={hasPlanSteps}
-        showWelcome={showWelcome}
-        onWelcomePlay={onWelcomePlay}
-        isStartingSession={isStartingSession}
-        welcomeResetKey={welcomeResetKey}
         sessionId={sessionId}
         ttsLanguage={ttsLanguage}
         aestheticImages={selectedAesthetic?.images}
@@ -118,8 +109,9 @@ export function SessionThoughtPane({
         onSelectChapterFollowUp={onSelectChapterFollowUp}
         onProjectStash={onProjectStash}
         onProjectSubmitToSolution={onProjectSubmitToSolution}
-        onOpenThoughts={onOpenThoughts}
         onOpenWordBoxTool={onOpenWordBoxTool}
+        chapterActions={chapterActions}
+        replica={replica}
       />
     </div>
   );

@@ -37,7 +37,7 @@ export interface SkillGridNode {
    * Raw JSON or parsed BlockCreatorEffects.
    */
   creator_effects?: unknown;
-  /** Single-word map-tile label (shown instead of the truncated title). */
+  /** Two-word map-tile label (shown instead of the truncated title). */
   map_keyword?: string | null;
   /** Lucide icon name from the workspace map catalog. */
   map_icon?: string | null;
@@ -80,11 +80,11 @@ export const SKILL_GRID_CELL_SIZE = 92;
 export const SKILL_GRID_GAP = 10;
 export const SKILL_GRID_PITCH = SKILL_GRID_CELL_SIZE + SKILL_GRID_GAP;
 
-export const SKILL_GRID_MIN_ZOOM = 0.35;
+export const SKILL_GRID_MIN_ZOOM = 0.25;
 export const SKILL_GRID_MAX_ZOOM = 2.5;
 /** sqrt(viewport area) calibrated to a ~500×400 panel. */
 export const SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE = 447.2;
-export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 0.5;
+export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 0.32;
 
 export function clampSkillGridZoom(zoom: number) {
   return Math.min(SKILL_GRID_MAX_ZOOM, Math.max(SKILL_GRID_MIN_ZOOM, zoom));

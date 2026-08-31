@@ -180,12 +180,13 @@ describe("workspace create + builder static wiring", () => {
     expect(read("lib/workspace-grid-ops/shared.ts")).toContain("block-footprint-prompt");
   });
 
-  it("block map exposes a full-height icon tool column with Select + Lasso and wired grid ops", () => {
+  it("block map exposes a floating icon tool widget with Select + Lasso and wired grid ops", () => {
     const grid = readMapGridSurface();
     expect(grid).toContain("data-block-map-tool-strip");
-    expect(grid).toContain("h-full w-11 shrink-0 flex-col");
-    expect(grid).toContain("border-r border-neutral-800");
-    expect(grid).not.toMatch(/data-block-map-tool-strip[\s\S]{0,120}absolute left-2 top-2/);
+    expect(grid).toContain('data-block-map-tool-strip-layout="widget"');
+    expect(grid).toContain("absolute left-2 z-20");
+    expect(grid).not.toContain("h-full w-11 shrink-0 flex-col");
+    expect(grid).not.toContain("border-r border-neutral-800");
     expect(grid).toContain("MapToolStripButton");
     const strip = read("components/block-skill-grid/map-tool-strip-button.tsx");
     expect(strip).toContain("data-block-map-tool={tool}");

@@ -123,6 +123,7 @@ export function BlockSkillGrid({
   recenterCell = null,
   followCell = null,
   onAddBlock,
+  onNodeDoubleClick,
   onGridOp,
   unusableCells = null,
   onMapGround,
@@ -698,6 +699,7 @@ export function BlockSkillGrid({
     dynamicPickActive,
     onDynamicBlockToggle,
     onPeekBlock: setPeekBlockId,
+    onNodeDoubleClick,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -892,6 +894,7 @@ export function BlockSkillGrid({
         prereqEditActive: prereqEdit.active,
         stagedPrereqCount: prereqEdit.stagedPrereqIds.length,
         onToolClick: handleToolClick,
+        overlayAnchorClass: suggestMode === "chapter" ? "top-12" : "top-2",
       }}
       world={{
         visibleCells,

@@ -1596,6 +1596,7 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "edit": "Bearbeiten",
+    "complete": "Abschließen",
     "markDone": "Als erledigt markieren",
     "done": "Erledigt",
     "skip": "Überspringen",
@@ -2524,14 +2525,15 @@
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them."
       },
       "step3": {
-        "title": "Depth over speed",
-        "body": "When you're ready, press Start block. Recording begins. Use Enter for the live bar, or a number key for stashed thoughts. Take your time — messy thinking is how real learning surfaces.",
+        "title": "You drive the session",
+        "highlight": "You control this session mostly by speaking your thoughts out loud and by using tools to explore the map.",
+        "body": "Talk as you work — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Press I'm done answering to close a chain of thought. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
         "starting": "Starting…",
-        "titleProject": "Depth over speed",
-        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise. Use Enter for Solution, Del for Stash, and open the Thoughts tool to manage both stacks. Take your time — messy thinking is how real learning surfaces."
+        "titleProject": "You drive the session",
+        "bodyProject": "Talk as you work each chapter exercise — your words land in the bar at the bottom. Open Notebook, Canvas, and the rest from the tools widget. Double-click a chapter on the map to go deeper.\n\nWhen you're ready, press Start block. Recording begins. Use Del to stash, I'm done answering to close the turn, and See Your thoughts to manage traces. Take your time — messy thinking is how real learning surfaces."
       }
     },
     "tap": {

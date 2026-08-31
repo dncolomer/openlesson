@@ -181,7 +181,7 @@ IMPORTANT: Create a completely fresh plan tailored to the user's needs. The new 
 Return ONLY valid JSON (no markdown) with this structure:
 {
   "nodes": [
-    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Foundations", "is_start": true/false, "next": ["b"] }
+    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Core Foundations", "is_start": true/false, "next": ["b"] }
   ]
 }
 

@@ -163,6 +163,7 @@ export function useMapAuthoring(input: {
   dynamicPickActive: boolean;
   onDynamicBlockToggle?: (blockId: string) => void;
   onPeekBlock?: (blockId: string) => void;
+  onNodeDoubleClick?: (blockId: string) => void;
   suppressBlockClickRef: { current: boolean };
   suppressEmptyClickRef: { current: boolean };
   generationLockedBlockIdsRef: { current: Set<string> };
@@ -252,6 +253,7 @@ export function useMapAuthoring(input: {
     dynamicPickActive,
     onDynamicBlockToggle,
     onPeekBlock,
+    onNodeDoubleClick,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -424,9 +426,13 @@ export function useMapAuthoring(input: {
   const handleBlockDoubleClick = useCallback(
     (blockId: string) => {
       if (generationLockedBlockIdsRef.current.has(blockId)) return;
+      if (onNodeDoubleClick) {
+        onNodeDoubleClick(blockId);
+        return;
+      }
       onPeekBlock?.(blockId);
     },
-    [onPeekBlock],
+    [onPeekBlock, onNodeDoubleClick],
   );
 
   const resolveCellFromClient = useCallback(

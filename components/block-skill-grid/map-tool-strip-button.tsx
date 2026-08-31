@@ -46,7 +46,7 @@ export function MapToolStripButton({
           ? isActiveMode
           : undefined
       }
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-none border text-sm transition ${
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-none border text-sm transition ${
         isActiveMode
           ? "border-white/40 bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.12)]"
           : enabled

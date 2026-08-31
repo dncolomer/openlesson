@@ -73,12 +73,10 @@ export function MapGridShell({
       data-clone-armed={rail.cloneArmed ? "true" : "false"}
       data-map-minimap={minimap.hidden ? "false" : "true"}
     >
-      <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
-        <MapToolRail {...rail} />
-
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <div
           ref={chrome.viewportRef}
-          className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
+          className={`relative h-full min-h-0 w-full touch-none overflow-hidden ${
             chrome.spaceHeld
               ? "cursor-grab active:cursor-grabbing"
               : gestures.annotationDrawingActive ||
@@ -142,6 +140,7 @@ export function MapGridShell({
           <MapStatusBar {...status} />
           <MapBlockPeekModal peek={peek?.block ?? null} onClose={peek?.onClose ?? (() => {})} />
         </div>
+        <MapToolRail {...rail} />
       </div>
 
       <MapAuthoringForms {...forms} />

@@ -88,6 +88,8 @@ describe("TAP + ILE hide Auto-stash context bar HUD", () => {
     expect(ile).toContain("stashCurrentTranscription");
     expect(ile).toContain("applyIleContextFullAutoStash");
     expect(ile).toContain("getFormingText");
-    expect(ile).toContain("<SlidingTranscript");
+    expect(ile).not.toContain("<SlidingTranscript");
+    const voice = fs.readFileSync(path.join(ROOT, "components/session-view/ile-voice-bar.tsx"), "utf8");
+    expect(voice).toContain("<SlidingTranscript");
   });
 });

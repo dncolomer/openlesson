@@ -34,7 +34,7 @@ import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { IleSessionMode } from "@/lib/ile-mode";
-import type { ResizablePaneHandle } from "@/components/ResizablePane";
+
 
 export type SessionPhaseInput = {
   session: Session | null;
@@ -90,7 +90,6 @@ export type SessionPhaseInput = {
   setIsStartingSession: (v: boolean) => void;
   applyIleChapterGridStartup: () => void;
   helpPreviousLayoutRef: { current: HelpPreviousLayout | null };
-  resizablePaneRef: { current: ResizablePaneHandle | null };
   setPaneVisibility: (v: { tools: boolean; tutor: boolean; plan: boolean }) => void;
   timerRef: { current: ReturnType<typeof setInterval> | null };
   muteTimerRef: { current: ReturnType<typeof setTimeout> | null };
@@ -134,7 +133,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     setModelLoadError, setModelLoadProgress, localInferenceEnabled, setLocalInferenceEnabled,
     localInferenceEnabledRef, localContextRef, initialChapters, resolvedSessionMode,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
-    helpPreviousLayoutRef, resizablePaneRef, setPaneVisibility, timerRef, muteTimerRef,
+    helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
     micStreamRef, setMicStatus, setIsMuted, setMuteRemaining, setIsSaving, setShowEndDialog,
     whiteboardData, notebookContent, handleDisconnectMuse, handleConnectMuse, flushRemainingIlePow,
     isScreenCapturing, isWebcamEnabled, setIsWebcamEnabled, setIsScreenCapturing, museStatus,
@@ -635,12 +634,10 @@ const handleWelcomePlay = useCallback(async () => {
       // Give the welcome-panel collapse effect a beat to finish before
       // we overwrite it, otherwise its 80ms timer races us.
       window.setTimeout(() => {
-        resizablePaneRef.current?.setLayout(prev.inner);
         const innerLeft = prev.inner.collapsedSide === "left";
         const innerRight = prev.inner.collapsedSide === "right";
         setPaneVisibility({
           tools: !innerLeft,
-          // Helios (tutor) pane is always visible — it cannot be hidden.
           tutor: true,
           plan: !innerRight,
         });

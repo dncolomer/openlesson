@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+
 import { useRouter } from "next/navigation";
 import { pauseSession, type Session, type SessionPlan, type Probe, type ToolName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
@@ -34,13 +35,17 @@ import { SessionWelcomeModal } from "@/components/session-view/session-welcome-m
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChrome } from "@/components/session-view/session-chrome";
+import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
+import { ChapterMapPanel } from "@/components/ChapterMapPanel";
+import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import { countIlePowByType } from "@/lib/ile-pow-counters";
+import { isIleMapOverlayTool } from "@/lib/ile-map-chrome";
 import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
   resolveIleDurableSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
-import { openIleThoughtHistoryTool } from "@/lib/ile-last-stash";
 import { openIleWordBoxTool } from "@/lib/ile-word-boxes";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 
@@ -228,6 +233,11 @@ export function SessionView({
   }, []);
 
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(false);
+  const [chapterCloseReview, setChapterCloseReview] = useState<{
+    canClose: boolean;
+    reason: string;
+  } | null>(null);
   const handlePauseRef = useRef<() => Promise<void>>(async () => {});
   const {
     isMobile,
@@ -248,7 +258,6 @@ export function SessionView({
     activeTool,
     setActiveTool,
     prevToolRef,
-    resizablePaneRef,
     paneVisibility,
     setPaneVisibility,
     applyPaneVisibility,
@@ -406,6 +415,8 @@ export function SessionView({
     ilePowContext,
     handleStartScreenCapture,
     handleStopScreenCapture,
+    sessionPowArtifacts,
+    sessionPowArtifactsRef,
   } = useSessionRuntime({
     sessionRef,
     sessionId: session?.id,
@@ -475,6 +486,8 @@ export function SessionView({
     setIsPaused,
     setShowPlanCompleteModal,
     chapterDialoguePrompt,
+    sessionPowArtifactsRef,
+    setChapterCloseReview,
   });
   const activeChapterFollowUps = chapterFollowUpsById[activeProjectChapterId] ?? [];
   const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
@@ -698,7 +711,6 @@ export function SessionView({
     setIsStartingSession,
     applyIleChapterGridStartup,
     helpPreviousLayoutRef,
-    resizablePaneRef,
     setPaneVisibility,
     timerRef,
     muteTimerRef,
@@ -748,6 +760,81 @@ export function SessionView({
     });
   }, [sessionThoughtInterface]);
 
+  const renderChapterThoughtPane = (replica: boolean) => {
+    if (!session) return null;
+    return (
+    <SessionThoughtPane
+      replica={replica}
+      activeChapterKey={session.id}
+      chapterReloadNonce={chapterReloadNonce}
+      isProjectMode={isProjectMode}
+      participantIdentity={participantIdentity}
+      lastUserTurn={lastDialogueUserTurn}
+      lastAssistantTurn={lastDialogueAssistantTurn}
+      isAssistantPending={isHeliosAssistantPending}
+      heliosTurnMode={heliosTurnMode}
+      chapterPrompt={isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt}
+      userInitial={userInitial}
+      isSessionActive={isRecording && !isPaused}
+      isInitializing={planLoading}
+      isChapterLoading={chapterLoading}
+      loadingChapterLabel={loadingChapterLabel}
+      hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
+      sessionId={session.id}
+      ttsLanguage={tutoringLanguage}
+      selectedAesthetic={chromeSelectedAesthetic}
+      thought={sessionThoughtInterface}
+      chapterThoughtsLocked={chapterThoughtsLocked}
+      projectStash={activeProjectLists.stash}
+      projectSolution={activeProjectLists.submitted}
+      chapterFollowUps={activeChapterFollowUps}
+      chapterFollowUpsLoading={activeChapterFollowUpsLoading}
+      chapterFollowUpsError={activeChapterFollowUpsError}
+      onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
+      onProjectStash={handleProjectStash}
+      onProjectSubmitToSolution={handleProjectSubmitToSolution}
+      onOpenWordBoxTool={(action) => {
+        const payload = openIleWordBoxTool({
+          tool: action.tool,
+          query: action.query,
+          setActiveTool,
+          setPrefillQuery: setToolPrefillQuery,
+        });
+        if (payload?.query) ensureVisible("tools");
+      }}
+      chapterActions={
+        activeStep
+          ? {
+              sessionId: session.id,
+              ayclToken,
+              ileToken,
+              locale,
+              chapterId: activeStep.id,
+              chapterIndex: activeChapterIndex,
+              chapterDescription: activeStep.description || "",
+              chapterCompleted:
+                activeStep.status === "completed" || activeStep.status === "skipped",
+              activeChapterIndex,
+              onChapterDone: (opts) => {
+                void (async () => {
+                  try {
+                    await flushRemainingIlePow();
+                  } catch {
+                    /* Review still runs on whatever was already recorded. */
+                  }
+                  await handleMarkChapterDone(opts);
+                })();
+              },
+              onUpdateChapter: handleUpdateChapter,
+              closeReviewBlocked: Boolean(chapterCloseReview && !chapterCloseReview.canClose),
+              closeReviewReason: chapterCloseReview?.reason ?? null,
+            }
+          : null
+      }
+    />
+    );
+  };
+
   const {
     notifyLeaveTab,
     openManualPicInPic,
@@ -774,6 +861,7 @@ export function SessionView({
       speechEnabled: sessionThoughtInterface.speechEnabled,
       isScreenSharing: isScreenCapturing,
     },
+    renderCompact: () => renderChapterThoughtPane(true),
   });
 
   const isSpeaking = useVoiceActivity({
@@ -854,13 +942,23 @@ export function SessionView({
       <SessionChrome
         t={t}
         activeTool={activeTool}
-        onToolChange={handleToolChange}
+        onToolChange={(tool) => {
+          if (tool === activeTool && isIleMapOverlayTool(tool)) {
+            setActiveTool("chapters");
+            return;
+          }
+          handleToolChange(tool);
+        }}
         problem={session.problem}
         workspaceId={session.metadata?.workspace_id as string | undefined}
         onBackToDashboard={pauseAndGoToDashboard}
         isRecording={isRecording}
         isPaused={isPaused}
         isWebcamEnabled={isWebcamEnabled}
+        isScreenCapturing={isScreenCapturing}
+        screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
+        onStopScreenCapture={handleStopScreenCapture}
+        onTurnOffWebcam={() => setIsWebcamEnabled(false)}
         museStatus={museStatus}
         museDeviceStatus={museDeviceStatus}
         museChannelData={eegChannelData}
@@ -869,7 +967,26 @@ export function SessionView({
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
-        resizablePaneRef={resizablePaneRef}
+        powCounts={countIlePowByType(sessionPowArtifacts)}
+        participantIdentity={participantIdentity}
+        onCloseToolOverlay={() => setActiveTool("chapters")}
+        heliosOpen={heliosWidgetOpen}
+        onCloseHelios={() => setHeliosWidgetOpen(false)}
+        introOpen={showWelcomePanel}
+        onCloseIntro={() => { void handleWelcomePlay(); }}
+        introWidget={
+          <SessionOnboardingGuide
+            key={welcomeOpenNonce}
+            variant="ile"
+            presentation="sidebar"
+            className="h-full min-h-0"
+            language={tutoringLanguage}
+            showStartAction
+            projectMode={isProjectMode}
+            onStart={() => { void handleWelcomePlay(); }}
+            isStarting={isStartingSession}
+          />
+        }
         allowEndSession={allowEndSession}
         showEndDialog={showEndDialog}
         onCancelEnd={() => setShowEndDialog(false)}
@@ -883,7 +1000,34 @@ export function SessionView({
             handleConfirmEnd();
           }
         }}
-        left={
+        map={
+          <ChapterMapPanel
+            plan={sessionPlan}
+            sessionId={session.id}
+            ayclToken={ayclToken}
+            ileToken={ileToken}
+            locale={locale}
+            loading={planLoading}
+            activeChapterIndex={activeChapterIndex}
+            onChapterDoubleClick={(stepId) => {
+              const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
+              if (idx >= 0 && idx !== activeChapterIndex) {
+                handleLoadChapter(idx);
+              }
+              setHeliosWidgetOpen(true);
+            }}
+            onAddChapter={handleAddChapter}
+            onEnsurePositions={handleEnsureChapterPositions}
+            learnerScopeId={
+              participantIdentity?.userId ||
+              participantIdentity?.guestUserId ||
+              ayclToken ||
+              ileToken ||
+              "local"
+            }
+          />
+        }
+        toolOverlay={
           <SessionToolPanes
             t={t}
             activeTool={activeTool}
@@ -896,11 +1040,6 @@ export function SessionView({
             planLoading={planLoading}
             activeChapterIndex={activeChapterIndex}
             chapterLoadingIndex={chapterLoadingIndex}
-            onLoadChapter={handleLoadChapter}
-            onChapterDone={() => { void handleMarkChapterDone(); }}
-            onAddChapter={handleAddChapter}
-            onUpdateChapter={handleUpdateChapter}
-            onEnsurePositions={handleEnsureChapterPositions}
             isRecording={isRecording}
             activeStep={activeStep}
             participantIdentity={participantIdentity}
@@ -961,53 +1100,20 @@ export function SessionView({
             toolPrefillQuery={toolPrefillQuery}
           />
         }
-        right={
-          <SessionThoughtPane
-            activeChapterKey={activeChapterKey}
-            chapterReloadNonce={chapterReloadNonce}
-            isProjectMode={isProjectMode}
-            participantIdentity={participantIdentity}
-            lastUserTurn={lastDialogueUserTurn}
-            lastAssistantTurn={lastDialogueAssistantTurn}
-            isAssistantPending={isHeliosAssistantPending}
-            heliosTurnMode={heliosTurnMode}
-            chapterPrompt={isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt}
-            userInitial={userInitial}
-            isSessionActive={isRecording && !isPaused}
-            isInitializing={planLoading}
-            isChapterLoading={chapterLoading}
-            loadingChapterLabel={loadingChapterLabel}
-            hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
-            showWelcome={showWelcomePanel}
-            onWelcomePlay={handleWelcomePlay}
-            isStartingSession={isStartingSession}
-            welcomeResetKey={welcomeOpenNonce}
-            sessionId={session.id}
-            ttsLanguage={tutoringLanguage}
-            selectedAesthetic={selectedAesthetic}
+        heliosWidget={renderChapterThoughtPane(false)}
+        voiceBar={
+          <IleVoiceBar
             thought={sessionThoughtInterface}
-            chapterThoughtsLocked={chapterThoughtsLocked}
-            projectStash={activeProjectLists.stash}
-            projectSolution={activeProjectLists.submitted}
-            chapterFollowUps={activeChapterFollowUps}
-            chapterFollowUpsLoading={activeChapterFollowUpsLoading}
-            chapterFollowUpsError={activeChapterFollowUpsError}
-            onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
-            onProjectStash={handleProjectStash}
-            onProjectSubmitToSolution={handleProjectSubmitToSolution}
-            onOpenThoughts={() => {
-              ensureVisible("tools");
-              openIleThoughtHistoryTool(setActiveTool);
+            activeTool={activeTool}
+            onToolChange={(tool) => {
+              if (tool === activeTool && isIleMapOverlayTool(tool)) {
+                setActiveTool("chapters");
+                return;
+              }
+              handleToolChange(tool);
             }}
-            onOpenWordBoxTool={(action) => {
-              const payload = openIleWordBoxTool({
-                tool: action.tool,
-                query: action.query,
-                setActiveTool,
-                setPrefillQuery: setToolPrefillQuery,
-              });
-              if (payload?.query) ensureVisible("tools");
-            }}
+            onBackToDashboard={pauseAndGoToDashboard}
+            errorNotification={Boolean(error)}
           />
         }
       />

@@ -30,7 +30,7 @@ type EnOnboarding = {
     ile: {
       step1: { title: string; body: string };
       step2: { title: string; body: string; bodyProject: string };
-      step3: { title: string; body: string; bodyProject: string; start: string };
+      step3: { title: string; body: string; bodyProject: string; start: string; highlight: string };
     };
     tap: {
       step1: { title: string; body: string; highlight: string };
@@ -56,7 +56,7 @@ function decodeHtml(html: string): string {
 }
 
 describe("session intro visuals", () => {
-  it("live TAP/ILE guide is two slides; thought-interface tutorial is not rendered", () => {
+  it("TAP is two slides; ILE is the last slide only; thought-interface tutorial is not rendered", () => {
     const en = JSON.parse(read("messages/en.json")) as EnOnboarding;
     const tapBody = en.onboardingGuide.tap.step1.body;
     const tapHighlight = en.onboardingGuide.tap.step1.highlight;
@@ -89,9 +89,17 @@ describe("session intro visuals", () => {
       }),
     );
 
-    for (const html of [tapHtml, tapPlayHtml, ileLearningHtml, ileProjectHtml]) {
+    for (const html of [tapHtml, tapPlayHtml]) {
       expect(countAriaSteps(html)).toBe(2);
       expect(html).toContain("1 / 2");
+      expect(html).not.toContain("1 / 3");
+      expect(html).not.toMatch(/How the interface works/i);
+      expect(html).not.toContain("/animations/selective_interface.mp4");
+      expect(html).not.toMatch(/Helios/);
+    }
+    for (const html of [ileLearningHtml, ileProjectHtml]) {
+      expect(countAriaSteps(html)).toBe(0);
+      expect(html).not.toContain("1 / 2");
       expect(html).not.toContain("1 / 3");
       expect(html).not.toMatch(/How the interface works/i);
       expect(html).not.toContain("/animations/selective_interface.mp4");
@@ -113,13 +121,17 @@ describe("session intro visuals", () => {
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.start);
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.title);
 
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.step1.title);
+    expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step1.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.start);
+    expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.highlight);
+    expect(ileLearningText).toMatch(/speaking your thoughts out loud/i);
+    expect(ileLearningText).toMatch(/using tools to explore the map/i);
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step2.title);
 
-    expect(ileProjectText).toContain(en.onboardingGuide.ile.step1.title);
+    expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step1.title);
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.start);
+    expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.highlight);
     expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step2.title);
 
     expect(tapBody).toMatch(/think out loud/i);
@@ -131,9 +143,9 @@ describe("session intro visuals", () => {
     expect(tapHighlight).toMatch(/reading the question out loud/i);
 
     const ileBodies = [
-      en.onboardingGuide.ile.step1.body,
       en.onboardingGuide.ile.step3.body,
       en.onboardingGuide.ile.step3.bodyProject,
+      en.onboardingGuide.ile.step3.highlight,
       en.onboardingGuide.tap.step3.body,
     ];
     for (const body of ileBodies) {
@@ -146,7 +158,8 @@ describe("session intro visuals", () => {
     expect(guide).not.toContain("STEP2_THOUGHT_INTERFACE_VIDEO");
     expect(guide).not.toContain("step2VideoSrc");
     expect(guide).toContain("index === lastSlideIndex && renderStep3Action");
-    expect(guide).toContain("index === lastSlideIndex && showStartAction");
+    expect(guide).toContain("showStartAction && !renderStep3Action && isLastStep");
+    expect(guide).toContain("data-onboarding-start");
     expect(guide).not.toContain("stepTitle(\"step2\")");
     expect(guide).not.toContain("stepBody(\"step2\")");
 
@@ -162,13 +175,18 @@ describe("session intro visuals", () => {
     const ileLearningMount = read("components/ProbesPanel.tsx");
     const ileMobile = read("components/MobileProbesTab.tsx");
     const ileHelios = read("components/SessionHeliosPanel.tsx");
+    const ileChrome = read("components/session-view/session-chrome.tsx");
+    const ileView = read("components/SessionView.tsx");
     expect(ileLearningMount).toContain("SessionOnboardingGuide");
     expect(ileLearningMount).toContain("showStartAction");
     expect(ileMobile).toContain("SessionOnboardingGuide");
     expect(ileMobile).toContain("showStartAction");
-    expect(ileHelios).toContain("SessionOnboardingGuide");
-    expect(ileHelios).toContain("showStartAction");
-    expect(ileHelios).toContain("projectMode={projectMode}");
+    expect(ileHelios).not.toContain("SessionOnboardingGuide");
+    expect(ileChrome).toContain("data-ile-intro-widget");
+    expect(ileView).toContain("SessionOnboardingGuide");
+    expect(ileView).toContain("introOpen={showWelcomePanel}");
+    expect(ileView).toContain("showStartAction");
+    expect(ileView).toContain("projectMode={isProjectMode}");
 
     for (const rel of ["public/animations/grid_pan.mp4", "public/animations/speaking.mp4"] as const) {
       const path = join(ROOT, rel);
@@ -179,12 +197,12 @@ describe("session intro visuals", () => {
     writeScratch(
       "intro-slides.txt",
       [
-        "slideCount=2",
+        "tapSlideCount=2 ileSlideCount=1",
         "thoughtInterfaceTutorial=gone",
         "tapModes=conversational+exercise lastSlide=topic-cards/Play",
         "ileModes=learning+project lastSlide=Start block",
         `tapTitles=${en.onboardingGuide.tap.step1.title} | ${en.onboardingGuide.tap.step3.title}`,
-        `ileTitles=${en.onboardingGuide.ile.step1.title} | ${en.onboardingGuide.ile.step3.title}`,
+        `ileTitle=${en.onboardingGuide.ile.step3.title}`,
       ].join("\n") + "\n",
     );
     writeScratch("tap-intro-copy.txt", tapBody + "\n---highlight---\n" + tapHighlight + "\n");

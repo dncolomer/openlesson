@@ -28,7 +28,7 @@ export function ImDoneAnsweringButton({
       title="I'm done answering"
       disabled={disabled}
       onClick={onClick}
-      className="w-full rounded-sm border-2 border-neutral-900 bg-white px-4 py-2.5 text-[13px] font-semibold tracking-[0.04em] text-neutral-900 outline outline-1 outline-offset-2 outline-white/70 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+      className="w-full rounded-none border-2 border-neutral-900 bg-white px-4 py-2.5 text-[13px] font-semibold tracking-[0.04em] text-neutral-900 outline outline-1 outline-offset-2 outline-white/70 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
     >
       I'm done answering
     </button>

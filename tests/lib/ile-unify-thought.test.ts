@@ -55,24 +55,25 @@ describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
   it("Send/Stash/Edit and last-stash labels are not gated off for project/solo", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain('label="Send"');
-    expect(helios).toContain('label="Stash"');
+    expect(helios).not.toContain('label="Stash"');
+    expect(helios).not.toContain("ThoughtCompactAction");
     expect(helios).not.toContain('label="Edit"');
     expect(helios).toContain("stashCurrentTranscription");
     expect(helios).not.toContain('label="Solution"');
     expect(helios).not.toContain("onProjectSubmitToSolution?.()");
     expect(helios).not.toContain("onProjectStash?.()");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
-    expect(helios).toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
+    expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("thought.sendThought");
     expect(helios).not.toContain("{!projectMode ? (");
-    expect(helios).toContain("data-ile-see-older-thoughts");
+    expect(helios).not.toContain("data-ile-see-older-thoughts");
 
     writeScratch(
       "ile-unify-helios-stash.txt",
       [
-        "Stash/Edit un-gated (no Send compact action)",
+        "Helios has no Del/Stash compact action; keyboard Del still stashes",
         `Submit last Thought=${helios.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
         `See Your thoughts=${helios.includes(ILE_SEE_YOUR_THOUGHTS_LABEL)}`,
         `last-stash=${helios.includes("data-ile-last-stash")}`,
@@ -118,7 +119,7 @@ describe("ILE thought-history is Thought Memory in both modes", () => {
 });
 
 describe("See Older Thoughts reachable in both modes", () => {
-  it("switches to thought-history from Helios without a solo-only omit", () => {
+  it("thought-history stays a tools-grid tool; Helios has no See Your thoughts button", () => {
     const tools: string[] = [];
     openIleThoughtHistoryTool((tool) => {
       tools.push(tool);
@@ -126,15 +127,15 @@ describe("See Older Thoughts reachable in both modes", () => {
     expect(tools).toEqual([ILE_THOUGHT_HISTORY_TOOL]);
 
     const helios = read("components/SessionHeliosPanel.tsx");
-    expect(helios).toContain("data-ile-see-older-thoughts");
-    expect(helios).toContain("onOpenThoughts");
-    const seeIdx = helios.indexOf("data-ile-see-older-thoughts");
-    const omit = helios.slice(Math.max(0, seeIdx - 400), seeIdx);
-    expect(omit).not.toContain("!projectMode");
+    expect(helios).not.toContain("data-ile-see-older-thoughts");
+    expect(helios).not.toContain("onOpenThoughts");
+    expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
+
+    const panel = read("components/ToolsPanel.tsx");
+    expect(panel).toContain("thought-history");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("openIleThoughtHistoryTool");
-    expect(view).toMatch(/openIleThoughtHistoryTool\(\s*setActiveTool\s*\)/);
+    expect(view).toContain('activeTool === "thought-history"');
 
     expect(decideIleKeyboardAction({ mode: "project", key: "Enter" })).toBe("ignore");
     expect(decideIleKeyboardAction({ mode: "project", key: "Delete" })).toBe("helios_stash");

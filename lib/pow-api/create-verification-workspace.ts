@@ -63,7 +63,7 @@ export async function createVerificationWorkspaceFromPrompt(
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
       userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "workspace_goal": "concise success outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "keyword": "Foundations", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.\n- ${composeBlockMapGlyphJsonInstruction()}${WORKSPACE_GENERATION_GOAL_RULE}`
+        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "workspace_goal": "concise success outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "keyword": "Core Foundations", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.\n- ${composeBlockMapGlyphJsonInstruction()}${WORKSPACE_GENERATION_GOAL_RULE}`
       ),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }

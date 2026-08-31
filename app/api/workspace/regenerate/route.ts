@@ -87,7 +87,7 @@ ${preservedCompleted.map((n: { title: string; description?: string }) => `- ${n.
 Return ONLY valid JSON (no markdown) with this structure:
 {
   "nodes": [
-    { "id": "a", "title": "Node Title", "description": "Why this matters", "keyword": "Foundations", "is_start": true/false, "next": ["b", "c"] }
+    { "id": "a", "title": "Node Title", "description": "Why this matters", "keyword": "Core Foundations", "is_start": true/false, "next": ["b", "c"] }
   ]
 }
 

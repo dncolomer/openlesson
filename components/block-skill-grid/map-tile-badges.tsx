@@ -41,7 +41,7 @@ export function MapCellStatusGlyph({
           variant={glyphVariant}
         />
         <span
-          className="max-w-full truncate text-[11px] font-medium leading-tight"
+          className="max-w-full px-0.5 text-center text-[11px] font-medium leading-tight line-clamp-2"
           data-map-cell-status="keyword"
         >
           {keyword || title}

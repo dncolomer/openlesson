@@ -143,7 +143,7 @@ describe("universal Stash Submit labels across ILE + TAP", () => {
     const session = readSessionViewSurface();
 
     expect(ileHelios).not.toContain("Submit last Thought");
-    expect(ileHelios).toContain("See Your thoughts");
+    expect(ileHelios).not.toContain("See Your thoughts");
     expect(ileHelios).not.toContain("See Older Thoughts");
     expect(ileHelios).toContain("ImDoneAnsweringControl");
     for (const surface of [tapConvo, tapSolo]) {

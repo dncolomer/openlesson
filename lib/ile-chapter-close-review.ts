@@ -1,0 +1,102 @@
+/**
+ * Mark-as-Done reviews session-global ILE Proof of Work (optionally in batches).
+ * Close-override always forces close; later scoring of override is out of scope.
+ */
+import {
+  countIlePowByType,
+  ilePowCounterTotal,
+  type IlePowCounterArtifact,
+  type IlePowTypeCounts,
+} from "@/lib/ile-pow-counters";
+
+export const ILE_CHAPTER_CLOSE_BATCH_SIZE = 8;
+
+export type IleChapterCloseReview = {
+  canClose: boolean;
+  reason: string;
+  counters: IlePowTypeCounts;
+  chapterId: string;
+  batchCount: number;
+};
+
+export type IleChapterCloseDecision = {
+  close: boolean;
+  closeOverride: boolean;
+  review: IleChapterCloseReview;
+};
+
+function reviewFromArtifacts(
+  artifacts: readonly IlePowCounterArtifact[],
+  chapter: { id: string; description?: string | null },
+  batchCount: number,
+): IleChapterCloseReview {
+  const counters = countIlePowByType(artifacts);
+  const total = ilePowCounterTotal(counters);
+  const canClose = total > 0;
+  return {
+    canClose,
+    reason: canClose
+      ? "Session proof of work supports closing this chapter."
+      : "No session proof of work yet — close is blocked unless overridden.",
+    counters,
+    chapterId: chapter.id,
+    batchCount,
+  };
+}
+
+export function reviewIleChapterClose(input: {
+  artifacts: readonly IlePowCounterArtifact[];
+  chapter: { id: string; description?: string | null };
+}): IleChapterCloseReview {
+  return reviewFromArtifacts(input.artifacts, input.chapter, 1);
+}
+
+export function splitIlePowBatches<T>(
+  artifacts: readonly T[],
+  batchSize = ILE_CHAPTER_CLOSE_BATCH_SIZE,
+): T[][] {
+  const size = Math.max(1, Math.floor(batchSize));
+  if (!artifacts.length) return [[]];
+  const batches: T[][] = [];
+  for (let i = 0; i < artifacts.length; i += size) {
+    batches.push(artifacts.slice(i, i + size) as T[]);
+  }
+  return batches;
+}
+
+/**
+ * Same decision as concatenating `batches` then reviewing once.
+ * Batch summaries are additive so split vs concat cannot diverge.
+ */
+export function reviewIleChapterCloseInBatches(input: {
+  batches: readonly (readonly IlePowCounterArtifact[])[];
+  chapter: { id: string; description?: string | null };
+}): IleChapterCloseReview {
+  const merged = input.batches.flat();
+  const batchCount = Math.max(1, input.batches.length);
+  return reviewFromArtifacts(merged, input.chapter, batchCount);
+}
+
+export function decideIleChapterClose(input: {
+  review: Pick<IleChapterCloseReview, "canClose">;
+  closeOverride: boolean;
+}): { close: boolean; closeOverride: boolean } {
+  if (input.closeOverride) return { close: true, closeOverride: true };
+  return { close: input.review.canClose, closeOverride: false };
+}
+
+export function planIleChapterClose(input: {
+  artifacts: readonly IlePowCounterArtifact[];
+  chapter: { id: string; description?: string | null };
+  closeOverride?: boolean;
+  batches?: readonly (readonly IlePowCounterArtifact[])[];
+}): IleChapterCloseDecision {
+  const review = input.batches
+    ? reviewIleChapterCloseInBatches({ batches: input.batches, chapter: input.chapter })
+    : reviewIleChapterClose({ artifacts: input.artifacts, chapter: input.chapter });
+  const decided = decideIleChapterClose({
+    review,
+    closeOverride: Boolean(input.closeOverride),
+  });
+  return { ...decided, review };
+}

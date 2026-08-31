@@ -68,7 +68,7 @@ Expand the topic "${node.title}" with 2-4 follow-up learning sessions as a direc
 Return ONLY valid JSON:
 {
   "nodes": [
-    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Foundations", "next": ["b"] }
+    { "id": "a", "title": "Session Title", "description": "Why this matters", "keyword": "Core Foundations", "next": ["b"] }
   ]
 }
 

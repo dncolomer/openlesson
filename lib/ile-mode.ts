@@ -354,6 +354,8 @@ export function buildIleChapterDonePowToolData(input: {
   stepDescription?: string | null;
   via?: string;
   sessionMode?: IleSessionMode;
+  closeOverride?: boolean;
+  reviewCanClose?: boolean | null;
 }): Record<string, unknown> {
   return {
     stepIndex: input.stepIndex,
@@ -365,6 +367,8 @@ export function buildIleChapterDonePowToolData(input: {
     evaluation: null,
     score: null,
     interface_evaluation: false,
+    close_override: Boolean(input.closeOverride),
+    review_can_close: input.reviewCanClose ?? null,
   };
 }
 

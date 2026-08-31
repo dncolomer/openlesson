@@ -225,11 +225,20 @@ export function SessionChrome({
           data-ile-tools-widget
           className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-30 flex flex-col items-stretch gap-1.5 rounded-none`}
         >
-          {isScreenCapturing ? (
-            <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
+          {isScreenCapturing || isWebcamEnabled || museStatus === "streaming" ? (
+            <div
+              data-ile-sensor-pair
+              className="grid w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] grid-cols-2 gap-1.5"
+            >
+              {museStatus === "streaming" ? (
+                <EegMiniPreview museChannelData={museChannelData} />
+              ) : null}
+              {isScreenCapturing ? (
+                <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
+              ) : null}
+              {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
+            </div>
           ) : null}
-          {museStatus === "streaming" ? <EegMiniPreview museChannelData={museChannelData} /> : null}
-          {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
           <ToolsPanel
             activeTool={activeTool}
             onToolChange={onToolChange}

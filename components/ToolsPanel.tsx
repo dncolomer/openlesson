@@ -252,8 +252,8 @@ export function ToolsPanel({
   );
 }
 
-const sensorWidgetShell =
-  "pointer-events-auto relative w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95";
+const sensorHalfWidgetShell =
+  "pointer-events-auto relative min-w-0 w-full overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95";
 
 function SensorPreviewOffButton({
   onTurnOff,
@@ -310,7 +310,7 @@ export function WebcamMiniPreview({
   return (
     <div
       data-ile-webcam-preview
-      className={sensorWidgetShell}
+      className={sensorHalfWidgetShell}
       title="Live webcam preview"
     >
       {onTurnOff ? <SensorPreviewOffButton onTurnOff={onTurnOff} testId="webcam" /> : null}
@@ -319,7 +319,7 @@ export function WebcamMiniPreview({
         autoPlay
         muted
         playsInline
-        className="h-14 w-full object-cover opacity-80 grayscale"
+        className="aspect-video w-full object-cover opacity-80 grayscale"
       />
     </div>
   );
@@ -335,55 +335,62 @@ export function EegMiniPreview({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const paint = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const w = rect.width;
-    const h = rect.height;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, w, h);
+      const w = rect.width;
+      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, w, h);
 
-    const lane = h / EEG_CHANNELS.length;
-    EEG_CHANNELS.forEach((channel, idx) => {
-      const samples = museChannelData?.get(channel) ?? [];
-      const y0 = idx * lane;
-      ctx.strokeStyle = "rgba(163,163,163,0.2)";
-      ctx.beginPath();
-      ctx.moveTo(0, y0 + lane / 2);
-      ctx.lineTo(w, y0 + lane / 2);
-      ctx.stroke();
-      if (samples.length < 2) return;
-      const slice = samples.slice(-80);
-      const min = Math.min(...slice);
-      const max = Math.max(...slice);
-      const range = max - min || 1;
-      ctx.strokeStyle = "rgba(229,229,229,0.85)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      slice.forEach((value, i) => {
-        const x = (i / (slice.length - 1)) * w;
-        const y = y0 + lane - ((value - min) / range) * lane;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+      const lane = h / EEG_CHANNELS.length;
+      EEG_CHANNELS.forEach((channel, idx) => {
+        const samples = museChannelData?.get(channel) ?? [];
+        const y0 = idx * lane;
+        ctx.strokeStyle = "rgba(163,163,163,0.2)";
+        ctx.beginPath();
+        ctx.moveTo(0, y0 + lane / 2);
+        ctx.lineTo(w, y0 + lane / 2);
+        ctx.stroke();
+        if (samples.length < 2) return;
+        const slice = samples.slice(-80);
+        const min = Math.min(...slice);
+        const max = Math.max(...slice);
+        const range = max - min || 1;
+        ctx.strokeStyle = "rgba(229,229,229,0.85)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        slice.forEach((value, i) => {
+          const x = (i / (slice.length - 1)) * w;
+          const y = y0 + lane - ((value - min) / range) * lane;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
       });
-      ctx.stroke();
-    });
+    };
+
+    paint();
+    const observer = new ResizeObserver(paint);
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, [museChannelData]);
 
   return (
     <div
       data-ile-eeg-preview
-      className={sensorWidgetShell}
+      className={`${sensorHalfWidgetShell} aspect-video`}
       title="Live EEG"
     >
-      <canvas ref={canvasRef} className="h-16 w-full grayscale" />
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full grayscale" />
     </div>
   );
 }
@@ -410,7 +417,7 @@ export function ScreenShareMiniPreview({
   return (
     <div
       data-ile-screenshare-preview
-      className={sensorWidgetShell}
+      className={sensorHalfWidgetShell}
       title="Live screenshare"
     >
       {onTurnOff ? <SensorPreviewOffButton onTurnOff={onTurnOff} testId="screenshare" /> : null}
@@ -419,7 +426,7 @@ export function ScreenShareMiniPreview({
         autoPlay
         muted
         playsInline
-        className="h-14 w-full object-cover opacity-80 grayscale"
+        className="aspect-video w-full object-cover opacity-80 grayscale"
       />
     </div>
   );

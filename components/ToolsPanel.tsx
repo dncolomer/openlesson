@@ -255,6 +255,101 @@ export function ToolsPanel({
 const sensorHalfWidgetShell =
   "pointer-events-auto relative min-w-0 w-full overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95";
 
+export function AudioMiniPreview({
+  stream,
+  muted,
+  onToggleMute,
+}: {
+  stream: MediaStream | null;
+  muted: boolean;
+  onToggleMute: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let animation = 0;
+    let audioContext: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    const dataArray = { current: new Uint8Array(0) };
+
+    const paintIdle = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+    };
+
+    if (!stream || muted) {
+      paintIdle();
+      return;
+    }
+
+    try {
+      audioContext = new AudioContext();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      audioContext.createMediaStreamSource(stream).connect(analyser);
+      dataArray.current = new Uint8Array(analyser.frequencyBinCount);
+    } catch {
+      paintIdle();
+      return;
+    }
+
+    const draw = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx || !analyser) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      analyser.getByteFrequencyData(dataArray.current);
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      const bars = 20;
+      const barWidth = rect.width / bars;
+      for (let i = 0; i < bars; i += 1) {
+        const magnitude = dataArray.current[i * 4] ?? 0;
+        const barHeight = (magnitude / 255) * rect.height;
+        ctx.fillStyle = "rgba(229,229,229,0.85)";
+        ctx.fillRect(i * barWidth + 1, rect.height - barHeight, Math.max(1, barWidth - 2), barHeight);
+      }
+      animation = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animation);
+      void audioContext?.close();
+    };
+  }, [stream, muted]);
+
+  return (
+    <div
+      data-ile-audio-preview
+      className={`${sensorHalfWidgetShell} aspect-video`}
+      title={muted ? "Microphone muted" : "Live audio"}
+    >
+      <button
+        type="button"
+        data-ile-audio-mute
+        onClick={onToggleMute}
+        className="absolute right-1 top-1 z-10 rounded-none border border-neutral-600 bg-neutral-950/90 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-200 hover:border-neutral-400 hover:text-white"
+      >
+        {muted ? "Unmute" : "Mute"}
+      </button>
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full grayscale" />
+    </div>
+  );
+}
+
 function SensorPreviewOffButton({
   onTurnOff,
   testId,

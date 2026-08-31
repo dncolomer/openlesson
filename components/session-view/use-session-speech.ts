@@ -32,6 +32,7 @@ import type { TransferHealth } from "@/components/LogsTool";
 
 export type SessionSpeechInput = {
   powSessionEnabled: boolean;
+  micMuted?: boolean;
   ilePowContext: {
     workspaceId?: string;
     sessionId: string | null;
@@ -77,6 +78,7 @@ export type SessionSpeechInput = {
 export function useSessionSpeech(input: SessionSpeechInput) {
   const {
     powSessionEnabled,
+    micMuted = false,
     ilePowContext,
     handlePowInterruption,
     getWorkspaceId,
@@ -251,7 +253,7 @@ const mutateActiveProjectThoughts = useCallback(
 );
 
 const sessionThoughtInterface = useSessionThoughtInterface({
-  enabled: powSessionEnabled && !(isProjectMode && chapterThoughtsLocked),
+  enabled: powSessionEnabled && !micMuted && !(isProjectMode && chapterThoughtsLocked),
   speechLang: sessionSpeechLang,
   sessionId,
   onLogTrace: (payload) => {

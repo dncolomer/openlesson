@@ -585,6 +585,7 @@ export function SessionView({
     handleSubmitToHelios,
   } = useSessionSpeech({
     powSessionEnabled,
+    micMuted: isMuted,
     ilePowContext,
     handlePowInterruption,
     getWorkspaceId,
@@ -639,6 +640,11 @@ export function SessionView({
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
+  useEffect(() => {
+    stream?.getAudioTracks().forEach((track) => {
+      track.enabled = !isMuted;
+    });
+  }, [stream, isMuted]);
 
   const {
     checkMicrophone,
@@ -959,6 +965,16 @@ export function SessionView({
         screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
         onStopScreenCapture={handleStopScreenCapture}
         onTurnOffWebcam={() => setIsWebcamEnabled(false)}
+        audioStream={stream}
+        audioMuted={isMuted}
+        onToggleAudioMute={() => {
+          if (muteTimerRef.current) {
+            clearTimeout(muteTimerRef.current);
+            muteTimerRef.current = null;
+          }
+          setMuteRemaining(0);
+          setIsMuted((muted) => !muted);
+        }}
         museStatus={museStatus}
         museDeviceStatus={museDeviceStatus}
         museChannelData={eegChannelData}

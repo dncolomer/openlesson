@@ -45,9 +45,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("data-ile-pow-resource-bar");
     expect(chrome).toContain("SessionIdentityBadge");
     expect(chrome).toContain("data-ile-identity-row");
-    expect(chrome).toContain("<SensorStrip");
+    expect(chrome).not.toContain("<SensorStrip");
+    expect(chrome).not.toContain("data-ile-signal-strip");
     expect(tools).toContain("data-ile-signal-strip");
-    expect(tools).not.toContain("<SensorStrip");
     expect(chrome).toContain("data-ile-pow-resource-label");
     expect(chrome).toContain("Proof of Work Resources");
     expect(chrome).toContain("data-ile-pow-count");
@@ -101,6 +101,11 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(tools).not.toContain("h-14 w-full object-cover");
     expect(chrome).toContain("data-ile-sensor-pair");
     expect(chrome).toContain("grid-cols-2");
+    expect(tools).toContain("AudioMiniPreview");
+    expect(tools).toContain("data-ile-audio-preview");
+    expect(tools).toContain("data-ile-audio-mute");
+    expect(chrome).toContain("<AudioMiniPreview");
+    expect(chrome).not.toContain("onTurnOff={onToggleAudioMute}");
     expect(tools).toContain("EegMiniPreview");
     expect(tools).toContain("data-ile-eeg-preview");
     expect(tools).toContain("ScreenShareMiniPreview");

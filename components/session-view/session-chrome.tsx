@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
+  AudioMiniPreview,
   EegMiniPreview,
   ScreenShareMiniPreview,
-  SensorStrip,
   ToolsPanel,
   WebcamMiniPreview,
   type Tool,
@@ -41,6 +41,9 @@ export type SessionChromeProps = {
   screenShareStream: MediaStream | null;
   onStopScreenCapture: () => void;
   onTurnOffWebcam: () => void;
+  audioStream: MediaStream | null;
+  audioMuted: boolean;
+  onToggleAudioMute: () => void;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museDeviceStatus: DeviceStatus | null;
   museChannelData: Map<string, number[]>;
@@ -85,6 +88,9 @@ export function SessionChrome({
   screenShareStream,
   onStopScreenCapture,
   onTurnOffWebcam,
+  audioStream,
+  audioMuted,
+  onToggleAudioMute,
   museStatus,
   museDeviceStatus,
   museChannelData,
@@ -143,14 +149,6 @@ export function SessionChrome({
               <span className="text-neutral-100">{powCounts[type]}</span>
             </div>
           ))}
-          <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
-          <SensorStrip
-            audioActive={isRecording && !isPaused}
-            webcamActive={isWebcamEnabled}
-            museStatus={museStatus}
-            museDeviceStatus={museDeviceStatus}
-            museChannelData={museChannelData}
-          />
           {participantIdentity ? (
             <>
               <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
@@ -225,20 +223,23 @@ export function SessionChrome({
           data-ile-tools-widget
           className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-30 flex flex-col items-stretch gap-1.5 rounded-none`}
         >
-          {isScreenCapturing || isWebcamEnabled || museStatus === "streaming" ? (
-            <div
-              data-ile-sensor-pair
-              className="grid w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] grid-cols-2 gap-1.5"
-            >
-              {museStatus === "streaming" ? (
-                <EegMiniPreview museChannelData={museChannelData} />
-              ) : null}
-              {isScreenCapturing ? (
-                <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
-              ) : null}
-              {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
-            </div>
-          ) : null}
+          <div
+            data-ile-sensor-pair
+            className="grid w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] grid-cols-2 gap-1.5"
+          >
+            <AudioMiniPreview
+              stream={audioStream}
+              muted={audioMuted}
+              onToggleMute={onToggleAudioMute}
+            />
+            {museStatus === "streaming" ? (
+              <EegMiniPreview museChannelData={museChannelData} />
+            ) : null}
+            {isScreenCapturing ? (
+              <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
+            ) : null}
+            {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
+          </div>
           <ToolsPanel
             activeTool={activeTool}
             onToolChange={onToolChange}

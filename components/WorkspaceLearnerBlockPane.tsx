@@ -48,6 +48,8 @@ import {
   previousSessionsDrawerShouldLoad,
   type BlockPreviousSession,
 } from "@/lib/block-previous-sessions";
+import { ileSessionListDisplayName } from "@/lib/ile-session-name";
+import { applyLearnerDrawerRequest } from "@/lib/block-circular-menu";
 
 export type LearnerBlockRef = {
   id: string;
@@ -80,6 +82,8 @@ export function WorkspaceLearnerBlockPane({
   workspaceId,
   ayclToken,
   locked = false,
+  requestedDrawerId = null,
+  requestedDrawerNonce = null,
   onLaunchIntent,
   onSavePlanningPrompt,
   onFetchPowSummary,
@@ -94,6 +98,8 @@ export function WorkspaceLearnerBlockPane({
   /** Stable learner key for sessionStorage (user id / aycl / guest). */
   learnerUserKey?: string | null;
   locked?: boolean;
+  requestedDrawerId?: string | null;
+  requestedDrawerNonce?: number | null;
   onLaunchIntent?: (
     target: ProductLaunchTarget,
     options?: ProductLaunchOptions,
@@ -373,8 +379,14 @@ export function WorkspaceLearnerBlockPane({
       : "practice";
 
   useEffect(() => {
-    setOpenDrawerId(defaultOpenId);
-  }, [defaultOpenId, block.id]);
+    setOpenDrawerId(
+      applyLearnerDrawerRequest({
+        defaultOpenId,
+        requestedId: requestedDrawerId,
+        requestedNonce: requestedDrawerNonce,
+      }),
+    );
+  }, [defaultOpenId, block.id, requestedDrawerId, requestedDrawerNonce]);
 
   useEffect(() => {
     if (!previousSessionsDrawerShouldLoad(openDrawerId) || locked) return;
@@ -515,8 +527,11 @@ export function WorkspaceLearnerBlockPane({
               data-session-started={entry.startedAt}
               className="rounded-none border border-neutral-800 bg-neutral-950/70 px-2.5 py-2"
             >
-              <p className="truncate font-mono text-[11px] text-neutral-200">
-                {entry.sessionId}
+              <p
+                className="truncate text-[11px] text-neutral-200"
+                data-previous-session-name
+              >
+                {ileSessionListDisplayName(entry)}
               </p>
               <p className="mt-0.5 text-[10px] text-neutral-500">
                 {entry.startedAt}

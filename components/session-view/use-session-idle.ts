@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   PredictiveInterruption,
   ProofOfWorkApiInterruption,
@@ -15,6 +15,7 @@ import {
 import {
   createIleMapInterruptionScheduler,
   isChapterMapExpandInterruption,
+  type IleMapSchedulerPending,
 } from "@/lib/ile-tim-chapter-complete";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
@@ -51,11 +52,17 @@ export function useSessionIdle(input: SessionIdleInput) {
   const pendingKindRef = useRef<Exclude<IleHeliosTriggerKind, "user_send">>("interruption");
   const onChapterMapExpandRef = useRef(onChapterMapExpand);
   onChapterMapExpandRef.current = onChapterMapExpand;
+  const [mapDelay, setMapDelay] = useState<IleMapSchedulerPending | null>(null);
+  const setMapDelayRef = useRef(setMapDelay);
+  setMapDelayRef.current = setMapDelay;
 
   const mapSchedulerRef = useRef(
-    createIleMapInterruptionScheduler((interruption) => {
-      onChapterMapExpandRef.current?.(interruption);
-    }),
+    createIleMapInterruptionScheduler(
+      (interruption) => {
+        onChapterMapExpandRef.current?.(interruption);
+      },
+      (pending) => setMapDelayRef.current(pending),
+    ),
   );
 
 const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
@@ -95,9 +102,19 @@ useEffect(() => {
 
 useEffect(() => () => mapSchedulerRef.current.clear(), []);
 
+  const beginMapDelay = useCallback((stepId: string | null | undefined) => {
+    mapSchedulerRef.current.begin(stepId);
+  }, []);
+  const clearMapDelay = useCallback(() => {
+    mapSchedulerRef.current.clear();
+  }, []);
+
   return {
     handlePowInterruption,
     applyInterruption,
     clearPendingInterruption,
+    mapDelay,
+    beginMapDelay,
+    clearMapDelay,
   };
 }

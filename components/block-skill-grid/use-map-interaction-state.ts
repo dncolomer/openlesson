@@ -12,6 +12,7 @@ import {
 } from "@/lib/block-map-tools";
 import { parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
 import type { WorkspaceMapSelection } from "@/lib/workspace-map-selection";
+import { workspaceModeFlipClearsMapSelection } from "@/lib/workspace-mode";
 import type { ShapeContextSourceOption } from "@/lib/shape-context-select";
 import type { LassoOverlay } from "@/components/block-skill-grid/map-gesture-overlays";
 
@@ -169,14 +170,16 @@ export function useMapInteractionState(input: {
   const [shapeContextSelected, setShapeContextSelected] = useState<string[]>([]);
   const [shapeContextLoading, setShapeContextLoading] = useState(false);
 
-  // Creator ↔ Learner: drop local map selection (parent clears drawers separately).
+  // Creator ↔ Learner: drop authoring chrome; keep block/empty selection.
   useEffect(() => {
     if (learnerModeRef.current === learnerMode) return;
     learnerModeRef.current = learnerMode;
-    selectedEmptyCellsRef.current = [];
-    selectedBlockIdsRef.current = [];
-    setSelectedEmptyCells([]);
-    setSelectedBlockIds([]);
+    if (workspaceModeFlipClearsMapSelection()) {
+      selectedEmptyCellsRef.current = [];
+      selectedBlockIdsRef.current = [];
+      setSelectedEmptyCells([]);
+      setSelectedBlockIds([]);
+    }
     setShapePromptOpen(false);
     setMergePromptOpen(false);
     setPrompt("");

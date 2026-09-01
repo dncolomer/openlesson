@@ -279,6 +279,13 @@ export function useMapAuthoring(input: {
         unusableKeys,
       });
       if (surface?.kind === "add_block") {
+        // ILE empty cells open an Add-chapter ring first; the ring action
+        // sets localPendingCell. Workspace still opens the add chrome here.
+        if (suggestMode === "chapter") {
+          setLocalPendingCell(null);
+          setShapePromptOpen(false);
+          return;
+        }
         setLocalPendingCell(surface.cell);
         setShapePromptOpen(false);
       } else if (surface?.kind === "generate_shape" && onGridOp) {
@@ -289,7 +296,7 @@ export function useMapAuthoring(input: {
         setShapePromptOpen(false);
       }
     },
-    [onGridOp, unusableKeys],
+    [onGridOp, suggestMode, unusableKeys],
   );
 
   const paintMapSelection = useCallback((selection: WorkspaceMapSelection) => {

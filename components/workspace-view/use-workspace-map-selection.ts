@@ -25,10 +25,13 @@ import {
   openMapExploreShell,
   resolveMapExploreRightColumn,
 } from "@/lib/empty-map-pane";
-import type { WorkspaceMapToggleId } from "@/lib/workspace-mode";
-import { nextWorkspaceMapToggle } from "@/lib/workspace-mode";
+import {
+  nextWorkspaceMapToggle,
+  workspaceModeFlipClearsMapSelection,
+  type WorkspaceInteractionMode,
+  type WorkspaceMapToggleId,
+} from "@/lib/workspace-mode";
 import type { UnusableCell } from "@/lib/map-ground-rules";
-import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 import {
   emptyWorkspaceMapSelection,
   mapSelectionEmptyCells,
@@ -334,7 +337,9 @@ export function useWorkspaceMapSelection(input: {
     : -1;
 
   const clearMapChromeForModeFlip = useCallback(() => {
-    applyMapSelectionResult(nextWorkspaceMapSelection({ type: "clear" }));
+    if (workspaceModeFlipClearsMapSelection()) {
+      applyMapSelectionResult(nextWorkspaceMapSelection({ type: "clear" }));
+    }
     setAddExpandPreviewCells(null);
     setGeneratorTargetPreviewCells(null);
     setGeneratorPickActiveSafe(false);

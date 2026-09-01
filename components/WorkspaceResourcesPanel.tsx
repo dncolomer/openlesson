@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import {
-  mergeIleGatherPlannedResources,
-  filterPlannedResourcesForIleBlock,
-} from "@/lib/ile-gather-resources";
+import { mergeIleGatherPlannedResources } from "@/lib/ile-gather-resources";
+import { filterPlannedResourcesByScope } from "@/lib/block-circular-menu";
 import {
   normalizeExternalResourceList,
   type WorkspaceExternalResource,
@@ -22,6 +20,7 @@ interface PlanFile {
 interface WorkspaceResourcesPanelProps {
   workspaceId: string;
   blockId?: string | null;
+  chapterId?: string | null;
   gatheredResources?: WorkspaceExternalResource[];
   ayclToken?: string;
   ileToken?: string;
@@ -58,6 +57,7 @@ function formatBytes(bytes: number): string {
 export function WorkspaceResourcesPanel({
   workspaceId,
   blockId = null,
+  chapterId = null,
   gatheredResources = [],
   ayclToken,
 }: WorkspaceResourcesPanelProps) {
@@ -97,7 +97,7 @@ export function WorkspaceResourcesPanel({
       }),
     [fetchedResources, gatheredResources, blockId],
   );
-  const scopedPlanned = filterPlannedResourcesForIleBlock(planned, blockId);
+  const scopedPlanned = filterPlannedResourcesByScope(planned, { blockId, chapterId });
 
   const handleDownload = async (file: PlanFile) => {
     setDownloadingId(file.id);

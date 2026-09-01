@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
     const blockId = typeof body.blockId === "string" ? body.blockId.trim() : "";
     const chapterId = typeof body.chapterId === "string" ? body.chapterId.trim() : "";
-    if (!sessionId || !blockId || !chapterId) {
-      return jsonError(400, "sessionId, blockId, and chapterId are required");
+    if (!sessionId || !chapterId) {
+      return jsonError(400, "sessionId and chapterId are required");
     }
 
     const auth = await guardSessionRoute(sessionId, {
@@ -80,6 +80,9 @@ export async function POST(req: NextRequest) {
       lastGatherAt: typeof body.lastGatherAt === "number" ? body.lastGatherAt : null,
       gatherCount: typeof body.gatherCount === "number" ? body.gatherCount : 0,
       now: typeof body.now === "number" ? body.now : Date.now(),
+      rateLimitKey:
+        typeof body.rateLimitKey === "string" ? body.rateLimitKey : chapterId || blockId,
+      lastGatherKey: typeof body.lastGatherKey === "string" ? body.lastGatherKey : null,
     });
     if (!decision.allowed) {
       return NextResponse.json(

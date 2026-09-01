@@ -3,9 +3,11 @@
 import {
   BLOCK_MAP_GRID_SIZE,
   DEFAULT_BLOCK_MAP_ICON,
+  ILE_GATHER_RUNNING_MAP_ICON,
   TIM_EXPLORE_MAP_ICON,
   blockMapPatternBits,
   blockMapPatternCells,
+  isIleGatherRunningMapIcon,
   isTimExploreMapIcon,
   parseBlockMapIconName,
 } from "@/lib/block-map-glyph";
@@ -25,8 +27,31 @@ export function BlockMapGlyphIcon({
   /** Workspace tiles fill squares; TAP/ILE chapter tiles are outlines. */
   variant?: "solid" | "outline";
 }) {
+  if (isIleGatherRunningMapIcon(name)) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className={className ?? "h-8 w-8"}
+        aria-hidden
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        data-block-map-icon={ILE_GATHER_RUNNING_MAP_ICON}
+        data-ile-gather-running-icon="true"
+        data-block-map-variant={variant}
+      >
+        <path d="M10 10h4" />
+        <path d="M19 7V4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3" />
+        <path d="M20 21a2 2 0 0 0 2-2v-3.851c0-1.39-2-2.962-2-4.829V8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2z" />
+        <path d="M4 21a2 2 0 0 1-2-2v-3.851c0-1.39 2-2.962 2-4.829V8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2z" />
+        <path d="M9 7V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3" />
+      </svg>
+    );
+  }
+
   if (isTimExploreMapIcon(name)) {
-    const outline = variant === "outline";
     return (
       <svg
         viewBox="0 0 24 24"
@@ -36,29 +61,17 @@ export function BlockMapGlyphIcon({
         data-tim-explore-icon="true"
         data-block-map-variant={variant}
       >
-        <rect
-          x="3.5"
-          y="5.5"
-          width="17"
-          height="13"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={outline ? 1.5 : 1.4}
-        />
-        <path
-          d="M9 5.5v13M15 5.5v13M3.5 12h17"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-        />
-        <circle cx="12" cy="12" r="2.1" fill={outline ? "none" : "currentColor"} stroke="currentColor" strokeWidth="1.2" />
-        <path
-          d="M12 7.2l1.1 2.3 2.5.2-2 1.7.6 2.5L12 12.7l-2.2 1.2.6-2.5-2-1.7 2.5-.2z"
-          fill={outline ? "none" : "currentColor"}
-          stroke="currentColor"
-          strokeWidth="1.1"
-          strokeLinejoin="miter"
-        />
+        <text
+          x="12"
+          y="18"
+          textAnchor="middle"
+          fill="currentColor"
+          fontSize="16"
+          fontWeight="700"
+          fontFamily="ui-sans-serif, system-ui, sans-serif"
+        >
+          ?
+        </text>
       </svg>
     );
   }

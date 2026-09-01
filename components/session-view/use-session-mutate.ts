@@ -22,7 +22,11 @@ import {
   revealTimChapterIconOnPlan,
 } from "@/lib/ile-tim-chapter-complete";
 import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interruption";
-import { planIleChapterClose } from "@/lib/ile-chapter-close-review";
+import {
+  applyIleChapterUndoDone,
+  planIleChapterClose,
+  resolveIleChapterDoneIndex,
+} from "@/lib/ile-chapter-close-review";
 import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 import { buildIleChapterAddPowToolData, buildIleChapterLoadPowToolData } from "@/lib/ile-chapter-depth";
 import {
@@ -847,13 +851,17 @@ useEffect(() => {
   fetchChapterFollowUps,
 ]);
 
-const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolean }) => {
+const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolean; stepId?: string | null }) => {
   const currentPlan = sessionPlanRef.current;
-  if (!currentPlan?.steps?.length) return;
+  if (!currentPlan?.steps?.length) return false;
 
-  const idx = activeChapterIndexRef.current;
-  const step = currentPlan.steps[idx];
-  if (!step || step.status === "completed" || step.status === "skipped") return;
+  const idx = resolveIleChapterDoneIndex(
+    currentPlan.steps,
+    activeChapterIndexRef.current,
+    opts?.stepId,
+  );
+  const step = idx >= 0 ? currentPlan.steps[idx] : undefined;
+  if (!step || step.status === "completed" || step.status === "skipped") return false;
 
   const artifacts = sessionPowArtifactsRef.current;
   const planned = planIleChapterClose({
@@ -866,7 +874,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
       canClose: planned.review.canClose,
       reason: planned.review.reason,
     });
-    return;
+    return false;
   }
   setChapterCloseReview(null);
 
@@ -909,6 +917,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
       if (isRecording && !isPaused) setIsPaused(true);
     }, 1500);
   }
+  return true;
 }, [
   isPaused,
   isRecording,
@@ -919,6 +928,15 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
   sessionPowArtifactsRef,
   setChapterCloseReview,
 ]);
+
+const handleMarkChapterUndone = useCallback(async (stepId: string) => {
+  const currentPlan = sessionPlanRef.current;
+  if (!currentPlan?.steps?.length) return;
+  const undone = applyIleChapterUndoDone(currentPlan.steps, stepId);
+  if (!undone.changed) return;
+  const updatedPlan = { ...currentPlan, steps: undone.steps };
+  await persistPlanSteps(updatedPlan);
+}, [persistPlanSteps]);
 
 
   return {
@@ -932,6 +950,7 @@ const handleMarkChapterDone = useCallback(async (opts?: { closeOverride?: boolea
     fetchChapterFollowUps,
     handleSelectChapterFollowUp,
     handleMarkChapterDone,
+    handleMarkChapterUndone,
     handleTimChapterMapExpansion,
     chapterFollowUpsById,
     chapterFollowUpsLoadingId,

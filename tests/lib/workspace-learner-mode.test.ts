@@ -11,6 +11,7 @@ import {
   resolveActiveSectionForMode,
   resolveWorkspaceModeShell,
   workspaceModeDisplayLabel,
+  workspaceModeFlipClearsMapSelection,
   WORKSPACE_MODE_DISPLAY_LABELS,
   WORKSPACE_INTERACTION_MODES,
 } from "@/lib/workspace-mode";
@@ -405,20 +406,23 @@ describe("learner mode UI structural", () => {
     expect(grid).not.toMatch(/label:\s*"Learner"/);
     expect(view).toContain("WorkspaceLearnerBlockPane");
     expect(view).toContain("selectInteractionMode");
-    // Mode flip clears sole / multi / empty selection (both directions)
-    expect(view).toMatch(
-      /selectInteractionMode[\s\S]*?nextWorkspaceMapSelection/,
+    expect(workspaceModeFlipClearsMapSelection()).toBe(false);
+    expect(view).toContain("clearMapChromeForModeFlip");
+    expect(view).not.toMatch(
+      /selectInteractionMode[\s\S]{0,500}nextWorkspaceMapSelection\(\{\s*type: "clear"/,
     );
-    expect(view).toMatch(
-      /selectInteractionMode[\s\S]*?type: "clear"/,
+    const selection = read("components/workspace-view/use-workspace-map-selection.ts");
+    expect(selection).toContain("workspaceModeFlipClearsMapSelection");
+    expect(selection).toMatch(
+      /if \(workspaceModeFlipClearsMapSelection\(\)\) \{[\s\S]*?type: "clear"/,
     );
     expect(view).toContain("if (next === interactionMode) return");
     expect(view).toContain("showLearnerDrawer");
     expect(view).toContain("showCreatorDrawers");
-    // Map chrome also drops local selectedBlockIds when learnerMode flips
     expect(grid).toContain("learnerModeRef");
+    expect(grid).toContain("workspaceModeFlipClearsMapSelection");
     expect(grid).toMatch(
-      /learnerModeRef\.current === learnerMode[\s\S]*?setSelectedBlockIds\(\[\]\)/,
+      /if \(workspaceModeFlipClearsMapSelection\(\)\) \{[\s\S]*?setSelectedBlockIds\(\[\]\)/,
     );
     // Practice Explore/Drill live on learner drawer; authoring on creator drawers.
     // (SessionItem still supports hidePracticeLaunch; map shell uses mode panes.)

@@ -4,8 +4,10 @@ import { join } from "node:path";
 import {
   appendIlePowCounterArtifact,
   countIlePowByType,
+  countIlePowDisplayByType,
   emptyIlePowTypeCounts,
   ilePowCounterTotal,
+  isIleSpokenThoughtArtifact,
   type IlePowCounterArtifact,
 } from "@/lib/ile-pow-counters";
 
@@ -52,6 +54,23 @@ describe("countIlePowByType (session-global)", () => {
       metadata: { impure: true, quality: "impure", calibration_passed: false },
     });
     expect(countIlePowByType(withImpure).eeg).toBe(2);
+
+    const spoken: IlePowCounterArtifact[] = [
+      { type: "tool", tool_name: "notebook" },
+      { type: "tool", tool_name: "ile-speech-segment", tool_action: "speech_stop" },
+      { type: "tool", tool_name: "tap-speech-segment" },
+      {
+        type: "tool",
+        metadata: { type: "uncertain_systems_ile_speech_segment" },
+      },
+    ];
+    expect(isIleSpokenThoughtArtifact(spoken[1])).toBe(true);
+    expect(isIleSpokenThoughtArtifact(spoken[0])).toBe(false);
+    expect(countIlePowByType(spoken).tool).toBe(1);
+    const display = countIlePowDisplayByType(spoken);
+    expect(display.tool).toBe(1);
+    expect(display.thoughts).toBe(3);
+    expect(display.screen).toBe(0);
 
     writeScratch(
       "ile-pow-counters-excerpts.txt",

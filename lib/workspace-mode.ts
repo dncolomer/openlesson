@@ -86,6 +86,14 @@ export function resolveWorkspaceMapToggleId(input: {
  * Explore keeps the current Build/Play shell underneath; leaving Explore
  * closes the overlay without inventing a mode.
  */
+/**
+ * Build / Play / Explore keep the current map selection (sole block, multi,
+ * empty cells). Authoring pick chrome may still reset.
+ */
+export function workspaceModeFlipClearsMapSelection(): boolean {
+  return false;
+}
+
 export function nextWorkspaceMapToggle(input: {
   clicked: unknown;
   interactionMode: WorkspaceInteractionMode | null | undefined;

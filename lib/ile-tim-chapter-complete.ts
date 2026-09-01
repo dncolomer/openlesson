@@ -647,9 +647,90 @@ export function revealTimChapterIconOnPlan(
   return { plan: changed ? { ...plan, steps } : plan, changed };
 }
 
+export type IleMapSchedulerPending = {
+  interruptionId: string;
+  delayMs: number;
+  startedAt: number;
+  stepId: string | null;
+};
+
+export const ILE_MARK_DONE_AWAITING_ID = "ile-mark-done-awaiting" as const;
+
+/** Optimistic bar from the Mark as Done click, before TIM responds. */
+export function beginIleMarkDoneProgress(
+  stepId: string | null | undefined,
+  now = Date.now(),
+): IleMapSchedulerPending | null {
+  const id = typeof stepId === "string" ? stepId.trim() : "";
+  if (!id) return null;
+  return {
+    interruptionId: ILE_MARK_DONE_AWAITING_ID,
+    delayMs: ILE_CHAPTER_COMPLETE_TIM_DELAY_MS,
+    startedAt: now,
+    stepId: id,
+  };
+}
+
+export function remainingIleMapDelayMs(
+  pending: Pick<IleMapSchedulerPending, "startedAt" | "delayMs"> | null | undefined,
+  now = Date.now(),
+): number {
+  if (!pending) return 0;
+  const delay = Number(pending.delayMs);
+  if (!Number.isFinite(delay) || delay <= 0) return 0;
+  const started = Number(pending.startedAt);
+  if (!Number.isFinite(started)) return 0;
+  return Math.max(0, delay - (now - started));
+}
+
+/**
+ * Keep the click-time startedAt when TIM arrives for the same chapter so the
+ * bar does not reset after the network wait.
+ */
+export function mergeIleMapDelayWithTim(
+  current: IleMapSchedulerPending | null | undefined,
+  interruption: PredictiveInterruption,
+  now = Date.now(),
+): { pending: IleMapSchedulerPending; remainingMs: number } {
+  const suggestion = chapterSuggestionFromInterruption(interruption);
+  const stepId = suggestion?.source_step_id ?? current?.stepId ?? null;
+  const delayMs = Math.max(interruption.delay_ms, 0);
+  const sameChapter =
+    Boolean(current?.stepId) && Boolean(stepId) && current?.stepId === stepId;
+  const startedAt = sameChapter && current ? current.startedAt : now;
+  const pending: IleMapSchedulerPending = {
+    interruptionId: interruption.interruption_id,
+    delayMs,
+    startedAt,
+    stepId,
+  };
+  return { pending, remainingMs: remainingIleMapDelayMs(pending, now) };
+}
+
+/**
+ * Filling bar while a TIM map-expansion delay is pending.
+ * (0, 1] during the wait; 0 when idle or after the delay finishes.
+ */
+export function ileTimDelayProgressFraction(
+  pending: Pick<IleMapSchedulerPending, "startedAt" | "delayMs"> | null | undefined,
+  now = Date.now(),
+): number {
+  if (!pending) return 0;
+  const delay = Number(pending.delayMs);
+  if (!Number.isFinite(delay) || delay <= 0) return 0;
+  const started = Number(pending.startedAt);
+  if (!Number.isFinite(started)) return 0;
+  const elapsed = now - started;
+  if (elapsed >= delay) return 0;
+  if (elapsed <= 0) return 0.08;
+  return Math.min(1, elapsed / delay);
+}
+
 export type IleMapInterruptionScheduler = {
   apply: (interruption: ProofOfWorkApiInterruption) => void;
+  begin: (stepId: string | null | undefined) => void;
   clear: () => void;
+  getPending: () => IleMapSchedulerPending | null;
 };
 
 /**
@@ -658,29 +739,69 @@ export type IleMapInterruptionScheduler = {
  */
 export function createIleMapInterruptionScheduler(
   onExpand: (interruption: PredictiveInterruption) => void,
+  onPendingChange?: (pending: IleMapSchedulerPending | null) => void,
 ): IleMapInterruptionScheduler {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pendingId: string | null = null;
+  let pending: IleMapSchedulerPending | null = null;
 
-  const clear = () => {
+  const setPending = (next: IleMapSchedulerPending | null) => {
+    pending = next;
+    onPendingChange?.(next);
+  };
+
+  const clearTimer = () => {
     if (timer) clearTimeout(timer);
     timer = null;
     pendingId = null;
   };
 
+  const clear = () => {
+    clearTimer();
+    setPending(null);
+  };
+
   const apply = (interruption: ProofOfWorkApiInterruption) => {
     if (!isChapterMapExpandInterruption(interruption)) return;
-    clear();
+    const merged = mergeIleMapDelayWithTim(pending, interruption);
+    clearTimer();
     const interruptionId = interruption.interruption_id;
     pendingId = interruptionId;
-    const delay = Math.max(interruption.delay_ms, 0);
+    setPending(merged.pending);
     timer = setTimeout(() => {
       if (pendingId !== interruptionId) return;
+      setPending(null);
       onExpand(interruption);
       pendingId = null;
       timer = null;
-    }, delay);
+    }, merged.remainingMs);
   };
 
-  return { apply, clear };
+  const begin = (stepId: string | null | undefined) => {
+    const next = beginIleMarkDoneProgress(stepId);
+    if (!next?.stepId) return;
+    if (
+      pending?.stepId === next.stepId &&
+      pending.interruptionId !== ILE_MARK_DONE_AWAITING_ID
+    ) {
+      return;
+    }
+    if (
+      pending?.stepId === next.stepId &&
+      pending.interruptionId === ILE_MARK_DONE_AWAITING_ID
+    ) {
+      return;
+    }
+    clearTimer();
+    pendingId = next.interruptionId;
+    setPending(next);
+    timer = setTimeout(() => {
+      if (pendingId !== ILE_MARK_DONE_AWAITING_ID) return;
+      setPending(null);
+      pendingId = null;
+      timer = null;
+    }, next.delayMs);
+  };
+
+  return { apply, begin, clear, getPending: () => pending };
 }

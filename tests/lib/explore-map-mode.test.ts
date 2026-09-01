@@ -14,6 +14,7 @@ import {
   resolveWorkspaceMapToggleId,
   visibleWorkspaceMapToggleIds,
   workspaceModeDisplayLabel,
+  workspaceModeFlipClearsMapSelection,
 } from "@/lib/workspace-mode";
 import {
   resolveEmptyCellMarker,
@@ -133,6 +134,12 @@ describe("Build / Play / Explore toggle helpers", () => {
         exploreOpen: true,
       }),
     ).toEqual({ interactionMode: "creator", exploreOpen: false });
+    expect(workspaceModeFlipClearsMapSelection()).toBe(false);
+
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const grid = read("components/BlockSkillGrid.tsx");
+    expect(world).toContain("!mapExploreOpen");
+    expect(grid).toContain("exploreOpen: mapExploreOpen");
 
     const occupied = resolveMapOccupiedTileBadges({
       hasDagLock: true,

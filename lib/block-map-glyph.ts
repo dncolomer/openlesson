@@ -13,6 +13,14 @@ export const BLOCK_MAP_PATTERN_MAX = (1 << BLOCK_MAP_CELL_COUNT) - 1;
 export const TIM_EXPLORE_MAP_ICON = "tim-explore" as const;
 export type TimExploreMapIcon = typeof TIM_EXPLORE_MAP_ICON;
 
+/** Display-only: running Gather resources (binoculars). Not persisted. */
+export const ILE_GATHER_RUNNING_MAP_ICON = "gather-resources" as const;
+export type IleGatherRunningMapIcon = typeof ILE_GATHER_RUNNING_MAP_ICON;
+
+export function isIleGatherRunningMapIcon(value: unknown): value is IleGatherRunningMapIcon {
+  return value === ILE_GATHER_RUNNING_MAP_ICON;
+}
+
 /** `g{bits}` — bits is a 9-bit occupancy mask (1 = filled cell). */
 export type BlockMapIconName = `g${number}` | TimExploreMapIcon;
 
@@ -28,7 +36,8 @@ export type BlockMapGlyph = {
   icon: BlockMapIconName;
 };
 
-const KEYWORD_COUNT = 2;
+const KEYWORD_MIN_WORDS = 1;
+const KEYWORD_MAX_WORDS = 2;
 const KEYWORD_MAX = 28;
 const PATTERN_RE = /^g(\d+)$/;
 
@@ -54,7 +63,7 @@ function capitalizeKeyword(token: string): string {
 }
 
 function formatKeywordPhrase(tokens: string[]): string {
-  const words = tokens.slice(0, KEYWORD_COUNT).map(capitalizeKeyword);
+  const words = tokens.slice(0, KEYWORD_MAX_WORDS).map(capitalizeKeyword);
   if (words.length === 0) return "";
   const phrase = words.join(" ");
   if (phrase.length <= KEYWORD_MAX) return phrase;
@@ -151,17 +160,11 @@ export function normalizeBlockMapKeyword(
   fallbackTitle?: string | null,
 ): string {
   const fromRaw = keywordTokens(clean(raw));
-  if (fromRaw.length >= KEYWORD_COUNT) return formatKeywordPhrase(fromRaw);
+  // Keep the model's 1 or 2 words as-is. Title words are only a fallback
+  // when the title request did not return a keyword.
+  if (fromRaw.length >= KEYWORD_MIN_WORDS) return formatKeywordPhrase(fromRaw);
   const fromTitle = keywordTokens(clean(fallbackTitle));
-  if (fromTitle.length >= KEYWORD_COUNT) return formatKeywordPhrase(fromTitle);
-  if (fromRaw.length === 1) {
-    const extra = fromTitle.find(
-      (token) => token.toLowerCase() !== fromRaw[0].toLowerCase(),
-    );
-    if (extra) return formatKeywordPhrase([fromRaw[0], extra]);
-    return formatKeywordPhrase(fromRaw);
-  }
-  if (fromTitle.length >= 1) return formatKeywordPhrase(fromTitle);
+  if (fromTitle.length >= KEYWORD_MIN_WORDS) return formatKeywordPhrase(fromTitle);
   return "Topic";
 }
 
@@ -186,7 +189,7 @@ export function normalizeBlockMapGlyph(
 
 /**
  * Columns written to `blocks` on create.
- * Two-word keyword from the model (or title fallback); icon is a random 3×3 occupancy.
+ * 1–2 word keyword from the model (or title fallback); icon is a random 3×3 occupancy.
  */
 export function blockMapGlyphDbFields(
   raw: unknown,
@@ -224,11 +227,11 @@ export function resolveBlockMapGlyph(input: {
   };
 }
 
-/** Prompt instruction: two keywords — 3×3 mark is assigned server-side. */
+/** Prompt instruction: 1–2 keyword words — 3×3 mark is assigned server-side. */
 export function composeBlockMapGlyphJsonInstruction(): string {
   return [
-    'Also return "keyword" (exactly two map words, 4–28 characters, one space, no punctuation).',
-    "Keyword is the two-word tile label shown on the map instead of the full title.",
+    'Also return "keyword" (1 or 2 map words, 4–28 characters, no punctuation).',
+    "Keyword is the 1–2 word tile label shown on the map instead of the full title.",
     "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (workspace: filled; TAP/ILE: outlines).",
   ].join(" ");
 }

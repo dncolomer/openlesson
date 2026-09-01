@@ -37,6 +37,8 @@ export function WorkspaceRightDrawers({
   isOwner,
   showCreatorDrawers,
   showLearnerDrawer,
+  requestedDrawerId,
+  requestedDrawerNonce,
   isLearnerMode,
   interactionMode,
   workspaceId,
@@ -103,6 +105,8 @@ export function WorkspaceRightDrawers({
   isOwner: boolean;
   showCreatorDrawers: boolean;
   showLearnerDrawer: boolean;
+  requestedDrawerId?: string | null;
+  requestedDrawerNonce?: number | null;
   isLearnerMode: boolean;
   interactionMode: WorkspaceInteractionMode;
   workspaceId: string;
@@ -274,6 +278,8 @@ export function WorkspaceRightDrawers({
             ayclToken={ayclToken}
             locale={locale}
             learnerUserKey={currentUserId || ayclToken || "local"}
+            requestedDrawerId={requestedDrawerId}
+            requestedDrawerNonce={requestedDrawerNonce}
             locked={locked}
             onBlocksUpdated={onBlocksUpdated}
             onDynamicGenerated={onDynamicGenerated}

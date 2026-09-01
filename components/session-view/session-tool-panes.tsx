@@ -79,6 +79,7 @@ export type SessionToolPanesProps = {
   onLeaveIleTab: (reason: "grok" | "grokipedia") => void;
   toolPrefillQuery?: string;
   gatherBlockId?: string | null;
+  gatherChapterId?: string | null;
   gatheredResources?: WorkspaceExternalResource[];
 };
 
@@ -132,6 +133,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     onLeaveIleTab,
     toolPrefillQuery,
     gatherBlockId = null,
+    gatherChapterId = null,
     gatheredResources = [],
   } = props;
 
@@ -254,6 +256,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             <WorkspaceResourcesPanel
               workspaceId={session.metadata.workspace_id as string}
               blockId={gatherBlockId}
+              chapterId={gatherChapterId}
               gatheredResources={gatheredResources}
               ayclToken={ayclToken}
               ileToken={ileToken}

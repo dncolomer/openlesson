@@ -8,6 +8,7 @@ import {
   ILE_GATHER_RESOURCES_TOOL,
   type IleGatherJob,
 } from "@/lib/ile-gather-resources";
+import { ileGatherJobTileId } from "@/lib/block-circular-menu";
 
 type MapSaveJob = {
   id: string;
@@ -35,7 +36,7 @@ export function MapJobIndicators({
   expandJobs?: readonly AddExpandJob[] | null;
   onAbortExpandJob?: (jobId: string) => void;
   gatherJobs?: readonly IleGatherJob[] | null;
-  onOpenGatherResources?: () => void;
+  onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
   minimapStackHeight: number;
   mountMapNotes: boolean;
 }) {
@@ -299,7 +300,12 @@ export function MapJobIndicators({
                     type="button"
                     data-ile-gather-open-resources
                     data-ile-gather-open-tool={ILE_GATHER_RESOURCES_TOOL}
-                    onClick={() => onOpenGatherResources?.()}
+                    onClick={() =>
+                      onOpenGatherResources?.({
+                        jobId: job.id,
+                        tileId: ileGatherJobTileId(job),
+                      })
+                    }
                     className="w-full rounded-none border border-white/50 bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:bg-neutral-100"
                   >
                     Open resources

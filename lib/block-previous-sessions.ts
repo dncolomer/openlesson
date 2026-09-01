@@ -2,6 +2,7 @@
  * Practice drawer: list this block’s past ILE sessions and continue by id.
  * Continue never inserts a new `sessions` row.
  */
+import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 
 export const SEE_PREVIOUS_SESSIONS_LABEL = "See Previous Sessions";
 export const START_NEW_SESSION_LABEL = "Start a New Session";
@@ -19,6 +20,8 @@ export type BlockPreviousSession = {
   sessionId: string;
   startedAt: string;
   status?: string;
+  /** Learner-chosen name; omit when unset so the list falls back to session id. */
+  name?: string;
 };
 
 export type IleLaunchKind = "new" | "continue";
@@ -50,15 +53,24 @@ export function normalizeBlockPreviousSessionRow(row: {
   startedAt?: unknown;
   created_at?: unknown;
   status?: unknown;
+  name?: unknown;
+  session_name?: unknown;
+  metadata?: unknown;
 }): BlockPreviousSession | null {
   const sessionId = String(row.sessionId ?? row.session_id ?? "").trim();
   const startedAt = String(row.startedAt ?? row.created_at ?? "").trim();
   if (!sessionId || !startedAt) return null;
   const status = row.status != null ? String(row.status).trim() : "";
+  const name =
+    ileSessionNameFromMetadata(row.metadata) ||
+    (typeof row.name === "string" ? row.name.trim() : "") ||
+    (typeof row.session_name === "string" ? row.session_name.trim() : "") ||
+    "";
   return {
     sessionId,
     startedAt,
     ...(status ? { status } : {}),
+    ...(name ? { name } : {}),
   };
 }
 
@@ -122,7 +134,7 @@ export async function listBlockPreviousSessions(
 
   const { data: sessionRows, error: sessionError } = await supabase
     .from("sessions")
-    .select("id, created_at, status")
+    .select("id, created_at, status, metadata")
     .in("id", ids);
   if (sessionError) {
     return normalizeBlockPreviousSessions(
@@ -136,11 +148,19 @@ export async function listBlockPreviousSessions(
     );
   }
 
-  const byId = new Map<string, { created_at?: string; status?: string }>();
+  const byId = new Map<
+    string,
+    { created_at?: string; status?: string; metadata?: unknown }
+  >();
   if (Array.isArray(sessionRows)) {
     for (const row of sessionRows) {
       if (!row || typeof row !== "object") continue;
-      const rec = row as { id?: string; created_at?: string; status?: string };
+      const rec = row as {
+        id?: string;
+        created_at?: string;
+        status?: string;
+        metadata?: unknown;
+      };
       const id = String(rec.id || "").trim();
       if (id) byId.set(id, rec);
     }
@@ -155,6 +175,7 @@ export async function listBlockPreviousSessions(
         sessionId: id,
         startedAt: session?.created_at || rec.created_at,
         status: session?.status,
+        metadata: session?.metadata,
       };
     }),
   );

@@ -13,6 +13,11 @@ import {
   CHAPTER_MAP_EXPAND_INTERVENTION,
   createIleMapInterruptionScheduler,
   displayChapterMapIcon,
+  ileTimDelayProgressFraction,
+  beginIleMarkDoneProgress,
+  mergeIleMapDelayWithTim,
+  remainingIleMapDelayMs,
+  ILE_MARK_DONE_AWAITING_ID,
   EXPAND_CHAPTER_MAP_ACTION,
   ILE_CHAPTER_COMPLETE_DEFAULT_EXPANSIONS,
   ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS,
@@ -437,11 +442,19 @@ describe("ILE map interruption scheduler (shipped)", () => {
 
     scheduler.apply(interruption);
     scheduler.apply(null);
-    vi.advanceTimersByTime(7_999);
+    const started = ileTimDelayProgressFraction(scheduler.getPending(), Date.now());
+    expect(started).toBeGreaterThan(0);
+    expect(started).toBeLessThanOrEqual(1);
+    vi.advanceTimersByTime(4_000);
+    const mid = ileTimDelayProgressFraction(scheduler.getPending(), Date.now());
+    expect(mid).toBeGreaterThan(0);
+    expect(mid).toBeLessThanOrEqual(1);
+    vi.advanceTimersByTime(3_999);
     expect(onExpand).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onExpand).toHaveBeenCalledTimes(1);
     expect(onExpand.mock.calls[0][0].interruption_id).toBe(interruption.interruption_id);
+    expect(ileTimDelayProgressFraction(scheduler.getPending(), Date.now())).toBe(0);
 
     const second = expansionInterruption({
       interruption_id: "int_newer",
@@ -452,6 +465,43 @@ describe("ILE map interruption scheduler (shipped)", () => {
     vi.advanceTimersByTime(8_000);
     expect(onExpand).toHaveBeenCalledTimes(2);
     expect(onExpand.mock.calls[1][0].interruption_id).toBe("int_newer");
+  });
+
+  it("Mark as Done begins a visible bar immediately; TIM apply keeps the click-time start", () => {
+    vi.setSystemTime(1_000);
+    const onExpand = vi.fn();
+    const scheduler = createIleMapInterruptionScheduler(onExpand);
+
+    expect(beginIleMarkDoneProgress("")).toBeNull();
+    const optimistic = beginIleMarkDoneProgress("ch-done", 1_000);
+    expect(optimistic?.interruptionId).toBe(ILE_MARK_DONE_AWAITING_ID);
+    expect(optimistic?.stepId).toBe("ch-done");
+    expect(ileTimDelayProgressFraction(optimistic, 1_000)).toBeGreaterThan(0);
+    expect(ileTimDelayProgressFraction(optimistic, 1_000)).toBeLessThanOrEqual(1);
+
+    scheduler.begin("ch-done");
+    const started = ileTimDelayProgressFraction(scheduler.getPending(), Date.now());
+    expect(started).toBeGreaterThan(0);
+    expect(scheduler.getPending()?.interruptionId).toBe(ILE_MARK_DONE_AWAITING_ID);
+
+    vi.advanceTimersByTime(2_000);
+    const mid = ileTimDelayProgressFraction(scheduler.getPending(), Date.now());
+    expect(mid).toBeGreaterThan(started);
+
+    const interruption = expansionInterruption({ delay_ms: 8_000 });
+    const merged = mergeIleMapDelayWithTim(scheduler.getPending(), interruption, Date.now());
+    expect(merged.pending.startedAt).toBe(scheduler.getPending()?.startedAt);
+    expect(merged.remainingMs).toBe(remainingIleMapDelayMs(merged.pending, Date.now()));
+    expect(merged.remainingMs).toBeLessThan(8_000);
+
+    scheduler.apply(interruption);
+    const afterApply = ileTimDelayProgressFraction(scheduler.getPending(), Date.now());
+    expect(afterApply).toBeGreaterThan(0);
+    expect(afterApply).toBeGreaterThanOrEqual(mid);
+    expect(onExpand).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(merged.remainingMs);
+    expect(onExpand).toHaveBeenCalledTimes(1);
+    expect(ileTimDelayProgressFraction(scheduler.getPending(), Date.now())).toBe(0);
   });
 });
 
@@ -508,7 +558,22 @@ describe("ILE TIM map interactions catalog + wiring", () => {
     const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
     expect(glyph).toContain("data-tim-explore-icon");
     expect(glyph).toContain("TIM_EXPLORE_MAP_ICON");
+    expect(glyph).toMatch(/>\s*\?\s*</);
     expect(glyph).not.toContain("lucide-react");
+    expect(idle).toContain("mapDelay");
+    expect(idle).toContain("beginMapDelay");
+    expect(idle).toContain("mapSchedulerRef.current.begin");
+    expect(view).toContain("ileTimDelayProgressFraction");
+    expect(view).toContain("timBlockActionProgress");
+    expect(view).toContain("beginMapDelay(stepId)");
+    const markDoneIdx = view.indexOf("onMarkChapterCompleted={(stepId) => {");
+    const flushIdx = view.indexOf("await flushRemainingIlePow()", markDoneIdx);
+    const beginIdx = view.indexOf("beginMapDelay(stepId)", markDoneIdx);
+    expect(markDoneIdx).toBeGreaterThan(-1);
+    expect(beginIdx).toBeGreaterThan(markDoneIdx);
+    expect(flushIdx).toBeGreaterThan(beginIdx);
+    expect(mutate).toContain("handleMarkChapterUndone");
+    expect(mutate).toContain("applyIleChapterUndoDone");
 
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     expect(world).toContain("data-tim-unopened");

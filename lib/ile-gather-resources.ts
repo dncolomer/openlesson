@@ -104,6 +104,7 @@ export type IleGatherJob = {
   completed: number;
   total: number;
   blockId: string;
+  chapterId?: string | null;
   openTool: typeof ILE_GATHER_RESOURCES_TOOL | null;
   error?: string | null;
 };
@@ -120,15 +121,32 @@ export function availableIlePowCounts(
   };
 }
 
+export function ileGatherRateLimitKey(input: {
+  chapterId?: string | null;
+  blockId?: string | null;
+}): string {
+  const chapter = typeof input.chapterId === "string" ? input.chapterId.trim() : "";
+  if (chapter) return chapter;
+  return typeof input.blockId === "string" ? input.blockId.trim() : "";
+}
+
 export function ileGatherRateLimited(input: {
   lastGatherAt: number | null | undefined;
   gatherCount: number;
   now?: number;
+  /** Chapter/block starting this gather. */
+  rateLimitKey?: string | null;
+  /** Chapter/block that last started a gather. */
+  lastGatherKey?: string | null;
 }): boolean {
   const count = Math.max(0, Math.floor(input.gatherCount || 0));
   if (count >= ILE_GATHER_MAX_PER_SESSION) return true;
   const last = input.lastGatherAt;
   if (last == null || !Number.isFinite(last) || last <= 0) return false;
+  const key = typeof input.rateLimitKey === "string" ? input.rateLimitKey.trim() : "";
+  const lastKey = typeof input.lastGatherKey === "string" ? input.lastGatherKey.trim() : "";
+  // Cooldown is per chapter/block so a second started job on another tile is not blocked.
+  if (key && lastKey && key !== lastKey) return false;
   const now = input.now ?? Date.now();
   return now - last < ILE_GATHER_RATE_LIMIT_MS;
 }
@@ -167,6 +185,8 @@ export function decideIleGatherResources(input: {
   lastGatherAt?: number | null;
   gatherCount?: number;
   now?: number;
+  rateLimitKey?: string | null;
+  lastGatherKey?: string | null;
 }): IleGatherDecision {
   const total =
     input.counts ?? countIlePowByType(input.artifacts ?? []);
@@ -176,6 +196,8 @@ export function decideIleGatherResources(input: {
     lastGatherAt: input.lastGatherAt,
     gatherCount: input.gatherCount ?? 0,
     now: input.now,
+    rateLimitKey: input.rateLimitKey,
+    lastGatherKey: input.lastGatherKey,
   });
   if (rateLimited) {
     return {
@@ -401,25 +423,41 @@ export function ileGatherResourceBlockId(resource: {
  * Workspace (no block id): all rows, including persisted gather results.
  */
 export function filterPlannedResourcesForIleBlock(
-  resources: readonly WorkspaceExternalResource[],
+  resources: readonly WorkspaceExternalResource[] | null | undefined,
   blockId: string | null | undefined,
 ): WorkspaceExternalResource[] {
+  if (!resources || !Array.isArray(resources)) return [];
   const bid = typeof blockId === "string" ? blockId.trim() : "";
   if (!bid) return [...resources];
   return resources.filter((row) => ileGatherResourceBlockId(row) === bid);
 }
 
+/**
+ * Workspace block_id and chapter_id stay distinct. Never copy a chapter step
+ * id into block_id — resources UIs scope with filterPlannedResourcesByScope.
+ */
+export function resolveIleGatherPersistIds(input: {
+  workspaceBlockId?: string | null;
+  chapterId?: string | null;
+}): { blockId: string; chapterId: string } {
+  return {
+    blockId: String(input.workspaceBlockId || "").trim(),
+    chapterId: String(input.chapterId || "").trim(),
+  };
+}
+
 export function mergeIleGatherPlannedResources(input: {
-  fetched: readonly WorkspaceExternalResource[];
-  local: readonly WorkspaceExternalResource[];
-  blockId: string | null | undefined;
+  fetched?: readonly WorkspaceExternalResource[] | null;
+  local?: readonly WorkspaceExternalResource[] | null;
+  /** Ignored; scoping is filterPlannedResourcesByScope after merge. */
+  blockId?: string | null;
 }): WorkspaceExternalResource[] {
   const byId = new Map<string, WorkspaceExternalResource>();
-  for (const row of [...input.fetched, ...input.local]) {
+  for (const row of [...(input.fetched || []), ...(input.local || [])]) {
     if (!row?.id) continue;
     byId.set(row.id, row);
   }
-  return filterPlannedResourcesForIleBlock([...byId.values()], input.blockId);
+  return [...byId.values()];
 }
 
 export function buildIleGatherPowArtifact(input: {
@@ -449,9 +487,12 @@ export function createIleGatherJobId(seed: string | number): string {
 export function createIleGatherJob(input: {
   id: string;
   blockId: string;
+  chapterId?: string | null;
   label?: string | null;
 }): IleGatherJob {
   const labelRaw = typeof input.label === "string" ? input.label.trim() : "";
+  const chapterId =
+    typeof input.chapterId === "string" ? input.chapterId.trim() : "";
   return {
     id: String(input.id || "").trim() || createIleGatherJobId("anon"),
     status: "running",
@@ -459,6 +500,7 @@ export function createIleGatherJob(input: {
     completed: 0,
     total: ILE_GATHER_JOB_TOTAL_STEPS,
     blockId: String(input.blockId || "").trim(),
+    chapterId: chapterId || null,
     openTool: null,
     error: null,
   };
@@ -519,4 +561,45 @@ export function completeIleGatherJob(
     label: "Resources ready",
     error: null,
   });
+}
+
+export function dismissIleGatherJob(
+  jobs: readonly IleGatherJob[],
+  jobId: string | null | undefined,
+): IleGatherJob[] {
+  const id = typeof jobId === "string" ? jobId.trim() : "";
+  if (!id) return [...(jobs || [])];
+  return (jobs || []).filter((job) => job.id !== id);
+}
+
+/** Drop completed "Resources ready" boxes for a chapter/block after the learner opens them. */
+export function dismissIleGatherReadyJobsForTile(
+  jobs: readonly IleGatherJob[],
+  tileId: string | null | undefined,
+): IleGatherJob[] {
+  const tile = typeof tileId === "string" ? tileId.trim() : "";
+  if (!tile) return [...(jobs || [])];
+  return (jobs || []).filter((job) => {
+    if (job.status !== "completed") return true;
+    return ileGatherJobTileId(job) !== tile;
+  });
+}
+
+function ileGatherJobTileId(job: Pick<IleGatherJob, "blockId" | "chapterId">): string {
+  const chapter = typeof job.chapterId === "string" ? job.chapterId.trim() : "";
+  if (chapter) return chapter;
+  return typeof job.blockId === "string" ? job.blockId.trim() : "";
+}
+
+/** Tiles with a running gather job — show the binoculars search icon until done. */
+export function ileGatherRunningTileIds(
+  jobs: readonly IleGatherJob[] | null | undefined,
+): Set<string> {
+  const out = new Set<string>();
+  for (const job of jobs || []) {
+    if (!job || job.status !== "running") continue;
+    const id = ileGatherJobTileId(job);
+    if (id) out.add(id);
+  }
+  return out;
 }

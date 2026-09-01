@@ -1,14 +1,14 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef } from "react";
+import { DialogFrame, type DialogSize } from "@/components/ui/DialogFrame";
 
 /**
  * ── ConfirmDialog ──────────────────────────────────────────────────────
  *
- * Single source of truth for all "Are you sure?" modals across the app.
- * Replaces both native `window.confirm()` and hand-rolled JSX dialogs so
- * every destructive/confirmatory action shares the same visual language
- * and keyboard/a11y affordances.
+ * Confirm/acknowledge variant of DialogFrame. Every ILE "are you sure?"
+ * and form modal uses this chrome (icon, title, description, children,
+ * primary/cancel/tertiary footer) so they share one visual language.
  *
  * The reference style is lifted from `SessionView`'s end-session modal:
  *   • fullscreen dark overlay with backdrop blur, click-to-dismiss
@@ -23,9 +23,9 @@ import { type ReactNode, useEffect, useRef } from "react";
  * see the companion `useConfirm()` hook in `lib/useConfirm.tsx`.
  *
  * Keyboard:
- *   • `Esc` fires `onCancel`
+ *   • `Esc` fires `onCancel` (DialogFrame)
  *   • `Enter` fires `onConfirm` (unless focus is in a textarea/input)
- *   • Primary action is auto-focused on open
+ *   • Primary action is auto-focused on open (unless `autoFocusConfirm` is false)
  */
 
 export type ConfirmVariant = "destructive" | "warning" | "info" | "success" | "neutral";
@@ -47,6 +47,8 @@ interface ConfirmDialogProps {
   variant?: ConfirmVariant;
   /** Override the default icon for the variant. */
   icon?: ReactNode;
+  /** Hide the header icon pill (form-style dialogs). */
+  hideIcon?: boolean;
 
   confirmLabel: ReactNode;
   cancelLabel?: ReactNode;
@@ -67,6 +69,12 @@ interface ConfirmDialogProps {
 
   /** Arbitrary custom body rendered between the description and the footer. */
   children?: ReactNode;
+
+  size?: DialogSize;
+  autoFocusConfirm?: boolean;
+  confirmOnEnter?: boolean;
+  testId?: string;
+  panelClassName?: string;
 }
 
 // ── Variant visuals ─────────────────────────────────────────────────────
@@ -149,6 +157,7 @@ export function ConfirmDialog({
   description,
   variant = "destructive",
   icon,
+  hideIcon = false,
   confirmLabel,
   cancelLabel = "Cancel",
   tertiaryLabel,
@@ -158,6 +167,11 @@ export function ConfirmDialog({
   confirmBusy = false,
   hideCancel = false,
   children,
+  size = "md",
+  autoFocusConfirm = true,
+  confirmOnEnter = true,
+  testId,
+  panelClassName,
 }: ConfirmDialogProps) {
   const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -167,106 +181,95 @@ export function ConfirmDialog({
   // accidental click (Enter on a freshly-rendered button still requires
   // an explicit user keystroke).
   useEffect(() => {
-    if (!open) return;
+    if (!open || !autoFocusConfirm) return;
     const id = window.setTimeout(() => confirmBtnRef.current?.focus(), 0);
     return () => window.clearTimeout(id);
-  }, [open]);
+  }, [open, autoFocusConfirm]);
 
-  // Esc closes; Enter submits (when a non-text target is focused).
+  // Enter submits (when a non-text target is focused). Esc is DialogFrame.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !confirmOnEnter) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key !== "Enter") return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName?.toLowerCase();
+      const isTextInput =
+        tag === "textarea" ||
+        (tag === "input" && (t as HTMLInputElement).type !== "button" && (t as HTMLInputElement).type !== "submit");
+      if (!isTextInput && !confirmDisabled && !confirmBusy) {
         e.preventDefault();
-        onCancel();
-      } else if (e.key === "Enter") {
-        const t = e.target as HTMLElement | null;
-        const tag = t?.tagName?.toLowerCase();
-        const isTextInput =
-          tag === "textarea" ||
-          (tag === "input" && (t as HTMLInputElement).type !== "button" && (t as HTMLInputElement).type !== "submit");
-        if (!isTextInput && !confirmDisabled && !confirmBusy) {
-          e.preventDefault();
-          onConfirm();
-        }
+        onConfirm();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onCancel, onConfirm, confirmDisabled, confirmBusy]);
-
-  if (!open) return null;
+  }, [open, onConfirm, confirmDisabled, confirmBusy, confirmOnEnter]);
 
   const tone = resolveConfirmTone(confirmTone, variant);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
+    <DialogFrame
+      open={open}
+      onClose={onCancel}
+      size={size}
+      testId={testId}
+      panelClassName={panelClassName}
     >
-      {/* Overlay — click to dismiss */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-md"
-        onClick={onCancel}
-      />
-
-      {/* Panel */}
-      <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-none shadow-2xl overflow-hidden">
-        <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
-          <div className="flex items-center gap-3">
+      <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
+        <div className="flex items-center gap-3">
+          {!hideIcon ? (
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ICON_PILL[variant]}`}
               aria-hidden="true"
             >
               {icon ?? <DefaultIcon variant={variant} />}
             </div>
-            <h3 className="text-base font-semibold text-white">{title}</h3>
-          </div>
-          {description && (
-            <p className="mt-3 text-[13px] leading-relaxed text-neutral-400 whitespace-pre-line">
-              {description}
-            </p>
-          )}
-          {children && (
-            <div className="mt-4">{children}</div>
-          )}
+          ) : null}
+          <h3 className="text-base font-semibold text-white">{title}</h3>
         </div>
+        {description && (
+          <p className="mt-3 text-[13px] leading-relaxed text-neutral-400 whitespace-pre-line">
+            {description}
+          </p>
+        )}
+        {children && (
+          <div className="mt-4">{children}</div>
+        )}
+      </div>
 
-        <div className="px-6 py-4 flex flex-col gap-2">
-          {onTertiary && tertiaryLabel && (
+      <div className="px-6 py-4 flex flex-col gap-2">
+        {onTertiary && tertiaryLabel && (
+          <button
+            type="button"
+            onClick={onTertiary}
+            className="w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2"
+          >
+            {tertiaryIcon}
+            {tertiaryLabel}
+          </button>
+        )}
+        <div className={hideCancel ? "flex" : "flex gap-2"}>
+          {!hideCancel && (
             <button
               type="button"
-              onClick={onTertiary}
-              className="w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2"
+              onClick={onCancel}
+              className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-none transition-colors"
             >
-              {tertiaryIcon}
-              {tertiaryLabel}
+              {cancelLabel}
             </button>
           )}
-          <div className={hideCancel ? "flex" : "flex gap-2"}>
-            {!hideCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-none transition-colors"
-              >
-                {cancelLabel}
-              </button>
-            )}
-            <button
-              ref={confirmBtnRef}
-              type="button"
-              onClick={onConfirm}
-              disabled={confirmDisabled || confirmBusy}
-              className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-none transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${CONFIRM_TONE[tone]}`}
-            >
-              {confirmBusy && <Spinner />}
-              {confirmLabel}
-            </button>
-          </div>
+          <button
+            ref={confirmBtnRef}
+            type="button"
+            onClick={onConfirm}
+            disabled={confirmDisabled || confirmBusy}
+            className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-none transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${CONFIRM_TONE[tone]}`}
+          >
+            {confirmBusy && <Spinner />}
+            {confirmLabel}
+          </button>
         </div>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

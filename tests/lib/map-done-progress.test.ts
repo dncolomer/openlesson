@@ -237,7 +237,8 @@ describe("workspace Mark as Done + tile glyphs", () => {
     expect(pane).toContain("Mark as Done");
     expect(pane).toContain("onMarkDone");
     expect(chapter).toContain("onChapterDone");
-    expect(chapter).toContain('t("chapterMap.complete")');
+    expect(chapter).not.toContain('t("chapterMap.complete")');
+    expect(read("components/ChapterMapPanel.tsx")).toContain("onMarkChapterCompleted");
     expect(read("components/ChapterMapPanel.tsx")).toContain("learnerScopeId");
 
     expect(grid).toContain("ileChapterCellChrome");

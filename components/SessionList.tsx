@@ -121,6 +121,10 @@ interface SessionListProps {
     progress: number;
     label: string;
   } | null;
+  onCircularMenuAction?: (
+    blockId: string,
+    action: "start_session" | "continue_session" | "mark_done" | string,
+  ) => void;
 }
 
 /** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
@@ -214,6 +218,7 @@ export function SessionList({
   expandJobs = null,
   onAbortExpandJob,
   clusterMapJob = null,
+  onCircularMenuAction,
 }: SessionListProps) {
   const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
   const isExpandedControlled =
@@ -468,6 +473,8 @@ export function SessionList({
             onMapSelectionChange={onMapSelectionChange}
             canEdit={isOwner && !learnerMode}
             learnerMode={learnerMode}
+            circularMenuSurface={learnerMode ? "workspace-learner" : "none"}
+            onCircularMenuAction={onCircularMenuAction}
             learnerScopeId={learnerScopeId || ayclToken || null}
             cloneArmed={cloneArmed}
             cloneSourceBlockId={cloneSourceBlockId}

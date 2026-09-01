@@ -22,10 +22,26 @@ import {
 } from "@/lib/ile-map-chrome";
 import { IleChapterWidgetFrame } from "@/components/session-view/ile-chapter-widget-frame";
 import {
+  Activity,
+  MessageCircle,
+  Monitor,
+  Video,
+  Wrench,
+} from "lucide-react";
+import {
   ILE_POW_COUNTER_LABELS,
-  ILE_POW_COUNTER_TYPES,
-  type IlePowTypeCounts,
+  ILE_POW_DISPLAY_COUNTER_TYPES,
+  type IlePowDisplayCounts,
+  type IlePowDisplayCounterType,
 } from "@/lib/ile-pow-counters";
+
+const ILE_POW_COUNTER_ICONS: Record<IlePowDisplayCounterType, ReactNode> = {
+  tool: <Wrench className="size-3.5" strokeWidth={2.2} aria-hidden />,
+  screen: <Monitor className="size-3.5" strokeWidth={2.2} aria-hidden />,
+  video: <Video className="size-3.5" strokeWidth={2.2} aria-hidden />,
+  eeg: <Activity className="size-3.5" strokeWidth={2.2} aria-hidden />,
+  thoughts: <MessageCircle className="size-3.5" strokeWidth={2.2} aria-hidden />,
+};
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -60,7 +76,7 @@ export type SessionChromeProps = {
   introOpen: boolean;
   introWidget: ReactNode;
   voiceBar: ReactNode;
-  powCounts: IlePowTypeCounts;
+  powCounts: IlePowDisplayCounts;
   participantIdentity?: PowParticipantIdentity | null;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
@@ -71,6 +87,17 @@ export type SessionChromeProps = {
   showPlanCompleteModal: boolean;
   onCancelPlanComplete: () => void;
   onConfirmPlanComplete: () => void;
+  showSaveExitNameDialog?: boolean;
+  saveExitName?: string;
+  onSaveExitNameChange?: (value: string) => void;
+  onCancelSaveExitName?: () => void;
+  onConfirmSaveExitName?: () => void;
+  gatherWarning?: string | null;
+  onDismissGatherWarning?: () => void;
+  closeReviewBlocked?: boolean;
+  closeReviewReason?: string | null;
+  onChapterDoneOverride?: () => void;
+  onDismissCloseReview?: () => void;
 };
 
 export function SessionChrome({
@@ -117,6 +144,17 @@ export function SessionChrome({
   showPlanCompleteModal,
   onCancelPlanComplete,
   onConfirmPlanComplete,
+  showSaveExitNameDialog = false,
+  saveExitName = "",
+  onSaveExitNameChange,
+  onCancelSaveExitName,
+  onConfirmSaveExitName,
+  gatherWarning = null,
+  onDismissGatherWarning,
+  closeReviewBlocked = false,
+  closeReviewReason = null,
+  onChapterDoneOverride,
+  onDismissCloseReview,
 }: SessionChromeProps) {
   const overlayOpen = isIleMapOverlayTool(activeTool);
 
@@ -137,13 +175,17 @@ export function SessionChrome({
           >
             Proof of Work Resources
           </span>
-          {ILE_POW_COUNTER_TYPES.map((type) => (
+          {ILE_POW_DISPLAY_COUNTER_TYPES.map((type) => (
             <div
               key={type}
               data-ile-pow-count={type}
+              title={ILE_POW_COUNTER_LABELS[type]}
               className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-neutral-300"
             >
-              <span className="text-neutral-500">{ILE_POW_COUNTER_LABELS[type]}</span>
+              <span className="text-neutral-400" aria-hidden>
+                {ILE_POW_COUNTER_ICONS[type]}
+              </span>
+              <span className="sr-only">{ILE_POW_COUNTER_LABELS[type]}</span>
               <span className="text-neutral-100">{powCounts[type]}</span>
             </div>
           ))}
@@ -167,9 +209,9 @@ export function SessionChrome({
         {introOpen ? (
           <div
             data-ile-intro-widget
-            className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex h-[min(88vh,44rem)] w-[min(40rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95"
+            className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex max-h-[min(88vh,44rem)] w-[min(40rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95"
           >
-            <div className="min-h-0 flex-1 overflow-hidden">{introWidget}</div>
+            <div className="min-h-0 overflow-y-auto">{introWidget}</div>
           </div>
         ) : null}
 
@@ -263,6 +305,30 @@ export function SessionChrome({
       ) : null}
 
       <ConfirmDialog
+        open={showSaveExitNameDialog}
+        onCancel={() => onCancelSaveExitName?.()}
+        onConfirm={() => onConfirmSaveExitName?.()}
+        variant="neutral"
+        title={t("session.nameSessionTitle")}
+        description={t("session.nameSessionBody")}
+        confirmLabel={t("session.nameSessionConfirm")}
+        cancelLabel={t("session.nameSessionStay")}
+        confirmTone="primary"
+        autoFocusConfirm={false}
+        confirmOnEnter={false}
+        testId="ile-save-exit-name"
+      >
+        <input
+          data-ile-session-name
+          value={saveExitName}
+          onChange={(e) => onSaveExitNameChange?.(e.target.value)}
+          placeholder={t("session.nameSessionPlaceholder")}
+          maxLength={80}
+          className="w-full rounded-none border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+        />
+      </ConfirmDialog>
+
+      <ConfirmDialog
         open={showPlanCompleteModal}
         onCancel={onCancelPlanComplete}
         onConfirm={onConfirmPlanComplete}
@@ -275,6 +341,37 @@ export function SessionChrome({
         confirmTone="primary"
         hideCancel
       />
+
+      <div data-ile-gather-warning={gatherWarning ? "true" : undefined}>
+        <ConfirmDialog
+          open={Boolean(gatherWarning)}
+          variant="warning"
+          title={t("chapterMap.gatherInsufficientTitle")}
+          description={gatherWarning || ""}
+          confirmLabel={t("chapterMap.gatherWarningConfirm")}
+          hideCancel
+          onConfirm={() => onDismissGatherWarning?.()}
+          onCancel={() => onDismissGatherWarning?.()}
+        />
+      </div>
+
+      <div data-ile-chapter-close-blocked={closeReviewBlocked ? "true" : undefined}>
+        <ConfirmDialog
+          open={closeReviewBlocked}
+          variant="warning"
+          title={t("chapterMap.closeBlockedTitle")}
+          description={
+            closeReviewReason ||
+            "Session proof of work is not enough to close this chapter."
+          }
+          confirmLabel={t("chapterMap.closeOverride")}
+          cancelLabel={t("common.keepGoing")}
+          confirmTone="warning"
+          testId="ile-close-override"
+          onConfirm={() => onChapterDoneOverride?.()}
+          onCancel={() => onDismissCloseReview?.()}
+        />
+      </div>
     </>
   );
 }

@@ -353,8 +353,8 @@ describe("I'm done answering vs chapter Complete (shipped split)", () => {
     const close = read("lib/ile-im-done-answering.ts");
     const doneFn = mutate.slice(mutate.indexOf("const handleMarkChapterDone"));
 
-    expect(actions).toContain('t("chapterMap.complete")');
-    expect(actions).toContain("onChapterDone()");
+    expect(actions).not.toContain('t("chapterMap.complete")');
+    expect(actions).not.toContain("onChapterDone()");
     expect(actions).not.toContain("closeIleImDoneAnswering");
     expect(actions).not.toContain("sendThought");
     expect(actions).not.toContain("I'm done answering");

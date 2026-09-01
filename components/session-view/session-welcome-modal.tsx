@@ -5,6 +5,7 @@ import { ChapterMiniMap } from "@/components/ChapterMiniMap";
 import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
+import { DialogFrame } from "@/components/ui/DialogFrame";
 import { dummyDensityCells } from "@/lib/ile-chapter-mini-map";
 import {
   ileWelcomeShowsContinuePreview,
@@ -54,12 +55,15 @@ export function SessionWelcomeModal({
   resumeSession = false,
 }: SessionWelcomeModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-      data-session-welcome-modal
+    <DialogFrame
+      open
+      onClose={() => {}}
+      closeOnOverlay={false}
+      closeOnEscape={false}
+      size="xl"
+      testId="session-welcome-modal"
+      panelClassName="flex max-h-[min(92vh,52rem)] flex-col"
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-      <div className="relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-900 shadow-[0_32px_100px_rgba(0,0,0,0.65)]">
         <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
           <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
             {t("session.welcomeTitle")}
@@ -450,7 +454,6 @@ export function SessionWelcomeModal({
           );
         })()}
         </div>
-      </div>
-    </div>
+    </DialogFrame>
   );
 }

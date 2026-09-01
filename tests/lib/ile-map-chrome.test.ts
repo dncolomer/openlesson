@@ -67,14 +67,17 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome.slice(introWidgetIdx, heliosOpenIdx)).not.toContain("✕");
     expect(chrome).not.toContain("onCloseIntro");
     expect(view).not.toContain("onCloseIntro");
-    expect(chrome).toContain("h-[min(88vh,44rem)]");
+    expect(chrome).toContain("max-h-[min(88vh,44rem)]");
+    expect(chrome).not.toMatch(/(?<!max-)h-\[min\(88vh,44rem\)\]/);
     expect(view).toContain("<SessionOnboardingGuide");
     expect(helios).not.toContain("SessionOnboardingGuide");
     expect(helios).not.toContain("data-ile-intro-widget");
     const helpChrome = read("components/session-view/use-session-chrome.ts");
     expect(helpChrome).toContain('if (tool === "help")');
     expect(helpChrome).toContain("setShowWelcomePanel(true)");
-    expect(view).toContain("onChapterDoubleClick");
+    expect(view).not.toContain("onChapterClick");
+    expect(view).toContain("onWorkChapter");
+    expect(view).not.toContain("onChapterDoubleClick");
     expect(view).toContain("<IleVoiceBar");
     expect(chrome).toContain("ILE_HELIOS_WIDGET_TOP_PX");
     expect(chrome).toContain("ILE_HELIOS_WIDGET_WIDTH_PX");
@@ -172,10 +175,13 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     const heliosActions = read("components/session-view/ile-chapter-helios-actions.tsx");
     expect(heliosActions).toContain("data-ile-chapter-helios-actions");
     expect(heliosActions).toContain("data-ile-chapter-actions");
-    expect(heliosActions).toContain('t("chapterMap.complete")');
+    expect(heliosActions).toContain("doneAnswering");
+    expect(heliosActions).not.toContain('t("chapterMap.complete")');
+    expect(heliosActions).not.toContain('t("chapterMap.edit")');
+    expect(heliosActions).not.toContain('t("chapterMap.gatherResources")');
     expect(heliosActions).not.toContain('t("chapterMap.reloadChapter")');
     expect(heliosActions).not.toContain('t("chapterMap.loadChapter")');
-    expect(heliosActions).toContain("data-ile-close-override");
+    expect(heliosActions).not.toContain("data-ile-close-override");
     expect(helios).toContain("IleChapterHeliosActions");
     expect(view).toContain("chapterActions");
 
@@ -183,14 +189,19 @@ describe("ILE map-first session chrome (shipped surface)", () => {
       expect(src).toContain("rounded-none");
       expect(src).not.toMatch(BOX_ROUNDED_RE);
     }
-    expect(chrome).toContain("ILE_POW_COUNTER_TYPES");
+    expect(chrome).toContain("ILE_POW_DISPLAY_COUNTER_TYPES");
     expect(chrome).toContain("data-ile-pow-count={type}");
     expect(chrome).toContain("ILE_POW_COUNTER_LABELS[type]");
+    expect(chrome).toContain("ILE_POW_COUNTER_ICONS[type]");
+    expect(chrome).not.toContain(">Traces<");
+    expect(chrome).toContain("thoughts:");
     const counters = read("lib/ile-pow-counters.ts");
     expect(counters).toContain('"tool"');
     expect(counters).toContain('"screen"');
     expect(counters).toContain('"video"');
     expect(counters).toContain('"eeg"');
+    expect(counters).toContain('"thoughts"');
+    expect(counters).toContain("isIleSpokenThoughtArtifact");
 
     expect(isIleMapOverlayTool("canvas")).toBe(true);
     expect(isIleMapOverlayTool("chapters")).toBe(false);

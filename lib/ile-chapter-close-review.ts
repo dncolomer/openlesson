@@ -25,6 +25,24 @@ export type IleChapterCloseDecision = {
   review: IleChapterCloseReview;
 };
 
+/** Resolve which plan step Mark as completed should close (clicked id wins). */
+export function resolveIleChapterDoneIndex(
+  steps: ReadonlyArray<{ id?: string | null }> | null | undefined,
+  activeIndex: number,
+  stepId?: string | null,
+): number {
+  if (!Array.isArray(steps) || steps.length === 0) return -1;
+  const wanted = typeof stepId === "string" ? stepId.trim() : "";
+  if (wanted) {
+    const idx = steps.findIndex((s) => String(s?.id || "").trim() === wanted);
+    if (idx >= 0) return idx;
+  }
+  if (!Number.isFinite(activeIndex)) return -1;
+  const idx = Math.floor(activeIndex);
+  if (idx < 0 || idx >= steps.length) return -1;
+  return idx;
+}
+
 function reviewFromArtifacts(
   artifacts: readonly IlePowCounterArtifact[],
   chapter: { id: string; description?: string | null },
@@ -99,4 +117,23 @@ export function planIleChapterClose(input: {
     closeOverride: Boolean(input.closeOverride),
   });
   return { ...decided, review };
+}
+
+export const ILE_CHAPTER_UNDO_DONE_STATUS = "in_progress" as const;
+
+/** Mark a completed chapter un-done so Work can resume it. */
+export function applyIleChapterUndoDone<T extends { id: string; status: string }>(
+  steps: readonly T[] | null | undefined,
+  stepId: string | null | undefined,
+): { steps: T[]; changed: boolean } {
+  const list = Array.isArray(steps) ? steps : [];
+  const id = typeof stepId === "string" ? stepId.trim() : "";
+  if (!id) return { steps: [...list], changed: false };
+  let changed = false;
+  const next = list.map((step) => {
+    if (step.id !== id || step.status !== "completed") return step;
+    changed = true;
+    return { ...step, status: ILE_CHAPTER_UNDO_DONE_STATUS };
+  });
+  return { steps: next, changed };
 }

@@ -41,6 +41,15 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { isIleMapOverlayTool } from "@/lib/ile-map-chrome";
 import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
 import {
+  blockHasUnseenGatherNotification,
+  ileGatherJobTileId,
+  markGatherResourcesSeen,
+  parseGatherSeenBlockIds,
+} from "@/lib/block-circular-menu";
+import { toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
+import { ileTimDelayProgressFraction } from "@/lib/ile-tim-chapter-complete";
+import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
+import {
   isIleChapterThoughtsLocked,
   isIleProjectMode,
   resolveIleDurableSessionMode,
@@ -166,6 +175,8 @@ export function SessionView({
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
+  const [showSaveExitNameDialog, setShowSaveExitNameDialog] = useState(false);
+  const [saveExitName, setSaveExitName] = useState("");
 
   // Session Plan state (needed before chapter workspaces hook)
   // Session Plan state
@@ -438,6 +449,9 @@ export function SessionView({
 
   const sessionBlockId =
     typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined;
+  const [resourceScopeChapterId, setResourceScopeChapterId] = useState<string | null>(null);
+  const completeTargetStepIdRef = useRef<string | null>(null);
+  const [gatherSeenIds, setGatherSeenIds] = useState<string[]>(() => parseGatherSeenBlockIds([]));
   const {
     availableCounts,
     gatherJobs,
@@ -463,6 +477,34 @@ export function SessionView({
     ayclToken,
   });
 
+  const gatherReadyCountByBlock = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const job of gatherJobs) {
+      if (job.status !== "completed") continue;
+      const tile = ileGatherJobTileId(job);
+      if (tile) counts[tile] = (counts[tile] || 0) + 1;
+    }
+    for (const row of gatheredResources) {
+      const meta = row.meta || {};
+      const bid = typeof meta.block_id === "string" ? meta.block_id.trim() : "";
+      const cid = typeof meta.chapter_id === "string" ? meta.chapter_id.trim() : "";
+      const tile = cid || bid;
+      if (tile) counts[tile] = (counts[tile] || 0) + 1;
+    }
+    return counts;
+  }, [gatherJobs, gatheredResources]);
+
+  const unseenGatherBlockIds = useMemo(
+    () =>
+      Object.keys(gatherReadyCountByBlock).filter((id) =>
+        blockHasUnseenGatherNotification({
+          readyCount: gatherReadyCountByBlock[id],
+          seen: gatherSeenIds.includes(id),
+        }),
+      ),
+    [gatherReadyCountByBlock, gatherSeenIds],
+  );
+
   const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
   const {
     persistPlanSteps,
@@ -475,6 +517,7 @@ export function SessionView({
     fetchChapterFollowUps,
     handleSelectChapterFollowUp,
     handleMarkChapterDone,
+    handleMarkChapterUndone,
     handleTimChapterMapExpansion,
     chapterFollowUpsById,
     chapterFollowUpsLoadingId,
@@ -523,13 +566,31 @@ export function SessionView({
   const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
 
   const bumpUserActivityRef = useRef<() => void>(() => {});
-  const { handlePowInterruption, clearPendingInterruption } = useSessionIdle({
+  const { handlePowInterruption, clearPendingInterruption, mapDelay, beginMapDelay, clearMapDelay } = useSessionIdle({
     activeChapterKey,
     updateChapterWorkspace,
     setHeliosTurnMode,
     handlePowInterruptionRef,
     onChapterMapExpand: handleTimChapterMapExpansion,
   });
+
+  const [timDelayNow, setTimDelayNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!mapDelay) return;
+    const id = window.setInterval(() => setTimDelayNow(Date.now()), 200);
+    return () => window.clearInterval(id);
+  }, [mapDelay]);
+  const timDelayProgress = ileTimDelayProgressFraction(mapDelay, timDelayNow);
+  const timBlockActionProgress = useMemo(() => {
+    if (!mapDelay?.stepId || !(timDelayProgress > 0)) return {};
+    return {
+      [mapDelay.stepId]: {
+        running: true,
+        completed: timDelayProgress,
+        total: 1,
+      },
+    };
+  }, [mapDelay, timDelayProgress]);
 
   const submitHeliosChatMessageNow = useCallback(async (
     message: string,
@@ -852,13 +913,15 @@ export function SessionView({
                 activeStep.status === "completed" || activeStep.status === "skipped",
               activeChapterIndex,
               onChapterDone: (opts) => {
+                beginMapDelay(activeStep.id);
                 void (async () => {
                   try {
                     await flushRemainingIlePow();
                   } catch {
                     /* Review still runs on whatever was already recorded. */
                   }
-                  await handleMarkChapterDone(opts);
+                  const closed = await handleMarkChapterDone(opts);
+                  if (!closed) clearMapDelay();
                 })();
               },
               onUpdateChapter: handleUpdateChapter,
@@ -991,7 +1054,18 @@ export function SessionView({
         }}
         problem={session.problem}
         workspaceId={session.metadata?.workspace_id as string | undefined}
-        onBackToDashboard={pauseAndGoToDashboard}
+        onBackToDashboard={() => {
+          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
+          setShowSaveExitNameDialog(true);
+        }}
+        showSaveExitNameDialog={showSaveExitNameDialog}
+        saveExitName={saveExitName}
+        onSaveExitNameChange={setSaveExitName}
+        onCancelSaveExitName={() => setShowSaveExitNameDialog(false)}
+        onConfirmSaveExitName={() => {
+          setShowSaveExitNameDialog(false);
+          void pauseAndGoToDashboard(saveExitName);
+        }}
         isRecording={isRecording}
         isPaused={isPaused}
         isWebcamEnabled={isWebcamEnabled}
@@ -1017,7 +1091,7 @@ export function SessionView({
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
-        powCounts={availableCounts}
+        powCounts={toIlePowDisplayCounts(availableCounts, sessionPowArtifacts)}
         participantIdentity={participantIdentity}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
@@ -1028,7 +1102,7 @@ export function SessionView({
             key={welcomeOpenNonce}
             variant="ile"
             presentation="sidebar"
-            className="h-full min-h-0"
+            className="min-h-0"
             language={tutoringLanguage}
             showStartAction
             projectMode={isProjectMode}
@@ -1049,6 +1123,17 @@ export function SessionView({
             handleConfirmEnd();
           }
         }}
+        gatherWarning={gatherWarning}
+        onDismissGatherWarning={dismissGatherWarning}
+        closeReviewBlocked={Boolean(chapterCloseReview && !chapterCloseReview.canClose)}
+        closeReviewReason={chapterCloseReview?.reason ?? null}
+        onChapterDoneOverride={() => {
+          void handleMarkChapterDone({
+            closeOverride: true,
+            stepId: completeTargetStepIdRef.current || activeStep?.id,
+          });
+        }}
+        onDismissCloseReview={() => setChapterCloseReview(null)}
         map={
           <ChapterMapPanel
             plan={sessionPlan}
@@ -1058,13 +1143,14 @@ export function SessionView({
             locale={locale}
             loading={planLoading}
             activeChapterIndex={activeChapterIndex}
-            onChapterDoubleClick={(stepId) => {
+            onWorkChapter={(stepId) => {
               const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
               if (idx >= 0 && idx !== activeChapterIndex) {
-                handleLoadChapter(idx);
+                void handleLoadChapter(idx);
               }
               setHeliosWidgetOpen(true);
             }}
+            onUndoChapterDone={(stepId) => handleMarkChapterUndone(stepId)}
             onAddChapter={handleAddChapter}
             onEnsurePositions={handleEnsureChapterPositions}
             learnerScopeId={
@@ -1076,6 +1162,39 @@ export function SessionView({
             }
             gatherJobs={gatherJobs}
             onOpenGatherResources={openGatheredResources}
+            blockActionProgress={timBlockActionProgress}
+            onMarkChapterCompleted={(stepId) => {
+              completeTargetStepIdRef.current = stepId;
+              beginMapDelay(stepId);
+              void (async () => {
+                const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
+                if (idx >= 0 && idx !== activeChapterIndex) {
+                  await handleLoadChapter(idx);
+                }
+                try {
+                  await flushRemainingIlePow();
+                } catch {
+                  /* Review still runs on whatever was already recorded. */
+                }
+                const closed = await handleMarkChapterDone({ stepId });
+                if (!closed) clearMapDelay();
+              })();
+            }}
+            onGatherChapterResources={(stepId, description) => {
+              void onGatherResources({
+                blockId: sessionBlockId,
+                chapterId: stepId,
+                chapterDescription: description,
+              });
+            }}
+            onSeeChapterResources={(stepId) => {
+              setResourceScopeChapterId(stepId);
+              setGatherSeenIds((prev) => markGatherResourcesSeen(prev, stepId));
+              openGatheredResources({ tileId: stepId });
+            }}
+            onUpdateChapter={handleUpdateChapter}
+            unseenGatherBlockIds={unseenGatherBlockIds}
+            gatherReadyCountByBlock={gatherReadyCountByBlock}
           />
         }
         toolOverlay={
@@ -1088,6 +1207,7 @@ export function SessionView({
             ayclToken={ayclToken}
             ileToken={ileToken}
             gatherBlockId={sessionBlockId}
+            gatherChapterId={resourceScopeChapterId || activeStep?.id}
             gatheredResources={gatheredResources}
             locale={locale}
             planLoading={planLoading}
@@ -1165,7 +1285,10 @@ export function SessionView({
               }
               handleToolChange(tool);
             }}
-            onBackToDashboard={pauseAndGoToDashboard}
+            onBackToDashboard={() => {
+              setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
+              setShowSaveExitNameDialog(true);
+            }}
             errorNotification={Boolean(error)}
           />
         }

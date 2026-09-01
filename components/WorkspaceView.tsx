@@ -28,6 +28,9 @@ import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/works
 import { WorkspaceMobilePlanAside } from "@/components/workspace-view/workspace-mobile-plan-aside";
 import { WorkspaceMobileTabBar } from "@/components/workspace-view/workspace-mobile-tab-bar";
 import { WorkspaceMapColumn } from "@/components/workspace-view/workspace-map-column";
+import {
+  nextLearnerDrawerRequest,
+} from "@/lib/block-circular-menu";
 import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-right-drawers";
 import {
   availableWorkspaceSections,
@@ -137,6 +140,10 @@ export function WorkspaceView({
   );
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
   const [mapGroundBusy, setMapGroundBusy] = useState(false);
+  const [learnerDrawerRequest, setLearnerDrawerRequest] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
   const {
     generatorTargetPreviewCells,
     setGeneratorTargetPreviewCells,
@@ -659,8 +666,6 @@ export function WorkspaceView({
     const next = normalizeWorkspaceInteractionMode(mode);
     if (next === interactionMode) return;
     setInteractionMode(next);
-    // Mode flip always clears active selection (sole block, multi, empty create).
-    applyMapSelectionResult(nextWorkspaceMapSelection({ type: "clear" }));
     clearMapChromeForModeFlip();
     if (next === "learner") {
       setActiveSection(
@@ -839,6 +844,13 @@ export function WorkspaceView({
           interactionMode={interactionMode}
           ayclCapabilities={ayclCapabilities}
           selectInteractionMode={selectInteractionMode}
+          onCircularMenuAction={(blockId, action) => {
+            const request = nextLearnerDrawerRequest(action);
+            applyMapSelectionResult(
+              nextWorkspaceMapSelection({ type: "open_block", blockId }),
+            );
+            if (request) setLearnerDrawerRequest(request);
+          }}
         />
 
         <WorkspaceRightDrawers
@@ -849,6 +861,8 @@ export function WorkspaceView({
           isOwner={isOwner}
           showCreatorDrawers={showCreatorDrawers}
           showLearnerDrawer={showLearnerDrawer}
+          requestedDrawerId={learnerDrawerRequest?.id ?? null}
+          requestedDrawerNonce={learnerDrawerRequest?.nonce ?? null}
           isLearnerMode={isLearnerMode}
           interactionMode={interactionMode}
           workspaceId={workspaceId}

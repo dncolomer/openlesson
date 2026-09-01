@@ -137,6 +137,15 @@ describe("session intro visuals", () => {
     expect(ileLearningText).toMatch(/use tools to explore the map/i);
     expect(ileLearningText).toMatch(/win by completing chapters/i);
     expect(ileLearningText).toMatch(/map can be further built/i);
+    expect(en.onboardingGuide.ile.step3.body).not.toMatch(/Commander/);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/Pan, zoom, and open a chapter/i);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/I'm done answering/i);
+    expect(en.onboardingGuide.ile.step3.body.length).toBeGreaterThan(280);
+    expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(700);
+    expect(en.onboardingGuide.ile.step3.bodyProject).not.toMatch(/Commander/);
+    expect(en.onboardingGuide.ile.step3.bodyProject.length).toBeGreaterThan(280);
+    expect(en.onboardingGuide.ile.step3.highlight).toMatch(/Fog lifts as you scout/i);
+    expect(en.onboardingGuide.ile.step3.highlight.length).toBeLessThan(280);
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step2.title);
 
     expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step1.title);
@@ -171,8 +180,14 @@ describe("session intro visuals", () => {
     expect(guide).not.toContain("STEP2_THOUGHT_INTERFACE_VIDEO");
     expect(guide).not.toContain("step2VideoSrc");
     expect(guide).toContain("index === lastSlideIndex && renderStep3Action");
-    expect(guide).toContain("showStartAction && !renderStep3Action && isLastStep");
+    expect(guide).toContain("index === lastSlideIndex && showStartAction && !renderStep3Action");
     expect(guide).toContain("data-onboarding-start");
+    expect(guide).toContain("data-onboarding-start-wrap");
+    const highlightIdx = guide.indexOf("data-onboarding-highlight");
+    const startIdx = guide.indexOf("data-onboarding-start");
+    expect(highlightIdx).toBeGreaterThan(-1);
+    expect(startIdx).toBeGreaterThan(highlightIdx);
+    expect(guide).not.toContain("showStartAction && !renderStep3Action && isLastStep");
     expect(guide).not.toContain("stepTitle(\"step2\")");
     expect(guide).not.toContain("stepBody(\"step2\")");
 

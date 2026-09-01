@@ -6,6 +6,8 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
   SKILL_GRID_PITCH,
@@ -64,6 +66,14 @@ import {
 import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
 import { type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { resolveMapBlockPeek } from "@/lib/block-map-peek";
+import {
+  blockCircularMenuDoubleClickIsNoop,
+  blockCircularMenuOpensOnEmpty,
+  blockCircularMenuOpensOnSelect,
+  nextCircularMenuBlockIdOnClick,
+  nextCircularMenuEmptyCellOnClick,
+  type BlockCircularMenuActionId,
+} from "@/lib/block-circular-menu";
 import { unusableCellKeySet } from "@/lib/map-ground-rules";
 import { normalizeSpan, parseShapeCells, type PlacedBlockRef, type StretchHandle } from "@/lib/skill-grid-ops";
 import {
@@ -93,6 +103,10 @@ export function BlockSkillGrid({
   onAbortExpandJob,
   gatherJobs = null,
   onOpenGatherResources,
+  circularMenuSurface: circularMenuSurfaceProp,
+  onCircularMenuAction,
+  blockProgressById,
+  unseenGatherById,
   clusterMapJob = null,
   selectiveExplanationActive = false,
   selectiveExplanationPolygon = null,
@@ -137,6 +151,17 @@ export function BlockSkillGrid({
   /** View-only public maps: no authoring, select, notes, or annotation tools. */
   const canEdit = canEditProp && !viewOnly;
   const [peekBlockId, setPeekBlockId] = useState<string | null>(null);
+  const [circularMenuBlockId, setCircularMenuBlockId] = useState<string | null>(null);
+  const [circularMenuEmptyCell, setCircularMenuEmptyCell] = useState<GridCell | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!mapExploreOpen) return;
+    setCircularMenuBlockId(null);
+  }, [mapExploreOpen]);
+  const circularMenuSurface: "ile" | "workspace-learner" | "none" = viewOnly
+    ? "none"
+    : circularMenuSurfaceProp ?? "none";
   const unusableKeys = useMemo(
     () => unusableCellKeySet(unusableCells || []),
     [unusableCells],
@@ -633,7 +658,7 @@ export function BlockSkillGrid({
     handleBlockPointerDown,
     handleBlockPointerMove,
     applyEmptyCellSelection,
-    handleEmptyCellClick,
+    handleEmptyCellClick: handleEmptyCellClickRaw,
     shapeFootprint,
     shapeFreeform,
     shapeWeightedNeighbors,
@@ -719,6 +744,93 @@ export function BlockSkillGrid({
     zoom,
     prompt,
   });
+
+  const handleCellSelectWithMenu = useCallback(
+    (blockId: string, event: ReactMouseEvent) => {
+      if (viewOnly) {
+        handleCellSelect(blockId, event);
+        return;
+      }
+      if (blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })) {
+        const nextMenuId = nextCircularMenuBlockIdOnClick({
+          surface: circularMenuSurface,
+          clickedId: blockId,
+          currentMenuId: circularMenuBlockId,
+          exploreOpen: mapExploreOpen,
+        });
+        setPeekBlockId(null);
+        setCircularMenuEmptyCell(null);
+        setCircularMenuBlockId(nextMenuId);
+        if (nextMenuId == null) {
+          event.stopPropagation();
+          clearSelection();
+          return;
+        }
+      }
+      handleCellSelect(blockId, event);
+    },
+    [
+      circularMenuBlockId,
+      circularMenuSurface,
+      clearSelection,
+      handleCellSelect,
+      mapExploreOpen,
+      viewOnly,
+    ],
+  );
+
+  const handleBlockDoubleClickGuarded = useCallback(
+    (blockId: string) => {
+      if (blockCircularMenuDoubleClickIsNoop(circularMenuSurface)) return;
+      handleBlockDoubleClick(blockId);
+    },
+    [circularMenuSurface, handleBlockDoubleClick],
+  );
+
+  const handleEmptyCellClick = useCallback(
+    (cell: GridCell, event: ReactMouseEvent | ReactPointerEvent) => {
+      if (blockCircularMenuOpensOnEmpty(circularMenuSurface)) {
+        const next = nextCircularMenuEmptyCellOnClick({
+          surface: circularMenuSurface,
+          clicked: cell,
+          current: circularMenuEmptyCell,
+        });
+        setCircularMenuBlockId(null);
+        setPeekBlockId(null);
+        setCircularMenuEmptyCell(next);
+        if (next == null) {
+          event.stopPropagation();
+          clearSelection();
+          return;
+        }
+      } else {
+        setCircularMenuBlockId(null);
+      }
+      handleEmptyCellClickRaw(cell, event);
+    },
+    [
+      circularMenuEmptyCell,
+      circularMenuSurface,
+      clearSelection,
+      handleEmptyCellClickRaw,
+    ],
+  );
+
+  const handleCircularMenuAction = useCallback(
+    (blockId: string, action: BlockCircularMenuActionId) => {
+      onCircularMenuAction?.(blockId, action);
+    },
+    [onCircularMenuAction],
+  );
+
+  const handleEmptyCircularMenuAction = useCallback(
+    (action: BlockCircularMenuActionId) => {
+      if (action !== "add_chapter" || !circularMenuEmptyCell) return;
+      setLocalPendingCell(circularMenuEmptyCell);
+      setCircularMenuEmptyCell(null);
+    },
+    [circularMenuEmptyCell, setLocalPendingCell],
+  );
 
   const {
     runSuggestTopics,
@@ -955,8 +1067,16 @@ export function BlockSkillGrid({
         canDragBlocks,
         spaceHeld,
         showProgress,
-        handleCellSelect,
-        handleBlockDoubleClick,
+        handleCellSelect: handleCellSelectWithMenu,
+        handleBlockDoubleClick: handleBlockDoubleClickGuarded,
+        circularMenuSurface,
+        circularMenuBlockId,
+        circularMenuEmptyCell,
+        onCircularMenuAction: handleCircularMenuAction,
+        onEmptyCircularMenuAction: handleEmptyCircularMenuAction,
+        blockProgressById,
+        unseenGatherById,
+        gatherJobs,
         handleBlockPointerDown,
         handleBlockPointerMove,
         handleBlockPointerUp,

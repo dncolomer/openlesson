@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   decideIleChapterClose,
   planIleChapterClose,
+  resolveIleChapterDoneIndex,
   reviewIleChapterClose,
   reviewIleChapterCloseInBatches,
   splitIlePowBatches,
@@ -100,15 +101,31 @@ describe("ILE chapter-close review", () => {
     expect(existsSync(mutatePath)).toBe(true);
     const mutate = readFileSync(mutatePath, "utf8");
     const doneFn = mutate.slice(mutate.indexOf("const handleMarkChapterDone"));
+    expect(resolveIleChapterDoneIndex(
+      [{ id: "a" }, { id: "b" }, { id: "c" }],
+      0,
+      "c",
+    )).toBe(2);
+    expect(resolveIleChapterDoneIndex([{ id: "a" }, { id: "b" }], 1)).toBe(1);
+    expect(resolveIleChapterDoneIndex([], 0, "c")).toBe(-1);
+    expect(doneFn).toContain("resolveIleChapterDoneIndex");
+    expect(doneFn).toContain("opts?.stepId");
     expect(doneFn).toContain("planIleChapterClose");
     expect(doneFn).toContain("if (!planned.close)");
     const reviewIdx = doneFn.indexOf("if (!planned.close)");
     const persistIdx = doneFn.indexOf("await persistPlanSteps(updatedPlan");
     expect(reviewIdx).toBeGreaterThan(-1);
     expect(persistIdx).toBeGreaterThan(reviewIdx);
-    expect(doneFn.slice(reviewIdx, persistIdx)).toContain("return;");
+    expect(doneFn.slice(reviewIdx, persistIdx)).toContain("return false;");
     expect(doneFn).toContain("closeOverride: planned.closeOverride");
     expect(doneFn).toContain("reviewCanClose: planned.review.canClose");
+
+    const chrome = readFileSync(join(ROOT, "components/session-view/session-chrome.tsx"), "utf8");
+    expect(chrome).toContain("data-ile-chapter-close-blocked");
+    expect(chrome).toContain("ConfirmDialog");
+    expect(chrome).toContain('t("chapterMap.closeOverride")');
+    const chapterPanel = readFileSync(join(ROOT, "components/ChapterMapPanel.tsx"), "utf8");
+    expect(chapterPanel).not.toContain("data-ile-chapter-close-blocked");
 
     writeScratch(
       "ile-chapter-close-review-excerpts.txt",

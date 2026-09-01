@@ -650,7 +650,7 @@ describe("Practice Portal structural wiring", () => {
         tap?: { step1?: { title?: string; body?: string; highlight?: string } };
         ile?: {
           step1?: { body?: string };
-          step3?: { start?: string };
+          step3?: { start?: string; body?: string; highlight?: string };
         };
       };
       welcome?: { panelIntro?: string };
@@ -667,6 +667,12 @@ describe("Practice Portal structural wiring", () => {
     // Live ILE remaining first + last slides (step2 thought-interface tutorial is not the live intro)
     expect(enCopy.onboardingGuide?.ile?.step1?.body).toMatch(/Chapters on a spatial grid/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/use tools/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/completing chapters/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/map can be further built/i);
+    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeGreaterThan(280);
+    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(700);
+    expect(enCopy.onboardingGuide?.ile?.step3?.highlight).toMatch(/speak your thoughts out loud/i);
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);

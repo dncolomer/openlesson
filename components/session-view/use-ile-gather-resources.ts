@@ -9,9 +9,13 @@ import {
   createIleGatherJob,
   createIleGatherJobId,
   decideIleGatherResources,
+  dismissIleGatherJob,
+  dismissIleGatherReadyJobsForTile,
   formatIleGatherInsufficientWarning,
+  ileGatherRateLimitKey,
   patchIleGatherJob,
   refundIleGatherSpend,
+  resolveIleGatherPersistIds,
   upsertIleGatherJob,
   type IleGatherJob,
 } from "@/lib/ile-gather-resources";
@@ -41,7 +45,7 @@ export function useIleGatherResources(input: {
   const [lastGatherAt, setLastGatherAt] = useState<number | null>(null);
   const [gatherJobs, setGatherJobs] = useState<IleGatherJob[]>([]);
   const [gatherWarning, setGatherWarning] = useState<string | null>(null);
-  const [gatherBusy, setGatherBusy] = useState(false);
+  const [lastGatherKey, setLastGatherKey] = useState<string | null>(null);
   const [gatheredResources, setGatheredResources] = useState<WorkspaceExternalResource[]>(
     [],
   );
@@ -51,13 +55,32 @@ export function useIleGatherResources(input: {
 
   const dismissGatherWarning = useCallback(() => setGatherWarning(null), []);
 
-  const openGatheredResources = useCallback(() => {
-    input.onOpenResources();
-  }, [input.onOpenResources]);
+  const openGatheredResources = useCallback(
+    (opts?: { jobId?: string | null; tileId?: string | null }) => {
+      setGatherJobs((jobs) => {
+        if (opts?.jobId) return dismissIleGatherJob(jobs, opts.jobId);
+        if (opts?.tileId) return dismissIleGatherReadyJobsForTile(jobs, opts.tileId);
+        return jobs;
+      });
+      input.onOpenResources();
+    },
+    [input],
+  );
 
   const onGatherResources = useCallback(
-    async () => {
-      if (gatherBusy) return;
+    async (opts?: {
+      blockId?: string | null;
+      chapterId?: string | null;
+      chapterDescription?: string | null;
+    }) => {
+      const persistIds = resolveIleGatherPersistIds({
+        workspaceBlockId: opts?.blockId ?? input.blockId,
+        chapterId: opts?.chapterId ?? input.chapterId,
+      });
+      const rateLimitKey = ileGatherRateLimitKey({
+        chapterId: persistIds.chapterId,
+        blockId: persistIds.blockId,
+      });
       const now = Date.now();
       const decision = decideIleGatherResources({
         artifacts: input.artifacts,
@@ -65,6 +88,8 @@ export function useIleGatherResources(input: {
         lastGatherAt,
         gatherCount,
         now,
+        rateLimitKey,
+        lastGatherKey,
       });
       if (!decision.allowed) {
         setGatherWarning(
@@ -77,19 +102,22 @@ export function useIleGatherResources(input: {
       }
 
       const jobId = createIleGatherJobId(now);
-      const blockId = String(input.blockId || "").trim();
-      const chapterId = input.chapterId || null;
-      setGatherBusy(true);
+      const blockId = persistIds.blockId;
+      const chapterId = persistIds.chapterId || null;
+      const chapterDescription =
+        opts?.chapterDescription ?? input.chapterDescription ?? "";
       setGatherWarning(null);
       setSpent((prev) => applyIleGatherSpend(prev, decision.consume));
       setGatherCount((n) => n + 1);
       setLastGatherAt(now);
+      setLastGatherKey(rateLimitKey || null);
       setGatherJobs((jobs) =>
         upsertIleGatherJob(
           jobs,
           createIleGatherJob({
             id: jobId,
             blockId,
+            chapterId,
             label: "Gathering resources…",
           }),
         ),
@@ -128,13 +156,15 @@ export function useIleGatherResources(input: {
             workspaceId: input.workspaceId,
             blockId,
             chapterId,
-            chapterDescription: input.chapterDescription || "",
+            chapterDescription,
             artifacts: input.artifacts,
             spent,
             lastGatherAt,
             gatherCount,
             now,
             jobId,
+            rateLimitKey,
+            lastGatherKey,
             ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),
             ...(input.ileToken ? { ileToken: input.ileToken } : {}),
           }),
@@ -179,18 +209,18 @@ export function useIleGatherResources(input: {
             error: err instanceof Error ? err.message : "Gather failed",
           }),
         );
-      } finally {
-        setGatherBusy(false);
       }
     },
     [
-      gatherBusy,
       gatherCount,
       input,
       lastGatherAt,
+      lastGatherKey,
       spent,
     ],
   );
+
+  const gatherBusy = gatherJobs.some((job) => job.status === "running");
 
   return {
     spent,

@@ -15,6 +15,8 @@ import {
   computeIleGatherConsume,
   createIleGatherJob,
   decideIleGatherResources,
+  dismissIleGatherJob,
+  dismissIleGatherReadyJobsForTile,
   describeIleGatherForagePolicy,
   filterPlannedResourcesForIleBlock,
   formatIleGatherInsufficientWarning,
@@ -22,7 +24,11 @@ import {
   ileGatherForageUserPrompt,
   ileGatherJobShowsFinishLink,
   ileGatherProgressFraction,
+  ileGatherRateLimitKey,
+  ileGatherRunningTileIds,
   ileGatherResourceMeta,
+  patchIleGatherJob,
+  upsertIleGatherJob,
   ILE_GATHER_CONSUME,
   ILE_GATHER_FORAGE_POLICY,
   ILE_GATHER_INSUFFICIENT_POW_WARNING,
@@ -36,10 +42,16 @@ import {
   mergeIleGatherPlannedResources,
   parseIleGatherForageResponse,
   refundIleGatherSpend,
+  resolveIleGatherPersistIds,
   resolveIleGatherPersistWorkspaceId,
   toIleGatherExternalCreate,
   type IleGatherJob,
 } from "@/lib/ile-gather-resources";
+import {
+  blockCircularMenuProgressFraction,
+  gatherJobToBlockProgress,
+  ileGatherJobTileId,
+} from "@/lib/block-circular-menu";
 import {
   countIlePowByType,
   emptyIlePowTypeCounts,
@@ -127,6 +139,17 @@ describe("ILE gather resources", () => {
     expect(rate.reason).toBe("rate_limited");
     expect(rate.warning).toBe(ILE_GATHER_RATE_LIMIT_WARNING);
     expect(rate.warning).toMatch(/forage manually inside the chapter tool/i);
+
+    const otherBlock = decideIleGatherResources({
+      artifacts: enoughArtifacts(),
+      lastGatherAt: 1_000,
+      gatherCount: 1,
+      now: 1_000 + ILE_GATHER_RATE_LIMIT_MS - 1,
+      rateLimitKey: "ch-2",
+      lastGatherKey: "ch-1",
+    });
+    expect(otherBlock.allowed).toBe(true);
+    expect(ileGatherRateLimitKey({ chapterId: "ch-2", blockId: "b-1" })).toBe("ch-2");
 
     const maxed = decideIleGatherResources({
       artifacts: enoughArtifacts(),
@@ -232,6 +255,35 @@ describe("ILE gather resources", () => {
     expect(jobs[0].openTool).toBe(ileGatherFinishOpensTool());
     expect(jobs[0].openTool).toBe(ILE_GATHER_RESOURCES_TOOL);
     expect(ileGatherJobShowsFinishLink(jobs[0])).toBe(true);
+    expect(ileGatherRunningTileIds([
+      createIleGatherJob({ id: "ile-gather-1", blockId: "block-9", chapterId: "ch-1" }),
+    ]).has("ch-1")).toBe(true);
+    expect(ileGatherRunningTileIds(jobs).has("block-9")).toBe(false);
+
+    let concurrent: IleGatherJob[] = [
+      createIleGatherJob({ id: "g-a", blockId: "b1", chapterId: "c1" }),
+    ];
+    concurrent = upsertIleGatherJob(
+      concurrent,
+      createIleGatherJob({ id: "g-b", blockId: "b1", chapterId: "c2" }),
+    );
+    concurrent = patchIleGatherJob(concurrent, "g-a", { completed: 2 });
+    concurrent = patchIleGatherJob(concurrent, "g-b", { completed: 1 });
+    expect(concurrent).toHaveLength(2);
+    expect(ileGatherJobTileId(concurrent[0])).toBe("c1");
+    expect(ileGatherJobTileId(concurrent[1])).toBe("c2");
+    const fracA = blockCircularMenuProgressFraction(gatherJobToBlockProgress(concurrent[0]));
+    const fracB = blockCircularMenuProgressFraction(gatherJobToBlockProgress(concurrent[1]));
+    expect(fracA).toBeGreaterThan(0);
+    expect(fracB).toBeGreaterThan(0);
+    expect(fracA).not.toBe(fracB);
+
+    concurrent = completeIleGatherJob(concurrent, "g-a");
+    expect(concurrent.find((j) => j.id === "g-a")?.label).toBe("Resources ready");
+    const afterOpen = dismissIleGatherJob(concurrent, "g-a");
+    expect(afterOpen.map((j) => j.id)).toEqual(["g-b"]);
+    concurrent = completeIleGatherJob(concurrent, "g-b");
+    expect(dismissIleGatherReadyJobsForTile(concurrent, "c2").map((j) => j.id)).toEqual(["g-a"]);
 
     const a: WorkspaceExternalResource = {
       id: "r1",
@@ -262,7 +314,16 @@ describe("ILE gather resources", () => {
       local: [a],
       blockId: "block-9",
     });
-    expect(merged.map((r) => r.id)).toEqual(["r1"]);
+    expect(merged.map((r) => r.id).sort()).toEqual(["r1", "r2"]);
+
+    const persist = resolveIleGatherPersistIds({
+      workspaceBlockId: "ws-block",
+      chapterId: "ch-step",
+    });
+    expect(persist).toEqual({ blockId: "ws-block", chapterId: "ch-step" });
+    expect(resolveIleGatherPersistIds({ chapterId: "ch-only" }).blockId).toBe("");
+    expect(ileGatherResourceMeta({ ...persist, jobId: "ile-gather-1" }).block_id).toBe("ws-block");
+    expect(ileGatherResourceMeta({ ...persist, jobId: "ile-gather-1" }).chapter_id).toBe("ch-step");
 
     writeScratch(
       "ile-gather-finish.txt",
@@ -325,7 +386,7 @@ describe("ILE gather resources", () => {
     );
   });
 
-  it("Chapter widget surfaces Gather with Edit, Complete, Done Answering; ILE shows under-layer progress and finish link", () => {
+  it("circular menu hosts Gather/Edit/Complete; chapter widget keeps I'm done answering; resources stay scoped", () => {
     const surface = readSessionViewSurface();
     const actions = read("components/session-view/ile-chapter-helios-actions.tsx");
     const helios = read("components/SessionHeliosPanel.tsx");
@@ -335,22 +396,13 @@ describe("ILE gather resources", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const panel = read("components/WorkspaceResourcesPanel.tsx");
     const api = read("app/api/ile/gather-resources/route.ts");
+    const ring = read("components/block-skill-grid/block-circular-menu.tsx");
+    const hook = read("components/session-view/use-ile-gather-resources.ts");
 
-    expect(actions).toContain("data-ile-gather-resources");
-    expect(actions).not.toContain("data-ile-gather-prompt");
-    expect(actions).not.toContain("gatherPromptPlaceholder");
-    expect(actions).toContain("data-ile-gather-warning");
-    expect(actions).toContain("data-ile-gather-warning-dismiss");
-    expect(actions).toContain('t("chapterMap.gatherInsufficientTitle")');
-    expect(actions).not.toContain("ConfirmDialog");
-    expect(actions).not.toContain("hideCancel");
-    expect(actions).toContain('t("chapterMap.edit")');
-    expect(actions).toContain('t("chapterMap.complete")');
-    expect(actions).toContain('t("chapterMap.gatherResources")');
-    expect(actions).toContain("<Pencil");
-    expect(actions).toContain("<Check");
-    expect(actions).toContain("<Pickaxe");
-    expect(actions).toContain("data-ile-chapter-actions");
+    expect(actions).not.toContain("data-ile-gather-resources");
+    expect(actions).not.toContain('t("chapterMap.edit")');
+    expect(actions).not.toContain('t("chapterMap.complete")');
+    expect(actions).not.toContain('t("chapterMap.gatherResources")');
     expect(actions).toContain("doneAnswering");
     expect(helios).toContain("ImDoneAnsweringControl");
     expect(helios).toContain("IleChapterHeliosActions");
@@ -359,14 +411,25 @@ describe("ILE gather resources", () => {
     expect(surface).toContain("gatherJobs");
     expect(surface).toContain("onGatherResources");
     expect(surface).toContain("decideIleGatherResources");
-    expect(surface).toContain("formatIleGatherInsufficientWarning");
-
-    const editIdx = actions.indexOf('t("chapterMap.edit")');
-    const completeIdx = actions.indexOf('t("chapterMap.complete")');
-    const gatherIdx = actions.indexOf('t("chapterMap.gatherResources")');
-    expect(editIdx).toBeGreaterThan(-1);
-    expect(completeIdx).toBeGreaterThan(editIdx);
-    expect(gatherIdx).toBeGreaterThan(completeIdx);
+    expect(chapter).toContain('circularMenuSurface="ile"');
+    expect(chapter).toContain("onGatherChapterResources");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(chrome).toContain("ConfirmDialog");
+    expect(chrome).toContain("data-ile-gather-warning");
+    expect(chrome).toContain('t("chapterMap.gatherInsufficientTitle")');
+    expect(chrome).toContain("hideCancel");
+    expect(surface).toContain("gatherWarning={gatherWarning}");
+    const dialog = read("components/ui/ConfirmDialog.tsx");
+    const frame = read("components/ui/DialogFrame.tsx");
+    expect(dialog).toContain("DialogFrame");
+    expect(frame).toContain("fixed inset-0 z-[200] flex items-center justify-center");
+    expect(frame).toContain("createPortal");
+    expect(surface).toContain("blockId: sessionBlockId");
+    expect(surface).toContain("chapterId: stepId");
+    expect(surface).not.toContain("blockId: stepId");
+    expect(hook).toContain("resolveIleGatherPersistIds");
+    expect(panel).not.toContain("filterPlannedResourcesForIleBlock");
+    expect(ring).toContain("data-block-circular-menu");
 
     expect(jobs).toContain("data-ile-gather-progress");
     expect(jobs).toContain("data-ile-gather-progress-bar");
@@ -375,7 +438,24 @@ describe("ILE gather resources", () => {
     expect(jobs).toContain("gatherJobs");
     expect(chapter).toContain("gatherJobs");
     expect(grid).toContain("gatherJobs");
+    expect(hook).not.toContain("if (gatherBusy) return");
+    expect(hook).toContain("ileGatherRateLimitKey");
+    expect(hook).toContain("dismissIleGatherJob");
+    expect(hook).toContain("dismissIleGatherReadyJobsForTile");
+    expect(jobs).toContain("jobId: job.id");
+    expect(surface).toContain("openGatheredResources({ tileId: stepId })");
+    expect(surface).toContain("timBlockActionProgress");
     expect(jobs).toContain("ILE_GATHER_RESOURCES_TOOL");
+
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
+    expect(world).toContain("ileGatherRunningTileIds");
+    expect(world).toContain("ILE_GATHER_RUNNING_MAP_ICON");
+    expect(world).toContain("gatheringTileIds.has(node.id)");
+    expect(glyph).toContain("data-ile-gather-running-icon");
+    expect(glyph).toContain("ILE_GATHER_RUNNING_MAP_ICON");
+    expect(glyph).not.toContain("lucide-react");
+    expect(grid).toContain("gatherJobs,");
 
     expect(api).toContain("callXaiJSON");
     expect(api).toContain("buildIleGatherForageInput");
@@ -385,7 +465,8 @@ describe("ILE gather resources", () => {
 
     expect(panes).toContain("WorkspaceResourcesPanel");
     expect(panes).toContain("blockId");
-    expect(panel).toContain("filterPlannedResourcesForIleBlock");
+    expect(panes).toContain("chapterId");
+    expect(panel).toContain("filterPlannedResourcesByScope");
     expect(panel).toContain("mergeIleGatherPlannedResources");
     expect(panel).toContain("data-ile-gather-planned");
 
@@ -398,7 +479,7 @@ describe("ILE gather resources", () => {
     writeScratch(
       "ile-gather-surface.txt",
       [
-        "gather=data-ile-gather-resources",
+        "gather=circular-menu",
         "progress=data-ile-gather-progress",
         "finish=data-ile-gather-open-resources",
         `tool=${ILE_GATHER_RESOURCES_TOOL}`,

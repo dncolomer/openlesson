@@ -28,6 +28,7 @@ const SHELL_PANELS = [
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "components/WorkspaceModeSelect.tsx",
   "components/ui/ConfirmDialog.tsx",
+  "components/ui/DialogFrame.tsx",
   "components/StrengthsGapsPanel.tsx",
   "components/WorkspacePerformancePanel.tsx",
   "components/ModelLoadingModal.tsx",

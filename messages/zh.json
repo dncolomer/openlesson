@@ -771,6 +771,11 @@
     "layoutHideTools": "隐藏工具",
     "backToDashboard": "返回仪表板",
     "saveAndExit": "保存并退出",
+    "nameSessionTitle": "Name this session?",
+    "nameSessionBody": "Give it a name so you can find it in Previous Sessions later. Leave blank to keep the default id.",
+    "nameSessionPlaceholder": "Session name",
+    "nameSessionConfirm": "Save and Exit",
+    "nameSessionStay": "Stay",
     "sessionPlan": "区块计划",
     "chapters": "章节",
     "sessionPaused": "区块已暂停",
@@ -1614,7 +1619,12 @@
     "gatheringResources": "Gathering…",
     "gatherInsufficientTitle": "Not enough Proof of Resources / Proof of Work",
     "gatherWarningConfirm": "OK",
-    "gatherOpenResources": "Open resources"
+    "gatherOpenResources": "Open resources",
+    "closeBlockedTitle": "Not enough Proof of Work",
+    "closeOverride": "Close override",
+    "undoWorkTitle": "Work this chapter again?",
+    "undoWorkBody": "This chapter is marked done. Working it again will mark it as not done.",
+    "undoWorkConfirm": "Mark undone and work"
   },
   "heliosChat": {
     "assistant": "Helios",
@@ -2532,13 +2542,13 @@
       "step3": {
         "title": "Explore the map",
         "highlight": "Speak your thoughts out loud and use tools to explore the map. Fog lifts as you scout. You win by completing chapters — and this map can be further built.",
-        "body": "Commander, this map is yours. Fog covers uncharted ground. Pan, zoom, and scout — double-click a chapter to move in.\n\nYou win by completing chapters. That is the objective. Finish them to hold the field.\n\nThe map can be further built. Add, edit, and expand chapters as you learn. Territory grows with you.\n\nPress Start. Recording begins. Talk as you work. I'm done answering closes a turn. Complete wins the chapter.",
+        "body": "This map is yours. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. I'm done answering closes a turn.",
         "quoteText": "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.",
         "quoteAuthor": "Sun Tzu",
         "start": "Start",
         "starting": "Deploying…",
         "titleProject": "Explore the map",
-        "bodyProject": "Commander, each chapter is an exercise on this map. Fog covers uncharted ground. Pan, zoom, and scout — double-click to move in.\n\nYou win by completing chapters. That is the objective. Finish them to hold the field.\n\nThe map can be further built. Add, edit, and expand chapters as you learn. Territory grows with you.\n\nPress Start. Recording begins. Talk as you work. Del stashes. I'm done answering closes a turn. Complete wins the chapter."
+        "bodyProject": "Each chapter is an exercise on this map. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. Del stashes. I'm done answering closes a turn."
       }
     },
     "tap": {

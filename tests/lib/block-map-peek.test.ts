@@ -3,6 +3,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { resolveMapBlockPeek } from "@/lib/block-map-peek";
+import {
+  blockCircularMenuDoubleClickIsNoop,
+  blockCircularMenuOpensOnSelect,
+} from "@/lib/block-circular-menu";
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");
@@ -38,12 +42,23 @@ describe("resolveMapBlockPeek", () => {
 });
 
 describe("map double-click peek overlay", () => {
-  it("double-click opens a map-centered title + description dialog in every mode", () => {
+  it("creator and ILE occupied-block double-click peek; Workspace learner stays a no-op", () => {
     const grid = readMapGridSurface();
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
+    const host = read("components/BlockSkillGrid.tsx");
+    const menu = read("lib/block-circular-menu.ts");
     expect(authoring).toContain("onPeekBlock");
     expect(authoring).toContain("handleBlockDoubleClick");
     expect(authoring).toMatch(/onPeekBlock\?\.\(blockId\)/);
+    expect(host).toContain("blockCircularMenuDoubleClickIsNoop");
+    expect(host).toContain("blockCircularMenuOpensOnSelect");
+    expect(host).toContain("handleBlockDoubleClickGuarded");
+    expect(host).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })");
+    expect(host).toMatch(/if \(blockCircularMenuDoubleClickIsNoop\(circularMenuSurface\)\) return/);
+    expect(blockCircularMenuOpensOnSelect("ile")).toBe(true);
+    expect(blockCircularMenuDoubleClickIsNoop("ile")).toBe(false);
+    expect(blockCircularMenuDoubleClickIsNoop("workspace-learner")).toBe(true);
+    expect(menu).toContain("blockCircularMenuOpensOnSelect");
     expect(grid).toContain("data-map-block-peek");
     expect(grid).toContain("data-map-block-peek-title");
     expect(grid).toContain("data-map-block-peek-description");

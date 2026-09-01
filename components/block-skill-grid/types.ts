@@ -32,7 +32,23 @@ export interface BlockSkillGridProps {
   expandJobs?: readonly AddExpandJob[] | null;
   onAbortExpandJob?: (jobId: string) => void;
   gatherJobs?: readonly IleGatherJob[] | null;
-  onOpenGatherResources?: () => void;
+  onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
+  circularMenuSurface?: "ile" | "workspace-learner" | "none";
+  onCircularMenuAction?: (
+    blockId: string,
+    action:
+      | "work"
+      | "mark_completed"
+      | "edit"
+      | "gather_resources"
+      | "see_resources"
+      | "add_chapter"
+      | "start_session"
+      | "continue_session"
+      | "mark_done",
+  ) => void;
+  blockProgressById?: Readonly<Record<string, number>>;
+  unseenGatherById?: Readonly<Record<string, boolean>>;
   clusterMapJob?: {
     active: boolean;
     progress: number;
@@ -77,7 +93,7 @@ export interface BlockSkillGridProps {
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;
-  /** Occupied-cell double-click. When set, peek is skipped so ILE can open Helios. */
+  /** Occupied-cell double-click. ILE/Workspace-learner maps no-op this. */
   onNodeDoubleClick?: (nodeId: string) => void;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   onGridOp?: (payload: {

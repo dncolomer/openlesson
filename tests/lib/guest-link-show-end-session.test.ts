@@ -121,7 +121,7 @@ describe("ILE UI gate", () => {
     expect(view).toContain("showEndSession");
     expect(view).toContain("allowEndSession");
     expect(view).toMatch(/allowEndSession\s*\?\s*\([\s\S]*ConfirmDialog/);
-    expect(view).toMatch(/allowEndSession\s*\?\s*t\('sessionEnd\.returnToWorkspace'\)/);
+    expect(view).toMatch(/allowEndSession\s*\?\s*t\(["']sessionEnd\.returnToWorkspace["']\)/);
 
     const bar = read("components/SessionControlBar.tsx");
     expect(bar).toContain("showEndSession");

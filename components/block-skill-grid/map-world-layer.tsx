@@ -86,8 +86,24 @@ import {
   BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
-import { DEFAULT_BLOCK_MAP_ICON, isTimExploreMapIcon, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import {
+  DEFAULT_BLOCK_MAP_ICON,
+  ILE_GATHER_RUNNING_MAP_ICON,
+  isTimExploreMapIcon,
+  resolveBlockMapGlyph,
+} from "@/lib/block-map-glyph";
+import { ileGatherRunningTileIds, type IleGatherJob } from "@/lib/ile-gather-resources";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
+import {
+  BlockCircularMenuRing,
+  BlockGatherNotificationDot,
+  BlockInTileProgress,
+} from "@/components/block-skill-grid/block-circular-menu";
+import {
+  ileCircularMenuDisabledActionIds,
+  type BlockCircularMenuActionId,
+  type BlockCircularMenuSurface,
+} from "@/lib/block-circular-menu";
 
 export function MapWorldLayer({
   visibleCells,
@@ -154,6 +170,14 @@ export function MapWorldLayer({
   soleStretchBlockId,
   renderStretchHandles,
   annotationLayers,
+  circularMenuSurface = "none",
+  circularMenuBlockId = null,
+  circularMenuEmptyCell = null,
+  onCircularMenuAction,
+  onEmptyCircularMenuAction,
+  blockProgressById,
+  unseenGatherById,
+  gatherJobs = null,
 }: {
   visibleCells: GridCell[];
   occupancy: Map<string, string>;
@@ -213,6 +237,14 @@ export function MapWorldLayer({
   showProgress: boolean;
   handleCellSelect: (id: string, e: MouseEvent) => void;
   handleBlockDoubleClick: (id: string) => void;
+  circularMenuSurface?: BlockCircularMenuSurface;
+  circularMenuBlockId?: string | null;
+  circularMenuEmptyCell?: { row: number; col: number } | null;
+  onCircularMenuAction?: (blockId: string, action: BlockCircularMenuActionId) => void;
+  onEmptyCircularMenuAction?: (action: BlockCircularMenuActionId) => void;
+  blockProgressById?: Readonly<Record<string, number>>;
+  unseenGatherById?: Readonly<Record<string, boolean>>;
+  gatherJobs?: readonly IleGatherJob[] | null;
   handleBlockPointerDown: (id: string, cell: GridCell, e: PointerEvent) => void;
   handleBlockPointerMove: (e: PointerEvent) => void;
   handleBlockPointerUp: (e: PointerEvent) => void;
@@ -220,6 +252,7 @@ export function MapWorldLayer({
   renderStretchHandles: (blockId: string) => ReactNode;
   annotationLayers: AnnotationLayer[];
 }) {
+  const gatheringTileIds = ileGatherRunningTileIds(gatherJobs);
   return (
     <>
           {/* Empty cells + selection highlights + unusable ground */}
@@ -383,6 +416,15 @@ export function MapWorldLayer({
                     </span>
                   ) : null}
                 </button>
+                {circularMenuSurface === "ile" &&
+                circularMenuEmptyCell?.row === cell.row &&
+                circularMenuEmptyCell?.col === cell.col ? (
+                  <BlockCircularMenuRing
+                    surface={circularMenuSurface}
+                    empty
+                    onAction={(action) => onEmptyCircularMenuAction?.(action)}
+                  />
+                ) : null}
               </div>
             );
           })}
@@ -693,7 +735,12 @@ export function MapWorldLayer({
               title: node.title,
             });
             const glyphKeyword = mapTitle === "?" ? "?" : mapGlyph.keyword;
-            const glyphIcon = mapTitle === "?" ? DEFAULT_BLOCK_MAP_ICON : mapGlyph.icon;
+            const gathering = gatheringTileIds.has(node.id);
+            const glyphIcon = gathering
+              ? ILE_GATHER_RUNNING_MAP_ICON
+              : mapTitle === "?"
+                ? DEFAULT_BLOCK_MAP_ICON
+                : mapGlyph.icon;
             const statusGlyph = (
               <MapCellStatusGlyph
                 status={node.status}
@@ -771,7 +818,12 @@ export function MapWorldLayer({
                           top: cell.row * SKILL_GRID_PITCH + dragDy,
                           width,
                           height,
-                          zIndex: isDragParticipant && blockDragOffset ? 5 : 2,
+                          zIndex:
+                            circularMenuBlockId === node.id
+                              ? 40
+                              : isDragParticipant && blockDragOffset
+                                ? 5
+                                : 2,
                         }}
                       >
                         <button
@@ -896,6 +948,8 @@ export function MapWorldLayer({
                           {isLabel ? (
                             <>
                               {statusGlyph}
+                              <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
+                              <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                               {learnerLockedLabel}
                               {practiceBadge}
                               {effectBadge}
@@ -906,6 +960,20 @@ export function MapWorldLayer({
                             </>
                           ) : null}
                         </button>
+                        {isLabel &&
+                        circularMenuSurface !== "none" &&
+                        !mapExploreOpen &&
+                        circularMenuBlockId === node.id ? (
+                          <BlockCircularMenuRing
+                            surface={circularMenuSurface}
+                            onAction={(action) => onCircularMenuAction?.(node.id, action)}
+                            disabledIds={
+                              circularMenuSurface === "ile"
+                                ? ileCircularMenuDisabledActionIds({ completed: itemDone })
+                                : undefined
+                            }
+                          />
+                        ) : null}
                       </div>
                     );
                   })}
@@ -949,11 +1017,13 @@ export function MapWorldLayer({
                   width,
                   height,
                   zIndex:
-                    isDragParticipant && blockDragOffset
-                      ? 5
-                      : liveStretch
+                    circularMenuBlockId === node.id
+                      ? 40
+                      : isDragParticipant && blockDragOffset
                         ? 5
-                        : undefined,
+                        : liveStretch
+                          ? 5
+                          : undefined,
                 }}
               >
                 <button
@@ -1037,6 +1107,8 @@ export function MapWorldLayer({
                   }
                 >
                   {statusGlyph}
+                  <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
+                  <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                   {learnerLockedLabel}
                   {practiceBadge}
                   {effectBadge}
@@ -1045,6 +1117,19 @@ export function MapWorldLayer({
                   {starterBadge}
                   {lockBadge}
                 </button>
+                {circularMenuSurface !== "none" &&
+                !mapExploreOpen &&
+                circularMenuBlockId === node.id ? (
+                  <BlockCircularMenuRing
+                    surface={circularMenuSurface}
+                    onAction={(action) => onCircularMenuAction?.(node.id, action)}
+                    disabledIds={
+                      circularMenuSurface === "ile"
+                        ? ileCircularMenuDisabledActionIds({ completed: itemDone })
+                        : undefined
+                    }
+                  />
+                ) : null}
                 {renderStretchHandles(node.id)}
               </div>
             );

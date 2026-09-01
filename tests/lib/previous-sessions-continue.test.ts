@@ -18,6 +18,12 @@ import {
   previousSessionsDrawerShouldLoad,
 } from "@/lib/block-previous-sessions";
 import {
+  applyIleSessionNameToMetadata,
+  ileSessionListDisplayName,
+  ileSessionNameFromMetadata,
+  normalizeIleSessionName,
+} from "@/lib/ile-session-name";
+import {
   continueMiniCellsFromPlanSteps,
   dummyDensityOccupiedCount,
   ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS,
@@ -48,7 +54,12 @@ function writeScratch(name: string, body: string) {
 
 function createListClient(input: {
   joins: Array<{ session_id: string; created_at: string }>;
-  sessions: Array<{ id: string; created_at: string; status: string }>;
+  sessions: Array<{
+    id: string;
+    created_at: string;
+    status: string;
+    metadata?: Record<string, unknown>;
+  }>;
 }) {
   const recorded: { tables: string[]; inIds: string[][] } = {
     tables: [],
@@ -112,6 +123,42 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
     expect(list[0].startedAt).toBeTruthy();
   });
 
+  it("lists learner-chosen names and falls back to session id", async () => {
+    expect(normalizeIleSessionName("  Graph walk  ")).toBe("Graph walk");
+    expect(normalizeIleSessionName("   ")).toBeNull();
+    expect(
+      ileSessionListDisplayName({ name: "Graph walk", sessionId: "sess-a" }),
+    ).toBe("Graph walk");
+    expect(ileSessionListDisplayName({ name: "", sessionId: "sess-a" })).toBe("sess-a");
+    expect(
+      ileSessionNameFromMetadata({ session_name: "Dijkstra night" }),
+    ).toBe("Dijkstra night");
+    expect(
+      applyIleSessionNameToMetadata({ block_id: "b1" }, "  Named  ").session_name,
+    ).toBe("Named");
+
+    const client = createListClient({
+      joins: [{ session_id: "sess-named", created_at: "2026-08-28T05:42:58Z" }],
+      sessions: [
+        {
+          id: "sess-named",
+          created_at: "2026-08-28T05:42:58.000Z",
+          status: "paused",
+          metadata: { session_name: "Graph walk" },
+        },
+      ],
+    });
+    const list = await listBlockPreviousSessions(client, {
+      workspaceId: "ws-1",
+      blockId: "block-1",
+    });
+    expect(list[0]).toMatchObject({
+      sessionId: "sess-named",
+      name: "Graph walk",
+    });
+    expect(ileSessionListDisplayName(list[0])).toBe("Graph walk");
+  });
+
   it("normalize keeps id + timestamp and drops empties", () => {
     expect(
       normalizeBlockPreviousSessions([
@@ -131,6 +178,8 @@ describe("continue uses chosen session id and does not insert", () => {
     expect(ileLaunchInsertsNewSession("new")).toBe(true);
 
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
+    expect(pane).toContain("ileSessionListDisplayName");
+    expect(pane).toContain("data-previous-session-name");
     expect(pane).toContain("continueIleSessionHref");
     expect(pane).toContain("ileLaunchInsertsNewSession(\"continue\")");
     expect(pane).toContain("WORKSPACE_LEARNER_LAUNCH_PATH".slice(0, 0) + "onLaunchIntent");
@@ -292,6 +341,8 @@ describe("Practice drawer labels and previous-sessions UI", () => {
       "fetchBlockPreviousSessions",
     );
     expect(pane).toContain("data-previous-session-row");
+    expect(pane).toContain("data-previous-session-name");
+    expect(pane).toContain("ileSessionListDisplayName");
     expect(pane).toContain("data-continue-session");
     expect(pane).toContain("entry.sessionId");
     expect(pane).toContain("entry.startedAt");
@@ -309,6 +360,15 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     const view = readSessionViewSurface();
     expect(view).toContain("ileWelcomeShowsSizePicker");
     expect(view).toContain("ileWelcomeShowsRegenerate");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    const phase = read("components/session-view/use-session-phase.ts");
+    expect(chrome).toContain('testId="ile-save-exit-name"');
+    expect(chrome).toContain("data-ile-session-name");
+    expect(chrome).toContain('t("session.nameSessionTitle")');
+    expect(view).toContain("setShowSaveExitNameDialog(true)");
+    expect(view).toContain("pauseAndGoToDashboard(saveExitName)");
+    expect(phase).toContain("applyIleSessionNameToMetadata");
+    expect(phase).toContain("async (sessionName?: string | null)");
 
     writeScratch(
       "previous-sessions-excerpts.txt",

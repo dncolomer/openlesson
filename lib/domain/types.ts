@@ -174,6 +174,8 @@ export interface Session {
     workspace_id?: string;
     /** ILE chapter / workspace block linked to this session (PoW context). */
     block_id?: string;
+    /** Learner-chosen name for Previous Sessions (blank → show session id). */
+    session_name?: string;
   };
 }
 

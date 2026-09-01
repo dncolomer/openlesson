@@ -31,6 +31,7 @@ import {
   fetchWelcomeChapterSnapshot,
 } from "@/lib/session-plan-chapters-status";
 import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
+import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 import type { IleSessionMode } from "@/lib/ile-mode";
@@ -581,15 +582,49 @@ const handleReset = async () => {
 };
 
 // Close session - return to workspace without ending
-const pauseAndGoToDashboard = useCallback(async () => {
+const pauseAndGoToDashboard = useCallback(async (sessionName?: string | null) => {
+  const current = sessionRef.current ?? session;
+  if (current) {
+    const metadata = applyIleSessionNameToMetadata(
+      current.metadata as Record<string, unknown>,
+      sessionName,
+    ) as Session["metadata"];
+    const named = { ...current, metadata };
+    setSession(named);
+    sessionRef.current = named;
+    try {
+      if (guestAccessKind === "aycl" && ayclToken) {
+        const { saveAyclSession } = await import("@/lib/aycl-storage");
+        await saveAyclSession(ayclToken, named);
+      } else if (guestAccessKind === "ile" && ileToken) {
+        const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
+        await saveIleLinkSession(ileToken, named);
+      } else {
+        await saveSession(named);
+      }
+    } catch {
+      /* Still pause and leave — name is best-effort. */
+    }
+  }
   if (session && isRecording && !isPaused) {
     await handlePause();
   } else if (session && isPaused) {
     await pauseSession(session.id, elapsedSeconds * 1000);
   }
-  const current = sessionRef.current ?? session;
-  router.push(current ? getIlePostSessionPath(current) : "/dashboard");
-}, [session, isRecording, isPaused, elapsedSeconds, handlePause, router]);
+  const next = sessionRef.current ?? session;
+  router.push(next ? getIlePostSessionPath(next) : "/dashboard");
+}, [
+  session,
+  isRecording,
+  isPaused,
+  elapsedSeconds,
+  handlePause,
+  router,
+  guestAccessKind,
+  ayclToken,
+  ileToken,
+  setSession,
+]);
 
 const handleClose = () => {
   void pauseAndGoToDashboard();

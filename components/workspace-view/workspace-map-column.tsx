@@ -60,6 +60,7 @@ export function WorkspaceMapColumn({
   interactionMode,
   ayclCapabilities,
   selectInteractionMode,
+  onCircularMenuAction,
 }: {
   mobileColumn: MobileColumn;
   nodes: Block[];
@@ -111,6 +112,10 @@ export function WorkspaceMapColumn({
   interactionMode: WorkspaceInteractionMode;
   ayclCapabilities: AyclCapabilities | null;
   selectInteractionMode: (mode: WorkspaceInteractionMode) => void;
+  onCircularMenuAction?: (
+    blockId: string,
+    action: "start_session" | "continue_session" | "mark_done" | string,
+  ) => void;
 }) {
   return (
     <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} relative flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full ${WORKSPACE_MAP_DESKTOP_MAP_WIDTH_CLASS} md:border-b-0 md:border-r`}>
@@ -121,6 +126,7 @@ export function WorkspaceMapColumn({
         onFork={() => {}}
         isOwner={isOwner}
         learnerMode={isLearnerMode}
+        onCircularMenuAction={onCircularMenuAction}
         learnerScopeId={currentUserId || ayclToken || "local"}
         cloneArmed={cloneArmed}
         cloneSourceBlockId={cloneSourceBlockId}

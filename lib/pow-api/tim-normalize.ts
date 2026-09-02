@@ -101,6 +101,12 @@ function normalizeChapterSuggestion(raw: unknown): InterruptionChapterSuggestion
     typeof rec.description === "string" && rec.description.trim()
       ? rec.description.trim()
       : title;
+  const keywordRaw =
+    typeof rec.keyword === "string"
+      ? rec.keyword.trim()
+      : typeof rec.map_keyword === "string"
+        ? rec.map_keyword.trim()
+        : "";
   const source =
     typeof rec.source_step_id === "string" && rec.source_step_id.trim()
       ? rec.source_step_id.trim()
@@ -111,6 +117,7 @@ function normalizeChapterSuggestion(raw: unknown): InterruptionChapterSuggestion
     topic: topic.slice(0, 200),
     title: title.slice(0, 120),
     description: description.slice(0, 400),
+    ...(keywordRaw ? { keyword: keywordRaw.slice(0, 28) } : {}),
     source_step_id: source,
   };
 }

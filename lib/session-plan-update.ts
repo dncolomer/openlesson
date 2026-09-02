@@ -5,6 +5,7 @@
 import {
   applyIleChapterModeInstructions,
 } from "@/lib/ile-chapter-depth";
+import { composeChapterMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 import type { IleSessionMode } from "@/lib/ile-mode";
 
 /** Prompt fill only needs type / description / status — LLM and domain steps both fit. */
@@ -89,5 +90,10 @@ export function composeSessionPlanUpdatePrompt(
     .replace("{focused_probes}", focusedProbesText)
     .replace("{secondsSinceLastProbe}", secondsSinceLastProbe.toString());
 
-  return applyIleChapterModeInstructions(filled, vars.sessionMode);
+  return [
+    applyIleChapterModeInstructions(filled, vars.sessionMode),
+    composeChapterMapGlyphJsonInstruction(),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

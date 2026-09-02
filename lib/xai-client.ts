@@ -485,9 +485,10 @@ export const SCHEMAS = {
             properties: {
               type: { type: "string", enum: ["question", "task", "suggestion", "checkpoint"] },
               description: { type: "string" },
+              keyword: { type: "string", description: "1 or 2 map-tile words (4-28 characters)" },
               order: { type: "number" },
             },
-            required: ["type", "description", "order"],
+            required: ["type", "description", "keyword", "order"],
           },
         },
       },

@@ -14,9 +14,10 @@ import type { IleSessionMode } from "@/lib/ile-mode";
 import type { RequestType, SessionPlanStep } from "@/lib/domain/types";
 import {
   blockMapGlyphDbFields,
-  composeBlockMapGlyphJsonInstruction,
+  composeChapterMapGlyphJsonInstruction,
   randFromSeed,
 } from "@/lib/block-map-glyph";
+import type { JsonSchema } from "@/lib/xai-client";
 
 const VALID_STEP_TYPES = new Set<RequestType>([
   "question",
@@ -97,11 +98,55 @@ export function composeSessionPlanCreatePrompt(
 
   return [
     applyIleChapterModeInstructions(filled, vars.sessionMode),
-    composeBlockMapGlyphJsonInstruction(),
+    composeChapterMapGlyphJsonInstruction(),
   ]
     .filter(Boolean)
     .join("\n\n");
 }
+
+/** Structured output: each chapter must include a 1–2 word map keyword (like workspace blocks). */
+export const SESSION_PLAN_CREATE_JSON_SCHEMA: JsonSchema = {
+  name: "session_plan",
+  schema: {
+    type: "object",
+    properties: {
+      goal: { type: "string", description: "Learning goal for the session" },
+      strategy: { type: "string", description: "Approach for guiding the student" },
+      description: { type: "string", description: "Brief summary for display" },
+      steps: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            type: {
+              type: "string",
+              enum: ["question", "task", "suggestion", "checkpoint", "feedback"],
+            },
+            description: { type: "string" },
+            keyword: {
+              type: "string",
+              description:
+                "1 or 2 map-tile words (4-28 characters). Suggested with the description — not a truncation of it.",
+            },
+            order: { type: "number" },
+            position_x: {
+              type: "integer",
+              description: "Grid column (may be negative); start at 0",
+            },
+            position_y: {
+              type: "integer",
+              description: "Grid row (may be negative); start at 0",
+            },
+          },
+          required: ["type", "description", "keyword"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["goal", "strategy", "steps"],
+    additionalProperties: false,
+  },
+};
 
 function parseGridCoord(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isInteger(value)) {

@@ -8,6 +8,7 @@ import {
   blockMapPatternBits,
   blockMapPatternCells,
   composeBlockMapGlyphJsonInstruction,
+  composeChapterMapGlyphJsonInstruction,
   DEFAULT_BLOCK_MAP_ICON,
   encodeBlockMapPattern,
   isBlockMapIconName,
@@ -129,6 +130,10 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
       "map_keyword",
     );
     expect(read("lib/insert-workspace-blocks.ts")).toContain("map_keyword");
+    const chapterInstruction = composeChapterMapGlyphJsonInstruction();
+    expect(chapterInstruction).toMatch(/Each chapter\/step must include "keyword"/);
+    expect(chapterInstruction).toMatch(/not copy the first words/i);
+    expect(chapterInstruction).toMatch(/1 or 2 map words/i);
   });
 
   it("workspace tiles show glyph and hide occupancy modifiers", () => {

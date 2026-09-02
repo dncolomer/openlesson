@@ -642,24 +642,61 @@ const handleLoadChapter = useCallback(async (index: number) => {
   updateChapterWorkspace,
 ]);
 
-const handleAddChapter = useCallback(async (description: string, position: { row: number; col: number }) => {
+const handleAddChapter = useCallback(async (
+  description: string,
+  position: { row: number; col: number },
+  options?: { keyword?: string | null },
+) => {
   const currentPlan = sessionPlanRef.current;
   if (!currentPlan) return;
   const trimmed = description.trim();
   if (!trimmed) return;
-  // Project Mode: LLM-author a real longer-horizon exercise (not a topic-list wrap).
   let framed = trimmed;
+  let keyword = String(options?.keyword || "").trim() || null;
+  // Same as workspace add-block-at-slot: author title/description/keyword together
+  // so the map tile is not the first two words of whatever title was picked.
+  const sessionId = sessionRef.current?.id || session?.id;
+  if (sessionId) {
+    try {
+      const authored = await fetch("/api/workspace/generate-chapter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          seed: trimmed,
+          sessionMode: resolvedSessionMode,
+          locale,
+          ...guestAccessBody,
+        }),
+      });
+      if (authored.ok) {
+        const data = (await authored.json()) as {
+          title?: string;
+          description?: string;
+          keyword?: string;
+        };
+        const nextDescription = String(data.description || "").trim();
+        const nextKeyword = String(data.keyword || "").trim();
+        if (nextDescription) framed = nextDescription;
+        if (nextKeyword) keyword = nextKeyword;
+      }
+    } catch {
+      /* keep seed; keyword fallback is first 1–2 title words */
+    }
+  }
+  // Project Mode: LLM-author a real longer-horizon exercise (not a topic-list wrap).
+  // Keep the generated map keyword even if the exercise text is rewritten.
   if (isProjectMode) {
     try {
       const res = await fetch("/api/generate-exercise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: sessionRef.current?.id || session?.id,
+          sessionId,
           workspaceId: ilePromptMaterials?.workspaceId || undefined,
           surface: "ile_project",
-          chapterDescription: trimmed,
-          seed: trimmed,
+          chapterDescription: framed,
+          seed: framed,
           blockTitle:
             ilePromptMaterials?.blockTitle ||
             (session?.metadata as { block_title?: string } | undefined)?.block_title ||
@@ -680,12 +717,12 @@ const handleAddChapter = useCallback(async (description: string, position: { row
       if (res.ok) {
         const data = (await res.json()) as { exercise?: string };
         if (data.exercise?.trim()) framed = data.exercise.trim();
-        else framed = frameIleProjectChapterDescription(trimmed);
+        else framed = frameIleProjectChapterDescription(framed);
       } else {
-        framed = frameIleProjectChapterDescription(trimmed);
+        framed = frameIleProjectChapterDescription(framed);
       }
     } catch {
-      framed = frameIleProjectChapterDescription(trimmed);
+      framed = frameIleProjectChapterDescription(framed);
     }
   }
   if (!isChapterSlotAvailable(currentPlan, position.row, position.col)) {
@@ -696,6 +733,7 @@ const handleAddChapter = useCallback(async (description: string, position: { row
     id: newStepId,
     description: framed,
     position,
+    keyword,
   });
   await persistPlanSteps(updatedPlan, {
     toolAction: "chapter_add",
@@ -718,6 +756,7 @@ const handleAddChapter = useCallback(async (description: string, position: { row
   session?.metadata,
   guestAccessBody,
   ilePromptMaterials,
+  locale,
 ]);
 
 const handleUpdateChapter = useCallback(async (stepId: string, description: string) => {
@@ -807,7 +846,7 @@ const handleSelectChapterFollowUp = useCallback(
     // Seed from follow-up; handleAddChapter LLM-authors a real exercise.
     const description = buildFollowUpChapterDescription(suggestion);
     try {
-      await handleAddChapter(description, slot);
+      await handleAddChapter(description, slot, { keyword: suggestion.keyword });
       // Keep section visible: drop the chosen topic, then refresh so finished
       // chapters always have optional follow-ups available.
       setChapterFollowUpsById((prev) => ({

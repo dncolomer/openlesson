@@ -95,6 +95,19 @@ describe("normalizeChapterFollowUpSuggestions", () => {
     expect(list[0].title).toBe("Hash tables");
     expect(list[1].title).toBe("Graphs BFS");
   });
+
+  it("keeps a generated 1–2 word keyword instead of truncating the title", () => {
+    const list = normalizeChapterFollowUpSuggestions({
+      suggestions: [
+        {
+          title: "Open addressing collision drills",
+          description: "Practice open addressing.",
+          keyword: "Open Address",
+        },
+      ],
+    });
+    expect(list[0].keyword).toBe("Open Address");
+  });
 });
 
 describe("buildChapterFollowUpContext / description", () => {

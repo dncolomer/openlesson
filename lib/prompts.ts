@@ -215,6 +215,7 @@ Each step should have:
   - suggestion: tool/route guidance when the topic earns it (Notebook, Grokipedia, screen share, IDE — not Canvas-by-default)
   - checkpoint: good-enough progress checks and demonstration reflection ("Summarize the decision you just made", "Mark what you can demonstrate now") — these are turns or a chapter's primary type, never their own shallow chapter
 - description: concise text for the student (1-2 sentences max) naming the topic-horizon or standalone exercise, not a one-shot micro-act
+- keyword: 1 or 2 map words (4–28 characters, no punctuation) suggested with the description — the tile label on the chapter map, NOT the first words of the description
 - order: Sequential number starting from 1
 - position_x: integer grid column (may be negative)
 - position_y: integer grid row (may be negative)
@@ -233,10 +234,10 @@ Return ONLY valid JSON (no markdown, no explanation):
   "strategy": "...",
   "description": "...",
   "steps": [
-    {"type": "question", "description": "...", "order": 1, "position_x": 0, "position_y": 0},
-    {"type": "task", "description": "...", "order": 2, "position_x": 1, "position_y": 0},
-    {"type": "task", "description": "...", "order": 3, "position_x": -1, "position_y": 0},
-    {"type": "checkpoint", "description": "...", "order": 4, "position_x": 0, "position_y": -1},
+    {"type": "question", "description": "...", "keyword": "Tree Insert", "order": 1, "position_x": 0, "position_y": 0},
+    {"type": "task", "description": "...", "keyword": "AVL Rotate", "order": 2, "position_x": 1, "position_y": 0},
+    {"type": "task", "description": "...", "keyword": "Delete Node", "order": 3, "position_x": -1, "position_y": 0},
+    {"type": "checkpoint", "description": "...", "keyword": "BST Check", "order": 4, "position_x": 0, "position_y": -1},
     ...
   ]
 }`,
@@ -391,12 +392,14 @@ Based on these observations, decide:
        still needs to demonstrate, e.g. "You haven't yet explained why X leads to Y" or 
        "Try working through a concrete example of Z before moving on".
 
+When plan_changed is true, each item in updated_steps must include keyword (1 or 2 map words) along with type and description — same as chapter create. Suggest the keyword with the description; do not truncate the description.
+
 Return ONLY valid JSON:
 {
   "gap_score": 0.5,
   "signals": ["hesitation", "confusion"],
   "plan_changed": true/false,
-  "updated_steps": [...],
+  "updated_steps": [{"type": "task", "description": "...", "keyword": "AVL Rotate", "order": 1, "status": "pending"}, ...],
   "current_step_index": <number>,
   "next_request": {
     "type": "question" | "task" | "suggestion" | "checkpoint" | "feedback",

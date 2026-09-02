@@ -16,8 +16,10 @@ import { ILE_SESSION_MODE_DEFAULT, type IleSessionMode } from "@/lib/ile-mode";
 import type { IleHeliosPowOrigin } from "@/lib/ile-helios-trigger";
 import {
   TIM_EXPLORE_MAP_ICON,
+  blockMapGlyphDbFields,
   blockMapGlyphForLabel,
   isTimExploreMapIcon,
+  randFromSeed,
 } from "@/lib/block-map-glyph";
 import type {
   PredictiveInterruption,
@@ -55,6 +57,7 @@ export type IleChapterSuggestionPayload = {
   topic: string;
   title: string;
   description: string;
+  keyword?: string;
   source_step_id?: string | null;
 };
 
@@ -190,8 +193,9 @@ export function payloadFromChapterSuggestion(raw: unknown): IleChapterSuggestion
   if (topic.length < 3) return null;
   const title = str(rec.title, 120) || topic.slice(0, 120);
   const description = str(rec.description, 400) || title;
+  const keyword = str(rec.keyword ?? rec.map_keyword, 28) || undefined;
   const source_step_id = str(rec.source_step_id, 80) || null;
-  return { topic, title, description, source_step_id };
+  return { topic, title, description, ...(keyword ? { keyword } : {}), source_step_id };
 }
 
 export function chapterSuggestionFromInterruption(
@@ -272,16 +276,19 @@ function fallbackExpansionBodies(completed: string): IleChapterSuggestionPayload
       topic: completed.slice(0, 200),
       title: `Go deeper from ${short}`.slice(0, 120),
       description: `Go deeper from ${completed}`.slice(0, 400),
+      keyword: "Go Deeper",
     },
     {
       topic: completed.slice(0, 200),
       title: `Apply ${short}`.slice(0, 120),
       description: `Apply ${completed} to a new case`.slice(0, 400),
+      keyword: "Apply Case",
     },
     {
       topic: completed.slice(0, 200),
       title: `Contrast ${short}`.slice(0, 120),
       description: `Contrast ${completed} with a nearby idea`.slice(0, 400),
+      keyword: "Contrast",
     },
   ];
 }
@@ -540,7 +547,14 @@ export function buildTimChapterCompleteStep(input: {
 }): SessionPlanStep {
   void input.sessionMode;
   const description = String(input.suggestion.description || input.suggestion.title || "").trim();
-  const glyph = blockMapGlyphForLabel(description, input.id);
+  const glyph = blockMapGlyphDbFields(
+    {
+      keyword: input.suggestion.keyword,
+      title: input.suggestion.title || description,
+    },
+    description,
+    randFromSeed(input.id),
+  );
   return {
     id: input.id,
     description,

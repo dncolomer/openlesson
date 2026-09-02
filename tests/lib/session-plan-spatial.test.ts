@@ -15,6 +15,7 @@ import {
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
+  SESSION_PLAN_CREATE_JSON_SCHEMA,
   toPersistedCreatePlanSteps,
 } from "@/lib/session-plan-create";
 import {
@@ -79,6 +80,8 @@ describe("session plan create prompt composition", () => {
     expect(narrowPrompt).toMatch(/position_x=0,\s*position_y=0|\(0,\s*0\)|position_x=0/);
     expect(narrowPrompt).toMatch(/negative/i);
     expect(narrowPrompt).toMatch(/keyword/);
+    expect(narrowPrompt).toMatch(/Each chapter\/step must include "keyword"/);
+    expect(narrowPrompt).toMatch(/not copy the first words/i);
     expect(narrowPrompt).toMatch(/branch/i);
     expect(narrowPrompt).toMatch(/sparse|non-rectilinear|not a filled/i);
     expect(narrowPrompt).not.toContain("{initial_chapters_level}");
@@ -99,6 +102,18 @@ describe("session plan create prompt composition", () => {
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{initial_chapters_level}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("position_x\": -1");
     expect(SPATIAL_MAP_LAYOUT_RULES).toMatch(/negative/i);
+  });
+
+  it("asks for a 1–2 word keyword on each chapter, not a truncated title", () => {
+    const prompt = DEFAULT_PROMPTS.session_plan_create;
+    expect(prompt).toMatch(/"keyword": "Tree Insert"/);
+    expect(prompt).toMatch(/keyword: 1 or 2 map words/i);
+    expect(prompt).toMatch(/NOT the first words of the description/);
+    expect(SESSION_PLAN_CREATE_JSON_SCHEMA.schema.properties.steps).toBeTruthy();
+    const stepsSchema = SESSION_PLAN_CREATE_JSON_SCHEMA.schema.properties.steps as {
+      items: { required?: string[] };
+    };
+    expect(stepsSchema.items.required).toContain("keyword");
   });
 });
 
@@ -121,6 +136,24 @@ describe("normalizeSessionPlanCreateSteps multi-quadrant positions", () => {
     expect(steps.some((s) => (s.position_y ?? 0) < 0)).toBe(true);
     const cells = new Set(steps.map((s) => `${s.position_x}:${s.position_y}`));
     expect(cells.size).toBe(5);
+  });
+
+  it("stores the model keyword instead of the first two words of the description", () => {
+    const steps = normalizeSessionPlanCreateSteps(
+      [
+        {
+          type: "task",
+          description: "Prove AVL rotate-left after a failing insert",
+          keyword: "Rotate Left",
+          order: 1,
+          position_x: 0,
+          position_y: 0,
+        },
+      ],
+      { idSeed: 7 },
+    );
+    expect(steps[0].map_keyword).toBe("Rotate Left");
+    expect(steps[0].map_keyword).not.toBe("Prove Avl");
   });
 
   it("assigns origin to first step when missing and free", () => {
@@ -306,6 +339,9 @@ describe("create surface wiring (structural)", () => {
     expect(routeSrc).toContain("toPersistedCreatePlanSteps");
     expect(routeSrc).toContain("sessionMode");
     expect(routeSrc).toContain("createSessionPlanLLM");
+    const xaiSrc = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
+    expect(xaiSrc).toContain("SESSION_PLAN_CREATE_JSON_SCHEMA");
+    expect(xaiSrc).toContain("callXaiWithSchema");
   });
 
   it("welcome UI labels initial chapters and sends initialChapters", () => {

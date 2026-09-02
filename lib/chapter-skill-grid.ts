@@ -5,7 +5,11 @@ import {
 } from "@/lib/block-skill-grid";
 import { getSkillGridPositions } from "@/lib/skill-grid-positions";
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
-import { blockMapGlyphForLabel, resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import {
+  blockMapGlyphDbFields,
+  randFromSeed,
+  resolveBlockMapGlyph,
+} from "@/lib/block-map-glyph";
 import {
   ILE_CHAPTER_SOURCE_TIM,
   displayChapterMapIcon,
@@ -76,6 +80,8 @@ export function appendIleChapterStep(
     id: string;
     description: string;
     position: { row: number; col: number };
+    keyword?: string | null;
+    map_keyword?: string | null;
     source?: SessionPlanStep["source"];
     sourceStepId?: string | null;
     timUnopened?: boolean;
@@ -83,7 +89,14 @@ export function appendIleChapterStep(
   },
 ): SessionPlan {
   const description = String(input.description || "").trim();
-  const glyph = blockMapGlyphForLabel(description, input.id);
+  const glyph = blockMapGlyphDbFields(
+    {
+      keyword: input.keyword ?? input.map_keyword,
+      title: description,
+    },
+    description,
+    randFromSeed(input.id),
+  );
   const timSourced = input.source === ILE_CHAPTER_SOURCE_TIM;
   const newStep: SessionPlanStep = {
     id: input.id,

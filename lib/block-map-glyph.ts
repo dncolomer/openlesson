@@ -232,7 +232,22 @@ export function composeBlockMapGlyphJsonInstruction(): string {
   return [
     'Also return "keyword" (1 or 2 map words, 4–28 characters, no punctuation).',
     "Keyword is the 1–2 word tile label shown on the map instead of the full title.",
+    "Suggest it with the title/description — do not truncate the title to its first words.",
     "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (workspace: filled; TAP/ILE: outlines).",
+  ].join(" ");
+}
+
+/**
+ * ILE chapters: each step must carry its own map keyword, same as workspace
+ * blocks. Generic "also return keyword" is easy to miss when the JSON example
+ * is a plan with nested steps.
+ */
+export function composeChapterMapGlyphJsonInstruction(): string {
+  return [
+    'Each chapter/step must include "keyword" (1 or 2 map words, 4–28 characters, no punctuation).',
+    "Keyword is suggested as part of title/description generation — the 1–2 word tile label shown on the map instead of the full chapter text.",
+    "Do not copy the first words of the description. Invent a short map label (e.g. description 'Prove AVL rotate-left after insert' → keyword 'AVL Rotate').",
+    "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (TAP/ILE: outlines).",
   ].join(" ");
 }
 

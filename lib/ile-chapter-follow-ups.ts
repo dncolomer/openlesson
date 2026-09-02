@@ -7,6 +7,8 @@ import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
 export type ChapterFollowUpSuggestion = {
   title: string;
   description: string;
+  /** 1–2 word map-tile label generated with title/description. */
+  keyword?: string;
 };
 
 /** Chebyshev distance on the chapter grid. */
@@ -178,10 +180,12 @@ export function normalizeChapterFollowUpSuggestions(
       const rec = item as Record<string, unknown>;
       const title = String(rec.title || rec.topic || rec.name || "").trim();
       const description = String(rec.description || rec.body || rec.summary || title).trim();
+      const keyword = String(rec.keyword || rec.map_keyword || rec.mapKeyword || "").trim();
       if (!title && !description) continue;
       out.push({
         title: (title || description).slice(0, 120),
         description: (description || title).slice(0, 400),
+        ...(keyword ? { keyword: keyword.slice(0, 28) } : {}),
       });
     }
     if (out.length >= limit) break;

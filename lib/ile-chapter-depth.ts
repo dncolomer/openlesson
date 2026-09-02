@@ -28,6 +28,7 @@ export interface IleChapterSuggestion {
   topic: string;
   title: string;
   description: string;
+  keyword?: string;
 }
 
 /**
@@ -110,7 +111,7 @@ export function ileChapterExpansionRules(mode: IleSessionMode): string {
 - Ask something like: "This thread could be its own chapter — want to add one about [concrete topic]?"
 - Do not auto-insert chapters without the learner confirming (TIM chapter-complete expansions are the exception).
 - When you propose a new chapter, append a hidden last-line marker the client will strip and record as PoW:
-  <!--ile-chapter-suggest:{"topic":"<short topic>","title":"<optional title>"}-->`;
+  <!--ile-chapter-suggest:{"topic":"<short topic>","title":"<optional title>","keyword":"<1 or 2 map words>"}-->`;
 }
 
 /**
@@ -179,10 +180,12 @@ export function normalizeIleChapterSuggestion(raw: unknown): IleChapterSuggestio
   if (topic.length < 3) return null;
   const title = String(rec.title || rec.name || topic).trim() || topic;
   const description = String(rec.description || rec.body || rec.summary || topic).trim() || topic;
+  const keyword = String(rec.keyword || rec.map_keyword || rec.mapKeyword || "").trim();
   return {
     topic: topic.slice(0, 200),
     title: title.slice(0, 120),
     description: description.slice(0, 400),
+    ...(keyword ? { keyword: keyword.slice(0, 28) } : {}),
   };
 }
 
@@ -243,6 +246,7 @@ export function ileChapterSuggestionPowFromCoachText(input: {
       topic: suggestion.topic,
       title: suggestion.title,
       description: suggestion.description,
+      keyword: suggestion.keyword,
       currentChapterId: input.currentChapterId,
       currentChapterDescription: input.currentChapterDescription,
       via: input.via ?? "helios_dialog",
@@ -256,6 +260,7 @@ export function buildIleChapterSuggestPowToolData(input: {
   topic: string;
   title?: string | null;
   description?: string | null;
+  keyword?: string | null;
   currentChapterId?: string | null;
   currentChapterDescription?: string | null;
   via?: string;
@@ -265,6 +270,7 @@ export function buildIleChapterSuggestPowToolData(input: {
     topic: input.topic,
     title: input.title,
     description: input.description,
+    keyword: input.keyword,
   });
   if (!suggestion) {
     throw new Error("chapter_suggest PoW requires chapter/topic text");
@@ -275,6 +281,7 @@ export function buildIleChapterSuggestPowToolData(input: {
     topic: suggestion.topic,
     title: suggestion.title,
     description: suggestion.description,
+    ...(suggestion.keyword ? { keyword: suggestion.keyword } : {}),
     chapter_topic: suggestion.topic,
     current_chapter_id: input.currentChapterId ?? null,
     current_chapter_description: (input.currentChapterDescription || "").slice(0, 160) || null,

@@ -16,6 +16,7 @@
 import {
   callXaiText,
   callXaiJSON,
+  callXaiWithSchema,
   callXaiResponses,
   callXaiResponsesWithFiles,
   DEFAULT_MODEL,
@@ -23,13 +24,14 @@ import {
   userMessage,
   type ResponsesInputContent,
 } from "./xai-client";
-import { blockMapGlyphForLabel } from "@/lib/block-map-glyph";
+import { blockMapGlyphDbFields, randFromSeed } from "@/lib/block-map-glyph";
 import { transcribeAudioBase64 } from "./xai-stt";
 import { getPrompt, type UserPrompts } from "./prompts";
 import { getInitialChaptersBand } from "./initial-chapters";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
+  SESSION_PLAN_CREATE_JSON_SCHEMA,
 } from "./session-plan-create";
 import { composeSessionPlanUpdatePrompt } from "./session-plan-update";
 import { shouldOfferIleChapterDone } from "./ile-chapter-depth";
@@ -454,6 +456,7 @@ export interface SessionPlanStep {
   status?: "pending" | "in_progress" | "completed" | "skipped";
   position_x?: number;
   position_y?: number;
+  keyword?: string | null;
   map_keyword?: string | null;
   map_icon?: string | null;
 }
@@ -511,8 +514,9 @@ export async function createSessionPlanLLM(options: {
   // Scale output budget with map breadth so broad plans are not truncated mid-JSON.
   const maxTokens = Math.min(5000, 1400 + band.max * 140);
 
-  const response = await callXaiJSON<CreateSessionPlanResult>(
+  const response = await callXaiWithSchema<CreateSessionPlanResult>(
     [userMessage(prompt)],
+    SESSION_PLAN_CREATE_JSON_SCHEMA,
     {
       model: MODEL,
       maxTokens,
@@ -582,6 +586,8 @@ const PLAN_UPDATE_JSON_SCHEMA = {
             id: { type: "string" },
             type: { type: "string" },
             description: { type: "string" },
+            keyword: { type: "string" },
+            map_keyword: { type: "string" },
             order: { type: "number" },
             status: { type: "string" },
           },
@@ -698,13 +704,23 @@ export async function updateSessionPlanLLM(options: {
 
   // Filter out steps with empty descriptions from LLM response.
   // If all steps end up empty, treat as if plan didn't change (don't overwrite good data).
+  const existingById = new Map(
+    options.steps
+      .filter((s) => s.id)
+      .map((s) => [s.id as string, s] as const),
+  );
   let updatedSteps: SessionPlanStep[] | undefined = parsed.updated_steps?.map((step: SessionPlanStep, idx: number) => {
     const id = step.id || `step_${idx + 1}_${Date.now()}`;
     const description = step.description || "";
-    const glyph =
-      step.map_keyword && step.map_icon
-        ? { map_keyword: step.map_keyword, map_icon: step.map_icon }
-        : blockMapGlyphForLabel(description, id);
+    const existing = existingById.get(id);
+    const glyph = blockMapGlyphDbFields(
+      {
+        keyword: step.keyword ?? step.map_keyword ?? existing?.map_keyword,
+        title: description,
+      },
+      description,
+      randFromSeed(id),
+    );
     return {
       id,
       type: step.type || "question",
@@ -712,7 +728,7 @@ export async function updateSessionPlanLLM(options: {
       order: step.order || idx + 1,
       status: step.status || "pending",
       map_keyword: glyph.map_keyword,
-      map_icon: glyph.map_icon,
+      map_icon: existing?.map_icon || glyph.map_icon,
     };
   });
 

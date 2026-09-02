@@ -10,9 +10,10 @@ import {
   buildChapterFollowUpContext,
   normalizeChapterFollowUpSuggestions,
 } from "@/lib/ile-chapter-follow-ups";
+import { composeBlockMapGlyphJsonInstruction } from "@/lib/block-map-glyph";
 
 interface SuggestChapterFollowUpsResponse {
-  suggestions?: Array<{ title?: string; description?: string } | string>;
+  suggestions?: Array<{ title?: string; description?: string; keyword?: string } | string>;
 }
 
 /**
@@ -98,12 +99,14 @@ export async function POST(req: NextRequest) {
       [
         systemMessage(
           `You propose the next learning exercises after a learner marks a chapter Done in Explore Solo (solo exercise, stash + solution thoughts).
-Return ONLY JSON: { "suggestions": [ { "title": "...", "description": "..." }, ... ] } with exactly 3 items.
+Return ONLY JSON: { "suggestions": [ { "title": "...", "description": "...", "keyword": "Two Words" }, ... ] } with exactly 3 items.
 Rules:
 - Each suggestion is a longer-horizon exercise suitable as a NEW chapter next to the completed one (adjacent topic, not a duplicate).
 - Prefer natural extensions, deeper practice, or related skills that build on solution/stash traces.
 - Avoid repeating existing chapters.
 - Titles: 5–12 words, concrete. Descriptions: 1 short sentence (actionable exercise framing).
+- Keyword: 1 or 2 map words suggested with the title/description — not the first words of the title.
+- ${composeBlockMapGlyphJsonInstruction()}
 - No product jargon (Helios, PoW, TAP). No markdown.`,
         ),
         userMessage(`Session goal / block: ${planRow?.goal || session.problem || "practice"}

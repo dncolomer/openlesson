@@ -30,7 +30,11 @@ interface ChapterMapPanelProps {
   locale?: string;
   loading?: boolean;
   activeChapterIndex: number;
-  onAddChapter: (description: string, position: { row: number; col: number }) => Promise<void>;
+  onAddChapter: (
+    description: string,
+    position: { row: number; col: number },
+    options?: { keyword?: string | null },
+  ) => Promise<void>;
   onEnsurePositions?: (plan: SessionPlan) => void;
   learnerScopeId?: string | null;
   gatherJobs?: readonly IleGatherJob[] | null;

@@ -66,6 +66,7 @@ describe("appendIleChapterStep + persist payload (shipped)", () => {
       id: "ch-new",
       description: "Adjacent follow-up",
       position: { row: 1, col: 2 },
+      keyword: "Follow On",
     });
     const payload = buildSessionPlanStepsUpdate(updated);
     const added = payload.steps.find((item) => item.id === "ch-new");
@@ -77,6 +78,7 @@ describe("appendIleChapterStep + persist payload (shipped)", () => {
       position_y: 1,
       status: "pending",
       order: 1,
+      map_keyword: "Follow On",
     });
 
     const mutate = read("components/session-view/use-session-mutate.ts");
@@ -91,6 +93,8 @@ describe("appendIleChapterStep + persist payload (shipped)", () => {
     expect(persistFn).not.toContain("console.warn");
     expect(mutate).toContain("handleAddChapter");
     expect(mutate).toContain("appendIleChapterStep(currentPlan");
+    expect(mutate).toContain("/api/workspace/generate-chapter");
+    expect(mutate).toContain("keyword");
 
     writeScratch(
       "ile-chapter-persist.txt",

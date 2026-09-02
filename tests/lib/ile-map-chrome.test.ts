@@ -124,7 +124,16 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(tools).toContain("ScreenShareMiniPreview");
     expect(tools).toContain("data-ile-screenshare-preview");
     expect(chrome).toContain("museStatus === \"streaming\" ? (");
-    expect(chrome).toContain("<EegMiniPreview museChannelData={museChannelData}");
+    expect(chrome).toContain("museChannelData={museChannelData}");
+    expect(chrome).toContain("bandPowers={bandPowers}");
+    expect(tools).toContain("data-ile-eeg-quality");
+    expect(tools).toContain("data-ile-eeg-bands");
+    const eegPreview = tools.slice(
+      tools.indexOf("export function EegMiniPreview"),
+      tools.indexOf("export function ScreenShareMiniPreview"),
+    );
+    expect(eegPreview).not.toContain("<canvas");
+    expect(eegPreview).toContain("data-ile-eeg-band");
     expect(chrome).toContain("isScreenCapturing ? (");
     expect(chrome).toContain("<ScreenShareMiniPreview stream={screenShareStream}");
     expect(tools).toContain("aspect-video");

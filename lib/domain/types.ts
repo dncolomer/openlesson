@@ -108,7 +108,7 @@ export interface SessionPlanStep {
   source?: "plan" | "learner" | "tim_chapter_complete" | null;
   /** Completed chapter that spawned a TIM expansion. */
   source_step_id?: string | null;
-  /** TIM-sourced chapters start unopened (explore icon) until the learner opens them. */
+  /** TIM-sourced chapters start unopened (explore icon) until the learner accepts or rejects them. */
   tim_unopened?: boolean;
 }
 

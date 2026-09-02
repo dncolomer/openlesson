@@ -99,13 +99,13 @@ export function ileChapterExpansionRules(mode: IleSessionMode): string {
   if (mode === "project") {
     return `PROJECT CHAPTER MAP EXPANSION:
 - After Mark as Done, suggest adjacent follow-up exercise chapters (existing Project follow-up flow).
-- Completing a chapter is also Proof of Work: TIM may place an adjacent TIM-sourced exercise (explore icon until opened), in addition to the follow-up chips.
+- Completing a chapter is also Proof of Work: TIM may place an adjacent TIM-sourced exercise (explore icon until accepted or rejected), in addition to the follow-up chips.
 - Do not prompt mid-exercise to grow the map the way Dialog does.`;
   }
 
   return `DIALOG CHAPTER MAP EXPANSION:
 - The chapter map can be expanded / grow — it is not a fixed list.
-- Completing a chapter is Proof of Work. TIM may grow the map with an adjacent TIM-sourced chapter (explore icon until the learner opens it). Do not fight that expansion.
+- Completing a chapter is Proof of Work. TIM may grow the map with an adjacent TIM-sourced chapter (explore icon until the learner accepts or rejects it). Do not fight that expansion.
 - Prompt the learner to suggest / propose new chapters about the topic they are actually working on (not only after Explore Solo Done).
 - When they (or you) suggest a new chapter, that suggestion is Proof of Work; if they accept and add it, the accepted add is also Proof of Work.
 - Ask something like: "This thread could be its own chapter — want to add one about [concrete topic]?"

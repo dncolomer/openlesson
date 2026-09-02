@@ -34,6 +34,7 @@ import {
   isTimUnopenedChapter,
   predictChapterCompleteMapExpansion,
   predictIleChapterCompleteInterruption,
+  rejectTimChapterFromPlan,
   revealTimChapterIcon,
   revealTimChapterIconOnPlan,
   resolveChapterCompleteExpansionAnchor,
@@ -48,7 +49,7 @@ import { setTimProviderForTests, predictWithTimProvider } from "@/lib/pow-api/ti
 import { TIM_INTERVENTION_TYPE_CATALOG } from "@/lib/pow-api/predictive-interruption-types";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 import { buildIleChapterDonePowToolData } from "@/lib/ile-mode";
-import { TIM_EXPLORE_MAP_ICON, parseBlockMapIconName } from "@/lib/block-map-glyph";
+import { CHAPTER_DONE_MAP_ICON, TIM_EXPLORE_MAP_ICON, parseBlockMapIconName } from "@/lib/block-map-glyph";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
 import type { SessionPlan, SessionPlanStep } from "@/lib/domain/types";
 import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interruption-types";
@@ -308,6 +309,13 @@ describe("applyChapterCompleteTimExpansionToPlan + TIM explore icon (shipped)", 
     const nodes = sessionStepsToSkillGridNodes(applied!.plan.steps);
     const timNode = nodes.find((node) => node.id === "ch-tim");
     expect(timNode?.map_icon).toBe(TIM_EXPLORE_MAP_ICON);
+    const doneNode = nodes.find((node) => node.id === "ch-done");
+    expect(doneNode?.map_icon).toBe(CHAPTER_DONE_MAP_ICON);
+
+    const rejected = rejectTimChapterFromPlan(applied!.plan, "ch-tim");
+    expect(rejected.changed).toBe(true);
+    expect(rejected.plan.steps.some((step) => step.id === "ch-tim")).toBe(false);
+    expect(rejectTimChapterFromPlan(rejected.plan, "ch-tim").changed).toBe(false);
 
     const duplicate = applyChapterCompleteTimExpansionToPlan({
       plan: applied!.plan,
@@ -328,6 +336,9 @@ describe("applyChapterCompleteTimExpansionToPlan + TIM explore icon (shipped)", 
     expect(onPlan.plan.steps.find((step) => step.id === "ch-tim")?.map_icon).toMatch(/^g\d+$/);
     const again = revealTimChapterIconOnPlan(onPlan.plan, "ch-tim");
     expect(again.changed).toBe(false);
+    const acceptedNodes = sessionStepsToSkillGridNodes(onPlan.plan.steps);
+    expect(acceptedNodes.find((node) => node.id === "ch-tim")?.map_icon).toMatch(/^g\d+$/);
+    expect(rejectTimChapterFromPlan(onPlan.plan, "ch-tim").changed).toBe(false);
 
     const anchor = resolveChapterCompleteExpansionAnchor(applied!.plan, interruption);
     expect(anchor?.id).toBe("ch-done");
@@ -540,6 +551,10 @@ describe("ILE TIM map interactions catalog + wiring", () => {
     expect(mutate).toContain("newStepIds");
     expect(mutate).toContain('via: "tim_chapter_complete"');
     expect(mutate).toContain("revealTimChapterIconOnPlan");
+    expect(mutate).toContain("rejectTimChapterFromPlan");
+    expect(mutate).toContain("handleAcceptTimChapter");
+    expect(mutate).toContain("handleRejectTimChapter");
+    expect(mutate).not.toContain("void persistPlanSteps(revealed.plan)");
 
     const view = read("components/SessionView.tsx");
     expect(view).toContain("onChapterMapExpand: handleTimChapterMapExpansion");
@@ -557,6 +572,7 @@ describe("ILE TIM map interactions catalog + wiring", () => {
 
     const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
     expect(glyph).toContain("data-tim-explore-icon");
+    expect(glyph).toContain("data-chapter-done-flag");
     expect(glyph).toContain("TIM_EXPLORE_MAP_ICON");
     expect(glyph).toMatch(/>\s*\?\s*</);
     expect(glyph).not.toContain("lucide-react");

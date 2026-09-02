@@ -13,6 +13,7 @@ import {
   chapterLoadControlEnglishLabel,
   resolveChapterLoadControl,
   shouldAllowChapterLoadClick,
+  shouldShowHeliosReplyForChapter,
 } from "@/lib/chapter-load-control";
 
 const ROOT = join(__dirname, "../..");
@@ -103,6 +104,15 @@ describe("chapter-map load control wiring (shipped source)", () => {
     expect(panel).not.toContain("onLoadChapter");
     expect(view).toContain("handleLoadChapter");
     expect(view).toContain("shouldAllowChapterLoadClick");
+    expect(view).toContain("activeChapterKey={activeChapterKey}");
+    expect(view).not.toContain("activeChapterKey={session.id}");
+    expect(view).toContain("chapterWidgetAssistantTurn");
+    expect(shouldShowHeliosReplyForChapter({ activeChapterId: "ch-2", replyChapterId: "ch-1" })).toBe(
+      false,
+    );
+    expect(shouldShowHeliosReplyForChapter({ activeChapterId: "ch-2", replyChapterId: "ch-2" })).toBe(
+      true,
+    );
     expect(view).not.toContain("if (index === activeChapterIndex) return");
     expect(view).toContain("buildIleChapterLoadPowToolData");
     expect(view).toContain('toolAction = isReload ? "chapter_reload" : "chapter_load"');

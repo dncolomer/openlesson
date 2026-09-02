@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Binoculars, BookOpen, Check, History, Pencil, Pickaxe, Play, Plus } from "lucide-react";
+import { Binoculars, BookOpen, Check, History, Pencil, Pickaxe, Play, Plus, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX,
@@ -21,6 +21,8 @@ const ACTION_ICONS: Record<BlockCircularMenuActionId, ReactNode> = {
   gather_resources: <Binoculars className="size-4" strokeWidth={2.4} aria-hidden />,
   see_resources: <BookOpen className="size-4" strokeWidth={2.4} aria-hidden />,
   add_chapter: <Plus className="size-4" strokeWidth={2.4} aria-hidden />,
+  accept_chapter: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
+  reject_chapter: <X className="size-4" strokeWidth={2.4} aria-hidden />,
   start_session: <Play className="size-4" strokeWidth={2.4} aria-hidden />,
   continue_session: <History className="size-4" strokeWidth={2.4} aria-hidden />,
   mark_done: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
@@ -31,13 +33,15 @@ export function BlockCircularMenuRing({
   onAction,
   disabledIds,
   empty = false,
+  timUnopened = false,
 }: {
   surface: BlockCircularMenuSurface;
   onAction: (id: BlockCircularMenuActionId) => void;
   disabledIds?: ReadonlySet<string>;
   empty?: boolean;
+  timUnopened?: boolean;
 }) {
-  const actions = blockCircularMenuActions(surface, { empty });
+  const actions = blockCircularMenuActions(surface, { empty, timUnopened });
   if (actions.length === 0) return null;
   const diameter = BLOCK_CIRCULAR_MENU_RING_RADIUS_PX * 2;
   return (
@@ -45,6 +49,7 @@ export function BlockCircularMenuRing({
       data-block-circular-menu
       data-block-circular-menu-surface={surface}
       data-block-circular-menu-empty={empty ? "true" : undefined}
+      data-block-circular-menu-tim={timUnopened ? "true" : undefined}
       className="pointer-events-none absolute inset-0 z-30 overflow-visible"
     >
       <div

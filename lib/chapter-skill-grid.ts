@@ -6,6 +6,7 @@ import {
 import { getSkillGridPositions } from "@/lib/skill-grid-positions";
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
 import {
+  CHAPTER_DONE_MAP_ICON,
   blockMapGlyphDbFields,
   randFromSeed,
   resolveBlockMapGlyph,
@@ -57,7 +58,12 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
       position_x: step.position_x,
       position_y: step.position_y,
       map_keyword: glyph.keyword,
-      map_icon: isTimUnopenedChapter(step) ? displayChapterMapIcon(step) : glyph.icon,
+      map_icon:
+        step.status === "completed"
+          ? CHAPTER_DONE_MAP_ICON
+          : isTimUnopenedChapter(step)
+            ? displayChapterMapIcon(step)
+            : glyph.icon,
     };
   });
 }

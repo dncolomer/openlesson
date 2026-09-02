@@ -60,3 +60,13 @@ export function resolveChapterLoadControl(input: {
     labelKey: chapterLoadControlLabelKey(isActiveChapter),
   };
 }
+
+/** Helios replies stay scoped to the chapter that produced them. */
+export function shouldShowHeliosReplyForChapter(input: {
+  activeChapterId?: string | null;
+  replyChapterId?: string | null;
+}): boolean {
+  const active = typeof input.activeChapterId === "string" ? input.activeChapterId.trim() : "";
+  const reply = typeof input.replyChapterId === "string" ? input.replyChapterId.trim() : "";
+  return Boolean(active) && active === reply;
+}

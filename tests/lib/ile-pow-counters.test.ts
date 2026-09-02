@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   appendIlePowCounterArtifact,
@@ -63,14 +63,27 @@ describe("countIlePowByType (session-global)", () => {
         type: "tool",
         metadata: { type: "uncertain_systems_ile_speech_segment" },
       },
+      { type: "tool", tool_name: "ile-thought-trace", tool_action: "system2:send" },
+      {
+        type: "tool",
+        tool_name: "tap-thought-trace",
+        metadata: { type: "uncertain_systems_ile_thought_trace" },
+      },
     ];
     expect(isIleSpokenThoughtArtifact(spoken[1])).toBe(true);
     expect(isIleSpokenThoughtArtifact(spoken[0])).toBe(false);
+    expect(isIleSpokenThoughtArtifact(spoken[4])).toBe(true);
+    expect(isIleSpokenThoughtArtifact(spoken[5])).toBe(true);
     expect(countIlePowByType(spoken).tool).toBe(1);
     const display = countIlePowDisplayByType(spoken);
     expect(display.tool).toBe(1);
-    expect(display.thoughts).toBe(3);
+    expect(display.thoughts).toBe(5);
     expect(display.screen).toBe(0);
+
+    const speech = readFileSync(join(__dirname, "../../components/session-view/use-session-speech.ts"), "utf8");
+    expect(speech).toContain("recordSessionPowArtifact");
+    expect(speech).toContain("ILE_TRACE_TOOL_NAME");
+    expect(speech).toContain("uncertain_systems_ile_thought_trace");
 
     writeScratch(
       "ile-pow-counters-excerpts.txt",

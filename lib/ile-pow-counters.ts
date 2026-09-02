@@ -7,6 +7,8 @@ import {
   type WorkspaceProofOfWorkType,
 } from "@/lib/pow-api/workspace-proof-of-work";
 import { isExcludedFromSnapshotPoW } from "@/lib/pow-api/pow-quality";
+import { ILE_TRACE_TOOL_NAME } from "@/lib/ile-thought-traces";
+import { TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 
 export const ILE_POW_COUNTER_TYPES = ["tool", "screen", "video", "eeg"] as const;
 export type IlePowCounterType = (typeof ILE_POW_COUNTER_TYPES)[number];
@@ -44,30 +46,42 @@ export const ILE_POW_COUNTER_LABELS: Record<IlePowDisplayCounterType, string> = 
   thoughts: "Thoughts",
 };
 
-const SPOKEN_TOOL_NAMES = new Set(["ile-speech-segment", "tap-speech-segment"]);
+const SPOKEN_TOOL_NAMES = new Set<string>(["ile-speech-segment", "tap-speech-segment"]);
+const THOUGHT_TRACE_TOOL_NAMES = new Set<string>([ILE_TRACE_TOOL_NAME, TAP_TRACE_TOOL_NAME]);
 const SPOKEN_META_TYPES = new Set([
   "uncertain_systems_ile_speech_segment",
   "uncertain_systems_tap_speech_segment",
 ]);
+const THOUGHT_TRACE_META_TYPES = new Set([
+  "uncertain_systems_ile_thought_trace",
+  "uncertain_systems_tap_thought_trace",
+]);
 
-/** Spoken-trace artifacts are display-only "thoughts", not the tools counter. */
+/** Submitted thought traces (and spoken segments) are display-only "thoughts", not tools. */
 export function isIleSpokenThoughtArtifact(
   item: IlePowCounterArtifact | null | undefined,
 ): boolean {
   if (!item) return false;
   const tool = String(item.tool_name || "").trim().toLowerCase();
-  if (SPOKEN_TOOL_NAMES.has(tool)) return true;
+  if (THOUGHT_TRACE_TOOL_NAMES.has(tool) || SPOKEN_TOOL_NAMES.has(tool)) return true;
   const action = String(item.tool_action || "").trim().toLowerCase();
   if (action.startsWith("speech_")) return true;
   const metaType =
     item.metadata && typeof item.metadata.type === "string"
       ? item.metadata.type.trim().toLowerCase()
       : "";
-  if (SPOKEN_META_TYPES.has(metaType)) return true;
+  if (THOUGHT_TRACE_META_TYPES.has(metaType) || SPOKEN_META_TYPES.has(metaType)) return true;
   const kind = String(item.kind || item.type || item.proof_of_work_type || "")
     .trim()
     .toLowerCase();
-  return kind === "speech" || kind === "spoken" || kind === "thoughts" || kind === "thought";
+  return (
+    kind === "speech" ||
+    kind === "spoken" ||
+    kind === "thoughts" ||
+    kind === "thought" ||
+    kind === "thought-trace" ||
+    kind === "thought_trace"
+  );
 }
 
 export function emptyIlePowTypeCounts(): IlePowTypeCounts {

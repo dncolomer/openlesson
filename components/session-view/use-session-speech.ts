@@ -29,6 +29,7 @@ import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interr
 import type { IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { TransferHealth } from "@/components/LogsTool";
+import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
 
 export type SessionSpeechInput = {
   powSessionEnabled: boolean;
@@ -47,6 +48,7 @@ export type SessionSpeechInput = {
   ileToken?: string;
   entryQueryParams?: Record<string, string | string[]>;
   recordTransferEvent: (channel: keyof TransferHealth, saved: boolean, error?: string) => void;
+  recordSessionPowArtifact?: (artifact: IlePowCounterArtifact) => void;
   tutoringLanguage: SpokenLocale;
   isProjectMode: boolean;
   chapterThoughtsLocked: boolean;
@@ -87,6 +89,7 @@ export function useSessionSpeech(input: SessionSpeechInput) {
     ileToken,
     entryQueryParams,
     recordTransferEvent,
+    recordSessionPowArtifact,
     tutoringLanguage,
     isProjectMode,
     chapterThoughtsLocked,
@@ -187,10 +190,20 @@ const uploadIleThoughtTrace = useCallback(
     });
     recordTransferEvent("tools", result.ok, result.error);
     if (result.ok) {
+      recordSessionPowArtifact?.({
+        type: "tool",
+        tool_name: ILE_TRACE_TOOL_NAME,
+        tool_action: `${payload.traceType}:${payload.action}`,
+        metadata: {
+          type: "uncertain_systems_ile_thought_trace",
+          trace_type: payload.traceType,
+          action: payload.action,
+        },
+      });
       handlePowInterruption(result.interruption);
     }
   },
-  [getWorkspaceId, recordTransferEvent, handlePowInterruption, ileToken, entryQueryParams],
+  [getWorkspaceId, recordTransferEvent, recordSessionPowArtifact, handlePowInterruption, ileToken, entryQueryParams],
 );
 
 const logSessionThoughtTrace = useCallback(

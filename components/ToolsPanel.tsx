@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { ILE_OPEN_PIC_IN_PIC_LABEL } from "@/lib/ile-compact-window";
 import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
-import { museEegPreviewLabel, museEegPreviewState } from "@/lib/muse-eeg-quality";
+import {
+  museEegPreviewLabel,
+  museEegPreviewState,
+  type EegBandPowers,
+} from "@/lib/muse-eeg-quality";
 
 const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 
@@ -421,72 +425,93 @@ export function WebcamMiniPreview({
   );
 }
 
+const EEG_MINI_BANDS = [
+  { key: "delta", label: "δ" },
+  { key: "theta", label: "θ" },
+  { key: "alpha", label: "α" },
+  { key: "beta", label: "β" },
+  { key: "gamma", label: "γ" },
+] as const;
+
 export function EegMiniPreview({
-  museChannelData,
+  museChannelData: _museChannelData,
+  museStatus = "disconnected",
+  museDeviceStatus = null,
+  bandPowers = null,
 }: {
   museChannelData?: Map<string, number[]>;
+  museStatus?: MuseAthenaStatus;
+  museDeviceStatus?: DeviceStatus | null;
+  bandPowers?: EegBandPowers | null;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const paint = () => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const w = rect.width;
-      const h = rect.height;
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#0a0a0a";
-      ctx.fillRect(0, 0, w, h);
-
-      const lane = h / EEG_CHANNELS.length;
-      EEG_CHANNELS.forEach((channel, idx) => {
-        const samples = museChannelData?.get(channel) ?? [];
-        const y0 = idx * lane;
-        ctx.strokeStyle = "rgba(163,163,163,0.2)";
-        ctx.beginPath();
-        ctx.moveTo(0, y0 + lane / 2);
-        ctx.lineTo(w, y0 + lane / 2);
-        ctx.stroke();
-        if (samples.length < 2) return;
-        const slice = samples.slice(-80);
-        const min = Math.min(...slice);
-        const max = Math.max(...slice);
-        const range = max - min || 1;
-        ctx.strokeStyle = "rgba(229,229,229,0.85)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        slice.forEach((value, i) => {
-          const x = (i / (slice.length - 1)) * w;
-          const y = y0 + lane - ((value - min) / range) * lane;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-      });
-    };
-
-    paint();
-    const observer = new ResizeObserver(paint);
-    observer.observe(canvas);
-    return () => observer.disconnect();
-  }, [museChannelData]);
+  void _museChannelData;
+  const preview = museEegPreviewState(museStatus, museDeviceStatus);
+  const label = museEegPreviewLabel(preview);
+  const qualityTone =
+    preview === "good"
+      ? "text-green-400"
+      : preview === "fair"
+        ? "text-neutral-200"
+        : preview === "checking"
+          ? "text-neutral-300"
+          : "text-red-400";
+  const qualityDot =
+    preview === "good"
+      ? "bg-green-400"
+      : preview === "fair"
+        ? "bg-neutral-200"
+        : preview === "checking"
+          ? "bg-neutral-300"
+          : "bg-red-400";
+  const maxBand = useMemo(() => {
+    if (!bandPowers) return 1;
+    return Math.max(
+      bandPowers.delta,
+      bandPowers.theta,
+      bandPowers.alpha,
+      bandPowers.beta,
+      bandPowers.gamma,
+      0.0001,
+    );
+  }, [bandPowers]);
 
   return (
     <div
       data-ile-eeg-preview
-      className={`${sensorHalfWidgetShell} aspect-video`}
-      title="Live EEG"
+      className={`${sensorHalfWidgetShell} aspect-video px-2 py-1.5`}
+      title="EEG band strength and signal quality"
     >
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full grayscale" />
+      <div className="flex h-full min-h-0 flex-col justify-between gap-1">
+        <div
+          className="flex items-center gap-1.5"
+          data-ile-eeg-quality={preview}
+        >
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${qualityDot}`} aria-hidden />
+          <span className={`truncate font-mono text-[9px] uppercase tracking-wider ${qualityTone}`}>
+            {label}
+          </span>
+        </div>
+        <div className="grid min-h-0 flex-1 grid-cols-5 items-end gap-1" data-ile-eeg-bands>
+          {EEG_MINI_BANDS.map((band) => {
+            const value = bandPowers?.[band.key] ?? 0;
+            const height = bandPowers ? Math.max(8, Math.round((value / maxBand) * 100)) : 8;
+            return (
+              <div key={band.key} className="flex h-full min-h-0 flex-col items-center justify-end gap-0.5">
+                <div className="relative w-full flex-1 overflow-hidden bg-neutral-900">
+                  <div
+                    data-ile-eeg-band={band.key}
+                    className="absolute inset-x-0 bottom-0 bg-neutral-200/85"
+                    style={{ height: `${height}%` }}
+                  />
+                </div>
+                <span className="font-mono text-[8px] uppercase leading-none text-neutral-500">
+                  {band.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

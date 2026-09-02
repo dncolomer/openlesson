@@ -41,6 +41,8 @@ interface ChapterMapPanelProps {
   onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
   onWorkChapter?: (stepId: string) => void;
   onUndoChapterDone?: (stepId: string) => void | Promise<void>;
+  onAcceptTimChapter?: (stepId: string) => void;
+  onRejectTimChapter?: (stepId: string) => void;
   onMarkChapterCompleted?: (stepId: string) => void;
   onGatherChapterResources?: (stepId: string, description: string) => void;
   onSeeChapterResources?: (stepId: string) => void;
@@ -65,6 +67,8 @@ export function ChapterMapPanel({
   onOpenGatherResources,
   onWorkChapter,
   onUndoChapterDone,
+  onAcceptTimChapter,
+  onRejectTimChapter,
   onMarkChapterCompleted,
   onGatherChapterResources,
   onSeeChapterResources,
@@ -203,6 +207,15 @@ export function ChapterMapPanel({
         onWorkChapter?.(blockId);
         return;
       }
+      if (action === "accept_chapter") {
+        onAcceptTimChapter?.(blockId);
+        return;
+      }
+      if (action === "reject_chapter") {
+        onRejectTimChapter?.(blockId);
+        setSelectedStepId(null);
+        return;
+      }
       if (action === "mark_completed") {
         onMarkChapterCompleted?.(blockId);
         return;
@@ -225,6 +238,8 @@ export function ChapterMapPanel({
     },
     [
       onWorkChapter,
+      onAcceptTimChapter,
+      onRejectTimChapter,
       onGatherChapterResources,
       onMarkChapterCompleted,
       onOpenGatherResources,

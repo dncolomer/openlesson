@@ -18,7 +18,9 @@ export type IleCircularMenuActionId =
   | "edit"
   | "gather_resources"
   | "see_resources"
-  | "add_chapter";
+  | "add_chapter"
+  | "accept_chapter"
+  | "reject_chapter";
 
 export type WorkspaceCircularMenuActionId =
   | "start_session"
@@ -46,6 +48,12 @@ export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[]
   { id: "add_chapter", label: "Add chapter" },
 ] as const;
 
+/** TIM-proposed chapters: accept keeps the 3×3 logos, reject clears the tile. */
+export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
+  { id: "accept_chapter", label: "Accept" },
+  { id: "reject_chapter", label: "Reject" },
+] as const;
+
 export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "start_session", label: "Start a new Session" },
   { id: "continue_session", label: "Continue prev Session" },
@@ -71,10 +79,14 @@ export function resolveBlockCircularMenuSurface(input: {
 
 export function blockCircularMenuActions(
   surface: BlockCircularMenuSurface | null | undefined,
-  opts?: { empty?: boolean | null },
+  opts?: { empty?: boolean | null; timUnopened?: boolean | null },
 ): readonly BlockCircularMenuAction[] {
   if (opts?.empty) {
     if (surface === "ile") return ILE_EMPTY_CIRCULAR_MENU_ACTIONS;
+    return [];
+  }
+  if (opts?.timUnopened) {
+    if (surface === "ile") return ILE_TIM_CIRCULAR_MENU_ACTIONS;
     return [];
   }
   if (surface === "ile") return ILE_CIRCULAR_MENU_ACTIONS;

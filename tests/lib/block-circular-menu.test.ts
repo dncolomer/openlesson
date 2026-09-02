@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   ILE_CIRCULAR_MENU_ACTIONS,
   ILE_EMPTY_CIRCULAR_MENU_ACTIONS,
+  ILE_TIM_CIRCULAR_MENU_ACTIONS,
   WORKSPACE_CIRCULAR_MENU_ACTIONS,
   WORKSPACE_CIRCULAR_MENU_DRAWER_IDS,
   blockCircularMenuActions,
@@ -84,6 +85,14 @@ describe("block circular menu catalog", () => {
     expect(blockCircularMenuActions("ile", { empty: true }).map((a) => a.label)).toEqual([
       "Add chapter",
     ]);
+    expect(blockCircularMenuActions("ile", { timUnopened: true }).map((a) => a.id)).toEqual(
+      ILE_TIM_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
+    );
+    expect(blockCircularMenuActions("ile", { timUnopened: true }).map((a) => a.label)).toEqual([
+      "Accept",
+      "Reject",
+    ]);
+    expect(blockCircularMenuActions("workspace-learner", { timUnopened: true })).toEqual([]);
     expect(blockCircularMenuActions("workspace-learner", { empty: true })).toEqual([]);
     expect(blockCircularMenuActions("none")).toEqual([]);
     expect(resolveBlockCircularMenuSurface({ tap: true, learnerMode: true, suggestMode: "chapter" })).toBe(
@@ -188,6 +197,15 @@ describe("circular menu source wiring", () => {
     expect(ring).toContain("work: <Pickaxe");
     expect(ring).toContain("gather_resources: <Binoculars");
     expect(ring).toContain("add_chapter: <Plus");
+    expect(ring).toContain("accept_chapter: <Check");
+    expect(ring).toContain("reject_chapter: <X");
+    expect(ring).toContain("timUnopened");
+    expect(chapter).toContain("accept_chapter");
+    expect(chapter).toContain("reject_chapter");
+    expect(chapter).toContain("onAcceptTimChapter");
+    expect(chapter).toContain("onRejectTimChapter");
+    expect(view).toContain("handleAcceptTimChapter");
+    expect(view).toContain("handleRejectTimChapter");
     expect(ring).not.toContain("work: <MessageSquare");
     expect(ring).not.toContain("gather_resources: <Pickaxe");
     expect(ring).toContain("data-block-circular-menu-action");

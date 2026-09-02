@@ -43,6 +43,8 @@ export interface BlockSkillGridProps {
       | "gather_resources"
       | "see_resources"
       | "add_chapter"
+      | "accept_chapter"
+      | "reject_chapter"
       | "start_session"
       | "continue_session"
       | "mark_done",

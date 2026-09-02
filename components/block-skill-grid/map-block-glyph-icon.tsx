@@ -2,11 +2,13 @@
 
 import {
   BLOCK_MAP_GRID_SIZE,
+  CHAPTER_DONE_MAP_ICON,
   DEFAULT_BLOCK_MAP_ICON,
   ILE_GATHER_RUNNING_MAP_ICON,
   TIM_EXPLORE_MAP_ICON,
   blockMapPatternBits,
   blockMapPatternCells,
+  isChapterDoneMapIcon,
   isIleGatherRunningMapIcon,
   isTimExploreMapIcon,
   parseBlockMapIconName,
@@ -72,6 +74,23 @@ export function BlockMapGlyphIcon({
         >
           ?
         </text>
+      </svg>
+    );
+  }
+
+  if (isChapterDoneMapIcon(name)) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className={className ?? "h-8 w-8"}
+        aria-hidden
+        fill="currentColor"
+        data-block-map-icon={CHAPTER_DONE_MAP_ICON}
+        data-chapter-done-flag="true"
+        data-block-map-variant={variant}
+      >
+        <path d="M6 3.75v16.5a.75.75 0 01-1.5 0V3.75a.75.75 0 011.5 0z" />
+        <path d="M6.75 4.5h8.1c.9 0 1.4.95.9 1.65L14.4 8.4l1.35 2.25c.5.7 0 1.65-.9 1.65H6.75V4.5z" />
       </svg>
     );
   }

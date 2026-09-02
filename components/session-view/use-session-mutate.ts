@@ -19,6 +19,7 @@ import {
 import {
   ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS,
   applyChapterCompleteTimExpansionToPlan,
+  rejectTimChapterFromPlan,
   revealTimChapterIconOnPlan,
 } from "@/lib/ile-tim-chapter-complete";
 import type { PredictiveInterruption } from "@/lib/pow-api/predictive-interruption";
@@ -449,14 +450,35 @@ const persistPlanSteps = useCallback(async (
   }
 }, []);
 
-useEffect(() => {
-  const plan = sessionPlanRef.current;
-  const step = plan?.steps?.[activeChapterIndexRef.current];
-  if (!plan || !step) return;
-  const revealed = revealTimChapterIconOnPlan(plan, step.id);
+const chapterLoadingRef = useRef(chapterLoading);
+chapterLoadingRef.current = chapterLoading;
+
+const handleAcceptTimChapter = useCallback(async (stepId: string) => {
+  const currentPlan = sessionPlanRef.current;
+  if (!currentPlan) return;
+  const revealed = revealTimChapterIconOnPlan(currentPlan, stepId);
   if (!revealed.changed) return;
-  void persistPlanSteps(revealed.plan);
-}, [activeChapterKey, persistPlanSteps, activeChapterIndexRef, sessionPlanRef]);
+  await persistPlanSteps(revealed.plan, {
+    toolAction: "chapter_load",
+    toolData: { via: "tim_accept", stepId },
+  });
+}, [persistPlanSteps]);
+
+const handleRejectTimChapter = useCallback(async (stepId: string) => {
+  const currentPlan = sessionPlanRef.current;
+  if (!currentPlan) return;
+  const rejected = rejectTimChapterFromPlan(currentPlan, stepId);
+  if (!rejected.changed) return;
+  const activeId = currentPlan.steps[activeChapterIndexRef.current]?.id;
+  await persistPlanSteps(rejected.plan);
+  if (!activeId) return;
+  const nextIdx = rejected.plan.steps.findIndex((row) => row.id === activeId);
+  if (nextIdx >= 0) {
+    if (nextIdx !== activeChapterIndexRef.current) handleActiveChapterIndexChange(nextIdx);
+    return;
+  }
+  handleActiveChapterIndexChange(rejected.plan.currentStepIndex);
+}, [handleActiveChapterIndexChange, persistPlanSteps]);
 
 const handleTimChapterMapExpansion = useCallback(
   async (interruption: PredictiveInterruption) => {
@@ -530,7 +552,7 @@ const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
 const [chapterReloadNonce, setChapterReloadNonce] = useState(0);
 
 const handleLoadChapter = useCallback(async (index: number) => {
-  if (!shouldAllowChapterLoadClick({ chapterLoading })) return;
+  if (!shouldAllowChapterLoadClick({ chapterLoading: chapterLoadingRef.current })) return;
   const currentPlan = sessionPlanRef.current;
   const step = currentPlan?.steps?.[index];
   if (!currentPlan || !step) return;
@@ -545,8 +567,11 @@ const handleLoadChapter = useCallback(async (index: number) => {
     reload: isReload,
   });
 
+  handleActiveChapterIndexChange(index);
+
   const showLoading = isReload || CHAPTER_LOAD_DURATION_MS > 0;
   if (showLoading) {
+    chapterLoadingRef.current = true;
     setChapterLoading(true);
     setChapterLoadingIndex(index);
   }
@@ -555,81 +580,79 @@ const handleLoadChapter = useCallback(async (index: number) => {
     if (i === index && s.status === "pending") return { ...s, status: "in_progress" as const };
     return s;
   });
-  const updatedPlan = revealTimChapterIconOnPlan(
-    { ...currentPlan, steps: updatedSteps, currentStepIndex: index },
-    step.id,
-  ).plan;
-  await persistPlanSteps(updatedPlan, { toolAction, toolData });
-  handleActiveChapterIndexChange(index);
+  const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: index };
+  try {
+    await persistPlanSteps(updatedPlan, { toolAction, toolData });
 
-  if (isReload) {
-    setChapterReloadNonce((n) => n + 1);
-    if (!isProjectMode && session) {
-      setHeliosTurnMode("responding");
-      const chapterKey = step.id;
-      const placeholderId = `chapter-reload-${Date.now()}`;
-      const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
-      updateChapterWorkspace(chapterKey, (workspace) => ({
-        chatMessages: [
-          ...workspace.chatMessages,
-          { id: placeholderId, role: "assistant", content: "", pending: true },
-        ],
-      }));
-      try {
-        const { ok, data, errorMessage } = await postIleSessionChat({
-            problem: session.problem,
-            activeStepIndex: index,
-            activeStepId: step.id,
-            activeStepDescription: step.description,
-            sessionPlan: updatedPlan,
-            sessionId: session.id,
-            tutoringLanguage,
-            ...guestAccessBody,
-            messages: [
-              ...existingMessages.map((m) => ({
-                role: m.role,
-                content: m.content,
-                imageDataUrl: m.imageDataUrl,
-              })),
-              {
-                role: "user",
-                content: `Reload this chapter and continue coaching from here: ${step.description}`,
-              },
-            ],
-          });
-        const content =
-          ok && typeof data?.message === "string" && data.message.trim()
-            ? data.message.trim()
-            : errorMessage || t("heliosChat.errorMessage");
+    if (isReload) {
+      setChapterReloadNonce((n) => n + 1);
+      if (!isProjectMode && session) {
+        setHeliosTurnMode("responding");
+        const chapterKey = step.id;
+        const placeholderId = `chapter-reload-${Date.now()}`;
+        const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
         updateChapterWorkspace(chapterKey, (workspace) => ({
-          chatMessages: workspace.chatMessages.map((message) =>
-            message.id === placeholderId ? { ...message, content, pending: false } : message,
-          ),
+          chatMessages: [
+            ...workspace.chatMessages,
+            { id: placeholderId, role: "assistant", content: "", pending: true },
+          ],
         }));
-      } catch {
-        updateChapterWorkspace(chapterKey, (workspace) => ({
-          chatMessages: workspace.chatMessages.map((message) =>
-            message.id === placeholderId
-              ? { ...message, content: t("heliosChat.errorMessage"), pending: false }
-              : message,
-          ),
-        }));
-      } finally {
-        setHeliosTurnMode("idle");
+        try {
+          const { ok, data, errorMessage } = await postIleSessionChat({
+              problem: session.problem,
+              activeStepIndex: index,
+              activeStepId: step.id,
+              activeStepDescription: step.description,
+              sessionPlan: updatedPlan,
+              sessionId: session.id,
+              tutoringLanguage,
+              ...guestAccessBody,
+              messages: [
+                ...existingMessages.map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                  imageDataUrl: m.imageDataUrl,
+                })),
+                {
+                  role: "user",
+                  content: `Reload this chapter and continue coaching from here: ${step.description}`,
+                },
+              ],
+            });
+          const content =
+            ok && typeof data?.message === "string" && data.message.trim()
+              ? data.message.trim()
+              : errorMessage || t("heliosChat.errorMessage");
+          updateChapterWorkspace(chapterKey, (workspace) => ({
+            chatMessages: workspace.chatMessages.map((message) =>
+              message.id === placeholderId ? { ...message, content, pending: false } : message,
+            ),
+          }));
+        } catch {
+          updateChapterWorkspace(chapterKey, (workspace) => ({
+            chatMessages: workspace.chatMessages.map((message) =>
+              message.id === placeholderId
+                ? { ...message, content: t("heliosChat.errorMessage"), pending: false }
+                : message,
+            ),
+          }));
+        } finally {
+          setHeliosTurnMode("idle");
+        }
       }
+    } else if (CHAPTER_LOAD_DURATION_MS > 0) {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
+      });
     }
-  } else if (CHAPTER_LOAD_DURATION_MS > 0) {
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, CHAPTER_LOAD_DURATION_MS);
-    });
-  }
-
-  if (showLoading) {
-    setChapterLoading(false);
-    setChapterLoadingIndex(null);
+  } finally {
+    if (showLoading) {
+      chapterLoadingRef.current = false;
+      setChapterLoading(false);
+      setChapterLoadingIndex(null);
+    }
   }
 }, [
-  chapterLoading,
   chapterWorkspaces,
   guestAccessBody,
   handleActiveChapterIndexChange,
@@ -983,6 +1006,8 @@ const handleMarkChapterUndone = useCallback(async (stepId: string) => {
     handleActiveChapterIndexChange,
     handleEnsureChapterPositions,
     handleLoadChapter,
+    handleAcceptTimChapter,
+    handleRejectTimChapter,
     handleAddChapter,
     handleUpdateChapter,
     chapterReloadNonce,

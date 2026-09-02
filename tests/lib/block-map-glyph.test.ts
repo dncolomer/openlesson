@@ -48,6 +48,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     ]);
     expect(parseBlockMapIconName("g186")).toBe("g186");
     expect(parseBlockMapIconName("tim-explore")).toBe("tim-explore");
+    expect(parseBlockMapIconName("chapter-done")).toBe("chapter-done");
     expect(parseBlockMapIconName("gather-resources")).toBeNull();
     expect(parseBlockMapIconName("Square")).toBeNull();
     expect(parseBlockMapIconName("Cube")).toBeNull();

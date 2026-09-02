@@ -63,6 +63,7 @@ export type SessionChromeProps = {
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museDeviceStatus: DeviceStatus | null;
   museChannelData: Map<string, number[]>;
+  bandPowers?: { delta: number; theta: number; alpha: number; beta: number; gamma: number } | null;
   showOpenPicInPic: boolean;
   onOpenPicInPic: () => void;
   error: string | null;
@@ -120,6 +121,7 @@ export function SessionChrome({
   museStatus,
   museDeviceStatus,
   museChannelData,
+  bandPowers = null,
   showOpenPicInPic,
   onOpenPicInPic,
   error,
@@ -262,7 +264,12 @@ export function SessionChrome({
               onToggleMute={onToggleAudioMute}
             />
             {museStatus === "streaming" ? (
-              <EegMiniPreview museChannelData={museChannelData} />
+              <EegMiniPreview
+                museChannelData={museChannelData}
+                museStatus={museStatus}
+                museDeviceStatus={museDeviceStatus}
+                bandPowers={bandPowers}
+              />
             ) : null}
             {isScreenCapturing ? (
               <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />

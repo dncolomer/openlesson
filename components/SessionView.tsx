@@ -56,6 +56,7 @@ import {
   type IleSessionMode,
 } from "@/lib/ile-mode";
 import { openIleWordBoxTool } from "@/lib/ile-word-boxes";
+import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
@@ -320,6 +321,22 @@ export function SessionView({
     return null;
   }, [chatMessages]);
 
+  const [heliosReplyChapterId, setHeliosReplyChapterId] = useState<string | null>(null);
+  const lastAssistantTurnIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = lastDialogueAssistantTurn?.id ?? null;
+    if (id && id !== lastAssistantTurnIdRef.current) {
+      lastAssistantTurnIdRef.current = id;
+      setHeliosReplyChapterId(activeChapterKey);
+    }
+  }, [activeChapterKey, lastDialogueAssistantTurn?.id]);
+  const chapterWidgetAssistantTurn = shouldShowHeliosReplyForChapter({
+    activeChapterId: activeChapterKey,
+    replyChapterId: heliosReplyChapterId,
+  })
+    ? lastDialogueAssistantTurn
+    : null;
+
   const isHeliosAssistantPending = useMemo(() => {
     for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
       const message = chatMessages[index];
@@ -511,6 +528,8 @@ export function SessionView({
     handleActiveChapterIndexChange,
     handleEnsureChapterPositions,
     handleLoadChapter,
+    handleAcceptTimChapter,
+    handleRejectTimChapter,
     handleAddChapter,
     handleUpdateChapter,
     chapterReloadNonce,
@@ -685,6 +704,7 @@ export function SessionView({
     ileToken,
     entryQueryParams,
     recordTransferEvent,
+    recordSessionPowArtifact,
     tutoringLanguage,
     isProjectMode,
     chapterThoughtsLocked,
@@ -862,12 +882,12 @@ export function SessionView({
     return (
     <SessionThoughtPane
       replica={replica}
-      activeChapterKey={session.id}
+      activeChapterKey={activeChapterKey}
       chapterReloadNonce={chapterReloadNonce}
       isProjectMode={isProjectMode}
       participantIdentity={participantIdentity}
       lastUserTurn={lastDialogueUserTurn}
-      lastAssistantTurn={lastDialogueAssistantTurn}
+      lastAssistantTurn={isProjectMode ? null : chapterWidgetAssistantTurn}
       isAssistantPending={isHeliosAssistantPending}
       heliosTurnMode={heliosTurnMode}
       chapterPrompt={isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt}
@@ -1086,6 +1106,7 @@ export function SessionView({
         museStatus={museStatus}
         museDeviceStatus={museDeviceStatus}
         museChannelData={eegChannelData}
+        bandPowers={bandPowers}
         showOpenPicInPic={showManualPicInPic}
         onOpenPicInPic={openManualPicInPic}
         error={error}
@@ -1144,11 +1165,18 @@ export function SessionView({
             loading={planLoading}
             activeChapterIndex={activeChapterIndex}
             onWorkChapter={(stepId) => {
-              const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
-              if (idx >= 0 && idx !== activeChapterIndex) {
+              const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
+              const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
+              if (idx >= 0 && idx !== activeChapterIndexRef.current) {
                 void handleLoadChapter(idx);
               }
               setHeliosWidgetOpen(true);
+            }}
+            onAcceptTimChapter={(stepId) => {
+              void handleAcceptTimChapter(stepId);
+            }}
+            onRejectTimChapter={(stepId) => {
+              void handleRejectTimChapter(stepId);
             }}
             onUndoChapterDone={(stepId) => handleMarkChapterUndone(stepId)}
             onAddChapter={handleAddChapter}

@@ -6,7 +6,7 @@
  * `chapter_map_expand` interruption. ILE applies it on a dedicated map
  * timer (not the Helios dialogue scheduler, so idle/speech PoW cannot
  * supersede it). The new tile uses a TIM-explore icon until the learner
- * opens it, then it switches to the usual 3×3 blocky glyph.
+ * accepts it (3×3 blocky glyph) or rejects it (tile cleared).
  *
  * Idle TIM map effects are intentionally not implemented here — see
  * ILE_TIM_MAP_INTERACTIONS for follow-on ideas.
@@ -81,7 +81,7 @@ export const ILE_TIM_MAP_INTERACTIONS: readonly IleTimMapInteraction[] = [
     tim_source: "upload_ile_chapter_done",
     effect: "positive",
     summary:
-      "Mark as Done is PoW; TIM + evidence appetite place 1–3 adjacent TIM-sourced chapters (explore icon until opened).",
+      "Mark as Done is PoW; TIM + evidence appetite place 1–3 adjacent TIM-sourced chapters (explore icon until accepted or rejected).",
   },
   {
     id: "idle_fog_creep",
@@ -659,6 +659,29 @@ export function revealTimChapterIconOnPlan(
     return revealTimChapterIcon(step);
   });
   return { plan: changed ? { ...plan, steps } : plan, changed };
+}
+
+/** Reject an unopened TIM chapter: drop the step so the cell is empty again. */
+export function rejectTimChapterFromPlan(
+  plan: SessionPlan,
+  stepId: string,
+): { plan: SessionPlan; changed: boolean } {
+  const id = typeof stepId === "string" ? stepId.trim() : "";
+  if (!id) return { plan, changed: false };
+  const removedIndex = plan.steps.findIndex((step) => step.id === id);
+  if (removedIndex < 0) return { plan, changed: false };
+  const step = plan.steps[removedIndex];
+  if (!isTimUnopenedChapter(step)) return { plan, changed: false };
+  const steps = plan.steps
+    .filter((row) => row.id !== id)
+    .map((row, index) => ({ ...row, order: index }));
+  let currentStepIndex = plan.currentStepIndex;
+  if (removedIndex <= currentStepIndex) {
+    currentStepIndex = Math.max(0, currentStepIndex - 1);
+  }
+  if (steps.length === 0) currentStepIndex = 0;
+  else if (currentStepIndex > steps.length - 1) currentStepIndex = steps.length - 1;
+  return { plan: { ...plan, steps, currentStepIndex }, changed: true };
 }
 
 export type IleMapSchedulerPending = {

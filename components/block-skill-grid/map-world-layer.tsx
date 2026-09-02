@@ -966,6 +966,7 @@ export function MapWorldLayer({
                         circularMenuBlockId === node.id ? (
                           <BlockCircularMenuRing
                             surface={circularMenuSurface}
+                            timUnopened={timUnopened}
                             onAction={(action) => onCircularMenuAction?.(node.id, action)}
                             disabledIds={
                               circularMenuSurface === "ile"
@@ -1122,6 +1123,7 @@ export function MapWorldLayer({
                 circularMenuBlockId === node.id ? (
                   <BlockCircularMenuRing
                     surface={circularMenuSurface}
+                    timUnopened={timUnopened}
                     onAction={(action) => onCircularMenuAction?.(node.id, action)}
                     disabledIds={
                       circularMenuSurface === "ile"

@@ -13,6 +13,10 @@ export const BLOCK_MAP_PATTERN_MAX = (1 << BLOCK_MAP_CELL_COUNT) - 1;
 export const TIM_EXPLORE_MAP_ICON = "tim-explore" as const;
 export type TimExploreMapIcon = typeof TIM_EXPLORE_MAP_ICON;
 
+/** Display-only: completed ILE chapter (flag). Not persisted — storage keeps the 3×3. */
+export const CHAPTER_DONE_MAP_ICON = "chapter-done" as const;
+export type ChapterDoneMapIcon = typeof CHAPTER_DONE_MAP_ICON;
+
 /** Display-only: running Gather resources (binoculars). Not persisted. */
 export const ILE_GATHER_RUNNING_MAP_ICON = "gather-resources" as const;
 export type IleGatherRunningMapIcon = typeof ILE_GATHER_RUNNING_MAP_ICON;
@@ -22,10 +26,14 @@ export function isIleGatherRunningMapIcon(value: unknown): value is IleGatherRun
 }
 
 /** `g{bits}` — bits is a 9-bit occupancy mask (1 = filled cell). */
-export type BlockMapIconName = `g${number}` | TimExploreMapIcon;
+export type BlockMapIconName = `g${number}` | TimExploreMapIcon | ChapterDoneMapIcon;
 
 export function isTimExploreMapIcon(value: unknown): value is TimExploreMapIcon {
   return value === TIM_EXPLORE_MAP_ICON;
+}
+
+export function isChapterDoneMapIcon(value: unknown): value is ChapterDoneMapIcon {
+  return value === CHAPTER_DONE_MAP_ICON;
 }
 
 /** 2×2 in the top-left of the 3×3 (cells 0,1,3,4). */
@@ -78,7 +86,7 @@ export function encodeBlockMapPattern(bits: number): BlockMapIconName | null {
 }
 
 export function blockMapPatternBits(name: BlockMapIconName): number {
-  if (isTimExploreMapIcon(name)) return 0;
+  if (isTimExploreMapIcon(name) || isChapterDoneMapIcon(name)) return 0;
   return Number(name.slice(1));
 }
 
@@ -150,6 +158,7 @@ export function isBlockMapIconName(value: unknown): value is BlockMapIconName {
 export function parseBlockMapIconName(raw: unknown): BlockMapIconName | null {
   const s = clean(raw);
   if (s === TIM_EXPLORE_MAP_ICON) return TIM_EXPLORE_MAP_ICON;
+  if (s === CHAPTER_DONE_MAP_ICON) return CHAPTER_DONE_MAP_ICON;
   const m = PATTERN_RE.exec(s);
   if (!m) return null;
   return encodeBlockMapPattern(Number(m[1]));

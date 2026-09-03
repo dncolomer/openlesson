@@ -507,10 +507,14 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(world).toContain("PREVIOUS_SESSIONS_MAP_ICON");
     expect(world).toContain("data-block-has-previous-sessions");
     expect(world).toContain("!hasPreviousSessions");
+    expect(world).toContain("hasPreviousSessions,");
+    expect(world).toContain("mapCellFreeformPreviousSessionsColors");
     expect(world).not.toContain("BlockPreviousSessionsPickaxeBadge");
     expect(glyph).toContain("Pickaxe");
     expect(glyph).toContain('from "lucide-react"');
     expect(glyph).toContain("data-block-previous-sessions-icon");
+    expect(badges).toContain("h-6 w-6");
+    expect(badges).toContain("isPreviousSessionsMapIcon");
     expect(badges).not.toContain("data-block-previous-sessions-pickaxe");
     expect(badges).not.toMatch(/from "lucide-react"/);
     expect(mapRoute).toContain("listWorkspaceBlockIdsWithPreviousSessions");

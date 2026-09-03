@@ -11,6 +11,7 @@ import {
   MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_MULTI_SELECTED_CLASS,
   MAP_CELL_NEUTRAL_CLASS,
+  MAP_CELL_PREVIOUS_SESSIONS_CLASS,
   MAP_CELL_PREREQ_CLASS,
   MAP_CELL_SELECTED_CLASS,
   MAP_CELL_TARGET_CLASS,
@@ -106,6 +107,25 @@ describe("mapCellChromeClasses", () => {
     expect(done).not.toMatch(/emerald|amber|cyan|yellow|green-/i);
     expect(mapCellChromeIsNeutral(progress)).toBe(true);
     expect(mapCellChromeIsNeutral(done)).toBe(true);
+  });
+
+  it("workspace previous-sessions tiles are slightly lighter; chapter stays neutral", () => {
+    const workspace = mapCellChromeClasses({
+      status: "available",
+      selected: false,
+      hasPreviousSessions: true,
+      surface: "block",
+    });
+    const chapter = mapCellChromeClasses({
+      status: "available",
+      selected: false,
+      hasPreviousSessions: true,
+      surface: "chapter",
+    });
+    expect(workspace).toBe(MAP_CELL_PREVIOUS_SESSIONS_CLASS);
+    expect(workspace).toContain("bg-neutral-800");
+    expect(chapter).toBe(MAP_CELL_NEUTRAL_CLASS);
+    expect(MAP_CELL_PREVIOUS_SESSIONS_CLASS).not.toMatch(/bg-white\/40|bg-white /);
   });
 
   it("focused (active chapter) uses white selection language", () => {

@@ -37,6 +37,10 @@ export const MAP_CELL_TARGET_CLASS = MAP_CELL_SELECTED_CLASS;
 export const MAP_CELL_NEUTRAL_CLASS =
   "border-neutral-700/80 bg-neutral-950/75 text-neutral-100";
 
+/** Workspace tile with saved previous sessions — slightly lighter than neutral. */
+export const MAP_CELL_PREVIOUS_SESSIONS_CLASS =
+  "border-neutral-600/80 bg-neutral-800/80 text-neutral-100";
+
 /** Unopened TIM-sourced ILE chapter — explore tile, slight pulse so the map feels alive. */
 export const MAP_CELL_TIM_UNOPENED_CLASS =
   "border-white/35 bg-neutral-950/80 shadow-[0_0_10px_rgba(255,255,255,0.08)] animate-pulse";
@@ -119,6 +123,8 @@ export function mapCellChromeClasses(input: {
   surface?: MapCellSurface;
   /** This user has worked on this tile at least once. */
   workedOn?: boolean;
+  /** Workspace-only: block has saved previous sessions. */
+  hasPreviousSessions?: boolean;
 }): string {
   const selected = Boolean(input.selected || input.focused);
   const status = String(input.status || "").toLowerCase();
@@ -156,6 +162,10 @@ export function mapCellChromeClasses(input: {
 
   if (selected) {
     return MAP_CELL_SELECTED_CLASS;
+  }
+
+  if (input.hasPreviousSessions && input.surface !== "chapter") {
+    return MAP_CELL_PREVIOUS_SESSIONS_CLASS;
   }
 
   return MAP_CELL_NEUTRAL_CLASS;
@@ -293,6 +303,21 @@ export function mapCellFreeformColors(selected: boolean): {
   return {
     fill: "rgba(10, 10, 12, 0.88)",
     border: "rgba(82, 82, 91, 0.9)",
+    text: "rgb(229, 229, 229)",
+  };
+}
+
+/** Workspace freeform tile with saved previous sessions — slightly lighter fill. */
+export function mapCellFreeformPreviousSessionsColors(selected = false): {
+  fill: string;
+  border: string;
+  text: string;
+  shadow?: string;
+} {
+  if (selected) return mapCellFreeformColors(true);
+  return {
+    fill: "rgba(38, 38, 42, 0.9)",
+    border: "rgba(115, 115, 115, 0.85)",
     text: "rgb(229, 229, 229)",
   };
 }

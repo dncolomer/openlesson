@@ -21,6 +21,10 @@ import { isBlockCompletedStatus } from "@/lib/map-ground-rules";
 export const LEARNER_MAP_CELL_DEFAULT_CLASS =
   "border-white/25 bg-white/[0.07] text-neutral-50 shadow-[0_0_10px_rgba(255,255,255,0.04)]";
 
+/** Learner tile with saved previous sessions — slightly lighter than default. */
+export const LEARNER_MAP_CELL_PREVIOUS_SESSIONS_CLASS =
+  "border-white/30 bg-white/[0.12] text-neutral-50 shadow-[0_0_10px_rgba(255,255,255,0.06)]";
+
 /** Locked learner tile — rose lock chrome so gated blocks are spottable. */
 export const LEARNER_MAP_CELL_LOCKED_CLASS =
   "border-rose-500/45 bg-rose-950/30 text-neutral-100 shadow-[0_0_10px_rgba(244,63,94,0.12)] opacity-95 pointer-events-auto";
@@ -49,6 +53,8 @@ export function learnerMapCellChromeClasses(input: {
   depHighlight?: boolean;
   /** This user has worked on this block at least once. */
   workedOn?: boolean;
+  /** Workspace-only: block has saved previous sessions. */
+  hasPreviousSessions?: boolean;
 }): string {
   void input.isStart; // Starter flag badge still shows; tile color stays white.
   const done = isBlockCompletedStatus(input.status);
@@ -74,6 +80,9 @@ export function learnerMapCellChromeClasses(input: {
   if (input.selected) {
     return MAP_CELL_SELECTED_CLASS;
   }
+  if (input.hasPreviousSessions) {
+    return LEARNER_MAP_CELL_PREVIOUS_SESSIONS_CLASS;
+  }
   return LEARNER_MAP_CELL_DEFAULT_CLASS;
 }
 
@@ -85,6 +94,7 @@ export function learnerMapFreeformColors(
     depHighlight?: boolean;
     done?: boolean;
     workedOn?: boolean;
+    hasPreviousSessions?: boolean;
   },
 ): {
   fill: string;
@@ -122,6 +132,14 @@ export function learnerMapFreeformColors(
       shadow: "0 0 10px rgba(244,63,94,0.14)",
     };
   }
+  if (opts?.hasPreviousSessions) {
+    return {
+      fill: "rgba(255, 255, 255, 0.12)",
+      border: "rgba(255, 255, 255, 0.32)",
+      text: "rgb(245, 245, 245)",
+      shadow: "0 0 10px rgba(255,255,255,0.06)",
+    };
+  }
   return {
     fill: "rgba(255, 255, 255, 0.07)",
     border: "rgba(255, 255, 255, 0.28)",
@@ -141,6 +159,7 @@ export function resolveOccupiedMapChrome(input: {
   depHighlight?: boolean;
   highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
   workedOn?: boolean;
+  hasPreviousSessions?: boolean;
 }): string {
   if (input.learnerMode) {
     return learnerMapCellChromeClasses({
@@ -152,6 +171,7 @@ export function resolveOccupiedMapChrome(input: {
       locked: input.locked,
       depHighlight: input.depHighlight,
       workedOn: input.workedOn,
+      hasPreviousSessions: input.hasPreviousSessions,
     });
   }
   return mapCellChromeClasses({
@@ -162,6 +182,7 @@ export function resolveOccupiedMapChrome(input: {
     focused: input.focused,
     highlightRole: input.highlightRole,
     workedOn: input.workedOn,
+    hasPreviousSessions: input.hasPreviousSessions,
     surface: "block",
   });
 }
@@ -177,6 +198,7 @@ export function resolveOccupiedMapTileChrome(input: {
   depHighlight?: boolean;
   highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
   workedOn?: boolean;
+  hasPreviousSessions?: boolean;
 }): { className: string; statusIcon: MapCellStatusIcon } {
   return {
     className: resolveOccupiedMapChrome(input),

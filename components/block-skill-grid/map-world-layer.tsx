@@ -48,6 +48,7 @@ import {
   mapCellFreeformColors,
   mapCellFreeformDoneColors,
   mapCellFreeformPrereqColors,
+  mapCellFreeformPreviousSessionsColors,
   mapCellFreeformSelfProgressColors,
 } from "@/lib/map-cell-chrome";
 import {
@@ -618,6 +619,7 @@ export function MapWorldLayer({
                 depHighlight: isLearnerDepHighlight,
                 highlightRole: learnerMode ? null : highlightRole,
                 workedOn: itemWorkedOn,
+                hasPreviousSessions,
               });
             const baseChrome =
               suggestMode === "chapter" && isLearnerDepHighlight
@@ -788,8 +790,13 @@ export function MapWorldLayer({
                           depHighlight: isLearnerDepHighlight,
                           done: itemDone,
                           workedOn: itemWorkedOn,
+                          hasPreviousSessions,
                         },
                       )
+                    : hasPreviousSessions
+                      ? mapCellFreeformPreviousSessionsColors(
+                          isBlockHighlighted || highlightRole === "target",
+                        )
                     : highlightRole === "target" || isBlockHighlighted
                       ? mapCellFreeformColors(true)
                       : mapCellFreeformColors(false);

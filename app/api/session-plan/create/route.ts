@@ -14,7 +14,7 @@ import {
 } from "@/lib/ile-mode";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {

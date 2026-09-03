@@ -34,6 +34,9 @@ import {
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
 
+export const runtime = "nodejs";
+export const maxDuration = 180;
+
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "text/plain",

@@ -11,7 +11,7 @@ import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { resolveIleLinkAccess } from "@/lib/ile-link-auth";
 
 export const runtime = "nodejs";
-export const maxDuration = 15;
+export const maxDuration = 45;
 
 export async function POST(request: NextRequest) {
   try {

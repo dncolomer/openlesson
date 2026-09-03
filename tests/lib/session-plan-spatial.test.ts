@@ -475,6 +475,7 @@ describe("create surface wiring (structural)", () => {
     expect(routeSrc).toContain("toPersistedCreatePlanSteps");
     expect(routeSrc).toContain("sessionMode");
     expect(routeSrc).toContain("createSessionPlanLLM");
+    expect(routeSrc).toMatch(/maxDuration\s*=\s*12[0-9]/);
     expect(routeSrc).toContain("unusable_cells");
     const xaiSrc = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
     expect(xaiSrc).toContain("SESSION_PLAN_CREATE_JSON_SCHEMA");

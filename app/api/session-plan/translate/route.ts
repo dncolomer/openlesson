@@ -7,7 +7,7 @@ import { ayclTokenFromBody,
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 interface SessionPlanStep {
   id: string;

@@ -12,6 +12,7 @@ import { composeSessionPlanCreatePrompt } from "@/lib/session-plan-create";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import {
   blankCustomMapType,
+  defaultMapTypePickerCatalog,
   formatMapTypeGeneratorContext,
   mapTypePickerCatalog,
   mapTypeRecordFromBuiltin,
@@ -36,6 +37,17 @@ function read(rel: string) {
 }
 
 describe("workspace map types helpers", () => {
+  it("default picker catalog items include mini-map cells for the preview grid", () => {
+    const catalog = defaultMapTypePickerCatalog();
+    expect(catalog.length).toBeGreaterThan(0);
+    for (const item of catalog) {
+      expect(item.cells.length).toBeGreaterThan(0);
+      expect(item.cells.some((c) => c.kind === "occupied" || c.kind === "blocked")).toBe(
+        true,
+      );
+    }
+  });
+
   it("Build-mode section list includes Map Types; Play/Explore/KR do not", () => {
     const creator = availableSectionsForMode({
       mode: "creator",

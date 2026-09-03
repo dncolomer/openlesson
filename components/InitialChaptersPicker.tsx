@@ -90,6 +90,7 @@ export function InitialChaptersPicker({
       data-initial-chapters-carousel
       data-initial-chapters-fill={fillHeight ? "true" : "false"}
       data-map-type-catalog-count={items.length}
+      className={fillHeight ? "flex h-full min-h-0 flex-col" : undefined}
     >
       {showCountHint && band ? (
         <p className="mb-2 text-[11px] text-neutral-500">
@@ -138,9 +139,10 @@ export function InitialChaptersPicker({
           }`}
         >
           <div
+            data-map-type-preview
             className={
               fillHeight
-                ? "min-h-0 w-full flex-1"
+                ? "min-h-[min(14rem,28vh)] w-full flex-1"
                 : "mx-auto aspect-square w-full max-w-[14rem]"
             }
           >

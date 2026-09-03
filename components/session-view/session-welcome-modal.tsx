@@ -211,7 +211,7 @@ export function SessionWelcomeModal({
                           className={`transition-colors ${
                             !showSizePicker
                               ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
-                              : ""
+                              : "flex min-h-0 flex-1 flex-col"
                           }`}
                         >
                           <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -231,7 +231,7 @@ export function SessionWelcomeModal({
                           {showSizePicker ? (
                             <div
                               data-ile-map-type-align="aesthetics"
-                              className="min-h-0 flex-1"
+                              className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]"
                             >
                               <InitialChaptersPicker
                                 value={initialChapters}

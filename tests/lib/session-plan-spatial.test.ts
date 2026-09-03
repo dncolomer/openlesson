@@ -582,6 +582,8 @@ describe("create surface wiring (structural)", () => {
     expect(pickerSrc).toContain("pickRandomMapType");
     expect(pickerSrc).toContain("data-initial-chapters-random-pick");
     expect(pickerSrc).toContain("fillHeight");
+    expect(pickerSrc).toContain("flex h-full min-h-0 flex-col");
+    expect(pickerSrc).toContain("data-map-type-preview");
     expect(pickerSrc).not.toContain("grid-cols-2");
     expect(pickerSrc).not.toContain("sm:grid-cols-4");
     expect(pickerSrc).toContain("aspect-square");
@@ -593,6 +595,9 @@ describe("create surface wiring (structural)", () => {
     );
     expect(welcomeSrc).toContain("fillHeight");
     expect(welcomeSrc).toContain('data-ile-map-type-align="aesthetics"');
+    expect(welcomeSrc).toContain(
+      "flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]",
+    );
     const miniSrc = readFileSync(
       path.join(process.cwd(), "components/ChapterMiniMap.tsx"),
       "utf8",

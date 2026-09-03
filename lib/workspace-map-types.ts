@@ -21,12 +21,7 @@ import type { MiniMapCell } from "@/lib/ile-chapter-mini-map";
 import { getCellKey } from "@/lib/block-skill-grid";
 import { nextFreeChapterCell } from "@/lib/ile-chapter-blocked";
 
-export const MAP_TYPE_CELL_MARKS = [
-  "spawn",
-  "no_spawn",
-  "blocked",
-  "dag_hint",
-] as const;
+export const MAP_TYPE_CELL_MARKS = ["spawn", "blocked"] as const;
 
 export type MapTypeCellMark = (typeof MAP_TYPE_CELL_MARKS)[number];
 
@@ -35,6 +30,19 @@ export type MapTypeCell = {
   col: number;
   mark: MapTypeCellMark;
 };
+
+export const MAX_MAP_TYPE_ORDER_STEPS = 8;
+
+export type MapTypeOrderStep = {
+  step: number;
+  cells: Array<{ row: number; col: number }>;
+};
+
+export type MapTypePaintTool =
+  | { kind: "spawn" }
+  | { kind: "blocked" }
+  | { kind: "clear" }
+  | { kind: "order"; step: number };
 
 export type MapTypeBand = {
   min: number;
@@ -53,8 +61,12 @@ export type WorkspaceMapTypeRecord = {
   source: WorkspaceMapTypeSource;
   enabled: boolean;
   cells: MapTypeCell[];
-  /** Workspace DAG ids used as optional generator hints (not a 1:1 copy). */
+  /** @deprecated Optional leftover workspace DAG ids; order steps replace this. */
   dagHintIds: string[];
+  /** How many recommended-order areas the author can paint (0–8). */
+  orderStepCount: number;
+  /** Painted areas 1…N for a loose recommended chapter DAG. */
+  orderSteps: MapTypeOrderStep[];
   layoutInstruction: string;
   band: MapTypeBand;
   /**
@@ -82,6 +94,7 @@ export type MapTypeGeneratorContext = {
   noSpawnInstruction: string;
   blockedInstruction: string;
   dagHintInstruction: string;
+  orderInstruction: string;
   topologyInstruction: string;
   spatialInstruction: string;
   /** Joined prompt fill for `{initial_chapters_instruction}`. */
@@ -152,13 +165,170 @@ export function normalizeMapTypeCells(raw: unknown): MapTypeCell[] {
     const row = clampGridCoord(o.row, MAP_TYPE_GRID.minRow, MAP_TYPE_GRID.maxRow);
     const col = clampGridCoord(o.col, MAP_TYPE_GRID.minCol, MAP_TYPE_GRID.maxCol);
     if (row === null || col === null) continue;
-    const mark = isMapTypeCellMark(o.mark) ? o.mark : null;
+    const rawMark = typeof o.mark === "string" ? o.mark : "";
+    if (rawMark === "no_spawn" || rawMark === "dag_hint" || rawMark === "order") {
+      continue;
+    }
+    const mark = isMapTypeCellMark(rawMark) ? rawMark : null;
     if (!mark) continue;
     byKey.set(cellKey(row, col), { row, col, mark });
   }
   return [...byKey.values()].sort((a, b) =>
     a.row === b.row ? a.col - b.col : a.row - b.row,
   );
+}
+
+function clampOrderStepCount(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(MAX_MAP_TYPE_ORDER_STEPS, Math.floor(n)));
+}
+
+function collectOrderCellsFromLegacy(rawCells: unknown): Array<{ row: number; col: number }> {
+  const list = Array.isArray(rawCells) ? rawCells : [];
+  const out: Array<{ row: number; col: number }> = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    if (o.mark !== "dag_hint" && o.mark !== "order") continue;
+    const row = clampGridCoord(o.row, MAP_TYPE_GRID.minRow, MAP_TYPE_GRID.maxRow);
+    const col = clampGridCoord(o.col, MAP_TYPE_GRID.minCol, MAP_TYPE_GRID.maxCol);
+    if (row === null || col === null) continue;
+    const key = cellKey(row, col);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ row, col });
+  }
+  return out;
+}
+
+export function normalizeMapTypeOrderSteps(
+  raw: unknown,
+  count: number,
+  legacyCells?: unknown,
+): MapTypeOrderStep[] {
+  const n = clampOrderStepCount(count);
+  const list = Array.isArray(raw) ? raw : [];
+  const byStep = new Map<number, Array<{ row: number; col: number }>>();
+  for (let step = 1; step <= n; step += 1) byStep.set(step, []);
+  const claimed = new Set<string>();
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const step = clampOrderStepCount(o.step);
+    if (step < 1 || step > n) continue;
+    const cellsRaw = Array.isArray(o.cells) ? o.cells : [];
+    const cells: Array<{ row: number; col: number }> = [];
+    for (const cell of cellsRaw) {
+      if (!cell || typeof cell !== "object") continue;
+      const c = cell as Record<string, unknown>;
+      const row = clampGridCoord(c.row, MAP_TYPE_GRID.minRow, MAP_TYPE_GRID.maxRow);
+      const col = clampGridCoord(c.col, MAP_TYPE_GRID.minCol, MAP_TYPE_GRID.maxCol);
+      if (row === null || col === null) continue;
+      const key = cellKey(row, col);
+      if (claimed.has(key)) continue;
+      claimed.add(key);
+      cells.push({ row, col });
+    }
+    byStep.set(step, cells);
+  }
+  if (n >= 1) {
+    const legacy = collectOrderCellsFromLegacy(legacyCells);
+    const step1 = byStep.get(1) || [];
+    for (const cell of legacy) {
+      const key = cellKey(cell.row, cell.col);
+      if (claimed.has(key)) continue;
+      claimed.add(key);
+      step1.push(cell);
+    }
+    byStep.set(1, step1);
+  }
+  return [...byStep.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([step, cells]) => ({ step, cells }));
+}
+
+export function occupancyAt(
+  cells: readonly MapTypeCell[],
+  row: number,
+  col: number,
+): MapTypeCellMark | null {
+  return cells.find((c) => c.row === row && c.col === col)?.mark ?? null;
+}
+
+export function orderStepAt(
+  orderSteps: readonly MapTypeOrderStep[],
+  row: number,
+  col: number,
+): number | null {
+  for (const area of orderSteps) {
+    if (area.cells.some((c) => c.row === row && c.col === col)) return area.step;
+  }
+  return null;
+}
+
+export function setMapTypeOrderStepCount(
+  record: WorkspaceMapTypeRecord,
+  count: unknown,
+): WorkspaceMapTypeRecord {
+  const orderStepCount = clampOrderStepCount(count);
+  return {
+    ...record,
+    orderStepCount,
+    orderSteps: normalizeMapTypeOrderSteps(record.orderSteps, orderStepCount),
+  };
+}
+
+/** Apply a paint tool to one cell. Clear always erases occupancy and order. */
+export function applyMapTypePaint(
+  record: WorkspaceMapTypeRecord,
+  row: number,
+  col: number,
+  tool: MapTypePaintTool,
+): WorkspaceMapTypeRecord {
+  const r = clampGridCoord(row, MAP_TYPE_GRID.minRow, MAP_TYPE_GRID.maxRow);
+  const c = clampGridCoord(col, MAP_TYPE_GRID.minCol, MAP_TYPE_GRID.maxCol);
+  if (r === null || c === null) return record;
+  const orderStepCount = clampOrderStepCount(record.orderStepCount);
+  let cells = normalizeMapTypeCells(record.cells);
+  let orderSteps = normalizeMapTypeOrderSteps(
+    record.orderSteps,
+    orderStepCount,
+  );
+  const stripOrder = () => {
+    orderSteps = orderSteps.map((area) => ({
+      ...area,
+      cells: area.cells.filter((cell) => !(cell.row === r && cell.col === c)),
+    }));
+  };
+  const setOccupancy = (mark: MapTypeCellMark | null) => {
+    cells = cells.filter((cell) => !(cell.row === r && cell.col === c));
+    if (mark) cells.push({ row: r, col: c, mark });
+    cells = normalizeMapTypeCells(cells);
+  };
+
+  if (tool.kind === "clear") {
+    setOccupancy(null);
+    stripOrder();
+  } else if (tool.kind === "spawn") {
+    setOccupancy("spawn");
+  } else if (tool.kind === "blocked") {
+    setOccupancy("blocked");
+    stripOrder();
+  } else if (tool.kind === "order") {
+    const step = clampOrderStepCount(tool.step);
+    if (step < 1 || step > orderStepCount) return record;
+    if (occupancyAt(cells, r, c) === "blocked") setOccupancy(null);
+    stripOrder();
+    orderSteps = orderSteps.map((area) =>
+      area.step === step
+        ? { ...area, cells: [...area.cells, { row: r, col: c }] }
+        : area,
+    );
+    orderSteps = normalizeMapTypeOrderSteps(orderSteps, orderStepCount);
+  }
+  return { ...record, cells, orderStepCount, orderSteps };
 }
 
 function normalizeBand(raw: unknown, fallback: MapTypeBand): MapTypeBand {
@@ -238,6 +408,8 @@ export function mapTypeRecordFromBuiltin(
     enabled,
     cells: normalizeMapTypeCells(cells),
     dagHintIds: [],
+    orderStepCount: 0,
+    orderSteps: [],
     layoutInstruction: option.layoutInstruction.trim(),
     band: {
       min: option.band.min,
@@ -267,6 +439,8 @@ export function blankCustomMapType(input?: {
     enabled: true,
     cells: [],
     dagHintIds: [],
+    orderStepCount: 0,
+    orderSteps: [],
     layoutInstruction: "",
     band: { ...DEFAULT_CUSTOM_BAND },
     topologyMode: "shaped",
@@ -283,6 +457,10 @@ export function normalizeCustomMapTypeRecord(
   const label = String(o.label || "").trim() || "Custom map";
   const description = String(o.description || "").trim();
   const enabled = o.enabled !== false;
+  const orderStepCount = clampOrderStepCount(
+    o.orderStepCount ?? o.order_step_count,
+  );
+  const cells = normalizeMapTypeCells(o.cells);
   return {
     id,
     label,
@@ -290,8 +468,14 @@ export function normalizeCustomMapTypeRecord(
       description || "Custom chapter-map layout for this workspace.",
     source: "custom",
     enabled,
-    cells: normalizeMapTypeCells(o.cells),
+    cells,
     dagHintIds: uniqIds(Array.isArray(o.dagHintIds) ? o.dagHintIds : []),
+    orderStepCount,
+    orderSteps: normalizeMapTypeOrderSteps(
+      o.orderSteps ?? o.order_steps,
+      orderStepCount,
+      o.cells,
+    ),
     layoutInstruction: String(o.layoutInstruction || "").trim(),
     band: normalizeBand(o.band, DEFAULT_CUSTOM_BAND),
     topologyMode: o.topologyMode === "scatter" ? "scatter" : "shaped",
@@ -345,6 +529,8 @@ export function serializeWorkspaceMapTypes(
       enabled: t.enabled,
       cells: t.cells,
       dagHintIds: t.dagHintIds,
+      orderStepCount: t.orderStepCount,
+      orderSteps: t.orderSteps,
       layoutInstruction: t.layoutInstruction,
       band: t.band,
     })),
@@ -533,13 +719,13 @@ export function schematicStartCell(
 }
 
 export function mapTypeSkeletonFrame(
-  record: Pick<WorkspaceMapTypeRecord, "cells">,
+  record: Pick<WorkspaceMapTypeRecord, "cells" | "orderSteps">,
   pad = 2,
 ): { minRow: number; maxRow: number; minCol: number; maxCol: number } | null {
   const skeleton = [
     ...cellsWithMark(record, "spawn"),
     ...cellsWithMark(record, "blocked"),
-    ...cellsWithMark(record, "dag_hint"),
+    ...(record.orderSteps || []).flatMap((s) => s.cells),
   ];
   if (skeleton.length === 0) return null;
   let minRow = skeleton[0]!.row;
@@ -649,9 +835,11 @@ export function formatMapTypeGeneratorContext(
   record: WorkspaceMapTypeRecord,
 ): MapTypeGeneratorContext {
   const spawn = cellsWithMark(record, "spawn");
-  const noSpawn = cellsWithMark(record, "no_spawn");
   const blocked = cellsWithMark(record, "blocked");
-  const dagHintCells = cellsWithMark(record, "dag_hint");
+  const orderSteps = normalizeMapTypeOrderSteps(
+    record.orderSteps,
+    record.orderStepCount ?? 0,
+  );
   const layoutInstruction = String(record.layoutInstruction || "").trim();
   const shaped = mapTypeUsesShapedTopology(record);
   const start = schematicStartCell(spawn);
@@ -674,25 +862,24 @@ export function formatMapTypeGeneratorContext(
         ? `SPAWN SKELETON (intended occupancy — place ~80% of chapters on or Chebyshev-adjacent to these cells): ${formatCellList(spawn)}.`
         : `SPAWN CELLS (preferred chapter locations — hints, not a 1:1 template): ${formatCellList(spawn)}.`
       : "";
-  const noSpawnInstruction =
-    noSpawn.length > 0
-      ? `NO-SPAWN CELLS (avoid placing chapters here): ${formatCellList(noSpawn)}.`
-      : "";
+  const noSpawnInstruction = "";
   const blockedInstruction =
     blocked.length > 0
       ? `BLOCKED CHAPTER SLOTS (non-placeable ground): do not place any chapter or block on these cells: ${formatCellList(blocked)}. Persist them as blocked/unusable so corridors stay empty for later bridges.`
       : "";
-  const dagParts: string[] = [];
-  if (dagHintCells.length > 0) {
-    dagParts.push(`hint cells ${formatCellList(dagHintCells)}`);
-  }
-  if (record.dagHintIds.length > 0) {
-    dagParts.push(`workspace DAG ids ${record.dagHintIds.join(", ")}`);
-  }
-  const dagHintInstruction =
-    dagParts.length > 0
-      ? `DAG HINTS (optional structure hints, not a 1:1 copy of a workspace DAG): ${dagParts.join("; ")}.`
+  const paintedOrder = orderSteps.filter((s) => s.cells.length > 0);
+  const orderInstruction =
+    paintedOrder.length > 0
+      ? [
+          "ORDER STEPS (recommended DAG / practice sequence — loose follow, not a 1:1 copy):",
+          "Earlier numbered areas should generally precede later ones. Chapters in area k should lock until work in area k-1 is done when they sit downstream.",
+          "Emit lock_until_orders (prerequisite chapter `order` numbers) and next_orders on each chapter so the map has DAG-like requirements.",
+          ...paintedOrder.map(
+            (s) => `Area ${s.step}: ${formatCellList(s.cells)}.`,
+          ),
+        ].join(" ")
       : "";
+  const dagHintInstruction = orderInstruction;
   const spatialInstruction = shaped
     ? MAP_TYPE_SHAPED_SPATIAL_RULES
     : SPATIAL_MAP_LAYOUT_RULES;
@@ -703,7 +890,7 @@ export function formatMapTypeGeneratorContext(
     spawnInstruction,
     noSpawnInstruction,
     blockedInstruction,
-    dagHintInstruction,
+    orderInstruction,
   ]
     .filter(Boolean)
     .join("\n");
@@ -717,6 +904,7 @@ export function formatMapTypeGeneratorContext(
     noSpawnInstruction,
     blockedInstruction,
     dagHintInstruction,
+    orderInstruction,
     topologyInstruction,
     spatialInstruction,
     countInstruction,
@@ -729,14 +917,7 @@ export function mapTypeCellsToMiniMap(
   return record.cells.map((cell) => ({
     row: cell.row,
     col: cell.col,
-    kind:
-      cell.mark === "blocked"
-        ? "blocked"
-        : cell.mark === "no_spawn"
-          ? "no_spawn"
-          : cell.mark === "dag_hint"
-            ? "dag_hint"
-            : "occupied",
+    kind: cell.mark === "blocked" ? "blocked" : "occupied",
   }));
 }
 

@@ -254,6 +254,34 @@ describe("session plan create prompt composition", () => {
 });
 
 describe("normalizeSessionPlanCreateSteps multi-quadrant positions", () => {
+  it("maps lock_until_orders / next_orders onto chapter DAG ids", () => {
+    const steps = normalizeSessionPlanCreateSteps(
+      [
+        {
+          type: "task",
+          description: "Hub",
+          keyword: "Hub",
+          order: 1,
+          position_x: 3,
+          position_y: 3,
+          next_orders: [2],
+        },
+        {
+          type: "task",
+          description: "Spoke",
+          keyword: "Spoke",
+          order: 2,
+          position_x: 4,
+          position_y: 3,
+          lock_until_orders: [1],
+        },
+      ],
+      { idSeed: 11 },
+    );
+    expect(steps[0].next_step_ids).toEqual([steps[1].id]);
+    expect(steps[1].lock_until_step_ids).toEqual([steps[0].id]);
+  });
+
   it("keeps signed unique coordinates including negatives", () => {
     const steps = normalizeSessionPlanCreateSteps(
       [

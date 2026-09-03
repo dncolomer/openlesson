@@ -219,6 +219,8 @@ Each step should have:
 - order: Sequential number starting from 1
 - position_x: integer grid column (may be negative)
 - position_y: integer grid row (may be negative)
+- lock_until_orders: optional array of earlier chapter order numbers this chapter should wait on (DAG lock-until / prerequisites). Use when the map type paints order-step areas or a later chapter depends on an earlier one.
+- next_orders: optional array of later chapter order numbers this chapter leads to.
 
 Plan design rules:
 - Optimize for forward progress and transferable skill, not validate-for-validation's-sake.
@@ -234,8 +236,8 @@ Return ONLY valid JSON (no markdown, no explanation):
   "strategy": "...",
   "description": "...",
   "steps": [
-    {"type": "question", "description": "...", "keyword": "Tree Insert", "order": 1, "position_x": 0, "position_y": 0},
-    {"type": "task", "description": "...", "keyword": "AVL Rotate", "order": 2, "position_x": 1, "position_y": 0},
+    {"type": "question", "description": "...", "keyword": "Tree Insert", "order": 1, "position_x": 0, "position_y": 0, "lock_until_orders": [], "next_orders": [2, 3]},
+    {"type": "task", "description": "...", "keyword": "AVL Rotate", "order": 2, "position_x": 1, "position_y": 0, "lock_until_orders": [1], "next_orders": [4]},
     {"type": "task", "description": "...", "keyword": "Delete Node", "order": 3, "position_x": -1, "position_y": 0},
     {"type": "checkpoint", "description": "...", "keyword": "BST Check", "order": 4, "position_x": 0, "position_y": -1},
     ...

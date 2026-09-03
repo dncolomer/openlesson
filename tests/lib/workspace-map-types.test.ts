@@ -26,7 +26,8 @@ import {
   resolveWorkspaceMapTypeCatalog,
   serializeWorkspaceMapTypes,
   setBuiltinMapTypeEnabled,
-  setMapTypeCellMark,
+  applyMapTypePaint,
+  setMapTypeOrderStepCount,
   upsertCustomMapType,
 } from "@/lib/workspace-map-types";
 
@@ -114,17 +115,15 @@ describe("workspace map types helpers", () => {
     expect(layout.showBlockMapChrome).toBe(false);
   });
 
-  it("custom spawn / no-spawn / blocked marks round-trip through normalize/persist", () => {
-    let cells = setMapTypeCellMark([], 0, 0, "spawn");
-    cells = setMapTypeCellMark(cells, 1, 2, "no_spawn");
-    cells = setMapTypeCellMark(cells, 3, 3, "blocked");
-    cells = setMapTypeCellMark(cells, 4, 1, "dag_hint");
-    const custom = blankCustomMapType({
+  it("custom spawn / blocked marks round-trip; empty cells mean no-spawn; clear erases", () => {
+    let custom = blankCustomMapType({
       id: "maptype_roundtrip",
       label: "River delta",
     });
-    custom.cells = cells;
-    custom.dagHintIds = ["dag_a"];
+    custom = applyMapTypePaint(custom, 0, 0, { kind: "spawn" });
+    custom = applyMapTypePaint(custom, 3, 3, { kind: "blocked" });
+    custom = applyMapTypePaint(custom, 1, 2, { kind: "spawn" });
+    custom = applyMapTypePaint(custom, 1, 2, { kind: "clear" });
     custom.layoutInstruction = "Prefer a branching river of chapters.";
     const afterUpsert = upsertCustomMapType(
       { disabledBuiltinIds: [], customTypes: [] },
@@ -139,13 +138,41 @@ describe("workspace map types helpers", () => {
     expect(normalizeMapTypeCells(round.cells)).toEqual(
       expect.arrayContaining([
         { row: 0, col: 0, mark: "spawn" },
-        { row: 1, col: 2, mark: "no_spawn" },
         { row: 3, col: 3, mark: "blocked" },
-        { row: 4, col: 1, mark: "dag_hint" },
       ]),
     );
-    expect(round.dagHintIds).toEqual(["dag_a"]);
+    expect(round.cells.some((c) => c.row === 1 && c.col === 2)).toBe(false);
     expect(round.layoutInstruction).toMatch(/river/i);
+  });
+
+  it("order-step areas paint independently of spawn and feed generator DAG text", () => {
+    let custom = setMapTypeOrderStepCount(
+      blankCustomMapType({ id: "maptype_orders", label: "Path" }),
+      3,
+    );
+    custom = applyMapTypePaint(custom, 0, 0, { kind: "spawn" });
+    custom = applyMapTypePaint(custom, 0, 0, { kind: "order", step: 1 });
+    custom = applyMapTypePaint(custom, 0, 1, { kind: "order", step: 1 });
+    custom = applyMapTypePaint(custom, 2, 2, { kind: "order", step: 2 });
+    custom = applyMapTypePaint(custom, 2, 2, { kind: "order", step: 3 });
+    expect(custom.cells).toEqual(
+      expect.arrayContaining([{ row: 0, col: 0, mark: "spawn" }]),
+    );
+    expect(custom.orderSteps.find((s) => s.step === 1)?.cells).toEqual(
+      expect.arrayContaining([
+        { row: 0, col: 0 },
+        { row: 0, col: 1 },
+      ]),
+    );
+    expect(custom.orderSteps.find((s) => s.step === 2)?.cells || []).toHaveLength(0);
+    expect(custom.orderSteps.find((s) => s.step === 3)?.cells).toEqual([
+      { row: 2, col: 2 },
+    ]);
+    const ctx = formatMapTypeGeneratorContext(custom);
+    expect(ctx.orderInstruction).toMatch(/ORDER STEPS/i);
+    expect(ctx.orderInstruction).toMatch(/lock_until_orders/i);
+    expect(ctx.countInstruction).toMatch(/Area 1/);
+    expect(ctx.countInstruction).toMatch(/Area 3/);
   });
 
   it("disabling a built-in drops it from the picker catalog; custom types appear", () => {
@@ -182,11 +209,8 @@ describe("workspace map types helpers", () => {
     });
     custom.cells = [
       { row: 0, col: 0, mark: "spawn" },
-      { row: 1, col: 1, mark: "no_spawn" },
       { row: 2, col: 2, mark: "blocked" },
-      { row: 3, col: 3, mark: "dag_hint" },
     ];
-    custom.dagHintIds = ["dag_core"];
     custom.layoutInstruction = "Keep a single crossing.";
 
     const builtinCtx = formatMapTypeGeneratorContext(builtin);
@@ -194,9 +218,7 @@ describe("workspace map types helpers", () => {
     expect(builtinCtx.spawnInstruction).toMatch(/SPAWN SKELETON/i);
     expect(builtinCtx.blockedInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
     expect(customCtx.spawnInstruction).toMatch(/SPAWN SKELETON/i);
-    expect(customCtx.noSpawnInstruction).toMatch(/NO-SPAWN CELLS/i);
     expect(customCtx.blockedInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
-    expect(customCtx.dagHintInstruction).toMatch(/DAG HINTS/i);
 
     // Id-only path (no pre-built record) — same formatter composeSessionPlanCreatePrompt uses.
     const builtinPrompt = composeSessionPlanCreatePrompt(
@@ -223,9 +245,7 @@ describe("workspace map types helpers", () => {
     );
     expect(customPrompt).toContain(customCtx.countInstruction);
     expect(customPrompt).toMatch(/SPAWN SKELETON/i);
-    expect(customPrompt).toMatch(/NO-SPAWN CELLS/i);
     expect(customPrompt).toMatch(/BLOCKED CHAPTER SLOTS/i);
-    expect(customPrompt).toMatch(/DAG HINTS/i);
     expect(customPrompt).toContain("maptype_bridge");
 
     expect(
@@ -349,9 +369,13 @@ describe("Map Types tab UI / API structural", () => {
 
     expect(panel).toContain("data-workspace-map-types-panel");
     expect(panel).toContain("data-map-type-grid");
-    expect(panel).toContain('mark: "spawn"');
-    expect(panel).toContain('mark: "no_spawn"');
-    expect(panel).toContain('mark: "blocked"');
+    expect(panel).toContain('kind: "spawn"');
+    expect(panel).not.toContain("mapTypesNoSpawn");
+    expect(panel).toContain('kind: "blocked"');
+    expect(panel).toContain('kind: "clear"');
+    expect(panel).toContain("data-map-type-paint-drag");
+    expect(panel).toContain("data-map-type-order-count");
+    expect(panel).toContain("applyMapTypePaint");
     expect(panel).toContain("data-map-type-create");
     expect(panel).toContain("data-map-type-save");
     expect(panel).toContain("data-map-type-delete");
@@ -421,9 +445,10 @@ describe("Map Types tab UI / API structural", () => {
             }).includes("map_types"),
           ),
         "grid=" + panel.includes("data-map-type-grid"),
-        "spawn=" + panel.includes('mark: "spawn"'),
-        "no_spawn=" + panel.includes('mark: "no_spawn"'),
-        "blocked=" + panel.includes('mark: "blocked"'),
+        "spawn=" + panel.includes('kind: "spawn"'),
+        "blocked=" + panel.includes('kind: "blocked"'),
+        "clear=" + panel.includes('kind: "clear"'),
+        "drag=" + panel.includes("data-map-type-paint-drag"),
         "build_only_host=" + view.includes("!isLearnerMode"),
       ].join("\n") + "\n",
     );
@@ -457,7 +482,7 @@ describe("map types verification evidence", () => {
     const custom = blankCustomMapType({ id: "maptype_harbor", label: "Harbor" });
     custom.cells = [
       { row: 0, col: 1, mark: "spawn" },
-      { row: 2, col: 2, mark: "no_spawn" },
+      { row: 2, col: 2, mark: "blocked" },
       { row: 5, col: 5, mark: "blocked" },
     ];
     const state = setBuiltinMapTypeEnabled(

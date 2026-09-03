@@ -61,6 +61,10 @@ export interface RawSessionPlanStep {
   keyword?: unknown;
   map_keyword?: unknown;
   map_icon?: unknown;
+  lock_until_orders?: unknown;
+  next_orders?: unknown;
+  lock_until_step_ids?: unknown;
+  next_step_ids?: unknown;
 }
 
 export interface NormalizedCreatePlan {
@@ -146,6 +150,18 @@ export const SESSION_PLAN_CREATE_JSON_SCHEMA: JsonSchema = {
             position_y: {
               type: "integer",
               description: "Grid row (may be negative); start at 0",
+            },
+            lock_until_orders: {
+              type: "array",
+              items: { type: "integer" },
+              description:
+                "Prerequisite chapter `order` numbers (DAG lock-until). Empty if none.",
+            },
+            next_orders: {
+              type: "array",
+              items: { type: "integer" },
+              description:
+                "Downstream chapter `order` numbers (leads-to). Empty if none.",
             },
           },
           required: ["type", "description", "keyword"],
@@ -233,11 +249,42 @@ export function normalizeSessionPlanCreateSteps(
       result.position_y = position_y;
     }
 
+    const lockOrders = Array.isArray(step.lock_until_orders)
+      ? step.lock_until_orders
+      : [];
+    const nextOrders = Array.isArray(step.next_orders) ? step.next_orders : [];
+    (result as SessionPlanStep & { _lockOrders?: number[]; _nextOrders?: number[] })._lockOrders =
+      lockOrders.filter((n): n is number => typeof n === "number" && Number.isInteger(n));
+    (result as SessionPlanStep & { _nextOrders?: number[] })._nextOrders =
+      nextOrders.filter((n): n is number => typeof n === "number" && Number.isInteger(n));
+
     return result;
   });
 
   const valid = mapped.filter((s) => s.description.trim().length > 0);
-  const renumbered = valid.map((s, idx) => ({ ...s, order: idx + 1 }));
+  const byOrigOrder = new Map<number, string>();
+  for (const step of valid) {
+    byOrigOrder.set(step.order, step.id);
+  }
+  const withDag = valid.map((s) => {
+    const extra = s as SessionPlanStep & {
+      _lockOrders?: number[];
+      _nextOrders?: number[];
+    };
+    const lock_until_step_ids = (extra._lockOrders || [])
+      .map((ord) => byOrigOrder.get(ord))
+      .filter((id): id is string => Boolean(id) && id !== s.id);
+    const next_step_ids = (extra._nextOrders || [])
+      .map((ord) => byOrigOrder.get(ord))
+      .filter((id): id is string => Boolean(id) && id !== s.id);
+    const { _lockOrders: _a, _nextOrders: _b, ...rest } = extra;
+    return {
+      ...rest,
+      ...(lock_until_step_ids.length ? { lock_until_step_ids } : {}),
+      ...(next_step_ids.length ? { next_step_ids } : {}),
+    };
+  });
+  const renumbered = withDag.map((s, idx) => ({ ...s, order: idx + 1 }));
 
   if (renumbered.length === 0) return renumbered;
 
@@ -262,6 +309,8 @@ export type PersistablePlanStep = {
   status?: SessionPlanStep["status"];
   map_keyword?: string | null;
   map_icon?: string | null;
+  lock_until_step_ids?: string[] | null;
+  next_step_ids?: string[] | null;
 };
 
 /**
@@ -298,6 +347,12 @@ export function toPersistedCreatePlanSteps(
     if (step.position_x != null && step.position_y != null) {
       persisted.position_x = step.position_x;
       persisted.position_y = step.position_y;
+    }
+    if (Array.isArray(step.lock_until_step_ids) && step.lock_until_step_ids.length) {
+      persisted.lock_until_step_ids = step.lock_until_step_ids.filter(Boolean);
+    }
+    if (Array.isArray(step.next_step_ids) && step.next_step_ids.length) {
+      persisted.next_step_ids = step.next_step_ids.filter(Boolean);
     }
     return persisted;
   });

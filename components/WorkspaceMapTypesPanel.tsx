@@ -1,46 +1,68 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ChapterMiniMap } from "@/components/ChapterMiniMap";
 import {
   MAP_TYPE_GRID,
+  MAX_MAP_TYPE_ORDER_STEPS,
+  applyMapTypePaint,
   blankCustomMapType,
   formatMapTypeGeneratorContext,
   mapTypeRecordFromBuiltin,
   newCustomMapTypeId,
   normalizeWorkspaceMapTypes,
+  occupancyAt,
+  orderStepAt,
   removeCustomMapType,
   serializeWorkspaceMapTypes,
   setBuiltinMapTypeEnabled,
-  setMapTypeCellMark,
+  setMapTypeOrderStepCount,
   upsertCustomMapType,
-  type MapTypeCellMark,
+  type MapTypePaintTool,
   type WorkspaceMapTypeRecord,
   type WorkspaceMapTypesState,
 } from "@/lib/workspace-map-types";
 import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 
-const MARK_PALETTE: Array<{
-  mark: MapTypeCellMark | null;
-  labelKey: string;
-  fallback: string;
-}> = [
-  { mark: "spawn", labelKey: "planView.mapTypesSpawn", fallback: "Spawn" },
-  { mark: "no_spawn", labelKey: "planView.mapTypesNoSpawn", fallback: "No spawn" },
-  { mark: "blocked", labelKey: "planView.mapTypesBlocked", fallback: "Blocked" },
-  { mark: "dag_hint", labelKey: "planView.mapTypesDagHint", fallback: "DAG hint" },
-  { mark: null, labelKey: "planView.mapTypesClear", fallback: "Clear" },
+const ORDER_FILL = [
+  "bg-sky-700",
+  "bg-amber-700",
+  "bg-violet-700",
+  "bg-emerald-700",
+  "bg-rose-700",
+  "bg-cyan-700",
+  "bg-lime-800",
+  "bg-fuchsia-700",
 ];
 
-function cellFillClass(mark: MapTypeCellMark | undefined): string {
-  if (mark === "spawn") return "bg-neutral-300";
-  if (mark === "blocked") {
+function cellFillClass(
+  occupancy: "spawn" | "blocked" | null,
+  orderStep: number | null,
+): string {
+  if (occupancy === "blocked") {
     return "bg-[repeating-linear-gradient(135deg,rgba(64,64,64,0.95)_0_2px,rgba(24,24,24,0.95)_2px_4px)]";
   }
-  if (mark === "no_spawn") return "bg-neutral-950 ring-1 ring-inset ring-rose-900/70";
-  if (mark === "dag_hint") return "bg-sky-900/70 ring-1 ring-inset ring-sky-500/50";
+  if (occupancy === "spawn" && orderStep) {
+    return `${ORDER_FILL[(orderStep - 1) % ORDER_FILL.length]} ring-1 ring-inset ring-neutral-200/80`;
+  }
+  if (occupancy === "spawn") return "bg-neutral-300";
+  if (orderStep) return ORDER_FILL[(orderStep - 1) % ORDER_FILL.length];
   return "bg-neutral-800";
+}
+
+function cellFromPoint(
+  clientX: number,
+  clientY: number,
+): { row: number; col: number } | null {
+  const el = document.elementFromPoint(clientX, clientY);
+  const node = el?.closest("[data-map-type-cell]");
+  const raw = node?.getAttribute("data-map-type-cell") || "";
+  const [rs, cs] = raw.split(":");
+  const row = Number(rs);
+  const col = Number(cs);
+  if (!Number.isInteger(row) || !Number.isInteger(col)) return null;
+  return { row, col };
 }
 
 function MapTypeGrid({
@@ -52,17 +74,50 @@ function MapTypeGrid({
   editable: boolean;
   onPaint?: (row: number, col: number) => void;
 }) {
-  const byKey = new Map(record.cells.map((c) => [`${c.row}:${c.col}`, c.mark]));
   const rows: number[] = [];
   const cols: number[] = [];
   for (let r = MAP_TYPE_GRID.minRow; r <= MAP_TYPE_GRID.maxRow; r += 1) rows.push(r);
   for (let c = MAP_TYPE_GRID.minCol; c <= MAP_TYPE_GRID.maxCol; c += 1) cols.push(c);
+  const painting = useRef(false);
+  const lastPainted = useRef<string | null>(null);
+
+  const paintAt = (row: number, col: number) => {
+    if (!editable) return;
+    const key = `${row}:${col}`;
+    if (lastPainted.current === key) return;
+    lastPainted.current = key;
+    onPaint?.(row, col);
+  };
 
   return (
     <div
       data-map-type-grid
       data-map-type-grid-editable={editable ? "true" : "false"}
-      className="aspect-square w-full max-w-[18rem]"
+      data-map-type-paint-drag="true"
+      className="aspect-square w-full max-w-[18rem] touch-none select-none"
+      onPointerDown={(e) => {
+        if (!editable) return;
+        const cell = cellFromPoint(e.clientX, e.clientY);
+        if (!cell) return;
+        painting.current = true;
+        lastPainted.current = null;
+        (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+        paintAt(cell.row, cell.col);
+      }}
+      onPointerMove={(e) => {
+        if (!editable || !painting.current) return;
+        const cell = cellFromPoint(e.clientX, e.clientY);
+        if (!cell) return;
+        paintAt(cell.row, cell.col);
+      }}
+      onPointerUp={() => {
+        painting.current = false;
+        lastPainted.current = null;
+      }}
+      onPointerCancel={() => {
+        painting.current = false;
+        lastPainted.current = null;
+      }}
     >
       <div
         className="grid h-full w-full gap-px"
@@ -73,22 +128,27 @@ function MapTypeGrid({
       >
         {rows.flatMap((row) =>
           cols.map((col) => {
-            const mark = byKey.get(`${row}:${col}`);
+            const occupancy = occupancyAt(record.cells, row, col);
+            const orderStep = orderStepAt(record.orderSteps || [], row, col);
             return (
-              <button
+              <div
                 key={`${row}:${col}`}
-                type="button"
                 data-map-type-cell={`${row}:${col}`}
-                data-map-type-cell-mark={mark || "empty"}
-                disabled={!editable}
-                onClick={() => onPaint?.(row, col)}
-                className={`min-h-0 min-w-0 rounded-[1px] ${cellFillClass(mark)} ${
-                  editable
-                    ? "cursor-pointer hover:brightness-125"
-                    : "cursor-default"
-                } disabled:cursor-default`}
-                aria-label={`Row ${row} column ${col}${mark ? ` ${mark}` : ""}`}
-              />
+                data-map-type-cell-mark={
+                  occupancy || (orderStep ? `order-${orderStep}` : "empty")
+                }
+                className={`relative min-h-0 min-w-0 rounded-[1px] ${cellFillClass(
+                  occupancy,
+                  orderStep,
+                )} ${editable ? "cursor-crosshair" : "cursor-default"}`}
+                aria-label={`Row ${row} column ${col}`}
+              >
+                {orderStep ? (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[8px] font-semibold text-white/90">
+                    {orderStep}
+                  </span>
+                ) : null}
+              </div>
             );
           }),
         )}
@@ -102,7 +162,7 @@ export function WorkspaceMapTypesPanel({
   isOwner,
   ayclToken,
   initialState,
-  workspaceDags = [],
+  workspaceDags: _workspaceDags = [],
   workspaceTitle,
   t,
 }: {
@@ -120,7 +180,9 @@ export function WorkspaceMapTypesPanel({
   const [selectedId, setSelectedId] = useState<string | null>(
     INITIAL_CHAPTERS_LEVELS[0] ?? null,
   );
-  const [paletteMark, setPaletteMark] = useState<MapTypeCellMark | null>("spawn");
+  const [paletteTool, setPaletteTool] = useState<MapTypePaintTool>({
+    kind: "spawn",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -221,21 +283,14 @@ export function WorkspaceMapTypesPanel({
   };
 
   const paintCell = (row: number, col: number) => {
-    if (!selected || selected.source !== "custom" || !isOwner) return;
-    const current = selected.cells.find((c) => c.row === row && c.col === col);
-    const nextMark =
-      current?.mark === paletteMark ? null : paletteMark;
-    const cells = setMapTypeCellMark(selected.cells, row, col, nextMark);
-    patchSelected({ cells });
-  };
-
-  const toggleDagHint = (dagId: string) => {
-    if (!selected || selected.source !== "custom") return;
-    const has = selected.dagHintIds.includes(dagId);
-    patchSelected({
-      dagHintIds: has
-        ? selected.dagHintIds.filter((x) => x !== dagId)
-        : [...selected.dagHintIds, dagId],
+    if (!isOwner) return;
+    setState((prev) => {
+      const current = prev.customTypes.find((c) => c.id === selectedId);
+      if (!current) return prev;
+      return upsertCustomMapType(
+        prev,
+        applyMapTypePaint(current, row, col, paletteTool),
+      );
     });
   };
 
@@ -465,29 +520,36 @@ export function WorkspaceMapTypesPanel({
                         </label>
                       ))}
                     </div>
-                    {workspaceDags.length > 0 ? (
-                      <div data-map-type-dag-hints>
-                        <p className="mb-1.5 text-[11px] text-neutral-400">
-                          {t("planView.mapTypesDagHints")}
-                        </p>
-                        <ul className="space-y-1">
-                          {workspaceDags.map((dag) => (
-                            <li key={dag.id}>
-                              <label className="flex items-center gap-2 text-[11px] text-neutral-300">
-                                <input
-                                  type="checkbox"
-                                  data-map-type-dag-hint={dag.id}
-                                  checked={selected.dagHintIds.includes(dag.id)}
-                                  onChange={() => toggleDagHint(dag.id)}
-                                  className="h-3 w-3 rounded-none border-neutral-600 bg-neutral-950"
-                                />
-                                {dag.title || dag.id}
-                              </label>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
+                    <label className="block text-[11px] text-neutral-400">
+                      {t("planView.mapTypesOrderSteps")}
+                      <input
+                        type="number"
+                        data-map-type-order-count
+                        min={0}
+                        max={MAX_MAP_TYPE_ORDER_STEPS}
+                        value={selected.orderStepCount ?? 0}
+                        onChange={(e) => {
+                          const next = setMapTypeOrderStepCount(
+                            selected,
+                            e.target.value,
+                          );
+                          patchSelected({
+                            orderStepCount: next.orderStepCount,
+                            orderSteps: next.orderSteps,
+                          });
+                          if (
+                            paletteTool.kind === "order" &&
+                            paletteTool.step > next.orderStepCount
+                          ) {
+                            setPaletteTool({ kind: "spawn" });
+                          }
+                        }}
+                        className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
+                      />
+                      <span className="mt-1 block text-[10px] leading-snug text-neutral-500">
+                        {t("planView.mapTypesOrderStepsHint")}
+                      </span>
+                    </label>
                   </>
                 ) : (
                   <>
@@ -503,19 +565,43 @@ export function WorkspaceMapTypesPanel({
                     data-map-type-palette
                     className="flex flex-wrap gap-1.5"
                   >
-                    {MARK_PALETTE.map((item) => (
+                    {(
+                      [
+                        { kind: "spawn" as const, label: t("planView.mapTypesSpawn") || "Spawn" },
+                        { kind: "blocked" as const, label: t("planView.mapTypesBlocked") || "Blocked" },
+                        { kind: "clear" as const, label: t("planView.mapTypesClear") || "Clear" },
+                      ] as const
+                    ).map((item) => (
                       <button
-                        key={item.fallback}
+                        key={item.kind}
                         type="button"
-                        data-map-type-palette-mark={item.mark ?? "clear"}
-                        onClick={() => setPaletteMark(item.mark)}
+                        data-map-type-palette-mark={item.kind}
+                        onClick={() => setPaletteTool({ kind: item.kind })}
                         className={`rounded-none border px-2 py-1 text-[10px] ${
-                          paletteMark === item.mark
+                          paletteTool.kind === item.kind
                             ? "border-neutral-300 bg-neutral-800 text-white"
                             : "border-white/10 text-neutral-400 hover:text-neutral-200"
                         }`}
                       >
-                        {t(item.labelKey) || item.fallback}
+                        {item.label}
+                      </button>
+                    ))}
+                    {Array.from(
+                      { length: selected.orderStepCount || 0 },
+                      (_, i) => i + 1,
+                    ).map((step) => (
+                      <button
+                        key={`order-${step}`}
+                        type="button"
+                        data-map-type-palette-mark={`order-${step}`}
+                        onClick={() => setPaletteTool({ kind: "order", step })}
+                        className={`rounded-none border px-2 py-1 text-[10px] ${
+                          paletteTool.kind === "order" && paletteTool.step === step
+                            ? "border-neutral-300 bg-neutral-800 text-white"
+                            : "border-white/10 text-neutral-400 hover:text-neutral-200"
+                        }`}
+                      >
+                        {t("planView.mapTypesOrderStep")} {step}
                       </button>
                     ))}
                   </div>

@@ -110,6 +110,10 @@ export interface SessionPlanStep {
   source_step_id?: string | null;
   /** TIM-sourced chapters start unopened (explore icon) until the learner accepts or rejects them. */
   tim_unopened?: boolean;
+  /** Prerequisite chapter ids (DAG lock-until), same idea as workspace lock_until_block_ids. */
+  lock_until_step_ids?: string[] | null;
+  /** Downstream chapter ids (leads-to), same idea as workspace next_block_ids. */
+  next_step_ids?: string[] | null;
 }
 
 export interface SessionPlan {

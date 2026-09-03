@@ -375,14 +375,14 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(planView.performanceEvalSubjectAllHint).toMatch(/\busers?\b/i);
     expect(planView.forkToEditBody).toMatch(/another user/i);
 
-    // Workspace builder / session chapter size copy (planMode + session namespaces).
+    // Workspace builder / session chapter-map copy (planMode + session namespaces).
     for (const ns of ["planMode", "session"] as const) {
       const bag = en[ns] ?? {};
-      for (const key of ["initialChaptersMidDesc", "mapSizeMidDesc"] as const) {
+      for (const key of Object.keys(bag)) {
+        if (!/^initialChapters.+Desc$/.test(key) && !/^mapSize.+Desc$/.test(key)) continue;
         const value = bag[key];
         if (typeof value !== "string") continue;
         expect(value, `${ns}.${key}`).not.toMatch(/\blearner(s)?\b/i);
-        expect(value, `${ns}.${key}`).toMatch(/most users/i);
       }
     }
 

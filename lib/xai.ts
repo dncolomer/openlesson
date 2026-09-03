@@ -27,7 +27,8 @@ import {
 import { blockMapGlyphDbFields, randFromSeed } from "@/lib/block-map-glyph";
 import { transcribeAudioBase64 } from "./xai-stt";
 import { getPrompt, type UserPrompts } from "./prompts";
-import { getInitialChaptersBand } from "./initial-chapters";
+import { blockedChapterSlotsFromPattern, getInitialChaptersBand } from "./initial-chapters";
+import { relocateChapterStepsOffBlocked } from "./ile-chapter-blocked";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
@@ -466,6 +467,7 @@ export interface CreateSessionPlanResult {
   strategy: string;
   description?: string; // Brief summary for display purposes
   steps: SessionPlanStep[];
+  unusable_cells?: Array<{ row: number; col: number }>;
 }
 
 export async function createSessionPlanLLM(options: {
@@ -476,8 +478,8 @@ export async function createSessionPlanLLM(options: {
   planningPrompt?: string; // Custom instructions for plan generation
   tutoringLanguage?: string; // Full language name for LLM response
   /**
-   * Initial chapters level from welcome UI / API (narrow | mid | broad).
-   * Prefer initialChapters; mapSize kept as legacy alias.
+   * Initial chapters pattern from welcome UI / API (technique id or random_sparse / random_dense).
+   * Prefer initialChapters; mapSize kept as legacy alias (narrow/mid/broad).
    */
   initialChapters?: string | null;
   /** @deprecated Prefer initialChapters */
@@ -533,11 +535,13 @@ export async function createSessionPlanLLM(options: {
     return { success: false, error: "LLM generated plan with no valid steps (all descriptions empty)" };
   }
 
+  const blocked = blockedChapterSlotsFromPattern(initialChapters);
   const plan: CreateSessionPlanResult = {
     goal: response.data.goal || "Understand the topic deeply",
     strategy: response.data.strategy || "Optimize practice progress and augment with tools that produce proof of work",
     description: response.data.description,
-    steps: numberedSteps,
+    steps: relocateChapterStepsOffBlocked(numberedSteps, blocked),
+    unusable_cells: blocked,
   };
 
   return { success: true, plan };

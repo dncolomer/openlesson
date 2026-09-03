@@ -18,10 +18,12 @@ import {
   type OpaqueWorkspaceCreateRequest,
 } from "./opaque-evaluation";
 import {
+  blockedChapterSlotsFromPattern,
   getInitialChaptersBand,
   resolveInitialChaptersFromBody,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
 import {
   normalizeGeneratedWorkspaceBlocks,
   type WorkspaceBlockRef,
@@ -162,6 +164,7 @@ async function createSemanticAgentWorkspace(
     : "";
 
   const band = getInitialChaptersBand(initialChapters);
+  const blockedSlots = blockedChapterSlotsFromPattern(initialChapters);
   const prompt =
     composeAgentFilesGoalPrompt({
       goalPrompt: initialPrompt,
@@ -182,8 +185,9 @@ async function createSemanticAgentWorkspace(
     throw new Error("Failed to generate verification workspace");
   }
 
-  const normalizedBlocks: WorkspaceBlockRef[] = normalizeGeneratedWorkspaceBlocks(
-    generated.data.blocks,
+  const normalizedBlocks: WorkspaceBlockRef[] = relocatePositionsOffBlockedSlots(
+    normalizeGeneratedWorkspaceBlocks(generated.data.blocks),
+    blockedSlots,
   );
   if (normalizedBlocks.length === 0) {
     throw new Error("Failed to generate verification workspace");
@@ -219,6 +223,7 @@ async function createSemanticAgentWorkspace(
       workspace_goal: workspaceGoal,
       is_agent_workspace: true,
       evaluation_mode: "semantic",
+      unusable_cells: blockedSlots,
     })
     .select(
       "id, title, root_topic, status, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"

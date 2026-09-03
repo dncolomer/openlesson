@@ -2,10 +2,12 @@
 
 import {
   miniMapBounds,
+  miniMapDummyFrame,
   miniMapHasCell,
   miniMapInteractive,
   type MiniMapCell,
 } from "@/lib/ile-chapter-mini-map";
+import type { InitialChaptersLevel } from "@/lib/initial-chapters";
 
 export function ChapterMiniMap({
   cells,
@@ -14,10 +16,10 @@ export function ChapterMiniMap({
 }: {
   cells: MiniMapCell[];
   dummy?: boolean;
-  density?: "narrow" | "mid" | "broad";
+  density?: InitialChaptersLevel | string;
 }) {
   const interactive = miniMapInteractive();
-  const bounds = miniMapBounds(cells);
+  const bounds = dummy ? miniMapDummyFrame() : miniMapBounds(cells);
   const rows: number[] = [];
   const cols: number[] = [];
   for (let r = bounds.minRow; r <= bounds.maxRow; r += 1) rows.push(r);
@@ -30,29 +32,34 @@ export function ChapterMiniMap({
       data-chapter-mini-interactive={interactive ? "true" : "false"}
       {...(density ? { "data-density-dummy-map": density } : {})}
       aria-hidden="true"
-      className="pointer-events-none select-none"
+      className="pointer-events-none h-full w-full select-none"
     >
       <div
-        className="grid gap-px"
+        className="grid h-full w-full gap-px"
         style={{
           gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${rows.length}, minmax(0, 1fr))`,
         }}
       >
         {rows.flatMap((row) =>
           cols.map((col) => {
             const hit = miniMapHasCell(cells, row, col);
+            const blocked = hit?.kind === "blocked";
             const completed = hit?.status === "completed";
+            const cellKind = blocked ? "blocked" : hit ? "occupied" : "empty";
             return (
               <div
                 key={`${row}:${col}`}
-                data-mini-cell={hit ? "occupied" : "empty"}
+                data-mini-cell={cellKind}
                 data-mini-cell-status={hit?.status || ""}
-                className={`aspect-square rounded-[1px] ${
-                  hit
-                    ? completed
-                      ? "bg-neutral-200"
-                      : "bg-neutral-400"
-                    : "bg-neutral-800"
+                className={`min-h-0 min-w-0 rounded-[1px] ${
+                  blocked
+                    ? "bg-[repeating-linear-gradient(135deg,rgba(64,64,64,0.95)_0_2px,rgba(24,24,24,0.95)_2px_4px)]"
+                    : hit
+                      ? completed
+                        ? "bg-neutral-200"
+                        : "bg-neutral-400"
+                      : "bg-neutral-800"
                 }`}
               />
             );

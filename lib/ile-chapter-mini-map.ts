@@ -7,72 +7,110 @@ import {
   getCellKey,
 } from "@/lib/block-skill-grid";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
-import type { InitialChaptersLevel } from "@/lib/initial-chapters";
+import {
+  INITIAL_CHAPTERS_LEVELS,
+  getInitialChaptersOption,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
+
+export type MiniMapCellKind = "occupied" | "blocked";
 
 export type MiniMapCell = {
   row: number;
   col: number;
   status?: string;
+  kind?: MiniMapCellKind;
 };
 
-/** Dummy occupancy — not loaded from session_plans. Narrow < mid < broad. */
-export const DUMMY_DENSITY_CELLS: Record<
-  InitialChaptersLevel,
-  MiniMapCell[]
-> = {
-  narrow: [
-    { row: 1, col: 1 },
-    { row: 1, col: 4 },
-    { row: 3, col: 2 },
-    { row: 5, col: 1 },
-    { row: 5, col: 5 },
-  ],
-  mid: [
-    { row: 0, col: 2 },
-    { row: 1, col: 1 },
-    { row: 1, col: 2 },
-    { row: 1, col: 3 },
-    { row: 2, col: 0 },
-    { row: 2, col: 2 },
-    { row: 2, col: 4 },
-    { row: 3, col: 1 },
-    { row: 3, col: 2 },
-    { row: 3, col: 3 },
-    { row: 4, col: 2 },
-  ],
-  broad: [
-    { row: 0, col: 1 },
-    { row: 0, col: 2 },
-    { row: 0, col: 3 },
-    { row: 1, col: 0 },
-    { row: 1, col: 1 },
-    { row: 1, col: 2 },
-    { row: 1, col: 3 },
-    { row: 1, col: 4 },
-    { row: 2, col: 0 },
-    { row: 2, col: 1 },
-    { row: 2, col: 2 },
-    { row: 2, col: 3 },
-    { row: 2, col: 4 },
-    { row: 3, col: 0 },
-    { row: 3, col: 1 },
-    { row: 3, col: 2 },
-    { row: 3, col: 3 },
-    { row: 4, col: 1 },
-    { row: 4, col: 2 },
-    { row: 4, col: 3 },
-  ],
-};
-
-export function dummyDensityCells(
-  level: InitialChaptersLevel,
-): MiniMapCell[] {
-  return DUMMY_DENSITY_CELLS[level].map((cell) => ({ ...cell }));
+function isOccupiedCell(cell: MiniMapCell): boolean {
+  return cell.kind !== "blocked";
 }
 
-export function dummyDensityOccupiedCount(level: InitialChaptersLevel): number {
-  return DUMMY_DENSITY_CELLS[level].length;
+/** Dummy occupancy — not loaded from session_plans. Includes blocked corridor cells. */
+export function dummyPatternCells(
+  level: InitialChaptersLevel | unknown,
+): MiniMapCell[] {
+  const option = getInitialChaptersOption(level);
+  return [
+    ...option.occupied.map((cell) => ({
+      row: cell.row,
+      col: cell.col,
+      kind: "occupied" as const,
+    })),
+    ...option.blocked.map((cell) => ({
+      row: cell.row,
+      col: cell.col,
+      kind: "blocked" as const,
+    })),
+  ];
+}
+
+/** @deprecated Prefer dummyPatternCells — includes blocked corridor cells. */
+export const DUMMY_DENSITY_CELLS: Record<InitialChaptersLevel, MiniMapCell[]> = (() => {
+  const out = {} as Record<InitialChaptersLevel, MiniMapCell[]>;
+  for (const id of INITIAL_CHAPTERS_LEVELS) {
+    out[id] = dummyPatternCells(id);
+  }
+  return out;
+})();
+
+export function dummyDensityCells(
+  level: InitialChaptersLevel | unknown,
+): MiniMapCell[] {
+  return dummyPatternCells(level);
+}
+
+export function dummyDensityOccupiedCount(level: InitialChaptersLevel | unknown): number {
+  return dummyPatternCells(level).filter(isOccupiedCell).length;
+}
+
+export function dummyDensityBlockedCount(level: InitialChaptersLevel | unknown): number {
+  return dummyPatternCells(level).filter((cell) => cell.kind === "blocked").length;
+}
+
+/**
+ * 4-connected occupied clusters (blocked/empty cells split groups).
+ * Used to assert Islands has ≥3 separated cores.
+ */
+export function occupiedClusters(cells: MiniMapCell[]): MiniMapCell[][] {
+  const occupied = cells.filter(isOccupiedCell);
+  const keyOf = (cell: MiniMapCell) => getCellKey(cell.row, cell.col);
+  const byKey = new Map(occupied.map((cell) => [keyOf(cell), cell]));
+  const seen = new Set<string>();
+  const clusters: MiniMapCell[][] = [];
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const;
+
+  for (const start of occupied) {
+    const startKey = keyOf(start);
+    if (seen.has(startKey)) continue;
+    const cluster: MiniMapCell[] = [];
+    const queue = [start];
+    seen.add(startKey);
+    while (queue.length) {
+      const cur = queue.pop()!;
+      cluster.push(cur);
+      for (const [dr, dc] of dirs) {
+        const nextKey = getCellKey(cur.row + dr, cur.col + dc);
+        if (seen.has(nextKey)) continue;
+        const next = byKey.get(nextKey);
+        if (!next) continue;
+        seen.add(nextKey);
+        queue.push(next);
+      }
+    }
+    clusters.push(cluster);
+  }
+  return clusters;
+}
+
+export function dummyOccupiedClusterCount(level: InitialChaptersLevel | unknown): number {
+  return occupiedClusters(dummyPatternCells(level)).length;
 }
 
 /** Continue mini: occupancy of the stored plan steps (read-only). */
@@ -93,6 +131,7 @@ export function continueMiniCellsFromPlanSteps(
       row,
       col,
       status: statusById.get(String(id)),
+      kind: "occupied",
     });
   }
   return cells;
@@ -119,6 +158,23 @@ export const ILE_CONTINUE_MAP_PREVIEW_LABELS = {
   zoomIn: "Zoom in",
   zoomOut: "Zoom out",
 } as const;
+
+/** Shared dummy schematic frame so catalog cards keep one size. */
+export const DUMMY_PATTERN_FRAME = {
+  minRow: 0,
+  maxRow: 6,
+  minCol: 0,
+  maxCol: 6,
+} as const;
+
+export function miniMapDummyFrame(): {
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
+} {
+  return DUMMY_PATTERN_FRAME;
+}
 
 export function miniMapBounds(cells: MiniMapCell[]): {
   minRow: number;
@@ -150,3 +206,5 @@ export function miniMapHasCell(
   const key = getCellKey(row, col);
   return cells.find((cell) => getCellKey(cell.row, cell.col) === key);
 }
+
+

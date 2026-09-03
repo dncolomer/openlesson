@@ -93,6 +93,7 @@ export type SessionChromeProps = {
   onSaveExitNameChange?: (value: string) => void;
   onCancelSaveExitName?: () => void;
   onConfirmSaveExitName?: () => void;
+  onDiscardSaveExitName?: () => void;
   gatherWarning?: string | null;
   onDismissGatherWarning?: () => void;
   closeReviewBlocked?: boolean;
@@ -151,6 +152,7 @@ export function SessionChrome({
   onSaveExitNameChange,
   onCancelSaveExitName,
   onConfirmSaveExitName,
+  onDiscardSaveExitName,
   gatherWarning = null,
   onDismissGatherWarning,
   closeReviewBlocked = false,
@@ -315,11 +317,15 @@ export function SessionChrome({
         open={showSaveExitNameDialog}
         onCancel={() => onCancelSaveExitName?.()}
         onConfirm={() => onConfirmSaveExitName?.()}
+        onTertiary={onDiscardSaveExitName ? () => onDiscardSaveExitName() : undefined}
         variant="neutral"
         title={t("session.nameSessionTitle")}
         description={t("session.nameSessionBody")}
         confirmLabel={t("session.nameSessionConfirm")}
         cancelLabel={t("session.nameSessionStay")}
+        tertiaryLabel={t("session.nameSessionDiscard")}
+        tertiaryTone="ghost"
+        tertiaryTestId="ile-exit-without-saving"
         confirmTone="primary"
         autoFocusConfirm={false}
         confirmOnEnter={false}

@@ -7,6 +7,7 @@ import {
   isUuid,
 } from "@/lib/domain/types";
 import { logToolUsage } from "@/lib/storage/media";
+import { isIleSessionUnsavedExit } from "@/lib/ile-session-name";
 
 // ---- Helpers: map DB rows → Session ----
 
@@ -141,7 +142,9 @@ export async function getSessions(): Promise<Session[]> {
     probesBySession.set(p.session_id, existing);
   }
 
-  return sessionRows.map((s: { id: string }) => mapDbSession(s, probesBySession.get(s.id) || []));
+  return sessionRows
+    .filter((s: { metadata?: unknown }) => !isIleSessionUnsavedExit(s.metadata))
+    .map((s: { id: string }) => mapDbSession(s, probesBySession.get(s.id) || []));
 }
 
 export async function saveSession(session: Session): Promise<void> {

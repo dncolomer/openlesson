@@ -95,6 +95,7 @@ export {
 export {
   createSessionPlan,
   getSessionPlan,
+  deleteSessionPlanBySessionId,
   sessionPlanHasChapters,
   sessionPlanHasChaptersFromRow,
   sessionPlanHasChaptersQuery,

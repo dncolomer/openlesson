@@ -3,6 +3,7 @@
  * and place a chosen one next to the completed chapter on the grid.
  */
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
+import { isChapterSlotBlocked } from "@/lib/ile-chapter-blocked";
 
 export type ChapterFollowUpSuggestion = {
   title: string;
@@ -92,7 +93,12 @@ export function findClosestEmptyChapterSlot(
     offsets.sort(compareOffsets);
     for (const { dr, dc } of offsets) {
       const next = { row: row + dr, col: col + dc };
-      if (!isChapterCellOccupied(plan, next.row, next.col)) return next;
+      if (
+        !isChapterCellOccupied(plan, next.row, next.col) &&
+        !isChapterSlotBlocked(plan, next.row, next.col)
+      ) {
+        return next;
+      }
     }
   }
 
@@ -104,7 +110,11 @@ export function findClosestEmptyChapterSlot(
     }
   }
   let fallbackCol = maxCol + 1;
-  while (isChapterCellOccupied(plan, row, fallbackCol) && fallbackCol < maxCol + 200) {
+  while (
+    (isChapterCellOccupied(plan, row, fallbackCol) ||
+      isChapterSlotBlocked(plan, row, fallbackCol)) &&
+    fallbackCol < maxCol + 200
+  ) {
     fallbackCol += 1;
   }
   return { row, col: fallbackCol };

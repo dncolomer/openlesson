@@ -16,8 +16,10 @@ import {
   displayChapterMapIcon,
   isTimUnopenedChapter,
 } from "@/lib/ile-tim-chapter-complete";
+import { isChapterSlotBlocked, relocateChapterStepsOffBlocked } from "@/lib/ile-chapter-blocked";
 
 export function isChapterSlotAvailable(plan: SessionPlan, row: number, col: number) {
+  if (isChapterSlotBlocked(plan, row, col)) return false;
   const nodes = sessionStepsToSkillGridNodes(plan.steps);
   const { occupancy } = buildSkillGridLayout(nodes);
   if (isCellOccupied(occupancy, row, col)) return false;
@@ -155,8 +157,13 @@ export function ensureChapterGridPositions(plan: SessionPlan): { plan: SessionPl
     };
   });
 
+  const relocated = relocateChapterStepsOffBlocked(steps, plan.unusable_cells || []);
+  const relocatedChanged = relocated.some((step, index) => {
+    const prev = steps[index];
+    return step.position_x !== prev.position_x || step.position_y !== prev.position_y;
+  });
   return {
-    plan: changed ? { ...plan, steps } : plan,
-    changed,
+    plan: changed || relocatedChanged ? { ...plan, steps: relocated } : plan,
+    changed: changed || relocatedChanged,
   };
 }

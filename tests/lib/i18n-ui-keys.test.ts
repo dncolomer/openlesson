@@ -96,6 +96,8 @@ describe("UI i18n surface keys resolve in en.json", () => {
       "sessionEnd.returnToWorkspace",
       "session.nameSessionTitle",
       "session.nameSessionConfirm",
+      "session.nameSessionDiscard",
+      "session.nameSessionBody",
     ];
     const localeFiles = fs
       .readdirSync(path.join(ROOT, "messages"))

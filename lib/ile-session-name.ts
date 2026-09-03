@@ -41,3 +41,28 @@ export function ileSessionListDisplayName(input: {
   const id = String(input.sessionId || "").trim();
   return id || "Session";
 }
+
+/**
+ * Exit-without-saving: hide from Previous Sessions. Proof of Work is stored
+ * independently (`workspace_proof_of_work`) and must not be deleted.
+ */
+export const ILE_SESSION_UNSAVED_EXIT_META_KEY = "unsaved_exit" as const;
+
+export function isIleSessionUnsavedExit(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+  return (
+    (metadata as Record<string, unknown>)[ILE_SESSION_UNSAVED_EXIT_META_KEY] ===
+    true
+  );
+}
+
+export function applyIleUnsavedExitToMetadata<T extends Record<string, unknown>>(
+  metadata: T | null | undefined,
+): T {
+  return {
+    ...(metadata || {}),
+    [ILE_SESSION_UNSAVED_EXIT_META_KEY]: true,
+  } as T;
+}

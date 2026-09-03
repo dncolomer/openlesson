@@ -5,6 +5,7 @@ import {
   type SessionPlanStep,
   validatePlanSteps,
 } from "@/lib/domain/types";
+import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 
 // ---- Session Plans (Session Planner feature) ----
 
@@ -19,6 +20,7 @@ function mapDbSessionPlan(p: any): SessionPlan {
     description: p.description ?? undefined,
     steps: (p.steps || []) as SessionPlanStep[],
     currentStepIndex: p.current_step_index || 0,
+    unusable_cells: normalizeUnusableCells(p.unusable_cells),
     createdAt: p.created_at,
     updatedAt: p.updated_at,
   };
@@ -26,7 +28,13 @@ function mapDbSessionPlan(p: any): SessionPlan {
 
 export async function createSessionPlan(
   sessionId: string,
-  plan: { goal: string; strategy: string; description?: string; steps: SessionPlanStep[] },
+  plan: {
+    goal: string;
+    strategy: string;
+    description?: string;
+    steps: SessionPlanStep[];
+    unusable_cells?: Array<{ row: number; col: number }> | null;
+  },
    
   supabaseClient?: any,
   options?: { userId?: string }
@@ -53,6 +61,7 @@ export async function createSessionPlan(
     description: plan.description || null,
     steps: plan.steps,
     current_step_index: 0,
+    unusable_cells: normalizeUnusableCells(plan.unusable_cells),
     updated_at: new Date().toISOString(),
   };
 
@@ -79,6 +88,7 @@ export async function createSessionPlan(
         description: plan.description || null,
         steps: plan.steps,
         current_step_index: 0,
+        unusable_cells: normalizeUnusableCells(plan.unusable_cells),
         updated_at: new Date().toISOString(),
       })
       .eq("session_id", sessionId)
@@ -189,6 +199,21 @@ export async function sessionPlanHasChapters(
   return status === "exists";
 }
 
+/** Drop the chapter map for a session. Does not touch Proof of Work. */
+export async function deleteSessionPlanBySessionId(
+  sessionId: string,
+  supabaseClient?: any,
+): Promise<void> {
+  const id = String(sessionId || "").trim();
+  if (!id) return;
+  const supabase = supabaseClient || createClient();
+  const { error } = await supabase
+    .from("session_plans")
+    .delete()
+    .eq("session_id", id);
+  if (error) throw new Error(error.message || "Failed to delete session plan");
+}
+
 export async function updateSessionPlan(
   workspaceId: string,
   updates: {
@@ -196,6 +221,7 @@ export async function updateSessionPlan(
     strategy?: string;
     steps?: SessionPlanStep[];
     currentStepIndex?: number;
+    unusable_cells?: Array<{ row: number; col: number }> | null;
   },
    
   supabaseClient?: any
@@ -215,6 +241,9 @@ export async function updateSessionPlan(
   if (updates.strategy !== undefined) updateData.strategy = updates.strategy;
   if (updates.steps !== undefined) updateData.steps = updates.steps;
   if (updates.currentStepIndex !== undefined) updateData.current_step_index = updates.currentStepIndex;
+  if (updates.unusable_cells !== undefined) {
+    updateData.unusable_cells = normalizeUnusableCells(updates.unusable_cells);
+  }
 
   const { data, error } = await supabase
     .from("session_plans")

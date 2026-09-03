@@ -19,10 +19,16 @@ import {
 } from "@/lib/block-previous-sessions";
 import {
   applyIleSessionNameToMetadata,
+  applyIleUnsavedExitToMetadata,
   ileSessionListDisplayName,
   ileSessionNameFromMetadata,
+  isIleSessionUnsavedExit,
   normalizeIleSessionName,
 } from "@/lib/ile-session-name";
+import {
+  ileUnsavedExitSessionPatch,
+  SESSION_PLAN_DISCARD_PATH,
+} from "@/lib/ile-unsaved-exit";
 import {
   continueMiniCellsFromPlanSteps,
   dummyDensityOccupiedCount,
@@ -159,6 +165,51 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
     expect(ileSessionListDisplayName(list[0])).toBe("Graph walk");
   });
 
+  it("omits sessions exited without saving and does not drop Proof of Work", async () => {
+    expect(isIleSessionUnsavedExit({ unsaved_exit: true })).toBe(true);
+    expect(isIleSessionUnsavedExit({ session_name: "Kept" })).toBe(false);
+    expect(applyIleUnsavedExitToMetadata({ block_id: "b1" }).unsaved_exit).toBe(
+      true,
+    );
+    expect(ileUnsavedExitSessionPatch({ session_name: "x" }).metadata.unsaved_exit).toBe(
+      true,
+    );
+    expect(SESSION_PLAN_DISCARD_PATH).toBe("/api/session-plan/discard");
+
+    const client = createListClient({
+      joins: [
+        { session_id: "sess-kept", created_at: "2026-08-28T05:42:58Z" },
+        { session_id: "sess-discard", created_at: "2026-08-28T05:43:58Z" },
+      ],
+      sessions: [
+        {
+          id: "sess-kept",
+          created_at: "2026-08-28T05:42:58.000Z",
+          status: "paused",
+          metadata: { session_name: "Graph walk" },
+        },
+        {
+          id: "sess-discard",
+          created_at: "2026-08-28T05:43:58.000Z",
+          status: "paused",
+          metadata: { unsaved_exit: true },
+        },
+      ],
+    });
+    const list = await listBlockPreviousSessions(client, {
+      workspaceId: "ws-1",
+      blockId: "block-1",
+    });
+    expect(list.map((row) => row.sessionId)).toEqual(["sess-kept"]);
+
+    const discardRoute = read("app/api/session-plan/discard/route.ts");
+    expect(discardRoute).toContain("deleteSessionPlanBySessionId");
+    expect(discardRoute).toContain("ileUnsavedExitSessionPatch");
+    expect(discardRoute).toContain("guardSessionRoute");
+    expect(discardRoute).not.toMatch(/\.from\(\s*["']workspace_proof_of_work["']\s*\)/);
+    expect(discardRoute).toContain("workspace_proof_of_work");
+  });
+
   it("normalize keeps id + timestamp and drops empties", () => {
     expect(
       normalizeBlockPreviousSessions([
@@ -223,8 +274,12 @@ describe("welcome branch continue vs new", () => {
     expect(welcome).toContain("ileWelcomeShowsRegenerate");
     expect(welcome).toContain("data-ile-continue-welcome");
     expect(welcome).toContain("IleContinueMapPreview");
-    expect(welcome).toContain("data-density-level");
-    expect(welcome).toContain("INITIAL_CHAPTERS_LEVELS");
+    expect(welcome).toContain("InitialChaptersPicker");
+    const picker = read("components/InitialChaptersPicker.tsx");
+    expect(picker).toContain("data-density-level");
+    expect(picker).toContain("INITIAL_CHAPTERS_CATALOG");
+    expect(picker).toContain("data-initial-chapters-prev");
+    expect(picker).toContain("data-initial-chapters-next");
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
     const sizeAt = welcome.indexOf("showSizePicker");
     expect(continueAt).toBeGreaterThan(-1);
@@ -233,13 +288,11 @@ describe("welcome branch continue vs new", () => {
 });
 
 describe("dummy density occupancy + continue mini read-only", () => {
-  it("narrow is sparser than mid is sparser than broad, and is dummy not session_plans", () => {
-    const n = dummyDensityOccupiedCount("narrow");
-    const m = dummyDensityOccupiedCount("mid");
-    const b = dummyDensityOccupiedCount("broad");
+  it("random sparse is sparser than random dense, and dummy maps are not session_plans", () => {
+    const n = dummyDensityOccupiedCount("random_sparse");
+    const b = dummyDensityOccupiedCount("random_dense");
     expect(n).toBeGreaterThan(0);
-    expect(m).toBeGreaterThan(n);
-    expect(b).toBeGreaterThan(m);
+    expect(b).toBeGreaterThan(n);
 
     const miniLib = read("lib/ile-chapter-mini-map.ts");
     expect(miniLib).toContain("Dummy occupancy");
@@ -247,8 +300,13 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(miniLib).toContain("DUMMY_DENSITY_CELLS");
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
-    expect(welcome).toContain("dummyDensityCells(level)");
-    expect(welcome).toContain("dummy");
+    expect(welcome).toContain("InitialChaptersPicker");
+    const picker = read("components/InitialChaptersPicker.tsx");
+    expect(picker).toContain("dummyDensityCells");
+    expect(picker).toContain("dummy");
+    const miniUi = read("components/ChapterMiniMap.tsx");
+    expect(miniUi).toContain('data-mini-cell={cellKind}');
+    expect(miniUi).toContain('"blocked"');
   });
 
   it("continue mini is built from stored plan steps and is not interactive", () => {
@@ -365,10 +423,23 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(chrome).toContain('testId="ile-save-exit-name"');
     expect(chrome).toContain("data-ile-session-name");
     expect(chrome).toContain('t("session.nameSessionTitle")');
+    expect(chrome).toContain('t("session.nameSessionDiscard")');
+    expect(chrome).toContain('t("session.nameSessionBody")');
+    expect(chrome).toContain('tertiaryTestId="ile-exit-without-saving"');
     expect(view).toContain("setShowSaveExitNameDialog(true)");
     expect(view).toContain("pauseAndGoToDashboard(saveExitName)");
+    expect(view).toContain("persistSession: false");
     expect(phase).toContain("applyIleSessionNameToMetadata");
-    expect(phase).toContain("async (sessionName?: string | null)");
+    expect(phase).toContain("discardUnsavedIleSession");
+    expect(phase).toContain("async (");
+    expect(phase).toContain("persistSession");
+
+    const en = JSON.parse(read("messages/en.json")) as {
+      session: Record<string, string>;
+    };
+    expect(en.session.nameSessionBody).toMatch(/Proof of Work/i);
+    expect(en.session.nameSessionBody).toMatch(/map will be lost/i);
+    expect(en.session.nameSessionDiscard).toMatch(/without saving/i);
 
     writeScratch(
       "previous-sessions-excerpts.txt",
@@ -380,9 +451,9 @@ describe("Practice drawer labels and previous-sessions UI", () => {
         `insertNew=${ileLaunchInsertsNewSession("new")}`,
         `sizePickerExists=${ileWelcomeShowsSizePicker("exists")}`,
         `sizePickerEmpty=${ileWelcomeShowsSizePicker("empty")}`,
-        `dummyNarrow=${dummyDensityOccupiedCount("narrow")}`,
-        `dummyMid=${dummyDensityOccupiedCount("mid")}`,
-        `dummyBroad=${dummyDensityOccupiedCount("broad")}`,
+        `dummySparse=${dummyDensityOccupiedCount("random_sparse")}`,
+        `dummyDense=${dummyDensityOccupiedCount("random_dense")}`,
+        `dummyIslands=${dummyDensityOccupiedCount("islands")}`,
         `miniInteractive=${miniMapInteractive()}`,
       ].join("\n"),
     );

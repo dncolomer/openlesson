@@ -89,5 +89,8 @@ describe("chapter slot availability", () => {
 
     expect(isChapterSlotAvailable(plan, 0, 0)).toBe(false);
     expect(isChapterSlotAvailable(plan, 1, 0)).toBe(true);
+    expect(
+      isChapterSlotAvailable({ ...plan, unusable_cells: [{ row: 1, col: 0 }] }, 1, 0),
+    ).toBe(false);
   });
 });

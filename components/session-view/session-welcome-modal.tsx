@@ -1,18 +1,16 @@
 "use client";
 
 import { AestheticPicker } from "@/components/AestheticPicker";
-import { ChapterMiniMap } from "@/components/ChapterMiniMap";
+import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { DialogFrame } from "@/components/ui/DialogFrame";
-import { dummyDensityCells } from "@/lib/ile-chapter-mini-map";
 import {
   ileWelcomeShowsContinuePreview,
   ileWelcomeShowsRegenerate,
   ileWelcomeShowsSizePicker,
 } from "@/lib/ile-welcome-chapters";
-import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import {
   coerceSpokenLocale,
   spokenLanguageNames,
@@ -230,51 +228,13 @@ export function SessionWelcomeModal({
                             ) : null}
                           </div>
                           {showSizePicker ? (
-                            <div className="grid grid-cols-3 gap-2.5">
-                              {INITIAL_CHAPTERS_LEVELS.map((level) => {
-                                const selected = initialChapters === level;
-                                const titleKey =
-                                  level === "narrow"
-                                    ? "session.initialChaptersNarrow"
-                                    : level === "mid"
-                                      ? "session.initialChaptersMid"
-                                      : "session.initialChaptersBroad";
-                                const descKey =
-                                  level === "narrow"
-                                    ? "session.initialChaptersNarrowDesc"
-                                    : level === "mid"
-                                      ? "session.initialChaptersMidDesc"
-                                      : "session.initialChaptersBroadDesc";
-                                return (
-                                  <button
-                                    key={level}
-                                    type="button"
-                                    data-density-level={level}
-                                    onClick={() => onInitialChaptersChange(level)}
-                                    disabled={isButtonDisabled}
-                                    className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed ${
-                                      selected
-                                        ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
-                                        : "border-neutral-800 bg-neutral-950 hover:border-neutral-600 disabled:hover:border-neutral-800"
-                                    } ${isButtonDisabled ? "opacity-50" : ""}`}
-                                  >
-                                    <span className="block text-xs font-medium leading-tight text-neutral-200">
-                                      {t(titleKey)}
-                                    </span>
-                                    <span className="mt-1.5 block text-[11px] leading-snug text-neutral-500">
-                                      {t(descKey)}
-                                    </span>
-                                    <div className="mt-2">
-                                      <ChapterMiniMap
-                                        cells={dummyDensityCells(level)}
-                                        dummy
-                                        density={level}
-                                      />
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                            <InitialChaptersPicker
+                              value={initialChapters}
+                              onChange={onInitialChaptersChange}
+                              disabled={isButtonDisabled}
+                              t={t}
+                              i18nPrefix="session"
+                            />
                           ) : null}
                           {statusUnknown && (
                             <div

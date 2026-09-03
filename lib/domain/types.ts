@@ -121,6 +121,8 @@ export interface SessionPlan {
   description?: string; // Brief summary for display purposes
   steps: SessionPlanStep[];
   currentStepIndex: number;
+  /** Blocked / non-placeable chapter-map cells (pattern corridors). */
+  unusable_cells?: Array<{ row: number; col: number }> | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -306,6 +306,7 @@ export function ChapterMapPanel({
         ileToken={ileToken}
         learnerScopeId={learnerScopeId}
         locale={locale}
+        unusableCells={plan.unusable_cells ?? []}
         suggestMode="chapter"
         recenterCell={activeCell}
         onAddBlock={handleAddAtCell}

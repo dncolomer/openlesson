@@ -1086,6 +1086,10 @@ export function SessionView({
           setShowSaveExitNameDialog(false);
           void pauseAndGoToDashboard(saveExitName);
         }}
+        onDiscardSaveExitName={() => {
+          setShowSaveExitNameDialog(false);
+          void pauseAndGoToDashboard(null, { persistSession: false });
+        }}
         isRecording={isRecording}
         isPaused={isPaused}
         isWebcamEnabled={isWebcamEnabled}

@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
         strategy: result.plan.strategy,
         description: result.plan.description,
         steps: toPersistedCreatePlanSteps(result.plan.steps),
+        unusable_cells: result.plan.unusable_cells ?? [],
       },
       supabase,
       { userId: subjectId },

@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
+import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
-  INITIAL_CHAPTERS_LEVELS,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 
@@ -334,42 +334,18 @@ export function PlanModeSelect({
         )}
       </div>
 
-      {/* Initial chapters — how many skill-grid blocks to generate */}
+      {/* Initial chapters — named technique layouts or random sparse/dense */}
       <div className="mb-6">
         <label className={`block text-sm mb-3 ${styles.label}`}>
           {t("planMode.initialChapters")}
         </label>
-        <div className="grid grid-cols-3 gap-2">
-          {INITIAL_CHAPTERS_LEVELS.map((level) => {
-            const selected = initialChapters === level;
-            const titleKey =
-              level === "narrow"
-                ? "planMode.initialChaptersNarrow"
-                : level === "mid"
-                  ? "planMode.initialChaptersMid"
-                  : "planMode.initialChaptersBroad";
-            const descKey =
-              level === "narrow"
-                ? "planMode.initialChaptersNarrowDesc"
-                : level === "mid"
-                  ? "planMode.initialChaptersMidDesc"
-                  : "planMode.initialChaptersBroadDesc";
-            return (
-              <button
-                key={level}
-                type="button"
-                onClick={() => setInitialChapters(level)}
-                disabled={isGenerating}
-                className={`rounded-none border px-2.5 py-2.5 text-left transition-colors disabled:opacity-50 ${
-                  selected ? styles.weekActive : styles.weekInactive
-                }`}
-              >
-                <span className="block text-xs font-medium leading-tight">{t(titleKey)}</span>
-                <span className="block text-[10px] opacity-70 leading-snug mt-1">{t(descKey)}</span>
-              </button>
-            );
-          })}
-        </div>
+        <InitialChaptersPicker
+          value={initialChapters}
+          onChange={setInitialChapters}
+          disabled={isGenerating}
+          t={t}
+          i18nPrefix="planMode"
+        />
       </div>
 
       {/* Weeks Selector */}

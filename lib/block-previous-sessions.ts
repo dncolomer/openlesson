@@ -2,7 +2,10 @@
  * Practice drawer: list this block’s past ILE sessions and continue by id.
  * Continue never inserts a new `sessions` row.
  */
-import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
+import {
+  ileSessionNameFromMetadata,
+  isIleSessionUnsavedExit,
+} from "@/lib/ile-session-name";
 
 export const SEE_PREVIOUS_SESSIONS_LABEL = "See Previous Sessions";
 export const START_NEW_SESSION_LABEL = "Start a New Session";
@@ -167,17 +170,19 @@ export async function listBlockPreviousSessions(
   }
 
   return normalizeBlockPreviousSessions(
-    joinRows.map((row) => {
-      const rec = row as { session_id?: string; created_at?: string };
-      const id = String(rec.session_id || "").trim();
-      const session = byId.get(id);
-      return {
-        sessionId: id,
-        startedAt: session?.created_at || rec.created_at,
-        status: session?.status,
-        metadata: session?.metadata,
-      };
-    }),
+    joinRows
+      .map((row) => {
+        const rec = row as { session_id?: string; created_at?: string };
+        const id = String(rec.session_id || "").trim();
+        const session = byId.get(id);
+        return {
+          sessionId: id,
+          startedAt: session?.created_at || rec.created_at,
+          status: session?.status,
+          metadata: session?.metadata,
+        };
+      })
+      .filter((row) => !isIleSessionUnsavedExit(row.metadata)),
   );
 }
 

@@ -69,7 +69,7 @@ describe("workspace create modes", () => {
     });
     expect(prompt).toContain("Linear Algebra");
     expect(prompt).toContain("3Blue1Brown");
-    expect(prompt).toContain(String(INITIAL_CHAPTERS_BANDS.narrow.target));
+    expect(prompt).toContain(String(INITIAL_CHAPTERS_BANDS.random_sparse.target));
     expect(prompt).toMatch(/position_x|grid|spatial|origin/i);
   });
 
@@ -115,7 +115,7 @@ describe("workspace create modes", () => {
     expect(prompt).toContain(goalPrompt);
     expect(prompt).toMatch(/GOAL|goal/i);
     expect(prompt).toContain("playbook.pdf");
-    expect(prompt).toContain(String(INITIAL_CHAPTERS_BANDS.mid.target));
+    expect(prompt).toContain(String(INITIAL_CHAPTERS_BANDS.islands.target));
   });
 
   it("API create entry rejects blank/template and accepts files_goal", () => {

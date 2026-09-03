@@ -5,13 +5,28 @@ import path from "path";
 import {
   DEFAULT_INITIAL_CHAPTERS,
   INITIAL_CHAPTERS_BANDS,
+  INITIAL_CHAPTERS_CATALOG,
   INITIAL_CHAPTERS_LEVELS,
+  INITIAL_CHAPTERS_TECHNIQUE_IDS,
   SPATIAL_MAP_LAYOUT_RULES,
+  blockedChapterSlotsFromPattern,
   formatInitialChaptersForPrompt,
   getInitialChaptersBand,
   parseInitialChaptersLevel,
   resolveInitialChaptersFromBody,
+  stepInitialChaptersCatalog,
 } from "@/lib/initial-chapters";
+import {
+  isChapterSlotBlocked,
+  relocateChapterStepsOffBlocked,
+} from "@/lib/ile-chapter-blocked";
+import {
+  dummyDensityBlockedCount,
+  dummyDensityOccupiedCount,
+  dummyOccupiedClusterCount,
+  dummyPatternCells,
+  miniMapDummyFrame,
+} from "@/lib/ile-chapter-mini-map";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
@@ -28,40 +43,143 @@ import { skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import type { SessionPlan } from "@/lib/domain/types";
 
-describe("initial chapters → count bands", () => {
-  it("exposes exactly three levels with raised counts", () => {
-    expect(INITIAL_CHAPTERS_LEVELS).toEqual(["narrow", "mid", "broad"]);
-    expect(DEFAULT_INITIAL_CHAPTERS).toBe("mid");
+describe("initial chapters → catalog + count bands", () => {
+  it("exposes six technique ids including islands plus random sparse/dense", () => {
+    expect(INITIAL_CHAPTERS_TECHNIQUE_IDS).toEqual([
+      "islands",
+      "spiral",
+      "ladder",
+      "hub",
+      "tracks",
+      "ring",
+    ]);
+    expect(INITIAL_CHAPTERS_TECHNIQUE_IDS).toHaveLength(6);
+    expect(INITIAL_CHAPTERS_TECHNIQUE_IDS).toContain("islands");
+    expect(INITIAL_CHAPTERS_LEVELS).toEqual([
+      "islands",
+      "spiral",
+      "ladder",
+      "hub",
+      "tracks",
+      "ring",
+      "random_sparse",
+      "random_dense",
+    ]);
+    expect(DEFAULT_INITIAL_CHAPTERS).toBe("islands");
+    expect(INITIAL_CHAPTERS_CATALOG).toHaveLength(INITIAL_CHAPTERS_LEVELS.length);
+    for (const option of INITIAL_CHAPTERS_CATALOG) {
+      expect(option.label.length).toBeGreaterThan(0);
+      expect(option.description.length).toBeGreaterThan(12);
+      expect(option.occupied.length).toBeGreaterThan(0);
+    }
+    const en = JSON.parse(
+      readFileSync(path.join(process.cwd(), "messages/en.json"), "utf8"),
+    ) as { session: Record<string, string>; planMode: Record<string, string> };
+    for (const option of INITIAL_CHAPTERS_CATALOG) {
+      expect(en.session[option.titleKey]).toBeTruthy();
+      expect(en.session[option.descKey]).toBeTruthy();
+      expect(en.planMode[option.titleKey]).toBeTruthy();
+      expect(en.planMode[option.descKey]).toBeTruthy();
+    }
   });
 
-  it("orders bands narrow < mid < broad with broad above prior ~12 target scale", () => {
-    const narrow = INITIAL_CHAPTERS_BANDS.narrow;
-    const mid = INITIAL_CHAPTERS_BANDS.mid;
-    const broad = INITIAL_CHAPTERS_BANDS.broad;
-
-    expect(narrow.target).toBeGreaterThanOrEqual(6);
-    expect(mid.target).toBeGreaterThan(narrow.target);
-    expect(broad.target).toBeGreaterThan(mid.target);
-    expect(broad.target).toBeGreaterThan(12);
-    expect(broad.max).toBeGreaterThan(14);
-    expect(narrow.max).toBeLessThanOrEqual(mid.min);
+  it("keeps random-sparse occupied count below random-dense at the old broad scale", () => {
+    const sparse = INITIAL_CHAPTERS_BANDS.random_sparse;
+    const dense = INITIAL_CHAPTERS_BANDS.random_dense;
+    expect(sparse.target).toBeGreaterThanOrEqual(6);
+    expect(dense.target).toBeGreaterThan(sparse.target);
+    expect(dense.target).toBeGreaterThan(12);
+    expect(dense.max).toBeGreaterThan(14);
+    expect(sparse.max).toBeLessThanOrEqual(dense.min);
+    expect(dummyDensityOccupiedCount("random_sparse")).toBeLessThan(
+      dummyDensityOccupiedCount("random_dense"),
+    );
+    expect(dummyDensityOccupiedCount("random_dense")).toBeGreaterThanOrEqual(18);
+    const frame = miniMapDummyFrame();
+    expect(frame).toEqual({ minRow: 0, maxRow: 6, minCol: 0, maxCol: 6 });
+    for (const id of INITIAL_CHAPTERS_LEVELS) {
+      const cells = dummyPatternCells(id);
+      expect(cells.every((c) => c.row >= frame.minRow && c.row <= frame.maxRow)).toBe(true);
+      expect(cells.every((c) => c.col >= frame.minCol && c.col <= frame.maxCol)).toBe(true);
+    }
   });
 
-  it("parses unknown values to mid and resolves body field aliases", () => {
-    expect(parseInitialChaptersLevel("narrow")).toBe("narrow");
+  it("maps legacy narrow/broad/mid and unknown values", () => {
+    expect(parseInitialChaptersLevel("narrow")).toBe("random_sparse");
+    expect(parseInitialChaptersLevel("broad")).toBe("random_dense");
+    expect(parseInitialChaptersLevel("mid")).toBe("islands");
+    expect(parseInitialChaptersLevel("islands")).toBe("islands");
     expect(parseInitialChaptersLevel("nope")).toBe(DEFAULT_INITIAL_CHAPTERS);
-    expect(resolveInitialChaptersFromBody({ initial_chapters: "broad" })).toBe("broad");
-    expect(resolveInitialChaptersFromBody({ initialChapters: "narrow" })).toBe("narrow");
-    expect(resolveInitialChaptersFromBody({ mapSize: "broad" })).toBe("broad");
+    expect(resolveInitialChaptersFromBody({ initial_chapters: "broad" })).toBe("random_dense");
+    expect(resolveInitialChaptersFromBody({ initialChapters: "narrow" })).toBe("random_sparse");
+    expect(resolveInitialChaptersFromBody({ mapSize: "narrow" })).toBe("random_sparse");
+    expect(resolveInitialChaptersFromBody({ mapSize: "broad" })).toBe("random_dense");
+    expect(resolveInitialChaptersFromBody({ initial_chapters: "islands" })).toBe("islands");
     expect(resolveInitialChaptersFromBody({})).toBe(DEFAULT_INITIAL_CHAPTERS);
   });
 
+  it("Islands schematic has ≥3 separated clusters plus blocked or empty corridors", () => {
+    expect(dummyOccupiedClusterCount("islands")).toBeGreaterThanOrEqual(3);
+    expect(dummyDensityBlockedCount("islands")).toBeGreaterThan(0);
+    const islandsPrompt = formatInitialChaptersForPrompt("islands");
+    expect(islandsPrompt.layoutInstruction).toMatch(/cluster|island/i);
+    expect(islandsPrompt.layoutInstruction).toMatch(/bridge/i);
+    expect(islandsPrompt.layoutInstruction).toMatch(/blocked|empty|corridor/i);
+    expect(islandsPrompt.countInstruction).toMatch(/cluster|island/i);
+    expect(islandsPrompt.countInstruction).toMatch(/bridge/i);
+    expect(blockedChapterSlotsFromPattern("islands").length).toBeGreaterThan(0);
+    expect(blockedChapterSlotsFromPattern("random_sparse")).toEqual([]);
+    expect(islandsPrompt.countInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
+    expect(islandsPrompt.countInstruction).toMatch(/position_x=/);
+    expect(formatInitialChaptersForPrompt("random_sparse").countInstruction).not.toMatch(
+      /BLOCKED CHAPTER SLOTS/i,
+    );
+  });
+
+  it("relocates generated chapters off blocked slots", () => {
+    const blocked = blockedChapterSlotsFromPattern("islands");
+    expect(blocked.length).toBeGreaterThan(0);
+    const hit = blocked[0];
+    const steps = relocateChapterStepsOffBlocked(
+      [
+        {
+          id: "s1",
+          description: "On a blocked cell",
+          status: "pending",
+          type: "task",
+          order: 1,
+          position_x: hit.col,
+          position_y: hit.row,
+        },
+      ],
+      blocked,
+    );
+    expect(steps[0].position_x).not.toBe(hit.col);
+    expect(steps[0].position_y).not.toBeUndefined();
+    expect(
+      blocked.some((cell) => cell.col === steps[0].position_x && cell.row === steps[0].position_y),
+    ).toBe(false);
+    expect(
+      isChapterSlotBlocked({ unusable_cells: blocked }, hit.row, hit.col),
+    ).toBe(true);
+  });
+
   it("formats prompt count instructions from the chosen band", () => {
-    const broad = formatInitialChaptersForPrompt("broad");
-    expect(broad.countInstruction).toContain(String(INITIAL_CHAPTERS_BANDS.broad.target));
-    expect(broad.countInstruction).toMatch(/initial chapters/i);
+    const dense = formatInitialChaptersForPrompt("random_dense");
+    expect(dense.countInstruction).toContain(String(INITIAL_CHAPTERS_BANDS.random_dense.target));
+    expect(dense.countInstruction).toMatch(/initial chapters/i);
     expect(getInitialChaptersBand("narrow").max).toBeLessThan(
       getInitialChaptersBand("broad").min,
+    );
+    expect(formatInitialChaptersForPrompt("random_sparse").layoutInstruction).toBe("");
+  });
+
+  it("carousel arrows wrap through the catalog", () => {
+    expect(stepInitialChaptersCatalog("islands", 1)).toBe("spiral");
+    expect(stepInitialChaptersCatalog("islands", -1)).toBe("random_dense");
+    expect(stepInitialChaptersCatalog("random_dense", 1)).toBe("islands");
+    expect(stepInitialChaptersCatalog("narrow", 1)).toBe(
+      stepInitialChaptersCatalog("random_sparse", 1),
     );
   });
 });
@@ -72,11 +190,11 @@ describe("session plan create prompt composition", () => {
       problem: "Binary search trees",
       objectives: ["Insert nodes", "Balance a tree"],
       calibration: "2 prior sessions",
-      initialChapters: "narrow",
+      initialChapters: "random_sparse",
     });
 
     expect(narrowPrompt).toContain("Binary search trees");
-    expect(narrowPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.narrow.target));
+    expect(narrowPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.random_sparse.target));
     expect(narrowPrompt).toMatch(/position_x=0,\s*position_y=0|\(0,\s*0\)|position_x=0/);
     expect(narrowPrompt).toMatch(/negative/i);
     expect(narrowPrompt).toMatch(/keyword/);
@@ -90,12 +208,20 @@ describe("session plan create prompt composition", () => {
 
     const broadPrompt = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
       problem: "Binary search trees",
-      initialChapters: "broad",
+      initialChapters: "random_dense",
     });
-    expect(broadPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.broad.target));
-    expect(INITIAL_CHAPTERS_BANDS.broad.target).toBeGreaterThan(
-      INITIAL_CHAPTERS_BANDS.narrow.target,
+    expect(broadPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.random_dense.target));
+    expect(INITIAL_CHAPTERS_BANDS.random_dense.target).toBeGreaterThan(
+      INITIAL_CHAPTERS_BANDS.random_sparse.target,
     );
+    const islandsPrompt = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
+      problem: "Binary search trees",
+      initialChapters: "islands",
+    });
+    expect(islandsPrompt).toMatch(/cluster|island/i);
+    expect(islandsPrompt).toMatch(/bridge/i);
+    expect(islandsPrompt).toMatch(/blocked|empty|corridor/i);
+    expect(islandsPrompt).toMatch(/BLOCKED CHAPTER SLOTS/i);
   });
 
   it("default prompt template encodes multi-quadrant example coords", () => {
@@ -186,22 +312,22 @@ describe("workspace spatial normalize + prompts", () => {
   it("composes workspace prompts with initial chapters and signed layout rules", () => {
     const agentPrompt = composeWorkspaceSpatialGeneratePrompt({
       topicOrPrompt: "Vector databases",
-      initialChapters: "broad",
+      initialChapters: "random_dense",
       fileContext: "\nInitial files: notes.md",
     });
     expect(agentPrompt).toContain("Vector databases");
-    expect(agentPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.broad.target));
+    expect(agentPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.random_dense.target));
     expect(agentPrompt).toMatch(/position_x=0|position_x\": 0|\(0, 0\)/);
     expect(agentPrompt).toMatch(/negative/i);
     expect(agentPrompt).toMatch(/branch/i);
 
     const planPrompt = composeWorkspacePlanGeneratePrompt({
       topic: "Linear algebra",
-      initialChapters: "narrow",
+      initialChapters: "random_sparse",
       daysHint: 30,
     });
     expect(planPrompt).toContain("Linear algebra");
-    expect(planPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.narrow.min));
+    expect(planPrompt).toContain(String(INITIAL_CHAPTERS_BANDS.random_sparse.min));
     expect(planPrompt).toMatch(/branch/i);
   });
 
@@ -339,6 +465,7 @@ describe("create surface wiring (structural)", () => {
     expect(routeSrc).toContain("toPersistedCreatePlanSteps");
     expect(routeSrc).toContain("sessionMode");
     expect(routeSrc).toContain("createSessionPlanLLM");
+    expect(routeSrc).toContain("unusable_cells");
     const xaiSrc = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
     expect(xaiSrc).toContain("SESSION_PLAN_CREATE_JSON_SCHEMA");
     expect(xaiSrc).toContain("callXaiWithSchema");
@@ -346,7 +473,7 @@ describe("create surface wiring (structural)", () => {
 
   it("welcome UI labels initial chapters and sends initialChapters", () => {
     const viewSrc = readSessionViewSurface();
-    expect(viewSrc).toContain("INITIAL_CHAPTERS_LEVELS");
+    expect(viewSrc).toContain("InitialChaptersPicker");
     expect(viewSrc).toContain("session.initialChapters");
     expect(viewSrc).toMatch(/initialChapters,/);
     // Existing chapter maps stay grayed until the user opts into regeneration.
@@ -391,6 +518,16 @@ describe("create surface wiring (structural)", () => {
     expect(genSrc).toContain("composeWorkspacePlanGeneratePrompt");
     expect(genSrc).toContain("normalizeGeneratedPlanNodes");
     expect(genSrc).toContain("insertGeneratedWorkspaceBlocks");
+    expect(genSrc).toContain("unusable_cells");
+    expect(genSrc).toContain("blockedChapterSlotsFromPattern");
+    const chapter = readFileSync(
+      path.join(process.cwd(), "components/ChapterMapPanel.tsx"),
+      "utf8",
+    );
+    expect(chapter).toContain("unusableCells={plan.unusable_cells ?? []}");
+    const xaiCreate = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
+    expect(xaiCreate).toContain("relocateChapterStepsOffBlocked");
+    expect(xaiCreate).toContain("blockedChapterSlotsFromPattern");
     expect(genSrc).toContain("extractGeneratedPlanNodes");
 
     const uiSrc = readFileSync(
@@ -413,10 +550,37 @@ describe("create surface wiring (structural)", () => {
       "utf8",
     );
     expect(newWorkspaceSrc).toContain("initialChapters");
-    expect(newWorkspaceSrc).toContain("INITIAL_CHAPTERS_LEVELS");
+    expect(newWorkspaceSrc).toContain("InitialChaptersPicker");
     expect(newWorkspaceSrc).toMatch(/initialChapters,/);
-    // UI labels starting size (initial chapters band); still wires initialChapters payload
-    expect(newWorkspaceSrc).toMatch(/Starting size|Initial chapters/i);
+    expect(newWorkspaceSrc).toMatch(/Map type|Starting map|Starting size|Initial chapters/i);
+    expect(uiSrc).toContain("InitialChaptersPicker");
+    expect(humanSrc).toContain("InitialChaptersPicker");
+    const pickerSrc = readFileSync(
+      path.join(process.cwd(), "components/InitialChaptersPicker.tsx"),
+      "utf8",
+    );
+    expect(pickerSrc).toContain("dummyDensityCells");
+    expect(pickerSrc).toContain("ChapterMiniMap");
+    expect(pickerSrc).toContain("option.descKey");
+    expect(pickerSrc).toContain("data-initial-chapters-carousel");
+    expect(pickerSrc).toContain("data-initial-chapters-prev");
+    expect(pickerSrc).toContain("data-initial-chapters-next");
+    expect(pickerSrc).toContain("stepInitialChaptersCatalog");
+    expect(pickerSrc).not.toContain("grid-cols-2");
+    expect(pickerSrc).not.toContain("sm:grid-cols-4");
+    expect(pickerSrc).toContain("aspect-square");
+    expect(pickerSrc).toContain("line-clamp-3");
+    expect(pickerSrc).toContain("min-h-[3.6rem]");
+    const miniSrc = readFileSync(
+      path.join(process.cwd(), "components/ChapterMiniMap.tsx"),
+      "utf8",
+    );
+    expect(miniSrc).toContain("miniMapDummyFrame");
+    const copy = JSON.parse(
+      readFileSync(path.join(process.cwd(), "messages/en.json"), "utf8"),
+    ) as { session: Record<string, string>; planMode: Record<string, string> };
+    expect(copy.session.initialChapters).toBe("Map type");
+    expect(copy.planMode.initialChapters).toBe("Map type");
 
     // Public MCP surface no longer offers create_workspace / initial_chapters on create
     const mcpSrc = readMcpSurface();

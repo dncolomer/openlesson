@@ -7,10 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { trackWorkspaceCreated } from "@/lib/analytics";
+import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
-  INITIAL_CHAPTERS_BANDS,
-  INITIAL_CHAPTERS_LEVELS,
+  getInitialChaptersBand,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 import {
@@ -32,23 +32,36 @@ const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
 
-const LEVEL_COPY: Record<
-  InitialChaptersLevel,
-  { title: string; description: string }
-> = {
-  narrow: {
-    title: "Narrow",
-    description: "Fewer blocks — calmer start",
-  },
-  mid: {
-    title: "Balanced",
-    description: "Standard block count",
-  },
-  broad: {
-    title: "Broad",
-    description: "More blocks and deeper branches",
-  },
-};
+function startingSizeCopy(key: string): string {
+  const suffix = key.includes(".") ? key.slice(key.indexOf(".") + 1) : key;
+  const catalog: Record<string, string> = {
+    initialChaptersIslands: "Islands",
+    initialChaptersIslandsDesc:
+      "Three core clusters with blocked corridors between them — learn each island, then build bridges.",
+    initialChaptersSpiral: "Spiral",
+    initialChaptersSpiralDesc:
+      "Start at the core and wind outward, revisiting ideas at rising complexity.",
+    initialChaptersLadder: "Ladder",
+    initialChaptersLadderDesc:
+      "A scaffolded climb: each rung is a prerequisite, with small practice steps off the spine.",
+    initialChaptersHub: "Hub",
+    initialChaptersHubDesc:
+      "One foundation in the center with radiating arms to elaborate and connect.",
+    initialChaptersTracks: "Tracks",
+    initialChaptersTracksDesc:
+      "Two parallel tracks (theory and practice) with a blocked median and a few crossing points.",
+    initialChaptersRing: "Ring",
+    initialChaptersRingDesc:
+      "A ring around a blocked center — space practice around a core you keep returning to.",
+    initialChaptersRandomSparse: "Random sparse",
+    initialChaptersRandomSparseDesc:
+      "A light scatter of chapters — the old Narrow count, with no named shape.",
+    initialChaptersRandomDense: "Random dense",
+    initialChaptersRandomDenseDesc:
+      "A fuller scatter of chapters — the old Broad count, with no named shape.",
+  };
+  return catalog[suffix] || suffix;
+}
 
 type DantesTopic = {
   slug: string;
@@ -954,39 +967,24 @@ function StartingSizePicker({
   onChange: (level: InitialChaptersLevel) => void;
   busy: boolean;
 }) {
+  const band = getInitialChaptersBand(initialChapters);
   return (
     <div className="mt-4 w-full">
       <div className="mb-2 flex items-end justify-between gap-3">
         <label className="block font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          Starting size
+          Map type
         </label>
         <span className="text-[11px] text-zinc-600">
-          About {INITIAL_CHAPTERS_BANDS[initialChapters].target} blocks (
-          {INITIAL_CHAPTERS_BANDS[initialChapters].min}–{INITIAL_CHAPTERS_BANDS[initialChapters].max})
+          About {band.target} blocks ({band.min}–{band.max})
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {INITIAL_CHAPTERS_LEVELS.map((level) => {
-          const selected = initialChapters === level;
-          const copy = LEVEL_COPY[level];
-          return (
-            <button
-              key={level}
-              type="button"
-              onClick={() => onChange(level)}
-              disabled={busy}
-              className={`rounded-none border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                selected
-                  ? "border-zinc-300 bg-zinc-900 ring-1 ring-zinc-300/30"
-                  : "border-zinc-800 bg-zinc-950/80 hover:border-zinc-600"
-              }`}
-            >
-              <span className="block text-sm font-medium text-zinc-100">{copy.title}</span>
-              <span className="mt-1 block text-[11px] leading-snug text-zinc-500">{copy.description}</span>
-            </button>
-          );
-        })}
-      </div>
+      <InitialChaptersPicker
+        value={initialChapters}
+        onChange={onChange}
+        disabled={busy}
+        t={startingSizeCopy}
+        i18nPrefix="session"
+      />
     </div>
   );
 }

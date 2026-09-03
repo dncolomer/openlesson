@@ -55,6 +55,10 @@ interface ConfirmDialogProps {
   tertiaryLabel?: ReactNode;
   /** Icon rendered inside the tertiary button (left of the label). */
   tertiaryIcon?: ReactNode;
+  /** Visual treatment for the tertiary button. Defaults to the solid primary row. */
+  tertiaryTone?: "primary" | "ghost";
+  /** Optional test id on the tertiary button. */
+  tertiaryTestId?: string;
 
   /** Visual treatment for the confirm button. Defaults to match `variant`. */
   confirmTone?: "destructive" | "primary" | "warning" | "info";
@@ -126,6 +130,13 @@ function Spinner() {
 // Confirm button tone. Destructive uses the `bg-red-500/10 border-red-500/30`
 // translucent pattern from SessionView, NOT the old `bg-red-600` solid —
 // solid red is reserved for marketing / destructive-final states elsewhere.
+const TERTIARY_TONE: Record<NonNullable<ConfirmDialogProps["tertiaryTone"]>, string> = {
+  primary:
+    "w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2",
+  ghost:
+    "w-full py-2.5 px-4 text-sm font-medium rounded-none text-neutral-400 bg-transparent border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white active:bg-neutral-800 active:text-white transition-colors flex items-center justify-center gap-2",
+};
+
 const CONFIRM_TONE: Record<NonNullable<ConfirmDialogProps["confirmTone"]>, string> = {
   destructive:
     "text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 active:bg-red-500/20 active:text-red-200",
@@ -162,6 +173,8 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   tertiaryLabel,
   tertiaryIcon,
+  tertiaryTone = "primary",
+  tertiaryTestId,
   confirmTone,
   confirmDisabled = false,
   confirmBusy = false,
@@ -242,7 +255,8 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onTertiary}
-            className="w-full py-2.5 px-4 text-sm font-medium rounded-none bg-neutral-100 text-neutral-900 hover:bg-white active:bg-white transition-colors flex items-center justify-center gap-2"
+            data-testid={tertiaryTestId}
+            className={TERTIARY_TONE[tertiaryTone]}
           >
             {tertiaryIcon}
             {tertiaryLabel}

@@ -8,9 +8,11 @@ import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 import { resolveUserBilling } from "@/lib/organization/resolve-user-billing";
 import {
+  blockedChapterSlotsFromPattern,
   getInitialChaptersBand,
   resolveInitialChaptersFromBody,
 } from "@/lib/initial-chapters";
+import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
 import {
   composeWorkspacePlanGeneratePrompt,
   normalizeGeneratedPlanNodes,
@@ -500,7 +502,11 @@ export async function POST(req: NextRequest) {
     }
 
     const rawNodes = extractGeneratedPlanNodes(planData);
-    const nodeRefs = normalizeGeneratedPlanNodes(rawNodes);
+    const blockedSlots = blockedChapterSlotsFromPattern(initialChapters);
+    const nodeRefs = relocatePositionsOffBlockedSlots(
+      normalizeGeneratedPlanNodes(rawNodes),
+      blockedSlots,
+    );
 
     if (nodeRefs.length === 0) {
       console.error("[generate] LLM returned no usable nodes:", {
@@ -542,6 +548,7 @@ export async function POST(req: NextRequest) {
         notes: goalFields.notes,
         workspace_goal: goalFields.workspace_goal,
         workspace_kind: workspaceKindForCreateMode(createMode),
+        unusable_cells: blockedSlots,
       })
       .select()
       .single();

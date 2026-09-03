@@ -40,6 +40,17 @@ describe("findClosestEmptyChapterSlot", () => {
     });
   });
 
+  it("skips blocked chapter slots when placing the next cell", () => {
+    const plan = planWithSteps([
+      { id: "a", description: "Done chapter", position_x: 0, position_y: 0 },
+    ]);
+    plan.unusable_cells = [{ row: 0, col: 1 }];
+    expect(findClosestEmptyChapterSlot(plan, { position_x: 0, position_y: 0 })).toEqual({
+      row: 1,
+      col: 0,
+    });
+  });
+
   it("picks the closest free square when nearer neighbors are full", () => {
     const plan = planWithSteps([
       { id: "a", description: "Done", position_x: 0, position_y: 0 },

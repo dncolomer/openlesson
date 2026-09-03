@@ -27,13 +27,19 @@ import {
 import { blockMapGlyphDbFields, randFromSeed } from "@/lib/block-map-glyph";
 import { transcribeAudioBase64 } from "./xai-stt";
 import { getPrompt, type UserPrompts } from "./prompts";
-import { blockedChapterSlotsFromPattern, getInitialChaptersBand } from "./initial-chapters";
+import { getInitialChaptersBand } from "./initial-chapters";
 import { relocateChapterStepsOffBlocked } from "./ile-chapter-blocked";
 import {
   composeSessionPlanCreatePrompt,
   normalizeSessionPlanCreateSteps,
   SESSION_PLAN_CREATE_JSON_SCHEMA,
 } from "./session-plan-create";
+import {
+  blockedCellsFromMapType,
+  resolveMapTypeRecord,
+  type WorkspaceMapTypeRecord,
+  type WorkspaceMapTypesState,
+} from "./workspace-map-types";
 import { composeSessionPlanUpdatePrompt } from "./session-plan-update";
 import { shouldOfferIleChapterDone } from "./ile-chapter-depth";
 import {
@@ -484,10 +490,17 @@ export async function createSessionPlanLLM(options: {
   initialChapters?: string | null;
   /** @deprecated Prefer initialChapters */
   mapSize?: string | null;
+  /** Resolved map-type record (built-in or custom). */
+  mapType?: WorkspaceMapTypeRecord | null;
+  /** Workspace enable/disable + custom types. */
+  mapTypesState?: WorkspaceMapTypesState | null;
   /** Dialog (learning) vs Project (solo exercise) grain. */
   sessionMode?: IleSessionMode | string | null;
 }): Promise<{ success: boolean; plan?: CreateSessionPlanResult; error?: string }> {
   const initialChapters = options.initialChapters ?? options.mapSize;
+  const mapType =
+    options.mapType ??
+    resolveMapTypeRecord(initialChapters, options.mapTypesState);
   let prompt = composeSessionPlanCreatePrompt(
     getPrompt("session_plan_create", options.promptOverrides),
     {
@@ -495,6 +508,8 @@ export async function createSessionPlanLLM(options: {
       objectives: options.objectives,
       calibration: options.calibration,
       initialChapters,
+      mapType,
+      mapTypesState: options.mapTypesState,
       sessionMode: options.sessionMode,
     },
   );
@@ -512,7 +527,7 @@ export async function createSessionPlanLLM(options: {
     );
   }
 
-  const band = getInitialChaptersBand(initialChapters);
+  const band = mapType.band ?? getInitialChaptersBand(initialChapters);
   // Scale output budget with map breadth so broad plans are not truncated mid-JSON.
   const maxTokens = Math.min(5000, 1400 + band.max * 140);
 
@@ -535,7 +550,7 @@ export async function createSessionPlanLLM(options: {
     return { success: false, error: "LLM generated plan with no valid steps (all descriptions empty)" };
   }
 
-  const blocked = blockedChapterSlotsFromPattern(initialChapters);
+  const blocked = blockedCellsFromMapType(mapType);
   const plan: CreateSessionPlanResult = {
     goal: response.data.goal || "Understand the topic deeply",
     strategy: response.data.strategy || "Optimize practice progress and augment with tools that produce proof of work",

@@ -472,6 +472,8 @@ describe("create surface wiring (structural)", () => {
     );
     expect(routeSrc).toContain("initialChapters");
     expect(routeSrc).toContain("resolveInitialChaptersFromBody");
+    expect(routeSrc).toContain("resolveMapTypeIdFromBody");
+    expect(routeSrc).toContain("resolveMapTypeRecord");
     expect(routeSrc).toContain("toPersistedCreatePlanSteps");
     expect(routeSrc).toContain("sessionMode");
     expect(routeSrc).toContain("createSessionPlanLLM");
@@ -538,7 +540,7 @@ describe("create surface wiring (structural)", () => {
     expect(chapter).toContain("unusableCells={plan.unusable_cells ?? []}");
     const xaiCreate = readFileSync(path.join(process.cwd(), "lib/xai.ts"), "utf8");
     expect(xaiCreate).toContain("relocateChapterStepsOffBlocked");
-    expect(xaiCreate).toContain("blockedChapterSlotsFromPattern");
+    expect(xaiCreate).toContain("blockedCellsFromMapType");
     expect(genSrc).toContain("extractGeneratedPlanNodes");
 
     const uiSrc = readFileSync(
@@ -576,8 +578,8 @@ describe("create surface wiring (structural)", () => {
     expect(pickerSrc).toContain("data-initial-chapters-carousel");
     expect(pickerSrc).toContain("data-initial-chapters-prev");
     expect(pickerSrc).toContain("data-initial-chapters-next");
-    expect(pickerSrc).toContain("stepInitialChaptersCatalog");
-    expect(pickerSrc).toContain("pickRandomInitialChapters");
+    expect(pickerSrc).toContain("stepMapTypeCatalog");
+    expect(pickerSrc).toContain("pickRandomMapType");
     expect(pickerSrc).toContain("data-initial-chapters-random-pick");
     expect(pickerSrc).toContain("fillHeight");
     expect(pickerSrc).not.toContain("grid-cols-2");

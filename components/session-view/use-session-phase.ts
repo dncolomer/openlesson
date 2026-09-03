@@ -85,7 +85,7 @@ export type SessionPhaseInput = {
   setLocalInferenceEnabled: (v: boolean) => void;
   localInferenceEnabledRef: { current: boolean };
   localContextRef: { current: LocalContextBuffer | null };
-  initialChapters: InitialChaptersLevel;
+  initialChapters: InitialChaptersLevel | string;
   resolvedSessionMode: IleSessionMode;
   setShowWelcomeModal: (v: boolean) => void;
   setShowWelcomePanel: (v: boolean) => void;

@@ -12,6 +12,7 @@ export type WorkspaceSectionKey =
   | "context"
   | "simulation"
   | "dags"
+  | "map_types"
   | "goals"
   | "knowledge"
   | "settings";
@@ -24,6 +25,7 @@ export type WorkspaceMainSurface =
   | "context"
   | "simulation"
   | "dags"
+  | "map_types"
   | "goals"
   | "knowledge"
   | "settings";
@@ -31,6 +33,7 @@ export type WorkspaceMainSurface =
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "workspace",
   "dags",
+  "map_types",
   "goals",
   "context",
   "simulation",
@@ -53,6 +56,8 @@ export type WorkspaceSectionLayout = {
   mountsSimulationPanel: boolean;
   /** Creator DAGs tab — list/edit/delete created multi-block DAGs. */
   mountsDagsPanel: boolean;
+  /** Creator Map Types tab — custom chapter-map types + built-in enable/disable. */
+  mountsMapTypesPanel: boolean;
   /** Goals tab — multi workspace goals CRUD. */
   mountsGoalsPanel: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
@@ -78,6 +83,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: true,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -92,6 +98,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: true,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -106,6 +113,22 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: true,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+      };
+    case "map_types":
+      return {
+        section: "map_types",
+        mainSurface: "map_types",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: true,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -120,6 +143,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -134,6 +158,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: true,
@@ -148,6 +173,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         localTabs: [],
         mountsPerformancePanel: false,
@@ -163,6 +189,7 @@ export function resolveWorkspaceSectionLayout(
         mountsContextPanel: false,
         mountsSimulationPanel: false,
         mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
@@ -198,7 +225,7 @@ export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
  * Privileged sections (Knowledge, Settings, Goals): non-privileged callers fall
  * back to the kind default (Workspace, or Goals on a Knowledge Region).
  * Context and Simulation are open to all standard-workspace viewers.
- * DAGs is owner-only.
+ * DAGs and Map Types are owner-only.
  */
 export function resolveActiveSection(
   requested: WorkspaceSectionKey,
@@ -219,9 +246,9 @@ export function availableWorkspaceSections(options: WorkspaceSectionAuth): Works
     return [];
   }
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    // Nav order: Workspace, DAGs (owner), Goals, Context, Simulation, Knowledge, Settings.
+    // Nav order: Workspace, DAGs (owner), Map Types (owner), Goals, Context, Simulation, Knowledge, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];
-    if (options.isOwner) sections.push("dags");
+    if (options.isOwner) sections.push("dags", "map_types");
     sections.push("goals", "context", "simulation", "knowledge", "settings");
     return sections;
   }

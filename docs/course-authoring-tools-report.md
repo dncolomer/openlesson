@@ -10,7 +10,7 @@
 ## 1. Top-level workspace sections
 
 Registry: `WORKSPACE_SECTION_KEYS` / `availableWorkspaceSections` in `lib/workspace-sections.ts`.  
-Nav labels (EN): Workspace · DAGs · Goals · Context · Simulation · Knowledge · Settings.
+Nav labels (EN): Workspace · DAGs · Map Types · Goals · Context · Simulation · Knowledge · Settings.
 
 | Section key | Who sees it | Purpose for authors |
 |---|---|---|
@@ -18,11 +18,12 @@ Nav labels (EN): Workspace · DAGs · Goals · Context · Simulation · Knowledg
 | **`context`** | Everyone | Workspace-level materials: notes, files, external links / Dantes search |
 | **`simulation`** | Everyone | Author preview of learner journey + **workspace validation** (not live learner session) |
 | **`dags`** | Workspace owner only (Creator mode) | List/edit/delete multi-block **leads-to** DAGs created via map multi-select Apply — no create on this tab |
+| **`map_types`** | Workspace owner only (Creator / Build mode; hidden in Play and Explore) | Author custom chapter-map types and enable/disable built-ins; types are generator context, not 1:1 templates |
 | **`goals`** | Owner / org admin only | Multi natural-language **workspace goals** CRUD (`mountsGoalsPanel`); block goals live on block-detail drawer |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
 | **`settings`** | Owner / org admin only | Identity (title/description — not goals), access, guest links, data studio, knowledge portal, integrations |
 
-**Note:** Privileged sections (`knowledge`, `settings`, `goals`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** is also hidden in Learner mode.
+**Note:** Privileged sections (`knowledge`, `settings`, `goals`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** and **Map Types** are also hidden in Learner mode.
 
 ---
 

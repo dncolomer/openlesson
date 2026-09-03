@@ -7,6 +7,11 @@ import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { getLanguageName } from "@/lib/tutoring-languages";
 import { resolveInitialChaptersFromBody } from "@/lib/initial-chapters";
+import {
+  normalizeWorkspaceMapTypes,
+  resolveMapTypeIdFromBody,
+  resolveMapTypeRecord,
+} from "@/lib/workspace-map-types";
 import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
 import {
   resolveIleSessionModeFromBody,
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
       planningPrompt,
       tutoringLanguage: bodyLanguage,
     } = body;
-    const initialChapters = resolveInitialChaptersFromBody(body);
+    const initialChaptersFallback = resolveInitialChaptersFromBody(body);
 
     if (!sessionId || !problem) {
       return jsonError(400, "Missing sessionId or problem");
@@ -95,6 +100,23 @@ export async function POST(request: NextRequest) {
 
     const promptOverrides = await getUserPrompts();
 
+    const sessionMeta = (sessionData?.metadata as Record<string, unknown> | undefined) ?? {};
+    const workspaceId =
+      typeof sessionMeta.workspace_id === "string" ? sessionMeta.workspace_id.trim() : "";
+    let mapTypesState = normalizeWorkspaceMapTypes(null);
+    if (workspaceId) {
+      const { data: workspaceRow } = await supabase
+        .from("workspaces")
+        .select("workspace_map_types")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      mapTypesState = normalizeWorkspaceMapTypes(
+        (workspaceRow as { workspace_map_types?: unknown } | null)?.workspace_map_types,
+      );
+    }
+    const mapTypeId = resolveMapTypeIdFromBody(body, mapTypesState) || initialChaptersFallback;
+    const mapType = resolveMapTypeRecord(mapTypeId, mapTypesState);
+
     const result = await createSessionPlanLLM({
       problem,
       objectives,
@@ -102,7 +124,9 @@ export async function POST(request: NextRequest) {
       promptOverrides,
       planningPrompt,
       tutoringLanguage: languageName,
-      initialChapters,
+      initialChapters: mapType.id,
+      mapType,
+      mapTypesState,
       sessionMode,
     });
 

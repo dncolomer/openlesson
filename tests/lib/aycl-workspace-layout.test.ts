@@ -35,6 +35,7 @@ describe("AYCL section layout mapping (shared helper)", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "dags",
+      "map_types",
       "goals",
       "context",
       "simulation",

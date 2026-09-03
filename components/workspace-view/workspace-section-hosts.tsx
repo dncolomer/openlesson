@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
+import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
 import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
@@ -10,6 +11,7 @@ import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
 import { WorkspaceSimulationPanel } from "@/components/WorkspaceSimulationPanel";
 import type { Block, Workspace } from "@/components/workspace-view/types";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
+import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import type { WorkspaceModeShell } from "@/lib/workspace-mode";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
@@ -34,6 +36,7 @@ export function WorkspaceSectionHosts({
   ayclToken,
   nodes,
   workspaceDags,
+  workspaceMapTypes,
   isAddingBlock,
   onSaveDagEdit,
   onDeleteDag,
@@ -41,6 +44,7 @@ export function WorkspaceSectionHosts({
   modeShell,
   knowledgeSubviewFromUrl,
   onPlanUpdate,
+  t,
 }: {
   isLearnerMode: boolean;
   isOwner: boolean;
@@ -61,6 +65,7 @@ export function WorkspaceSectionHosts({
   ayclToken?: string;
   nodes: Block[];
   workspaceDags: WorkspaceDagRecord[];
+  workspaceMapTypes: WorkspaceMapTypesState;
   isAddingBlock: boolean;
   onSaveDagEdit: (input: {
     blockIds: string[];
@@ -75,6 +80,7 @@ export function WorkspaceSectionHosts({
   modeShell: WorkspaceModeShell;
   knowledgeSubviewFromUrl: string | null;
   onPlanUpdate: Dispatch<SetStateAction<Workspace | null>>;
+  t: (key: string) => string;
 }) {
   const identity = {
     title: plan.title || plan.root_topic,
@@ -164,6 +170,31 @@ export function WorkspaceSectionHosts({
                 });
               }}
               onDelete={onDeleteDag}
+            />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        isOwner &&
+        sectionLayout.mountsMapTypesPanel &&
+        visibleSections.includes("map_types") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            data-workspace-map-types-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <WorkspaceMapTypesPanel
+              workspaceId={workspaceId}
+              isOwner={isOwner}
+              ayclToken={ayclToken}
+              initialState={workspaceMapTypes}
+              workspaceDags={workspaceDags}
+              t={t}
             />
           </div>
         </WorkspaceSectionSurface>

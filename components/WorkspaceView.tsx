@@ -68,6 +68,10 @@ import {
   type WorkspaceDagRecord,
 } from "@/lib/workspace-dags";
 import {
+  normalizeWorkspaceMapTypes,
+  type WorkspaceMapTypesState,
+} from "@/lib/workspace-map-types";
+import {
   formatAyclPriceCentsLabel,
   resolveAyclCapabilities,
   type AyclCapabilities,
@@ -137,6 +141,9 @@ export function WorkspaceView({
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
   const [workspaceDags, setWorkspaceDags] = useState<WorkspaceDagRecord[]>(() =>
     normalizeWorkspaceDags(initialPlan?.workspace_dags),
+  );
+  const [workspaceMapTypes, setWorkspaceMapTypes] = useState<WorkspaceMapTypesState>(() =>
+    normalizeWorkspaceMapTypes(initialPlan?.workspace_map_types),
   );
   const [workspaceFileItems, setWorkspaceFileItems] = useState<WorkspaceFileContextItem[]>([]);
   const [mapGroundBusy, setMapGroundBusy] = useState(false);
@@ -264,6 +271,11 @@ export function WorkspaceView({
           (data.workspace as { workspace_dags?: unknown }).workspace_dags,
         ),
       );
+      setWorkspaceMapTypes(
+        normalizeWorkspaceMapTypes(
+          (data.workspace as { workspace_map_types?: unknown }).workspace_map_types,
+        ),
+      );
     }
     if (Array.isArray(data.blocks)) {
       setNodes(mapWorkspaceNodes(data.blocks, { ayclClone: true }));
@@ -382,6 +394,9 @@ export function WorkspaceView({
           setPlan(initialPlan);
           setUnusableCells(normalizeUnusableCells(initialPlan.unusable_cells));
           setWorkspaceDags(normalizeWorkspaceDags(initialPlan.workspace_dags));
+          setWorkspaceMapTypes(
+            normalizeWorkspaceMapTypes(initialPlan.workspace_map_types),
+          );
         }
         if (initialNodes) {
           setNodes(mapWorkspaceNodes(initialNodes, { ayclClone: true }));
@@ -454,6 +469,11 @@ export function WorkspaceView({
       setWorkspaceDags(
         normalizeWorkspaceDags(
           (planData as { workspace_dags?: unknown }).workspace_dags,
+        ),
+      );
+      setWorkspaceMapTypes(
+        normalizeWorkspaceMapTypes(
+          (planData as { workspace_map_types?: unknown }).workspace_map_types,
         ),
       );
 
@@ -693,6 +713,7 @@ export function WorkspaceView({
     isLearnerMode,
     isOwner,
     visibleSections,
+    exploreOpen: showMapExplore,
   });
 
   const detailLockTitles =
@@ -740,6 +761,7 @@ export function WorkspaceView({
         ayclToken={ayclToken}
         nodes={nodes}
         workspaceDags={workspaceDags}
+        workspaceMapTypes={workspaceMapTypes}
         isAddingBlock={isAddingBlock}
         onSaveDagEdit={handleApplyDag}
         onDeleteDag={handleDeleteDag}
@@ -747,6 +769,7 @@ export function WorkspaceView({
         modeShell={modeShell}
         knowledgeSubviewFromUrl={knowledgeSubviewFromUrl}
         onPlanUpdate={setPlan}
+        t={t}
       />
 
       {sectionLayout.showBlockMapChrome && (

@@ -45,8 +45,18 @@ export function ChapterMiniMap({
           cols.map((col) => {
             const hit = miniMapHasCell(cells, row, col);
             const blocked = hit?.kind === "blocked";
+            const noSpawn = hit?.kind === "no_spawn";
+            const dagHint = hit?.kind === "dag_hint";
             const completed = hit?.status === "completed";
-            const cellKind = blocked ? "blocked" : hit ? "occupied" : "empty";
+            const cellKind = blocked
+              ? "blocked"
+              : noSpawn
+                ? "no_spawn"
+                : dagHint
+                  ? "dag_hint"
+                  : hit
+                    ? "occupied"
+                    : "empty";
             return (
               <div
                 key={`${row}:${col}`}
@@ -55,11 +65,15 @@ export function ChapterMiniMap({
                 className={`min-h-0 min-w-0 rounded-[1px] ${
                   blocked
                     ? "bg-[repeating-linear-gradient(135deg,rgba(64,64,64,0.95)_0_2px,rgba(24,24,24,0.95)_2px_4px)]"
-                    : hit
-                      ? completed
-                        ? "bg-neutral-200"
-                        : "bg-neutral-400"
-                      : "bg-neutral-800"
+                    : noSpawn
+                      ? "bg-neutral-950 ring-1 ring-inset ring-rose-900/60"
+                      : dagHint
+                        ? "bg-sky-900/70"
+                        : hit
+                          ? completed
+                            ? "bg-neutral-200"
+                            : "bg-neutral-400"
+                          : "bg-neutral-800"
                 }`}
               />
             );

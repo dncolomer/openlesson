@@ -4,11 +4,16 @@
  */
 
 import {
-  formatInitialChaptersForPrompt,
   parseInitialChaptersLevel,
   SPATIAL_MAP_LAYOUT_RULES,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import {
+  formatMapTypeGeneratorContext,
+  resolveMapTypeRecord,
+  type WorkspaceMapTypeRecord,
+  type WorkspaceMapTypesState,
+} from "@/lib/workspace-map-types";
 import { applyIleChapterModeInstructions } from "@/lib/ile-chapter-depth";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { RequestType, SessionPlanStep } from "@/lib/domain/types";
@@ -38,6 +43,10 @@ export interface SessionPlanCreatePromptVars {
   initialChapters?: InitialChaptersLevel | string | null;
   /** @deprecated alias for initialChapters */
   mapSize?: InitialChaptersLevel | string | null;
+  /** Resolved map-type record (built-in or custom). When set, used as-is. */
+  mapType?: WorkspaceMapTypeRecord | null;
+  /** Workspace enable/disable + custom types; used to resolve `initialChapters`. */
+  mapTypesState?: WorkspaceMapTypesState | null;
   /** Dialog (learning) vs Project (solo exercise) grain. */
   sessionMode?: IleSessionMode | string | null;
 }
@@ -76,19 +85,21 @@ export function composeSessionPlanCreatePrompt(
   template: string,
   vars: SessionPlanCreatePromptVars,
 ): string {
-  const level = vars.initialChapters ?? vars.mapSize;
-  const mapInfo = formatInitialChaptersForPrompt(level);
+  const record =
+    vars.mapType ??
+    resolveMapTypeRecord(vars.initialChapters ?? vars.mapSize, vars.mapTypesState);
+  const mapInfo = formatMapTypeGeneratorContext(record);
 
   const filled = template
     .replace("{problem}", vars.problem || "Untitled topic")
     .replace("{objectives}", formatObjectives(vars.objectives))
     .replace("{calibration}", vars.calibration || "No prior learning data available")
     // Preferred placeholders
-    .replaceAll("{initial_chapters_level}", mapInfo.level)
+    .replaceAll("{initial_chapters_level}", mapInfo.id)
     .replaceAll("{initial_chapters_audience}", mapInfo.band.audience)
     .replaceAll("{initial_chapters_instruction}", mapInfo.countInstruction)
     // Legacy map-size placeholders (still filled if present in overrides)
-    .replaceAll("{map_size_level}", mapInfo.level)
+    .replaceAll("{map_size_level}", mapInfo.id)
     .replaceAll("{map_size_audience}", mapInfo.band.audience)
     .replaceAll("{map_size_instruction}", mapInfo.countInstruction)
     .replaceAll("{target_step_count}", String(mapInfo.band.target))

@@ -8,9 +8,11 @@ export function buildWorkspaceSectionNavItems(input: {
   isLearnerMode: boolean;
   isOwner: boolean;
   visibleSections: WorkspaceSectionKey[];
+  /** Explore overlay hides authoring Map Types (Play already omits them). */
+  exploreOpen?: boolean;
 }): WorkspaceSectionNavItem[] {
-  const { t, isLearnerMode, isOwner, visibleSections } = input;
-  // Nav order: Workspace → DAGs → Goals → Context → Simulation → Knowledge → Settings
+  const { t, isLearnerMode, isOwner, visibleSections, exploreOpen } = input;
+  // Nav order: Workspace → DAGs → Map Types → Goals → Context → Simulation → Knowledge → Settings
   // Knowledge Region shells omit Workspace (no map tab).
   return [
     ...(visibleSections.includes("workspace")
@@ -36,6 +38,23 @@ export function buildWorkspaceSectionNavItems(input: {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h3v3h-3v-3zm6 0h3v3h-3v-3zm-6 6h3v3h-3v-3zm6 0h3v3h-3v-3z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 9h3M9 10.5v3M13.5 13.5h-3M15 13.5v-3" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(!isLearnerMode &&
+    !exploreOpen &&
+    isOwner &&
+    visibleSections.includes("map_types")
+      ? [
+          {
+            key: "map_types" as const,
+            label: t("planView.sectionMapTypes"),
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75v10.5M12 6.75v10.5m5.25-10.5v10.5" />
               </svg>
             ),
           },

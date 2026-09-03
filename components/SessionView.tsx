@@ -30,7 +30,8 @@ import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
-import { DEFAULT_INITIAL_CHAPTERS, type InitialChaptersLevel } from "@/lib/initial-chapters";
+import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
+import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
@@ -287,7 +288,8 @@ export function SessionView({
 
   const [isPreparing, setIsPreparing] = useState(false);
   const [toolPrefillQuery, setToolPrefillQuery] = useState("");
-  const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
+  const [initialChapters, setInitialChapters] = useState<string>(DEFAULT_INITIAL_CHAPTERS);
+  const [mapTypeCatalog, setMapTypeCatalog] = useState<MapTypePickerItem[] | null>(null);
   /**
    * Whether a persisted chapter map already exists for this session.
    * Tracked separately from `sessionPlan` so the regenerate UI stays stable
@@ -300,6 +302,38 @@ export function SessionView({
   /** When a chapter set already exists, keep size controls grayed until user opts in. */
   const [regenerateChapters, setRegenerateChapters] = useState(false);
 
+  useEffect(() => {
+    if (!session?.id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/session-plan/map-types", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: session.id,
+            ...guestAccessBody,
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        const catalog = Array.isArray(data.catalog) ? data.catalog : [];
+        if (catalog.length === 0) return;
+        setMapTypeCatalog(catalog);
+        setInitialChapters((prev) =>
+          catalog.some((item: { id?: string }) => item.id === prev)
+            ? prev
+            : String(catalog[0].id || DEFAULT_INITIAL_CHAPTERS),
+        );
+      } catch {
+        /* default built-in catalog */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id, guestAccessBody]);
 
   const lastDialogueUserTurn = useMemo(() => {
     for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
@@ -1042,6 +1076,7 @@ export function SessionView({
           onRegenerateChaptersChange={setRegenerateChapters}
           initialChapters={initialChapters}
           onInitialChaptersChange={setInitialChapters}
+          mapTypeCatalog={mapTypeCatalog}
           autoAdvance={autoAdvance}
           onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
           localInferenceEnabled={localInferenceEnabled}

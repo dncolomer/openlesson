@@ -401,6 +401,7 @@ export interface Workspace {
   aycl_full_price_cents?: number | null;
   unusable_cells?: Array<{ row: number; col: number }> | null;
   workspace_dags?: unknown[] | null;
+  workspace_map_types?: unknown | null;
   simulation_collection?: SimulationCollection | null;
 }
 

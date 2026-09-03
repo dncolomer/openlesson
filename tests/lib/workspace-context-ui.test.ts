@@ -53,6 +53,7 @@ describe("Context section layout resolver", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "dags",
+      "map_types",
       "goals",
       "context",
       "simulation",

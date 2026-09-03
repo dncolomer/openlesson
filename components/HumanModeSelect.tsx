@@ -11,6 +11,7 @@ import { createSession } from "@/lib/storage";
 import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
+  parseInitialChaptersLevel,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 
@@ -324,7 +325,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
         </label>
         <InitialChaptersPicker
           value={initialChapters}
-          onChange={setInitialChapters}
+          onChange={(id) => setInitialChapters(parseInitialChaptersLevel(id))}
           disabled={inputDisabled}
           t={t}
           i18nPrefix="planMode"

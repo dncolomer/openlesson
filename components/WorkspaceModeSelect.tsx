@@ -8,6 +8,7 @@ import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
+  parseInitialChaptersLevel,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 
@@ -341,7 +342,7 @@ export function PlanModeSelect({
         </label>
         <InitialChaptersPicker
           value={initialChapters}
-          onChange={setInitialChapters}
+          onChange={(id) => setInitialChapters(parseInitialChaptersLevel(id))}
           disabled={isGenerating}
           t={t}
           i18nPrefix="planMode"

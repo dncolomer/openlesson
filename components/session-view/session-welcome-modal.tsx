@@ -34,6 +34,7 @@ export function SessionWelcomeModal({
   onRegenerateChaptersChange,
   initialChapters,
   onInitialChaptersChange,
+  mapTypeCatalog,
   autoAdvance,
   onToggleAutoAdvance,
   localInferenceEnabled,
@@ -239,6 +240,7 @@ export function SessionWelcomeModal({
                                 t={t}
                                 i18nPrefix="session"
                                 fillHeight
+                                catalog={mapTypeCatalog}
                               />
                             </div>
                           ) : null}

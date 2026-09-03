@@ -197,6 +197,7 @@ describe("Knowledge Region shell", () => {
     expect(normal).toEqual([
       "workspace",
       "dags",
+      "map_types",
       "goals",
       "context",
       "simulation",

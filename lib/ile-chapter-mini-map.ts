@@ -14,7 +14,7 @@ import {
 } from "@/lib/initial-chapters";
 import type { SessionPlanStep } from "@/lib/domain/types";
 
-export type MiniMapCellKind = "occupied" | "blocked";
+export type MiniMapCellKind = "occupied" | "blocked" | "no_spawn" | "dag_hint";
 
 export type MiniMapCell = {
   row: number;

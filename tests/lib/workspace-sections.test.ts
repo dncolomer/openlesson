@@ -123,6 +123,7 @@ describe("availableWorkspaceSections", () => {
     expect(availableWorkspaceSections({ isOwner: true })).toEqual([
       "workspace",
       "dags",
+      "map_types",
       "goals",
       "context",
       "simulation",

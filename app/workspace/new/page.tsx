@@ -11,6 +11,7 @@ import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
   getInitialChaptersBand,
+  parseInitialChaptersLevel,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 import {
@@ -981,7 +982,7 @@ function StartingSizePicker({
       </div>
       <InitialChaptersPicker
         value={initialChapters}
-        onChange={onChange}
+        onChange={(id) => onChange(parseInitialChaptersLevel(id))}
         disabled={busy}
         t={startingSizeCopy}
         i18nPrefix="session"

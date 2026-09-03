@@ -69,6 +69,7 @@ describe("course authoring tools report", () => {
     expect(owner).toEqual([
       "workspace",
       "dags",
+      "map_types",
       "goals",
       "context",
       "simulation",

@@ -167,7 +167,7 @@ export type WorkspaceModeShell = {
  * Visible top-level sections for the active interaction mode.
  * Learner: Workspace + Knowledge only (logged-in Knowledge scope).
  * Creator: existing owner/consumer section lists.
- * Knowledge Region: never resurrects Workspace / Context / Simulation / DAGs.
+ * Knowledge Region: never resurrects Workspace / Context / Simulation / DAGs / Map Types.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;
@@ -191,7 +191,7 @@ export function availableSectionsForMode(input: {
   }
   if (mode === "learner") {
     // Knowledge only when logged in (user-scoped LWM); guests get map only.
-    // DAGs tab is Creator-only — never in Learner.
+    // DAGs / Map Types tabs are Creator-only — never in Learner.
     if (input.isLoggedIn) return ["workspace", "knowledge"];
     return ["workspace"];
   }

@@ -9,8 +9,8 @@ import {
   blankCustomMapType,
   formatMapTypeGeneratorContext,
   importLibraryMapType,
-  mapTypeRecordFromBuiltin,
   mapTypeRecordFromLibrary,
+  mapTypeRecordFromLibraryId,
   mapTypeCellsToMiniMap,
   newCustomMapTypeId,
   normalizeWorkspaceMapTypes,
@@ -20,7 +20,6 @@ import {
   removeCustomMapType,
   removeLibraryMapType,
   serializeWorkspaceMapTypes,
-  setBuiltinMapTypeEnabled,
   setMapTypeOrderStepCount,
   upsertCustomMapType,
   workspaceHasLibraryMapType,
@@ -28,10 +27,9 @@ import {
   type WorkspaceMapTypeRecord,
   type WorkspaceMapTypesState,
 } from "@/lib/workspace-map-types";
-import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import {
+  MAP_TYPE_LIBRARY,
   MAP_TYPE_LIBRARY_CATEGORIES,
-  MAP_TYPE_LIBRARY_EXTRAS,
 } from "@/lib/map-type-library";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 
@@ -173,7 +171,6 @@ export function WorkspaceMapTypesPanel({
   ayclToken,
   initialState,
   workspaceDags: _workspaceDags = [],
-  workspaceTitle,
   t,
 }: {
   workspaceId: string;
@@ -181,59 +178,47 @@ export function WorkspaceMapTypesPanel({
   ayclToken?: string | null;
   initialState?: unknown;
   workspaceDags?: readonly WorkspaceDagRecord[];
-  workspaceTitle?: string | null;
   t: (key: string) => string;
 }) {
   const [state, setState] = useState<WorkspaceMapTypesState>(() =>
     normalizeWorkspaceMapTypes(initialState),
   );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    INITIAL_CHAPTERS_LEVELS[0] ?? null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const initial = normalizeWorkspaceMapTypes(initialState);
+    return (
+      initial.selectedLibraryIds?.[0] ||
+      initial.customTypes[0]?.id ||
+      null
+    );
+  });
   const [paletteTool, setPaletteTool] = useState<MapTypePaintTool>({
     kind: "spawn",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
-  const [simulateError, setSimulateError] = useState<string | null>(null);
-  const [simulateResult, setSimulateResult] = useState<{
-    mapTypeId: string;
-    cells: Array<{ row: number; col: number }>;
-    percent: number;
-  } | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [browseFilter, setBrowseFilter] = useState<string>("all");
   const [community, setCommunity] = useState<Array<Record<string, unknown>>>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishNote, setPublishNote] = useState<string | null>(null);
 
-  const importedLibrary = useMemo(
+  const selectedLibrary = useMemo(
     () =>
-      (state.importedLibraryIds || [])
-        .map((id) => MAP_TYPE_LIBRARY_EXTRAS.find((e) => e.id === id))
-        .filter((e): e is (typeof MAP_TYPE_LIBRARY_EXTRAS)[number] => Boolean(e))
-        .map((e) => mapTypeRecordFromLibrary(e, true)),
-    [state.importedLibraryIds],
+      (state.selectedLibraryIds || [])
+        .map((id) => mapTypeRecordFromLibraryId(id, true))
+        .filter((r): r is WorkspaceMapTypeRecord => Boolean(r)),
+    [state.selectedLibraryIds],
   );
 
-  const builtins = useMemo(
-    () =>
-      INITIAL_CHAPTERS_LEVELS.map((id) =>
-        mapTypeRecordFromBuiltin(
-          id,
-          !state.disabledBuiltinIds.includes(id),
-        ),
-      ),
-    [state.disabledBuiltinIds],
-  );
   const selected =
-    builtins.find((b) => b.id === selectedId) ||
-    importedLibrary.find((b) => b.id === selectedId) ||
+    selectedLibrary.find((b) => b.id === selectedId) ||
     state.customTypes.find((c) => c.id === selectedId) ||
     null;
   const selectedIsCustom = selected?.source === "custom";
+
+  const firstIdIn = (next: WorkspaceMapTypesState) =>
+    next.selectedLibraryIds?.[0] || next.customTypes[0]?.id || null;
 
   const loadCommunity = useCallback(async () => {
     try {
@@ -290,7 +275,7 @@ export function WorkspaceMapTypesPanel({
   const dropLibraryType = (id: string) => {
     const next = removeLibraryMapType(state, id);
     setState(next);
-    if (selectedId === id) setSelectedId(INITIAL_CHAPTERS_LEVELS[0] ?? null);
+    if (selectedId === id) setSelectedId(firstIdIn(next));
     void persist(next);
   };
 
@@ -347,12 +332,6 @@ export function WorkspaceMapTypesPanel({
     }
   };
 
-  const toggleBuiltin = (id: string, enabled: boolean) => {
-    const next = setBuiltinMapTypeEnabled(state, id, enabled);
-    setState(next);
-    void persist(next);
-  };
-
   const createCustom = () => {
     const record = blankCustomMapType({
       id: newCustomMapTypeId(),
@@ -380,7 +359,7 @@ export function WorkspaceMapTypesPanel({
     const next = removeCustomMapType(state, id);
     setState(next);
     setConfirmDeleteId(null);
-    if (selectedId === id) setSelectedId(INITIAL_CHAPTERS_LEVELS[0] ?? null);
+    if (selectedId === id) setSelectedId(firstIdIn(next));
     void persist(next);
   };
 
@@ -397,53 +376,6 @@ export function WorkspaceMapTypesPanel({
   };
 
   const previewCtx = selected ? formatMapTypeGeneratorContext(selected) : null;
-
-  const runSimulate = async () => {
-    if (!selected || simulating) return;
-    setSimulating(true);
-    setSimulateError(null);
-    try {
-      const res = await fetch("/api/workspace/map-types/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          mapTypeId: selected.id,
-          mapType: selected.source === "custom" ? selected : undefined,
-          topic: workspaceTitle || undefined,
-          ...(ayclToken ? { ayclToken } : {}),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          typeof data.error === "string"
-            ? data.error
-            : t("planView.mapTypesSimulateError"),
-        );
-      }
-      const generated = Array.isArray(data.generated)
-        ? data.generated.filter(
-            (c: { row?: number; col?: number }) =>
-              typeof c.row === "number" && typeof c.col === "number",
-          )
-        : [];
-      const percent = Math.round(
-        Number(data.resemblance?.score ?? 0) * 100,
-      );
-      setSimulateResult({
-        mapTypeId: selected.id,
-        cells: generated,
-        percent: Number.isFinite(percent) ? percent : 0,
-      });
-    } catch (err) {
-      setSimulateError(
-        err instanceof Error ? err.message : t("planView.mapTypesSimulateError"),
-      );
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   return (
     <div
@@ -480,52 +412,20 @@ export function WorkspaceMapTypesPanel({
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row">
         <div className="flex min-h-0 w-full shrink-0 flex-col gap-4 overflow-y-auto lg:w-72">
-          <section data-map-types-builtins>
+          <section data-map-types-library data-map-types-imported>
             <h3 className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-              {t("planView.mapTypesBuiltins")}
+              {t("planView.mapTypesBrowseTitle")}
             </h3>
-            <ul className="space-y-1.5" data-map-types-builtin-list>
-              {builtins.map((item) => (
-                <li key={item.id}>
-                  <div
-                    className={`flex items-center gap-2 rounded-none border px-2 py-1.5 ${
-                      selectedId === item.id
-                        ? "border-neutral-500 bg-neutral-900"
-                        : "border-white/10 bg-neutral-950/70"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      data-map-type-select={item.id}
-                      onClick={() => setSelectedId(item.id)}
-                      className="min-w-0 flex-1 truncate text-left text-[12px] text-neutral-100"
-                    >
-                      {item.label}
-                    </button>
-                    <label className="flex shrink-0 items-center gap-1 text-[10px] text-neutral-400">
-                      <input
-                        type="checkbox"
-                        data-map-type-builtin-enabled={item.id}
-                        checked={item.enabled}
-                        disabled={!isOwner || saving}
-                        onChange={(e) => toggleBuiltin(item.id, e.target.checked)}
-                        className="h-3 w-3 rounded-none border-neutral-600 bg-neutral-950"
-                      />
-                      {t("planView.mapTypesEnabled")}
-                    </label>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {importedLibrary.length > 0 ? (
-            <section data-map-types-imported>
-              <h3 className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                {t("planView.mapTypesBrowseTitle")}
-              </h3>
-              <ul className="space-y-1.5">
-                {importedLibrary.map((item) => (
+            {selectedLibrary.length === 0 ? (
+              <p
+                data-map-types-library-empty
+                className="rounded-none border border-dashed border-white/10 px-3 py-4 text-center text-[11px] text-neutral-500"
+              >
+                {t("planView.mapTypesEmptyLibrary")}
+              </p>
+            ) : (
+              <ul className="space-y-1.5" data-map-types-library-list>
+                {selectedLibrary.map((item) => (
                   <li key={item.id}>
                     <div
                       className={`flex items-center gap-2 rounded-none border px-2 py-1.5 ${
@@ -556,8 +456,8 @@ export function WorkspaceMapTypesPanel({
                   </li>
                 ))}
               </ul>
-            </section>
-          ) : null}
+            )}
+          </section>
 
           <section data-map-types-customs>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -587,18 +487,55 @@ export function WorkspaceMapTypesPanel({
               <ul className="space-y-1.5" data-map-types-custom-list>
                 {state.customTypes.map((item) => (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      data-map-type-select={item.id}
-                      onClick={() => setSelectedId(item.id)}
-                      className={`w-full truncate rounded-none border px-2 py-1.5 text-left text-[12px] ${
+                    <div
+                      className={`flex items-center gap-2 rounded-none border px-2 py-1.5 ${
                         selectedId === item.id
-                          ? "border-neutral-500 bg-neutral-900 text-white"
-                          : "border-white/10 bg-neutral-950/70 text-neutral-100"
+                          ? "border-neutral-500 bg-neutral-900"
+                          : "border-white/10 bg-neutral-950/70"
                       }`}
                     >
-                      {item.label}
-                    </button>
+                      <button
+                        type="button"
+                        data-map-type-select={item.id}
+                        onClick={() => setSelectedId(item.id)}
+                        className="min-w-0 flex-1 truncate text-left text-[12px] text-neutral-100"
+                      >
+                        {item.label}
+                      </button>
+                      {isOwner ? (
+                        confirmDeleteId === item.id ? (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              data-map-type-delete-confirm={item.id}
+                              disabled={saving}
+                              onClick={() => deleteSelected(item.id)}
+                              className="text-[10px] text-rose-200 hover:text-rose-100"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-[10px] text-neutral-500 hover:text-neutral-300"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            data-map-type-custom-remove={item.id}
+                            data-map-type-delete={item.id}
+                            disabled={saving}
+                            onClick={() => setConfirmDeleteId(item.id)}
+                            className="text-[10px] text-neutral-500 hover:text-neutral-200"
+                          >
+                            {t("planView.mapTypesDelete")}
+                          </button>
+                        )
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -768,57 +705,6 @@ export function WorkspaceMapTypesPanel({
                   onPaint={paintCell}
                 />
 
-                {isOwner ? (
-                  <div className="space-y-2" data-map-type-simulate-block>
-                    <button
-                      type="button"
-                      data-map-type-simulate
-                      disabled={simulating}
-                      onClick={() => void runSimulate()}
-                      className="w-full rounded-none border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-medium text-neutral-100 hover:bg-white/10 disabled:opacity-40"
-                    >
-                      {simulating
-                        ? t("planView.mapTypesSimulating")
-                        : t("planView.mapTypesSimulate")}
-                    </button>
-                    <p className="text-[10px] leading-snug text-neutral-500">
-                      {t("planView.mapTypesSimulateHint")}
-                    </p>
-                    {simulateError ? (
-                      <p
-                        data-map-type-simulate-error
-                        className="text-[11px] text-rose-200"
-                      >
-                        {simulateError}
-                      </p>
-                    ) : null}
-                    {simulateResult && simulateResult.mapTypeId === selected.id ? (
-                      <div
-                        data-map-type-simulate-result
-                        className="space-y-2 rounded-none border border-white/10 bg-black/30 p-2"
-                      >
-                        <p className="text-[11px] text-neutral-300">
-                          {t("planView.mapTypesResemble").replace(
-                            "{percent}",
-                            String(simulateResult.percent),
-                          )}
-                        </p>
-                        <div className="mx-auto aspect-square w-full max-w-[14rem]">
-                          <ChapterMiniMap
-                            cells={simulateResult.cells.map((c) => ({
-                              row: c.row,
-                              col: c.col,
-                              kind: "occupied" as const,
-                            }))}
-                            dummy
-                            density={selected.id}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
                 {selectedIsCustom && isOwner ? (
                   <div className="flex gap-2">
                     <button
@@ -911,6 +797,7 @@ export function WorkspaceMapTypesPanel({
           <div className="mb-3 flex flex-wrap gap-1.5">
             <button
               type="button"
+              data-map-type-browse-filter="all"
               onClick={() => setBrowseFilter("all")}
               className={`rounded-none border px-2 py-1 text-[10px] ${
                 browseFilter === "all"
@@ -920,42 +807,46 @@ export function WorkspaceMapTypesPanel({
             >
               All
             </button>
-            {MAP_TYPE_LIBRARY_CATEGORIES.filter((c) => c.id !== "core").map(
-              (cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setBrowseFilter(cat.id)}
-                  className={`rounded-none border px-2 py-1 text-[10px] ${
-                    browseFilter === cat.id
-                      ? "border-neutral-300 text-white"
-                      : "border-white/10 text-neutral-400"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ),
-            )}
             <button
               type="button"
-              onClick={() => setBrowseFilter("community")}
+              data-map-type-browse-filter="in_workspace"
+              onClick={() => setBrowseFilter("in_workspace")}
               className={`rounded-none border px-2 py-1 text-[10px] ${
-                browseFilter === "community"
+                browseFilter === "in_workspace"
                   ? "border-neutral-300 text-white"
                   : "border-white/10 text-neutral-400"
               }`}
             >
-              Community
+              {t("planView.mapTypesBrowseSelected")}
             </button>
+            {MAP_TYPE_LIBRARY_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                data-map-type-browse-filter={cat.id}
+                onClick={() => setBrowseFilter(cat.id)}
+                className={`rounded-none border px-2 py-1 text-[10px] ${
+                  browseFilter === cat.id
+                    ? "border-neutral-300 text-white"
+                    : "border-white/10 text-neutral-400"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {MAP_TYPE_LIBRARY_EXTRAS.filter(
-                (e) =>
-                  browseFilter === "all" ||
-                  browseFilter === e.category ||
-                  browseFilter === e.strength,
-              ).map((entry) => {
+              {MAP_TYPE_LIBRARY.filter((e) => {
+                if (browseFilter === "all") return true;
+                if (browseFilter === "in_workspace") {
+                  return workspaceHasLibraryMapType(state, e.id);
+                }
+                if (browseFilter === "community") return false;
+                return (
+                  browseFilter === e.category || browseFilter === e.strength
+                );
+              }).map((entry) => {
                 const record = mapTypeRecordFromLibrary(entry);
                 const inWs = workspaceHasLibraryMapType(state, entry.id);
                 return (
@@ -1005,8 +896,16 @@ export function WorkspaceMapTypesPanel({
                   </li>
                 );
               })}
-              {(browseFilter === "all" || browseFilter === "community") &&
-                community.map((item) => {
+              {(browseFilter === "all" ||
+                browseFilter === "community" ||
+                browseFilter === "in_workspace") &&
+                community
+                  .filter((item) => {
+                    if (browseFilter !== "in_workspace") return true;
+                    const id = String(item.id || item.slug || "");
+                    return workspaceHasLibraryMapType(state, id);
+                  })
+                  .map((item) => {
                   const id = String(item.id || item.slug || "");
                   const inWs = workspaceHasLibraryMapType(state, id);
                   const record = recordFromLibraryListing({
@@ -1068,6 +967,63 @@ export function WorkspaceMapTypesPanel({
                     </li>
                   );
                 })}
+              {browseFilter === "in_workspace" &&
+                state.customTypes
+                  .filter((item) => !item.libraryId)
+                  .map((item) => (
+                    <li
+                      key={item.id}
+                      data-map-type-library-card={item.id}
+                      className="flex flex-col rounded-none border border-white/10 bg-neutral-950 p-3"
+                    >
+                      <div className="mx-auto aspect-square w-full max-w-[10rem]">
+                        <ChapterMiniMap
+                          cells={mapTypeCellsToMiniMap(item)}
+                          dummy
+                          density={item.id}
+                        />
+                      </div>
+                      <p className="mt-2 text-[12px] font-medium text-white">
+                        {item.label}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                        {t("planView.mapTypesCustom")}
+                      </p>
+                      <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-neutral-400">
+                        {item.description}
+                      </p>
+                      {isOwner ? (
+                        confirmDeleteId === item.id ? (
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              data-map-type-delete-confirm={item.id}
+                              onClick={() => deleteSelected(item.id)}
+                              className="flex-1 rounded-none border border-rose-500/40 bg-rose-500/15 px-2 py-1.5 text-[10px] text-rose-100"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="rounded-none border border-white/15 px-2 py-1.5 text-[10px] text-neutral-400"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            data-map-type-custom-remove={item.id}
+                            onClick={() => setConfirmDeleteId(item.id)}
+                            className="mt-2 rounded-none border border-white/15 px-2 py-1.5 text-[10px] text-neutral-300"
+                          >
+                            {t("planView.mapTypesDelete")}
+                          </button>
+                        )
+                      ) : null}
+                    </li>
+                  ))}
             </ul>
           </div>
         </div>

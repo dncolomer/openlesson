@@ -194,7 +194,6 @@ export function WorkspaceSectionHosts({
               ayclToken={ayclToken}
               initialState={workspaceMapTypes}
               workspaceDags={workspaceDags}
-              workspaceTitle={plan.title || plan.root_topic}
               t={t}
             />
           </div>

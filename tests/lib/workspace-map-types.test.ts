@@ -9,7 +9,10 @@ import {
 import { availableSectionsForMode } from "@/lib/workspace-mode";
 import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
 import { composeSessionPlanCreatePrompt } from "@/lib/session-plan-create";
-import { MAP_TYPE_LIBRARY_EXTRAS } from "@/lib/map-type-library";
+import {
+  MAP_TYPE_LIBRARY_CORE,
+  MAP_TYPE_LIBRARY_EXTRAS,
+} from "@/lib/map-type-library";
 import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import {
@@ -24,6 +27,7 @@ import {
   normalizeMapTypeCells,
   normalizeWorkspaceMapTypes,
   removeCustomMapType,
+  removeLibraryMapType,
   resolveMapTypeIdFromBody,
   resolveMapTypeRecord,
   resolveWorkspaceMapTypeCatalog,
@@ -55,6 +59,10 @@ describe("workspace map types helpers", () => {
     expect(catalog.map((i) => i.id).sort()).toEqual([...INITIAL_CHAPTERS_LEVELS].sort());
     expect(catalog.some((i) => i.id === "spiral_curriculum")).toBe(false);
     expect(catalog.some((i) => i.id === "epitome_zoom")).toBe(false);
+    expect(MAP_TYPE_LIBRARY_CORE.every((e) => e.defaultImported)).toBe(true);
+    expect(MAP_TYPE_LIBRARY_CORE.map((e) => e.id).sort()).toEqual(
+      [...INITIAL_CHAPTERS_LEVELS].sort(),
+    );
   });
 
   it("official extra library types import onto a workspace catalog without replacing defaults", () => {
@@ -91,6 +99,28 @@ describe("workspace map types helpers", () => {
       mapTypesState: imported,
     });
     expect(prompt).toMatch(/Trajectories|fringe|DAG/i);
+
+    const withoutHub = removeLibraryMapType(
+      { disabledBuiltinIds: [], customTypes: [] },
+      "hub",
+    );
+    const afterRemove = resolveWorkspaceMapTypeCatalog(withoutHub);
+    expect(afterRemove.map((t) => t.id)).not.toContain("hub");
+    expect(afterRemove.map((t) => t.id)).toContain("islands");
+    const restored = importLibraryMapType(withoutHub, "hub");
+    expect(resolveWorkspaceMapTypeCatalog(restored).map((t) => t.id)).toContain(
+      "hub",
+    );
+    const serialized = serializeWorkspaceMapTypes(withoutHub);
+    expect(serialized.selectedLibraryIds || []).not.toContain("hub");
+    expect(serialized.disabledBuiltinIds).toContain("hub");
+    const remigrated = normalizeWorkspaceMapTypes({
+      disabledBuiltinIds: serialized.disabledBuiltinIds,
+      importedLibraryIds: serialized.importedLibraryIds,
+      customTypes: [],
+    });
+    expect(remigrated.selectedLibraryIds || []).not.toContain("hub");
+    expect(remigrated.selectedLibraryIds || []).toContain("islands");
   });
 
   it("Build-mode section list includes Map Types; Play/Explore/KR do not", () => {
@@ -421,17 +451,21 @@ describe("Map Types tab UI / API structural", () => {
     expect(panel).toContain("data-map-type-create");
     expect(panel).toContain("data-map-type-save");
     expect(panel).toContain("data-map-type-delete");
-    expect(panel).toContain("data-map-type-builtin-enabled");
-    expect(panel).toContain("data-map-type-simulate");
+    expect(panel).not.toContain("data-map-types-builtins");
+    expect(panel).not.toContain("data-map-type-builtin-enabled");
+    expect(panel).toContain("data-map-types-library");
+    expect(panel).toContain("data-map-type-library-remove");
+    expect(panel).toContain("data-map-type-custom-remove");
+    expect(panel).toContain('data-map-type-browse-filter="in_workspace"');
+    expect(panel).toContain("MAP_TYPE_LIBRARY");
+    expect(panel).not.toContain("data-map-type-simulate");
+    expect(panel).not.toContain("/api/workspace/map-types/simulate");
     expect(panel).toContain("data-map-type-browse");
     expect(panel).toContain("data-map-type-library-add");
     expect(panel).toContain("data-map-type-publish");
     expect(read("lib/map-type-library.ts")).toContain("spiral_curriculum");
-    expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY_EXTRAS");
-    expect(panel).toContain("/api/workspace/map-types/simulate");
-    const simulate = read("app/api/workspace/map-types/simulate/route.ts");
-    expect(simulate).toContain("createSessionPlanLLM");
-    expect(simulate).toContain("mapTypeTopologyResemblance");
+    expect(read("lib/map-type-library.ts")).toContain("MAP_TYPE_LIBRARY_CORE");
+    expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY");
 
     expect(mod).toContain("export function formatMapTypeGeneratorContext");
     expect(mod).toContain("export function resolveWorkspaceMapTypeCatalog");

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { MAP_TYPE_LIBRARY_EXTRAS } from "@/lib/map-type-library";
+import { MAP_TYPE_LIBRARY } from "@/lib/map-type-library";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { blankCustomMapType, normalizeCustomMapTypeRecord } from "@/lib/workspace-map-types";
 
@@ -22,7 +22,7 @@ function slugify(label: string, seed: string): string {
 
 export async function GET() {
   try {
-    const official = MAP_TYPE_LIBRARY_EXTRAS.map((e) => ({
+    const official = MAP_TYPE_LIBRARY.map((e) => ({
       id: e.id,
       slug: e.id,
       label: e.label,

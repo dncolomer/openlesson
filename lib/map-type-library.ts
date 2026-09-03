@@ -1,9 +1,14 @@
 /**
  * Official map-type library (global catalog).
- * Default workspace import is still the frozen eight built-ins in
- * `initial-chapters`. These extra pedagogical types are browseable and
- * opt-in per workspace.
+ * Core types (the frozen eight in `initial-chapters`) are pre-selected on
+ * new workspaces. Extra pedagogical types are browseable and opt-in.
  */
+
+import {
+  INITIAL_CHAPTERS_CATALOG,
+  INITIAL_CHAPTERS_LEVELS,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
 
 export type MapTypeLibraryCategory =
   | "core"
@@ -43,9 +48,13 @@ export type MapTypeLibraryEntry = {
   layoutInstruction: string;
   occupied: MapTypeLibraryCell[];
   blocked: MapTypeLibraryCell[];
-  /** Seed extras are not auto-imported onto new workspaces. */
+  /** Core types start selected; extras are opt-in. */
   defaultImported: boolean;
   authorUsername: string | null;
+  titleKey?: string;
+  descKey?: string;
+  topologyMode?: "shaped" | "scatter";
+  band?: { min: number; max: number; target: number; audience: string };
 };
 
 function ring(
@@ -74,6 +83,52 @@ function rowBand(row: number, cols: number[]): MapTypeLibraryCell[] {
 
 const ALL_ROWS = [0, 1, 2, 3, 4, 5, 6];
 const ALL_COLS = [0, 1, 2, 3, 4, 5, 6];
+
+const CORE_STRENGTH: Record<
+  InitialChaptersLevel,
+  { strength: MapTypeLibraryStrength; strengthLabel: string }
+> = {
+  islands: { strength: "working_memory", strengthLabel: "Working memory" },
+  spiral: { strength: "deepening", strengthLabel: "Deepening" },
+  ladder: { strength: "prerequisites", strengthLabel: "Prerequisites" },
+  hub: { strength: "orientation", strengthLabel: "Orientation" },
+  tracks: { strength: "discrimination", strengthLabel: "Discrimination" },
+  ring: { strength: "deepening", strengthLabel: "Deepening" },
+  random_sparse: { strength: "working_memory", strengthLabel: "Working memory" },
+  random_dense: { strength: "working_memory", strengthLabel: "Working memory" },
+};
+
+/** Frozen eight — pre-selected on every new workspace. */
+export const MAP_TYPE_LIBRARY_CORE: readonly MapTypeLibraryEntry[] =
+  INITIAL_CHAPTERS_CATALOG.map((option) => {
+    const meta = CORE_STRENGTH[option.id];
+    return {
+      id: option.id,
+      label: option.label,
+      description: option.description,
+      category: "core" as const,
+      categoryLabel: "Core",
+      strength: meta.strength,
+      strengthLabel: meta.strengthLabel,
+      playRule: option.description,
+      literature: "OpenLesson core map type.",
+      useWhen: option.audience,
+      layoutInstruction: option.layoutInstruction,
+      occupied: option.occupied.map((c) => ({ row: c.row, col: c.col })),
+      blocked: option.blocked.map((c) => ({ row: c.row, col: c.col })),
+      defaultImported: true,
+      authorUsername: null,
+      titleKey: option.titleKey,
+      descKey: option.descKey,
+      topologyMode: option.kind === "random" ? "scatter" : "shaped",
+      band: {
+        min: option.band.min,
+        max: option.band.max,
+        target: option.band.target,
+        audience: option.band.audience,
+      },
+    };
+  });
 
 /** Extra official types — in the global library, not default-imported. */
 export const MAP_TYPE_LIBRARY_EXTRAS: readonly MapTypeLibraryEntry[] = [
@@ -427,11 +482,27 @@ export const MAP_TYPE_LIBRARY_EXTRAS: readonly MapTypeLibraryEntry[] = [
   },
 ];
 
+export const MAP_TYPE_LIBRARY: readonly MapTypeLibraryEntry[] = [
+  ...MAP_TYPE_LIBRARY_CORE,
+  ...MAP_TYPE_LIBRARY_EXTRAS,
+];
+
+export const DEFAULT_SELECTED_LIBRARY_IDS: readonly string[] = [
+  ...INITIAL_CHAPTERS_LEVELS,
+];
+
 export const MAP_TYPE_LIBRARY_BY_ID: Record<string, MapTypeLibraryEntry> =
-  Object.fromEntries(MAP_TYPE_LIBRARY_EXTRAS.map((e) => [e.id, e]));
+  Object.fromEntries(MAP_TYPE_LIBRARY.map((e) => [e.id, e]));
 
 export function isMapTypeLibraryId(value: unknown): boolean {
   return typeof value === "string" && value in MAP_TYPE_LIBRARY_BY_ID;
+}
+
+export function isDefaultSelectedLibraryId(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    (DEFAULT_SELECTED_LIBRARY_IDS as readonly string[]).includes(value)
+  );
 }
 
 export const MAP_TYPE_LIBRARY_CATEGORIES: Array<{

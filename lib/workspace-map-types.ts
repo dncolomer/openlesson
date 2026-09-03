@@ -9,7 +9,6 @@
 
 import {
   DEFAULT_INITIAL_CHAPTERS,
-  INITIAL_CHAPTERS_LEVELS,
   SPATIAL_MAP_LAYOUT_RULES,
   canonicalizeInitialChapters,
   getInitialChaptersOption,
@@ -17,6 +16,7 @@ import {
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 import {
+  DEFAULT_SELECTED_LIBRARY_IDS,
   MAP_TYPE_LIBRARY_BY_ID,
   isMapTypeLibraryId,
   type MapTypeLibraryEntry,
@@ -89,8 +89,17 @@ export type WorkspaceMapTypeRecord = {
 };
 
 export type WorkspaceMapTypesState = {
+  /** Official library ids currently on this workspace (core defaults + extras). */
+  selectedLibraryIds?: string[];
+  /**
+   * @deprecated Accepted on read; derived from selectedLibraryIds on write.
+   * Core ids not present in selectedLibraryIds.
+   */
   disabledBuiltinIds: string[];
-  /** Extra official library ids imported onto this workspace (not the default eight). */
+  /**
+   * @deprecated Accepted on read; derived from selectedLibraryIds on write.
+   * Extra official ids present in selectedLibraryIds.
+   */
   importedLibraryIds?: string[];
   customTypes: WorkspaceMapTypeRecord[];
 };
@@ -374,7 +383,54 @@ function uniqIds(ids: readonly unknown[]): string[] {
 }
 
 export function emptyWorkspaceMapTypesState(): WorkspaceMapTypesState {
-  return { disabledBuiltinIds: [], importedLibraryIds: [], customTypes: [] };
+  return {
+    selectedLibraryIds: [...DEFAULT_SELECTED_LIBRARY_IDS],
+    disabledBuiltinIds: [],
+    importedLibraryIds: [],
+    customTypes: [],
+  };
+}
+
+function orderSelectedLibraryIds(ids: readonly string[]): string[] {
+  const uniq = uniqIds(ids).filter((id) => isMapTypeLibraryId(id));
+  const cores = DEFAULT_SELECTED_LIBRARY_IDS.filter((id) => uniq.includes(id));
+  const rest = uniq.filter((id) => !isInitialChaptersLevel(id));
+  return [...cores, ...rest];
+}
+
+function migrateSelectedLibraryIds(o: Record<string, unknown>): string[] {
+  const selectedRaw = Array.isArray(o.selectedLibraryIds)
+    ? o.selectedLibraryIds
+    : Array.isArray(o.selected_library_ids)
+      ? o.selected_library_ids
+      : null;
+  if (selectedRaw) {
+    return orderSelectedLibraryIds(selectedRaw);
+  }
+  const disabledRaw = Array.isArray(o.disabledBuiltinIds)
+    ? o.disabledBuiltinIds
+    : Array.isArray(o.disabled_builtin_ids)
+      ? o.disabled_builtin_ids
+      : [];
+  const disabled = new Set<string>(
+    uniqIds(disabledRaw).filter((id) => isInitialChaptersLevel(id)),
+  );
+  const importedRaw = Array.isArray(o.importedLibraryIds)
+    ? o.importedLibraryIds
+    : Array.isArray(o.imported_library_ids)
+      ? o.imported_library_ids
+      : [];
+  const imported = uniqIds(importedRaw).filter((id) => isMapTypeLibraryId(id));
+  const cores = DEFAULT_SELECTED_LIBRARY_IDS.filter((id) => !disabled.has(id));
+  return orderSelectedLibraryIds([...cores, ...imported]);
+}
+
+function derivedDisabledBuiltinIds(selected: readonly string[]): string[] {
+  return DEFAULT_SELECTED_LIBRARY_IDS.filter((id) => !selected.includes(id));
+}
+
+function derivedImportedLibraryIds(selected: readonly string[]): string[] {
+  return selected.filter((id) => !isInitialChaptersLevel(id));
 }
 
 export function newCustomMapTypeId(seed?: string | number): string {
@@ -445,29 +501,51 @@ export function mapTypeRecordFromLibrary(
       .filter((c) => !blockedKeys.has(cellKey(c.row, c.col)))
       .map((c) => ({ row: c.row, col: c.col, mark: "spawn" as const })),
   ];
+  const isCore = isInitialChaptersLevel(entry.id);
   return {
     id: entry.id,
     label: entry.label,
-    description: [entry.description, entry.playRule].filter(Boolean).join(" "),
-    source: "library",
+    description: isCore
+      ? entry.description
+      : [entry.description, entry.playRule].filter(Boolean).join(" "),
+    source: isCore ? "builtin" : "library",
     enabled,
     cells: normalizeMapTypeCells(cells),
     dagHintIds: [],
     orderStepCount: 0,
     orderSteps: [],
-    layoutInstruction: [
-      entry.layoutInstruction,
-      entry.playRule ? `PLAY RULE: ${entry.playRule}` : "",
-      entry.useWhen ? `USE WHEN: ${entry.useWhen}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    band: { ...DEFAULT_CUSTOM_BAND, audience: entry.useWhen || DEFAULT_CUSTOM_BAND.audience },
-    topologyMode: "shaped",
+    layoutInstruction: isCore
+      ? entry.layoutInstruction.trim()
+      : [
+          entry.layoutInstruction,
+          entry.playRule ? `PLAY RULE: ${entry.playRule}` : "",
+          entry.useWhen ? `USE WHEN: ${entry.useWhen}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+    band: entry.band
+      ? { ...entry.band }
+      : { ...DEFAULT_CUSTOM_BAND, audience: entry.useWhen || DEFAULT_CUSTOM_BAND.audience },
+    topologyMode: entry.topologyMode === "scatter" ? "scatter" : "shaped",
+    titleKey: entry.titleKey,
+    descKey: entry.descKey,
     libraryId: entry.id,
     authorUsername: entry.authorUsername,
     category: entry.category,
   };
+}
+
+export function mapTypeRecordFromLibraryId(
+  id: unknown,
+  enabled = true,
+): WorkspaceMapTypeRecord | null {
+  const raw = cleanId(id);
+  if (!isMapTypeLibraryId(raw)) return null;
+  if (isInitialChaptersLevel(raw)) {
+    return mapTypeRecordFromBuiltin(raw, enabled);
+  }
+  const entry = MAP_TYPE_LIBRARY_BY_ID[raw];
+  return entry ? mapTypeRecordFromLibrary(entry, enabled) : null;
 }
 
 export function blankCustomMapType(input?: {
@@ -533,20 +611,13 @@ export function normalizeCustomMapTypeRecord(
   };
 }
 
-/** Normalize jsonb / API payload into enable flags + custom records. */
+/** Normalize jsonb / API payload into selected library ids + custom records. */
 export function normalizeWorkspaceMapTypes(raw: unknown): WorkspaceMapTypesState {
   const o =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : {};
-  const disabledRaw = Array.isArray(o.disabledBuiltinIds)
-    ? o.disabledBuiltinIds
-    : Array.isArray(o.disabled_builtin_ids)
-      ? o.disabled_builtin_ids
-      : [];
-  const disabledBuiltinIds = uniqIds(disabledRaw).filter((id) =>
-    isInitialChaptersLevel(id),
-  );
+  const selectedLibraryIds = migrateSelectedLibraryIds(o);
   const customRaw = Array.isArray(o.customTypes)
     ? o.customTypes
     : Array.isArray(o.custom_types)
@@ -563,15 +634,12 @@ export function normalizeWorkspaceMapTypes(raw: unknown): WorkspaceMapTypesState
     seen.add(record.id);
     customTypes.push(record);
   }
-  const importedRaw = Array.isArray(o.importedLibraryIds)
-    ? o.importedLibraryIds
-    : Array.isArray(o.imported_library_ids)
-      ? o.imported_library_ids
-      : [];
-  const importedLibraryIds = uniqIds(importedRaw).filter((id) =>
-    isMapTypeLibraryId(id),
-  );
-  return { disabledBuiltinIds, importedLibraryIds, customTypes };
+  return {
+    selectedLibraryIds,
+    disabledBuiltinIds: derivedDisabledBuiltinIds(selectedLibraryIds),
+    importedLibraryIds: derivedImportedLibraryIds(selectedLibraryIds),
+    customTypes,
+  };
 }
 
 export function serializeWorkspaceMapTypes(
@@ -579,6 +647,8 @@ export function serializeWorkspaceMapTypes(
 ): WorkspaceMapTypesState {
   const normalized = normalizeWorkspaceMapTypes(state);
   return {
+    selectedLibraryIds:
+      normalized.selectedLibraryIds || [...DEFAULT_SELECTED_LIBRARY_IDS],
     disabledBuiltinIds: normalized.disabledBuiltinIds,
     importedLibraryIds: normalized.importedLibraryIds,
     customTypes: normalized.customTypes.map((t) => ({
@@ -607,13 +677,9 @@ export function setBuiltinMapTypeEnabled(
 ): WorkspaceMapTypesState {
   const id = canonicalizeInitialChapters(builtinId);
   if (!id) return normalizeWorkspaceMapTypes(state);
-  const current = normalizeWorkspaceMapTypes(state);
-  const without = current.disabledBuiltinIds.filter((x) => x !== id);
-  return {
-    disabledBuiltinIds: enabled ? without : [...without, id],
-    importedLibraryIds: current.importedLibraryIds,
-    customTypes: current.customTypes,
-  };
+  return enabled
+    ? importLibraryMapType(state, id)
+    : removeLibraryMapType(state, id);
 }
 
 export function upsertCustomMapType(
@@ -628,8 +694,7 @@ export function upsertCustomMapType(
   if (idx >= 0) customTypes[idx] = next;
   else customTypes.push(next);
   return {
-    disabledBuiltinIds: current.disabledBuiltinIds,
-    importedLibraryIds: current.importedLibraryIds,
+    ...current,
     customTypes,
   };
 }
@@ -641,8 +706,7 @@ export function removeCustomMapType(
   const current = normalizeWorkspaceMapTypes(state);
   const target = cleanId(id);
   return {
-    disabledBuiltinIds: current.disabledBuiltinIds,
-    importedLibraryIds: current.importedLibraryIds,
+    ...current,
     customTypes: current.customTypes.filter((t) => t.id !== target),
   };
 }
@@ -654,11 +718,14 @@ export function importLibraryMapType(
   const current = normalizeWorkspaceMapTypes(state);
   const id = cleanId(libraryId);
   if (!isMapTypeLibraryId(id)) return current;
-  const imported = current.importedLibraryIds || [];
-  if (imported.includes(id)) return current;
+  const currentSelected = current.selectedLibraryIds || [];
+  if (currentSelected.includes(id)) return current;
+  const selectedLibraryIds = orderSelectedLibraryIds([...currentSelected, id]);
   return {
     ...current,
-    importedLibraryIds: [...imported, id],
+    selectedLibraryIds,
+    disabledBuiltinIds: derivedDisabledBuiltinIds(selectedLibraryIds),
+    importedLibraryIds: derivedImportedLibraryIds(selectedLibraryIds),
   };
 }
 
@@ -668,9 +735,14 @@ export function removeLibraryMapType(
 ): WorkspaceMapTypesState {
   const current = normalizeWorkspaceMapTypes(state);
   const id = cleanId(libraryId);
+  const selectedLibraryIds = (current.selectedLibraryIds || []).filter(
+    (x) => x !== id,
+  );
   return {
     ...current,
-    importedLibraryIds: (current.importedLibraryIds || []).filter((x) => x !== id),
+    selectedLibraryIds,
+    disabledBuiltinIds: derivedDisabledBuiltinIds(selectedLibraryIds),
+    importedLibraryIds: derivedImportedLibraryIds(selectedLibraryIds),
   };
 }
 
@@ -680,10 +752,7 @@ export function workspaceHasLibraryMapType(
 ): boolean {
   const current = normalizeWorkspaceMapTypes(state);
   const id = cleanId(libraryId);
-  if (isInitialChaptersLevel(id)) {
-    return builtinEnabled(current, id);
-  }
-  if ((current.importedLibraryIds || []).includes(id)) return true;
+  if ((current.selectedLibraryIds || []).includes(id)) return true;
   return current.customTypes.some(
     (t) => t.libraryId === id || t.id === id,
   );
@@ -741,30 +810,26 @@ export function recordFromLibraryListing(item: {
   };
 }
 
-function builtinEnabled(
+function librarySelected(
   state: WorkspaceMapTypesState,
-  id: InitialChaptersLevel,
+  id: string,
 ): boolean {
-  return !state.disabledBuiltinIds.includes(id);
+  return (state.selectedLibraryIds || []).includes(id);
 }
 
 /**
- * Picker catalog: enabled built-ins (frozen eight-id list, in catalog order)
+ * Picker catalog: selected official library types (core defaults + extras)
  * plus enabled custom types. If that would be empty, fall back to islands.
  */
 export function resolveWorkspaceMapTypeCatalog(
   state?: WorkspaceMapTypesState | null,
 ): WorkspaceMapTypeRecord[] {
   const normalized = normalizeWorkspaceMapTypes(state ?? emptyWorkspaceMapTypesState());
-  const builtins = INITIAL_CHAPTERS_LEVELS.filter((id) =>
-    builtinEnabled(normalized, id),
-  ).map((id) => mapTypeRecordFromBuiltin(id, true));
-  const imported = (normalized.importedLibraryIds || [])
-    .map((id) => MAP_TYPE_LIBRARY_BY_ID[id])
-    .filter((e): e is MapTypeLibraryEntry => Boolean(e))
-    .map((e) => mapTypeRecordFromLibrary(e, true));
+  const selected = (normalized.selectedLibraryIds || [])
+    .map((id) => mapTypeRecordFromLibraryId(id, true))
+    .filter((r): r is WorkspaceMapTypeRecord => Boolean(r));
   const customs = normalized.customTypes.filter((t) => t.enabled);
-  const catalog = [...builtins, ...imported, ...customs];
+  const catalog = [...selected, ...customs];
   if (catalog.length > 0) return catalog;
   return [mapTypeRecordFromBuiltin(DEFAULT_INITIAL_CHAPTERS, true)];
 }
@@ -780,17 +845,13 @@ export function findMapTypeInState(
   if (canonical) {
     return mapTypeRecordFromBuiltin(
       canonical,
-      builtinEnabled(normalized, canonical),
+      librarySelected(normalized, canonical),
     );
   }
   const custom = normalized.customTypes.find((t) => t.id === raw);
   if (custom) return custom;
-  if (
-    isMapTypeLibraryId(raw) &&
-    (normalized.importedLibraryIds || []).includes(raw)
-  ) {
-    const entry = MAP_TYPE_LIBRARY_BY_ID[raw];
-    if (entry) return mapTypeRecordFromLibrary(entry, true);
+  if (isMapTypeLibraryId(raw) && librarySelected(normalized, raw)) {
+    return mapTypeRecordFromLibraryId(raw, true);
   }
   return null;
 }

@@ -127,15 +127,23 @@ export function InitialChaptersPicker({
             data-map-type-preview
             className={
               fillHeight
-                ? "min-h-[min(14rem,28vh)] w-full flex-1"
+                ? "flex min-h-[12rem] w-full flex-1 items-center justify-center [container-type:size]"
                 : "mx-auto aspect-square w-full max-w-[14rem]"
             }
           >
-            <ChapterMiniMap
-              cells={miniCells}
-              dummy
-              density={option.id}
-            />
+            <div
+              className={
+                fillHeight
+                  ? "aspect-square w-full max-w-[100cqmin]"
+                  : "h-full w-full"
+              }
+            >
+              <ChapterMiniMap
+                cells={miniCells}
+                dummy
+                density={option.id}
+              />
+            </div>
           </div>
           <p className="mt-3 truncate text-sm font-medium leading-tight text-neutral-100">
             {title}

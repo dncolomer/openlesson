@@ -588,9 +588,10 @@ describe("create surface wiring (structural)", () => {
     expect(pickerSrc).toContain("fillHeight");
     expect(pickerSrc).toContain("flex h-full min-h-0 flex-col");
     expect(pickerSrc).toContain("data-map-type-preview");
+    expect(pickerSrc).toContain("max-w-[100cqmin]");
+    expect(pickerSrc).toContain("aspect-square");
     expect(pickerSrc).not.toContain("grid-cols-2");
     expect(pickerSrc).not.toContain("sm:grid-cols-4");
-    expect(pickerSrc).toContain("aspect-square");
     expect(pickerSrc).toContain("line-clamp-3");
     expect(pickerSrc).toContain("min-h-[3.6rem]");
     const welcomeSrc = readFileSync(

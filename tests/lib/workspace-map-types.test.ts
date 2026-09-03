@@ -60,15 +60,22 @@ describe("workspace map types helpers", () => {
     ).not.toContain("map_types");
 
     const t = (key: string) => key;
-    const buildNav = buildWorkspaceSectionNavItems({
-      t,
+    const enCopy = JSON.parse(read("messages/en.json")) as {
+      planView: Record<string, string>;
+    };
+    expect(enCopy.planView.sectionMapTypes).toBe("Map Types");
+    const labeledNav = buildWorkspaceSectionNavItems({
+      t: (key) =>
+        key === "planView.sectionMapTypes"
+          ? enCopy.planView.sectionMapTypes
+          : key,
       isLearnerMode: false,
       isOwner: true,
       visibleSections: creator,
     });
-    expect(buildNav.map((item) => item.key)).toContain("map_types");
-    expect(buildNav.find((item) => item.key === "map_types")?.label).toBe(
-      "planView.sectionMapTypes",
+    expect(labeledNav.map((item) => item.key)).toContain("map_types");
+    expect(labeledNav.find((item) => item.key === "map_types")?.label).toBe(
+      "Map Types",
     );
 
     const playNav = buildWorkspaceSectionNavItems({
@@ -177,18 +184,27 @@ describe("workspace map types helpers", () => {
     expect(customCtx.blockedInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
     expect(customCtx.dagHintInstruction).toMatch(/DAG HINTS/i);
 
+    // Id-only path (no pre-built record) — same formatter composeSessionPlanCreatePrompt uses.
     const builtinPrompt = composeSessionPlanCreatePrompt(
       DEFAULT_PROMPTS.session_plan_create,
-      { problem: "Graphs", mapType: builtin },
+      { problem: "Graphs", initialChapters: "islands" },
     );
     expect(builtinPrompt).toContain(builtinCtx.countInstruction);
     expect(builtinPrompt).toMatch(/SPAWN CELLS/i);
     expect(builtinPrompt).toMatch(/BLOCKED CHAPTER SLOTS/i);
     expect(builtinPrompt).not.toContain("{initial_chapters_instruction}");
 
+    const customState = upsertCustomMapType(
+      { disabledBuiltinIds: [], customTypes: [] },
+      custom,
+    );
     const customPrompt = composeSessionPlanCreatePrompt(
       DEFAULT_PROMPTS.session_plan_create,
-      { problem: "Graphs", mapType: custom, initialChapters: custom.id },
+      {
+        problem: "Graphs",
+        initialChapters: custom.id,
+        mapTypesState: customState,
+      },
     );
     expect(customPrompt).toContain(customCtx.countInstruction);
     expect(customPrompt).toMatch(/SPAWN CELLS/i);
@@ -197,10 +213,9 @@ describe("workspace map types helpers", () => {
     expect(customPrompt).toMatch(/DAG HINTS/i);
     expect(customPrompt).toContain("maptype_bridge");
 
-    expect(resolveMapTypeIdFromBody({ initial_chapters: custom.id }, upsertCustomMapType(
-      { disabledBuiltinIds: [], customTypes: [] },
-      custom,
-    ))).toBe("maptype_bridge");
+    expect(
+      resolveMapTypeIdFromBody({ initial_chapters: custom.id }, customState),
+    ).toBe("maptype_bridge");
   });
 });
 
@@ -244,14 +259,17 @@ describe("Map Types tab UI / API structural", () => {
 
     expect(sections).toContain('"map_types"');
     expect(sections).toContain("mountsMapTypesPanel");
-    expect(en).toContain("sectionMapTypes");
-    expect(en).toContain('"Map Types"');
+    const enJson = JSON.parse(en) as { planView: Record<string, string> };
+    expect(enJson.planView.sectionMapTypes).toBe("Map Types");
 
     expect(view).toContain('key: "map_types"');
     expect(view).toContain("sectionMapTypes");
     expect(view).toContain("WorkspaceMapTypesPanel");
     expect(view).toContain("data-workspace-map-types-host");
     expect(view).toContain("exploreOpen: showMapExplore");
+    expect(view).toMatch(
+      /!isLearnerMode &&\s*isOwner &&\s*sectionLayout\.mountsMapTypesPanel &&\s*visibleSections\.includes\("map_types"\)/,
+    );
 
     expect(panel).toContain("data-workspace-map-types-panel");
     expect(panel).toContain("data-map-type-grid");
@@ -354,8 +372,7 @@ describe("Map Types tab UI / API structural", () => {
 });
 
 describe("map types verification evidence", () => {
-  it("writes helper assertions to scratch", () => {
-    mkdirSync(SCRATCH, { recursive: true });
+  it("id-only compose + catalog disable/custom still hold", () => {
     const custom = blankCustomMapType({ id: "maptype_harbor", label: "Harbor" });
     custom.cells = [
       { row: 0, col: 1, mark: "spawn" },
@@ -368,53 +385,17 @@ describe("map types verification evidence", () => {
       false,
     );
     const catalog = resolveWorkspaceMapTypeCatalog(state);
-    const islandsCtx = formatMapTypeGeneratorContext(
-      resolveMapTypeRecord("islands", state),
-    );
     const customCtx = formatMapTypeGeneratorContext(
       resolveMapTypeRecord("maptype_harbor", state),
     );
     const prompt = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
       problem: "Proofs",
-      mapType: resolveMapTypeRecord("maptype_harbor", state),
+      initialChapters: "maptype_harbor",
+      mapTypesState: state,
     });
-    writeFileSync(
-      join(SCRATCH, "map-types.test.log"),
-      [
-        "map-types-helpers",
-        "build_has_map_types=" +
-          String(
-            availableSectionsForMode({
-              mode: "creator",
-              isOwner: true,
-            }).includes("map_types"),
-          ),
-        "play_has_map_types=" +
-          String(
-            availableSectionsForMode({
-              mode: "learner",
-              isOwner: true,
-              isLoggedIn: true,
-            }).includes("map_types"),
-          ),
-        "catalog_has_custom=" + String(catalog.some((t) => t.id === "maptype_harbor")),
-        "catalog_has_ring=" + String(catalog.some((t) => t.id === "ring")),
-        "builtin_spawn=" + String(islandsCtx.spawnInstruction.includes("SPAWN CELLS")),
-        "builtin_blocked=" +
-          String(islandsCtx.blockedInstruction.includes("BLOCKED CHAPTER SLOTS")),
-        "custom_spawn=" + String(customCtx.spawnInstruction.includes("SPAWN CELLS")),
-        "custom_no_spawn=" + String(customCtx.noSpawnInstruction.includes("NO-SPAWN CELLS")),
-        "custom_blocked=" +
-          String(customCtx.blockedInstruction.includes("BLOCKED CHAPTER SLOTS")),
-        "prompt_includes_custom_ctx=" + String(prompt.includes(customCtx.countInstruction)),
-        "deleted=" +
-          String(
-            removeCustomMapType(state, "maptype_harbor").customTypes.length === 0,
-          ),
-      ].join("\n") + "\n",
-    );
     expect(catalog.some((t) => t.id === "maptype_harbor")).toBe(true);
     expect(catalog.some((t) => t.id === "ring")).toBe(false);
     expect(prompt).toContain(customCtx.countInstruction);
+    expect(removeCustomMapType(state, "maptype_harbor").customTypes).toHaveLength(0);
   });
 });

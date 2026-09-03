@@ -16,6 +16,11 @@ import {
   isInitialChaptersLevel,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import {
+  MAP_TYPE_LIBRARY_BY_ID,
+  isMapTypeLibraryId,
+  type MapTypeLibraryEntry,
+} from "@/lib/map-type-library";
 import { DUMMY_PATTERN_FRAME } from "@/lib/ile-chapter-mini-map";
 import type { MiniMapCell } from "@/lib/ile-chapter-mini-map";
 import { getCellKey } from "@/lib/block-skill-grid";
@@ -51,7 +56,7 @@ export type MapTypeBand = {
   audience: string;
 };
 
-export type WorkspaceMapTypeSource = "builtin" | "custom";
+export type WorkspaceMapTypeSource = "builtin" | "custom" | "library";
 export type MapTypeTopologyMode = "shaped" | "scatter";
 
 export type WorkspaceMapTypeRecord = {
@@ -77,10 +82,16 @@ export type WorkspaceMapTypeRecord = {
   /** i18n key suffixes for built-ins (session.* / planMode.*). */
   titleKey?: string;
   descKey?: string;
+  /** Official or published library id when this record was imported. */
+  libraryId?: string;
+  authorUsername?: string | null;
+  category?: string;
 };
 
 export type WorkspaceMapTypesState = {
   disabledBuiltinIds: string[];
+  /** Extra official library ids imported onto this workspace (not the default eight). */
+  importedLibraryIds?: string[];
   customTypes: WorkspaceMapTypeRecord[];
 };
 
@@ -363,7 +374,7 @@ function uniqIds(ids: readonly unknown[]): string[] {
 }
 
 export function emptyWorkspaceMapTypesState(): WorkspaceMapTypesState {
-  return { disabledBuiltinIds: [], customTypes: [] };
+  return { disabledBuiltinIds: [], importedLibraryIds: [], customTypes: [] };
 }
 
 export function newCustomMapTypeId(seed?: string | number): string {
@@ -423,6 +434,42 @@ export function mapTypeRecordFromBuiltin(
   };
 }
 
+export function mapTypeRecordFromLibrary(
+  entry: MapTypeLibraryEntry,
+  enabled = true,
+): WorkspaceMapTypeRecord {
+  const blockedKeys = new Set(entry.blocked.map((c) => cellKey(c.row, c.col)));
+  const cells: MapTypeCell[] = [
+    ...entry.blocked.map((c) => ({ row: c.row, col: c.col, mark: "blocked" as const })),
+    ...entry.occupied
+      .filter((c) => !blockedKeys.has(cellKey(c.row, c.col)))
+      .map((c) => ({ row: c.row, col: c.col, mark: "spawn" as const })),
+  ];
+  return {
+    id: entry.id,
+    label: entry.label,
+    description: [entry.description, entry.playRule].filter(Boolean).join(" "),
+    source: "library",
+    enabled,
+    cells: normalizeMapTypeCells(cells),
+    dagHintIds: [],
+    orderStepCount: 0,
+    orderSteps: [],
+    layoutInstruction: [
+      entry.layoutInstruction,
+      entry.playRule ? `PLAY RULE: ${entry.playRule}` : "",
+      entry.useWhen ? `USE WHEN: ${entry.useWhen}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    band: { ...DEFAULT_CUSTOM_BAND, audience: entry.useWhen || DEFAULT_CUSTOM_BAND.audience },
+    topologyMode: "shaped",
+    libraryId: entry.id,
+    authorUsername: entry.authorUsername,
+    category: entry.category,
+  };
+}
+
 export function blankCustomMapType(input?: {
   id?: string;
   label?: string;
@@ -479,6 +526,10 @@ export function normalizeCustomMapTypeRecord(
     layoutInstruction: String(o.layoutInstruction || "").trim(),
     band: normalizeBand(o.band, DEFAULT_CUSTOM_BAND),
     topologyMode: o.topologyMode === "scatter" ? "scatter" : "shaped",
+    libraryId: typeof o.libraryId === "string" ? o.libraryId : undefined,
+    authorUsername:
+      typeof o.authorUsername === "string" ? o.authorUsername : null,
+    category: typeof o.category === "string" ? o.category : undefined,
   };
 }
 
@@ -512,7 +563,15 @@ export function normalizeWorkspaceMapTypes(raw: unknown): WorkspaceMapTypesState
     seen.add(record.id);
     customTypes.push(record);
   }
-  return { disabledBuiltinIds, customTypes };
+  const importedRaw = Array.isArray(o.importedLibraryIds)
+    ? o.importedLibraryIds
+    : Array.isArray(o.imported_library_ids)
+      ? o.imported_library_ids
+      : [];
+  const importedLibraryIds = uniqIds(importedRaw).filter((id) =>
+    isMapTypeLibraryId(id),
+  );
+  return { disabledBuiltinIds, importedLibraryIds, customTypes };
 }
 
 export function serializeWorkspaceMapTypes(
@@ -521,6 +580,7 @@ export function serializeWorkspaceMapTypes(
   const normalized = normalizeWorkspaceMapTypes(state);
   return {
     disabledBuiltinIds: normalized.disabledBuiltinIds,
+    importedLibraryIds: normalized.importedLibraryIds,
     customTypes: normalized.customTypes.map((t) => ({
       id: t.id,
       label: t.label,
@@ -533,6 +593,9 @@ export function serializeWorkspaceMapTypes(
       orderSteps: t.orderSteps,
       layoutInstruction: t.layoutInstruction,
       band: t.band,
+      libraryId: t.libraryId,
+      authorUsername: t.authorUsername,
+      category: t.category,
     })),
   };
 }
@@ -548,6 +611,7 @@ export function setBuiltinMapTypeEnabled(
   const without = current.disabledBuiltinIds.filter((x) => x !== id);
   return {
     disabledBuiltinIds: enabled ? without : [...without, id],
+    importedLibraryIds: current.importedLibraryIds,
     customTypes: current.customTypes,
   };
 }
@@ -563,7 +627,11 @@ export function upsertCustomMapType(
   const customTypes = [...current.customTypes];
   if (idx >= 0) customTypes[idx] = next;
   else customTypes.push(next);
-  return { disabledBuiltinIds: current.disabledBuiltinIds, customTypes };
+  return {
+    disabledBuiltinIds: current.disabledBuiltinIds,
+    importedLibraryIds: current.importedLibraryIds,
+    customTypes,
+  };
 }
 
 export function removeCustomMapType(
@@ -574,7 +642,102 @@ export function removeCustomMapType(
   const target = cleanId(id);
   return {
     disabledBuiltinIds: current.disabledBuiltinIds,
+    importedLibraryIds: current.importedLibraryIds,
     customTypes: current.customTypes.filter((t) => t.id !== target),
+  };
+}
+
+export function importLibraryMapType(
+  state: WorkspaceMapTypesState,
+  libraryId: unknown,
+): WorkspaceMapTypesState {
+  const current = normalizeWorkspaceMapTypes(state);
+  const id = cleanId(libraryId);
+  if (!isMapTypeLibraryId(id)) return current;
+  const imported = current.importedLibraryIds || [];
+  if (imported.includes(id)) return current;
+  return {
+    ...current,
+    importedLibraryIds: [...imported, id],
+  };
+}
+
+export function removeLibraryMapType(
+  state: WorkspaceMapTypesState,
+  libraryId: unknown,
+): WorkspaceMapTypesState {
+  const current = normalizeWorkspaceMapTypes(state);
+  const id = cleanId(libraryId);
+  return {
+    ...current,
+    importedLibraryIds: (current.importedLibraryIds || []).filter((x) => x !== id),
+  };
+}
+
+export function workspaceHasLibraryMapType(
+  state: WorkspaceMapTypesState,
+  libraryId: unknown,
+): boolean {
+  const current = normalizeWorkspaceMapTypes(state);
+  const id = cleanId(libraryId);
+  if (isInitialChaptersLevel(id)) {
+    return builtinEnabled(current, id);
+  }
+  if ((current.importedLibraryIds || []).includes(id)) return true;
+  return current.customTypes.some(
+    (t) => t.libraryId === id || t.id === id,
+  );
+}
+
+export function recordFromLibraryListing(item: {
+  id?: string;
+  slug?: string;
+  label?: string;
+  description?: string;
+  occupied?: Array<{ row: number; col: number }>;
+  blocked?: Array<{ row: number; col: number }>;
+  payload?: unknown;
+  authorUsername?: string | null;
+  playRule?: string;
+  useWhen?: string;
+  category?: string;
+}): WorkspaceMapTypeRecord {
+  const fromPayload = normalizeCustomMapTypeRecord({
+    ...(item.payload && typeof item.payload === "object" ? item.payload : {}),
+    id: newCustomMapTypeId(item.slug || item.id || "pub"),
+    label: item.label,
+    description: item.description,
+    authorUsername: item.authorUsername,
+    category: item.category || "community",
+    libraryId: item.slug || item.id,
+  });
+  if (fromPayload && (fromPayload.cells.length > 0 || item.payload)) {
+    return {
+      ...fromPayload,
+      authorUsername: item.authorUsername ?? fromPayload.authorUsername,
+      libraryId: String(item.slug || item.id || fromPayload.libraryId || ""),
+    };
+  }
+  const occupied = Array.isArray(item.occupied) ? item.occupied : [];
+  const blocked = Array.isArray(item.blocked) ? item.blocked : [];
+  const blockedKeys = new Set(blocked.map((c) => cellKey(c.row, c.col)));
+  const cells: MapTypeCell[] = [
+    ...blocked.map((c) => ({ row: c.row, col: c.col, mark: "blocked" as const })),
+    ...occupied
+      .filter((c) => !blockedKeys.has(cellKey(c.row, c.col)))
+      .map((c) => ({ row: c.row, col: c.col, mark: "spawn" as const })),
+  ];
+  return {
+    ...blankCustomMapType({
+      id: newCustomMapTypeId(item.slug || item.id || "pub"),
+      label: item.label || "Library map",
+    }),
+    description: item.description || "",
+    cells: normalizeMapTypeCells(cells),
+    layoutInstruction: item.playRule || "",
+    authorUsername: item.authorUsername ?? null,
+    libraryId: String(item.slug || item.id || ""),
+    category: item.category || "community",
   };
 }
 
@@ -596,8 +759,12 @@ export function resolveWorkspaceMapTypeCatalog(
   const builtins = INITIAL_CHAPTERS_LEVELS.filter((id) =>
     builtinEnabled(normalized, id),
   ).map((id) => mapTypeRecordFromBuiltin(id, true));
+  const imported = (normalized.importedLibraryIds || [])
+    .map((id) => MAP_TYPE_LIBRARY_BY_ID[id])
+    .filter((e): e is MapTypeLibraryEntry => Boolean(e))
+    .map((e) => mapTypeRecordFromLibrary(e, true));
   const customs = normalized.customTypes.filter((t) => t.enabled);
-  const catalog = [...builtins, ...customs];
+  const catalog = [...builtins, ...imported, ...customs];
   if (catalog.length > 0) return catalog;
   return [mapTypeRecordFromBuiltin(DEFAULT_INITIAL_CHAPTERS, true)];
 }
@@ -616,7 +783,16 @@ export function findMapTypeInState(
       builtinEnabled(normalized, canonical),
     );
   }
-  return normalized.customTypes.find((t) => t.id === raw) ?? null;
+  const custom = normalized.customTypes.find((t) => t.id === raw);
+  if (custom) return custom;
+  if (
+    isMapTypeLibraryId(raw) &&
+    (normalized.importedLibraryIds || []).includes(raw)
+  ) {
+    const entry = MAP_TYPE_LIBRARY_BY_ID[raw];
+    if (entry) return mapTypeRecordFromLibrary(entry, true);
+  }
+  return null;
 }
 
 /**

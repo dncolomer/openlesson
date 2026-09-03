@@ -9,11 +9,14 @@ import {
 import { availableSectionsForMode } from "@/lib/workspace-mode";
 import { buildWorkspaceSectionNavItems } from "@/components/workspace-view/workspace-section-nav-items";
 import { composeSessionPlanCreatePrompt } from "@/lib/session-plan-create";
+import { MAP_TYPE_LIBRARY_EXTRAS } from "@/lib/map-type-library";
+import { INITIAL_CHAPTERS_LEVELS } from "@/lib/initial-chapters";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import {
   blankCustomMapType,
   clampPositionsToMapTypeFrame,
   defaultMapTypePickerCatalog,
+  importLibraryMapType,
   formatMapTypeGeneratorContext,
   mapTypePickerCatalog,
   mapTypeRecordFromBuiltin,
@@ -49,6 +52,45 @@ describe("workspace map types helpers", () => {
         true,
       );
     }
+    expect(catalog.map((i) => i.id).sort()).toEqual([...INITIAL_CHAPTERS_LEVELS].sort());
+    expect(catalog.some((i) => i.id === "spiral_curriculum")).toBe(false);
+    expect(catalog.some((i) => i.id === "epitome_zoom")).toBe(false);
+  });
+
+  it("official extra library types import onto a workspace catalog without replacing defaults", () => {
+    expect(MAP_TYPE_LIBRARY_EXTRAS.map((e) => e.id)).toEqual(
+      expect.arrayContaining([
+        "spiral_curriculum",
+        "epitome_zoom",
+        "strands",
+        "trajectories",
+        "criss_cross",
+        "web_first",
+        "interleaved_mosaic",
+        "whole_task_bands",
+      ]),
+    );
+    for (const extra of MAP_TYPE_LIBRARY_EXTRAS) {
+      expect(extra.defaultImported).toBe(false);
+      expect((INITIAL_CHAPTERS_LEVELS as readonly string[]).includes(extra.id)).toBe(
+        false,
+      );
+      expect(extra.occupied.length).toBeGreaterThan(0);
+      expect(extra.playRule.length).toBeGreaterThan(20);
+    }
+    const imported = importLibraryMapType(
+      { disabledBuiltinIds: [], importedLibraryIds: [], customTypes: [] },
+      "trajectories",
+    );
+    const catalog = resolveWorkspaceMapTypeCatalog(imported);
+    expect(catalog.map((t) => t.id)).toContain("trajectories");
+    expect(catalog.map((t) => t.id)).toContain("islands");
+    const prompt = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
+      problem: "Algebra",
+      initialChapters: "trajectories",
+      mapTypesState: imported,
+    });
+    expect(prompt).toMatch(/Trajectories|fringe|DAG/i);
   });
 
   it("Build-mode section list includes Map Types; Play/Explore/KR do not", () => {
@@ -381,6 +423,11 @@ describe("Map Types tab UI / API structural", () => {
     expect(panel).toContain("data-map-type-delete");
     expect(panel).toContain("data-map-type-builtin-enabled");
     expect(panel).toContain("data-map-type-simulate");
+    expect(panel).toContain("data-map-type-browse");
+    expect(panel).toContain("data-map-type-library-add");
+    expect(panel).toContain("data-map-type-publish");
+    expect(read("lib/map-type-library.ts")).toContain("spiral_curriculum");
+    expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY_EXTRAS");
     expect(panel).toContain("/api/workspace/map-types/simulate");
     const simulate = read("app/api/workspace/map-types/simulate/route.ts");
     expect(simulate).toContain("createSessionPlanLLM");

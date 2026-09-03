@@ -83,9 +83,11 @@ import {
   BlockGeneratorTargetSparkBadge,
   BlockLocalContextDocBadge,
   BlockPracticeOptionsBadge,
+  BlockPreviousSessionsPickaxeBadge,
   BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
+import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-sessions";
 import {
   DEFAULT_BLOCK_MAP_ICON,
   ILE_GATHER_RUNNING_MAP_ICON,
@@ -155,6 +157,7 @@ export function MapWorldLayer({
   chapterUnlockHighlightIds,
   learnerDepHighlightIds,
   workedOnIds,
+  previousSessionBlockIds = new Set<string>(),
   generationLockedBlockIds,
   dynamicUnlockHighlightIds,
   dynamicGeneratedSet,
@@ -228,6 +231,7 @@ export function MapWorldLayer({
   chapterUnlockHighlightIds: Set<string>;
   learnerDepHighlightIds: Set<string>;
   workedOnIds: Set<string>;
+  previousSessionBlockIds?: Set<string>;
   generationLockedBlockIds: Set<string>;
   dynamicUnlockHighlightIds: Set<string>;
   dynamicGeneratedSet: Set<string>;
@@ -702,6 +706,14 @@ export function MapWorldLayer({
             const starterBadge = tileBadges.showStarter ? (
               <BlockStarterFlagBadge />
             ) : null;
+            const hasPreviousSessions = workspaceTileShowsPreviousSessionsPickaxe({
+              suggestMode,
+              blockId: node.id,
+              previousSessionBlockIds,
+            });
+            const previousSessionsBadge = hasPreviousSessions ? (
+              <BlockPreviousSessionsPickaxeBadge />
+            ) : null;
             const practiceKeys = practiceOptionsIconKeys(
               parseBlockPracticeOptions(
                 (node as { practice_options?: unknown }).practice_options,
@@ -845,6 +857,9 @@ export function MapWorldLayer({
                           }
                           data-block-has-local-context={hasLocalContext ? "true" : "false"}
                           data-block-is-start={isStarter ? "true" : "false"}
+                          data-block-has-previous-sessions={
+                            hasPreviousSessions ? "true" : "false"
+                          }
                           data-block-generation-locked={generationLocked ? "true" : "false"}
                           data-generator-busy={generatorBusy ? "true" : "false"}
                           data-dynamic-unlock-highlight={
@@ -956,6 +971,7 @@ export function MapWorldLayer({
                               {generatorSparkBadge}
                               {localContextBadge}
                               {starterBadge}
+                              {previousSessionsBadge}
                               {lockBadge}
                             </>
                           ) : null}
@@ -1046,6 +1062,9 @@ export function MapWorldLayer({
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
                   data-block-has-local-context={hasLocalContext ? "true" : "false"}
                   data-block-is-start={isStarter ? "true" : "false"}
+                  data-block-has-previous-sessions={
+                    hasPreviousSessions ? "true" : "false"
+                  }
                   data-block-generation-locked={generationLocked ? "true" : "false"}
                   data-generator-busy={generatorBusy ? "true" : "false"}
                   data-dynamic-unlock-highlight={
@@ -1116,6 +1135,7 @@ export function MapWorldLayer({
                   {generatorSparkBadge}
                   {localContextBadge}
                   {starterBadge}
+                  {previousSessionsBadge}
                   {lockBadge}
                 </button>
                 {circularMenuSurface !== "none" &&

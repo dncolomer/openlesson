@@ -11,6 +11,8 @@ export const SEE_PREVIOUS_SESSIONS_LABEL = "See Previous Sessions";
 export const START_NEW_SESSION_LABEL = "Start a New Session";
 export const PREVIOUS_SESSIONS_DRAWER_ID = "previous_sessions";
 export const WORKSPACE_BLOCK_SESSIONS_PATH = "/api/workspace/block-sessions";
+export const WORKSPACE_BLOCKS_WITH_SESSIONS_PATH =
+  "/api/workspace/blocks-with-sessions";
 
 /** Load the list whenever this drawer is open (header click or the button). */
 export function previousSessionsDrawerShouldLoad(
@@ -184,6 +186,138 @@ export async function listBlockPreviousSessions(
       })
       .filter((row) => !isIleSessionUnsavedExit(row.metadata)),
   );
+}
+
+/**
+ * Workspace map: block ids that have at least one saved previous session.
+ * Discarded (exit-without-saving) sessions do not count.
+ */
+export function blockIdsWithSavedPreviousSessions(
+  joins: unknown,
+  sessions: unknown,
+): string[] {
+  const byId = new Map<string, { metadata?: unknown }>();
+  if (Array.isArray(sessions)) {
+    for (const row of sessions) {
+      if (!row || typeof row !== "object") continue;
+      const rec = row as { id?: unknown; metadata?: unknown };
+      const id = String(rec.id || "").trim();
+      if (id) byId.set(id, rec);
+    }
+  }
+  if (!Array.isArray(joins)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of joins) {
+    if (!raw || typeof raw !== "object") continue;
+    const rec = raw as { block_id?: unknown; session_id?: unknown };
+    const blockId = String(rec.block_id || "").trim();
+    const sessionId = String(rec.session_id || "").trim();
+    if (!blockId || seen.has(blockId)) continue;
+    if (sessionId && byId.has(sessionId)) {
+      if (isIleSessionUnsavedExit(byId.get(sessionId)?.metadata)) continue;
+    }
+    seen.add(blockId);
+    out.push(blockId);
+  }
+  return out;
+}
+
+export async function listWorkspaceBlockIdsWithPreviousSessions(
+  supabase: { from: (table: string) => any },
+  input: { workspaceId: string },
+): Promise<string[]> {
+  const workspaceId = String(input.workspaceId || "").trim();
+  if (!workspaceId) return [];
+
+  const { data: joins, error: joinError } = await supabase
+    .from("block_sessions")
+    .select("block_id, session_id")
+    .eq("workspace_id", workspaceId);
+  if (joinError) {
+    const message =
+      joinError && typeof joinError === "object" && "message" in joinError
+        ? String((joinError as { message?: unknown }).message || "")
+        : "Failed to list sessions";
+    throw new Error(message || "Failed to list sessions");
+  }
+
+  const joinRows = Array.isArray(joins) ? joins : [];
+  const ids = [
+    ...new Set(
+      joinRows
+        .map((row) =>
+          row && typeof row === "object"
+            ? String((row as { session_id?: unknown }).session_id || "").trim()
+            : "",
+        )
+        .filter(Boolean),
+    ),
+  ];
+  if (ids.length === 0) return blockIdsWithSavedPreviousSessions(joinRows, []);
+
+  const { data: sessionRows, error: sessionError } = await supabase
+    .from("sessions")
+    .select("id, metadata")
+    .in("id", ids);
+  if (sessionError) {
+    return blockIdsWithSavedPreviousSessions(joinRows, []);
+  }
+  return blockIdsWithSavedPreviousSessions(joinRows, sessionRows);
+}
+
+export async function fetchWorkspaceBlocksWithPreviousSessions(
+  workspaceId: string,
+  guestAccessBody: Record<string, unknown> = {},
+): Promise<string[]> {
+  const id = String(workspaceId || "").trim();
+  if (!id) return [];
+  const res = await fetch(WORKSPACE_BLOCKS_WITH_SESSIONS_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId: id,
+      ...guestAccessBody,
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    blockIds?: unknown;
+    error?: unknown;
+  };
+  if (!res.ok) {
+    const err = json.error;
+    const message =
+      typeof err === "string"
+        ? err
+        : err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message || "Failed to list sessions")
+          : "Failed to list sessions";
+    throw new Error(message);
+  }
+  if (!Array.isArray(json.blockIds)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of json.blockIds) {
+    const blockId = String(raw || "").trim();
+    if (!blockId || seen.has(blockId)) continue;
+    seen.add(blockId);
+    out.push(blockId);
+  }
+  return out;
+}
+
+export function workspaceTileShowsPreviousSessionsPickaxe(input: {
+  suggestMode?: string | null;
+  blockId?: string | null;
+  previousSessionBlockIds?: ReadonlySet<string> | readonly string[] | null;
+}): boolean {
+  if (input.suggestMode === "chapter") return false;
+  const blockId = String(input.blockId || "").trim();
+  if (!blockId || !input.previousSessionBlockIds) return false;
+  if (input.previousSessionBlockIds instanceof Set) {
+    return input.previousSessionBlockIds.has(blockId);
+  }
+  return Array.from(input.previousSessionBlockIds).includes(blockId);
 }
 
 export async function fetchBlockPreviousSessions(

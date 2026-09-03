@@ -38,6 +38,7 @@ import {
 } from "@/components/block-skill-grid/types";
 import { useMapNotes } from "@/components/block-skill-grid/use-map-notes";
 import { useMapSelfProgress } from "@/components/block-skill-grid/use-map-self-progress";
+import { useWorkspacePreviousSessionBlockIds } from "@/components/block-skill-grid/use-workspace-previous-session-blocks";
 import { useMapInteractionState } from "@/components/block-skill-grid/use-map-interaction-state";
 import { useMapAnnotations } from "@/components/block-skill-grid/use-map-annotations";
 import { useMapDerived } from "@/components/block-skill-grid/use-map-derived";
@@ -198,6 +199,12 @@ export function BlockSkillGrid({
     sessionId,
     workspaceId,
     focusedNodeId,
+  });
+  const previousSessionBlockIds = useWorkspacePreviousSessionBlockIds({
+    workspaceId,
+    suggestMode,
+    ayclToken,
+    ileToken,
   });
 
   const {
@@ -1060,6 +1067,7 @@ export function BlockSkillGrid({
         chapterUnlockHighlightIds,
         learnerDepHighlightIds,
         workedOnIds,
+        previousSessionBlockIds,
         generationLockedBlockIds,
         dynamicUnlockHighlightIds,
         dynamicGeneratedSet,

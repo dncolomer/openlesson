@@ -11,11 +11,15 @@ import {
   SEE_PREVIOUS_SESSIONS_LABEL,
   START_NEW_SESSION_LABEL,
   WORKSPACE_BLOCK_SESSIONS_PATH,
+  WORKSPACE_BLOCKS_WITH_SESSIONS_PATH,
+  blockIdsWithSavedPreviousSessions,
   continueIleSessionHref,
   ileLaunchInsertsNewSession,
   listBlockPreviousSessions,
+  listWorkspaceBlockIdsWithPreviousSessions,
   normalizeBlockPreviousSessions,
   previousSessionsDrawerShouldLoad,
+  workspaceTileShowsPreviousSessionsPickaxe,
 } from "@/lib/block-previous-sessions";
 import {
   applyIleSessionNameToMetadata,
@@ -373,7 +377,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
 });
 
 describe("Practice drawer labels and previous-sessions UI", () => {
-  it("uses verbatim See Previous Sessions and Start a New Session", () => {
+  it("uses verbatim See Previous Sessions and Start a New Session", async () => {
     const pane = read("components/WorkspaceLearnerBlockPane.tsx");
     expect(SEE_PREVIOUS_SESSIONS_LABEL).toBe("See Previous Sessions");
     expect(START_NEW_SESSION_LABEL).toBe("Start a New Session");
@@ -414,6 +418,93 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(route).toContain("listBlockPreviousSessions");
     expect(route).toContain("guardWorkspaceRoute");
     expect(WORKSPACE_BLOCK_SESSIONS_PATH).toBe("/api/workspace/block-sessions");
+    expect(WORKSPACE_BLOCKS_WITH_SESSIONS_PATH).toBe(
+      "/api/workspace/blocks-with-sessions",
+    );
+
+    expect(
+      blockIdsWithSavedPreviousSessions(
+        [
+          { block_id: "b-saved", session_id: "s-saved" },
+          { block_id: "b-discard", session_id: "s-discard" },
+          { block_id: "b-saved", session_id: "s-other" },
+        ],
+        [
+          { id: "s-saved", metadata: { session_name: "Keep" } },
+          { id: "s-discard", metadata: { unsaved_exit: true } },
+          { id: "s-other", metadata: { unsaved_exit: true } },
+        ],
+      ),
+    ).toEqual(["b-saved"]);
+    expect(
+      workspaceTileShowsPreviousSessionsPickaxe({
+        suggestMode: "block",
+        blockId: "b-saved",
+        previousSessionBlockIds: new Set(["b-saved"]),
+      }),
+    ).toBe(true);
+    expect(
+      workspaceTileShowsPreviousSessionsPickaxe({
+        suggestMode: "chapter",
+        blockId: "b-saved",
+        previousSessionBlockIds: new Set(["b-saved"]),
+      }),
+    ).toBe(false);
+
+    const mapClient = {
+      from(table: string) {
+        if (table === "block_sessions") {
+          const q = {
+            select() {
+              return q;
+            },
+            eq() {
+              return Promise.resolve({
+                data: [
+                  { block_id: "b-saved", session_id: "s-saved" },
+                  { block_id: "b-discard", session_id: "s-discard" },
+                ],
+                error: null,
+              });
+            },
+          };
+          return q;
+        }
+        const q = {
+          select() {
+            return q;
+          },
+          in() {
+            return Promise.resolve({
+              data: [
+                { id: "s-saved", metadata: { session_name: "Keep" } },
+                { id: "s-discard", metadata: { unsaved_exit: true } },
+              ],
+              error: null,
+            });
+          },
+        };
+        return q;
+      },
+    };
+    await expect(
+      listWorkspaceBlockIdsWithPreviousSessions(mapClient, {
+        workspaceId: "ws-1",
+      }),
+    ).resolves.toEqual(["b-saved"]);
+
+    const grid = read("components/BlockSkillGrid.tsx");
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const badges = read("components/block-skill-grid/map-tile-badges.tsx");
+    const mapRoute = read("app/api/workspace/blocks-with-sessions/route.ts");
+    expect(grid).toContain("useWorkspacePreviousSessionBlockIds");
+    expect(grid).toContain("previousSessionBlockIds");
+    expect(world).toContain("BlockPreviousSessionsPickaxeBadge");
+    expect(world).toContain("data-block-has-previous-sessions");
+    expect(badges).toContain("data-block-previous-sessions-pickaxe");
+    expect(badges).not.toMatch(/from "lucide-react"/);
+    expect(mapRoute).toContain("listWorkspaceBlockIdsWithPreviousSessions");
+    expect(mapRoute).toContain("guardWorkspaceRoute");
 
     const view = readSessionViewSurface();
     expect(view).toContain("ileWelcomeShowsSizePicker");

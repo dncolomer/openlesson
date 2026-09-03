@@ -581,6 +581,10 @@ describe("create surface wiring (structural)", () => {
     expect(pickerSrc).toContain("stepMapTypeCatalog");
     expect(pickerSrc).toContain("pickRandomMapType");
     expect(pickerSrc).toContain("data-initial-chapters-random-pick");
+    expect(pickerSrc).toMatch(
+      /data-initial-chapters-random[\s\S]{0,120}data-initial-chapters-random-pick/,
+    );
+    expect(pickerSrc).not.toContain('type="checkbox"');
     expect(pickerSrc).toContain("fillHeight");
     expect(pickerSrc).toContain("flex h-full min-h-0 flex-col");
     expect(pickerSrc).toContain("data-map-type-preview");

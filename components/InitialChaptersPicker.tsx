@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ChapterMiniMap } from "@/components/ChapterMiniMap";
 import { dummyDensityCells } from "@/lib/ile-chapter-mini-map";
@@ -62,7 +62,6 @@ export function InitialChaptersPicker({
     i18nPrefix === "planMode"
       ? t("planMode.initialChaptersPickRandom")
       : t("session.initialChaptersPickRandom");
-  const [randomPick, setRandomPick] = useState(false);
   const miniCells =
     option.cells && option.cells.length > 0
       ? option.cells
@@ -70,17 +69,11 @@ export function InitialChaptersPicker({
 
   function slide(delta: -1 | 1) {
     if (disabled) return;
-    setRandomPick(false);
     onChange(stepMapTypeCatalog(ids, option.id, delta));
   }
 
-  function toggleRandom(checked: boolean) {
+  function pickRandom() {
     if (disabled) return;
-    if (!checked) {
-      setRandomPick(false);
-      return;
-    }
-    setRandomPick(true);
     onChange(pickRandomMapType(ids));
   }
 
@@ -97,24 +90,16 @@ export function InitialChaptersPicker({
           About {band.target} tiles ({band.min}–{band.max})
         </p>
       ) : null}
-      <label
+      <button
+        type="button"
         data-initial-chapters-random
-        className={`mb-2 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 ${
-          disabled ? "pointer-events-none opacity-50" : ""
-        }`}
+        data-initial-chapters-random-pick
+        disabled={disabled}
+        onClick={pickRandom}
+        className="mb-2 w-full rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 text-left text-xs font-medium leading-tight text-neutral-200 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <input
-          type="checkbox"
-          data-initial-chapters-random-pick
-          checked={randomPick}
-          disabled={disabled}
-          onChange={(e) => toggleRandom(e.target.checked)}
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
-        />
-        <span className="min-w-0 text-xs font-medium leading-tight text-neutral-200">
-          {randomLabel}
-        </span>
-      </label>
+        {randomLabel}
+      </button>
       <div
         className={`flex items-stretch gap-2 ${
           fillHeight ? "min-h-0 flex-1" : ""

@@ -144,7 +144,10 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
       ileSessionNameFromMetadata({ session_name: "Dijkstra night" }),
     ).toBe("Dijkstra night");
     expect(
-      applyIleSessionNameToMetadata({ block_id: "b1" }, "  Named  ").session_name,
+      applyIleSessionNameToMetadata(
+        { block_id: "b1" } as Record<string, unknown>,
+        "  Named  ",
+      ).session_name,
     ).toBe("Named");
 
     const client = createListClient({
@@ -172,9 +175,10 @@ describe("listBlockPreviousSessions (shipped list entry)", () => {
   it("omits sessions exited without saving and does not drop Proof of Work", async () => {
     expect(isIleSessionUnsavedExit({ unsaved_exit: true })).toBe(true);
     expect(isIleSessionUnsavedExit({ session_name: "Kept" })).toBe(false);
-    expect(applyIleUnsavedExitToMetadata({ block_id: "b1" }).unsaved_exit).toBe(
-      true,
-    );
+    expect(
+      applyIleUnsavedExitToMetadata({ block_id: "b1" } as Record<string, unknown>)
+        .unsaved_exit,
+    ).toBe(true);
     expect(ileUnsavedExitSessionPatch({ session_name: "x" }).metadata.unsaved_exit).toBe(
       true,
     );

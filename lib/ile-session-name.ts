@@ -61,8 +61,7 @@ export function isIleSessionUnsavedExit(metadata: unknown): boolean {
 export function applyIleUnsavedExitToMetadata<T extends Record<string, unknown>>(
   metadata: T | null | undefined,
 ): T {
-  return {
-    ...(metadata || {}),
-    [ILE_SESSION_UNSAVED_EXIT_META_KEY]: true,
-  } as T;
+  const next = { ...(metadata || {}) } as T;
+  (next as Record<string, unknown>)[ILE_SESSION_UNSAVED_EXIT_META_KEY] = true;
+  return next;
 }

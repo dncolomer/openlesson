@@ -83,7 +83,6 @@ import {
   BlockGeneratorTargetSparkBadge,
   BlockLocalContextDocBadge,
   BlockPracticeOptionsBadge,
-  BlockPreviousSessionsPickaxeBadge,
   BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
@@ -91,6 +90,7 @@ import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-
 import {
   DEFAULT_BLOCK_MAP_ICON,
   ILE_GATHER_RUNNING_MAP_ICON,
+  PREVIOUS_SESSIONS_MAP_ICON,
   isTimExploreMapIcon,
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
@@ -589,7 +589,13 @@ export function MapWorldLayer({
                 : learnerMode &&
                   !isBlockHighlighted &&
                   learnerDepHighlightIds.has(node.id);
-            const itemWorkedOn = workedOnIds.has(node.id);
+            const hasPreviousSessions = workspaceTileShowsPreviousSessionsPickaxe({
+              suggestMode,
+              blockId: node.id,
+              previousSessionBlockIds,
+            });
+            const itemWorkedOn =
+              workedOnIds.has(node.id) && !hasPreviousSessions;
             const itemDone = isMapCellDoneStatus(displayStatus);
             const chapterChrome =
               suggestMode === "chapter"
@@ -706,14 +712,6 @@ export function MapWorldLayer({
             const starterBadge = tileBadges.showStarter ? (
               <BlockStarterFlagBadge />
             ) : null;
-            const hasPreviousSessions = workspaceTileShowsPreviousSessionsPickaxe({
-              suggestMode,
-              blockId: node.id,
-              previousSessionBlockIds,
-            });
-            const previousSessionsBadge = hasPreviousSessions ? (
-              <BlockPreviousSessionsPickaxeBadge />
-            ) : null;
             const practiceKeys = practiceOptionsIconKeys(
               parseBlockPracticeOptions(
                 (node as { practice_options?: unknown }).practice_options,
@@ -752,7 +750,9 @@ export function MapWorldLayer({
               ? ILE_GATHER_RUNNING_MAP_ICON
               : mapTitle === "?"
                 ? DEFAULT_BLOCK_MAP_ICON
-                : mapGlyph.icon;
+                : hasPreviousSessions
+                  ? PREVIOUS_SESSIONS_MAP_ICON
+                  : mapGlyph.icon;
             const statusGlyph = (
               <MapCellStatusGlyph
                 status={node.status}
@@ -971,7 +971,6 @@ export function MapWorldLayer({
                               {generatorSparkBadge}
                               {localContextBadge}
                               {starterBadge}
-                              {previousSessionsBadge}
                               {lockBadge}
                             </>
                           ) : null}
@@ -1135,7 +1134,6 @@ export function MapWorldLayer({
                   {generatorSparkBadge}
                   {localContextBadge}
                   {starterBadge}
-                  {previousSessionsBadge}
                   {lockBadge}
                 </button>
                 {circularMenuSurface !== "none" &&

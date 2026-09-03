@@ -499,13 +499,19 @@ describe("Practice drawer labels and previous-sessions UI", () => {
 
     const grid = read("components/BlockSkillGrid.tsx");
     const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     const mapRoute = read("app/api/workspace/blocks-with-sessions/route.ts");
     expect(grid).toContain("useWorkspacePreviousSessionBlockIds");
     expect(grid).toContain("previousSessionBlockIds");
-    expect(world).toContain("BlockPreviousSessionsPickaxeBadge");
+    expect(world).toContain("PREVIOUS_SESSIONS_MAP_ICON");
     expect(world).toContain("data-block-has-previous-sessions");
-    expect(badges).toContain("data-block-previous-sessions-pickaxe");
+    expect(world).toContain("!hasPreviousSessions");
+    expect(world).not.toContain("BlockPreviousSessionsPickaxeBadge");
+    expect(glyph).toContain("Pickaxe");
+    expect(glyph).toContain('from "lucide-react"');
+    expect(glyph).toContain("data-block-previous-sessions-icon");
+    expect(badges).not.toContain("data-block-previous-sessions-pickaxe");
     expect(badges).not.toMatch(/from "lucide-react"/);
     expect(mapRoute).toContain("listWorkspaceBlockIdsWithPreviousSessions");
     expect(mapRoute).toContain("guardWorkspaceRoute");

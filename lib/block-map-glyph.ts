@@ -25,6 +25,14 @@ export function isIleGatherRunningMapIcon(value: unknown): value is IleGatherRun
   return value === ILE_GATHER_RUNNING_MAP_ICON;
 }
 
+/** Display-only: workspace block with saved previous sessions (Work pickaxe). */
+export const PREVIOUS_SESSIONS_MAP_ICON = "pickaxe" as const;
+export type PreviousSessionsMapIcon = typeof PREVIOUS_SESSIONS_MAP_ICON;
+
+export function isPreviousSessionsMapIcon(value: unknown): value is PreviousSessionsMapIcon {
+  return value === PREVIOUS_SESSIONS_MAP_ICON;
+}
+
 /** `g{bits}` — bits is a 9-bit occupancy mask (1 = filled cell). */
 export type BlockMapIconName = `g${number}` | TimExploreMapIcon | ChapterDoneMapIcon;
 

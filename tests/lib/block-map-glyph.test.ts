@@ -50,6 +50,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(parseBlockMapIconName("tim-explore")).toBe("tim-explore");
     expect(parseBlockMapIconName("chapter-done")).toBe("chapter-done");
     expect(parseBlockMapIconName("gather-resources")).toBeNull();
+    expect(parseBlockMapIconName("pickaxe")).toBeNull();
     expect(parseBlockMapIconName("Square")).toBeNull();
     expect(parseBlockMapIconName("Cube")).toBeNull();
     expect(parseBlockMapIconName("g0")).toBeNull();
@@ -63,7 +64,9 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(icons).toContain('stroke={outline ? "currentColor" : "none"}');
     expect(icons).toContain("blockMapPatternCells");
     expect(icons).not.toMatch(/\brx=/);
-    expect(icons).not.toContain("lucide-react");
+    expect(icons).toContain('from "lucide-react"');
+    expect(icons).toContain("Pickaxe");
+    expect(icons).toContain("isPreviousSessionsMapIcon");
     expect(icons).not.toContain("Cube");
   });
 

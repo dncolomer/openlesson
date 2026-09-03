@@ -1,15 +1,18 @@
 "use client";
 
+import { Pickaxe } from "lucide-react";
 import {
   BLOCK_MAP_GRID_SIZE,
   CHAPTER_DONE_MAP_ICON,
   DEFAULT_BLOCK_MAP_ICON,
   ILE_GATHER_RUNNING_MAP_ICON,
+  PREVIOUS_SESSIONS_MAP_ICON,
   TIM_EXPLORE_MAP_ICON,
   blockMapPatternBits,
   blockMapPatternCells,
   isChapterDoneMapIcon,
   isIleGatherRunningMapIcon,
+  isPreviousSessionsMapIcon,
   isTimExploreMapIcon,
   parseBlockMapIconName,
 } from "@/lib/block-map-glyph";
@@ -29,6 +32,19 @@ export function BlockMapGlyphIcon({
   /** Workspace tiles fill squares; TAP/ILE chapter tiles are outlines. */
   variant?: "solid" | "outline";
 }) {
+  if (isPreviousSessionsMapIcon(name)) {
+    return (
+      <Pickaxe
+        className={className ?? "h-8 w-8"}
+        strokeWidth={2.4}
+        aria-hidden
+        data-block-map-icon={PREVIOUS_SESSIONS_MAP_ICON}
+        data-block-previous-sessions-icon="true"
+        data-block-map-variant={variant}
+      />
+    );
+  }
+
   if (isIleGatherRunningMapIcon(name)) {
     return (
       <svg

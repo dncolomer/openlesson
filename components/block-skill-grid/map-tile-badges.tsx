@@ -163,34 +163,6 @@ export function BlockLocalContextDocBadge() {
   );
 }
 
-/** Pickaxe badge: this workspace block has saved previous sessions. */
-export function BlockPreviousSessionsPickaxeBadge() {
-  return (
-    <span
-      className="absolute right-1 top-1 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px text-current"
-      data-block-previous-sessions-pickaxe
-      title="Has previous sessions"
-      aria-label="Has previous sessions"
-    >
-      <svg
-        className="h-3.5 w-3.5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        data-block-previous-sessions-icon
-        aria-hidden
-      >
-        <path d="M14.531 12.469 6.619 20.38a1 1 0 1 1-3-3l7.912-7.912" />
-        <path d="M15.686 4.314A12.5 12.5 0 0 0 5.461 2.958 1 1 0 0 0 5.58 4.71a22 22 0 0 1 2.391 3.955 22.1 22.1 0 0 1 3.956 2.391 1 1 0 0 0 1.752-.119 12.5 12.5 0 0 0 1.007-10.623Z" />
-        <path d="M18.185 10.185a13 13 0 0 1 1.383 7.992 1 1 0 0 1-1.76.048 22 22 0 0 0-2.391-3.955 22.1 22.1 0 0 0-3.956-2.391 1 1 0 0 1 .119-1.752 12.5 12.5 0 0 1 10.623-1.007Z" />
-      </svg>
-    </span>
-  );
-}
-
 /** Flag badge for author starter blocks (`is_start`) — map-visible without Edit. */
 export function BlockStarterFlagBadge() {
   return (

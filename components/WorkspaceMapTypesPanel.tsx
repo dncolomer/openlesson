@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { ChapterMiniMap } from "@/components/ChapterMiniMap";
 import {
   MAP_TYPE_GRID,
   blankCustomMapType,
@@ -102,6 +103,7 @@ export function WorkspaceMapTypesPanel({
   ayclToken,
   initialState,
   workspaceDags = [],
+  workspaceTitle,
   t,
 }: {
   workspaceId: string;
@@ -109,6 +111,7 @@ export function WorkspaceMapTypesPanel({
   ayclToken?: string | null;
   initialState?: unknown;
   workspaceDags?: readonly WorkspaceDagRecord[];
+  workspaceTitle?: string | null;
   t: (key: string) => string;
 }) {
   const [state, setState] = useState<WorkspaceMapTypesState>(() =>
@@ -121,6 +124,13 @@ export function WorkspaceMapTypesPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState(false);
+  const [simulateError, setSimulateError] = useState<string | null>(null);
+  const [simulateResult, setSimulateResult] = useState<{
+    mapTypeId: string;
+    cells: Array<{ row: number; col: number }>;
+    percent: number;
+  } | null>(null);
 
   const builtins = useMemo(
     () =>
@@ -230,6 +240,53 @@ export function WorkspaceMapTypesPanel({
   };
 
   const previewCtx = selected ? formatMapTypeGeneratorContext(selected) : null;
+
+  const runSimulate = async () => {
+    if (!selected || simulating) return;
+    setSimulating(true);
+    setSimulateError(null);
+    try {
+      const res = await fetch("/api/workspace/map-types/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          mapTypeId: selected.id,
+          mapType: selected.source === "custom" ? selected : undefined,
+          topic: workspaceTitle || undefined,
+          ...(ayclToken ? { ayclToken } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : t("planView.mapTypesSimulateError"),
+        );
+      }
+      const generated = Array.isArray(data.generated)
+        ? data.generated.filter(
+            (c: { row?: number; col?: number }) =>
+              typeof c.row === "number" && typeof c.col === "number",
+          )
+        : [];
+      const percent = Math.round(
+        Number(data.resemblance?.score ?? 0) * 100,
+      );
+      setSimulateResult({
+        mapTypeId: selected.id,
+        cells: generated,
+        percent: Number.isFinite(percent) ? percent : 0,
+      });
+    } catch (err) {
+      setSimulateError(
+        err instanceof Error ? err.message : t("planView.mapTypesSimulateError"),
+      );
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   return (
     <div
@@ -469,6 +526,57 @@ export function WorkspaceMapTypesPanel({
                   editable={Boolean(selectedIsCustom && isOwner)}
                   onPaint={paintCell}
                 />
+
+                {isOwner ? (
+                  <div className="space-y-2" data-map-type-simulate-block>
+                    <button
+                      type="button"
+                      data-map-type-simulate
+                      disabled={simulating}
+                      onClick={() => void runSimulate()}
+                      className="w-full rounded-none border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-medium text-neutral-100 hover:bg-white/10 disabled:opacity-40"
+                    >
+                      {simulating
+                        ? t("planView.mapTypesSimulating")
+                        : t("planView.mapTypesSimulate")}
+                    </button>
+                    <p className="text-[10px] leading-snug text-neutral-500">
+                      {t("planView.mapTypesSimulateHint")}
+                    </p>
+                    {simulateError ? (
+                      <p
+                        data-map-type-simulate-error
+                        className="text-[11px] text-rose-200"
+                      >
+                        {simulateError}
+                      </p>
+                    ) : null}
+                    {simulateResult && simulateResult.mapTypeId === selected.id ? (
+                      <div
+                        data-map-type-simulate-result
+                        className="space-y-2 rounded-none border border-white/10 bg-black/30 p-2"
+                      >
+                        <p className="text-[11px] text-neutral-300">
+                          {t("planView.mapTypesResemble").replace(
+                            "{percent}",
+                            String(simulateResult.percent),
+                          )}
+                        </p>
+                        <div className="mx-auto aspect-square w-full max-w-[14rem]">
+                          <ChapterMiniMap
+                            cells={simulateResult.cells.map((c) => ({
+                              row: c.row,
+                              col: c.col,
+                              kind: "occupied" as const,
+                            }))}
+                            dummy
+                            density={selected.id}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {selectedIsCustom && isOwner ? (
                   <div className="flex gap-2">

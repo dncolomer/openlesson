@@ -5,7 +5,6 @@
 
 import {
   parseInitialChaptersLevel,
-  SPATIAL_MAP_LAYOUT_RULES,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 import {
@@ -105,7 +104,7 @@ export function composeSessionPlanCreatePrompt(
     .replaceAll("{target_step_count}", String(mapInfo.band.target))
     .replaceAll("{min_steps}", String(mapInfo.band.min))
     .replaceAll("{max_steps}", String(mapInfo.band.max))
-    .replaceAll("{spatial_map_layout_rules}", SPATIAL_MAP_LAYOUT_RULES);
+    .replaceAll("{spatial_map_layout_rules}", mapInfo.spatialInstruction);
 
   return [
     applyIleChapterModeInstructions(filled, vars.sessionMode),

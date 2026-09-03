@@ -12,10 +12,12 @@ import { composeSessionPlanCreatePrompt } from "@/lib/session-plan-create";
 import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import {
   blankCustomMapType,
+  clampPositionsToMapTypeFrame,
   defaultMapTypePickerCatalog,
   formatMapTypeGeneratorContext,
   mapTypePickerCatalog,
   mapTypeRecordFromBuiltin,
+  mapTypeTopologyResemblance,
   normalizeMapTypeCells,
   normalizeWorkspaceMapTypes,
   removeCustomMapType,
@@ -189,9 +191,9 @@ describe("workspace map types helpers", () => {
 
     const builtinCtx = formatMapTypeGeneratorContext(builtin);
     const customCtx = formatMapTypeGeneratorContext(custom);
-    expect(builtinCtx.spawnInstruction).toMatch(/SPAWN CELLS/i);
+    expect(builtinCtx.spawnInstruction).toMatch(/SPAWN SKELETON/i);
     expect(builtinCtx.blockedInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
-    expect(customCtx.spawnInstruction).toMatch(/SPAWN CELLS/i);
+    expect(customCtx.spawnInstruction).toMatch(/SPAWN SKELETON/i);
     expect(customCtx.noSpawnInstruction).toMatch(/NO-SPAWN CELLS/i);
     expect(customCtx.blockedInstruction).toMatch(/BLOCKED CHAPTER SLOTS/i);
     expect(customCtx.dagHintInstruction).toMatch(/DAG HINTS/i);
@@ -202,8 +204,9 @@ describe("workspace map types helpers", () => {
       { problem: "Graphs", initialChapters: "islands" },
     );
     expect(builtinPrompt).toContain(builtinCtx.countInstruction);
-    expect(builtinPrompt).toMatch(/SPAWN CELLS/i);
+    expect(builtinPrompt).toMatch(/SPAWN SKELETON/i);
     expect(builtinPrompt).toMatch(/BLOCKED CHAPTER SLOTS/i);
+    expect(builtinPrompt).toMatch(/TOPOLOGY FIDELITY/i);
     expect(builtinPrompt).not.toContain("{initial_chapters_instruction}");
 
     const customState = upsertCustomMapType(
@@ -219,7 +222,7 @@ describe("workspace map types helpers", () => {
       },
     );
     expect(customPrompt).toContain(customCtx.countInstruction);
-    expect(customPrompt).toMatch(/SPAWN CELLS/i);
+    expect(customPrompt).toMatch(/SPAWN SKELETON/i);
     expect(customPrompt).toMatch(/NO-SPAWN CELLS/i);
     expect(customPrompt).toMatch(/BLOCKED CHAPTER SLOTS/i);
     expect(customPrompt).toMatch(/DAG HINTS/i);
@@ -228,6 +231,67 @@ describe("workspace map types helpers", () => {
     expect(
       resolveMapTypeIdFromBody({ initial_chapters: custom.id }, customState),
     ).toBe("maptype_bridge");
+  });
+
+  it("Hub topology prompt keeps the schematic hub and overrides four-quadrant scatter", () => {
+    const hub = mapTypeRecordFromBuiltin("hub");
+    const ctx = formatMapTypeGeneratorContext(hub);
+    expect(hub.topologyMode).toBe("shaped");
+    expect(ctx.topologyInstruction).toMatch(/80%/);
+    expect(ctx.topologyInstruction).toMatch(/FOUNDATION CELL/i);
+    expect(ctx.spatialInstruction).toMatch(/SUPERSEDES/i);
+    expect(ctx.spatialInstruction).not.toMatch(
+      /Place nodes across positive AND negative/i,
+    );
+    expect(ctx.spawnInstruction).toMatch(/SPAWN SKELETON/i);
+    const prompt = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
+      problem: "Schemas",
+      initialChapters: "hub",
+    });
+    expect(prompt).toContain(ctx.countInstruction);
+    expect(prompt).toContain(ctx.spatialInstruction);
+    expect(prompt).toMatch(/FOUNDATION CELL/i);
+    expect(prompt).not.toMatch(/Place nodes across positive AND negative/i);
+
+    const sparse = composeSessionPlanCreatePrompt(DEFAULT_PROMPTS.session_plan_create, {
+      problem: "Schemas",
+      initialChapters: "random_sparse",
+    });
+    expect(sparse).toMatch(/negative/i);
+  });
+
+  it("clamps far-away generated tiles into the Hub frame and scores resemblance", () => {
+    const hub = mapTypeRecordFromBuiltin("hub");
+    const spawn = hub.cells.filter((c) => c.mark === "spawn");
+    const onSkeleton = mapTypeTopologyResemblance(spawn, hub);
+    expect(onSkeleton.score).toBe(1);
+    const far = mapTypeTopologyResemblance(
+      [
+        { row: -12, col: -9 },
+        { row: 20, col: 18 },
+      ],
+      hub,
+    );
+    expect(far.score).toBe(0);
+    const clamped = clampPositionsToMapTypeFrame(
+      [
+        { position_x: -12, position_y: -9 },
+        { position_x: 20, position_y: 18 },
+        { position_x: 3, position_y: 3 },
+      ],
+      hub,
+    );
+    for (const item of clamped) {
+      expect(item.position_x).toBeGreaterThanOrEqual(-1);
+      expect(item.position_x).toBeLessThanOrEqual(8);
+      expect(item.position_y).toBeGreaterThanOrEqual(-1);
+      expect(item.position_y).toBeLessThanOrEqual(8);
+    }
+    const after = mapTypeTopologyResemblance(
+      clamped.map((c) => ({ row: c.position_y!, col: c.position_x! })),
+      hub,
+    );
+    expect(after.score).toBeGreaterThan(far.score);
   });
 });
 
@@ -292,6 +356,11 @@ describe("Map Types tab UI / API structural", () => {
     expect(panel).toContain("data-map-type-save");
     expect(panel).toContain("data-map-type-delete");
     expect(panel).toContain("data-map-type-builtin-enabled");
+    expect(panel).toContain("data-map-type-simulate");
+    expect(panel).toContain("/api/workspace/map-types/simulate");
+    const simulate = read("app/api/workspace/map-types/simulate/route.ts");
+    expect(simulate).toContain("createSessionPlanLLM");
+    expect(simulate).toContain("mapTypeTopologyResemblance");
 
     expect(mod).toContain("export function formatMapTypeGeneratorContext");
     expect(mod).toContain("export function resolveWorkspaceMapTypeCatalog");

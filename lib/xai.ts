@@ -36,6 +36,7 @@ import {
 } from "./session-plan-create";
 import {
   blockedCellsFromMapType,
+  clampPositionsToMapTypeFrame,
   resolveMapTypeRecord,
   type WorkspaceMapTypeRecord,
   type WorkspaceMapTypesState,
@@ -551,11 +552,15 @@ export async function createSessionPlanLLM(options: {
   }
 
   const blocked = blockedCellsFromMapType(mapType);
+  const pulled = clampPositionsToMapTypeFrame(
+    relocateChapterStepsOffBlocked(numberedSteps, blocked),
+    mapType,
+  );
   const plan: CreateSessionPlanResult = {
     goal: response.data.goal || "Understand the topic deeply",
     strategy: response.data.strategy || "Optimize practice progress and augment with tools that produce proof of work",
     description: response.data.description,
-    steps: relocateChapterStepsOffBlocked(numberedSteps, blocked),
+    steps: relocateChapterStepsOffBlocked(pulled, blocked),
     unusable_cells: blocked,
   };
 

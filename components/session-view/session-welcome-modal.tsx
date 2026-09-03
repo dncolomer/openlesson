@@ -150,7 +150,7 @@ export function SessionWelcomeModal({
                   return (
                     <div
                       className={
-                        showContinuePreview
+                        showContinuePreview || showSizePicker
                           ? "flex min-h-0 flex-1 flex-col"
                           : "mb-5"
                       }
@@ -228,13 +228,19 @@ export function SessionWelcomeModal({
                             ) : null}
                           </div>
                           {showSizePicker ? (
-                            <InitialChaptersPicker
-                              value={initialChapters}
-                              onChange={onInitialChaptersChange}
-                              disabled={isButtonDisabled}
-                              t={t}
-                              i18nPrefix="session"
-                            />
+                            <div
+                              data-ile-map-type-align="aesthetics"
+                              className="min-h-0 flex-1"
+                            >
+                              <InitialChaptersPicker
+                                value={initialChapters}
+                                onChange={onInitialChaptersChange}
+                                disabled={isButtonDisabled}
+                                t={t}
+                                i18nPrefix="session"
+                                fillHeight
+                              />
+                            </div>
                           ) : null}
                           {statusUnknown && (
                             <div

@@ -288,6 +288,10 @@ describe("welcome branch continue vs new", () => {
     expect(picker).toContain("INITIAL_CHAPTERS_CATALOG");
     expect(picker).toContain("data-initial-chapters-prev");
     expect(picker).toContain("data-initial-chapters-next");
+    expect(picker).toContain("data-initial-chapters-random-pick");
+    expect(picker).toContain("pickRandomInitialChapters");
+    expect(welcome).toContain("fillHeight");
+    expect(welcome).toContain('data-ile-map-type-align="aesthetics"');
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
     const sizeAt = welcome.indexOf("showSizePicker");
     expect(continueAt).toBeGreaterThan(-1);

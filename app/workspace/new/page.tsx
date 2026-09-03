@@ -59,6 +59,7 @@ function startingSizeCopy(key: string): string {
     initialChaptersRandomDense: "Random dense",
     initialChaptersRandomDenseDesc:
       "A fuller scatter of chapters — the old Broad count, with no named shape.",
+    initialChaptersPickRandom: "Random (pick a random type)",
   };
   return catalog[suffix] || suffix;
 }

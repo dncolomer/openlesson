@@ -899,7 +899,8 @@
     "initialChaptersRandomSparse": "Losowy rzadki",
     "initialChaptersRandomSparseDesc": "Lekki rozrzut rozdziałów — dawna wąska liczba, bez nazwanego kształtu.",
     "initialChaptersRandomDense": "Losowy gęsty",
-    "initialChaptersRandomDenseDesc": "Gęstszy rozrzut rozdziałów — dawna szeroka liczba, bez nazwanego kształtu."
+    "initialChaptersRandomDenseDesc": "Gęstszy rozrzut rozdziałów — dawna szeroka liczba, bez nazwanego kształtu.",
+    "initialChaptersPickRandom": "Losowo (wybierz losowy typ)"
   },
   "sessionEnd": {
     "endSession": "Zakończ blok",
@@ -1254,7 +1255,8 @@
     "initialChaptersRandomSparse": "Losowy rzadki",
     "initialChaptersRandomSparseDesc": "Lekki rozrzut rozdziałów — dawna wąska liczba, bez nazwanego kształtu.",
     "initialChaptersRandomDense": "Losowy gęsty",
-    "initialChaptersRandomDenseDesc": "Gęstszy rozrzut rozdziałów — dawna szeroka liczba, bez nazwanego kształtu."
+    "initialChaptersRandomDenseDesc": "Gęstszy rozrzut rozdziałów — dawna szeroka liczba, bez nazwanego kształtu.",
+    "initialChaptersPickRandom": "Losowo (wybierz losowy typ)"
   },
   "workspaceFiles": {
     "title": "Pliki planu",

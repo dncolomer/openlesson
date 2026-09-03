@@ -98,6 +98,8 @@ describe("UI i18n surface keys resolve in en.json", () => {
       "session.nameSessionConfirm",
       "session.nameSessionDiscard",
       "session.nameSessionBody",
+      "session.initialChaptersPickRandom",
+      "planMode.initialChaptersPickRandom",
     ];
     const localeFiles = fs
       .readdirSync(path.join(ROOT, "messages"))

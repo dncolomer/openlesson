@@ -14,6 +14,7 @@ import {
   getInitialChaptersBand,
   parseInitialChaptersLevel,
   resolveInitialChaptersFromBody,
+  pickRandomInitialChapters,
   stepInitialChaptersCatalog,
 } from "@/lib/initial-chapters";
 import {
@@ -180,6 +181,15 @@ describe("initial chapters → catalog + count bands", () => {
     expect(stepInitialChaptersCatalog("random_dense", 1)).toBe("islands");
     expect(stepInitialChaptersCatalog("narrow", 1)).toBe(
       stepInitialChaptersCatalog("random_sparse", 1),
+    );
+  });
+
+  it("picks uniformly among the eight catalog types", () => {
+    expect(INITIAL_CHAPTERS_LEVELS).toHaveLength(8);
+    expect(pickRandomInitialChapters(() => 0)).toBe("islands");
+    expect(pickRandomInitialChapters(() => 0.99)).toBe("random_dense");
+    expect(INITIAL_CHAPTERS_LEVELS).toContain(
+      pickRandomInitialChapters(() => 0.5),
     );
   });
 });
@@ -566,11 +576,20 @@ describe("create surface wiring (structural)", () => {
     expect(pickerSrc).toContain("data-initial-chapters-prev");
     expect(pickerSrc).toContain("data-initial-chapters-next");
     expect(pickerSrc).toContain("stepInitialChaptersCatalog");
+    expect(pickerSrc).toContain("pickRandomInitialChapters");
+    expect(pickerSrc).toContain("data-initial-chapters-random-pick");
+    expect(pickerSrc).toContain("fillHeight");
     expect(pickerSrc).not.toContain("grid-cols-2");
     expect(pickerSrc).not.toContain("sm:grid-cols-4");
     expect(pickerSrc).toContain("aspect-square");
     expect(pickerSrc).toContain("line-clamp-3");
     expect(pickerSrc).toContain("min-h-[3.6rem]");
+    const welcomeSrc = readFileSync(
+      path.join(process.cwd(), "components/session-view/session-welcome-modal.tsx"),
+      "utf8",
+    );
+    expect(welcomeSrc).toContain("fillHeight");
+    expect(welcomeSrc).toContain('data-ile-map-type-align="aesthetics"');
     const miniSrc = readFileSync(
       path.join(process.cwd(), "components/ChapterMiniMap.tsx"),
       "utf8",

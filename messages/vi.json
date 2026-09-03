@@ -899,7 +899,8 @@
     "initialChaptersRandomSparse": "Ngẫu nhiên thưa",
     "initialChaptersRandomSparseDesc": "Rải thưa các chương — số lượng Hẹp cũ, không hình dạng đặt tên.",
     "initialChaptersRandomDense": "Ngẫu nhiên dày",
-    "initialChaptersRandomDenseDesc": "Rải dày các chương — số lượng Rộng cũ, không hình dạng đặt tên."
+    "initialChaptersRandomDenseDesc": "Rải dày các chương — số lượng Rộng cũ, không hình dạng đặt tên.",
+    "initialChaptersPickRandom": "Ngẫu nhiên (chọn một loại ngẫu nhiên)"
   },
   "sessionEnd": {
     "endSession": "Kết thúc khối",
@@ -1254,7 +1255,8 @@
     "initialChaptersRandomSparse": "Ngẫu nhiên thưa",
     "initialChaptersRandomSparseDesc": "Rải thưa các chương — số lượng Hẹp cũ, không hình dạng đặt tên.",
     "initialChaptersRandomDense": "Ngẫu nhiên dày",
-    "initialChaptersRandomDenseDesc": "Rải dày các chương — số lượng Rộng cũ, không hình dạng đặt tên."
+    "initialChaptersRandomDenseDesc": "Rải dày các chương — số lượng Rộng cũ, không hình dạng đặt tên.",
+    "initialChaptersPickRandom": "Ngẫu nhiên (chọn một loại ngẫu nhiên)"
   },
   "workspaceFiles": {
     "title": "Plan Files",

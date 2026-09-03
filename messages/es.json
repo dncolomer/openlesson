@@ -951,7 +951,8 @@
     "initialChaptersRandomSparse": "Aleatorio disperso",
     "initialChaptersRandomSparseDesc": "Una dispersión ligera de capítulos — el recuento estrecho antiguo, sin forma.",
     "initialChaptersRandomDense": "Aleatorio denso",
-    "initialChaptersRandomDenseDesc": "Una dispersión más llena de capítulos — el recuento amplio antiguo, sin forma."
+    "initialChaptersRandomDenseDesc": "Una dispersión más llena de capítulos — el recuento amplio antiguo, sin forma.",
+    "initialChaptersPickRandom": "Aleatorio (elegir un tipo al azar)"
   },
   "sessionEnd": {
     "endSession": "Terminar bloque",
@@ -1306,7 +1307,8 @@
     "initialChaptersRandomSparse": "Aleatorio disperso",
     "initialChaptersRandomSparseDesc": "Una dispersión ligera de capítulos — el recuento estrecho antiguo, sin forma.",
     "initialChaptersRandomDense": "Aleatorio denso",
-    "initialChaptersRandomDenseDesc": "Una dispersión más llena de capítulos — el recuento amplio antiguo, sin forma."
+    "initialChaptersRandomDenseDesc": "Una dispersión más llena de capítulos — el recuento amplio antiguo, sin forma.",
+    "initialChaptersPickRandom": "Aleatorio (elegir un tipo al azar)"
   },
   "workspaceFiles": {
     "title": "Archivos del plan",

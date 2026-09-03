@@ -914,6 +914,7 @@
     "initialChaptersRandomSparseDesc": "A light scatter of chapters — the old Narrow count, with no named shape.",
     "initialChaptersRandomDense": "Random dense",
     "initialChaptersRandomDenseDesc": "A fuller scatter of chapters — the old Broad count, with no named shape.",
+    "initialChaptersPickRandom": "Random (pick a random type)",
     "initialChaptersExisting": "Already generated",
     "initialChaptersChecking": "Checking…",
     "initialChaptersLoading": "Checking for existing chapters",
@@ -1297,7 +1298,8 @@
     "initialChaptersRandomSparse": "Random sparse",
     "initialChaptersRandomSparseDesc": "A light scatter of chapters — the old Narrow count, with no named shape.",
     "initialChaptersRandomDense": "Random dense",
-    "initialChaptersRandomDenseDesc": "A fuller scatter of chapters — the old Broad count, with no named shape."
+    "initialChaptersRandomDenseDesc": "A fuller scatter of chapters — the old Broad count, with no named shape.",
+    "initialChaptersPickRandom": "Random (pick a random type)"
   },
   "workspaceFiles": {
     "title": "Workspace Files",

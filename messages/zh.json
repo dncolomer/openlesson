@@ -899,7 +899,8 @@
     "initialChaptersRandomSparse": "随机稀疏",
     "initialChaptersRandomSparseDesc": "少量散落章节——旧的精简数量，没有固定形状。",
     "initialChaptersRandomDense": "随机密集",
-    "initialChaptersRandomDenseDesc": "更满的散落章节——旧的宽广数量，没有固定形状。"
+    "initialChaptersRandomDenseDesc": "更满的散落章节——旧的宽广数量，没有固定形状。",
+    "initialChaptersPickRandom": "随机（随机选择一种类型）"
   },
   "sessionEnd": {
     "endSession": "结束区块",
@@ -1254,7 +1255,8 @@
     "initialChaptersRandomSparse": "随机稀疏",
     "initialChaptersRandomSparseDesc": "少量散落章节——旧的精简数量，没有固定形状。",
     "initialChaptersRandomDense": "随机密集",
-    "initialChaptersRandomDenseDesc": "更满的散落章节——旧的宽广数量，没有固定形状。"
+    "initialChaptersRandomDenseDesc": "更满的散落章节——旧的宽广数量，没有固定形状。",
+    "initialChaptersPickRandom": "随机（随机选择一种类型）"
   },
   "workspaceFiles": {
     "title": "计划文件",

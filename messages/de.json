@@ -899,7 +899,8 @@
     "initialChaptersRandomSparse": "Zufällig dünn",
     "initialChaptersRandomSparseDesc": "Eine lockere Streuung von Kapiteln — die alte schmale Anzahl, ohne Form.",
     "initialChaptersRandomDense": "Zufällig dicht",
-    "initialChaptersRandomDenseDesc": "Eine dichtere Streuung von Kapiteln — die alte breite Anzahl, ohne Form."
+    "initialChaptersRandomDenseDesc": "Eine dichtere Streuung von Kapiteln — die alte breite Anzahl, ohne Form.",
+    "initialChaptersPickRandom": "Zufällig (einen Typ zufällig wählen)"
   },
   "sessionEnd": {
     "endSession": "Block beenden",
@@ -1254,7 +1255,8 @@
     "initialChaptersRandomSparse": "Zufällig dünn",
     "initialChaptersRandomSparseDesc": "Eine lockere Streuung von Kapiteln — die alte schmale Anzahl, ohne Form.",
     "initialChaptersRandomDense": "Zufällig dicht",
-    "initialChaptersRandomDenseDesc": "Eine dichtere Streuung von Kapiteln — die alte breite Anzahl, ohne Form."
+    "initialChaptersRandomDenseDesc": "Eine dichtere Streuung von Kapiteln — die alte breite Anzahl, ohne Form.",
+    "initialChaptersPickRandom": "Zufällig (einen Typ zufällig wählen)"
   },
   "workspaceFiles": {
     "title": "Plan-Dateien",

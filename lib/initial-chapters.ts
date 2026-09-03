@@ -538,6 +538,18 @@ export function stepInitialChaptersCatalog(
   return INITIAL_CHAPTERS_LEVELS[next];
 }
 
+/** One of the eight catalog types, chosen uniformly. */
+export function pickRandomInitialChapters(
+  rand: () => number = Math.random,
+): InitialChaptersLevel {
+  const n = INITIAL_CHAPTERS_LEVELS.length;
+  if (n <= 0) return DEFAULT_INITIAL_CHAPTERS;
+  const raw = rand();
+  const roll = Number.isFinite(raw) ? raw : Math.random();
+  const i = Math.min(n - 1, Math.max(0, Math.floor(roll * n)));
+  return INITIAL_CHAPTERS_LEVELS[i];
+}
+
 /** Prompt-facing summary of the chosen initial-chapters option. */
 export function formatInitialChaptersForPrompt(level: InitialChaptersLevel | unknown): {
   level: InitialChaptersLevel;

@@ -59,6 +59,8 @@ describe("workspace map types helpers", () => {
     expect(catalog.map((i) => i.id).sort()).toEqual([...INITIAL_CHAPTERS_LEVELS].sort());
     expect(catalog.some((i) => i.id === "spiral_curriculum")).toBe(false);
     expect(catalog.some((i) => i.id === "epitome_zoom")).toBe(false);
+    expect(catalog.some((i) => i.id === "funnel")).toBe(false);
+    expect(catalog.some((i) => i.id === "chambers")).toBe(false);
     expect(MAP_TYPE_LIBRARY_CORE.every((e) => e.defaultImported)).toBe(true);
     expect(MAP_TYPE_LIBRARY_CORE.map((e) => e.id).sort()).toEqual(
       [...INITIAL_CHAPTERS_LEVELS].sort(),
@@ -76,6 +78,11 @@ describe("workspace map types helpers", () => {
         "web_first",
         "interleaved_mosaic",
         "whole_task_bands",
+        "funnel",
+        "switchbacks",
+        "hourglass",
+        "delta",
+        "chambers",
       ]),
     );
     for (const extra of MAP_TYPE_LIBRARY_EXTRAS) {
@@ -447,6 +454,31 @@ describe("Map Types tab UI / API structural", () => {
     expect(panel).toContain('kind: "clear"');
     expect(panel).toContain("data-map-type-paint-drag");
     expect(panel).toContain("data-map-type-order-count");
+    expect(panel).toContain("data-map-type-label");
+    expect(panel).toContain("data-map-type-description");
+    expect(panel).toContain("data-map-type-layout");
+    expect(panel).toContain("data-map-type-band");
+    expect(panel).toContain('data-map-type-editor-layout="grid-form-prompt"');
+    expect(panel).toContain("lg:flex-row-reverse");
+    expect(panel).toContain("lg:w-[22rem]");
+    expect(panel).not.toContain("lg:grid-cols-2");
+    expect(panel).toContain('data-map-type-stage="grid"');
+    expect(panel).toContain("data-map-type-fields");
+    expect(panel).toContain("data-map-type-context-preview");
+    expect(panel).toContain("data-map-type-prompt-title");
+    expect(enJson.planView.mapTypesPromptTitle).toBe("Generator prompt");
+    expect(panel).not.toContain("lg:w-64");
+    expect(panel).not.toContain("max-h-64");
+    const editorSrc = panel.slice(panel.indexOf("data-map-type-editor"));
+    const gridPos = editorSrc.indexOf('data-map-type-stage="grid"');
+    const fieldsPos = editorSrc.indexOf("data-map-type-fields");
+    const previewPos = editorSrc.indexOf("data-map-type-context-preview");
+    expect(fieldsPos).toBeGreaterThan(-1);
+    expect(gridPos).toBeGreaterThan(fieldsPos);
+    expect(previewPos).toBeGreaterThan(gridPos);
+    expect(editorSrc).toMatch(
+      /data-map-type-context-preview[\s\S]{0,120}min-h-72 w-full/,
+    );
     expect(panel).toContain("applyMapTypePaint");
     expect(panel).toContain("data-map-type-create");
     expect(panel).toContain("data-map-type-save");
@@ -462,7 +494,10 @@ describe("Map Types tab UI / API structural", () => {
     expect(panel).not.toContain("/api/workspace/map-types/simulate");
     expect(panel).toContain("data-map-type-browse");
     expect(panel).toContain("data-map-type-library-add");
-    expect(panel).toContain("data-map-type-publish");
+    expect(panel).not.toContain("data-map-type-publish");
+    expect(read("app/api/map-types/library/route.ts")).toContain(
+      "Custom map types cannot be published",
+    );
     expect(read("lib/map-type-library.ts")).toContain("spiral_curriculum");
     expect(read("lib/map-type-library.ts")).toContain("MAP_TYPE_LIBRARY_CORE");
     expect(read("app/api/map-types/library/route.ts")).toContain("MAP_TYPE_LIBRARY");
@@ -531,6 +566,11 @@ describe("Map Types tab UI / API structural", () => {
         "clear=" + panel.includes('kind: "clear"'),
         "drag=" + panel.includes("data-map-type-paint-drag"),
         "build_only_host=" + view.includes("!isLearnerMode"),
+        "grid_form_prompt=" +
+          panel.includes('data-map-type-editor-layout="grid-form-prompt"'),
+        "no_prompt_rail=" +
+          String(!panel.includes("lg:w-64") && !panel.includes("max-h-64")),
+        "prompt_min_h_72=" + panel.includes("min-h-72 w-full"),
       ].join("\n") + "\n",
     );
 

@@ -137,6 +137,34 @@ describe("initial chapters → catalog + count bands", () => {
     );
   });
 
+  it("Spiral schematic is a one-cell corridor with blocked walls between turns", () => {
+    const spiral = INITIAL_CHAPTERS_CATALOG.find((o) => o.id === "spiral");
+    expect(spiral).toBeTruthy();
+    expect(spiral!.occupied.length).toBeGreaterThanOrEqual(12);
+    expect(spiral!.blocked.length).toBeGreaterThan(spiral!.occupied.length);
+    const spawn = new Set(spiral!.occupied.map((c) => `${c.row}:${c.col}`));
+    for (const cell of spiral!.occupied) {
+      expect(spiral!.blocked.some((b) => b.row === cell.row && b.col === cell.col)).toBe(
+        false,
+      );
+    }
+    let filled2x2 = 0;
+    for (const cell of spiral!.occupied) {
+      if (
+        spawn.has(`${cell.row}:${cell.col + 1}`) &&
+        spawn.has(`${cell.row + 1}:${cell.col}`) &&
+        spawn.has(`${cell.row + 1}:${cell.col + 1}`)
+      ) {
+        filled2x2 += 1;
+      }
+    }
+    expect(filled2x2).toBe(0);
+    expect(dummyDensityBlockedCount("spiral")).toBeGreaterThan(0);
+    expect(formatInitialChaptersForPrompt("spiral").layoutInstruction).toMatch(
+      /one-cell-wide spiral|blocked walls/i,
+    );
+  });
+
   it("relocates generated chapters off blocked slots", () => {
     const blocked = blockedChapterSlotsFromPattern("islands");
     expect(blocked.length).toBeGreaterThan(0);

@@ -16,7 +16,6 @@ import {
   normalizeWorkspaceMapTypes,
   occupancyAt,
   orderStepAt,
-  recordFromLibraryListing,
   removeCustomMapType,
   removeLibraryMapType,
   serializeWorkspaceMapTypes,
@@ -102,7 +101,7 @@ function MapTypeGrid({
       data-map-type-grid
       data-map-type-grid-editable={editable ? "true" : "false"}
       data-map-type-paint-drag="true"
-      className="aspect-square w-full max-w-[18rem] touch-none select-none"
+      className="mx-auto aspect-square w-full max-w-[22rem] touch-none select-none"
       onPointerDown={(e) => {
         if (!editable) return;
         const cell = cellFromPoint(e.clientX, e.clientY);
@@ -199,9 +198,6 @@ export function WorkspaceMapTypesPanel({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [browseFilter, setBrowseFilter] = useState<string>("all");
-  const [community, setCommunity] = useState<Array<Record<string, unknown>>>([]);
-  const [publishing, setPublishing] = useState(false);
-  const [publishNote, setPublishNote] = useState<string | null>(null);
 
   const selectedLibrary = useMemo(
     () =>
@@ -219,16 +215,6 @@ export function WorkspaceMapTypesPanel({
 
   const firstIdIn = (next: WorkspaceMapTypesState) =>
     next.selectedLibraryIds?.[0] || next.customTypes[0]?.id || null;
-
-  const loadCommunity = useCallback(async () => {
-    try {
-      const res = await fetch("/api/map-types/library");
-      const data = await res.json().catch(() => ({}));
-      setCommunity(Array.isArray(data.community) ? data.community : []);
-    } catch {
-      setCommunity([]);
-    }
-  }, []);
 
   const persist = useCallback(
     async (next: WorkspaceMapTypesState) => {
@@ -277,59 +263,6 @@ export function WorkspaceMapTypesPanel({
     setState(next);
     if (selectedId === id) setSelectedId(firstIdIn(next));
     void persist(next);
-  };
-
-  const addCommunityType = (item: Record<string, unknown>) => {
-    const record = recordFromLibraryListing({
-      id: typeof item.id === "string" ? item.id : undefined,
-      slug: typeof item.slug === "string" ? item.slug : undefined,
-      label: typeof item.label === "string" ? item.label : undefined,
-      description:
-        typeof item.description === "string" ? item.description : undefined,
-      occupied: Array.isArray(item.occupied)
-        ? (item.occupied as Array<{ row: number; col: number }>)
-        : [],
-      blocked: Array.isArray(item.blocked)
-        ? (item.blocked as Array<{ row: number; col: number }>)
-        : [],
-      payload: item.payload,
-      authorUsername:
-        typeof item.authorUsername === "string" ? item.authorUsername : null,
-      playRule: typeof item.playRule === "string" ? item.playRule : undefined,
-      category: "community",
-    });
-    const next = upsertCustomMapType(state, record);
-    setState(next);
-    setSelectedId(record.id);
-    void persist(next);
-  };
-
-  const publishSelected = async () => {
-    if (!selected || selected.source !== "custom" || publishing) return;
-    setPublishing(true);
-    setPublishNote(null);
-    try {
-      const res = await fetch("/api/map-types/library", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mapType: selected }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          typeof data.error === "string" ? data.error : "Failed to publish",
-        );
-      }
-      setPublishNote(
-        t("planView.mapTypesPublished") +
-          (data.authorUsername ? ` · ${data.authorUsername}` : ""),
-      );
-      void loadCommunity();
-    } catch (err) {
-      setPublishNote(err instanceof Error ? err.message : "Failed to publish");
-    } finally {
-      setPublishing(false);
-    }
   };
 
   const createCustom = () => {
@@ -393,10 +326,7 @@ export function WorkspaceMapTypesPanel({
           <button
             type="button"
             data-map-type-browse
-            onClick={() => {
-              setBrowseOpen(true);
-              void loadCommunity();
-            }}
+            onClick={() => setBrowseOpen(true)}
             className="mt-3 rounded-none border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-neutral-100 hover:bg-white/10"
           >
             {t("planView.mapTypesBrowse")}
@@ -550,226 +480,244 @@ export function WorkspaceMapTypesPanel({
           {!selected ? (
             <p className="text-[12px] text-neutral-500">Select a map type.</p>
           ) : (
-            <div className="flex flex-col gap-4 lg:flex-row">
-              <div className="min-w-0 flex-1 space-y-3">
-                {selectedIsCustom && isOwner ? (
-                  <>
-                    <label className="block text-[11px] text-neutral-400">
-                      {t("planView.mapTypesLabel")}
-                      <input
-                        data-map-type-label
-                        value={selected.label}
-                        onChange={(e) => patchSelected({ label: e.target.value })}
-                        className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
-                      />
-                    </label>
-                    <label className="block text-[11px] text-neutral-400">
-                      {t("planView.mapTypesDescription")}
-                      <textarea
-                        data-map-type-description
-                        value={selected.description}
-                        onChange={(e) =>
-                          patchSelected({ description: e.target.value })
-                        }
-                        rows={3}
-                        className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
-                      />
-                    </label>
-                    <label className="block text-[11px] text-neutral-400">
-                      {t("planView.mapTypesLayoutHint")}
-                      <textarea
-                        data-map-type-layout
-                        value={selected.layoutInstruction}
-                        onChange={(e) =>
-                          patchSelected({ layoutInstruction: e.target.value })
-                        }
-                        rows={3}
-                        className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
-                      />
-                    </label>
-                    <div className="grid grid-cols-3 gap-2" data-map-type-band>
-                      {(["min", "max", "target"] as const).map((field) => (
-                        <label
-                          key={field}
-                          className="block text-[11px] text-neutral-400"
-                        >
-                          {field}
-                          <input
-                            type="number"
-                            data-map-type-band-field={field}
-                            value={selected.band[field]}
-                            min={1}
-                            onChange={(e) =>
-                              patchSelected({
-                                band: {
-                                  ...selected.band,
-                                  [field]: Number(e.target.value) || selected.band[field],
-                                },
-                              })
+            <div
+              data-map-type-editor-layout="grid-form-prompt"
+              className="flex min-h-0 flex-col gap-4"
+            >
+              <div className="flex min-h-0 flex-col-reverse gap-4 lg:flex-row-reverse lg:items-start">
+                <div
+                  data-map-type-fields
+                  className="min-w-0 flex-1 space-y-2"
+                >
+                  {selectedIsCustom && isOwner ? (
+                    <>
+                      <label className="block text-[10px] uppercase tracking-[0.08em] text-neutral-500">
+                        {t("planView.mapTypesLabel")}
+                        <input
+                          data-map-type-label
+                          value={selected.label}
+                          onChange={(e) =>
+                            patchSelected({ label: e.target.value })
+                          }
+                          className="mt-0.5 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
+                        />
+                      </label>
+                      <label className="block text-[10px] uppercase tracking-[0.08em] text-neutral-500">
+                        {t("planView.mapTypesDescription")}
+                        <textarea
+                          data-map-type-description
+                          value={selected.description}
+                          onChange={(e) =>
+                            patchSelected({ description: e.target.value })
+                          }
+                          rows={2}
+                          className="mt-0.5 w-full resize-y rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
+                        />
+                      </label>
+                      <label className="block text-[10px] uppercase tracking-[0.08em] text-neutral-500">
+                        {t("planView.mapTypesLayoutHint")}
+                        <textarea
+                          data-map-type-layout
+                          value={selected.layoutInstruction}
+                          onChange={(e) =>
+                            patchSelected({ layoutInstruction: e.target.value })
+                          }
+                          rows={2}
+                          className="mt-0.5 w-full resize-y rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
+                        />
+                      </label>
+                      <div className="grid grid-cols-3 gap-2" data-map-type-band>
+                        {(["min", "max", "target"] as const).map((field) => (
+                          <label
+                            key={field}
+                            className="block text-[10px] uppercase tracking-[0.08em] text-neutral-500"
+                          >
+                            {field}
+                            <input
+                              type="number"
+                              data-map-type-band-field={field}
+                              value={selected.band[field]}
+                              min={1}
+                              onChange={(e) =>
+                                patchSelected({
+                                  band: {
+                                    ...selected.band,
+                                    [field]:
+                                      Number(e.target.value) ||
+                                      selected.band[field],
+                                  },
+                                })
+                              }
+                              className="mt-0.5 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <label className="block text-[10px] uppercase tracking-[0.08em] text-neutral-500">
+                        {t("planView.mapTypesOrderSteps")}
+                        <input
+                          type="number"
+                          data-map-type-order-count
+                          min={0}
+                          max={MAX_MAP_TYPE_ORDER_STEPS}
+                          value={selected.orderStepCount ?? 0}
+                          onChange={(e) => {
+                            const next = setMapTypeOrderStepCount(
+                              selected,
+                              e.target.value,
+                            );
+                            patchSelected({
+                              orderStepCount: next.orderStepCount,
+                              orderSteps: next.orderSteps,
+                            });
+                            if (
+                              paletteTool.kind === "order" &&
+                              paletteTool.step > next.orderStepCount
+                            ) {
+                              setPaletteTool({ kind: "spawn" });
                             }
-                            className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
-                          />
-                        </label>
+                          }}
+                          className="mt-0.5 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
+                        />
+                        <span className="mt-0.5 block text-[10px] leading-snug text-neutral-600">
+                          {t("planView.mapTypesOrderStepsHint")}
+                        </span>
+                      </label>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          data-map-type-save
+                          disabled={saving}
+                          onClick={saveSelected}
+                          className="rounded-none bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-neutral-200 disabled:opacity-40"
+                        >
+                          {saving ? "Saving…" : t("planView.mapTypesSave")}
+                        </button>
+                        {confirmDeleteId === selected.id ? (
+                          <>
+                            <button
+                              type="button"
+                              data-map-type-delete-confirm
+                              disabled={saving}
+                              onClick={() => deleteSelected(selected.id)}
+                              className="rounded-none border border-rose-500/40 bg-rose-500/15 px-3 py-1.5 text-xs text-rose-100"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="rounded-none px-3 py-1.5 text-xs text-neutral-400"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            data-map-type-delete
+                            disabled={saving}
+                            onClick={() => setConfirmDeleteId(selected.id)}
+                            className="rounded-none border border-white/10 px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-200"
+                          >
+                            {t("planView.mapTypesDelete")}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-white">
+                        {selected.label}
+                      </p>
+                      <p className="text-[11px] leading-snug text-neutral-400">
+                        {selected.description}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div
+                  data-map-type-stage="grid"
+                  className="flex w-full shrink-0 flex-col items-center gap-2 lg:w-[22rem]"
+                >
+                  <MapTypeGrid
+                    record={selected}
+                    editable={Boolean(selectedIsCustom && isOwner)}
+                    onPaint={paintCell}
+                  />
+                  {selectedIsCustom && isOwner ? (
+                    <div
+                      data-map-type-palette
+                      className="flex max-w-[22rem] flex-wrap justify-center gap-1.5"
+                    >
+                      {(
+                        [
+                          { kind: "spawn" as const, label: t("planView.mapTypesSpawn") || "Spawn" },
+                          { kind: "blocked" as const, label: t("planView.mapTypesBlocked") || "Blocked" },
+                          { kind: "clear" as const, label: t("planView.mapTypesClear") || "Clear" },
+                        ] as const
+                      ).map((item) => (
+                        <button
+                          key={item.kind}
+                          type="button"
+                          data-map-type-palette-mark={item.kind}
+                          onClick={() => setPaletteTool({ kind: item.kind })}
+                          className={`rounded-none border px-2 py-1 text-[10px] ${
+                            paletteTool.kind === item.kind
+                              ? "border-neutral-300 bg-neutral-800 text-white"
+                              : "border-white/10 text-neutral-400 hover:text-neutral-200"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                      {Array.from(
+                        { length: selected.orderStepCount || 0 },
+                        (_, i) => i + 1,
+                      ).map((step) => (
+                        <button
+                          key={`order-${step}`}
+                          type="button"
+                          data-map-type-palette-mark={`order-${step}`}
+                          onClick={() =>
+                            setPaletteTool({ kind: "order", step })
+                          }
+                          className={`rounded-none border px-2 py-1 text-[10px] ${
+                            paletteTool.kind === "order" &&
+                            paletteTool.step === step
+                              ? "border-neutral-300 bg-neutral-800 text-white"
+                              : "border-white/10 text-neutral-400 hover:text-neutral-200"
+                          }`}
+                        >
+                          {t("planView.mapTypesOrderStep")} {step}
+                        </button>
                       ))}
                     </div>
-                    <label className="block text-[11px] text-neutral-400">
-                      {t("planView.mapTypesOrderSteps")}
-                      <input
-                        type="number"
-                        data-map-type-order-count
-                        min={0}
-                        max={MAX_MAP_TYPE_ORDER_STEPS}
-                        value={selected.orderStepCount ?? 0}
-                        onChange={(e) => {
-                          const next = setMapTypeOrderStepCount(
-                            selected,
-                            e.target.value,
-                          );
-                          patchSelected({
-                            orderStepCount: next.orderStepCount,
-                            orderSteps: next.orderSteps,
-                          });
-                          if (
-                            paletteTool.kind === "order" &&
-                            paletteTool.step > next.orderStepCount
-                          ) {
-                            setPaletteTool({ kind: "spawn" });
-                          }
-                        }}
-                        className="mt-1 w-full rounded-none border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-sm text-white"
-                      />
-                      <span className="mt-1 block text-[10px] leading-snug text-neutral-500">
-                        {t("planView.mapTypesOrderStepsHint")}
-                      </span>
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium text-white">{selected.label}</p>
-                    <p className="text-[12px] leading-relaxed text-neutral-400">
-                      {selected.description}
-                    </p>
-                  </>
-                )}
-
-                {selectedIsCustom && isOwner ? (
-                  <div
-                    data-map-type-palette
-                    className="flex flex-wrap gap-1.5"
-                  >
-                    {(
-                      [
-                        { kind: "spawn" as const, label: t("planView.mapTypesSpawn") || "Spawn" },
-                        { kind: "blocked" as const, label: t("planView.mapTypesBlocked") || "Blocked" },
-                        { kind: "clear" as const, label: t("planView.mapTypesClear") || "Clear" },
-                      ] as const
-                    ).map((item) => (
-                      <button
-                        key={item.kind}
-                        type="button"
-                        data-map-type-palette-mark={item.kind}
-                        onClick={() => setPaletteTool({ kind: item.kind })}
-                        className={`rounded-none border px-2 py-1 text-[10px] ${
-                          paletteTool.kind === item.kind
-                            ? "border-neutral-300 bg-neutral-800 text-white"
-                            : "border-white/10 text-neutral-400 hover:text-neutral-200"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                    {Array.from(
-                      { length: selected.orderStepCount || 0 },
-                      (_, i) => i + 1,
-                    ).map((step) => (
-                      <button
-                        key={`order-${step}`}
-                        type="button"
-                        data-map-type-palette-mark={`order-${step}`}
-                        onClick={() => setPaletteTool({ kind: "order", step })}
-                        className={`rounded-none border px-2 py-1 text-[10px] ${
-                          paletteTool.kind === "order" && paletteTool.step === step
-                            ? "border-neutral-300 bg-neutral-800 text-white"
-                            : "border-white/10 text-neutral-400 hover:text-neutral-200"
-                        }`}
-                      >
-                        {t("planView.mapTypesOrderStep")} {step}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                <MapTypeGrid
-                  record={selected}
-                  editable={Boolean(selectedIsCustom && isOwner)}
-                  onPaint={paintCell}
-                />
-
-                {selectedIsCustom && isOwner ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      data-map-type-save
-                      disabled={saving}
-                      onClick={saveSelected}
-                      className="flex-1 rounded-none bg-white px-3 py-2 text-xs font-semibold text-black hover:bg-neutral-200 disabled:opacity-40"
-                    >
-                      {saving ? "Saving…" : t("planView.mapTypesSave")}
-                    </button>
-                    <button
-                      type="button"
-                      data-map-type-publish
-                      disabled={publishing}
-                      onClick={() => void publishSelected()}
-                      className="rounded-none border border-white/15 px-3 py-2 text-xs text-neutral-200 hover:bg-white/5 disabled:opacity-40"
-                    >
-                      {publishing
-                        ? t("planView.mapTypesPublishing")
-                        : t("planView.mapTypesPublish")}
-                    </button>
-                    {confirmDeleteId === selected.id ? (
-                      <>
-                        <button
-                          type="button"
-                          data-map-type-delete-confirm
-                          disabled={saving}
-                          onClick={() => deleteSelected(selected.id)}
-                          className="rounded-none border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs text-rose-100"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="rounded-none px-3 py-2 text-xs text-neutral-400"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        data-map-type-delete
-                        disabled={saving}
-                        onClick={() => setConfirmDeleteId(selected.id)}
-                        className="rounded-none border border-white/10 px-3 py-2 text-xs text-neutral-400 hover:text-neutral-200"
-                      >
-                        {t("planView.mapTypesDelete")}
-                      </button>
-                    )}
-                  </div>
-                ) : null}
-                {publishNote ? (
-                  <p className="text-[11px] text-neutral-400">{publishNote}</p>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
+
               {previewCtx ? (
-                <pre
-                  data-map-type-context-preview
-                  className="max-h-64 overflow-auto whitespace-pre-wrap rounded-none border border-white/10 bg-black/40 p-3 text-[10px] leading-relaxed text-neutral-500 lg:max-h-none lg:w-64 lg:shrink-0"
-                >
-                  {previewCtx.countInstruction}
-                </pre>
+                <section data-map-type-prompt className="min-w-0 space-y-1.5">
+                  <div>
+                    <h3
+                      data-map-type-prompt-title
+                      className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500"
+                    >
+                      {t("planView.mapTypesPromptTitle")}
+                    </h3>
+                    <p className="mt-0.5 text-[10px] leading-snug text-neutral-600">
+                      {t("planView.mapTypesPromptHint")}
+                    </p>
+                  </div>
+                  <pre
+                    data-map-type-context-preview
+                    className="min-h-72 w-full flex-1 overflow-auto whitespace-pre-wrap rounded-none border border-white/10 bg-black/40 p-3 text-[11px] leading-relaxed text-neutral-400"
+                  >
+                    {previewCtx.countInstruction}
+                  </pre>
+                </section>
               ) : null}
             </div>
           )}
@@ -819,7 +767,7 @@ export function WorkspaceMapTypesPanel({
             >
               {t("planView.mapTypesBrowseSelected")}
             </button>
-            {MAP_TYPE_LIBRARY_CATEGORIES.map((cat) => (
+            {MAP_TYPE_LIBRARY_CATEGORIES.filter((c) => c.id !== "community").map((cat) => (
               <button
                 key={cat.id}
                 type="button"
@@ -842,7 +790,6 @@ export function WorkspaceMapTypesPanel({
                 if (browseFilter === "in_workspace") {
                   return workspaceHasLibraryMapType(state, e.id);
                 }
-                if (browseFilter === "community") return false;
                 return (
                   browseFilter === e.category || browseFilter === e.strength
                 );
@@ -896,77 +843,6 @@ export function WorkspaceMapTypesPanel({
                   </li>
                 );
               })}
-              {(browseFilter === "all" ||
-                browseFilter === "community" ||
-                browseFilter === "in_workspace") &&
-                community
-                  .filter((item) => {
-                    if (browseFilter !== "in_workspace") return true;
-                    const id = String(item.id || item.slug || "");
-                    return workspaceHasLibraryMapType(state, id);
-                  })
-                  .map((item) => {
-                  const id = String(item.id || item.slug || "");
-                  const inWs = workspaceHasLibraryMapType(state, id);
-                  const record = recordFromLibraryListing({
-                    id,
-                    slug: typeof item.slug === "string" ? item.slug : id,
-                    label: String(item.label || "Untitled"),
-                    description: String(item.description || ""),
-                    occupied: Array.isArray(item.occupied)
-                      ? (item.occupied as Array<{ row: number; col: number }>)
-                      : [],
-                    blocked: Array.isArray(item.blocked)
-                      ? (item.blocked as Array<{ row: number; col: number }>)
-                      : [],
-                    payload: item.payload,
-                    authorUsername:
-                      typeof item.authorUsername === "string"
-                        ? item.authorUsername
-                        : null,
-                  });
-                  return (
-                    <li
-                      key={id}
-                      data-map-type-library-card={id}
-                      className="flex flex-col rounded-none border border-white/10 bg-neutral-950 p-3"
-                    >
-                      <div className="mx-auto aspect-square w-full max-w-[10rem]">
-                        <ChapterMiniMap
-                          cells={mapTypeCellsToMiniMap(record)}
-                          dummy
-                          density={record.id}
-                        />
-                      </div>
-                      <p className="mt-2 text-[12px] font-medium text-white">
-                        {record.label}
-                      </p>
-                      <p className="text-[10px] text-neutral-500">
-                        {t("planView.mapTypesBy").replace(
-                          "{name}",
-                          String(item.authorUsername || "anonymous"),
-                        )}
-                      </p>
-                      <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-neutral-400">
-                        {record.description}
-                      </p>
-                      {inWs ? (
-                        <p className="mt-2 text-[10px] text-neutral-500">
-                          {t("planView.mapTypesInWorkspace")}
-                        </p>
-                      ) : (
-                        <button
-                          type="button"
-                          data-map-type-library-add={id}
-                          onClick={() => addCommunityType(item)}
-                          className="mt-2 rounded-none bg-white px-2 py-1.5 text-[10px] font-semibold text-black"
-                        >
-                          {t("planView.mapTypesAdd")}
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
               {browseFilter === "in_workspace" &&
                 state.customTypes
                   .filter((item) => !item.libraryId)

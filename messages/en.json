@@ -2072,6 +2072,8 @@
     "mapTypesDagHints": "Workspace DAG hints",
     "mapTypesEmptyCustom": "No custom map types yet.",
     "mapTypesCountBand": "Chapter count",
+    "mapTypesPromptTitle": "Generator prompt",
+    "mapTypesPromptHint": "Layout context sent when a new session map is generated from this type.",
     "sectionGoals": "Goals",
     "sectionKnowledge": "Knowledge",
     "sectionSetting": "Settings",

@@ -117,6 +117,38 @@ const ISLANDS_OCCUPIED: Cell[] = [
   { row: 6, col: 6 },
 ];
 
+/** One-cell-wide spiral corridor; blocked walls between turns show the form. */
+const SPIRAL_OCCUPIED: Cell[] = [
+  { row: 3, col: 3 },
+  { row: 3, col: 4 },
+  { row: 3, col: 5 },
+  { row: 2, col: 5 },
+  { row: 1, col: 5 },
+  { row: 1, col: 4 },
+  { row: 1, col: 3 },
+  { row: 1, col: 2 },
+  { row: 1, col: 1 },
+  { row: 2, col: 1 },
+  { row: 3, col: 1 },
+  { row: 4, col: 1 },
+  { row: 5, col: 1 },
+  { row: 5, col: 2 },
+  { row: 5, col: 3 },
+  { row: 5, col: 4 },
+  { row: 5, col: 5 },
+];
+
+const SPIRAL_BLOCKED: Cell[] = (() => {
+  const spawn = new Set(SPIRAL_OCCUPIED.map((c) => `${c.row}:${c.col}`));
+  const out: Cell[] = [];
+  for (let row = 0; row <= 6; row += 1) {
+    for (let col = 0; col <= 6; col += 1) {
+      if (!spawn.has(`${row}:${col}`)) out.push({ row, col });
+    }
+  }
+  return out;
+})();
+
 const ISLANDS_BLOCKED: Cell[] = [
   { row: 0, col: 3 },
   { row: 1, col: 3 },
@@ -175,23 +207,9 @@ export const INITIAL_CHAPTERS_CATALOG: readonly InitialChaptersOption[] = [
       SHAPED_BAND,
     ),
     layoutInstruction:
-      'LAYOUT PATTERN "Spiral": Place the start at (0, 0). Wind remaining chapters outward in a spiral so later tiles revisit earlier themes at higher complexity. Keep the path connected; do not fill a rectangle.',
-    occupied: [
-      { row: 3, col: 3 },
-      { row: 3, col: 4 },
-      { row: 4, col: 4 },
-      { row: 4, col: 3 },
-      { row: 4, col: 2 },
-      { row: 3, col: 2 },
-      { row: 2, col: 2 },
-      { row: 2, col: 3 },
-      { row: 2, col: 4 },
-      { row: 2, col: 5 },
-      { row: 3, col: 5 },
-      { row: 4, col: 5 },
-      { row: 5, col: 5 },
-    ],
-    blocked: [],
+      'LAYOUT PATTERN "Spiral": Place chapters along a ONE-CELL-WIDE spiral corridor winding out from the core. Foundation sits at the inner end of the spiral, not at a far-off origin. Do not fill the interior and do not occupy the blocked walls between turns — those hatched cells keep the spiral shape readable. Later tiles along the path revisit earlier themes at higher complexity.',
+    occupied: SPIRAL_OCCUPIED,
+    blocked: SPIRAL_BLOCKED,
     titleKey: "initialChaptersSpiral",
     descKey: "initialChaptersSpiralDesc",
   },

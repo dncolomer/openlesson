@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
-import { BRAND_NAME, BRAND_SLUG, MCP_RESOURCE_SCHEME } from "@/lib/brand";
+import { BRAND_NAME, BRAND_SHORT, BRAND_SLUG, MCP_RESOURCE_SCHEME } from "@/lib/brand";
 import { MCP_PROOF_OF_WORK_SERVER_NAME } from "@/lib/pow-api/mcp-proof-of-work-server";
 import { buildTapThoughtTracePayload } from "@/lib/tap-score-traces";
 import { buildIleThoughtTracePayload } from "@/lib/ile-thought-traces";
@@ -89,6 +89,7 @@ function collectOffenders(files: string[]): string[] {
 describe("Uncertain Systems brand", () => {
   it("exports brand constants", () => {
     expect(BRAND_NAME).toBe("Uncertain Systems");
+    expect(BRAND_SHORT).toBe("unsys");
     expect(BRAND_SLUG).toBe("uncertain-systems");
     expect(MCP_RESOURCE_SCHEME).toBe("uncertain-systems://");
     expect(MCP_PROOF_OF_WORK_SERVER_NAME).toBe("uncertain-systems-proof-of-work-api");

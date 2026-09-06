@@ -3,6 +3,9 @@ export const BRAND_LOGO_PATH = "/unsyslogo.jpeg";
 /** User-visible product name */
 export const BRAND_NAME = "Uncertain Systems";
 
+/** Short mark for Uncertain Systems. Product/system label, not a character. */
+export const BRAND_SHORT = "unsys";
+
 /** Machine/slug form for API, MCP, storage keys */
 export const BRAND_SLUG = "uncertain-systems";
 

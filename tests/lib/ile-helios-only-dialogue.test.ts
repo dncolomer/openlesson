@@ -61,13 +61,14 @@ describe("ILE Helios-only surface helper", () => {
   });
 });
 
-describe("Helios thinking copy", () => {
-  it("exposes 3 distinct Helios-is-thinking lines", () => {
+describe("ILE waiting copy", () => {
+  it("rotates 3 waiting lines with no Helios character", () => {
     expect(ILE_HELIOS_THINKING_LINES).toHaveLength(3);
     const unique = new Set(ILE_HELIOS_THINKING_LINES);
     expect(unique.size).toBe(3);
     for (const line of ILE_HELIOS_THINKING_LINES) {
-      expect(line.toLowerCase()).toMatch(/helios is thinking/);
+      expect(line.toLowerCase()).not.toMatch(/helios/);
+      expect(line.toLowerCase()).not.toMatch(/unsys is thinking/);
     }
     expect(ileHeliosThinkingLine(0)).toBe(ILE_HELIOS_THINKING_LINES[0]);
     expect(ileHeliosThinkingLine(1)).toBe(ILE_HELIOS_THINKING_LINES[1]);

@@ -16,9 +16,9 @@ export type IleHeliosTriggerInput = {
 };
 
 export const ILE_HELIOS_WHY_COPY = {
-  idle: "Helios checked in after a pause in your work.",
-  speech: "Helios responded to a spoken segment.",
-  interruption: "Helios interrupted from a proof-of-work signal.",
+  idle: "Checked in after a pause in your work.",
+  speech: "Responded to a spoken segment.",
+  interruption: "Interrupted from a proof-of-work signal.",
 } as const;
 
 export type IleHeliosTriggerDecision = {

@@ -10,6 +10,7 @@ export function IleChapterWidgetFrame({
   compact = false,
   className = "",
   style,
+  footer,
 }: {
   children: ReactNode;
   onClose?: () => void;
@@ -17,6 +18,7 @@ export function IleChapterWidgetFrame({
   compact?: boolean;
   className?: string;
   style?: CSSProperties;
+  footer?: ReactNode;
 }) {
   return (
     <div
@@ -44,16 +46,31 @@ export function IleChapterWidgetFrame({
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      {footer ? (
+        <div
+          data-ile-chapter-widget-footer
+          className="shrink-0 border-t border-neutral-800 px-2 py-2"
+        >
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }
 
 /** PiP / popup host: same Chapter chrome, fills the compact window. */
-export function IleChapterPipFrame({ children }: { children: ReactNode }) {
+export function IleChapterPipFrame({
+  children,
+  footer,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <IleChapterWidgetFrame
       fill
       compact
+      footer={footer}
       className="pointer-events-auto"
       style={{
         position: "relative",

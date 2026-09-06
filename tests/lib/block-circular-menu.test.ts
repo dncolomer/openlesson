@@ -209,10 +209,15 @@ describe("circular menu source wiring", () => {
     expect(ring).not.toContain("work: <MessageSquare");
     expect(ring).not.toContain("gather_resources: <Pickaxe");
     expect(ring).toContain("data-block-circular-menu-action");
+    expect(ring).toContain('action.id === "work"');
+    expect(ring).toContain("data-block-circular-menu-prominent");
+    expect(ring).toContain("outline-offset-[3px]");
+    expect(ring).toContain("outline-white/80");
     expect(ring).toContain("data-block-circular-menu-icon");
     expect(ring).toContain("data-block-circular-menu-label");
     expect(ring).toContain("group-hover:hidden");
     expect(ring).toContain("group-hover:inline");
+    expect(ring).toContain("cursor-pointer");
     expect(ring).toContain("rounded-full");
     expect(ring).toContain("data-block-circular-progress");
     expect(ring).toContain("data-block-gather-notification");

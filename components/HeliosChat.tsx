@@ -58,19 +58,18 @@ interface HeliosChatProps {
   isMicOn?: boolean;
 }
 
-// Helios first-person welcome — unified across probe panel and chat.
-// The voice matches the BASE_SYSTEM_PROMPT in /api/session-chat.
+// First chat welcome — product label is unsys, not a named character.
 const CHAT_WELCOME_MESSAGES: Record<string, string> = {
-  en: "Hey, I'm Helios. Send me a thought and I'll answer here in plain text — one turn at a time.",
-  es: "Hola, soy Helios. Envíame un pensamiento y responderé aquí en texto claro, un turno a la vez.",
-  vi: "Chào, tôi là Helios. Gửi cho tôi một suy nghĩ và tôi sẽ trả lời ở đây bằng văn bản thuần, từng lượt một.",
-  zh: "嘿，我是 Helios。发送一条想法，我会在这里用纯文本回复，一次一轮。",
-  de: "Hey, ich bin Helios. Schick mir einen Gedanken und ich antworte hier in Klartext — einen Zug nach dem anderen.",
-  pl: "Cześć, jestem Helios. Wyślij mi myśl, a odpowiem tutaj prostym tekstem — po jednej turze.",
-  ca: "Hola, sóc Helios. Envia'm un pensament i respondré aquí en text pla, un torn cada vegada.",
+  en: "Send a thought and you'll get an answer here in plain text — one turn at a time.",
+  es: "Envía un pensamiento y recibirás una respuesta aquí en texto claro, un turno a la vez.",
+  vi: "Gửi một suy nghĩ và bạn sẽ nhận câu trả lời ở đây bằng văn bản thuần, từng lượt một.",
+  zh: "发送一条想法，这里会用纯文本回复，一次一轮。",
+  de: "Schick einen Gedanken und du erhältst hier eine Antwort in Klartext — einen Zug nach dem anderen.",
+  pl: "Wyślij myśl, a otrzymasz tutaj odpowiedź prostym tekstem — po jednej turze.",
+  ca: "Envia un pensament i rebràs una resposta aquí en text pla, un torn cada vegada.",
 };
 
-// Small circular avatar with a violet gradient and a serif "H" — Helios brand mark.
+// Small circular avatar with a serif "u" — unsys product mark.
 function HeliosAvatar({ size = 28 }: { size?: number }) {
   return (
     <div
@@ -78,7 +77,7 @@ function HeliosAvatar({ size = 28 }: { size?: number }) {
       style={{ width: size, height: size }}
       aria-hidden
     >
-      <span className="font-serif text-neutral-200" style={{ fontSize: size * 0.5 }}>H</span>
+      <span className="font-serif text-neutral-200" style={{ fontSize: size * 0.5 }}>u</span>
     </div>
   );
 }

@@ -22,10 +22,11 @@ export type IleDialogueTurnVisibility = {
 export const TAP_DIALOGUE_AVATAR_SIZE_CLASS = "h-28 w-28";
 export const ILE_DIALOGUE_AVATAR_SIZE_CLASS = "h-10 w-10";
 
+/** Waiting copy — no named character (unsys is the product mark, not a thinker). */
 export const ILE_HELIOS_THINKING_LINES = [
-  "Helios is thinking",
-  "Helios is thinking this through",
-  "Helios is thinking with you",
+  "Thinking…",
+  "Working through this…",
+  "One moment…",
 ] as const;
 
 export const ILE_HELIOS_THINKING_ROTATE_MS = 2200;

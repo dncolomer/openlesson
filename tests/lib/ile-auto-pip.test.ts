@@ -752,6 +752,7 @@ describe("PiP content height fills the live window (shipped helpers)", () => {
     expect(surface).not.toContain("popup=yes");
     const pipShell = read("components/IleCompactStashWindow.tsx");
     expect(pipShell).toContain("IleChapterPipFrame");
+    expect(pipShell).toContain("data-ile-compact-share-cta");
 
     writeScratch(
       "ile-pip-height-excerpts.txt",

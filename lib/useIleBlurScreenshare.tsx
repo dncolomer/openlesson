@@ -86,9 +86,13 @@ export function useIleBlurScreenshare(input: {
     if (!compactRootRef.current) {
       compactRootRef.current = createRoot(win.document.body);
     }
+    const compact = compactPropsRef.current;
     compactRootRef.current.render(
       <I18nProvider>
-        <IleCompactStashWindow>
+        <IleCompactStashWindow
+          isScreenSharing={compact.isScreenSharing}
+          onStartShare={() => startRef.current()}
+        >
           {renderCompactRef.current?.() ?? null}
         </IleCompactStashWindow>
       </I18nProvider>,

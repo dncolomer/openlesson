@@ -253,7 +253,7 @@ export function MobileProbesTab({
               <button
                 onClick={handleResetHelios}
                 disabled={resettingProbes}
-                aria-label="Reset Helios"
+                aria-label="Reset unsys"
                 className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 bg-neutral-800 text-xs text-neutral-300 active:text-neutral-100 active:border-neutral-600 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {resettingProbes ? (
@@ -354,7 +354,7 @@ export function MobileProbesTab({
                       <button
                         onClick={handleResetHelios}
                         disabled={resettingProbes}
-                        aria-label="Reset Helios"
+                        aria-label="Reset unsys"
                         className="p-1.5 rounded-md text-neutral-400 active:text-neutral-100 active:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         {resettingProbes ? (
@@ -538,13 +538,13 @@ export function MobileProbesTab({
         onCancel={() => setResetConfirmOpen(false)}
         onConfirm={confirmResetHelios}
         variant="destructive"
-        title="Reset Helios?"
+        title="Reset unsys?"
         description={
           activeProbes.length > 0
             ? `This will permanently archive the ${activeProbes.length} current ${activeProbes.length === 1 ? "probe" : "probes"} and generate a fresh question for the current step. This action cannot be undone.`
             : "This will generate a fresh question for the current step. Any in-flight probe will be archived."
         }
-        confirmLabel="Reset Helios"
+        confirmLabel="Reset unsys"
         cancelLabel="Cancel"
       />
     </div>

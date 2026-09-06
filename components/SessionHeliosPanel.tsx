@@ -89,7 +89,7 @@ export function SessionHeliosPanel({
   loadingChapterLabel = null,
   sessionId,
   ttsLanguage,
-  tutorName = "Helios",
+  tutorName = "unsys",
   aestheticImages,
   aestheticName,
   sessionControls,

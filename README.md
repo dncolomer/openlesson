@@ -36,7 +36,7 @@ On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge link
 - **Think Aloud Protocol (TAP) and ILE** — practice sessions on standard workspaces (knowledge-link mint)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
-- **Helios** — Socratic companion in session and workspace chat
+- **unsys** — practice dialogue in ILE session and workspace chat
 
 ## Tech Stack
 

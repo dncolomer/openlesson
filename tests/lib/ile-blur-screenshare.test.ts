@@ -368,6 +368,8 @@ describe("ILE leave-focus wiring (shipped source)", () => {
     expect(hook).not.toContain("compactHost");
     expect(hook).toContain("visibilitychange");
     expect(hook).toContain("startScreenshare");
+    expect(hook).toContain("onStartShare");
+    expect(hook).toContain("isScreenSharing={compact.isScreenSharing}");
     expect(hook).not.toContain("shouldRequestIlePopupOnLeave");
     expect(hook).not.toContain("result.post.compactWindow");
     expect(hook).not.toContain("shareDeclined");
@@ -384,6 +386,9 @@ describe("ILE leave-focus wiring (shipped source)", () => {
 
     const compact = read("components/IleCompactStashWindow.tsx");
     expect(compact).toContain("IleChapterPipFrame");
+    expect(compact).toContain("data-ile-compact-share-cta");
+    expect(compact).toContain("ileMiniModeShareCtaLabel");
+    expect(compact).toContain("runIleMiniShareCta");
     expect(compact).not.toContain("CompactList");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-compact-stash");

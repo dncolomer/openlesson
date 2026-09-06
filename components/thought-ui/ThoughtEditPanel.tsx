@@ -21,7 +21,7 @@ export function ThoughtEditPanel({
   isSending = false,
   title = "Edit transcription",
   submitLabel = "send",
-  placeholder = "Refine your transcription before sending to Helios...",
+  placeholder = "Refine your transcription before sending...",
 }: ThoughtEditPanelProps) {
   const canSend = draft.trim().length > 0 && !isSending;
 

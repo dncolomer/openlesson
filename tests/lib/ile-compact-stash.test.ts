@@ -226,9 +226,12 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
 
     const compact = read("components/IleCompactStashWindow.tsx");
     expect(compact).toContain("IleChapterPipFrame");
+    expect(compact).toContain("data-ile-compact-share-cta");
+    expect(compact).toContain("ileMiniModeShareCtaLabel");
+    expect(compact).toContain("shouldShowIleMiniShareCta");
+    expect(compact).toContain("runIleMiniShareCta");
     expect(compact).not.toContain("HeliosProbeAvatar");
     expect(compact).not.toContain("data-ile-compact-transcript");
-    expect(compact).not.toContain("data-ile-compact-share-cta");
     expect(compact).not.toContain("data-ile-compact-autostash");
     expect(compact).not.toContain("<AutoStashContextBar");
     expect(compact).not.toContain("<SlidingTranscript");
@@ -281,6 +284,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
         `transcriptListening=${listening.kind}:${listening.text}`,
         `autostashFill=${fill}`,
         "PiP paints IleChapterPipFrame + replica SessionThoughtPane",
+        "Share your Screen CTA in PiP footer when not sharing",
         "no last thought / no CompactList / no visible ILE label",
         "createRoot in PiP document → Chapter widget clone",
       ].join("\n"),
@@ -307,6 +311,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
       "ile-pip-surface.txt",
       [
         "IleCompactStashWindow: IleChapterPipFrame wraps replica Chapter widget",
+        "data-ile-compact-share-cta in PiP footer",
         "no data-ile-last-stash / data-ile-compact-forming",
         "useIleBlurScreenshare createRoot paints renderCompact Chapter clone",
         `chapterFrame=${frame.includes("data-ile-helios-widget")}`,

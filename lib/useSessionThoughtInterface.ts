@@ -619,7 +619,7 @@ export function useSessionThoughtInterface({
       try {
         await onSendToProbe(clean, thoughtIds);
       } catch (err) {
-        setSendError(err instanceof Error ? err.message : "Could not reach Helios");
+        setSendError(err instanceof Error ? err.message : "Could not reach unsys");
       } finally {
         setIsSending(false);
       }

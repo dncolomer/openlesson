@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
 }
 
 function buildSystemInstructions(sessionTopic: string): string {
-  return `You are Helios, an AI learning assistant analyzing a single tutoring session on the topic: "${sessionTopic}".
+  return `You are an AI learning assistant analyzing a single tutoring session on the topic: "${sessionTopic}". Do not introduce yourself by name.
 
 Your role is to help the learner understand their performance in this specific session and provide actionable insights.
 

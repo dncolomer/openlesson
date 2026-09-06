@@ -312,8 +312,8 @@ export function ProbesPanel({
               <button
                 onClick={handleResetHelios}
                 disabled={resettingProbes}
-                title="Reset Helios — generates a fresh question for the current step"
-                aria-label="Reset Helios"
+                title="Reset unsys — generates a fresh question for the current step"
+                aria-label="Reset unsys"
                 className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none border border-neutral-800 text-[11px] text-neutral-500 hover:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {resettingProbes ? (
@@ -415,8 +415,8 @@ export function ProbesPanel({
                       <button
                         onClick={handleResetHelios}
                         disabled={resettingProbes}
-                        title="Reset Helios — clears all active probes and generates a fresh one"
-                        aria-label="Reset Helios"
+                        title="Reset unsys — clears all active probes and generates a fresh one"
+                        aria-label="Reset unsys"
                         className="p-1 rounded-none text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         {resettingProbes ? (

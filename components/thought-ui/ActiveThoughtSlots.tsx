@@ -97,7 +97,7 @@ function ThoughtSlot({
       <div className="flex shrink-0 justify-end border-t border-neutral-900 pt-2">
         <ThoughtCompactAction
           shortcut={String(index + 1)}
-          label="Send to Helios"
+          label="Send to unsys"
           disabled={isSending}
           onClick={() => onSendThought(thought.text, thought.id)}
         />

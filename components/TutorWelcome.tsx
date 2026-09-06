@@ -52,7 +52,7 @@ export function TutorWelcome({
   ttsLanguage,
 }: TutorWelcomeProps) {
   const { locale: uiLocale } = useI18n();
-  const avatarInitial = (tutorName || "Helios").charAt(0).toUpperCase();
+  const avatarInitial = (tutorName || "unsys").charAt(0).toUpperCase();
   const keyPrefix = variant === "tap" ? "tap.welcome" : "welcome";
 
   // The welcome surface (typed greeting + button labels) follows the

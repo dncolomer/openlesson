@@ -13,6 +13,7 @@ import {
   type BlockCircularMenuActionId,
   type BlockCircularMenuSurface,
 } from "@/lib/block-circular-menu";
+import { cn } from "@/lib/utils";
 
 const ACTION_ICONS: Record<BlockCircularMenuActionId, ReactNode> = {
   work: <Pickaxe className="size-4" strokeWidth={2.4} aria-hidden />,
@@ -65,14 +66,20 @@ export function BlockCircularMenuRing({
       {actions.map((action, index) => {
         const pos = circularMenuActionPosition(index, actions.length);
         const disabled = disabledIds?.has(action.id);
+        const prominent = action.id === "work";
         return (
           <button
             key={action.id}
             type="button"
             data-block-circular-menu-action={action.id}
+            data-block-circular-menu-prominent={prominent ? "true" : undefined}
             aria-label={action.label}
             disabled={disabled}
-            className="group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 items-center justify-center rounded-full border-white/55 bg-neutral-950 text-neutral-100 shadow-[0_6px_16px_rgba(0,0,0,0.55)] hover:z-10 hover:w-auto hover:min-w-10 hover:border-white/90 hover:bg-neutral-900 hover:px-2.5 disabled:opacity-40"
+            className={cn(
+              "group pointer-events-auto absolute left-1/2 top-1/2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-white/55 bg-neutral-950 text-neutral-100 shadow-[0_6px_16px_rgba(0,0,0,0.55)] hover:z-10 hover:w-auto hover:min-w-10 hover:border-white/90 hover:bg-neutral-900 hover:px-2.5 disabled:cursor-not-allowed disabled:opacity-40",
+              prominent &&
+                "z-[1] outline outline-2 outline-offset-[3px] outline-white/80",
+            )}
             style={{
               height: BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX,
               minHeight: BLOCK_CIRCULAR_MENU_ACTION_SIZE_PX,

@@ -224,6 +224,13 @@ describe("circular menu source wiring", () => {
     expect(world).toContain("BlockCircularMenuRing");
     expect(world).toContain("BlockInTileProgress");
     expect(world).toContain("BlockGatherNotificationDot");
+    expect(ring).toContain("absolute inset-x-1 bottom-1");
+    expect(world).not.toMatch(
+      /flex-col items-center">\s*\{statusGlyph\}\s*<BlockInTileProgress/,
+    );
+    expect(world).toMatch(
+      /<\/span>\s*<BlockInTileProgress fraction=\{blockProgressById/,
+    );
     expect(world).toMatch(/<\/button>\s*\{circularMenuSurface !== "none"/);
     expect(world).toMatch(/<\/button>\s*\{isLabel &&/);
     expect(world).not.toContain("<BlockCircularMenuRing\n                                surface={circularMenuSurface}");

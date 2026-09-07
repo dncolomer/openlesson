@@ -112,6 +112,7 @@ export function BlockCircularMenuRing({
   );
 }
 
+/** Pin to the tile button (`relative`), not the title cluster. */
 export function BlockInTileProgress({ fraction }: { fraction: number }) {
   if (!(fraction > 0 && fraction <= 1)) return null;
   return (

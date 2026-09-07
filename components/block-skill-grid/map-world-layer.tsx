@@ -1024,7 +1024,6 @@ export function MapWorldLayer({
                             <>
                               <span className="relative z-10 flex max-w-full flex-col items-center">
                               {statusGlyph}
-                              <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                               <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                               {learnerLockedLabel}
                               {practiceBadge}
@@ -1034,6 +1033,7 @@ export function MapWorldLayer({
                               {starterBadge}
                               {lockBadge}
                               </span>
+                              <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                             </>
                           ) : null}
                         </button>
@@ -1198,7 +1198,6 @@ export function MapWorldLayer({
                   ) : null}
                   <span className="relative z-10 flex max-w-full flex-col items-center">
                   {statusGlyph}
-                  <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                   <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
                   {learnerLockedLabel}
                   {practiceBadge}
@@ -1208,6 +1207,7 @@ export function MapWorldLayer({
                   {starterBadge}
                   {lockBadge}
                   </span>
+                  <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                 </button>
                 {circularMenuSurface !== "none" &&
                 !mapExploreOpen &&

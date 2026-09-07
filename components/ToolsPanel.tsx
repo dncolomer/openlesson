@@ -21,26 +21,6 @@ const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 // compiler will surface anything still trying to set them.
 export type Tool = "chat" | "chapters" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "help" | "data-input" | "logs" | "plan-resources";
 
-interface ToolsPanelProps {
-  activeTool: Tool | null;
-  onToolChange: (tool: Tool) => void;
-  problem: string;
-  className?: string;
-  errorNotification?: boolean;
-  workspaceId?: string;
-  disabledTools?: Tool[];
-  onBackToDashboard?: () => void;
-  isRecording?: boolean;
-  isPaused?: boolean;
-  isWebcamEnabled?: boolean;
-  museStatus?: MuseAthenaStatus;
-  museDeviceStatus?: DeviceStatus | null;
-  museChannelData?: Map<string, number[]>;
-  /** No Meet-style Document PiP: show the manual popup control above Help. */
-  showOpenPicInPic?: boolean;
-  onOpenPicInPic?: () => void;
-}
-
 export function ToolIcon({ id }: { id: Tool }) {
   switch (id) {
     case "chat":
@@ -190,77 +170,6 @@ export function VoiceBarUtilityRow({
       ) : (
         <span />
       )}
-      </div>
-    </div>
-  );
-}
-
-export function ToolsPanel({ 
-  activeTool, onToolChange, problem, className = "", errorNotification = false,
-  workspaceId, disabledTools = [], onBackToDashboard,
-  isRecording = false, isPaused = false, isWebcamEnabled = false,
-  museStatus = "disconnected", museDeviceStatus = null, museChannelData,
-  showOpenPicInPic = false, onOpenPicInPic,
-}: ToolsPanelProps) {
-  const { t } = useI18n();
-  // Practice (exercise) and Theory (reading) used to live here as their
-  // own panels. They've been merged into the Helios chat surface — the
-  // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
-  // assistant message into chat instead. Keep this list lean.
-  const mainTools: Tool[] = [];
-  const getToolLabel = (id: Tool): string => {
-    switch (id) {
-      case "chat": return t('tools.helios');
-      case "chapters": return t('tools.chapters');
-      case "canvas": return t('tools.canvas');
-      case "notebook": return t('tools.notebook');
-      case "thought-history": return "Thoughts";
-
-      case "grokipedia": return t('tools.grokipedia');
-      case "dantes": return t('tools.dantes');
-      case "help": return t('tools.help');
-      case "data-input": return t('tools.dataInput');
-      case "logs": return t('tools.logs');
-      case "plan-resources": return t('tools.planResources');
-    }
-  };
-
-  const toolCellClass = (isActive = false, isDisabled = false) =>
-    `flex h-[3.25rem] min-w-0 w-full flex-col items-center justify-center gap-0.5 rounded-none px-1 text-[10px] font-medium leading-tight transition-all ${
-      isDisabled
-        ? "cursor-not-allowed border border-neutral-800/30 bg-neutral-800/30 text-neutral-600"
-        : isActive
-          ? "border border-neutral-600 bg-neutral-700/70 text-white"
-          : "border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-    }`;
-
-  if (mainTools.length === 0) return null;
-
-  return (
-    <div
-      data-ile-tools-widget
-      data-ile-tools-layout="compact"
-      className={`pointer-events-auto flex w-[min(10rem,calc(100vw-1rem))] max-w-[10rem] shrink-0 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95 p-1.5 ${className}`}
-    >
-      <div data-ile-tools-grid className="grid grid-cols-1 auto-rows-[3.25rem] gap-1">
-        {mainTools.map((toolId) => {
-          const isDisabled = disabledTools.includes(toolId);
-          return (
-          <button
-            key={toolId}
-            data-ile-global-resources
-            onClick={() => !isDisabled && onToolChange(toolId)}
-            disabled={isDisabled}
-            className={toolCellClass(activeTool === toolId, isDisabled)}
-          >
-            <ToolIcon id={toolId} />
-            <span className="min-w-0 max-w-full truncate px-0.5">{getToolLabel(toolId)}</span>
-            {toolId === "logs" && errorNotification && (
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
-            )}
-          </button>
-          );
-        })}
       </div>
     </div>
   );

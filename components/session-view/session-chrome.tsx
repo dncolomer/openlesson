@@ -6,7 +6,6 @@ import {
   AudioMiniPreview,
   EegMiniPreview,
   ScreenShareMiniPreview,
-  ToolsPanel,
   WebcamMiniPreview,
   type Tool,
 } from "@/components/ToolsPanel";
@@ -42,11 +41,6 @@ export type SessionChromeProps = {
   t: SessionViewTranslate;
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
-  problem: string;
-  workspaceId?: string;
-  onBackToDashboard: () => void;
-  isRecording: boolean;
-  isPaused: boolean;
   isWebcamEnabled: boolean;
   isScreenCapturing: boolean;
   screenShareStream: MediaStream | null;
@@ -59,8 +53,6 @@ export type SessionChromeProps = {
   museDeviceStatus: DeviceStatus | null;
   museChannelData: Map<string, number[]>;
   bandPowers?: { delta: number; theta: number; alpha: number; beta: number; gamma: number } | null;
-  showOpenPicInPic: boolean;
-  onOpenPicInPic: () => void;
   error: string | null;
   onDismissError: () => void;
   showWelcomeModal: boolean;
@@ -118,11 +110,6 @@ export function SessionChrome({
   t,
   activeTool,
   onToolChange,
-  problem,
-  workspaceId,
-  onBackToDashboard,
-  isRecording,
-  isPaused,
   isWebcamEnabled,
   isScreenCapturing,
   screenShareStream,
@@ -135,8 +122,6 @@ export function SessionChrome({
   museDeviceStatus,
   museChannelData,
   bandPowers = null,
-  showOpenPicInPic,
-  onOpenPicInPic,
   error,
   onDismissError,
   showWelcomeModal,
@@ -407,22 +392,6 @@ export function SessionChrome({
             ) : null}
             {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
           </div>
-          <ToolsPanel
-            activeTool={activeTool}
-            onToolChange={onToolChange}
-            problem={problem}
-            workspaceId={workspaceId}
-            disabledTools={[]}
-            onBackToDashboard={onBackToDashboard}
-            isRecording={isRecording}
-            isPaused={isPaused}
-            isWebcamEnabled={isWebcamEnabled}
-            museStatus={museStatus}
-            museDeviceStatus={museDeviceStatus}
-            museChannelData={museChannelData}
-            showOpenPicInPic={showOpenPicInPic}
-            onOpenPicInPic={onOpenPicInPic}
-          />
         </div>
 
         {voiceBar}

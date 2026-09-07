@@ -53,7 +53,7 @@ describe("resolveIleDockChipStatus", () => {
     expect(
       chapterHasPendingHeliosReply([
         { role: "assistant", pending: true },
-        { role: "assistant", id: "a2", pending: false },
+        { role: "assistant", pending: false },
       ]),
     ).toBe(false);
     expect(

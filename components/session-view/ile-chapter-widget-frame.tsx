@@ -5,7 +5,6 @@ import { ileCompactRootFillStyle } from "@/lib/ile-compact-window";
 
 export function IleChapterWidgetFrame({
   children,
-  onClose,
   onMinimize,
   fill = false,
   compact = false,
@@ -15,7 +14,6 @@ export function IleChapterWidgetFrame({
   footer,
 }: {
   children: ReactNode;
-  onClose?: () => void;
   onMinimize?: () => void;
   fill?: boolean;
   compact?: boolean;
@@ -47,15 +45,6 @@ export function IleChapterWidgetFrame({
               className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
             >
               –
-            </button>
-          ) : onClose ? (
-            <button
-              type="button"
-              data-ile-helios-widget-close
-              onClick={onClose}
-              className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
-            >
-              ✕
             </button>
           ) : (
             <span className="px-1.5 py-0.5 text-xs text-transparent">–</span>

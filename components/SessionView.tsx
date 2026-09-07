@@ -773,7 +773,6 @@ export function SessionView({
 
   const {
     sessionThoughtInterface,
-    sessionThoughtHistory,
     handleProjectStash,
     handleProjectSubmitToSolution,
     handleProjectPromote,
@@ -1319,20 +1318,13 @@ export function SessionView({
         activeTool={activeTool}
         shouldBlockTools={Boolean(shouldBlockTools)}
         session={session}
-        sessionPlan={sessionPlan}
         ayclToken={ayclToken}
         ileToken={ileToken}
         gatherBlockId={sessionBlockId}
         gatherChapterId={resourceScopeChapterId || activeStep?.id}
         gatheredResources={gatheredResources}
-        locale={locale}
-        planLoading={planLoading}
-        activeChapterIndex={activeChapterIndex}
-        chapterLoadingIndex={chapterLoadingIndex}
         isRecording={isRecording}
         activeStep={activeStep}
-        participantIdentity={participantIdentity}
-        activeChapterKey={activeChapterKey}
         whiteboardData={whiteboardData}
         whiteboardSceneData={whiteboardSceneData}
         onCanvasChange={(data) => {
@@ -1343,8 +1335,6 @@ export function SessionView({
           }
         }}
         onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
-        chapterThoughtsLocked={chapterThoughtsLocked}
-        isProjectMode={isProjectMode}
         activeChapterLabel={activeChapterLabel}
         notebookContent={notebookContent}
         onNotebookChange={(value) => {
@@ -1352,10 +1342,6 @@ export function SessionView({
           setNotebookDirtyForHelios(true);
         }}
         resolvedSessionMode={resolvedSessionMode}
-        activeProjectLists={activeProjectLists}
-        onProjectPromote={handleProjectPromote}
-        onProjectDemote={handleProjectDemote}
-        sessionThoughtHistory={sessionThoughtHistory}
         unsubmittedThoughts={sessionThoughtInterface.stashedThoughts}
         formingThoughtText={
           sessionThoughtInterface.getFormingText?.() ||
@@ -1363,8 +1349,6 @@ export function SessionView({
         }
         canvasDirtyForHelios={canvasDirtyForHelios}
         notebookDirtyForHelios={notebookDirtyForHelios}
-        onSendThought={sessionThoughtInterface.sendThought}
-        thoughtIsSending={sessionThoughtInterface.isSending}
         stream={stream}
         museStatus={museStatus}
         museError={museError}
@@ -1552,12 +1536,6 @@ export function SessionView({
         t={t}
         activeTool={activeTool}
         onToolChange={handleIleSessionToolChange}
-        problem={session.problem}
-        workspaceId={session.metadata?.workspace_id as string | undefined}
-        onBackToDashboard={() => {
-          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
-          setShowSaveExitNameDialog(true);
-        }}
         showSaveExitNameDialog={showSaveExitNameDialog}
         saveExitName={saveExitName}
         onSaveExitNameChange={setSaveExitName}
@@ -1570,8 +1548,6 @@ export function SessionView({
           setShowSaveExitNameDialog(false);
           void pauseAndGoToDashboard(null, { persistSession: false });
         }}
-        isRecording={isRecording}
-        isPaused={isPaused}
         isWebcamEnabled={isWebcamEnabled}
         isScreenCapturing={isScreenCapturing}
         screenShareStream={isScreenCapturing ? screenCaptureRef.current?.getStream() ?? null : null}
@@ -1591,8 +1567,6 @@ export function SessionView({
         museDeviceStatus={museDeviceStatus}
         museChannelData={eegChannelData}
         bandPowers={bandPowers}
-        showOpenPicInPic={showManualPicInPic}
-        onOpenPicInPic={openManualPicInPic}
         error={error}
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}

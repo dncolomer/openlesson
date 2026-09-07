@@ -575,7 +575,11 @@ describe("ILE TIM map interactions catalog + wiring", () => {
     expect(glyph).toContain("data-chapter-done-flag");
     expect(glyph).toContain("TIM_EXPLORE_MAP_ICON");
     expect(glyph).toMatch(/>\s*\?\s*</);
-    expect(glyph).not.toContain("lucide-react");
+    expect(glyph).toContain('from "lucide-react"');
+    expect(glyph).toContain("Pickaxe");
+    const timIcon = glyph.slice(glyph.indexOf("if (isTimExploreMapIcon(name))"));
+    expect(timIcon).toMatch(/>\s*\?\s*</);
+    expect(timIcon.slice(0, 400)).not.toContain("Pickaxe");
     expect(idle).toContain("mapDelay");
     expect(idle).toContain("beginMapDelay");
     expect(idle).toContain("mapSchedulerRef.current.begin");

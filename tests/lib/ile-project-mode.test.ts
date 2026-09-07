@@ -305,7 +305,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(view).toContain("projectMode={isProjectMode}");
     expect(view).toContain("chapterThoughtsLocked");
     expect(view).toContain("IleReviewWorkPanel");
-    expect(view).toContain("onSendThought");
+    expect(view).toContain("sendThought");
     expect(view).toContain("buildIleChapterDonePowToolData");
     expect(view).toContain("frameIleProjectChapterDescription");
     expect(view).toContain("buildIleChapterDonePowToolData");

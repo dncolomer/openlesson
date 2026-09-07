@@ -229,7 +229,7 @@ describe("decideIleWorkStart (shipped)", () => {
 
   it("persists open Work ids in session metadata and drops closed chapters on restore", () => {
     const saved = applyIleOpenWorkIdsToMetadata(
-      { session_name: "Mars" },
+      { session_name: "Mars" } as Record<string, unknown>,
       ["ch-a", " ch-b ", "ch-a", ""],
     );
     expect(saved[ILE_OPEN_WORK_IDS_META_KEY]).toEqual(["ch-a", "ch-b"]);

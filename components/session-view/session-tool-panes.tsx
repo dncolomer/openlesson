@@ -13,48 +13,31 @@ import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 import type { IleSessionMode } from "@/lib/ile-mode";
 import type { DeviceStatus } from "@/lib/muse-athena";
-import type { Session, SessionPlan, SessionPlanStep } from "@/lib/storage";
+import type { Session, SessionPlanStep } from "@/lib/storage";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
-import type { ExerciseDualLists } from "@/lib/ile-mode";
 import type { SessionViewTranslate } from "@/components/session-view/types";
-import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 export type SessionToolPanesProps = {
   t: SessionViewTranslate;
   activeTool: Tool;
   shouldBlockTools: boolean;
   session: Session;
-  sessionPlan: SessionPlan | null;
   ayclToken?: string;
   ileToken?: string;
-  locale: string;
-  planLoading: boolean;
-  activeChapterIndex: number;
-  chapterLoadingIndex: number | null;
   isRecording: boolean;
   activeStep: SessionPlanStep | undefined;
-  participantIdentity: PowParticipantIdentity | null;
-  activeChapterKey: string;
   whiteboardData: string | null;
   whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
   onCanvasChange: (data: string) => void;
   onSceneChange: (data: { elements: any[]; appState: any; files: any }) => void;
-  chapterThoughtsLocked: boolean;
-  isProjectMode: boolean;
   activeChapterLabel: string;
   notebookContent: string;
   onNotebookChange: (value: string) => void;
   resolvedSessionMode: IleSessionMode;
-  activeProjectLists: ExerciseDualLists;
-  onProjectPromote: (thoughtId: string) => void;
-  onProjectDemote: (thoughtId: string) => void;
-  sessionThoughtHistory: SessionThoughtInterface["thoughts"];
   unsubmittedThoughts?: SessionThoughtInterface["stashedThoughts"];
   formingThoughtText?: string | null;
   canvasDirtyForHelios?: boolean;
   notebookDirtyForHelios?: boolean;
-  onSendThought: SessionThoughtInterface["sendThought"];
-  thoughtIsSending?: boolean;
   stream: MediaStream | null;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museError: string | null;
@@ -101,7 +84,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     notebookContent,
     onNotebookChange,
     resolvedSessionMode,
-    sessionThoughtHistory,
     unsubmittedThoughts,
     formingThoughtText,
     canvasDirtyForHelios = false,
@@ -174,7 +156,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             data-ile-review-work-host
           >
             <IleReviewWorkPanel
-              thoughts={unsubmittedThoughts ?? sessionThoughtHistory}
+              thoughts={unsubmittedThoughts ?? []}
               formingText={formingThoughtText}
               notebookDirty={notebookDirtyForHelios}
               notebookContent={notebookContent}

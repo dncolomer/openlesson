@@ -695,7 +695,9 @@ describe("popup fallback when Document PiP is absent (shipped helpers)", () => {
     expect(tools).toContain("ILE_OPEN_PIC_IN_PIC_LABEL");
     expect(tools).toContain("data-ile-open-pic-in-pic");
     expect(tools).toContain("VoiceBarUtilityRow");
-    expect(tools.indexOf("data-ile-open-pic-in-pic")).toBeGreaterThan(tools.indexOf("VoiceBarUtilityRow"));
+    expect(tools.indexOf("data-ile-open-pic-in-pic")).toBeGreaterThan(
+      tools.indexOf("export function VoiceBarUtilityRow"),
+    );
     expect(view).toContain("showOpenPicInPic={showManualPicInPic}");
     expect(view).toContain("onOpenPicInPic={openManualPicInPic}");
 

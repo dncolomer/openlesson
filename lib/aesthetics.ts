@@ -29,6 +29,49 @@ export function aestheticImagesForSlots(count: number, images = FALLBACK_AESTHET
   return picks;
 }
 
+/**
+ * Session-lived Work stills: keep an existing pick, assign a fresh unused
+ * image for new ids. Reload drops React state so picks can change.
+ */
+export function assignIleWorkAestheticImages(input: {
+  ids: readonly string[] | null | undefined;
+  current?: Record<string, string> | null;
+  images?: readonly string[] | null;
+  random?: () => number;
+}): Record<string, string> {
+  const ids = [
+    ...new Set(
+      (input.ids ?? [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const pool =
+    input.images && input.images.length > 0
+      ? [...input.images]
+      : FALLBACK_AESTHETIC_IMAGES;
+  const next: Record<string, string> = {};
+  for (const id of ids) {
+    const existing = input.current?.[id];
+    if (existing) next[id] = existing;
+  }
+  const used = new Set(Object.values(next));
+  const random = input.random ?? Math.random;
+  for (const id of ids) {
+    if (next[id]) continue;
+    const unused = pool.filter((image) => !used.has(image));
+    const source = unused.length > 0 ? unused : pool;
+    const index = Math.min(
+      source.length - 1,
+      Math.max(0, Math.floor(random() * source.length)),
+    );
+    const image = source[index] ?? pool[0];
+    next[id] = image;
+    used.add(image);
+  }
+  return next;
+}
+
 /** Stable per-id pick — same image on server and client (no Math.random). */
 export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAGES) {
   if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];

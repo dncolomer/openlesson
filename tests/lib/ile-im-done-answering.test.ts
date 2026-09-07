@@ -272,11 +272,10 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(button).not.toContain("ThoughtCompactAction");
     expect(button).not.toContain('label="Send"');
 
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).not.toContain("data-ile-transcription-box");
     expect(helios).not.toContain("<SlidingTranscript");
-    expect(helios).toContain("data-ile-im-done-answering-overlay");
-    expect(helios).toContain("doneAnswering");
+    expect(helios).not.toContain("data-ile-im-done-answering-overlay");
     expect(helios).not.toContain("min-h-[42vh]");
     expect(helios).not.toContain("absolute inset-x-0 bottom-0");
     expect(helios).not.toContain("Submit last Thought");
@@ -290,8 +289,9 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(helios).not.toContain('shortcut="E"');
     expect(helios).not.toContain("See Your thoughts");
 
-    const overlayIdx = helios.indexOf("data-ile-im-done-answering-overlay");
-    expect(overlayIdx).toBeGreaterThan(-1);
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(chrome).toContain("IleSubmitWorkButton");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-transcription-box");
     expect(voice).toContain("<SlidingTranscript");
@@ -336,7 +336,7 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     writeScratch(
       "ile-im-done-answering-chrome.txt",
       [
-        "ILE: standard white I'm done answering sits on top of the transcription box",
+        "ILE: Submit work lives on the PoW bar; PiP dock keeps Submit work; chapter widget has no I'm done answering",
         "no SVG bump",
         "no Submit last Thought on ILE or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",
@@ -360,12 +360,12 @@ describe("I'm done answering vs chapter Complete (shipped split)", () => {
     expect(actions).not.toContain("I'm done answering");
     expect(actions).not.toContain("ImDoneAnswering");
 
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).toContain("IleChapterHeliosActions");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
     const actionsIdx = helios.indexOf("<IleChapterHeliosActions");
-    const doneIdx = helios.indexOf("<ImDoneAnsweringControl");
     expect(actionsIdx).toBeGreaterThan(-1);
-    expect(doneIdx).toBeGreaterThan(actionsIdx);
 
     expect(doneFn).toContain('toolAction: "chapter_done"');
     expect(doneFn).toContain("planIleChapterClose");

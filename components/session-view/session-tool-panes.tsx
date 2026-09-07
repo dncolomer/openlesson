@@ -7,8 +7,7 @@ import { FacialDataPoint } from "@/components/FaceTracker";
 import { GrokGrokipediaTool } from "@/components/GrokGrokipediaTool";
 import { LogsTool, type LogEntry } from "@/components/LogsTool";
 import type { TransferHealth } from "@/components/LogsTool";
-import { NotebookSubmitButton } from "@/components/session/NotebookSubmitButton";
-import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
+import { IleReviewWorkPanel } from "@/components/session-view/ile-review-work-panel";
 import type { Tool } from "@/components/ToolsPanel";
 import { WorkspaceResourcesPanel } from "@/components/WorkspaceResourcesPanel";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
@@ -40,10 +39,7 @@ export type SessionToolPanesProps = {
   whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
   onCanvasChange: (data: string) => void;
   onSceneChange: (data: { elements: any[]; appState: any; files: any }) => void;
-  onSubmitToHelios: (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => void;
   chapterThoughtsLocked: boolean;
-  canvasDirtyForHelios: boolean;
-  notebookDirtyForHelios: boolean;
   isProjectMode: boolean;
   activeChapterLabel: string;
   notebookContent: string;
@@ -53,6 +49,10 @@ export type SessionToolPanesProps = {
   onProjectPromote: (thoughtId: string) => void;
   onProjectDemote: (thoughtId: string) => void;
   sessionThoughtHistory: SessionThoughtInterface["thoughts"];
+  unsubmittedThoughts?: SessionThoughtInterface["stashedThoughts"];
+  formingThoughtText?: string | null;
+  canvasDirtyForHelios?: boolean;
+  notebookDirtyForHelios?: boolean;
   onSendThought: SessionThoughtInterface["sendThought"];
   thoughtIsSending?: boolean;
   stream: MediaStream | null;
@@ -97,18 +97,15 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     whiteboardSceneData,
     onCanvasChange,
     onSceneChange,
-    onSubmitToHelios,
-    chapterThoughtsLocked,
-    canvasDirtyForHelios,
-    notebookDirtyForHelios,
-    isProjectMode,
     activeChapterLabel,
     notebookContent,
     onNotebookChange,
     resolvedSessionMode,
     sessionThoughtHistory,
-    onSendThought,
-    thoughtIsSending,
+    unsubmittedThoughts,
+    formingThoughtText,
+    canvasDirtyForHelios = false,
+    notebookDirtyForHelios = false,
     stream,
     museStatus,
     museError,
@@ -150,9 +147,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
             initialSceneData={whiteboardSceneData}
             onCanvasChange={onCanvasChange}
             onSceneChange={onSceneChange}
-            onSubmitToHelios={(dataUrl) => onSubmitToHelios("canvas", dataUrl)}
-            canSubmitToHelios={!chapterThoughtsLocked && canvasDirtyForHelios}
-            submitLabel={isProjectMode ? "To solution" : undefined}
             chapterLabel={activeChapterLabel}
           />
         </div>
@@ -160,22 +154,6 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
           <div className="h-full rounded-none border border-neutral-800 bg-neutral-900/50 flex flex-col">
             <div className="shrink-0 px-3 py-2 border-b border-neutral-800 flex items-center justify-between gap-3">
               <span className="min-w-0 truncate text-[11px] text-neutral-500">Notes for {activeChapterLabel}</span>
-              <NotebookSubmitButton
-                onSubmit={() => onSubmitToHelios("notebook")}
-                disabled={
-                  chapterThoughtsLocked ||
-                  notebookContent.trim().length === 0 ||
-                  !notebookDirtyForHelios
-                }
-                disabledReason={
-                  chapterThoughtsLocked
-                    ? "Chapter marked Done"
-                    : notebookContent.trim().length === 0
-                      ? t("whiteboard.nothingToSubmit")
-                      : t("whiteboard.alreadySubmitted")
-                }
-                label={isProjectMode ? "To solution" : undefined}
-              />
             </div>
             <textarea
               value={notebookContent}
@@ -193,17 +171,14 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
           <div
             className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden"
             data-ile-session-mode={resolvedSessionMode}
+            data-ile-review-work-host
           >
-            <ThoughtMemoryPanel
-              className="flex h-full min-h-0 max-h-full flex-col overflow-hidden px-1"
-              listClassName="pr-2"
-              thoughts={sessionThoughtHistory}
-              workspaceId={session.metadata?.workspace_id ?? undefined}
-              sessionId={session.id}
-              insightSurface="ile"
-              allowInsightGeneration={true}
-              onSendThought={onSendThought}
-              isSending={Boolean(thoughtIsSending) || chapterThoughtsLocked}
+            <IleReviewWorkPanel
+              thoughts={unsubmittedThoughts ?? sessionThoughtHistory}
+              formingText={formingThoughtText}
+              notebookDirty={notebookDirtyForHelios}
+              notebookContent={notebookContent}
+              canvasDirty={canvasDirtyForHelios}
             />
           </div>
         )}

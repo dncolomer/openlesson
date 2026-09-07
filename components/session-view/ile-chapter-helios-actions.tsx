@@ -20,7 +20,7 @@ export type IleChapterHeliosActionsProps = {
   gatherBusy?: boolean;
   gatherWarning?: string | null;
   onDismissGatherWarning?: () => void;
-  /** Spoken-turn close — the only remaining chapter-widget action. */
+  /** Deprecated: spoken-turn close lives on session chrome, not the chapter widget. */
   doneAnswering?: ReactNode;
 };
 

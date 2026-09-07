@@ -18,6 +18,7 @@ export function MapCellStatusGlyph({
   icon = null,
   labelMode = "title",
   glyphVariant = "solid",
+  hideIcon = false,
 }: {
   status: string;
   showProgress: boolean;
@@ -27,6 +28,7 @@ export function MapCellStatusGlyph({
   icon?: string | null;
   labelMode?: "title" | "glyph";
   glyphVariant?: "solid" | "outline";
+  hideIcon?: boolean;
 }) {
   const resolved = statusIcon ?? resolveMapCellStatusIcon(status, showProgress);
   if (labelMode === "glyph") {
@@ -36,15 +38,17 @@ export function MapCellStatusGlyph({
         data-map-cell-glyph
         data-map-cell-keyword={keyword || undefined}
       >
-        <BlockMapGlyphIcon
-          name={icon}
-          className={
-            isPreviousSessionsMapIcon(icon)
-              ? "h-6 w-6 shrink-0"
-              : "h-8 w-8 shrink-0"
-          }
-          variant={glyphVariant}
-        />
+        {hideIcon ? null : (
+          <BlockMapGlyphIcon
+            name={icon}
+            className={
+              isPreviousSessionsMapIcon(icon)
+                ? "h-6 w-6 shrink-0"
+                : "h-8 w-8 shrink-0"
+            }
+            variant={glyphVariant}
+          />
+        )}
         <span
           className="max-w-full px-0.5 text-center text-[11px] font-medium leading-tight line-clamp-2"
           data-map-cell-status="keyword"

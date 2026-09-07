@@ -304,7 +304,7 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(view).not.toContain("ProjectThoughtsDualStack");
     expect(view).toContain("projectMode={isProjectMode}");
     expect(view).toContain("chapterThoughtsLocked");
-    expect(view).toContain("ThoughtMemoryPanel");
+    expect(view).toContain("IleReviewWorkPanel");
     expect(view).toContain("onSendThought");
     expect(view).toContain("buildIleChapterDonePowToolData");
     expect(view).toContain("frameIleProjectChapterDescription");
@@ -323,16 +323,16 @@ describe("structural Project Mode wiring (static source checks)", () => {
     expect(helios).not.toContain('label="Edit"');
     expect(helios).not.toContain('label="Solution"');
     expect(helios).not.toContain("Submit last Thought");
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).toContain("stashCurrentTranscription");
 
     const panes = read("components/session-view/session-tool-panes.tsx");
-    expect(panes).toContain("ThoughtMemoryPanel");
+    expect(panes).toContain("IleReviewWorkPanel");
+    expect(panes).not.toContain("ThoughtMemoryPanel");
     expect(panes).not.toContain("ProjectThoughtsDualStack");
     expect(panes).toContain('activeTool === "thought-history"');
-    expect(panes).toContain("onSendThought={onSendThought}");
 
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("ileProjectMode");

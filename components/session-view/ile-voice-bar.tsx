@@ -11,12 +11,16 @@ export function IleVoiceBar({
   onToolChange,
   onBackToDashboard,
   errorNotification = false,
+  showOpenPicInPic = false,
+  onOpenPicInPic,
 }: {
   thought: SessionThoughtInterface;
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
+  showOpenPicInPic?: boolean;
+  onOpenPicInPic?: () => void;
 }) {
   return (
     <div
@@ -58,6 +62,8 @@ export function IleVoiceBar({
           onToolChange={onToolChange}
           onBackToDashboard={onBackToDashboard}
           errorNotification={errorNotification}
+          showOpenPicInPic={showOpenPicInPic}
+          onOpenPicInPic={onOpenPicInPic}
         />
       </div>
     </div>

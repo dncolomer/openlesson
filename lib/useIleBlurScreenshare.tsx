@@ -65,6 +65,7 @@ export function useIleBlurScreenshare(input: {
 } {
   const compactRef = useRef<IleCompactWindowHandle | null>(null);
   const compactRootRef = useRef<Root | null>(null);
+  const compactRootLiveRef = useRef(false);
   const compactPropsRef = useRef(input.compact);
   compactPropsRef.current = input.compact;
   const renderCompactRef = useRef(input.renderCompact);
@@ -82,22 +83,42 @@ export function useIleBlurScreenshare(input: {
   const justOpenedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userDismissedRef = useRef(false);
 
+  const disposeCompactRoot = useCallback(() => {
+    compactRootLiveRef.current = false;
+    const root = compactRootRef.current;
+    compactRootRef.current = null;
+    if (!root) return;
+    try {
+      root.unmount();
+    } catch {
+      /* already gone */
+    }
+  }, []);
+
   const paintCompact = useCallback((win: Window) => {
+    if (win.closed || !win.document?.body) return;
+    if (!compactRootLiveRef.current) return;
     if (!compactRootRef.current) {
       compactRootRef.current = createRoot(win.document.body);
     }
+    const root = compactRootRef.current;
+    if (!root || !compactRootLiveRef.current) return;
     const compact = compactPropsRef.current;
-    compactRootRef.current.render(
-      <I18nProvider>
-        <IleCompactStashWindow
-          isScreenSharing={compact.isScreenSharing}
-          onStartShare={() => startRef.current()}
-        >
-          {renderCompactRef.current?.() ?? null}
-        </IleCompactStashWindow>
-      </I18nProvider>,
-    );
-  }, []);
+    try {
+      root.render(
+        <I18nProvider>
+          <IleCompactStashWindow
+            isScreenSharing={compact.isScreenSharing}
+            onStartShare={() => startRef.current()}
+          >
+            {renderCompactRef.current?.() ?? null}
+          </IleCompactStashWindow>
+        </I18nProvider>,
+      );
+    } catch {
+      disposeCompactRoot();
+    }
+  }, [disposeCompactRoot]);
 
   const hideCompact = useCallback((opts?: { destroy?: boolean }) => {
     if (
@@ -109,12 +130,7 @@ export function useIleBlurScreenshare(input: {
     ) {
       return;
     }
-    try {
-      compactRootRef.current?.unmount();
-    } catch {
-      /* already gone */
-    }
-    compactRootRef.current = null;
+    disposeCompactRoot();
     const destroy =
       opts?.destroy === true ||
       shouldDestroyIlePipOnHide({
@@ -124,7 +140,7 @@ export function useIleBlurScreenshare(input: {
       });
     if (destroy) closeIleAlwaysOnTopWindow(compactRef.current);
     compactRef.current = null;
-  }, []);
+  }, [disposeCompactRoot]);
 
   const markJustOpened = useCallback(() => {
     justOpenedRef.current = true;
@@ -138,6 +154,7 @@ export function useIleBlurScreenshare(input: {
   const adoptOpenedCompact = useCallback(
     (handle: IleCompactWindowHandle) => {
       compactRef.current = handle;
+      compactRootLiveRef.current = true;
       markJustOpened();
       handle.window.addEventListener("pagehide", () => {
         const openerHidden = typeof document !== "undefined" ? document.hidden : undefined;
@@ -148,17 +165,12 @@ export function useIleBlurScreenshare(input: {
         });
         if (verdict === "ignore") return;
         userDismissedRef.current = true;
-        try {
-          compactRootRef.current?.unmount();
-        } catch {
-          /* already gone */
-        }
-        compactRootRef.current = null;
+        disposeCompactRoot();
         if (compactRef.current === handle) compactRef.current = null;
       });
       paintCompact(handle.window);
     },
-    [hideCompact, markJustOpened, paintCompact],
+    [disposeCompactRoot, hideCompact, markJustOpened, paintCompact],
   );
 
   const applyDecision = useCallback(async (leaveReason: IleLeaveFocusReason | null, tabFocused: boolean) => {
@@ -333,7 +345,7 @@ export function useIleBlurScreenshare(input: {
 
   useEffect(() => {
     const handle = compactRef.current;
-    if (!handle || handle.window.closed) return;
+    if (!handle || handle.window.closed || !compactRootLiveRef.current) return;
     paintCompact(handle.window);
   }, [input.compact, input.renderCompact, paintCompact]);
 

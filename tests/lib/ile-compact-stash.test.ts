@@ -96,7 +96,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(helios).not.toContain("onOpenThoughts");
     expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("Submit last Thought");
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).toContain("DialogueSplit");
 
     const view = readSessionViewSurface();
@@ -242,7 +242,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
 
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget");
-    expect(frame).toContain(">Chapter</span>");
+    expect(frame).toContain(">Work</span>");
     expect(frame).toContain("ileCompactRootFillStyle");
     expect(frame).toContain('data-ile-compact-stash={compact ? "true" : undefined}');
 
@@ -255,7 +255,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(hook).not.toContain("compactHost");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("renderCompact: () => renderChapterThoughtPane(true)");
+    expect(view).toContain("renderCompact: () => renderCompactWorkspace()");
     expect(view).toContain("renderChapterThoughtPane(false)");
     expect(view).toContain("replica={replica}");
     expect(view).toContain("onDoneAnswering: handleCompactDoneAnswering");

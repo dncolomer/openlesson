@@ -6,9 +6,9 @@
  */
 
 /** Match the live Chapter widget width. */
-export const ILE_COMPACT_WINDOW_WIDTH = 440;
-/** Tall enough to show Helios dialogue + I'm done answering like the widget. */
-export const ILE_COMPACT_WINDOW_HEIGHT = 640;
+export const ILE_COMPACT_WINDOW_WIDTH = 640;
+/** Tall enough for chapter tabs, dialogue/tools, and the Work dock. */
+export const ILE_COMPACT_WINDOW_HEIGHT = 720;
 
 export type IleCompactWindowKind = "document-pip" | "popup";
 

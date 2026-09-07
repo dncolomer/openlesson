@@ -509,8 +509,13 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     const mapRoute = read("app/api/workspace/blocks-with-sessions/route.ts");
     expect(grid).toContain("useWorkspacePreviousSessionBlockIds");
     expect(grid).toContain("previousSessionBlockIds");
+    expect(grid).toContain("fetchAestheticPackages");
     expect(world).toContain("PREVIOUS_SESSIONS_MAP_ICON");
     expect(world).toContain("data-block-has-previous-sessions");
+    expect(world).toContain("data-block-session-aesthetic");
+    expect(world).toContain("hasPreviousSessions");
+    expect(world).toContain("tileAesthetic");
+    expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
     expect(world).toContain("!hasPreviousSessions");
     expect(world).toContain("hasPreviousSessions,");
     expect(world).toContain("mapCellFreeformPreviousSessionsColors");

@@ -35,6 +35,8 @@ export function SessionWelcomeModal({
   initialChapters,
   onInitialChaptersChange,
   mapTypeCatalog,
+  powExpense = 3,
+  onPowExpenseChange,
   autoAdvance,
   onToggleAutoAdvance,
   localInferenceEnabled,
@@ -118,6 +120,29 @@ export function SessionWelcomeModal({
                       loading={aestheticsLoading}
                       wide
                     />
+
+                    <div data-ile-pow-expense-slider>
+                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                        {t("session.powExpense")}
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={5}
+                        step={1}
+                        value={powExpense}
+                        disabled={isButtonDisabled}
+                        onChange={(e) => onPowExpenseChange?.(Number(e.target.value))}
+                        className="w-full accent-white"
+                        aria-valuemin={1}
+                        aria-valuemax={5}
+                        aria-valuenow={powExpense}
+                      />
+                      <div className="mt-1.5 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
+                        <span>{t("session.powExpenseCheap")}</span>
+                        <span>{t("session.powExpenseExpensive")}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Right column: chapter map size + primary CTA */}

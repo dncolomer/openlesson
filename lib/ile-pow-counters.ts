@@ -88,6 +88,27 @@ export function emptyIlePowTypeCounts(): IlePowTypeCounts {
   return { tool: 0, screen: 0, video: 0, eeg: 0 };
 }
 
+export function emptyIlePowDisplayCounts(): IlePowDisplayCounts {
+  return { tool: 0, screen: 0, video: 0, eeg: 0, thoughts: 0 };
+}
+
+/** Pending work not yet sent via Submit work (stashed thoughts, forming speech, dirty tools). */
+export function countIleUnsubmittedPowDisplay(input: {
+  unflaggedThoughtCount?: number;
+  formingThought?: boolean;
+  notebookDirty?: boolean;
+  canvasDirty?: boolean;
+}): IlePowDisplayCounts {
+  const thoughts = Math.max(0, Math.floor(Number(input.unflaggedThoughtCount) || 0));
+  return {
+    tool: Number(Boolean(input.notebookDirty)) + Number(Boolean(input.canvasDirty)),
+    screen: 0,
+    video: 0,
+    eeg: 0,
+    thoughts: thoughts + (input.formingThought ? 1 : 0),
+  };
+}
+
 export function resolveIlePowCounterType(value: unknown): IlePowCounterType | null {
   const normalized = normalizeProofOfWorkType(value);
   if (normalized) return normalized;

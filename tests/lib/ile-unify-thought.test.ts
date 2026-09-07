@@ -65,8 +65,8 @@ describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
     expect(helios).not.toContain(ILE_SEE_YOUR_THOUGHTS_LABEL);
     expect(helios).not.toContain("data-ile-last-stash");
-    expect(helios).toContain("ImDoneAnsweringControl");
-    expect(helios).toContain("thought.sendThought");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
+    expect(helios).toContain("thought.isSending");
     expect(helios).not.toContain("{!projectMode ? (");
     expect(helios).not.toContain("data-ile-see-older-thoughts");
 
@@ -77,7 +77,7 @@ describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
         `Submit last Thought=${helios.includes(ILE_SUBMIT_LAST_THOUGHT_LABEL)}`,
         `See Your thoughts=${helios.includes(ILE_SEE_YOUR_THOUGHTS_LABEL)}`,
         `last-stash=${helios.includes("data-ile-last-stash")}`,
-        `sendPath=ImDoneAnsweringControl + thought.sendThought`,
+        `sendPath=session Submit this turn + thought.sendThought`,
         `noProjectSolutionAction=${!helios.includes('label="Solution"')}`,
       ].join("\n"),
     );
@@ -91,7 +91,8 @@ describe("ILE thought-history is Thought Memory in both modes", () => {
     const view = readSessionViewSurface();
 
     expect(panes).toContain('activeTool === "thought-history"');
-    expect(panes).toContain("ThoughtMemoryPanel");
+    expect(panes).toContain("IleReviewWorkPanel");
+    expect(panes).not.toContain("ThoughtMemoryPanel");
     expect(panes).not.toContain("ProjectThoughtsDualStack");
     expect(panes).not.toContain("data-ile-thoughts-dual-stack");
     expect(view).not.toContain("ProjectThoughtsDualStack");
@@ -108,7 +109,7 @@ describe("ILE thought-history is Thought Memory in both modes", () => {
     writeScratch(
       "ile-unify-thought-tool.txt",
       [
-        "thought-history=ThoughtMemoryPanel both modes",
+        "thought-history=IleReviewWorkPanel both modes",
         "no ProjectThoughtsDualStack on live tool",
         `Submit Selection=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
         `Edit Selection=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,

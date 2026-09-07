@@ -5,6 +5,8 @@ import {
   appendIlePowCounterArtifact,
   countIlePowByType,
   countIlePowDisplayByType,
+  countIleUnsubmittedPowDisplay,
+  emptyIlePowDisplayCounts,
   emptyIlePowTypeCounts,
   ilePowCounterTotal,
   isIleSpokenThoughtArtifact,
@@ -78,6 +80,15 @@ describe("countIlePowByType (session-global)", () => {
     const display = countIlePowDisplayByType(spoken);
     expect(display.tool).toBe(1);
     expect(display.thoughts).toBe(5);
+    expect(countIleUnsubmittedPowDisplay({})).toEqual(emptyIlePowDisplayCounts());
+    expect(
+      countIleUnsubmittedPowDisplay({
+        unflaggedThoughtCount: 2,
+        formingThought: true,
+        notebookDirty: true,
+        canvasDirty: true,
+      }),
+    ).toEqual({ tool: 2, screen: 0, video: 0, eeg: 0, thoughts: 3 });
     expect(display.screen).toBe(0);
 
     const speech = readFileSync(join(__dirname, "../../components/session-view/use-session-speech.ts"), "utf8");

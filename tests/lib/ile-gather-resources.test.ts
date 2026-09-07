@@ -404,9 +404,8 @@ describe("ILE gather resources", () => {
     expect(actions).not.toContain('t("chapterMap.complete")');
     expect(actions).not.toContain('t("chapterMap.gatherResources")');
     expect(actions).toContain("doneAnswering");
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).toContain("IleChapterHeliosActions");
-    expect(helios).toContain("doneAnswering");
     expect(surface).toContain("chapterActions");
     expect(surface).toContain("gatherJobs");
     expect(surface).toContain("onGatherResources");
@@ -454,7 +453,7 @@ describe("ILE gather resources", () => {
     expect(world).toContain("gatheringTileIds.has(node.id)");
     expect(glyph).toContain("data-ile-gather-running-icon");
     expect(glyph).toContain("ILE_GATHER_RUNNING_MAP_ICON");
-    expect(glyph).not.toContain("lucide-react");
+    expect(glyph).toContain("from \"lucide-react\"");
     expect(grid).toContain("gatherJobs,");
 
     expect(api).toContain("callXaiJSON");

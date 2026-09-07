@@ -289,7 +289,7 @@ describe("P1–P10 shipped helpers", () => {
     expect(tapClient).toContain("tapTracePayload");
     expect(sessionView).toContain("postIleSessionChat");
     expect(sessionView).toContain("onSendThought");
-    expect(sessionView).toContain("ThoughtMemoryPanel");
+    expect(sessionView).toContain("IleReviewWorkPanel");
     expect(sessionView).not.toContain('from "./HeliosChat"');
     expect(stash).toContain("authenticateStashRequest");
     expect(tapLinks).toContain("requireProductWorkspaceLinkAuth");

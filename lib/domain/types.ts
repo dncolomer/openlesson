@@ -182,6 +182,8 @@ export interface Session {
     block_id?: string;
     /** Learner-chosen name for Previous Sessions (blank → show session id). */
     session_name?: string;
+    /** Chapter ids in open Work (clicked Work, not closed yet). */
+    ile_open_work_ids?: string[];
   };
 }
 

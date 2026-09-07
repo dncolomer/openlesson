@@ -212,7 +212,7 @@ describe("session intro visuals", () => {
     expect(ileHelios).not.toContain("SessionOnboardingGuide");
     expect(ileChrome).toContain("data-ile-intro-widget");
     expect(ileView).toContain("SessionOnboardingGuide");
-    expect(ileView).toContain("introOpen={showWelcomePanel}");
+    expect(ileView).toContain("introOpen={showWelcomePanel || activeTool === \"help\"}");
     expect(ileView).toContain("showStartAction");
     expect(ileView).toContain("projectMode={isProjectMode}");
 

@@ -32,6 +32,7 @@ import {
 } from "@/lib/session-plan-chapters-status";
 import { ileWelcomeShowsRegenerate } from "@/lib/ile-welcome-chapters";
 import { applyIleSessionNameToMetadata } from "@/lib/ile-session-name";
+import { applyIleOpenWorkIdsToMetadata } from "@/lib/ile-pow-spend";
 import { discardUnsavedIleSession } from "@/lib/ile-unsaved-exit";
 import type { GuestAccessKind, ChapterPlanStatus, PrepStage, HelpPreviousLayout } from "@/components/session-view/types";
 import type { InitialChaptersLevel } from "@/lib/initial-chapters";
@@ -121,6 +122,7 @@ export type SessionPhaseInput = {
   pausedScreenStreamRef: { current: MediaStream | null };
   pausedWebcamStreamRef: { current: MediaStream | null };
   handlePauseRef: { current: () => Promise<void> };
+  openWorkIdsRef: { current: string[] };
 };
 
 export function useSessionPhase(input: SessionPhaseInput) {
@@ -141,7 +143,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     isScreenCapturing, isWebcamEnabled, setIsWebcamEnabled, setIsScreenCapturing, museStatus,
     screenCaptureRef, wasRecordingRef, wasScreenCapturingRef, wasWebcamEnabledRef,
     wasMuseStreamingRef, isRecordingRef, pausedAudioStreamRef, pausedScreenStreamRef,
-    pausedWebcamStreamRef, handlePauseRef,
+    pausedWebcamStreamRef, handlePauseRef, openWorkIdsRef,
   } = input;
 
 useEffect(() => {
@@ -410,11 +412,14 @@ const stopRecording = async () => {
 
   const finalSession = endSession(session, elapsedSeconds * 1000);
   finalSession.hasAudio = false;
-  finalSession.metadata = {
-    ...finalSession.metadata,
-    whiteboardData: whiteboardData || undefined,
-    notebookData: notebookContent || undefined,
-  };
+  finalSession.metadata = applyIleOpenWorkIdsToMetadata(
+    {
+      ...finalSession.metadata,
+      whiteboardData: whiteboardData || undefined,
+      notebookData: notebookContent || undefined,
+    } as Record<string, unknown>,
+    openWorkIdsRef.current,
+  ) as Session["metadata"];
 
   if (guestAccessKind === "aycl" && ayclToken) {
     const { saveAyclSession } = await import("@/lib/aycl-storage");
@@ -591,9 +596,12 @@ const pauseAndGoToDashboard = useCallback(async (
   const current = sessionRef.current ?? session;
   if (current) {
     if (persistSession) {
-      const metadata = applyIleSessionNameToMetadata(
-        current.metadata as Record<string, unknown>,
-        sessionName,
+      const metadata = applyIleOpenWorkIdsToMetadata(
+        applyIleSessionNameToMetadata(
+          current.metadata as Record<string, unknown>,
+          sessionName,
+        ),
+        openWorkIdsRef.current,
       ) as Session["metadata"];
       const named = { ...current, metadata };
       setSession(named);
@@ -643,6 +651,7 @@ const pauseAndGoToDashboard = useCallback(async (
   setSession,
   guestAccessBody,
   flushRemainingIlePow,
+  openWorkIdsRef,
 ]);
 
 const handleClose = () => {

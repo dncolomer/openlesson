@@ -1,0 +1,229 @@
+"use client";
+
+import { AlertTriangle, ClipboardList, Send } from "lucide-react";
+import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
+import { ILE_REVIEW_WORK_LABEL } from "@/lib/ile-review-work";
+import {
+  aestheticImageForId,
+  FALLBACK_AESTHETIC_IMAGES,
+} from "@/lib/aesthetics";
+import type { SessionViewTranslate } from "@/components/session-view/types";
+
+export type IleWorkDockLabel = {
+  id: string;
+  label: string;
+  keyword?: string;
+  focused?: boolean;
+  status?: IleDockChipStatus;
+  image?: string;
+};
+
+export function IleSubmitWorkButton({
+  label,
+  onClick,
+  busy = false,
+  disabled = false,
+  square = false,
+  compact = false,
+}: {
+  label: string;
+  onClick?: () => void;
+  busy?: boolean;
+  disabled?: boolean;
+  square?: boolean;
+  compact?: boolean;
+}) {
+  const squareSize = compact ? "size-16" : "size-24";
+  return (
+    <button
+      type="button"
+      data-ile-submit-turn
+      onClick={onClick}
+      disabled={disabled || busy}
+      className={
+        square
+          ? `flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border border-white bg-white px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_10px_32px_rgba(255,255,255,0.22)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
+          : "flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+      }
+    >
+      <Send className={square ? "size-4" : "size-3.5"} strokeWidth={2.3} aria-hidden />
+      {label}
+    </button>
+  );
+}
+
+export function IleWorkDockBar({
+  t,
+  heliosOpen,
+  openWorkLabels,
+  onFocusOpenWork,
+  onOpenGlobalResources,
+  globalResourcesOpen = false,
+  onSubmitTurn,
+  submitTurnLabel,
+  submitTurnBusy,
+  submitTurnDisabled = false,
+  onReviewWork,
+  reviewWorkOpen = false,
+  reviewWorkLabel = ILE_REVIEW_WORK_LABEL,
+  aestheticImages = [],
+  compact = false,
+}: {
+  t: SessionViewTranslate;
+  heliosOpen: boolean;
+  openWorkLabels: IleWorkDockLabel[];
+  onFocusOpenWork?: (id: string) => void;
+  onOpenGlobalResources?: () => void;
+  globalResourcesOpen?: boolean;
+  onSubmitTurn?: () => void;
+  submitTurnLabel: string;
+  submitTurnBusy?: boolean;
+  submitTurnDisabled?: boolean;
+  onReviewWork?: () => void;
+  reviewWorkOpen?: boolean;
+  reviewWorkLabel?: string;
+  aestheticImages?: string[];
+  compact?: boolean;
+}) {
+  const dockImages = aestheticImages.length > 0 ? aestheticImages : FALLBACK_AESTHETIC_IMAGES;
+  const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
+  const squareSize = compact ? "size-16" : "size-24";
+  const showGlobalResources = Boolean(onOpenGlobalResources) && !compact;
+  const showSubmit = Boolean(onSubmitTurn) && compact;
+  const showReview = Boolean(onReviewWork) && compact;
+
+  return (
+    <div
+      data-ile-work-dock-bar
+      className={`pointer-events-auto flex max-w-[min(100vw-1rem,52rem)] items-end gap-2 border border-white/20 bg-neutral-950/95 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.62)] ${
+        compact ? "w-full max-w-none" : ""
+      }`}
+    >
+      {openWorkLabels.length > 0 ? (
+        <div
+          data-ile-open-work-tabs
+          className="flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto"
+        >
+          {openWorkLabels.map((work) => {
+            const expanded = Boolean(work.focused && heliosOpen);
+            const chipImage = work.image || aestheticImageForId(work.id, dockImages);
+            const keyword = work.keyword?.trim();
+            const status = work.status ?? "idle";
+            return (
+              <button
+                key={work.id}
+                type="button"
+                data-ile-open-work-chip={work.id}
+                data-ile-open-work-focused={work.focused ? "true" : undefined}
+                data-ile-chapter-minimized={expanded ? undefined : "true"}
+                data-ile-chapter-chip-status={status}
+                onClick={() => onFocusOpenWork?.(work.id)}
+                title={keyword ? `${work.label} · ${keyword}` : work.label}
+                className={`relative flex ${chipSize} shrink-0 flex-col items-stretch justify-end overflow-hidden rounded-none border ${
+                  expanded
+                    ? "border-white shadow-[0_0_0_1px_#fff,0_12px_28px_rgba(0,0,0,0.55)]"
+                    : "border-white/25 hover:border-white/70"
+                }`}
+              >
+                <span
+                  data-ile-chapter-chip-image
+                  aria-hidden
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${chipImage})` }}
+                />
+                <span
+                  aria-hidden
+                  className={`absolute inset-0 ${
+                    expanded
+                      ? "bg-gradient-to-t from-black/80 via-black/25 to-black/5"
+                      : "bg-gradient-to-t from-black/90 via-black/50 to-black/20"
+                  }`}
+                />
+                {status === "attention" && !expanded ? (
+                  <span
+                    data-ile-chapter-chip-attention
+                    title="Needs attention"
+                    className="absolute right-1 top-1 z-20 flex size-5 items-center justify-center border border-amber-300/80 bg-black/75 text-amber-300"
+                  >
+                    <AlertTriangle className="size-3" strokeWidth={2.4} aria-hidden />
+                    <span className="sr-only">Needs attention</span>
+                  </span>
+                ) : null}
+                <span className="relative z-10 flex flex-col items-start px-1.5 pb-1.5 pt-6">
+                  <span className="max-w-full truncate font-mono text-[9px] uppercase tracking-wider text-white/75">
+                    {work.label}
+                  </span>
+                  {keyword ? (
+                    <span
+                      data-ile-chapter-chip-keyword
+                      className="line-clamp-2 max-w-full text-left font-mono text-[11px] font-semibold uppercase leading-tight tracking-wide text-white"
+                    >
+                      {keyword}
+                    </span>
+                  ) : null}
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-white/70">
+                    {expanded ? "Open" : "Docked"}
+                  </span>
+                </span>
+                {status === "loading" ? (
+                  <span
+                    data-ile-chapter-chip-loading
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 z-20 h-1 overflow-hidden bg-white/15"
+                  >
+                    <span className="block h-full w-1/3 animate-ile-dock-indeterminate bg-white" />
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      {showGlobalResources ? (
+        <button
+          type="button"
+          data-ile-global-resources
+          title={t("tools.planResources")}
+          aria-label={t("tools.planResources")}
+          aria-pressed={globalResourcesOpen}
+          onClick={() => onOpenGlobalResources?.()}
+          className={`relative flex ${squareSize} shrink-0 flex-col items-center justify-center overflow-hidden rounded-none border bg-neutral-950 text-neutral-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] ${
+            globalResourcesOpen
+              ? "border-white"
+              : "border-white/35 hover:border-white/70"
+          }`}
+        >
+          <span className="px-1 text-center font-mono text-[10px] font-semibold uppercase leading-tight tracking-wider text-white">
+            {t("tools.planResources")}
+          </span>
+        </button>
+      ) : null}
+      {showSubmit ? (
+        <IleSubmitWorkButton
+          square
+          compact={compact}
+          label={submitTurnLabel}
+          onClick={onSubmitTurn}
+          busy={submitTurnBusy}
+          disabled={submitTurnDisabled}
+        />
+      ) : null}
+      {showReview ? (
+        <button
+          type="button"
+          data-ile-review-work
+          aria-pressed={reviewWorkOpen}
+          onClick={() => onReviewWork?.()}
+          className={`flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider ${
+            reviewWorkOpen
+              ? "border-white bg-white text-neutral-950"
+              : "border-white/35 bg-neutral-950 text-neutral-100 hover:border-white/70"
+          }`}
+        >
+          <ClipboardList className="size-4" strokeWidth={2.3} aria-hidden />
+          {reviewWorkLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}

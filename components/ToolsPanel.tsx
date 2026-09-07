@@ -41,7 +41,7 @@ interface ToolsPanelProps {
   onOpenPicInPic?: () => void;
 }
 
-function ToolIcon({ id }: { id: Tool }) {
+export function ToolIcon({ id }: { id: Tool }) {
   switch (id) {
     case "chat":
       return (
@@ -120,11 +120,15 @@ export function VoiceBarUtilityRow({
   onToolChange,
   onBackToDashboard,
   errorNotification = false,
+  showOpenPicInPic = false,
+  onOpenPicInPic,
 }: {
   activeTool: Tool | null;
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
+  showOpenPicInPic?: boolean;
+  onOpenPicInPic?: () => void;
 }) {
   const { t } = useI18n();
   const getToolLabel = (id: Tool): string => {
@@ -138,7 +142,23 @@ export function VoiceBarUtilityRow({
 
   return (
     <div data-ile-voice-utility className="flex justify-end">
-      <div className="inline-grid grid-cols-4 gap-1">
+      <div className="inline-grid grid-cols-5 gap-1">
+      {showOpenPicInPic && onOpenPicInPic ? (
+        <button
+          type="button"
+          data-ile-open-pic-in-pic
+          onClick={onOpenPicInPic}
+          className="flex h-8 w-full items-center justify-center gap-1 rounded-none border border-neutral-700/50 bg-neutral-800/50 px-2 text-[11px] font-medium text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+          title={ILE_OPEN_PIC_IN_PIC_LABEL}
+        >
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
+          </svg>
+          <span className="truncate">PiP</span>
+        </button>
+      ) : (
+        <span />
+      )}
       {utilityTools.map((toolId) => (
         <button
           key={toolId}
@@ -187,8 +207,7 @@ export function ToolsPanel({
   // own panels. They've been merged into the Helios chat surface — the
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
-  const baseMainTools: Tool[] = ["chapters", "canvas", "notebook", "thought-history", "grokipedia", "dantes"];
-  const mainTools: Tool[] = workspaceId ? [...baseMainTools, "plan-resources"] : baseMainTools;
+  const mainTools: Tool[] = [];
   const getToolLabel = (id: Tool): string => {
     switch (id) {
       case "chat": return t('tools.helios');
@@ -215,18 +234,21 @@ export function ToolsPanel({
           : "border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
     }`;
 
+  if (mainTools.length === 0) return null;
+
   return (
     <div
       data-ile-tools-widget
       data-ile-tools-layout="compact"
-      className={`pointer-events-auto flex w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] shrink-0 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95 p-1.5 ${className}`}
+      className={`pointer-events-auto flex w-[min(10rem,calc(100vw-1rem))] max-w-[10rem] shrink-0 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95 p-1.5 ${className}`}
     >
-      <div data-ile-tools-grid className="grid grid-cols-4 auto-rows-[3.25rem] gap-1">
+      <div data-ile-tools-grid className="grid grid-cols-1 auto-rows-[3.25rem] gap-1">
         {mainTools.map((toolId) => {
           const isDisabled = disabledTools.includes(toolId);
           return (
           <button
             key={toolId}
+            data-ile-global-resources
             onClick={() => !isDisabled && onToolChange(toolId)}
             disabled={isDisabled}
             className={toolCellClass(activeTool === toolId, isDisabled)}
@@ -239,19 +261,6 @@ export function ToolsPanel({
           </button>
           );
         })}
-        {showOpenPicInPic && onOpenPicInPic ? (
-          <button
-            type="button"
-            data-ile-open-pic-in-pic
-            onClick={onOpenPicInPic}
-            className={toolCellClass()}
-          >
-            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
-            </svg>
-            <span className="min-w-0 max-w-full truncate px-0.5">{ILE_OPEN_PIC_IN_PIC_LABEL}</span>
-          </button>
-        ) : null}
       </div>
     </div>
   );

@@ -228,12 +228,12 @@ describe("ILE Helios last-stash surface (shipped source)", () => {
     expect(helios).not.toContain("Submit last Thought");
     expect(helios).not.toContain("See Your thoughts");
     expect(helios).not.toContain("See Older Thoughts");
-    expect(helios).toContain("ImDoneAnsweringControl");
+    expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).not.toContain("data-ile-last-stash");
     expect(helios).not.toContain("data-ile-last-stash-text");
     expect(helios).not.toContain("selectLastStashedThought");
     expect(helios).not.toContain("submitLastStashedThought");
-    expect(helios).toContain("thought.sendThought");
+    expect(helios).toContain("thought.isSending");
     expect(helios).not.toContain("ActiveThoughtSlots");
     expect(helios).not.toContain("ACTIVE_THOUGHT_SLOT_COUNT");
     expect(helios).not.toContain("thought.latestThoughts");
@@ -267,8 +267,8 @@ describe("ILE Thought tool multi-select (shipped source)", () => {
 
     const panes = read("components/session-view/session-tool-panes.tsx");
     expect(panes).toContain('activeTool === "thought-history"');
-    expect(panes).toContain("onSendThought={onSendThought}");
-    expect(panes).toContain("<ThoughtMemoryPanel");
+    expect(panes).toContain("<IleReviewWorkPanel");
+    expect(panes).not.toContain("<ThoughtMemoryPanel");
 
     const edit = read("components/thought-ui/ThoughtEditPanel.tsx");
     expect(edit).toContain("<textarea");

@@ -21,10 +21,18 @@ import {
 } from "@/lib/ile-gather-resources";
 import {
   countIlePowByType,
+  countIleSpokenThoughts,
   emptyIlePowTypeCounts,
+  ilePowCounterTotal,
   type IlePowCounterArtifact,
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
+import {
+  applyIlePowSpend,
+  decideIleWorkStart,
+  ILE_POW_EXPENSE_DEFAULT,
+  type IleWorkStartDecision,
+} from "@/lib/ile-pow-spend";
 import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
 import type { WorkspaceExternalResource } from "@/lib/workspace-external-resources";
 
@@ -39,8 +47,10 @@ export function useIleGatherResources(input: {
   onOpenResources: () => void;
   ileToken?: string;
   ayclToken?: string;
+  expense?: unknown;
 }) {
   const [spent, setSpent] = useState<IlePowTypeCounts>(emptyIlePowTypeCounts);
+  const [spentUnits, setSpentUnits] = useState(0);
   const [gatherCount, setGatherCount] = useState(0);
   const [lastGatherAt, setLastGatherAt] = useState<number | null>(null);
   const [gatherJobs, setGatherJobs] = useState<IleGatherJob[]>([]);
@@ -90,6 +100,7 @@ export function useIleGatherResources(input: {
         now,
         rateLimitKey,
         lastGatherKey,
+        expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
       });
       if (!decision.allowed) {
         setGatherWarning(
@@ -108,6 +119,7 @@ export function useIleGatherResources(input: {
         opts?.chapterDescription ?? input.chapterDescription ?? "";
       setGatherWarning(null);
       setSpent((prev) => applyIleGatherSpend(prev, decision.consume));
+      setSpentUnits((n) => n + ilePowCounterTotal(decision.consume));
       setGatherCount((n) => n + 1);
       setLastGatherAt(now);
       setLastGatherKey(rateLimitKey || null);
@@ -165,6 +177,7 @@ export function useIleGatherResources(input: {
             jobId,
             rateLimitKey,
             lastGatherKey,
+            expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
             ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),
             ...(input.ileToken ? { ileToken: input.ileToken } : {}),
           }),
@@ -177,6 +190,7 @@ export function useIleGatherResources(input: {
         };
         if (!response.ok) {
           setSpent((prev) => refundIleGatherSpend(prev, decision.consume));
+          setSpentUnits((n) => Math.max(0, n - ilePowCounterTotal(decision.consume)));
           setGatherCount((n) => Math.max(0, n - 1));
           setGatherWarning(
             data.warning ||
@@ -202,6 +216,7 @@ export function useIleGatherResources(input: {
         setGatherJobs((jobs) => completeIleGatherJob(jobs, jobId));
       } catch (err) {
         setSpent((prev) => refundIleGatherSpend(prev, decision.consume));
+        setSpentUnits((n) => Math.max(0, n - ilePowCounterTotal(decision.consume)));
         setGatherCount((n) => Math.max(0, n - 1));
         setGatherJobs((jobs) =>
           patchIleGatherJob(jobs, jobId, {
@@ -222,8 +237,34 @@ export function useIleGatherResources(input: {
 
   const gatherBusy = gatherJobs.some((job) => job.status === "running");
 
+  const tryStartWork = useCallback(
+    (chapterId: string, openWorkIds: readonly string[]): IleWorkStartDecision => {
+      const decision = decideIleWorkStart({
+        chapterId,
+        openWorkIds,
+        available: availableCounts,
+        thoughts: countIleSpokenThoughts(input.artifacts),
+        spentUnits,
+        spentTyped: spent,
+        expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
+      });
+      if (!decision.allowed) {
+        setGatherWarning(decision.warning);
+        return decision;
+      }
+      if (decision.consumeUnits > 0) {
+        setSpent((prev) => applyIlePowSpend(prev, decision.consume));
+        setSpentUnits((n) => n + decision.consumeUnits);
+        setGatherWarning(null);
+      }
+      return decision;
+    },
+    [availableCounts, input.artifacts, input.expense, spent, spentUnits],
+  );
+
   return {
     spent,
+    spentUnits,
     availableCounts,
     gatherJobs,
     gatherWarning,
@@ -232,5 +273,6 @@ export function useIleGatherResources(input: {
     onGatherResources,
     dismissGatherWarning,
     openGatheredResources,
+    tryStartWork,
   };
 }

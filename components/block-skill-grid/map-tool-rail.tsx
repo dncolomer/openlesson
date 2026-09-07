@@ -42,6 +42,7 @@ export function MapToolRail({
   stagedPrereqCount,
   onToolClick,
   overlayAnchorClass = "top-2",
+  hidden = false,
 }: {
   learnerMode: boolean;
   viewOnly: boolean;
@@ -67,8 +68,10 @@ export function MapToolRail({
   onToolClick: (tool: BlockMapToolId) => void;
   /** Extra overlay anchor classes (e.g. ILE chapter maps sit below the PoW bar). */
   overlayAnchorClass?: string;
+  /** ILE chapter maps: hide the select/lasso utilities strip under PoW resources. */
+  hidden?: boolean;
 }) {
-  if (learnerMode || viewOnly) return null;
+  if (hidden || learnerMode || viewOnly) return null;
 
   const renderToolButton = (tool: BlockMapToolId) => {
     const enabled =

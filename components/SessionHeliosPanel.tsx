@@ -14,7 +14,7 @@ import {
 
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 
-import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
+
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
@@ -382,39 +382,7 @@ export function SessionHeliosPanel({
               </div>
             )}
 
-            <IleChapterHeliosActions
-              {...(chapterActions ?? {
-                chapterId: null,
-                chapterIndex: -1,
-                chapterDescription: "",
-                chapterCompleted: false,
-                activeChapterIndex: -1,
-                onChapterDone: () => {},
-                onUpdateChapter: async () => {},
-              })}
-              doneAnswering={
-                <div
-                  data-ile-im-done-answering-overlay
-                  className="relative z-20 min-w-0"
-                >
-                  <ImDoneAnsweringControl
-                    sessionId={sessionId}
-                    thoughts={thought.stashedThoughts}
-                    formingText={
-                      typeof thought.getFormingText === "function"
-                        ? thought.getFormingText()
-                        : thought.crystallizableText
-                    }
-                    sendThought={(text, ids) =>
-                      thought.sendThought(text, ids, { skipTrace: true })
-                    }
-                    logEndOfChainOfThought={(event) => thought.logTrace(event)}
-                    onClearForming={thought.clearCurrentTranscription}
-                    disabled={chapterThoughtsLocked || thought.isSending}
-                  />
-                </div>
-              }
-            />
+            {chapterActions ? <IleChapterHeliosActions {...chapterActions} /> : null}
             {sessionControls ? (
               <div className="mt-2 flex w-full shrink-0 flex-col items-center gap-2">
                 {sessionControls}

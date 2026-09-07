@@ -19,8 +19,23 @@ import {
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
 import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat } from "@/lib/session-chat-client";
+import type { Tool } from "@/components/ToolsPanel";
 import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
 import { closeIleImDoneAnswering } from "@/lib/ile-im-done-answering";
+import {
+  closeIleOpenWorkTurn,
+  ILE_SUBMIT_TURN_LABEL,
+  ILE_SUBMIT_WORK_CONTINUE_TEXT,
+  partitionIleThoughtsByOpenWork,
+  resolveIleWorkChatTarget,
+} from "@/lib/ile-session-turn-close";
+import {
+  clampIlePowExpense,
+  ILE_POW_EXPENSE_DEFAULT,
+  parseIleOpenWorkIdsFromMetadata,
+  removeIleOpenWork,
+  restoreIleOpenWorkIds,
+} from "@/lib/ile-pow-spend";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
@@ -39,7 +54,13 @@ import { SessionChrome } from "@/components/session-view/session-chrome";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
 import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { isIleMapOverlayTool } from "@/lib/ile-map-chrome";
+import {
+  isIleChapterWidgetTool,
+  isIleMapOverlayTool,
+  isIleSessionModalTool,
+} from "@/lib/ile-map-chrome";
+import { IleChapterToolTabs } from "@/components/session-view/ile-chapter-tool-tabs";
+import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
 import {
   blockHasUnseenGatherNotification,
@@ -47,7 +68,16 @@ import {
   markGatherResourcesSeen,
   parseGatherSeenBlockIds,
 } from "@/lib/block-circular-menu";
-import { toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
+import { countIleUnsubmittedPowDisplay, toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
+import { assignIleWorkAestheticImages } from "@/lib/aesthetics";
+import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
+import {
+  chapterHasPendingHeliosReply,
+  latestSettledAssistantId,
+  resolveIleDockChipStatus,
+  sameIleIdList,
+} from "@/lib/ile-work-dock-status";
+import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
 import { ileTimDelayProgressFraction } from "@/lib/ile-tim-chapter-complete";
 import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import {
@@ -247,6 +277,17 @@ export function SessionView({
 
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(false);
+  const [powExpense, setPowExpense] = useState(ILE_POW_EXPENSE_DEFAULT);
+  const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
+  const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>(
+    {},
+  );
+  const openWorkIdsRef = useRef<string[]>([]);
+  const [submitTurnBusy, setSubmitTurnBusy] = useState(false);
+  const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
+  const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
+  const dockSeenAssistantIdRef = useRef<Record<string, string | null>>({});
+  const dockPendingSeenRef = useRef<Record<string, boolean>>({});
   const [chapterCloseReview, setChapterCloseReview] = useState<{
     canClose: boolean;
     reason: string;
@@ -512,6 +553,9 @@ export function SessionView({
     onGatherResources,
     dismissGatherWarning,
     openGatheredResources,
+    tryStartWork,
+    spent: _spent,
+    spentUnits: _spentUnits,
   } = useIleGatherResources({
     sessionId: session?.id,
     workspaceId:
@@ -526,6 +570,7 @@ export function SessionView({
     onOpenResources: () => setActiveTool("plan-resources"),
     ileToken,
     ayclToken,
+    expense: powExpense,
   });
 
   const gatherReadyCountByBlock = useMemo(() => {
@@ -648,11 +693,19 @@ export function SessionView({
   const submitHeliosChatMessageNow = useCallback(async (
     message: string,
     imageDataUrl?: string,
+    chapterId?: string | null,
   ) => {
     const text = message.trim();
     if (!text || !session) return;
 
-    const chapterKey = activeChapterKey;
+    const target = resolveIleWorkChatTarget({
+      chapterId,
+      steps: sessionPlan?.steps,
+      fallbackIndex: activeChapterIndex,
+      fallbackId: activeStep?.id ?? activeChapterKey,
+      fallbackDescription: activeStep?.description,
+    });
+    const chapterKey = target.chapterId || activeChapterKey;
     const userMsg: ChatMessage = {
       id: `${Date.now()}-u`,
       role: "user",
@@ -672,9 +725,9 @@ export function SessionView({
       const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
       const { ok, data, errorMessage } = await postIleSessionChat({
           problem: session.problem,
-          activeStepIndex: activeChapterIndex,
-          activeStepId: activeStep?.id,
-          activeStepDescription: activeStep?.description,
+          activeStepIndex: target.stepIndex,
+          activeStepId: target.chapterId || activeStep?.id,
+          activeStepDescription: target.description || activeStep?.description,
           sessionPlan,
           sessionId: session.id,
           tutoringLanguage,
@@ -783,6 +836,39 @@ export function SessionView({
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
   useEffect(() => { localInferenceEnabledRef.current = localInferenceEnabled; }, [localInferenceEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
+  useEffect(() => { openWorkIdsRef.current = openWorkIds; }, [openWorkIds]);
+  useEffect(() => {
+    setWorkAestheticById((current) =>
+      assignIleWorkAestheticImages({
+        ids: openWorkIds,
+        current,
+        images: chromeSelectedAesthetic?.images,
+      }),
+    );
+  }, [chromeSelectedAesthetic?.images, openWorkIds]);
+  useEffect(() => {
+    if (!session?.id) return;
+    setWorkAestheticById({});
+    setOpenWorkIds(
+      restoreIleOpenWorkIds({
+        stored: parseIleOpenWorkIdsFromMetadata(session.metadata),
+        steps: sessionPlanRef.current?.steps,
+      }),
+    );
+    // Restore docked Work once per session load, not on later metadata writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
+  useEffect(() => {
+    const steps = sessionPlan?.steps;
+    if (!steps?.length) return;
+    setOpenWorkIds((ids) => {
+      const next = restoreIleOpenWorkIds({ stored: ids, steps });
+      if (next.length === ids.length && next.every((id, index) => id === ids[index])) {
+        return ids;
+      }
+      return next;
+    });
+  }, [sessionPlan?.steps]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
   useEffect(() => {
@@ -891,6 +977,7 @@ export function SessionView({
     pausedScreenStreamRef,
     pausedWebcamStreamRef,
     handlePauseRef,
+    openWorkIdsRef,
   });
 
 
@@ -910,6 +997,238 @@ export function SessionView({
       onClearForming: () => sessionThoughtInterface.clearCurrentTranscription(),
     });
   }, [sessionThoughtInterface]);
+
+  const handleWorkChapter = useCallback(
+    (stepId: string) => {
+      const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
+      const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
+      const decision = tryStartWork(stepId, openWorkIds);
+      if (!decision.allowed) return;
+      setOpenWorkIds(decision.openWorkIds);
+      if (idx >= 0 && idx !== activeChapterIndexRef.current) {
+        void handleLoadChapter(idx);
+      }
+      setActiveTool("chapters");
+      setHeliosWidgetOpen(true);
+    },
+    [openWorkIds, sessionPlan?.steps, tryStartWork],
+  );
+
+  const handleFocusOpenWork = useCallback(
+    (stepId: string) => {
+      const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
+      const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
+      const alreadyFocused =
+        idx >= 0 && idx === activeChapterIndexRef.current && heliosWidgetOpen;
+      setDockAttentionIds((current) => current.filter((id) => id !== stepId));
+      if (alreadyFocused) {
+        setHeliosWidgetOpen(false);
+        return;
+      }
+      if (idx >= 0 && idx !== activeChapterIndexRef.current) {
+        void handleLoadChapter(idx);
+      }
+      setActiveTool("chapters");
+      setHeliosWidgetOpen(true);
+    },
+    [heliosWidgetOpen, sessionPlan?.steps],
+  );
+
+  const handleIleSessionToolChange = useCallback(
+    (tool: Tool) => {
+      if (isIleChapterWidgetTool(tool)) {
+        if (tool === activeTool) {
+          setActiveTool("chapters");
+          return;
+        }
+        setActiveTool(tool);
+        setHeliosWidgetOpen(true);
+        return;
+      }
+      if (isIleSessionModalTool(tool)) {
+        if (tool === "help") {
+          handleToolChange("help");
+          setActiveTool("help");
+          return;
+        }
+        if (tool === activeTool) {
+          setActiveTool("chapters");
+          return;
+        }
+        setShowWelcomePanel(false);
+        setActiveTool(tool);
+        return;
+      }
+      if (tool === activeTool && isIleMapOverlayTool(tool)) {
+        setActiveTool("chapters");
+        return;
+      }
+      handleToolChange(tool);
+    },
+    [activeTool, handleToolChange],
+  );
+
+  const handleSubmitTurn = useCallback(async () => {
+    if (submitTurnBusy) return;
+    setSubmitTurnBusy(true);
+    const formingText =
+      sessionThoughtInterface.getFormingText?.() ||
+      sessionThoughtInterface.crystallizableText;
+    const awaitingIds = [...openWorkIds];
+    const works = partitionIleThoughtsByOpenWork({
+      thoughts: sessionThoughtInterface.stashedThoughts,
+      openWorkIds,
+      focusedChapterId: activeStep?.id ?? null,
+    }).map((work) => ({
+      ...work,
+      formingText:
+        work.chapterId === (activeStep?.id ?? "") ? formingText : work.formingText,
+    }));
+    for (const id of awaitingIds) {
+      dockSeenAssistantIdRef.current[id] = latestSettledAssistantId(
+        chapterWorkspaces[id]?.chatMessages,
+      );
+      dockPendingSeenRef.current[id] = false;
+    }
+    setDockLoadingIds(awaitingIds);
+    setDockAttentionIds((current) => current.filter((id) => !awaitingIds.includes(id)));
+    try {
+      if (canvasDirtyForHelios) {
+        await handleSubmitToHelios("canvas");
+      }
+      if (notebookDirtyForHelios) {
+        await handleSubmitToHelios("notebook");
+      }
+      const thoughtChapterIds = new Set(
+        works
+          .filter((work) => {
+            const forming =
+              work.chapterId === (activeStep?.id ?? "")
+                ? formingText
+                : work.formingText;
+            const hasThoughts = (work.thoughts ?? []).some((thought) =>
+              Boolean(String(thought?.text || "").trim()),
+            );
+            return hasThoughts || Boolean(String(forming || "").trim());
+          })
+          .map((work) => work.chapterId),
+      );
+      const remaining = awaitingIds.filter((id) => !thoughtChapterIds.has(id));
+      await Promise.all([
+        closeIleOpenWorkTurn({
+          works,
+          formingText,
+          focusedChapterId: activeStep?.id ?? null,
+          sendThought: (text, ids, chapterId) =>
+            sessionThoughtInterface.sendThought(text, ids, {
+              skipTrace: true,
+              chapterId,
+            }),
+          logEndOfChainOfThought: (event) => sessionThoughtInterface.logTrace(event),
+          onClearForming: () => sessionThoughtInterface.clearCurrentTranscription(),
+        }),
+        ...remaining.map((chapterId) =>
+          submitHeliosChatMessageNow(
+            ILE_SUBMIT_WORK_CONTINUE_TEXT,
+            undefined,
+            chapterId,
+          ),
+        ),
+      ]);
+    } finally {
+      setSubmitTurnBusy(false);
+    }
+  }, [
+    activeStep?.id,
+    canvasDirtyForHelios,
+    handleSubmitToHelios,
+    notebookDirtyForHelios,
+    chapterWorkspaces,
+    openWorkIds,
+    sessionThoughtInterface,
+    submitHeliosChatMessageNow,
+    submitTurnBusy,
+  ]);
+
+  useEffect(() => {
+    if (dockLoadingIds.length === 0) return;
+    const stillLoading: string[] = [];
+    const newlyReady: string[] = [];
+    for (const id of dockLoadingIds) {
+      const messages = chapterWorkspaces[id]?.chatMessages;
+      if (chapterHasPendingHeliosReply(messages)) {
+        dockPendingSeenRef.current[id] = true;
+        stillLoading.push(id);
+        continue;
+      }
+      const assistantId = latestSettledAssistantId(messages);
+      const replyLanded =
+        Boolean(dockPendingSeenRef.current[id]) &&
+        Boolean(assistantId) &&
+        assistantId !== dockSeenAssistantIdRef.current[id];
+      if (replyLanded) {
+        dockSeenAssistantIdRef.current[id] = assistantId;
+        newlyReady.push(id);
+        continue;
+      }
+      stillLoading.push(id);
+    }
+    if (!sameIleIdList(stillLoading, dockLoadingIds)) {
+      setDockLoadingIds(stillLoading);
+    }
+    if (newlyReady.length === 0) return;
+    const openId = heliosWidgetOpen ? activeStep?.id ?? null : null;
+    setDockAttentionIds((current) => {
+      const next = new Set(current);
+      for (const id of newlyReady) {
+        if (id !== openId) next.add(id);
+      }
+      return [...next];
+    });
+  }, [activeStep?.id, chapterWorkspaces, dockLoadingIds, heliosWidgetOpen]);
+
+  useEffect(() => {
+    if (!heliosWidgetOpen || !activeStep?.id) return;
+    const openId = activeStep.id;
+    setDockAttentionIds((current) =>
+      current.some((id) => id === openId)
+        ? current.filter((id) => id !== openId)
+        : current,
+    );
+  }, [activeStep?.id, heliosWidgetOpen]);
+
+  const openWorkDockLabels = useMemo(
+    () =>
+      openWorkIds.map((id) => {
+        const idx = sessionPlan?.steps?.findIndex((row) => row.id === id) ?? -1;
+        const step = idx >= 0 ? sessionPlan?.steps?.[idx] : undefined;
+        return {
+          id,
+          label: idx >= 0 ? `Ch ${idx + 1}` : "Chapter",
+          keyword: step
+            ? resolveBlockMapGlyph({
+                map_keyword: step.map_keyword,
+                title: step.description,
+              }).keyword
+            : undefined,
+          focused: id === activeStep?.id,
+          status: resolveIleDockChipStatus({
+            chapterId: id,
+            loadingIds: dockLoadingIds,
+            attentionIds: dockAttentionIds,
+          }),
+          image: workAestheticById[id],
+        };
+      }),
+    [
+      activeStep?.id,
+      dockAttentionIds,
+      dockLoadingIds,
+      openWorkIds,
+      sessionPlan?.steps,
+      workAestheticById,
+    ],
+  );
 
   const renderChapterThoughtPane = (replica: boolean) => {
     if (!session) return null;
@@ -992,6 +1311,136 @@ export function SessionView({
     );
   };
 
+  const renderSessionToolPanes = (onLeaveIleTab: (reason: "grok" | "grokipedia") => void) => {
+    if (!session) return null;
+    return (
+      <SessionToolPanes
+        t={t}
+        activeTool={activeTool}
+        shouldBlockTools={Boolean(shouldBlockTools)}
+        session={session}
+        sessionPlan={sessionPlan}
+        ayclToken={ayclToken}
+        ileToken={ileToken}
+        gatherBlockId={sessionBlockId}
+        gatherChapterId={resourceScopeChapterId || activeStep?.id}
+        gatheredResources={gatheredResources}
+        locale={locale}
+        planLoading={planLoading}
+        activeChapterIndex={activeChapterIndex}
+        chapterLoadingIndex={chapterLoadingIndex}
+        isRecording={isRecording}
+        activeStep={activeStep}
+        participantIdentity={participantIdentity}
+        activeChapterKey={activeChapterKey}
+        whiteboardData={whiteboardData}
+        whiteboardSceneData={whiteboardSceneData}
+        onCanvasChange={(data) => {
+          setWhiteboardData(data);
+          setCanvasDirtyForHelios(true);
+          if (sessionRef.current) {
+            sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
+          }
+        }}
+        onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
+        chapterThoughtsLocked={chapterThoughtsLocked}
+        isProjectMode={isProjectMode}
+        activeChapterLabel={activeChapterLabel}
+        notebookContent={notebookContent}
+        onNotebookChange={(value) => {
+          setNotebookContent(value);
+          setNotebookDirtyForHelios(true);
+        }}
+        resolvedSessionMode={resolvedSessionMode}
+        activeProjectLists={activeProjectLists}
+        onProjectPromote={handleProjectPromote}
+        onProjectDemote={handleProjectDemote}
+        sessionThoughtHistory={sessionThoughtHistory}
+        unsubmittedThoughts={sessionThoughtInterface.stashedThoughts}
+        formingThoughtText={
+          sessionThoughtInterface.getFormingText?.() ||
+          sessionThoughtInterface.crystallizableText
+        }
+        canvasDirtyForHelios={canvasDirtyForHelios}
+        notebookDirtyForHelios={notebookDirtyForHelios}
+        onSendThought={sessionThoughtInterface.sendThought}
+        thoughtIsSending={sessionThoughtInterface.isSending}
+        stream={stream}
+        museStatus={museStatus}
+        museError={museError}
+        museDeviceStatus={museDeviceStatus}
+        eegChannelData={eegChannelData}
+        bandPowers={bandPowers}
+        onConnectMuse={handleConnectMuse}
+        onDisconnectMuse={handleDisconnectMuse}
+        isWebcamEnabled={isWebcamEnabled}
+        onWebcamToggle={() => setIsWebcamEnabled((prev) => !prev)}
+        latestFacialData={latestFacialData}
+        onFacialData={handleFacialData}
+        onFaceError={handleFaceError}
+        isScreenCapturing={isScreenCapturing}
+        onStartScreenCapture={handleStartScreenCapture}
+        onStopScreenCapture={handleStopScreenCapture}
+        screenshotCount={screenshotCount}
+        logs={logs}
+        transferHealth={transferHealth}
+        onClearLogs={() => {
+          logsRef.current = [];
+          setLogs([]);
+        }}
+        isMobile={isMobile}
+        onLeaveIleTab={onLeaveIleTab}
+        toolPrefillQuery={toolPrefillQuery}
+      />
+    );
+  };
+
+  const renderCompactWorkspace = () => {
+    const reviewOpen = activeTool === ILE_REVIEW_WORK_TOOL;
+    return (
+    <div
+      data-ile-compact-chapter-workspace
+      className="flex h-full min-h-0 flex-col"
+    >
+      {reviewOpen ? (
+        <div
+          data-ile-compact-review-work
+          className="min-h-0 flex-1 overflow-hidden"
+        >
+          {renderSessionToolPanes(() => {})}
+        </div>
+      ) : (
+        <>
+          <IleChapterToolTabs
+            activeTool={activeTool}
+            onToolChange={handleIleSessionToolChange}
+          />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {isIleChapterWidgetTool(activeTool)
+              ? renderSessionToolPanes(() => {})
+              : renderChapterThoughtPane(true)}
+          </div>
+        </>
+      )}
+      <IleWorkDockBar
+        t={t}
+        compact
+        heliosOpen
+        openWorkLabels={openWorkDockLabels}
+        onFocusOpenWork={handleFocusOpenWork}
+        onSubmitTurn={() => void handleSubmitTurn()}
+        submitTurnLabel={t("session.submitTurn") || ILE_SUBMIT_TURN_LABEL}
+        submitTurnBusy={submitTurnBusy}
+        submitTurnDisabled={submitTurnBusy || openWorkIds.length < 1}
+        onReviewWork={() => handleIleSessionToolChange(ILE_REVIEW_WORK_TOOL)}
+        reviewWorkOpen={reviewOpen}
+        reviewWorkLabel={t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
+        aestheticImages={chromeSelectedAesthetic?.images}
+      />
+    </div>
+    );
+  };
+
   const {
     notifyLeaveTab,
     openManualPicInPic,
@@ -1018,7 +1467,7 @@ export function SessionView({
       speechEnabled: sessionThoughtInterface.speechEnabled,
       isScreenSharing: isScreenCapturing,
     },
-    renderCompact: () => renderChapterThoughtPane(true),
+    renderCompact: () => renderCompactWorkspace(),
   });
 
   const isSpeaking = useVoiceActivity({
@@ -1077,6 +1526,8 @@ export function SessionView({
           initialChapters={initialChapters}
           onInitialChaptersChange={setInitialChapters}
           mapTypeCatalog={mapTypeCatalog}
+          powExpense={powExpense}
+          onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
           autoAdvance={autoAdvance}
           onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
           localInferenceEnabled={localInferenceEnabled}
@@ -1100,13 +1551,7 @@ export function SessionView({
       <SessionChrome
         t={t}
         activeTool={activeTool}
-        onToolChange={(tool) => {
-          if (tool === activeTool && isIleMapOverlayTool(tool)) {
-            setActiveTool("chapters");
-            return;
-          }
-          handleToolChange(tool);
-        }}
+        onToolChange={handleIleSessionToolChange}
         problem={session.problem}
         workspaceId={session.metadata?.workspace_id as string | undefined}
         onBackToDashboard={() => {
@@ -1152,11 +1597,36 @@ export function SessionView({
         onDismissError={() => setError(null)}
         showWelcomeModal={showWelcomeModal}
         powCounts={toIlePowDisplayCounts(availableCounts, sessionPowArtifacts)}
+        unsubmittedPowCounts={countIleUnsubmittedPowDisplay({
+          unflaggedThoughtCount: sessionThoughtInterface.stashedThoughts.length,
+          formingThought: Boolean(
+            (
+              sessionThoughtInterface.getFormingText?.() ||
+              sessionThoughtInterface.crystallizableText ||
+              ""
+            ).trim(),
+          ),
+          notebookDirty: notebookDirtyForHelios,
+          canvasDirty: canvasDirtyForHelios,
+        })}
+        openWorkCount={openWorkIds.length}
+        aestheticImages={selectedAesthetic?.images}
+        openWorkLabels={openWorkDockLabels}
+        onFocusOpenWork={handleFocusOpenWork}
+        onOpenGlobalResources={() => handleIleSessionToolChange("plan-resources")}
+        onSubmitTurn={() => void handleSubmitTurn()}
+        submitTurnLabel={t("session.submitTurn") || ILE_SUBMIT_TURN_LABEL}
+        submitTurnBusy={submitTurnBusy}
         participantIdentity={participantIdentity}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
-        introOpen={showWelcomePanel}
+        onMinimizeHelios={() => setHeliosWidgetOpen(false)}
+        introOpen={showWelcomePanel || activeTool === "help"}
+        onCloseSessionModal={() => {
+          setShowWelcomePanel(false);
+          setActiveTool("chapters");
+        }}
         introWidget={
           <SessionOnboardingGuide
             key={welcomeOpenNonce}
@@ -1203,14 +1673,7 @@ export function SessionView({
             locale={locale}
             loading={planLoading}
             activeChapterIndex={activeChapterIndex}
-            onWorkChapter={(stepId) => {
-              const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
-              const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
-              if (idx >= 0 && idx !== activeChapterIndexRef.current) {
-                void handleLoadChapter(idx);
-              }
-              setHeliosWidgetOpen(true);
-            }}
+            onWorkChapter={handleWorkChapter}
             onAcceptTimChapter={(stepId) => {
               void handleAcceptTimChapter(stepId);
             }}
@@ -1229,9 +1692,13 @@ export function SessionView({
             }
             gatherJobs={gatherJobs}
             onOpenGatherResources={openGatheredResources}
+            openWorkIds={openWorkIds}
+            aestheticImages={selectedAesthetic?.images}
+            workAestheticById={workAestheticById}
             blockActionProgress={timBlockActionProgress}
             onMarkChapterCompleted={(stepId) => {
               completeTargetStepIdRef.current = stepId;
+              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
               beginMapDelay(stepId);
               void (async () => {
                 const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
@@ -1264,99 +1731,20 @@ export function SessionView({
             gatherReadyCountByBlock={gatherReadyCountByBlock}
           />
         }
-        toolOverlay={
-          <SessionToolPanes
-            t={t}
-            activeTool={activeTool}
-            shouldBlockTools={Boolean(shouldBlockTools)}
-            session={session}
-            sessionPlan={sessionPlan}
-            ayclToken={ayclToken}
-            ileToken={ileToken}
-            gatherBlockId={sessionBlockId}
-            gatherChapterId={resourceScopeChapterId || activeStep?.id}
-            gatheredResources={gatheredResources}
-            locale={locale}
-            planLoading={planLoading}
-            activeChapterIndex={activeChapterIndex}
-            chapterLoadingIndex={chapterLoadingIndex}
-            isRecording={isRecording}
-            activeStep={activeStep}
-            participantIdentity={participantIdentity}
-            activeChapterKey={activeChapterKey}
-            whiteboardData={whiteboardData}
-            whiteboardSceneData={whiteboardSceneData}
-            onCanvasChange={(data) => {
-              setWhiteboardData(data);
-              setCanvasDirtyForHelios(true);
-              if (sessionRef.current) {
-                sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
-              }
-            }}
-            onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
-            onSubmitToHelios={handleSubmitToHelios}
-            chapterThoughtsLocked={chapterThoughtsLocked}
-            canvasDirtyForHelios={canvasDirtyForHelios}
-            notebookDirtyForHelios={notebookDirtyForHelios}
-            isProjectMode={isProjectMode}
-            activeChapterLabel={activeChapterLabel}
-            notebookContent={notebookContent}
-            onNotebookChange={(value) => {
-              setNotebookContent(value);
-              setNotebookDirtyForHelios(true);
-            }}
-            resolvedSessionMode={resolvedSessionMode}
-            activeProjectLists={activeProjectLists}
-            onProjectPromote={handleProjectPromote}
-            onProjectDemote={handleProjectDemote}
-            sessionThoughtHistory={sessionThoughtHistory}
-            onSendThought={sessionThoughtInterface.sendThought}
-            thoughtIsSending={sessionThoughtInterface.isSending}
-            stream={stream}
-            museStatus={museStatus}
-            museError={museError}
-            museDeviceStatus={museDeviceStatus}
-            eegChannelData={eegChannelData}
-            bandPowers={bandPowers}
-            onConnectMuse={handleConnectMuse}
-            onDisconnectMuse={handleDisconnectMuse}
-            isWebcamEnabled={isWebcamEnabled}
-            onWebcamToggle={() => setIsWebcamEnabled((prev) => !prev)}
-            latestFacialData={latestFacialData}
-            onFacialData={handleFacialData}
-            onFaceError={handleFaceError}
-            isScreenCapturing={isScreenCapturing}
-            onStartScreenCapture={handleStartScreenCapture}
-            onStopScreenCapture={handleStopScreenCapture}
-            screenshotCount={screenshotCount}
-            logs={logs}
-            transferHealth={transferHealth}
-            onClearLogs={() => {
-              logsRef.current = [];
-              setLogs([]);
-            }}
-            isMobile={isMobile}
-            onLeaveIleTab={notifyLeaveTab}
-            toolPrefillQuery={toolPrefillQuery}
-          />
-        }
+        toolOverlay={renderSessionToolPanes(notifyLeaveTab)}
         heliosWidget={renderChapterThoughtPane(false)}
         voiceBar={
           <IleVoiceBar
             thought={sessionThoughtInterface}
             activeTool={activeTool}
-            onToolChange={(tool) => {
-              if (tool === activeTool && isIleMapOverlayTool(tool)) {
-                setActiveTool("chapters");
-                return;
-              }
-              handleToolChange(tool);
-            }}
+            onToolChange={handleIleSessionToolChange}
             onBackToDashboard={() => {
               setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
               setShowSaveExitNameDialog(true);
             }}
             errorNotification={Boolean(error)}
+            showOpenPicInPic={showManualPicInPic}
+            onOpenPicInPic={openManualPicInPic}
           />
         }
       />

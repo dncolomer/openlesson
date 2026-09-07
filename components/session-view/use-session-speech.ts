@@ -60,7 +60,11 @@ export type SessionSpeechInput = {
   ) => void;
   setHeliosTurnMode: (mode: HeliosTurnMode) => void;
   flushRemainingIlePow: (options?: { force?: boolean }) => Promise<void>;
-  submitHeliosChatMessageNow: (message: string, imageDataUrl?: string) => Promise<void>;
+  submitHeliosChatMessageNow: (
+    message: string,
+    imageDataUrl?: string,
+    chapterId?: string | null,
+  ) => Promise<void>;
   bumpUserActivityRef: { current: () => void };
   clearPendingInterruption: () => void;
   chapterWorkspaces: Record<string, {
@@ -269,15 +273,16 @@ const sessionThoughtInterface = useSessionThoughtInterface({
   enabled: powSessionEnabled && !micMuted && !(isProjectMode && chapterThoughtsLocked),
   speechLang: sessionSpeechLang,
   sessionId,
+  getActiveChapterId: () => activeStep?.id ?? activeChapterKey ?? null,
   onLogTrace: (payload) => {
     logSessionThoughtTrace(payload);
   },
   onSpeechTranscript: (text) => notifySpeechResultRef.current(text),
   onUserActivity: () => bumpUserActivityRef.current(),
-  onSendToProbe: async (text) => {
+  onSendToProbe: async (text, _thoughtIds, chapterId) => {
     setHeliosTurnMode("idle");
     await flushRemainingIlePow();
-    await submitHeliosChatMessageNow(text);
+    await submitHeliosChatMessageNow(text, undefined, chapterId);
   },
 });
 

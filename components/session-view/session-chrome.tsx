@@ -15,33 +15,28 @@ import type { PowParticipantIdentity } from "@/lib/session-participant-identity"
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
-  ILE_HELIOS_WIDGET_TOP_PX,
-  ILE_HELIOS_WIDGET_WIDTH_PX,
+  ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
+  ILE_MAP_WIDGET_FRAME_CLASS,
+  isIleChapterWidgetTool,
   isIleMapOverlayTool,
+  isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
 import { IleChapterWidgetFrame } from "@/components/session-view/ile-chapter-widget-frame";
+import { IleChapterToolTabs } from "@/components/session-view/ile-chapter-tool-tabs";
 import {
-  Activity,
-  MessageCircle,
-  Monitor,
-  Video,
-  Wrench,
-} from "lucide-react";
+  IleSubmitWorkButton,
+  IleWorkDockBar,
+} from "@/components/session-view/ile-work-dock-bar";
+import { ILE_POW_COUNTER_ICONS } from "@/components/session-view/ile-pow-icons";
 import {
+  emptyIlePowDisplayCounts,
   ILE_POW_COUNTER_LABELS,
   ILE_POW_DISPLAY_COUNTER_TYPES,
   type IlePowDisplayCounts,
-  type IlePowDisplayCounterType,
 } from "@/lib/ile-pow-counters";
-
-const ILE_POW_COUNTER_ICONS: Record<IlePowDisplayCounterType, ReactNode> = {
-  tool: <Wrench className="size-3.5" strokeWidth={2.2} aria-hidden />,
-  screen: <Monitor className="size-3.5" strokeWidth={2.2} aria-hidden />,
-  video: <Video className="size-3.5" strokeWidth={2.2} aria-hidden />,
-  eeg: <Activity className="size-3.5" strokeWidth={2.2} aria-hidden />,
-  thoughts: <MessageCircle className="size-3.5" strokeWidth={2.2} aria-hidden />,
-};
+import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
+import { ClipboardList } from "lucide-react";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -74,10 +69,27 @@ export type SessionChromeProps = {
   heliosWidget: ReactNode;
   heliosOpen: boolean;
   onCloseHelios: () => void;
+  onMinimizeHelios?: () => void;
   introOpen: boolean;
   introWidget: ReactNode;
+  onCloseSessionModal?: () => void;
   voiceBar: ReactNode;
   powCounts: IlePowDisplayCounts;
+  unsubmittedPowCounts?: IlePowDisplayCounts;
+  openWorkCount?: number;
+  openWorkLabels?: Array<{
+    id: string;
+    label: string;
+    keyword?: string;
+    focused?: boolean;
+    image?: string;
+  }>;
+  aestheticImages?: string[];
+  onFocusOpenWork?: (id: string) => void;
+  onOpenGlobalResources?: () => void;
+  onSubmitTurn?: () => void;
+  submitTurnLabel?: string;
+  submitTurnBusy?: boolean;
   participantIdentity?: PowParticipantIdentity | null;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
@@ -133,10 +145,21 @@ export function SessionChrome({
   heliosWidget,
   heliosOpen,
   onCloseHelios,
+  onMinimizeHelios,
   introOpen,
   introWidget,
+  onCloseSessionModal,
   voiceBar,
   powCounts,
+  unsubmittedPowCounts = emptyIlePowDisplayCounts(),
+  openWorkCount = 0,
+  openWorkLabels = [],
+  aestheticImages = [],
+  onFocusOpenWork,
+  onOpenGlobalResources,
+  onSubmitTurn,
+  submitTurnLabel = "Submit work",
+  submitTurnBusy = false,
   participantIdentity = null,
   onCloseToolOverlay,
   allowEndSession,
@@ -161,6 +184,20 @@ export function SessionChrome({
   onDismissCloseReview,
 }: SessionChromeProps) {
   const overlayOpen = isIleMapOverlayTool(activeTool);
+  const chapterToolOpen = isIleChapterWidgetTool(activeTool);
+  const modalTool = introOpen
+    ? "help"
+    : isIleSessionModalTool(activeTool)
+      ? activeTool
+      : null;
+  const modalTitle =
+    modalTool === "help" ? "Help" : modalTool === "data-input" ? "Data" : modalTool === "logs" ? "Logs" : "";
+  const overlayTitle =
+    activeTool === ILE_REVIEW_WORK_TOOL
+      ? t("session.reviewWork") || ILE_REVIEW_WORK_LABEL
+      : activeTool === "plan-resources"
+        ? "Global resources"
+        : activeTool;
 
   return (
     <>
@@ -179,28 +216,70 @@ export function SessionChrome({
           >
             Proof of Work Resources
           </span>
-          {ILE_POW_DISPLAY_COUNTER_TYPES.map((type) => (
+          {ILE_POW_DISPLAY_COUNTER_TYPES.map((type) => {
+            const submitted = powCounts[type];
+            const unsubmitted = unsubmittedPowCounts[type] ?? 0;
+            return (
             <div
               key={type}
               data-ile-pow-count={type}
-              title={ILE_POW_COUNTER_LABELS[type]}
+              title={`${ILE_POW_COUNTER_LABELS[type]}: ${submitted} submitted, ${unsubmitted} unsubmitted`}
               className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-neutral-300"
             >
               <span className="text-neutral-400" aria-hidden>
                 {ILE_POW_COUNTER_ICONS[type]}
               </span>
               <span className="sr-only">{ILE_POW_COUNTER_LABELS[type]}</span>
-              <span className="text-neutral-100">{powCounts[type]}</span>
+              <span
+                data-ile-pow-dual-pill
+                className="inline-flex overflow-hidden rounded-none border border-white font-mono text-[11px] leading-none"
+              >
+                <span
+                  data-ile-pow-submitted
+                  className="bg-white px-1.5 py-0.5 text-neutral-950"
+                >
+                  {submitted}
+                </span>
+                <span
+                  data-ile-pow-unsubmitted
+                  className="bg-black px-1.5 py-0.5 text-white"
+                >
+                  {unsubmitted}
+                </span>
+              </span>
             </div>
-          ))}
-          {participantIdentity ? (
-            <>
-              <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
+            );
+          })}
+          <>
+            <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
+            {onSubmitTurn ? (
+              <IleSubmitWorkButton
+                label={submitTurnLabel}
+                onClick={onSubmitTurn}
+                busy={submitTurnBusy}
+                disabled={submitTurnBusy || openWorkCount < 1}
+              />
+            ) : null}
+            <button
+              type="button"
+              data-ile-review-work
+              aria-pressed={activeTool === ILE_REVIEW_WORK_TOOL}
+              onClick={() => onToolChange(ILE_REVIEW_WORK_TOOL)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-none border px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider ${
+                activeTool === ILE_REVIEW_WORK_TOOL
+                  ? "border-white bg-white text-neutral-950"
+                  : "border-neutral-500 bg-neutral-900 text-neutral-100 hover:border-white"
+              }`}
+            >
+              <ClipboardList className="size-3.5" strokeWidth={2.3} aria-hidden />
+              {t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
+            </button>
+            {participantIdentity ? (
               <div data-ile-identity-row className="flex shrink-0 items-center">
                 <SessionIdentityBadge identity={participantIdentity} />
               </div>
-            </>
-          ) : null}
+            ) : null}
+          </>
         </div>
 
         {error && !showWelcomeModal ? (
@@ -210,35 +289,85 @@ export function SessionChrome({
           </div>
         ) : null}
 
-        {introOpen ? (
+        {modalTool ? (
           <div
-            data-ile-intro-widget
-            className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex max-h-[min(88vh,44rem)] w-[min(40rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95"
+            data-ile-session-modal={modalTool}
+            data-ile-intro-widget={modalTool === "help" ? "true" : undefined}
+            className="pointer-events-auto absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           >
-            <div className="min-h-0 overflow-y-auto">{introWidget}</div>
+            <button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 cursor-default"
+              onClick={() => onCloseSessionModal?.()}
+            />
+            <div className="relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)]">
+              <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-3 py-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
+                  {modalTitle}
+                </span>
+                <button
+                  type="button"
+                  data-ile-session-modal-close
+                  onClick={() => onCloseSessionModal?.()}
+                  className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {modalTool === "help" ? (
+                  <div className="h-full min-h-0 overflow-y-auto">{introWidget}</div>
+                ) : (
+                  toolOverlay
+                )}
+              </div>
+            </div>
           </div>
         ) : null}
 
         {heliosOpen ? (
-          <IleChapterWidgetFrame
-            onClose={onCloseHelios}
-            className={`pointer-events-auto absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} z-30`}
-            style={{
-              top: ILE_HELIOS_WIDGET_TOP_PX,
-              width: ILE_HELIOS_WIDGET_WIDTH_PX,
-            }}
+          <div
+            data-ile-chapter-dock-panel
+            className={`pointer-events-auto ${ILE_MAP_WIDGET_FRAME_CLASS} z-40`}
           >
-            {heliosWidget}
-          </IleChapterWidgetFrame>
+            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
+              <IleChapterWidgetFrame
+                fill
+                onMinimize={onMinimizeHelios ?? onCloseHelios}
+                toolbar={
+                  <IleChapterToolTabs activeTool={activeTool} onToolChange={onToolChange} />
+                }
+              >
+                {chapterToolOpen ? toolOverlay : heliosWidget}
+              </IleChapterWidgetFrame>
+            </div>
+          </div>
         ) : null}
+
+        <div
+          data-ile-work-dock
+          className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} z-50 flex flex-col items-end`}
+        >
+          <IleWorkDockBar
+            t={t}
+            heliosOpen={heliosOpen}
+            openWorkLabels={openWorkLabels}
+            onFocusOpenWork={onFocusOpenWork}
+            onOpenGlobalResources={onOpenGlobalResources}
+            globalResourcesOpen={overlayOpen}
+            submitTurnLabel={submitTurnLabel}
+            aestheticImages={aestheticImages}
+          />
+        </div>
 
         {overlayOpen ? (
           <div
             data-ile-tool-overlay
-            className={`pointer-events-auto absolute left-2 top-14 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} z-40 flex w-[min(720px,calc(100%-18rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95`}
+            className={`pointer-events-auto ${ILE_MAP_WIDGET_FRAME_CLASS} z-[45] overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95`}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-3 py-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">{activeTool}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">{overlayTitle}</span>
               <button
                 type="button"
                 data-ile-tool-overlay-close

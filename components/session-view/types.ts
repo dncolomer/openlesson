@@ -76,6 +76,8 @@ export type SessionWelcomeModalProps = {
   initialChapters: InitialChaptersLevel | string;
   onInitialChaptersChange: (level: InitialChaptersLevel | string) => void;
   mapTypeCatalog?: MapTypePickerItem[] | null;
+  powExpense?: number;
+  onPowExpenseChange?: (value: number) => void;
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
   localInferenceEnabled: boolean;

@@ -33,6 +33,12 @@ export interface BlockSkillGridProps {
   onAbortExpandJob?: (jobId: string) => void;
   gatherJobs?: readonly IleGatherJob[] | null;
   onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
+  /** Chapter ids currently in open Work (docked). ILE map tiles use matching aesthetic stills. */
+  openWorkIds?: readonly string[] | null;
+  /** Session aesthetic stills — same pool as the Work dock chips. */
+  aestheticImages?: readonly string[] | null;
+  /** Session-lived still per open Work id (stable until reload). */
+  workAestheticById?: Readonly<Record<string, string>> | null;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
   onCircularMenuAction?: (
     blockId: string,

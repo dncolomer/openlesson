@@ -65,6 +65,7 @@ import {
   mapSelfProgressStorageKey,
 } from "@/lib/map-self-progress";
 import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { resolveMapBlockPeek } from "@/lib/block-map-peek";
 import {
@@ -104,6 +105,9 @@ export function BlockSkillGrid({
   onAbortExpandJob,
   gatherJobs = null,
   onOpenGatherResources,
+  openWorkIds = null,
+  aestheticImages = null,
+  workAestheticById = null,
   circularMenuSurface: circularMenuSurfaceProp,
   onCircularMenuAction,
   blockProgressById,
@@ -151,6 +155,30 @@ export function BlockSkillGrid({
 }: BlockSkillGridProps) {
   /** View-only public maps: no authoring, select, notes, or annotation tools. */
   const canEdit = canEditProp && !viewOnly;
+  const [fetchedAestheticImages, setFetchedAestheticImages] = useState<string[] | null>(
+    null,
+  );
+  useEffect(() => {
+    if (aestheticImages && aestheticImages.length > 0) {
+      setFetchedAestheticImages(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        const images = packages.flatMap((pkg) => pkg.images).filter(Boolean);
+        if (images.length > 0) setFetchedAestheticImages(images);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [aestheticImages]);
+  const resolvedAestheticImages =
+    aestheticImages && aestheticImages.length > 0
+      ? aestheticImages
+      : fetchedAestheticImages;
   const [peekBlockId, setPeekBlockId] = useState<string | null>(null);
   const [circularMenuBlockId, setCircularMenuBlockId] = useState<string | null>(null);
   const [circularMenuEmptyCell, setCircularMenuEmptyCell] = useState<GridCell | null>(
@@ -1016,6 +1044,7 @@ export function BlockSkillGrid({
         stagedPrereqCount: prereqEdit.stagedPrereqIds.length,
         onToolClick: handleToolClick,
         overlayAnchorClass: suggestMode === "chapter" ? "top-12" : "top-2",
+        hidden: suggestMode === "chapter",
       }}
       world={{
         visibleCells,
@@ -1067,6 +1096,9 @@ export function BlockSkillGrid({
         chapterUnlockHighlightIds,
         learnerDepHighlightIds,
         workedOnIds,
+        openWorkIds,
+        aestheticImages: resolvedAestheticImages,
+        workAestheticById,
         previousSessionBlockIds,
         generationLockedBlockIds,
         dynamicUnlockHighlightIds,

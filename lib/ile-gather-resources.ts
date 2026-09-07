@@ -11,6 +11,12 @@ import {
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
 import {
+  ILE_POW_EXPENSE_DEFAULT,
+  ilePowGatherConsumeBase,
+  ilePowGatherMinTool,
+  ilePowGatherMinTotal,
+} from "@/lib/ile-pow-spend";
+import {
   isValidHttpUrl,
   normalizeExternalResourceCreate,
   type ExternalResourceCreateInput,
@@ -155,13 +161,17 @@ export function ileGatherRateLimited(input: {
  * Spend: always the configured tool amount (when available), plus one extra
  * unit of the richest leftover non-required type (screen / eeg / video).
  */
-export function computeIleGatherConsume(available: IlePowTypeCounts): IlePowTypeCounts {
+export function computeIleGatherConsume(
+  available: IlePowTypeCounts,
+  expense: unknown = ILE_POW_EXPENSE_DEFAULT,
+): IlePowTypeCounts {
+  const base = ilePowGatherConsumeBase(expense);
   const consume = emptyIlePowTypeCounts();
-  consume.tool = Math.min(ILE_GATHER_CONSUME.tool, Math.max(0, available.tool));
+  consume.tool = Math.min(base.tool, Math.max(0, available.tool));
   const extras: Array<{ type: "screen" | "eeg" | "video"; leftover: number }> = [
-    { type: "screen", leftover: Math.max(0, available.screen - ILE_GATHER_CONSUME.screen) },
-    { type: "eeg", leftover: Math.max(0, available.eeg - ILE_GATHER_CONSUME.eeg) },
-    { type: "video", leftover: Math.max(0, available.video - ILE_GATHER_CONSUME.video) },
+    { type: "screen", leftover: Math.max(0, available.screen - base.screen) },
+    { type: "eeg", leftover: Math.max(0, available.eeg - base.eeg) },
+    { type: "video", leftover: Math.max(0, available.video - base.video) },
   ];
   extras.sort((a, b) => b.leftover - a.leftover);
   const richest = extras[0];
@@ -187,6 +197,7 @@ export function decideIleGatherResources(input: {
   now?: number;
   rateLimitKey?: string | null;
   lastGatherKey?: string | null;
+  expense?: unknown;
 }): IleGatherDecision {
   const total =
     input.counts ?? countIlePowByType(input.artifacts ?? []);
@@ -208,9 +219,13 @@ export function decideIleGatherResources(input: {
       available,
     };
   }
+  const expense = input.expense ?? ILE_POW_EXPENSE_DEFAULT;
+  const minTool = ilePowGatherMinTool(expense);
+  const minTotal = ilePowGatherMinTotal(expense);
+  const base = ilePowGatherConsumeBase(expense);
   const totalAvailable = ilePowCounterTotal(available);
-  const enoughTypes = available.tool >= ILE_GATHER_MIN_COUNTS.tool;
-  const enoughTotal = totalAvailable >= ILE_GATHER_MIN_TOTAL;
+  const enoughTypes = available.tool >= minTool;
+  const enoughTotal = totalAvailable >= minTotal;
   if (!enoughTypes || !enoughTotal) {
     return {
       allowed: false,
@@ -220,8 +235,8 @@ export function decideIleGatherResources(input: {
       available,
     };
   }
-  const consume = computeIleGatherConsume(available);
-  if (consume.tool < ILE_GATHER_CONSUME.tool) {
+  const consume = computeIleGatherConsume(available, expense);
+  if (consume.tool < base.tool) {
     return {
       allowed: false,
       reason: "insufficient_pow",

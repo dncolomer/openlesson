@@ -50,6 +50,9 @@ interface ChapterMapPanelProps {
   blockActionProgress?: Readonly<Record<string, { running: boolean; completed: number; total: number }>>;
   unseenGatherBlockIds?: ReadonlySet<string> | readonly string[];
   gatherReadyCountByBlock?: Readonly<Record<string, number>>;
+  openWorkIds?: readonly string[] | null;
+  aestheticImages?: readonly string[] | null;
+  workAestheticById?: Readonly<Record<string, string>> | null;
 }
 
 export function ChapterMapPanel({
@@ -76,6 +79,9 @@ export function ChapterMapPanel({
   blockActionProgress,
   unseenGatherBlockIds,
   gatherReadyCountByBlock,
+  openWorkIds = null,
+  aestheticImages = null,
+  workAestheticById = null,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -313,6 +319,9 @@ export function ChapterMapPanel({
         labels={gridLabels}
         gatherJobs={gatherJobs}
         onOpenGatherResources={onOpenGatherResources}
+        openWorkIds={openWorkIds}
+        aestheticImages={aestheticImages}
+        workAestheticById={workAestheticById}
       />
       {editingStepId ? (
         <BlockCircularEditForm

@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
       rateLimitKey:
         typeof body.rateLimitKey === "string" ? body.rateLimitKey : chapterId || blockId,
       lastGatherKey: typeof body.lastGatherKey === "string" ? body.lastGatherKey : null,
+      expense: body.expense,
     });
     if (!decision.allowed) {
       return NextResponse.json(

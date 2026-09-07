@@ -98,6 +98,10 @@ import {
 import { ileGatherRunningTileIds, type IleGatherJob } from "@/lib/ile-gather-resources";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 import {
+  aestheticImageForId,
+  FALLBACK_AESTHETIC_IMAGES,
+} from "@/lib/aesthetics";
+import {
   BlockCircularMenuRing,
   BlockGatherNotificationDot,
   BlockInTileProgress,
@@ -107,6 +111,23 @@ import {
   type BlockCircularMenuActionId,
   type BlockCircularMenuSurface,
 } from "@/lib/block-circular-menu";
+
+function OpenWorkTileAesthetic({ src }: { src: string }) {
+  return (
+    <>
+      <span
+        data-ile-open-work-tile-image
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${src})` }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-black/50"
+      />
+    </>
+  );
+}
 
 export function MapWorldLayer({
   visibleCells,
@@ -158,6 +179,9 @@ export function MapWorldLayer({
   chapterUnlockHighlightIds,
   learnerDepHighlightIds,
   workedOnIds,
+  openWorkIds = null,
+  aestheticImages = null,
+  workAestheticById = null,
   previousSessionBlockIds = new Set<string>(),
   generationLockedBlockIds,
   dynamicUnlockHighlightIds,
@@ -232,6 +256,9 @@ export function MapWorldLayer({
   chapterUnlockHighlightIds: Set<string>;
   learnerDepHighlightIds: Set<string>;
   workedOnIds: Set<string>;
+  openWorkIds?: readonly string[] | null;
+  aestheticImages?: readonly string[] | null;
+  workAestheticById?: Readonly<Record<string, string>> | null;
   previousSessionBlockIds?: Set<string>;
   generationLockedBlockIds: Set<string>;
   dynamicUnlockHighlightIds: Set<string>;
@@ -258,6 +285,11 @@ export function MapWorldLayer({
   annotationLayers: AnnotationLayer[];
 }) {
   const gatheringTileIds = ileGatherRunningTileIds(gatherJobs);
+  const openWorkIdSet = new Set(openWorkIds ?? []);
+  const aestheticPool =
+    aestheticImages && aestheticImages.length > 0
+      ? Array.from(aestheticImages)
+      : FALLBACK_AESTHETIC_IMAGES;
   return (
     <>
           {/* Empty cells + selection highlights + unusable ground */}
@@ -598,6 +630,13 @@ export function MapWorldLayer({
             const itemWorkedOn =
               workedOnIds.has(node.id) && !hasPreviousSessions;
             const itemDone = isMapCellDoneStatus(displayStatus);
+            const tileAesthetic =
+              suggestMode === "chapter" && openWorkIdSet.has(node.id)
+                ? workAestheticById?.[node.id] ||
+                  aestheticImageForId(node.id, aestheticPool)
+                : hasPreviousSessions
+                  ? aestheticImageForId(node.id, aestheticPool)
+                  : null;
             const chapterChrome =
               suggestMode === "chapter"
                 ? ileChapterCellChrome({
@@ -637,7 +676,7 @@ export function MapWorldLayer({
               node.id,
             );
             const timUnopened = isTimExploreMapIcon(node.map_icon);
-            const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-none border px-2 text-center transition ${
+            const tileClass = `relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-none border px-2 text-center transition ${
               generationLocked
                 ? "pointer-events-none cursor-not-allowed opacity-60"
                 : `hover:brightness-110 pointer-events-auto ${
@@ -765,6 +804,7 @@ export function MapWorldLayer({
                 icon={glyphIcon}
                 labelMode="glyph"
                 glyphVariant={isChapterSurface ? "outline" : "solid"}
+                hideIcon={Boolean(tileAesthetic)}
               />
             );
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
@@ -926,7 +966,7 @@ export function MapWorldLayer({
                                       ? `${node.title} (has local context)`
                                       : node.title
                           }
-                          className={`relative flex h-full w-full flex-col items-center justify-center px-2 text-center transition ${
+                          className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden px-2 text-center transition ${
                             generationLocked
                               ? "pointer-events-none cursor-not-allowed opacity-60"
                               : `hover:brightness-110 pointer-events-auto ${
@@ -943,10 +983,16 @@ export function MapWorldLayer({
                                 : "opacity-0 scale-95"
                               : ""
                           }`}
+                          data-ile-open-work-tile={
+                            suggestMode === "chapter" && tileAesthetic ? "true" : undefined
+                          }
+                          data-block-session-aesthetic={
+                            hasPreviousSessions && tileAesthetic ? "true" : undefined
+                          }
                           style={{
                             ...tileTransition,
-                            backgroundColor: freeformFill,
-                            color: freeformText,
+                            backgroundColor: tileAesthetic ? undefined : freeformFill,
+                            color: tileAesthetic ? "#fff" : freeformText,
                             // Outer edges only — internal edges open so the polyomino reads as one shape.
                             // Dependencies of the selected target use a dashed outline.
                             borderStyle: freeformBorderStyle,
@@ -967,8 +1013,12 @@ export function MapWorldLayer({
                                 : undefined,
                           }}
                         >
+                          {tileAesthetic ? (
+                            <OpenWorkTileAesthetic src={tileAesthetic} />
+                          ) : null}
                           {isLabel ? (
                             <>
+                              <span className="relative z-10 flex max-w-full flex-col items-center">
                               {statusGlyph}
                               <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                               <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
@@ -979,6 +1029,7 @@ export function MapWorldLayer({
                               {localContextBadge}
                               {starterBadge}
                               {lockBadge}
+                              </span>
                             </>
                           ) : null}
                         </button>
@@ -1110,8 +1161,14 @@ export function MapWorldLayer({
                       ? handleBlockPointerUp
                       : undefined
                   }
-                  className={tileClass}
+                  className={`${tileClass} ${tileAesthetic ? "text-white" : ""}`}
                   style={tileTransition}
+                  data-ile-open-work-tile={
+                    suggestMode === "chapter" && tileAesthetic ? "true" : undefined
+                  }
+                  data-block-session-aesthetic={
+                    hasPreviousSessions && tileAesthetic ? "true" : undefined
+                  }
                   title={
                     generationLocked
                       ? `${node.title} (generating — not clickable yet)`
@@ -1132,6 +1189,10 @@ export function MapWorldLayer({
                               : node.title
                   }
                 >
+                  {tileAesthetic ? (
+                    <OpenWorkTileAesthetic src={tileAesthetic} />
+                  ) : null}
+                  <span className="relative z-10 flex max-w-full flex-col items-center">
                   {statusGlyph}
                   <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
                   <BlockGatherNotificationDot visible={Boolean(unseenGatherById?.[node.id])} />
@@ -1142,6 +1203,7 @@ export function MapWorldLayer({
                   {localContextBadge}
                   {starterBadge}
                   {lockBadge}
+                  </span>
                 </button>
                 {circularMenuSurface !== "none" &&
                 !mapExploreOpen &&

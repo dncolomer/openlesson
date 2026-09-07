@@ -14,6 +14,7 @@ export interface SessionThought {
   text: string;
   timestamp: number;
   chainId: string;
+  chapterId?: string;
 }
 
 export type SessionTraceType = "system1" | "system2";
@@ -337,6 +338,10 @@ function loadStoredThoughts(sessionId: string): SessionThought[] {
           typeof item?.text === "string" &&
           typeof item?.timestamp === "number",
       )
+      .map((item) => ({
+        ...item,
+        chapterId: typeof item.chapterId === "string" ? item.chapterId : undefined,
+      }))
       .slice(-THOUGHT_HISTORY_LIMIT);
   } catch {
     return [];
@@ -348,11 +353,16 @@ interface UseSessionThoughtInterfaceOptions {
   speechLang?: string;
   sessionId?: string;
   onLogTrace: (payload: SessionThoughtTracePayload) => void;
-  onSendToProbe: (text: string, thoughtIds: string[]) => Promise<void>;
+  onSendToProbe: (
+    text: string,
+    thoughtIds: string[],
+    chapterId?: string | null,
+  ) => Promise<void>;
   onSpeechTranscript?: (text: string) => void;
   onUserActivity?: () => void;
   /** ILE default: capture Enter/Del. TAP shells keep their own keys. */
   captureKeys?: boolean;
+  getActiveChapterId?: () => string | null;
 }
 
 export function useSessionThoughtInterface({
@@ -364,9 +374,12 @@ export function useSessionThoughtInterface({
   onSpeechTranscript,
   onUserActivity,
   captureKeys = true,
+  getActiveChapterId,
 }: UseSessionThoughtInterfaceOptions) {
   const onSpeechTranscriptRef = useRef(onSpeechTranscript);
   const onUserActivityRef = useRef(onUserActivity);
+  const getActiveChapterIdRef = useRef(getActiveChapterId);
+  getActiveChapterIdRef.current = getActiveChapterId;
 
   useEffect(() => {
     onSpeechTranscriptRef.current = onSpeechTranscript;
@@ -434,11 +447,13 @@ export function useSessionThoughtInterface({
     onUserActivityRef.current?.();
     const thought = buildThoughtRecord(text, thoughts);
     if (!thought) return;
-    const already = thoughts.some((t) => t.id === thought.id);
+    const chapterId = getActiveChapterIdRef.current?.() || undefined;
+    const stamped = chapterId ? { ...thought, chapterId } : thought;
+    const already = thoughts.some((t) => t.id === stamped.id);
     if (already) return;
     setThoughts((current) => {
-      if (current.some((t) => t.id === thought.id)) return current;
-      return [...current, thought];
+      if (current.some((t) => t.id === stamped.id)) return current;
+      return [...current, stamped];
     });
     onLogTrace({
       traceType: "system1",
@@ -593,7 +608,11 @@ export function useSessionThoughtInterface({
   }, [enabled, speechLang, speechBindings]);
 
   const sendThought = useCallback(
-    async (text: string, thoughtIds: string[] = [], options?: { skipTrace?: boolean }) => {
+    async (
+      text: string,
+      thoughtIds: string[] = [],
+      options?: { skipTrace?: boolean; chapterId?: string | null },
+    ) => {
       const clean = normalize(text);
       if (!clean || isSending) return;
       const isResend = thoughtIds.length > 0 && thoughtIds.every((id) => sentThoughtIds.has(id));
@@ -617,7 +636,7 @@ export function useSessionThoughtInterface({
         return next;
       });
       try {
-        await onSendToProbe(clean, thoughtIds);
+        await onSendToProbe(clean, thoughtIds, options?.chapterId);
       } catch (err) {
         setSendError(err instanceof Error ? err.message : "Could not reach unsys");
       } finally {

@@ -145,7 +145,7 @@ describe("universal Stash Submit labels across ILE + TAP", () => {
     expect(ileHelios).not.toContain("Submit last Thought");
     expect(ileHelios).not.toContain("See Your thoughts");
     expect(ileHelios).not.toContain("See Older Thoughts");
-    expect(ileHelios).toContain("ImDoneAnsweringControl");
+    expect(ileHelios).not.toContain("ImDoneAnsweringControl");
     for (const surface of [tapConvo, tapSolo]) {
       expect(surface).not.toContain("Submit last Thought");
       expect(surface).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
@@ -155,8 +155,8 @@ describe("universal Stash Submit labels across ILE + TAP", () => {
     }
     expect(ileMemory).toContain("Submit Selection");
     expect(ileMemory).toContain("Edit Selection");
-    expect(ilePanes).toContain("ThoughtMemoryPanel");
-    expect(session).toContain("ThoughtMemoryPanel");
+    expect(ilePanes).toContain("IleReviewWorkPanel");
+    expect(session).toContain("IleReviewWorkPanel");
     expect(tapConvo).toContain("ThoughtMemoryPanel");
     expect(tapSolo).toContain("ThoughtMemoryPanel");
   });

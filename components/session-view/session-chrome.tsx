@@ -286,7 +286,11 @@ export function SessionChrome({
               className="absolute inset-0 cursor-default"
               onClick={() => onCloseSessionModal?.()}
             />
-            <div className="relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)]">
+            <div
+              className={`relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)] ${
+                modalTool === "logs" ? "h-[min(88vh,44rem)]" : ""
+              }`}
+            >
               <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-3 py-1.5">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
                   {modalTitle}
@@ -303,6 +307,10 @@ export function SessionChrome({
               <div className="min-h-0 flex-1 overflow-hidden">
                 {modalTool === "help" ? (
                   <div className="h-full min-h-0 overflow-y-auto">{introWidget}</div>
+                ) : modalTool === "logs" ? (
+                  <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                    {toolOverlay}
+                  </div>
                 ) : (
                   toolOverlay
                 )}

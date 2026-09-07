@@ -204,7 +204,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       <div
         ref={containerRef}
         data-ile-logs-scroll
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 space-y-1"
+        className="h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 space-y-1"
       >
         {filteredLogs.length === 0 ? (
           <div className="flex items-center justify-center h-full">

@@ -76,7 +76,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(view).toContain("onCloseSessionModal");
     expect(view).toContain("isIleSessionModalTool");
     expect(chrome).toContain("max-h-[min(88vh,44rem)]");
-    expect(chrome).not.toMatch(/(?<!max-)h-\[min\(88vh,44rem\)\]/);
+    expect(chrome).toContain('modalTool === "logs" ? "h-[min(88vh,44rem)]"');
     expect(view).toContain("<SessionOnboardingGuide");
     expect(helios).not.toContain("SessionOnboardingGuide");
     expect(helios).not.toContain("data-ile-intro-widget");

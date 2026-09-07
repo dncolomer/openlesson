@@ -4,8 +4,8 @@ import { AlertTriangle, ClipboardList, Send } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
 import { ILE_REVIEW_WORK_LABEL } from "@/lib/ile-review-work";
 import {
-  aestheticImageForId,
   FALLBACK_AESTHETIC_IMAGES,
+  resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 
@@ -106,7 +106,11 @@ export function IleWorkDockBar({
         >
           {openWorkLabels.map((work) => {
             const expanded = Boolean(work.focused && heliosOpen);
-            const chipImage = work.image || aestheticImageForId(work.id, dockImages);
+            const chipImage = resolveIleWorkAestheticImage({
+              id: work.id,
+              assigned: work.image,
+              images: dockImages,
+            });
             const keyword = work.keyword?.trim();
             const status = work.status ?? "idle";
             return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
@@ -9,8 +9,8 @@ import {
   DialogueSplit,
   type DialogueMessage,
   type HeliosTurnMode,
-  THOUGHT_BACKGROUND_IMAGES,
 } from "@/components/thought-ui/ThoughtUi";
+import { resolveIleWorkAestheticImage } from "@/lib/aesthetics";
 
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 
@@ -47,6 +47,9 @@ interface SessionHeliosPanelProps {
   ttsLanguage?: string;
   tutorName?: string;
   aestheticImages?: string[];
+  /** Session-lived still for this chapter — same as the dock chip and map tile. */
+  workAestheticImage?: string;
+  workId?: string;
   aestheticName?: string;
   sessionControls?: ReactNode;
   thought: SessionThoughtInterface;
@@ -87,10 +90,11 @@ export function SessionHeliosPanel({
   isInitializing = false,
   isChapterLoading = false,
   loadingChapterLabel = null,
-  sessionId,
   ttsLanguage,
   tutorName = "unsys",
   aestheticImages,
+  workAestheticImage,
+  workId,
   aestheticName,
   sessionControls,
   thought,
@@ -110,13 +114,14 @@ export function SessionHeliosPanel({
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
-  const [bgImage, setBgImage] = useState("");
   const contextStashInFlightRef = useRef(false);
-
-  useEffect(() => {
-    const pool = aestheticImages?.length ? aestheticImages : THOUGHT_BACKGROUND_IMAGES;
-    setBgImage(pool[Math.floor(Math.random() * pool.length)]);
-  }, [aestheticImages, sessionId]);
+  const bgImage = workId
+    ? resolveIleWorkAestheticImage({
+        id: workId,
+        assigned: workAestheticImage,
+        images: aestheticImages,
+      })
+    : String(workAestheticImage || "").trim();
 
   // Thought context capacity auto-stash (ILE has no purity clock).
   // Reads live forming text (ref) so a full bar actually persists.

@@ -1252,6 +1252,7 @@ export function SessionView({
       sessionId={session.id}
       ttsLanguage={tutoringLanguage}
       selectedAesthetic={chromeSelectedAesthetic}
+      workAestheticImage={workAestheticById[activeChapterKey]}
       thought={sessionThoughtInterface}
       chapterThoughtsLocked={chapterThoughtsLocked}
       projectStash={activeProjectLists.stash}

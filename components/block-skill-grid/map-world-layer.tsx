@@ -100,6 +100,7 @@ import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 import {
   aestheticImageForId,
   FALLBACK_AESTHETIC_IMAGES,
+  resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
 import {
   BlockCircularMenuRing,
@@ -632,8 +633,11 @@ export function MapWorldLayer({
             const itemDone = isMapCellDoneStatus(displayStatus);
             const tileAesthetic =
               suggestMode === "chapter" && openWorkIdSet.has(node.id)
-                ? workAestheticById?.[node.id] ||
-                  aestheticImageForId(node.id, aestheticPool)
+                ? resolveIleWorkAestheticImage({
+                    id: node.id,
+                    assigned: workAestheticById?.[node.id],
+                    images: aestheticPool,
+                  })
                 : hasPreviousSessions
                   ? aestheticImageForId(node.id, aestheticPool)
                   : null;

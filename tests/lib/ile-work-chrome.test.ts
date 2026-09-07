@@ -7,7 +7,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
-import { assignIleWorkAestheticImages } from "@/lib/aesthetics";
+import {
+  aestheticImageForId,
+  assignIleWorkAestheticImages,
+  resolveIleWorkAestheticImage,
+} from "@/lib/aesthetics";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -49,6 +53,32 @@ describe("assignIleWorkAestheticImages", () => {
       random: () => 0,
     });
     expect(dropped).toEqual({ "ch-b": "/b.jpg" });
+  });
+});
+
+describe("resolveIleWorkAestheticImage", () => {
+  it("uses the session-lived assigned still, else a stable per-id pick", () => {
+    const pool = ["/a.jpg", "/b.jpg", "/c.jpg"];
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-a",
+        assigned: "/b.jpg",
+        images: pool,
+      }),
+    ).toBe("/b.jpg");
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-a",
+        images: pool,
+      }),
+    ).toBe(aestheticImageForId("ch-a", pool));
+    expect(
+      resolveIleWorkAestheticImage({
+        id: "ch-b",
+        assigned: "  ",
+        images: pool,
+      }),
+    ).toBe(aestheticImageForId("ch-b", pool));
   });
 });
 
@@ -117,9 +147,18 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("data-ile-chapter-minimized");
     expect(dockBar).toContain("data-ile-chapter-chip-image");
     expect(dockBar).toContain("data-ile-chapter-chip-keyword");
-    expect(dockBar).toContain("work.image || aestheticImageForId");
+    expect(dockBar).toContain("resolveIleWorkAestheticImage");
+    expect(dockBar).toContain("assigned: work.image");
     expect(view).toContain("assignIleWorkAestheticImages");
     expect(view).toContain("workAestheticById");
+    expect(view).toContain("workAestheticImage={workAestheticById[activeChapterKey]}");
+    const thoughtPane = read("components/session-view/session-thought-pane.tsx");
+    expect(thoughtPane).toContain("workId={activeChapterKey}");
+    expect(thoughtPane).toContain("workAestheticImage={workAestheticImage}");
+    expect(helios).toContain("resolveIleWorkAestheticImage");
+    expect(helios).toContain("assigned: workAestheticImage");
+    expect(helios).not.toContain("Math.random");
+    expect(helios).not.toContain("THOUGHT_BACKGROUND_IMAGES");
     expect(dockBar).toContain("FALLBACK_AESTHETIC_IMAGES");
     expect(dockBar).toContain("size-24");
     expect(view).toContain("resolveBlockMapGlyph");
@@ -156,6 +195,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     expect(world).toContain("data-ile-open-work-tile-image");
     expect(world).toContain("workAestheticById");
+    expect(world).toContain("resolveIleWorkAestheticImage");
     expect(world).toContain("aestheticImageForId");
     expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
@@ -183,6 +223,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "welcome: data-ile-pow-expense-slider beside aesthetics/map type",
         "chrome: Submit work left of identity pill; dock is Global resources + chapter chips",
         "minimized chips use aesthetic stills + map two-word keyword; bar has no bg image",
+        "Work widget bg uses the same session-lived still as the chapter dock chip and map tile",
         "chapters open from the dock; minimize keeps chips on the bar",
         "save stores ile_open_work_ids; resume restores unclosed Work",
         "submit routes resolveIleWorkChatTarget + sendThought chapterId",

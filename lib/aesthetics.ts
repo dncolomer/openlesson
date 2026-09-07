@@ -82,6 +82,21 @@ export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAG
   return images[hash % images.length];
 }
 
+/** Dock chip, map tile, and Work widget share this still for a chapter. */
+export function resolveIleWorkAestheticImage(input: {
+  id: string;
+  assigned?: string | null;
+  images?: readonly string[] | null;
+}): string {
+  const pool =
+    input.images && input.images.length > 0
+      ? [...input.images]
+      : FALLBACK_AESTHETIC_IMAGES;
+  const assigned = String(input.assigned || "").trim();
+  if (assigned) return assigned;
+  return aestheticImageForId(input.id, pool);
+}
+
 export function formatAestheticName(id: string) {
   return id
     .split(/[-_]+/)

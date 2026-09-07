@@ -30,6 +30,7 @@ export type SessionThoughtPaneProps = {
   sessionId: string;
   ttsLanguage: SpokenLocale;
   selectedAesthetic: AestheticPackage | undefined;
+  workAestheticImage?: string;
   thought: SessionThoughtInterface;
   chapterThoughtsLocked: boolean;
   projectStash: ExerciseDualLists["stash"];
@@ -64,6 +65,7 @@ export function SessionThoughtPane({
   sessionId,
   ttsLanguage,
   selectedAesthetic,
+  workAestheticImage,
   thought,
   chapterThoughtsLocked,
   projectStash,
@@ -96,6 +98,8 @@ export function SessionThoughtPane({
         sessionId={sessionId}
         ttsLanguage={ttsLanguage}
         aestheticImages={selectedAesthetic?.images}
+        workId={activeChapterKey}
+        workAestheticImage={workAestheticImage}
         aestheticName={selectedAesthetic?.name}
         thought={thought}
         participantIdentity={participantIdentity}

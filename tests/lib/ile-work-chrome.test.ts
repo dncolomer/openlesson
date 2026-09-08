@@ -10,8 +10,10 @@ import { ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
 import {
   aestheticImageForId,
   assignIleWorkAestheticImages,
+  parseIleWorkAestheticStored,
   resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
+import { ileTabUnfocusPowFromFocusEvent, ILE_TAB_UNFOCUS_TOOL_ACTION } from "@/lib/ile-thought-traces";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -79,6 +81,50 @@ describe("resolveIleWorkAestheticImage", () => {
         images: pool,
       }),
     ).toBe(aestheticImageForId("ch-b", pool));
+
+    const firstVisit = assignIleWorkAestheticImages({
+      ids: ["ch-a"],
+      images: pool,
+    });
+    expect(firstVisit["ch-a"]).toBe(aestheticImageForId("ch-a", pool));
+    const stored = JSON.stringify(firstVisit);
+    const parsed = parseIleWorkAestheticStored(stored);
+    const remount = assignIleWorkAestheticImages({
+      ids: ["ch-a"],
+      current: parsed,
+      images: pool,
+    });
+    expect(remount["ch-a"]).toBe(firstVisit["ch-a"]);
+    expect(remount["ch-a"]).toBeTruthy();
+  });
+});
+
+describe("ILE tab unfocus PoW (shipped)", () => {
+  it("visibilitychange hidden and blur produce a stable tab_unfocus action", () => {
+    const hidden = ileTabUnfocusPowFromFocusEvent({
+      type: "visibilitychange",
+      hidden: true,
+      sessionId: "s1",
+      workspaceId: "w1",
+    });
+    expect(hidden?.toolAction).toBe(ILE_TAB_UNFOCUS_TOOL_ACTION);
+    expect(hidden?.toolAction).toBe("tab_unfocus");
+    expect(hidden?.reason).toBe("tab_hidden");
+
+    const visible = ileTabUnfocusPowFromFocusEvent({
+      type: "visibilitychange",
+      hidden: false,
+    });
+    expect(visible).toBeNull();
+
+    const blur = ileTabUnfocusPowFromFocusEvent({ type: "blur" });
+    expect(blur?.toolAction).toBe("tab_unfocus");
+    expect(blur?.reason).toBe("window_blur");
+
+    const speech = read("components/session-view/use-session-speech.ts");
+    expect(speech).toContain("ileTabUnfocusPowFromFocusEvent");
+    expect(speech).toContain("visibilitychange");
+    expect(speech).toContain('addEventListener("blur"');
   });
 });
 

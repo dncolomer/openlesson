@@ -8,6 +8,9 @@ import {
 } from "@/lib/ile-mode";
 import {
   buildIleThoughtTracePayload,
+  ileTabUnfocusPowFromFocusEvent,
+  ILE_TAB_UNFOCUS_TOOL_ACTION,
+  ILE_TAB_UNFOCUS_TOOL_NAME,
   ILE_TRACE_TOOL_NAME,
   type IleSystem1Action,
   type IleSystem2Action,
@@ -347,6 +350,61 @@ const handleProjectDemote = useCallback(
   useEffect(() => {
     bumpUserActivityRef.current = bumpUserActivity;
   }, [bumpUserActivity, bumpUserActivityRef]);
+
+  useEffect(() => {
+    if (!powSessionEnabled) return;
+    let lastSentAt = 0;
+    const sendUnfocus = (type: "visibilitychange" | "blur") => {
+      const event = ileTabUnfocusPowFromFocusEvent({
+        type,
+        hidden: typeof document !== "undefined" ? document.hidden : true,
+        sessionId: ilePowContext.sessionId ?? sessionId ?? "",
+        workspaceId: ilePowContext.workspaceId ?? getWorkspaceId() ?? "",
+        blockId: ilePowContext.blockId ?? null,
+      });
+      if (!event) return;
+      const now = Date.now();
+      if (now - lastSentAt < 2_000) return;
+      lastSentAt = now;
+      const workspaceId = ilePowContext.workspaceId ?? getWorkspaceId();
+      const liveSessionId = ilePowContext.sessionId ?? sessionId;
+      if (!workspaceId || !liveSessionId) return;
+      void uploadIleProofOfWork({
+        workspaceId,
+        sessionId: liveSessionId,
+        type: "tool",
+        mime_type: "application/json",
+        data: textToBase64(JSON.stringify(event.payload)),
+        file_name: `ile-tab-unfocus-${now}.json`,
+        timestamp_ms: now,
+        tool_name: ILE_TAB_UNFOCUS_TOOL_NAME,
+        tool_action: ILE_TAB_UNFOCUS_TOOL_ACTION,
+        metadata: { reason: event.reason, action: ILE_TAB_UNFOCUS_TOOL_ACTION },
+        ileToken,
+        entryQueryParams,
+      }).then((result) => {
+        if (result.interruption) handlePowInterruption(result.interruption, "other");
+      });
+    };
+    const onVisibility = () => sendUnfocus("visibilitychange");
+    const onBlur = () => sendUnfocus("blur");
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [
+    powSessionEnabled,
+    ilePowContext.sessionId,
+    ilePowContext.workspaceId,
+    ilePowContext.blockId,
+    sessionId,
+    getWorkspaceId,
+    ileToken,
+    entryQueryParams,
+    handlePowInterruption,
+  ]);
 
   useEffect(() => {
     if (!powSessionEnabled) {

@@ -10,8 +10,7 @@ import {
   ileHeliosThinkingLine,
   resolveIleDialogueTurn,
 } from "@/lib/ile-dialogue-turn";
-import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
-import { processHeliosMarkdown } from "@/lib/helios-markdown";
+import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
 import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
 
 export type HeliosTurnMode = "idle" | "responding" | "interruption";
@@ -419,11 +418,12 @@ function DialogueSplitIle(
           data-ile-helios-scroll
           className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain"
         >
-          <IleWordBoxText
+          <HeliosMarkdown
             className={`${textClass} ${lastAssistantTurn ? "text-neutral-100" : "text-neutral-300"}`}
-            text={processHeliosMarkdown(lastAssistantTurn ? lastAssistantTurn.content : promptText)}
-            onOpenTool={onOpenWordBoxTool}
-          />
+            onOpenWordBoxTool={onOpenWordBoxTool}
+          >
+            {lastAssistantTurn ? lastAssistantTurn.content : promptText}
+          </HeliosMarkdown>
           {error ? (
             <p className="mt-2 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>
           ) : null}

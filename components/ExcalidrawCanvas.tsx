@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef, useCallback, useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
+import { bindIleSurfaceResize } from "@/lib/ile-compact-window";
 
 // Excalidraw CSS - required for proper rendering
 import "@excalidraw/excalidraw/index.css";
@@ -64,6 +65,7 @@ export function ExcalidrawCanvas({
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
   const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
+  const canvasHostRef = useRef<HTMLDivElement>(null);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
@@ -342,6 +344,15 @@ export function ExcalidrawCanvas({
     setIsLoaded(true);
   }, []);
 
+  useEffect(() => {
+    return bindIleSurfaceResize(canvasHostRef.current, () => {
+      const api = excalidrawAPIRef.current;
+      if (api && typeof api.refresh === "function") {
+        api.refresh();
+      }
+    });
+  }, [isLoaded]);
+
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] rounded-none overflow-hidden">
       {/* Toolbar with Submit to Helios button */}
@@ -415,8 +426,8 @@ export function ExcalidrawCanvas({
         )}
       </div>
 
-      {/* Excalidraw container */}
-      <div className="flex-1 min-h-0 relative">
+      {/* Excalidraw container — ownerDocument.defaultView for PiP pointer/resize */}
+      <div ref={canvasHostRef} className="flex-1 min-h-0 relative" data-ile-excalidraw-host>
         {isLoaded && (
           <Excalidraw
             excalidrawAPI={(api) => {

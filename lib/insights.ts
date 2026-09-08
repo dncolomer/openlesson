@@ -58,6 +58,61 @@ export function workspaceKnowledgeInsightsPath(workspaceId: string): string {
   return `/workspace/${workspaceId}?section=knowledge&subview=insights`;
 }
 
+/** Play-mode top-level Insights tab. */
+export function workspacePlayInsightsPath(workspaceId: string): string {
+  return `/workspace/${workspaceId}?section=insights`;
+}
+
+export const GENERATE_INSIGHTS_ACTION_LABEL = "Generate Insights";
+export const LEARNER_WORK_DRAWER_TITLE = "Work";
+export const GENERATE_INSIGHTS_DRAWER_ID = "generate_insights";
+
+export function insightsTracesUrl(
+  workspaceId: string,
+  blockId?: string | null,
+): string {
+  const base = `/api/insights/traces?workspaceId=${encodeURIComponent(workspaceId)}`;
+  const block = typeof blockId === "string" ? blockId.trim() : "";
+  if (!block) return base;
+  return `${base}&blockId=${encodeURIComponent(block)}`;
+}
+
+export function buildGenerateInsightsSuggestBody(input: {
+  thoughts: Array<{ id: string; text: string }>;
+  modifyingPrompt?: string | null;
+}): { thoughts: Array<{ id: string; text: string }>; modifyingPrompt?: string } {
+  const thoughts = input.thoughts
+    .filter((thought) => thought?.id && thought?.text?.trim())
+    .map((thought) => ({ id: thought.id, text: thought.text.trim() }));
+  const modifyingPrompt = String(input.modifyingPrompt || "").trim();
+  return modifyingPrompt ? { thoughts, modifyingPrompt } : { thoughts };
+}
+
+export function buildGenerateInsightsCreateBody(input: {
+  thoughts: Array<{ id: string; text: string }>;
+  thoughtIds?: string[];
+  workspaceId: string;
+  blockId?: string | null;
+  sessionId?: string | null;
+  modifyingPrompt?: string | null;
+}): Record<string, unknown> {
+  const thoughts = input.thoughts
+    .filter((thought) => thought?.text?.trim())
+    .map((thought) => ({
+      id: thought.id,
+      text: thought.text.trim(),
+    }));
+  const modifyingPrompt = String(input.modifyingPrompt || "").trim();
+  return {
+    thoughts,
+    thoughtIds: input.thoughtIds ?? thoughts.map((thought) => thought.id),
+    workspaceId: input.workspaceId,
+    blockId: input.blockId ?? null,
+    sessionId: input.sessionId ?? null,
+    ...(modifyingPrompt ? { modifyingPrompt } : {}),
+  };
+}
+
 export function formatInsightDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",

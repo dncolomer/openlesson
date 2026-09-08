@@ -184,15 +184,16 @@ export function availableSectionsForMode(input: {
       workspaceKind: input.workspaceKind,
     });
     if (mode === "learner") {
-      // Learner KR: Knowledge only when logged in; no map tab.
-      return kr.filter((s) => s === "knowledge");
+      // Learner KR: Knowledge + Insights when logged in; no map tab.
+      if (!input.isLoggedIn) return [];
+      return ["knowledge", "insights"];
     }
     return kr;
   }
   if (mode === "learner") {
     // Knowledge only when logged in (user-scoped LWM); guests get map only.
     // DAGs / Map Types tabs are Creator-only — never in Learner.
-    if (input.isLoggedIn) return ["workspace", "knowledge"];
+    if (input.isLoggedIn) return ["workspace", "knowledge", "insights"];
     return ["workspace"];
   }
   // Creator: full owner/consumer lists (includes dags for owners).

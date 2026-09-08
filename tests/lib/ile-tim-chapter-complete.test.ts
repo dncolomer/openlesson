@@ -14,6 +14,8 @@ import {
   createIleMapInterruptionScheduler,
   displayChapterMapIcon,
   ileTimDelayProgressFraction,
+  ileTimProgressByTileId,
+  applyIleChapterGenerateResultsToSuggestions,
   beginIleMarkDoneProgress,
   mergeIleMapDelayWithTim,
   remainingIleMapDelayMs,
@@ -206,6 +208,25 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
     });
     expect(emptyAppetite.description).toMatch(/Dijkstra/i);
     expect(emptyAppetite.source_step_id).toBe("ch-done");
+    expect(emptyAppetite.keyword?.toLowerCase()).not.toMatch(/go deeper|apply case/);
+    expect(emptyAppetite.title.toLowerCase()).not.toMatch(/go deeper|apply case/);
+
+    const generated = applyIleChapterGenerateResultsToSuggestions(
+      buildChapterCompleteExpansionSuggestions({
+        completedDescription: "Dijkstra shortest path",
+        completedStepId: "ch-done",
+      }),
+      [
+        {
+          title: "Relaxation order in Dijkstra",
+          description: "Trace why a settled node never needs reopening.",
+          keyword: "Relaxation",
+        },
+      ],
+    );
+    expect(generated[0]?.title).toBe("Relaxation order in Dijkstra");
+    expect(generated[0]?.keyword).toBe("Relaxation");
+    expect(generated.map((item) => item.title).join(" ")).not.toMatch(/Go Deeper|Apply Case/);
     expect(
       buildChapterCompleteExpansionSuggestions({
         completedDescription: "Dijkstra shortest path",
@@ -514,6 +535,30 @@ describe("ILE map interruption scheduler (shipped)", () => {
     expect(onExpand).toHaveBeenCalledTimes(1);
     expect(ileTimDelayProgressFraction(scheduler.getPending(), Date.now())).toBe(0);
   });
+
+  it("progress bars key to tiles that receive the effect; two chapters can run together", () => {
+    const scheduler = createIleMapInterruptionScheduler(vi.fn());
+    scheduler.begin("ch-a");
+    scheduler.begin("ch-b");
+    expect(scheduler.getAllPending().map((row) => row.stepId).sort()).toEqual(["ch-a", "ch-b"]);
+    const bars = ileTimProgressByTileId(scheduler.getAllPending(), Date.now());
+    expect(Object.keys(bars).sort()).toEqual(["ch-a", "ch-b"]);
+    expect(bars["ch-a"]?.running).toBe(true);
+    expect(bars["ch-b"]?.running).toBe(true);
+
+    const expansionBars = ileTimProgressByTileId(
+      {
+        interruptionId: "int_1",
+        delayMs: 8_000,
+        startedAt: Date.now(),
+        stepId: "ch-done",
+        expansionStepIds: ["ch-tim-a", "ch-tim-b"],
+      },
+      Date.now(),
+    );
+    expect(Object.keys(expansionBars).sort()).toEqual(["ch-tim-a", "ch-tim-b"]);
+    expect(expansionBars["ch-done"]).toBeUndefined();
+  });
 });
 
 describe("ILE TIM map interactions catalog + wiring", () => {
@@ -583,7 +628,7 @@ describe("ILE TIM map interactions catalog + wiring", () => {
     expect(idle).toContain("mapDelay");
     expect(idle).toContain("beginMapDelay");
     expect(idle).toContain("mapSchedulerRef.current.begin");
-    expect(view).toContain("ileTimDelayProgressFraction");
+    expect(view).toContain("ileTimProgressByTileId");
     expect(view).toContain("timBlockActionProgress");
     expect(view).toContain("beginMapDelay(stepId)");
     const markDoneIdx = view.indexOf("onMarkChapterCompleted={(stepId) => {");

@@ -55,7 +55,7 @@ export const SECTION_TAB_CONTENT_CLASS =
 export const SETTING_INNER_LAYOUT_CLASS =
   "w-full max-w-none space-y-4";
 
-export type SectionSurfaceKind = "knowledge" | "settings";
+export type SectionSurfaceKind = "knowledge" | "settings" | "insights";
 
 export type WorkspaceSectionIdentity = {
   title: string;
@@ -92,7 +92,8 @@ export function resolveSectionIdentityDisplay(
     notes && notes.length > 160 ? `${notes.slice(0, 157)}…` : notes;
 
   return {
-    eyebrow: kind === "knowledge" ? "Knowledge" : "Settings",
+    eyebrow:
+      kind === "knowledge" ? "Knowledge" : kind === "insights" ? "Insights" : "Settings",
     title,
     subtitle: description,
     showOwnerBadge: identity.isOwner === true,

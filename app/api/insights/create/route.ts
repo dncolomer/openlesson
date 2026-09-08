@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
 
-    const { thoughtIds, thoughts, workspaceId, blockId, sessionId } = await req.json();
+    const { thoughtIds, thoughts, workspaceId, blockId, sessionId, modifyingPrompt } = await req.json();
     const sourceThoughts = Array.isArray(thoughts)
       ? thoughts.filter((t: { text?: string }) => t?.text?.trim())
       : [];
@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
         systemMessage(
           'Turn learner thought traces into one insight bookmark. Return JSON: { "title": "4-12 words", "summary": "2-4 sentences, rephrased synthesis — not a quote dump." }',
         ),
-        userMessage(`Thought traces:\n${thoughtBlock}\n\nSynthesize into one durable insight the learner can revisit.`),
+        userMessage(
+          `Thought traces:\n${thoughtBlock}\n\nSynthesize into one durable insight the learner can revisit.${
+            typeof modifyingPrompt === "string" && modifyingPrompt.trim()
+              ? `\n\nModifying prompt from the learner:\n${modifyingPrompt.trim().slice(0, 2000)}`
+              : ""
+          }`,
+        ),
       ],
       { model: DEFAULT_MODEL, maxTokens: 500, temperature: 0.4 },
     );

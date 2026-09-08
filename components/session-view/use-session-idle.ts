@@ -53,8 +53,11 @@ export function useSessionIdle(input: SessionIdleInput) {
   const onChapterMapExpandRef = useRef(onChapterMapExpand);
   onChapterMapExpandRef.current = onChapterMapExpand;
   const [mapDelay, setMapDelay] = useState<IleMapSchedulerPending | null>(null);
+  const [mapDelayList, setMapDelayList] = useState<IleMapSchedulerPending[]>([]);
   const setMapDelayRef = useRef(setMapDelay);
   setMapDelayRef.current = setMapDelay;
+  const setMapDelayListRef = useRef(setMapDelayList);
+  setMapDelayListRef.current = setMapDelayList;
 
   const mapSchedulerRef = useRef(
     createIleMapInterruptionScheduler(
@@ -62,6 +65,7 @@ export function useSessionIdle(input: SessionIdleInput) {
         onChapterMapExpandRef.current?.(interruption);
       },
       (pending) => setMapDelayRef.current(pending),
+      (pendingList) => setMapDelayListRef.current(pendingList),
     ),
   );
 
@@ -114,6 +118,7 @@ useEffect(() => () => mapSchedulerRef.current.clear(), []);
     applyInterruption,
     clearPendingInterruption,
     mapDelay,
+    mapDelayList,
     beginMapDelay,
     clearMapDelay,
   };

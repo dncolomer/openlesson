@@ -50,6 +50,14 @@ import {
 } from "@/lib/block-previous-sessions";
 import { ileSessionListDisplayName } from "@/lib/ile-session-name";
 import { applyLearnerDrawerRequest } from "@/lib/block-circular-menu";
+import {
+  GENERATE_INSIGHTS_ACTION_LABEL,
+  GENERATE_INSIGHTS_DRAWER_ID,
+  LEARNER_WORK_DRAWER_TITLE,
+  buildGenerateInsightsCreateBody,
+  buildGenerateInsightsSuggestBody,
+  insightsTracesUrl,
+} from "@/lib/insights";
 
 export type LearnerBlockRef = {
   id: string;
@@ -199,6 +207,10 @@ export function WorkspaceLearnerBlockPane({
   );
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
+  const [insightsPrompt, setInsightsPrompt] = useState("");
+  const [insightsBusy, setInsightsBusy] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [insightsStatus, setInsightsStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setPlanningPrompt(String(block.planning_prompt || ""));
@@ -425,6 +437,91 @@ export function WorkspaceLearnerBlockPane({
     [locked, router],
   );
 
+  const generateInsightsFromWork = useCallback(async () => {
+    if (insightsBusy) return;
+    setInsightsBusy(true);
+    setInsightsError(null);
+    setInsightsStatus(null);
+    try {
+      const tracesRes = await fetch(insightsTracesUrl(workspaceId, block.id));
+      const tracesData = await tracesRes.json();
+      if (!tracesRes.ok) {
+        throw new Error(tracesData.error || "Failed to load Work traces");
+      }
+      const thoughts = Array.isArray(tracesData.thoughts) ? tracesData.thoughts : [];
+      if (thoughts.length < 1) {
+        throw new Error("No Work (PoW) traces on this block yet.");
+      }
+      const suggestBody = buildGenerateInsightsSuggestBody({
+        thoughts,
+        modifyingPrompt: insightsPrompt,
+      });
+      const suggestRes = await fetch("/api/insights/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(suggestBody),
+      });
+      const suggestData = await suggestRes.json();
+      if (!suggestRes.ok) {
+        throw new Error(suggestData.error || "Failed to suggest insights");
+      }
+      const suggestions = Array.isArray(suggestData.suggestions)
+        ? suggestData.suggestions
+        : [];
+      if (suggestions.length === 0) {
+        const createRes = await fetch("/api/insights/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            buildGenerateInsightsCreateBody({
+              thoughts,
+              workspaceId,
+              blockId: block.id,
+              modifyingPrompt: insightsPrompt,
+            }),
+          ),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createData.error || "Failed to generate insights");
+        }
+        setInsightsStatus("Created 1 insight from this block’s Work.");
+        return;
+      }
+      let created = 0;
+      for (const suggestion of suggestions) {
+        const source = Array.isArray(suggestion.thoughtIds)
+          ? thoughts.filter((thought: { id: string }) =>
+              suggestion.thoughtIds.includes(thought.id),
+            )
+          : thoughts;
+        const createRes = await fetch("/api/insights/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            buildGenerateInsightsCreateBody({
+              thoughts: source.length ? source : thoughts,
+              thoughtIds: suggestion.thoughtIds,
+              workspaceId,
+              blockId: block.id,
+              modifyingPrompt: insightsPrompt,
+            }),
+          ),
+        });
+        if (createRes.ok) created += 1;
+      }
+      setInsightsStatus(
+        created > 0
+          ? `Created ${created} insight${created === 1 ? "" : "s"} from this block’s Work.`
+          : "No insights could be saved.",
+      );
+    } catch (err) {
+      setInsightsError(err instanceof Error ? err.message : "Failed to generate insights");
+    } finally {
+      setInsightsBusy(false);
+    }
+  }, [block.id, insightsBusy, insightsPrompt, workspaceId]);
+
   return (
     <WorkspaceRightPaneDrawerGroup
       defaultOpenId={defaultOpenId}
@@ -436,11 +533,11 @@ export function WorkspaceLearnerBlockPane({
       data-learner-effect-dynamic={isDynamic ? "true" : "false"}
       className="flex h-full w-full min-h-0 flex-col overflow-hidden bg-neutral-950/95"
     >
-      {/* Practice — launch only */}
+      {/* Work — launch only */}
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="practice"
-        title="Practice"
+        title={LEARNER_WORK_DRAWER_TITLE}
         defaultExpanded={
           !(locked && (showDynamicUnlockDrawer || showLocalDagDrawer))
         }
@@ -494,6 +591,53 @@ export function WorkspaceLearnerBlockPane({
               promptSection={promptSection}
             />
           </div>
+        </div>
+      </WorkspaceRightPaneDrawer>
+
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId={GENERATE_INSIGHTS_DRAWER_ID}
+        title={GENERATE_INSIGHTS_ACTION_LABEL}
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+      >
+        <div data-generate-insights-drawer className="space-y-3">
+          <p className="text-[11px] leading-relaxed text-neutral-400">
+            Generate Insights from this block’s Work (PoW). Optionally add a
+            modifying prompt to steer the synthesis.
+          </p>
+          <label className="block space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+              Modifying prompt
+            </span>
+            <textarea
+              data-generate-insights-prompt
+              value={insightsPrompt}
+              onChange={(e) => setInsightsPrompt(e.target.value)}
+              placeholder="Optional: focus on misconceptions, a comparison, a next step…"
+              rows={3}
+              className="w-full resize-none rounded-none border border-neutral-700/60 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            data-generate-insights-action
+            disabled={insightsBusy}
+            onClick={() => void generateInsightsFromWork()}
+            className="w-full rounded-none bg-white px-2 py-1.5 text-[11px] font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-40"
+          >
+            {insightsBusy ? "Generating…" : GENERATE_INSIGHTS_ACTION_LABEL}
+          </button>
+          {insightsError ? (
+            <p className="text-[11px] text-rose-300" data-generate-insights-error>
+              {insightsError}
+            </p>
+          ) : null}
+          {insightsStatus ? (
+            <p className="text-[11px] text-neutral-300" data-generate-insights-status>
+              {insightsStatus}
+            </p>
+          ) : null}
         </div>
       </WorkspaceRightPaneDrawer>
 

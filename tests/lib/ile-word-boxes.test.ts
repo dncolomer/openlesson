@@ -16,6 +16,8 @@ import {
   ileWordBoxApplyWindowPointerUp,
   ileWordBoxMenuActions,
   ileWordBoxMenuPosition,
+  ileWordBoxPortalTarget,
+  resolveIleWordBoxView,
   ileWordBoxPointerDown,
   ileWordBoxPointerEnter,
   ileWordBoxPointerIdle,
@@ -178,6 +180,25 @@ describe("ile word-box helpers (shipped)", () => {
       left: 120 + ILE_WORD_BOX_MENU_OFFSET_PX,
       top: 80 + ILE_WORD_BOX_MENU_OFFSET_PX,
     });
+    const pipView = {
+      document: { body: { id: "pip-body" }, innerWidth: 640, innerHeight: 720 },
+      innerWidth: 640,
+      innerHeight: 720,
+      body: { id: "pip-body" },
+    };
+    const pipPos = ileWordBoxMenuPosition({
+      clientX: 600,
+      clientY: 700,
+      view: pipView,
+    });
+    expect(pipPos.left).toBeLessThan(600);
+    expect(pipPos.top).toBeLessThan(700);
+    expect(ileWordBoxPortalTarget(pipView)).toEqual({ id: "pip-body" });
+    expect(
+      resolveIleWordBoxView(null, pipView)?.innerWidth,
+    ).toBe(640);
+    expect(resolveIleWordBoxView(null, pipView)?.body).toEqual({ id: "pip-body" });
+
     const flipped = ileWordBoxMenuPosition({
       clientX: 790,
       clientY: 590,
@@ -258,8 +279,10 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(boxes).toContain("ileWordBoxMenuPosition");
     expect(boxes).toContain("ileWordBoxShouldClearSelection");
     expect(boxes).toContain("createPortal");
+    expect(boxes).toContain("resolveIleWordBoxView");
+    expect(boxes).toContain("ileWordBoxPortalTarget");
     expect(boxes).toContain('data-ile-word-box-menu-at="pointer"');
-    expect(boxes).toContain('window.addEventListener("pointerdown"');
+    expect(boxes).toContain('viewWindow.addEventListener("pointerdown"');
     expect(boxes).toContain("pointerRef");
     expect(boxes).toContain("data-ile-word-box-open");
     expect(boxes).toContain("data-ile-word-box-menu-text");
@@ -280,11 +303,11 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(boxes).not.toContain("data-ile-concept-mark");
 
     const ileFn = ui.slice(ui.indexOf("function DialogueSplitIle"), ui.indexOf("function DialogueSplitFramed"));
-    expect(ileFn).toContain("IleWordBoxText");
+    expect(ileFn).toContain("HeliosMarkdown");
     expect(ileFn).toContain("onOpenWordBoxTool");
-    expect(ileFn).not.toContain("<HeliosMarkdown");
+    expect(ileFn).toContain("<HeliosMarkdown");
     expect(ileFn).not.toContain("onConceptClick");
-    expect(helios).toContain("IleWordBoxText");
+    expect(helios).toContain("HeliosMarkdown");
     expect(helios).toContain("onOpenWordBoxTool={onOpenWordBoxTool}");
     expect(helios).not.toContain("IleConceptMarkedText");
     expect(helios).not.toContain("data-ile-concept-mark");
@@ -293,6 +316,10 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(markdown).not.toContain("onConceptClick");
     expect(markdown).not.toContain("encodeIleConceptMarkdown");
     expect(markdown).not.toContain("IleConceptMark");
+    expect(markdown).toContain("IleWordBoxText");
+    expect(markdown).toContain("onOpenWordBoxTool");
+    expect(markdown).toContain("processHeliosMarkdown");
+    expect(markdown).toContain("data-helios-markdown");
 
     expect(view).toContain("openIleWordBoxTool");
     expect(view).toContain("onOpenWordBoxTool");

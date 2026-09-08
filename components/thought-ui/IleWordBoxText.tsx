@@ -9,7 +9,9 @@ import {
   ileWordBoxPointerDown,
   ileWordBoxPointerEnter,
   ileWordBoxPointerIdle,
+  ileWordBoxPortalTarget,
   ileWordBoxShouldClearSelection,
+  resolveIleWordBoxView,
   splitIleTurnWords,
   type IleWordBoxMenuAction,
   type IleWordBoxPointerState,
@@ -28,6 +30,7 @@ export function IleWordBoxText({
   const tokensRef = useRef(tokens);
   tokensRef.current = tokens;
   const pointerRef = useRef<IleWordBoxPointerState>(ileWordBoxPointerIdle());
+  const surfaceRef = useRef<HTMLSpanElement>(null);
   const [selected, setSelected] = useState<{ from: number; to: number } | null>(null);
   const [menu, setMenu] = useState<{ text: string; left: number; top: number } | null>(null);
   const selectedRef = useRef(selected);
@@ -36,6 +39,14 @@ export function IleWordBoxText({
   menuRef.current = menu;
 
   useEffect(() => {
+    const view = resolveIleWordBoxView(surfaceRef.current, {
+      document,
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      body: document.body,
+    });
+    const viewWindow =
+      (view?.document?.defaultView as Window | null | undefined) ?? window;
     const onUp = (event: PointerEvent) => {
       const released = ileWordBoxApplyWindowPointerUp(
         pointerRef.current,
@@ -50,8 +61,9 @@ export function IleWordBoxText({
       const pos = ileWordBoxMenuPosition({
         clientX: event.clientX,
         clientY: event.clientY,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        view,
+        viewportWidth: viewWindow.innerWidth,
+        viewportHeight: viewWindow.innerHeight,
       });
       setMenu({ text: released.menuText, left: pos.left, top: pos.top });
     };
@@ -68,18 +80,19 @@ export function IleWordBoxText({
       setMenu(null);
       setSelected(null);
     };
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    window.addEventListener("pointerdown", onDown);
+    viewWindow.addEventListener("pointerup", onUp);
+    viewWindow.addEventListener("pointercancel", onUp);
+    viewWindow.addEventListener("pointerdown", onDown);
     return () => {
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      window.removeEventListener("pointerdown", onDown);
+      viewWindow.removeEventListener("pointerup", onUp);
+      viewWindow.removeEventListener("pointercancel", onUp);
+      viewWindow.removeEventListener("pointerdown", onDown);
     };
   }, []);
 
   return (
     <span
+      ref={surfaceRef}
       data-ile-word-box-surface
       className={className}
       style={{ userSelect: "none", WebkitUserSelect: "none" }}
@@ -135,7 +148,7 @@ export function IleWordBoxText({
           </span>
         );
       })}
-      {menu && typeof document !== "undefined"
+      {menu
         ? createPortal(
             <span
               data-ile-word-box-menu
@@ -167,7 +180,14 @@ export function IleWordBoxText({
                 </span>
               ))}
             </span>,
-            document.body,
+            (ileWordBoxPortalTarget(
+              resolveIleWordBoxView(surfaceRef.current, {
+                document,
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                body: document.body,
+              }),
+            ) as Element | null) ?? document.body,
           )
         : null}
     </span>

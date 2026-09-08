@@ -172,7 +172,7 @@ describe("Knowledge Region shell", () => {
         isLoggedIn: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["knowledge"]);
+    ).toEqual(["knowledge", "insights"]);
     expect(
       availableSectionsForMode({
         mode: "learner",

@@ -166,18 +166,84 @@ export const ILE_WORD_BOX_MENU_OFFSET_PX = 8;
 export const ILE_WORD_BOX_MENU_WIDTH_PX = 176;
 export const ILE_WORD_BOX_MENU_HEIGHT_PX = 80;
 
+export type IleWordBoxView = {
+  document: { body?: unknown | null; defaultView?: IleWordBoxView | null } | null;
+  innerWidth: number;
+  innerHeight: number;
+  body: unknown | null;
+};
+
+/**
+ * Resolve the document/window that owns a word-box surface.
+ * Document PiP must use the PiP window — not the opener.
+ */
+export function resolveIleWordBoxView(
+  node?: { ownerDocument?: { defaultView?: unknown; body?: unknown } | null } | null,
+  fallback?: Partial<IleWordBoxView> | null,
+): IleWordBoxView | null {
+  const ownerDoc = node?.ownerDocument ?? null;
+  const ownerWin = ownerDoc?.defaultView as
+    | { innerWidth?: number; innerHeight?: number; document?: { body?: unknown } }
+    | null
+    | undefined;
+  if (ownerDoc) {
+    return {
+      document: ownerDoc,
+      innerWidth: Number(ownerWin?.innerWidth) || Number(fallback?.innerWidth) || 0,
+      innerHeight: Number(ownerWin?.innerHeight) || Number(fallback?.innerHeight) || 0,
+      body: ownerDoc.body ?? fallback?.body ?? null,
+    };
+  }
+  if (!fallback) return null;
+  return {
+    document: fallback.document ?? null,
+    innerWidth: Number(fallback.innerWidth) || 0,
+    innerHeight: Number(fallback.innerHeight) || 0,
+    body: fallback.body ?? fallback.document?.body ?? null,
+  };
+}
+
+/** Portal the Open Grok / Open Dantes menu into the owning document body (PiP or opener). */
+export function ileWordBoxPortalTarget(
+  view: Pick<IleWordBoxView, "body" | "document"> | null | undefined,
+): unknown | null {
+  if (view?.body) return view.body;
+  if (view?.document?.body) return view.document.body;
+  return null;
+}
+
+function viewportFromInput(input: {
+  viewportWidth?: number;
+  viewportHeight?: number;
+  view?: { innerWidth?: number; innerHeight?: number; document?: unknown; body?: unknown } | null;
+}): { vw: number; vh: number } {
+  const fromViewW = Number(input.view?.innerWidth);
+  const fromViewH = Number(input.view?.innerHeight);
+  const vw = Number.isFinite(input.viewportWidth)
+    ? Number(input.viewportWidth)
+    : Number.isFinite(fromViewW)
+      ? fromViewW
+      : Number.POSITIVE_INFINITY;
+  const vh = Number.isFinite(input.viewportHeight)
+    ? Number(input.viewportHeight)
+    : Number.isFinite(fromViewH)
+      ? fromViewH
+      : Number.POSITIVE_INFINITY;
+  return { vw, vh };
+}
+
 /** Place Open Grok / Open Dantes beside the pointer, flipping if near the viewport edge. */
 export function ileWordBoxMenuPosition(input: {
   clientX: number;
   clientY: number;
   viewportWidth?: number;
   viewportHeight?: number;
+  view?: { innerWidth?: number; innerHeight?: number; document?: unknown; body?: unknown } | null;
 }): { left: number; top: number } {
   const x = Number(input.clientX) || 0;
   const y = Number(input.clientY) || 0;
   const offset = ILE_WORD_BOX_MENU_OFFSET_PX;
-  const vw = Number.isFinite(input.viewportWidth) ? Number(input.viewportWidth) : Number.POSITIVE_INFINITY;
-  const vh = Number.isFinite(input.viewportHeight) ? Number(input.viewportHeight) : Number.POSITIVE_INFINITY;
+  const { vw, vh } = viewportFromInput(input);
   let left = x + offset;
   let top = y + offset;
   if (left + ILE_WORD_BOX_MENU_WIDTH_PX > vw) {

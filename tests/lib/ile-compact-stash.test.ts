@@ -244,6 +244,12 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(frame).toContain("data-ile-helios-widget");
     expect(frame).toContain(">Work</span>");
     expect(frame).toContain("ileCompactRootFillStyle");
+    const compactWindow = read("lib/ile-compact-window.ts");
+    expect(compactWindow).toContain("bindIleSurfaceResize");
+    expect(compactWindow).toContain("resolveIleSurfaceView");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("bindIleSurfaceResize");
+    expect(canvas).toContain("data-ile-excalidraw-host");
     expect(frame).toContain('data-ile-compact-stash={compact ? "true" : undefined}');
 
     const hook = read("lib/useIleBlurScreenshare.tsx");

@@ -16,6 +16,7 @@ import type { DeviceStatus } from "@/lib/muse-athena";
 import type { Session, SessionPlanStep } from "@/lib/storage";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { SessionViewTranslate } from "@/components/session-view/types";
+import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
 
 export type SessionToolPanesProps = {
   t: SessionViewTranslate;
@@ -31,6 +32,7 @@ export type SessionToolPanesProps = {
   onCanvasChange: (data: string) => void;
   onSceneChange: (data: { elements: any[]; appState: any; files: any }) => void;
   activeChapterLabel: string;
+  activeChapterKey: string;
   notebookContent: string;
   onNotebookChange: (value: string) => void;
   resolvedSessionMode: IleSessionMode;
@@ -81,6 +83,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
     onCanvasChange,
     onSceneChange,
     activeChapterLabel,
+    activeChapterKey,
     notebookContent,
     onNotebookChange,
     resolvedSessionMode,
@@ -124,7 +127,7 @@ export function SessionToolPanes(props: SessionToolPanesProps) {
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
           <ExcalidrawCanvas
-            key={session.id}
+            key={ileChapterCanvasRemountKey(session.id, activeChapterKey)}
             initialData={whiteboardData || undefined}
             initialSceneData={whiteboardSceneData}
             onCanvasChange={onCanvasChange}

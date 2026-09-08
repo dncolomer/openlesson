@@ -17,6 +17,7 @@ export interface ScreenCaptureInstance {
   captureNow: () => Promise<Blob | null>;
   isCapturing: () => boolean;
   getStream: () => MediaStream | null;
+  getStreamOwner: () => ScreenCaptureMediaSource;
 }
 
 /** User closed the picker or denied display-media — not an application failure. */
@@ -55,6 +56,36 @@ export type ScreenCaptureMediaHost = {
 };
 
 export type ScreenCaptureMediaSource = "pip" | "opener" | "none";
+
+/**
+ * Clone a display-media stream so the opener can own tracks independently of
+ * the Document PiP browsing context that may have called getDisplayMedia.
+ */
+export function adoptScreenCaptureStreamOnOpener(stream: MediaStream): MediaStream {
+  if (typeof stream.clone === "function") {
+    return stream.clone();
+  }
+  const adopted = new MediaStream();
+  for (const track of stream.getTracks()) {
+    adopted.addTrack(typeof track.clone === "function" ? track.clone() : track);
+  }
+  return adopted;
+}
+
+/**
+ * Closing a PiP host must not stop an opener-held stream. PiP-owned streams
+ * still end with the host.
+ */
+export function screenCaptureShouldStopOnHostClose(input: {
+  streamOwner: ScreenCaptureMediaSource | string | null | undefined;
+  hostClosed: boolean;
+  host?: "pip" | "opener";
+}): boolean {
+  if (!input.hostClosed) return false;
+  const host = input.host ?? "pip";
+  if (input.streamOwner === "opener") return false;
+  return host === "pip" || host === "opener";
+}
 
 function hostHasGetDisplayMedia(
   host: ScreenCaptureMediaHost | null | undefined,
@@ -98,6 +129,7 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
   } = options;
 
   let stream: MediaStream | null = null;
+  let streamOwner: ScreenCaptureMediaSource = "none";
   let videoElement: HTMLVideoElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -177,14 +209,20 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
       }
       console.log("[ScreenCapture] Requesting getDisplayMedia...", resolved.source);
       // Request screen capture permission from a visible document (PiP when the ILE tab is hidden).
-      stream = await resolved.mediaDevices.getDisplayMedia({
+      const pipStream = await resolved.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: "monitor", // Prefer full screen
           frameRate: 1, // Low framerate since we only need screenshots
         },
         audio: false,
       });
-      console.log("[ScreenCapture] Got stream:", stream);
+      // Own tracks on the opener so closing Document PiP does not end capture.
+      stream =
+        resolved.source === "pip"
+          ? adoptScreenCaptureStreamOnOpener(pipStream)
+          : pipStream;
+      streamOwner = "opener";
+      console.log("[ScreenCapture] Got stream:", stream, "owner:", streamOwner);
 
       // Handle stream ending (user clicked "Stop sharing")
       stream.getVideoTracks()[0].addEventListener("ended", () => {
@@ -266,6 +304,7 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
     captureNow,
     isCapturing: () => isActive,
     getStream: () => stream,
+    getStreamOwner: () => streamOwner,
   };
 }
 

@@ -21,6 +21,7 @@ Nav labels (EN): Workspace · DAGs · Map Types · Goals · Context · Simulatio
 | **`map_types`** | Workspace owner only (Creator / Build mode; hidden in Play and Explore) | Author custom chapter-map types and enable/disable built-ins; types are generator context, not 1:1 templates |
 | **`goals`** | Owner / org admin only | Multi natural-language **workspace goals** CRUD (`mountsGoalsPanel`); block goals live on block-detail drawer |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
+| **`insights`** | Play (learner) mode only — not in Build/creator nav | Workspace-related Insights list (`mountsInsightsPanel`); generated from Work/PoW. Not a Knowledge subview. |
 | **`settings`** | Owner / org admin only | Identity (title/description — not goals), access, guest links, data studio, knowledge portal, integrations |
 
 **Note:** Privileged sections (`knowledge`, `settings`, `goals`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** and **Map Types** are also hidden in Learner mode.

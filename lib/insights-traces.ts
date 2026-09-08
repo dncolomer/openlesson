@@ -74,21 +74,26 @@ export function extractInsightThoughtsFromPowRows(rows: PowTraceRow[]): Workspac
 export async function fetchWorkspaceInsightThoughts(
   supabase: SupabaseClient,
   workspaceId: string,
+  blockId?: string | null,
 ): Promise<WorkspaceInsightThought[]> {
-  const { data, error } = await queryWorkspaceProofOfWorkRows<PowTraceRow>(
-    supabase
-      .from("workspace_proof_of_work")
-      .select("id, session_id, block_id, timestamp_ms, created_at, metadata, tool_action")
-      .eq("workspace_id", workspaceId)
-      .eq("tool_name", ILE_TRACE_TOOL_NAME)
-      .order("timestamp_ms", { ascending: false })
-      .limit(INSIGHT_TRACE_SCAN_LIMIT),
-  );
+  let query = supabase
+    .from("workspace_proof_of_work")
+    .select("id, session_id, block_id, timestamp_ms, created_at, metadata, tool_action")
+    .eq("workspace_id", workspaceId)
+    .eq("tool_name", ILE_TRACE_TOOL_NAME)
+    .order("timestamp_ms", { ascending: false })
+    .limit(INSIGHT_TRACE_SCAN_LIMIT);
+  const scopedBlock = typeof blockId === "string" ? blockId.trim() : "";
+  if (scopedBlock) {
+    query = query.eq("block_id", scopedBlock);
+  }
+  const { data, error } = await queryWorkspaceProofOfWorkRows<PowTraceRow>(query);
 
   if (error) {
     throw new Error(error.message || "Failed to load thought traces");
   }
 
-  // Rows come newest-first; extractor re-sorts ascending.
-  return extractInsightThoughtsFromPowRows(data);
+  const thoughts = extractInsightThoughtsFromPowRows(data);
+  if (!scopedBlock) return thoughts;
+  return thoughts.filter((thought) => thought.blockId === scopedBlock);
 }

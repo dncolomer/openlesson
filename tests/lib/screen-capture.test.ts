@@ -3,10 +3,12 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  adoptScreenCaptureStreamOnOpener,
   isScreenCaptureInvalidState,
   isScreenCaptureStartQuietFailure,
   isScreenCaptureUserDenied,
   resolveScreenCaptureMediaDevices,
+  screenCaptureShouldStopOnHostClose,
 } from "@/lib/screen-capture";
 
 function gdm() {
@@ -41,6 +43,42 @@ describe("resolveScreenCaptureMediaDevices (shipped)", () => {
     });
     expect(resolved.source).toBe("opener");
     expect(resolved.mediaDevices?.getDisplayMedia).toBe(openerGdm);
+  });
+});
+
+describe("screen capture stream lifetime vs PiP host (shipped)", () => {
+  it("opener-held stream does not stop when the PiP host closes", () => {
+    const original = {
+      clone() {
+        return { id: "opener-clone", getTracks: () => [] } as unknown as MediaStream;
+      },
+      getTracks() {
+        return [];
+      },
+    } as unknown as MediaStream;
+    const adopted = adoptScreenCaptureStreamOnOpener(original);
+    expect(adopted).not.toBe(original);
+
+    expect(
+      screenCaptureShouldStopOnHostClose({
+        streamOwner: "opener",
+        hostClosed: true,
+        host: "pip",
+      }),
+    ).toBe(false);
+    expect(
+      screenCaptureShouldStopOnHostClose({
+        streamOwner: "pip",
+        hostClosed: true,
+        host: "pip",
+      }),
+    ).toBe(true);
+    expect(
+      screenCaptureShouldStopOnHostClose({
+        streamOwner: "opener",
+        hostClosed: false,
+      }),
+    ).toBe(false);
   });
 });
 

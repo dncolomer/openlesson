@@ -15,6 +15,7 @@ export type WorkspaceSectionKey =
   | "map_types"
   | "goals"
   | "knowledge"
+  | "insights"
   | "settings";
 
 /** @deprecated Local tab keys no longer drive the Workspace section UI. */
@@ -28,6 +29,7 @@ export type WorkspaceMainSurface =
   | "map_types"
   | "goals"
   | "knowledge"
+  | "insights"
   | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
@@ -38,6 +40,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "context",
   "simulation",
   "knowledge",
+  "insights",
   "settings",
 ] as const;
 
@@ -64,6 +67,8 @@ export type WorkspaceSectionLayout = {
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
   mountsIntegrationPanel: boolean;
+  /** Play-only Insights list (not a Knowledge subview). */
+  mountsInsightsPanel: boolean;
 };
 
 /**
@@ -88,6 +93,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
     case "simulation":
       return {
@@ -103,6 +109,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
     case "dags":
       return {
@@ -118,6 +125,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
     case "map_types":
       return {
@@ -133,6 +141,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
     case "goals":
       return {
@@ -148,6 +157,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
     case "knowledge":
       return {
@@ -163,6 +173,23 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+      };
+    case "insights":
+      return {
+        section: "insights",
+        mainSurface: "insights",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: true,
       };
     case "settings":
       return {
@@ -178,6 +205,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
+        mountsInsightsPanel: false,
       };
     case "workspace":
     default:
@@ -194,6 +222,7 @@ export function resolveWorkspaceSectionLayout(
         localTabs: WORKSPACE_LOCAL_TABS,
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
       };
   }
 }

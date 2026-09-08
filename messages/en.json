@@ -2083,6 +2083,7 @@
     "mapTypesPromptHint": "Layout context sent when a new session map is generated from this type.",
     "sectionGoals": "Goals",
     "sectionKnowledge": "Knowledge",
+    "sectionInsights": "Insights",
     "sectionSetting": "Settings",
     "topLevelSectionsNav": "Workspace areas",
     "performanceSubTabInsights": "Insights",

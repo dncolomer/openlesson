@@ -155,6 +155,54 @@ export function ileCompactRootFillStyle(): { height: "100%"; minHeight: 0 } {
   return { height: "100%", minHeight: 0 };
 }
 
+export type IleSurfaceView = {
+  document: Document;
+  window: Window;
+  innerWidth: number;
+  innerHeight: number;
+  body: HTMLElement | null;
+};
+
+/** PiP / popup painting surface — ownerDocument.defaultView, never the opener. */
+export function resolveIleSurfaceView(
+  node?: { ownerDocument?: Document | null } | null,
+): IleSurfaceView | null {
+  const doc = node?.ownerDocument ?? null;
+  const win = doc?.defaultView ?? null;
+  if (!doc || !win) return null;
+  return {
+    document: doc,
+    window: win,
+    innerWidth: win.innerWidth,
+    innerHeight: win.innerHeight,
+    body: doc.body ?? null,
+  };
+}
+
+/** Bind resize to the surface window so Excalidraw in PiP stays in sync. */
+export function bindIleSurfaceResize(
+  node: { ownerDocument?: Document | null } | null | undefined,
+  onResize: () => void,
+): () => void {
+  const view = resolveIleSurfaceView(node ?? null);
+  if (!view) return () => {};
+  const handler = () => onResize();
+  view.window.addEventListener("resize", handler);
+  let observer: ResizeObserver | null = null;
+  if (typeof ResizeObserver === "function" && node && "getBoundingClientRect" in node) {
+    observer = new ResizeObserver(handler);
+    try {
+      observer.observe(node as Element);
+    } catch {
+      observer = null;
+    }
+  }
+  return () => {
+    view.window.removeEventListener("resize", handler);
+    observer?.disconnect();
+  };
+}
+
 export function styleIleCompactDocument(doc: Document): void {
   const fill = ileCompactDocumentFillStyles();
   doc.documentElement.style.height = fill.html.height;

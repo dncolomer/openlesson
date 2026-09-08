@@ -38,13 +38,16 @@ function read(rel: string) {
 }
 
 describe("workspace mode pure resolvers", () => {
-  it("Learner sections: workspace + knowledge when logged in", () => {
+  it("Learner sections: workspace + knowledge + insights when logged in", () => {
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: true }),
-    ).toEqual(["workspace", "knowledge"]);
+    ).toEqual(["workspace", "knowledge", "insights"]);
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: false }),
     ).toEqual(["workspace"]);
+    expect(
+      availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
+    ).not.toContain("insights");
   });
 
   it("Creator keeps full owner sections", () => {
@@ -473,9 +476,15 @@ describe("learner mode UI structural", () => {
     expect(grid).not.toMatch(
       /if \(nodes\.length === 0 && !canEdit\)[\s\S]{0,80}labels\.emptyCell/,
     );
-    // Practice drawer: BlockDetailCard launch UI
+    // Work drawer: BlockDetailCard launch UI
     expect(learner).toContain("BlockDetailCard");
     expect(learner).toContain('drawerId="practice"');
+    expect(learner).toContain("LEARNER_WORK_DRAWER_TITLE");
+    expect(learner).toContain("GENERATE_INSIGHTS_ACTION_LABEL");
+    expect(learner).toContain("data-generate-insights-drawer");
+    expect(learner).toContain("data-generate-insights-prompt");
+    expect(learner).toContain("data-generate-insights-action");
+    expect(learner).not.toContain('title="Practice"');
     expect(learner).toContain("data-learner-explore-drill");
     expect(learner).toContain("data-learner-launch-card");
     expect(learner).toContain("data-learner-planning-prompt");

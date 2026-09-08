@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
 
-    const { thoughts } = await req.json();
+    const { thoughts, modifyingPrompt } = await req.json();
     const sourceThoughts = Array.isArray(thoughts)
       ? thoughts
           .filter((thought: { id?: string; text?: string }) => typeof thought?.id === "string" && thought?.text?.trim())
@@ -62,7 +62,13 @@ Rules:
 - Each suggestion must include at least 2 thoughtIds.
 - Traces may appear in at most one suggestion.`,
         ),
-        userMessage(`Thought traces:\n${thoughtBlock}\n\nSuggest insight bookmarks that group related traces.`),
+        userMessage(
+          `Thought traces:\n${thoughtBlock}\n\nSuggest insight bookmarks that group related traces.${
+            typeof modifyingPrompt === "string" && modifyingPrompt.trim()
+              ? `\n\nModifying prompt from the learner:\n${modifyingPrompt.trim().slice(0, 2000)}`
+              : ""
+          }`,
+        ),
       ],
       { model: DEFAULT_MODEL, maxTokens: 900, temperature: 0.35 },
     );

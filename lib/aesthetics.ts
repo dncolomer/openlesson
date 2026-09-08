@@ -29,9 +29,30 @@ export function aestheticImagesForSlots(count: number, images = FALLBACK_AESTHET
   return picks;
 }
 
+export function ileWorkAestheticStorageKey(sessionId: string): string {
+  return `uncertain-systems:${sessionId}:work-aesthetics`;
+}
+
+export function parseIleWorkAestheticStored(
+  raw: string | null | undefined,
+): Record<string, string> | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const next: Record<string, string> = {};
+    for (const [id, value] of Object.entries(parsed)) {
+      if (typeof value === "string" && value.trim()) next[id] = value.trim();
+    }
+    return next;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Session-lived Work stills: keep an existing pick, assign a fresh unused
- * image for new ids. Reload drops React state so picks can change.
+ * Session-lived Work stills: keep an existing pick, assign a stable per-id
+ * unused image for new ids so leave/return does not drop stills.
  */
 export function assignIleWorkAestheticImages(input: {
   ids: readonly string[] | null | undefined;
@@ -52,22 +73,25 @@ export function assignIleWorkAestheticImages(input: {
       : FALLBACK_AESTHETIC_IMAGES;
   const next: Record<string, string> = {};
   for (const id of ids) {
-    const existing = input.current?.[id];
+    const existing = String(input.current?.[id] || "").trim();
     if (existing) next[id] = existing;
   }
   const used = new Set(Object.values(next));
-  const random = input.random ?? Math.random;
+  const random = input.random;
   for (const id of ids) {
     if (next[id]) continue;
     const unused = pool.filter((image) => !used.has(image));
     const source = unused.length > 0 ? unused : pool;
-    const index = Math.min(
-      source.length - 1,
-      Math.max(0, Math.floor(random() * source.length)),
-    );
-    const image = source[index] ?? pool[0];
-    next[id] = image;
-    used.add(image);
+    const image = random
+      ? source[
+          Math.min(
+            source.length - 1,
+            Math.max(0, Math.floor(random() * source.length)),
+          )
+        ]
+      : aestheticImageForId(id, source);
+    next[id] = image ?? pool[0];
+    used.add(next[id]);
   }
   return next;
 }

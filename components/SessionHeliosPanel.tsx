@@ -23,7 +23,7 @@ import {
 import { applyIleContextFullAutoStash } from "@/lib/ile-context-auto-stash";
 import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
-import { IleWordBoxText } from "@/components/thought-ui/IleWordBoxText";
+import { HeliosMarkdown } from "@/components/thought-ui/HeliosMarkdown";
 import type { IleWordBoxMenuAction } from "@/lib/ile-word-boxes";
 import {
   IleChapterHeliosActions,
@@ -230,10 +230,9 @@ export function SessionHeliosPanel({
                   <p
                     className="mt-2.5 min-h-0 flex-1 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed"
                   >
-                    <IleWordBoxText
-                      text={chapterPrompt}
-                      onOpenTool={onOpenWordBoxTool}
-                    />
+                    <HeliosMarkdown onOpenWordBoxTool={onOpenWordBoxTool}>
+                      {chapterPrompt}
+                    </HeliosMarkdown>
                   </p>
                   {chapterThoughtsLocked ? (
                     <div

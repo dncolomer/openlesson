@@ -2,6 +2,8 @@ export const ILE_TRACE_TOOL_NAME = "ile-thought-trace";
 export const ILE_CHAT_TOOL_NAME = "ile-helios-chat";
 export const ILE_IDLE_TOOL_NAME = "ile-idle-heartbeat";
 export const ILE_SPEECH_TOOL_NAME = "ile-speech-segment";
+export const ILE_TAB_UNFOCUS_TOOL_NAME = "ile-tab-unfocus";
+export const ILE_TAB_UNFOCUS_TOOL_ACTION = "tab_unfocus";
 export const ILE_IDLE_POW_INTERVAL_MS = 60_000;
 
 export type IleTraceType = "system1" | "system2";
@@ -95,6 +97,51 @@ export function buildIleIdleHeartbeatPayload(input: {
     has_pending_transcription: Boolean(input.hasPendingTranscription),
     timestamp_ms: timestampMs,
     at: new Date(timestampMs).toISOString(),
+  };
+}
+
+export type IleTabUnfocusReason = "tab_hidden" | "window_blur";
+
+export interface IleTabUnfocusPayload {
+  type: "uncertain_systems_ile_tab_unfocus";
+  session_id: string;
+  workspace_id: string;
+  block_id?: string | null;
+  reason: IleTabUnfocusReason;
+  timestamp_ms: number;
+  at: string;
+}
+
+export function ileTabUnfocusPowFromFocusEvent(input: {
+  type: "visibilitychange" | "blur";
+  hidden?: boolean;
+  sessionId?: string;
+  workspaceId?: string;
+  blockId?: string | null;
+  timestampMs?: number;
+}): {
+  toolName: typeof ILE_TAB_UNFOCUS_TOOL_NAME;
+  toolAction: typeof ILE_TAB_UNFOCUS_TOOL_ACTION;
+  reason: IleTabUnfocusReason;
+  payload: IleTabUnfocusPayload;
+} | null {
+  if (input.type === "visibilitychange" && input.hidden !== true) return null;
+  const reason: IleTabUnfocusReason =
+    input.type === "blur" ? "window_blur" : "tab_hidden";
+  const timestampMs = input.timestampMs ?? Date.now();
+  return {
+    toolName: ILE_TAB_UNFOCUS_TOOL_NAME,
+    toolAction: ILE_TAB_UNFOCUS_TOOL_ACTION,
+    reason,
+    payload: {
+      type: "uncertain_systems_ile_tab_unfocus",
+      session_id: String(input.sessionId || ""),
+      workspace_id: String(input.workspaceId || ""),
+      block_id: input.blockId ?? null,
+      reason,
+      timestamp_ms: timestampMs,
+      at: new Date(timestampMs).toISOString(),
+    },
   };
 }
 

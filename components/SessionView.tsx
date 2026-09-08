@@ -69,7 +69,11 @@ import {
   parseGatherSeenBlockIds,
 } from "@/lib/block-circular-menu";
 import { countIleUnsubmittedPowDisplay, toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
-import { assignIleWorkAestheticImages } from "@/lib/aesthetics";
+import {
+  assignIleWorkAestheticImages,
+  ileWorkAestheticStorageKey,
+  parseIleWorkAestheticStored,
+} from "@/lib/aesthetics";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
 import {
   chapterHasPendingHeliosReply,
@@ -78,7 +82,7 @@ import {
   sameIleIdList,
 } from "@/lib/ile-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
-import { ileTimDelayProgressFraction } from "@/lib/ile-tim-chapter-complete";
+import { ileTimProgressByTileId } from "@/lib/ile-tim-chapter-complete";
 import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import {
   isIleChapterThoughtsLocked,
@@ -664,7 +668,7 @@ export function SessionView({
   const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
 
   const bumpUserActivityRef = useRef<() => void>(() => {});
-  const { handlePowInterruption, clearPendingInterruption, mapDelay, beginMapDelay, clearMapDelay } = useSessionIdle({
+  const { handlePowInterruption, clearPendingInterruption, mapDelay, mapDelayList, beginMapDelay, clearMapDelay } = useSessionIdle({
     activeChapterKey,
     updateChapterWorkspace,
     setHeliosTurnMode,
@@ -674,21 +678,14 @@ export function SessionView({
 
   const [timDelayNow, setTimDelayNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!mapDelay) return;
+    if (!mapDelay && mapDelayList.length === 0) return;
     const id = window.setInterval(() => setTimDelayNow(Date.now()), 200);
     return () => window.clearInterval(id);
-  }, [mapDelay]);
-  const timDelayProgress = ileTimDelayProgressFraction(mapDelay, timDelayNow);
-  const timBlockActionProgress = useMemo(() => {
-    if (!mapDelay?.stepId || !(timDelayProgress > 0)) return {};
-    return {
-      [mapDelay.stepId]: {
-        running: true,
-        completed: timDelayProgress,
-        total: 1,
-      },
-    };
-  }, [mapDelay, timDelayProgress]);
+  }, [mapDelay, mapDelayList.length]);
+  const timBlockActionProgress = useMemo(
+    () => ileTimProgressByTileId(mapDelayList.length ? mapDelayList : mapDelay, timDelayNow),
+    [mapDelay, mapDelayList, timDelayNow],
+  );
 
   const submitHeliosChatMessageNow = useCallback(async (
     message: string,
@@ -846,8 +843,30 @@ export function SessionView({
     );
   }, [chromeSelectedAesthetic?.images, openWorkIds]);
   useEffect(() => {
+    if (!session?.id || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        ileWorkAestheticStorageKey(session.id),
+        JSON.stringify(workAestheticById),
+      );
+    } catch {
+      /* quota */
+    }
+  }, [session?.id, workAestheticById]);
+  useEffect(() => {
     if (!session?.id) return;
-    setWorkAestheticById({});
+    let restored: Record<string, string> = {};
+    if (typeof window !== "undefined") {
+      try {
+        restored =
+          parseIleWorkAestheticStored(
+            window.sessionStorage.getItem(ileWorkAestheticStorageKey(session.id)),
+          ) ?? {};
+      } catch {
+        restored = {};
+      }
+    }
+    setWorkAestheticById(restored);
     setOpenWorkIds(
       restoreIleOpenWorkIds({
         stored: parseIleOpenWorkIdsFromMetadata(session.metadata),
@@ -1337,6 +1356,7 @@ export function SessionView({
         }}
         onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
         activeChapterLabel={activeChapterLabel}
+        activeChapterKey={activeChapterKey}
         notebookContent={notebookContent}
         onNotebookChange={(value) => {
           setNotebookContent(value);

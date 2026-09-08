@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
       return jsonError(404, "Workspace not found");
     }
 
-    const thoughts = await fetchWorkspaceInsightThoughts(supabase, workspaceId);
+    const blockId = req.nextUrl.searchParams.get("blockId")?.trim() || null;
+    const thoughts = await fetchWorkspaceInsightThoughts(supabase, workspaceId, blockId);
     return NextResponse.json({
       thoughts,
       count: thoughts.length,

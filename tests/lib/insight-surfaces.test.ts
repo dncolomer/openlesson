@@ -3,10 +3,16 @@ import { readSessionViewSurface, readTapScoreSurface } from "@/tests/helpers/sur
 import fs from "node:fs";
 import path from "node:path";
 import {
+  GENERATE_INSIGHTS_ACTION_LABEL,
+  LEARNER_WORK_DRAWER_TITLE,
+  buildGenerateInsightsSuggestBody,
   insightsListUrl,
+  insightsTracesUrl,
   resolveInsightSurfaceCapabilities,
   workspaceKnowledgeInsightsPath,
+  workspacePlayInsightsPath,
 } from "@/lib/insights";
+import { availableSectionsForMode } from "@/lib/workspace-mode";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
@@ -51,6 +57,50 @@ describe("workspaceKnowledgeInsightsPath", () => {
     expect(workspaceKnowledgeInsightsPath("abc")).toBe(
       "/workspace/abc?section=knowledge&subview=insights",
     );
+  });
+});
+
+describe("Play-only Insights tab + Generate Insights", () => {
+  it("lists Insights next to Knowledge in Play and omits it in Build", () => {
+    expect(availableSectionsForMode({ mode: "learner", isLoggedIn: true })).toEqual([
+      "workspace",
+      "knowledge",
+      "insights",
+    ]);
+    expect(
+      availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),
+    ).not.toContain("insights");
+    expect(workspacePlayInsightsPath("abc")).toBe("/workspace/abc?section=insights");
+    expect(insightsTracesUrl("ws-1", "block-9")).toContain("blockId=block-9");
+    expect(LEARNER_WORK_DRAWER_TITLE).toBe("Work");
+    expect(GENERATE_INSIGHTS_ACTION_LABEL).toBe("Generate Insights");
+    expect(
+      buildGenerateInsightsSuggestBody({
+        thoughts: [{ id: "t1", text: "one" }],
+        modifyingPrompt: "focus on tradeoffs",
+      }).modifyingPrompt,
+    ).toBe("focus on tradeoffs");
+
+    const nav = fs.readFileSync(
+      path.join(REPO_ROOT, "components/workspace-view/workspace-section-nav-items.tsx"),
+      "utf8",
+    );
+    const hosts = fs.readFileSync(
+      path.join(REPO_ROOT, "components/workspace-view/workspace-section-hosts.tsx"),
+      "utf8",
+    );
+    const learner = fs.readFileSync(
+      path.join(REPO_ROOT, "components/WorkspaceLearnerBlockPane.tsx"),
+      "utf8",
+    );
+    expect(nav).toContain('key: "insights"');
+    expect(nav).toContain("isLearnerMode && visibleSections.includes(\"insights\")");
+    expect(hosts).toContain("InsightsDashboardTab");
+    expect(hosts).toContain("data-play-insights-tab");
+    expect(hosts).toContain("mountsInsightsPanel");
+    expect(learner).toContain("data-generate-insights-drawer");
+    expect(learner).toContain("data-generate-insights-prompt");
+    expect(learner).toContain(GENERATE_INSIGHTS_ACTION_LABEL);
   });
 });
 
@@ -100,11 +150,12 @@ describe("shipped insight surface wiring", () => {
     expect(thoughtMemory).toContain("allowInsightGeneration");
     expect(thoughtMemory).toContain("resolveInsightSurfaceCapabilities");
     expect(thoughtMemory).toContain("generationEnabled");
+    expect(thoughtMemory).toContain('insightSurface = "ile"');
     expect(tapClient).toContain("ThoughtMemoryPanel");
     expect(tapClient).toContain('insightSurface="tap"');
     expect(tapClient).toContain("allowInsightGeneration={false}");
-    expect(sessionView).toContain('insightSurface="ile"');
-    expect(sessionView).toContain("allowInsightGeneration={true}");
+    expect(resolveInsightSurfaceCapabilities("ile").allowInsightGeneration).toBe(true);
+    expect(sessionView).not.toContain('insightSurface="tap"');
   });
 
   it("does not link back to dashboard Insights; uses Knowledge path helper", () => {

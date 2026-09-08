@@ -6,11 +6,17 @@ import type { SessionPlan } from "@/lib/domain/types";
 import type { ChapterWorkspace } from "@/components/session/sessionViewHelpers";
 import {
   applyIleSessionContextWrite,
-  createIleSessionContext,
+  boundIleSessionLiveState,
+  ileChapterCanvasInitialScene,
   ileLegacyChapterWorkspacesStorageKey,
   ileSessionContextStorageKey,
   parseIleSessionContextStored,
+  persistIleChapterColdWorkspace,
+  hydrateIleFocusedChapterLiveState,
+  readIleFocusedChapterWorkspace,
+  resolveIleChapterContextKey,
   type IleSessionContext,
+  type IleSessionContextMap,
 } from "@/lib/ile-session-global-context";
 
 export function useSessionChapterWorkspaces(
@@ -23,7 +29,8 @@ export function useSessionChapterWorkspaces(
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterLoadingIndex, setChapterLoadingIndex] = useState<number | null>(null);
   const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
-  const [sessionContext, setSessionContext] = useState<IleSessionContext>(createIleSessionContext);
+  const [sessionContext, setSessionContext] = useState<IleSessionContextMap>({});
+  const coldContextRef = useRef<IleSessionContextMap>({});
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
 
   useEffect(() => {
@@ -31,7 +38,8 @@ export function useSessionChapterWorkspaces(
     activeChapterIndexRef.current = 0;
     planInitializedRef.current = false;
     chapterFocusSinceRef.current = { 0: Date.now() };
-    setSessionContext(createIleSessionContext());
+    setSessionContext({});
+    coldContextRef.current = {};
     setChapterWorkspacesLoaded(false);
   }, [sessionId]);
 
@@ -42,7 +50,10 @@ export function useSessionChapterWorkspaces(
         window.sessionStorage.getItem(ileSessionContextStorageKey(sessionId)) ||
         window.sessionStorage.getItem(ileLegacyChapterWorkspacesStorageKey(sessionId));
       const parsed = parseIleSessionContextStored(stored);
-      if (parsed) setSessionContext(parsed);
+      if (parsed) {
+        coldContextRef.current = parsed;
+        setSessionContext(parsed);
+      }
     } catch {
       /* Ignore corrupt local workspace snapshots. */
     } finally {
@@ -56,7 +67,7 @@ export function useSessionChapterWorkspaces(
     try {
       window.sessionStorage.setItem(
         ileSessionContextStorageKey(sessionId),
-        JSON.stringify(sessionContext),
+        JSON.stringify(coldContextRef.current),
       );
     } catch {
       /* Session storage can fail on quota, especially with canvas data. */
@@ -83,7 +94,22 @@ export function useSessionChapterWorkspaces(
 
   const activeStep = sessionPlan?.steps?.[activeChapterIndex];
   const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
-  const activeWorkspace = sessionContext;
+
+  // Same render as ileChapterCanvasRemountKey: restore cold canvas before Excalidraw mounts.
+  const activeWorkspace = readIleFocusedChapterWorkspace(
+    sessionContext,
+    coldContextRef.current,
+    activeChapterKey,
+  );
+
+  useEffect(() => {
+    const key = resolveIleChapterContextKey(activeChapterKey);
+    setSessionContext((prev) => {
+      const cold = coldContextRef.current;
+      const focused = readIleFocusedChapterWorkspace(prev, cold, key);
+      return boundIleSessionLiveState({ ...prev, [key]: focused }, key);
+    });
+  }, [activeChapterKey]);
 
   const updateChapterWorkspace = useCallback(
     (
@@ -92,7 +118,24 @@ export function useSessionChapterWorkspaces(
         | Partial<ChapterWorkspace>
         | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)
     ) => {
-      setSessionContext((prev) => applyIleSessionContextWrite(prev, chapterKey, update));
+      setSessionContext((prev) => {
+        const key = resolveIleChapterContextKey(chapterKey);
+        const hydratedPrev = hydrateIleFocusedChapterLiveState(
+          prev,
+          coldContextRef.current,
+          key,
+        );
+        const next = applyIleSessionContextWrite(hydratedPrev, chapterKey, update);
+        const written = next[key];
+        if (written) {
+          coldContextRef.current = persistIleChapterColdWorkspace(
+            coldContextRef.current,
+            key,
+            written,
+          );
+        }
+        return next;
+      });
     },
     []
   );
@@ -152,10 +195,11 @@ export function useSessionChapterWorkspaces(
     [updateActiveChapterWorkspace]
   );
 
-  const chapterWorkspaces = useMemo(
-    (): Record<string, ChapterWorkspace> => ({ [activeChapterKey]: sessionContext }),
-    [activeChapterKey, sessionContext],
-  );
+  const chapterWorkspaces = useMemo((): Record<string, ChapterWorkspace> => {
+    const out: Record<string, ChapterWorkspace> = { ...sessionContext };
+    out[activeChapterKey] = activeWorkspace;
+    return out;
+  }, [activeChapterKey, activeWorkspace, sessionContext]);
 
   const setChapterWorkspaces = useCallback(
     (
@@ -164,10 +208,9 @@ export function useSessionChapterWorkspaces(
         | ((prev: Record<string, ChapterWorkspace>) => Record<string, ChapterWorkspace>),
     ) => {
       setSessionContext((prev) => {
-        const asRecord = { [activeChapterKey]: prev };
-        const next = typeof value === "function" ? value(asRecord) : value;
-        const first = Object.values(next)[0];
-        return first ?? prev;
+        const next = typeof value === "function" ? value(prev) : value;
+        coldContextRef.current = { ...coldContextRef.current, ...next };
+        return boundIleSessionLiveState(next, activeChapterKey);
       });
     },
     [activeChapterKey],
@@ -192,7 +235,7 @@ export function useSessionChapterWorkspaces(
     chatMessages: activeWorkspace.chatMessages,
     pendingChatMessage: activeWorkspace.pendingChatMessage,
     whiteboardData: activeWorkspace.whiteboardData,
-    whiteboardSceneData: activeWorkspace.whiteboardSceneData,
+    whiteboardSceneData: ileChapterCanvasInitialScene(activeWorkspace),
     notebookContent: activeWorkspace.notebookContent,
     canvasDirtyForHelios: activeWorkspace.canvasDirtyForHelios,
     notebookDirtyForHelios: activeWorkspace.notebookDirtyForHelios,
@@ -207,3 +250,5 @@ export function useSessionChapterWorkspaces(
     sessionContext,
   };
 }
+
+export type { IleSessionContext };

@@ -18,6 +18,12 @@ export const ILE_EVIDENCE_THRESHOLDS = {
   screenshotMinCount: 1,
 } as const;
 
+/** Live PoW buffers — last N so a long ILE session cannot unbounded-grow. */
+export const ILE_LIVE_TOOL_EVENTS_MAX = 200;
+export const ILE_LIVE_EEG_CHUNKS_MAX = 12;
+export const ILE_LIVE_SCREENSHOTS_MAX = 8;
+export const ILE_LIVE_TRANSCRIPT_PARTS_MAX = 40;
+
 export interface IleBufferedToolEvent {
   toolName: ToolName;
   action: ToolAction;
@@ -170,23 +176,38 @@ export class IleEvidenceBuffer {
 
   pushToolEvent(event: IleBufferedToolEvent) {
     this.toolEvents.push(event);
+    if (this.toolEvents.length > ILE_LIVE_TOOL_EVENTS_MAX) {
+      this.toolEvents = this.toolEvents.slice(-ILE_LIVE_TOOL_EVENTS_MAX);
+    }
   }
 
   pushTranscript(text: string) {
     const clean = text.replace(/\s+/g, " ").trim();
     if (clean) this.transcriptParts.push(clean);
+    if (this.transcriptParts.length > ILE_LIVE_TRANSCRIPT_PARTS_MAX) {
+      this.transcriptParts = this.transcriptParts.slice(-ILE_LIVE_TRANSCRIPT_PARTS_MAX);
+    }
   }
 
   pushFacialPoints(points: unknown[]) {
     if (points.length > 0) this.facialPoints.push(...points);
+    if (this.facialPoints.length > 2_000) {
+      this.facialPoints = this.facialPoints.slice(-2_000);
+    }
   }
 
   pushEegChunk(chunk: IleBufferedEegChunk) {
     this.eegChunks.push(chunk);
+    if (this.eegChunks.length > ILE_LIVE_EEG_CHUNKS_MAX) {
+      this.eegChunks = this.eegChunks.slice(-ILE_LIVE_EEG_CHUNKS_MAX);
+    }
   }
 
   pushScreenshot(screenshot: IleBufferedScreenshot) {
     this.screenshots.push(screenshot);
+    if (this.screenshots.length > ILE_LIVE_SCREENSHOTS_MAX) {
+      this.screenshots = this.screenshots.slice(-ILE_LIVE_SCREENSHOTS_MAX);
+    }
   }
 
   setCanvasData(data: string | null) {

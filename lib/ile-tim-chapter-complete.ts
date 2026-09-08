@@ -12,6 +12,10 @@
  * ILE_TIM_MAP_INTERACTIONS for follow-on ideas.
  */
 import { findClosestEmptyChapterSlot } from "@/lib/ile-chapter-follow-ups";
+import {
+  normalizeIleChapterGenerateResult,
+  type IleChapterGenerateResult,
+} from "@/lib/ile-chapter-generate";
 import { ILE_SESSION_MODE_DEFAULT, type IleSessionMode } from "@/lib/ile-mode";
 import type { IleHeliosPowOrigin } from "@/lib/ile-helios-trigger";
 import {
@@ -269,28 +273,81 @@ export function appetiteExpansionHint(
   return appetiteExpansionHints(appetite)[0] ?? null;
 }
 
+const GENERIC_TIM_KEYWORDS = new Set(["go deeper", "apply", "apply case", "contrast"]);
+
+function keywordFromSeed(seed: string): string {
+  const glyph = blockMapGlyphDbFields({ title: seed }, seed);
+  return glyph.map_keyword;
+}
+
+function authoredExpansionFromSeed(
+  seed: string,
+  flavor: "mechanism" | "practice" | "contrast",
+): IleChapterSuggestionPayload {
+  const short = seed.slice(0, 80);
+  const raw =
+    flavor === "mechanism"
+      ? {
+          title: `How ${short} actually works`.slice(0, 120),
+          description: `Build a working model of ${seed} you can reconstruct from memory.`.slice(0, 400),
+          keyword: keywordFromSeed(seed),
+        }
+      : flavor === "practice"
+        ? {
+            title: `${short} on a concrete problem`.slice(0, 120),
+            description: `Use ${seed} on one concrete problem and name what must change.`.slice(0, 400),
+            keyword: keywordFromSeed(`practice ${seed}`),
+          }
+        : {
+            title: `${short} versus a nearby idea`.slice(0, 120),
+            description: `Contrast ${seed} with a nearby idea until the difference is crisp.`.slice(0, 400),
+            keyword: keywordFromSeed(`versus ${seed}`),
+          };
+  const generated = normalizeIleChapterGenerateResult(raw, seed);
+  return {
+    topic: (generated?.title || raw.title).slice(0, 200),
+    title: (generated?.title || raw.title).slice(0, 120),
+    description: (generated?.description || raw.description).slice(0, 400),
+    keyword: generated?.keyword || raw.keyword,
+  };
+}
+
 function fallbackExpansionBodies(completed: string): IleChapterSuggestionPayload[] {
-  const short = completed.slice(0, 80);
   return [
-    {
-      topic: completed.slice(0, 200),
-      title: `Go deeper from ${short}`.slice(0, 120),
-      description: `Go deeper from ${completed}`.slice(0, 400),
-      keyword: "Go Deeper",
-    },
-    {
-      topic: completed.slice(0, 200),
-      title: `Apply ${short}`.slice(0, 120),
-      description: `Apply ${completed} to a new case`.slice(0, 400),
-      keyword: "Apply Case",
-    },
-    {
-      topic: completed.slice(0, 200),
-      title: `Contrast ${short}`.slice(0, 120),
-      description: `Contrast ${completed} with a nearby idea`.slice(0, 400),
-      keyword: "Contrast",
-    },
+    authoredExpansionFromSeed(completed, "mechanism"),
+    authoredExpansionFromSeed(completed, "practice"),
+    authoredExpansionFromSeed(completed, "contrast"),
   ];
+}
+
+/** Overlay LLM/authoring results onto TIM suggestions so tiles are real chapters. */
+export function applyIleChapterGenerateResultsToSuggestions(
+  suggestions: IleChapterSuggestionPayload[],
+  results: Array<IleChapterGenerateResult | null | undefined> | null | undefined,
+): IleChapterSuggestionPayload[] {
+  if (!results?.length) return suggestions;
+  return suggestions.map((suggestion, index) => {
+    const result = results[index];
+    if (!result) return suggestion;
+    const generated = normalizeIleChapterGenerateResult(result, suggestion.title || suggestion.description);
+    if (!generated) return suggestion;
+    const keyword = generated.keyword.trim();
+    if (GENERIC_TIM_KEYWORDS.has(keyword.toLowerCase())) {
+      return {
+        ...suggestion,
+        topic: generated.title.slice(0, 200),
+        title: generated.title.slice(0, 120),
+        description: generated.description.slice(0, 400),
+      };
+    }
+    return {
+      ...suggestion,
+      topic: generated.title.slice(0, 200),
+      title: generated.title.slice(0, 120),
+      description: generated.description.slice(0, 400),
+      keyword,
+    };
+  });
 }
 
 export function buildChapterCompleteExpansionSuggestions(input: {
@@ -298,6 +355,7 @@ export function buildChapterCompleteExpansionSuggestions(input: {
   completedStepId?: string | null;
   appetite?: { want_more?: string[]; saturated?: string[] } | null;
   llmMessage?: string | null;
+  generationResults?: Array<IleChapterGenerateResult | null | undefined> | null;
 }): IleChapterSuggestionPayload[] {
   const completed = str(input.completedDescription, 160) || "the chapter you just finished";
   const source_step_id = input.completedStepId ?? null;
@@ -314,18 +372,32 @@ export function buildChapterCompleteExpansionSuggestions(input: {
   };
 
   if (llm.length >= 3) {
+    const generated = normalizeIleChapterGenerateResult(
+      { title: llm, description: llm, keyword: keywordFromSeed(hints[0] || llm) },
+      hints[0] || completed,
+    );
     push({
-      topic: (hints[0] || completed).slice(0, 200),
-      title: llm.slice(0, 120),
-      description: llm.slice(0, 400),
+      topic: (generated?.title || hints[0] || completed).slice(0, 200),
+      title: (generated?.title || llm).slice(0, 120),
+      description: (generated?.description || llm).slice(0, 400),
+      keyword: generated?.keyword,
       source_step_id,
     });
   }
   for (const hint of hints) {
+    const generated = normalizeIleChapterGenerateResult(
+      {
+        title: hint.slice(0, 120),
+        description: `Work through ${hint} beside ${completed} until you can teach the link.`.slice(0, 400),
+        keyword: keywordFromSeed(hint),
+      },
+      hint,
+    );
     push({
-      topic: hint.slice(0, 200),
-      title: `Explore ${hint}`.slice(0, 120),
-      description: `Explore ${hint} next to ${completed}`.slice(0, 400),
+      topic: (generated?.title || hint).slice(0, 200),
+      title: (generated?.title || hint).slice(0, 120),
+      description: (generated?.description || `Work through ${hint} beside ${completed}.`).slice(0, 400),
+      keyword: generated?.keyword,
       source_step_id,
     });
   }
@@ -340,7 +412,10 @@ export function buildChapterCompleteExpansionSuggestions(input: {
   if (out.length === 0) {
     push({ ...fallbackExpansionBodies(completed)[0], source_step_id });
   }
-  return out.slice(0, ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS);
+  return applyIleChapterGenerateResultsToSuggestions(
+    out.slice(0, ILE_CHAPTER_COMPLETE_MAX_EXPANSIONS),
+    input.generationResults,
+  );
 }
 
 export function buildChapterCompleteExpansionSuggestion(input: {
@@ -689,7 +764,54 @@ export type IleMapSchedulerPending = {
   delayMs: number;
   startedAt: number;
   stepId: string | null;
+  /** Tiles that will receive the expansion effect (progress bars key here). */
+  expansionStepIds?: string[];
 };
+
+export function ileTimPendingList(
+  pending:
+    | IleMapSchedulerPending
+    | IleMapSchedulerPending[]
+    | Record<string, IleMapSchedulerPending>
+    | null
+    | undefined,
+): IleMapSchedulerPending[] {
+  if (!pending) return [];
+  if (Array.isArray(pending)) return pending.filter(Boolean);
+  if (typeof pending === "object" && "interruptionId" in pending) {
+    return [pending];
+  }
+  return Object.values(pending).filter(Boolean);
+}
+
+/** Progress bars only on tiles that will receive the TIM effect. */
+export function ileTimProgressByTileId(
+  pending:
+    | IleMapSchedulerPending
+    | IleMapSchedulerPending[]
+    | Record<string, IleMapSchedulerPending>
+    | null
+    | undefined,
+  now = Date.now(),
+): Record<string, { running: boolean; completed: number; total: number }> {
+  const out: Record<string, { running: boolean; completed: number; total: number }> = {};
+  for (const item of ileTimPendingList(pending)) {
+    const frac = ileTimDelayProgressFraction(item, now);
+    if (!(frac > 0)) continue;
+    const tileIds =
+      item.expansionStepIds && item.expansionStepIds.length > 0
+        ? item.expansionStepIds
+        : item.stepId
+          ? [item.stepId]
+          : [];
+    for (const id of tileIds) {
+      const tileId = String(id || "").trim();
+      if (!tileId) continue;
+      out[tileId] = { running: true, completed: frac, total: 1 };
+    }
+  }
+  return out;
+}
 
 export const ILE_MARK_DONE_AWAITING_ID = "ile-mark-done-awaiting" as const;
 
@@ -768,77 +890,98 @@ export type IleMapInterruptionScheduler = {
   begin: (stepId: string | null | undefined) => void;
   clear: () => void;
   getPending: () => IleMapSchedulerPending | null;
+  getAllPending: () => IleMapSchedulerPending[];
+};
+
+type SchedulerSlot = {
+  pending: IleMapSchedulerPending;
+  timer: ReturnType<typeof setTimeout> | null;
+  interruptionId: string;
 };
 
 /**
  * Dedicated ILE map-expansion timer. Idle/speech TIM (Helios path) must not
- * supersede a pending chapter-complete map expansion.
+ * supersede a pending chapter-complete map expansion. Concurrent Mark as Done
+ * on two chapters each keep their own bar until that chapter's expansion fires.
  */
 export function createIleMapInterruptionScheduler(
   onExpand: (interruption: PredictiveInterruption) => void,
   onPendingChange?: (pending: IleMapSchedulerPending | null) => void,
+  onPendingListChange?: (pending: IleMapSchedulerPending[]) => void,
 ): IleMapInterruptionScheduler {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let pendingId: string | null = null;
-  let pending: IleMapSchedulerPending | null = null;
+  const slots = new Map<string, SchedulerSlot>();
 
-  const setPending = (next: IleMapSchedulerPending | null) => {
-    pending = next;
-    onPendingChange?.(next);
+  const list = (): IleMapSchedulerPending[] =>
+    [...slots.values()].map((slot) => slot.pending);
+
+  const emit = () => {
+    const all = list();
+    onPendingListChange?.(all);
+    onPendingChange?.(all[all.length - 1] ?? null);
   };
 
-  const clearTimer = () => {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    pendingId = null;
+  const slotKey = (stepId: string | null | undefined, fallback: string) =>
+    (typeof stepId === "string" && stepId.trim()) || fallback;
+
+  const clearSlot = (key: string) => {
+    const slot = slots.get(key);
+    if (slot?.timer) clearTimeout(slot.timer);
+    slots.delete(key);
   };
 
   const clear = () => {
-    clearTimer();
-    setPending(null);
+    for (const key of [...slots.keys()]) clearSlot(key);
+    emit();
   };
 
   const apply = (interruption: ProofOfWorkApiInterruption) => {
     if (!isChapterMapExpandInterruption(interruption)) return;
-    const merged = mergeIleMapDelayWithTim(pending, interruption);
-    clearTimer();
+    const suggestion = chapterSuggestionFromInterruption(interruption);
+    const sourceId = suggestion?.source_step_id ?? null;
+    const existing =
+      (sourceId && slots.get(sourceId)?.pending) ||
+      [...slots.values()].find((slot) => slot.pending.stepId === sourceId)?.pending ||
+      null;
+    const merged = mergeIleMapDelayWithTim(existing, interruption);
+    const key = slotKey(merged.pending.stepId, interruption.interruption_id);
+    clearSlot(key);
     const interruptionId = interruption.interruption_id;
-    pendingId = interruptionId;
-    setPending(merged.pending);
-    timer = setTimeout(() => {
-      if (pendingId !== interruptionId) return;
-      setPending(null);
+    const timer = setTimeout(() => {
+      const live = slots.get(key);
+      if (!live || live.interruptionId !== interruptionId) return;
+      clearSlot(key);
+      emit();
       onExpand(interruption);
-      pendingId = null;
-      timer = null;
     }, merged.remainingMs);
+    slots.set(key, { pending: merged.pending, timer, interruptionId });
+    emit();
   };
 
   const begin = (stepId: string | null | undefined) => {
     const next = beginIleMarkDoneProgress(stepId);
     if (!next?.stepId) return;
-    if (
-      pending?.stepId === next.stepId &&
-      pending.interruptionId !== ILE_MARK_DONE_AWAITING_ID
-    ) {
-      return;
-    }
-    if (
-      pending?.stepId === next.stepId &&
-      pending.interruptionId === ILE_MARK_DONE_AWAITING_ID
-    ) {
-      return;
-    }
-    clearTimer();
-    pendingId = next.interruptionId;
-    setPending(next);
-    timer = setTimeout(() => {
-      if (pendingId !== ILE_MARK_DONE_AWAITING_ID) return;
-      setPending(null);
-      pendingId = null;
-      timer = null;
+    const key = next.stepId;
+    const existing = slots.get(key);
+    if (existing) return;
+    const timer = setTimeout(() => {
+      const live = slots.get(key);
+      if (!live || live.interruptionId !== ILE_MARK_DONE_AWAITING_ID) return;
+      clearSlot(key);
+      emit();
     }, next.delayMs);
+    slots.set(key, {
+      pending: next,
+      timer,
+      interruptionId: next.interruptionId,
+    });
+    emit();
   };
 
-  return { apply, begin, clear, getPending: () => pending };
+  return {
+    apply,
+    begin,
+    clear,
+    getPending: () => list()[list().length - 1] ?? null,
+    getAllPending: () => list(),
+  };
 }

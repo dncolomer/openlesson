@@ -40,6 +40,7 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
+  DEFAULT_WORKSPACE_INTERACTION_MODE,
   mountsCreatorAuthoringDrawers,
   mountsLearnerPracticeDrawer,
   normalizeWorkspaceInteractionMode,
@@ -121,14 +122,14 @@ export function WorkspaceView({
       sectionFromUrl ??
       defaultWorkspaceSection(parseWorkspaceKind(initialPlan?.workspace_kind)),
   );
-  /** Creator = authoring (default); Learner = practice map + Knowledge LWM. */
+  /** Play (practice) is the default; Build is authoring. */
   const [interactionMode, setInteractionMode] =
     useState<WorkspaceInteractionMode>(() => {
       if (ayclToken) {
         return resolveAyclCapabilities(ayclAccessTierProp ?? "full")
           .defaultInteractionMode;
       }
-      return "creator";
+      return DEFAULT_WORKSPACE_INTERACTION_MODE;
     });
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);

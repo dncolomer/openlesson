@@ -14,6 +14,8 @@ import {
   workspaceModeFlipClearsMapSelection,
   WORKSPACE_MODE_DISPLAY_LABELS,
   WORKSPACE_INTERACTION_MODES,
+  DEFAULT_WORKSPACE_INTERACTION_MODE,
+  normalizeWorkspaceInteractionMode,
 } from "@/lib/workspace-mode";
 import {
   blocksUnlockedAfterDone,
@@ -303,7 +305,10 @@ describe("Build / Play mode display labels", () => {
     expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
     expect(WORKSPACE_MODE_DISPLAY_LABELS.creator).toBe("Build");
     expect(WORKSPACE_MODE_DISPLAY_LABELS.learner).toBe("Play");
-    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["creator", "learner"]);
+    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["learner", "creator"]);
+    expect(DEFAULT_WORKSPACE_INTERACTION_MODE).toBe("learner");
+    expect(normalizeWorkspaceInteractionMode(undefined)).toBe("learner");
+    expect(normalizeWorkspaceInteractionMode("nope")).toBe("learner");
 
     // Wire ids still drive authoring vs practice shell (labels only changed)
     expect(mountsCreatorAuthoringDrawers("creator")).toBe(true);
@@ -332,6 +337,7 @@ describe("Build / Play mode display labels", () => {
     expect(grid).toContain("WORKSPACE_MAP_TOGGLE_IDS");
     expect(view).toContain("showModeToggle={false}");
     expect(view).toContain("onInteractionModeChange");
+    expect(view).toContain("DEFAULT_WORKSPACE_INTERACTION_MODE");
     // Toggle must not hardcode Creator/Learner button text
     expect(grid).not.toMatch(/label:\s*"Creator"/);
     expect(grid).not.toMatch(/label:\s*"Learner"/);

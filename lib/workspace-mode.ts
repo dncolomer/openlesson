@@ -14,24 +14,28 @@ import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export type WorkspaceInteractionMode = "creator" | "learner";
 
-/** Under-minimap 3-state control: Build / Play / Explore. */
+/** Under-minimap 3-state control: Play / Build / Explore. */
 export type WorkspaceMapToggleId = WorkspaceInteractionMode | "explore";
 
+/** Workspaces open in Play (practice). */
+export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
+  "learner";
+
 export const WORKSPACE_INTERACTION_MODES: readonly WorkspaceInteractionMode[] = [
-  "creator",
   "learner",
+  "creator",
 ] as const;
 
 export const WORKSPACE_MAP_TOGGLE_IDS: readonly WorkspaceMapToggleId[] = [
-  "creator",
   "learner",
+  "creator",
   "explore",
 ] as const;
 
 /**
  * Under-minimap segments to render.
- * Play is always present. Explore defaults on (AYCL clones keep it even when
- * Build is hidden). Build is omitted when allowCreator is false (play-only).
+ * Play is always first. Explore follows Build (AYCL clones keep Explore even
+ * when Build is hidden). Build is omitted when allowCreator is false (play-only).
  */
 export function visibleWorkspaceMapToggleIds(input?: {
   allowCreator?: boolean;
@@ -39,9 +43,8 @@ export function visibleWorkspaceMapToggleIds(input?: {
 }): WorkspaceMapToggleId[] {
   const allowCreator = input?.allowCreator !== false;
   const allowExplore = input?.allowExplore !== false;
-  const ids: WorkspaceMapToggleId[] = [];
+  const ids: WorkspaceMapToggleId[] = ["learner"];
   if (allowCreator) ids.push("creator");
-  ids.push("learner");
   if (allowExplore) ids.push("explore");
   return ids;
 }
@@ -49,7 +52,7 @@ export function visibleWorkspaceMapToggleIds(input?: {
 /**
  * User-visible labels for the workspace mode toggle (under minimap).
  * Wire/state ids stay `"creator"` | `"learner"` | `"explore"`; display is
- * Build / Play / Explore.
+ * Play / Build / Explore.
  */
 export const WORKSPACE_MODE_DISPLAY_LABELS: Readonly<
   Record<WorkspaceMapToggleId, string>
@@ -59,7 +62,7 @@ export const WORKSPACE_MODE_DISPLAY_LABELS: Readonly<
   explore: "Explore",
 } as const;
 
-/** Display label for a toggle id (Build / Play / Explore). */
+/** Display label for a toggle id (Play / Build / Explore). */
 export function workspaceModeDisplayLabel(
   mode: WorkspaceMapToggleId,
 ): string {
@@ -82,12 +85,12 @@ export function resolveWorkspaceMapToggleId(input: {
 }
 
 /**
- * Next Build / Play / Explore state after a toggle click.
+ * Next Play / Build / Explore state after a toggle click.
  * Explore keeps the current Build/Play shell underneath; leaving Explore
  * closes the overlay without inventing a mode.
  */
 /**
- * Build / Play / Explore keep the current map selection (sole block, multi,
+ * Play / Build / Explore keep the current map selection (sole block, multi,
  * empty cells). Authoring pick chrome may still reset.
  */
 export function workspaceModeFlipClearsMapSelection(): boolean {
@@ -120,7 +123,7 @@ export function isWorkspaceInteractionMode(
 
 export function normalizeWorkspaceInteractionMode(
   value: unknown,
-  fallback: WorkspaceInteractionMode = "creator",
+  fallback: WorkspaceInteractionMode = DEFAULT_WORKSPACE_INTERACTION_MODE,
 ): WorkspaceInteractionMode {
   return isWorkspaceInteractionMode(value) ? value : fallback;
 }

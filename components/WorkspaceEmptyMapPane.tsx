@@ -38,7 +38,7 @@ import {
  */
 export function WorkspaceEmptyMapPane({
   canEdit: _canEdit = false,
-  interactionMode = "creator",
+  interactionMode = "learner",
   workspaceId,
   ayclToken = null,
   locale = "en",

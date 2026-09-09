@@ -172,7 +172,7 @@ export function resolveAyclCapabilities(
     canAuthor: true,
     canGrow: true,
     canUpgrade: false,
-    defaultInteractionMode: "creator",
+    defaultInteractionMode: "learner",
     allowCreatorModeToggle: true,
     allowExplore: true,
   };

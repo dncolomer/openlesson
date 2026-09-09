@@ -222,14 +222,14 @@ describe("Explore on purchased clones", () => {
     });
     expect(playOnlyIds).toEqual(["learner", "explore"]);
     expect(playOnlyIds).not.toContain("creator");
-    expect(playBuildIds).toEqual(["creator", "learner", "explore"]);
+    expect(playBuildIds).toEqual(["learner", "creator", "explore"]);
     expect(playOnlyIds.map(workspaceModeDisplayLabel)).toEqual([
       "Play",
       "Explore",
     ]);
     expect(playBuildIds.map(workspaceModeDisplayLabel)).toEqual([
-      "Build",
       "Play",
+      "Build",
       "Explore",
     ]);
 

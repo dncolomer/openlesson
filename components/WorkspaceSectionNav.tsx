@@ -35,7 +35,7 @@ export function WorkspaceSectionNav({
   onChange,
   variant = "bar",
   workspaceTitle,
-  interactionMode = "creator",
+  interactionMode = "learner",
   onInteractionModeChange,
   showModeToggle,
 }: WorkspaceSectionNavProps) {

@@ -36,7 +36,7 @@ export type MapAuthoringBlock = {
  */
 export function WorkspaceMapAuthoringPane({
   canEdit,
-  interactionMode = "creator",
+  interactionMode = "learner",
   workspaceId = null,
   ayclToken,
   locale = "en",

@@ -77,13 +77,13 @@ describe("Build / Play / Explore toggle helpers", () => {
     expect(workspaceModeDisplayLabel("explore")).toBe("Explore");
     expect(WORKSPACE_MODE_DISPLAY_LABELS.explore).toBe("Explore");
     expect([...WORKSPACE_MAP_TOGGLE_IDS]).toEqual([
-      "creator",
       "learner",
+      "creator",
       "explore",
     ]);
     expect(visibleWorkspaceMapToggleIds()).toEqual([
-      "creator",
       "learner",
+      "creator",
       "explore",
     ]);
     expect(
@@ -97,8 +97,13 @@ describe("Build / Play / Explore toggle helpers", () => {
         allowCreator: true,
         allowExplore: true,
       }),
-    ).toEqual(["creator", "learner", "explore"]);
-    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["creator", "learner"]);
+    ).toEqual(["learner", "creator", "explore"]);
+    expect([...WORKSPACE_INTERACTION_MODES]).toEqual(["learner", "creator"]);
+    expect(visibleWorkspaceMapToggleIds().map(workspaceModeDisplayLabel)).toEqual([
+      "Play",
+      "Build",
+      "Explore",
+    ]);
 
     expect(
       resolveWorkspaceMapToggleId({

@@ -202,7 +202,7 @@ export function SessionList({
   onMapExploreToggle,
   onMapToggle,
   mapToggleIds,
-  interactionMode = "creator",
+  interactionMode = "learner",
   onInteractionModeChange,
   unusableCells = null,
   onMapGround,

@@ -768,6 +768,12 @@ export type IleMapSchedulerPending = {
   expansionStepIds?: string[];
 };
 
+function isIleMapSchedulerPending(value: unknown): value is IleMapSchedulerPending {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const rec = value as Record<string, unknown>;
+  return typeof rec.interruptionId === "string" && typeof rec.delayMs === "number";
+}
+
 export function ileTimPendingList(
   pending:
     | IleMapSchedulerPending
@@ -778,10 +784,8 @@ export function ileTimPendingList(
 ): IleMapSchedulerPending[] {
   if (!pending) return [];
   if (Array.isArray(pending)) return pending.filter(Boolean);
-  if (typeof pending === "object" && "interruptionId" in pending) {
-    return [pending];
-  }
-  return Object.values(pending).filter(Boolean);
+  if (isIleMapSchedulerPending(pending)) return [pending];
+  return Object.values(pending).filter(isIleMapSchedulerPending);
 }
 
 /** Progress bars only on tiles that will receive the TIM effect. */

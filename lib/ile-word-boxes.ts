@@ -166,8 +166,20 @@ export const ILE_WORD_BOX_MENU_OFFSET_PX = 8;
 export const ILE_WORD_BOX_MENU_WIDTH_PX = 176;
 export const ILE_WORD_BOX_MENU_HEIGHT_PX = 80;
 
+/** Window that owns a word-box surface (opener or Document PiP). */
+export type IleWordBoxWindowLike = {
+  innerWidth?: number;
+  innerHeight?: number;
+  document?: IleWordBoxDocumentLike | null;
+};
+
+export type IleWordBoxDocumentLike = {
+  body?: unknown | null;
+  defaultView?: IleWordBoxWindowLike | null;
+};
+
 export type IleWordBoxView = {
-  document: { body?: unknown | null; defaultView?: IleWordBoxView | null } | null;
+  document: IleWordBoxDocumentLike | null;
   innerWidth: number;
   innerHeight: number;
   body: unknown | null;
@@ -178,14 +190,11 @@ export type IleWordBoxView = {
  * Document PiP must use the PiP window — not the opener.
  */
 export function resolveIleWordBoxView(
-  node?: { ownerDocument?: { defaultView?: unknown; body?: unknown } | null } | null,
+  node?: { ownerDocument?: IleWordBoxDocumentLike | null } | null,
   fallback?: Partial<IleWordBoxView> | null,
 ): IleWordBoxView | null {
   const ownerDoc = node?.ownerDocument ?? null;
-  const ownerWin = ownerDoc?.defaultView as
-    | { innerWidth?: number; innerHeight?: number; document?: { body?: unknown } }
-    | null
-    | undefined;
+  const ownerWin = ownerDoc?.defaultView ?? null;
   if (ownerDoc) {
     return {
       document: ownerDoc,

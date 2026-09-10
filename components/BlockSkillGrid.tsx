@@ -1116,7 +1116,6 @@ export function BlockSkillGrid({
         onEmptyCircularMenuAction: handleEmptyCircularMenuAction,
         blockProgressById,
         unseenGatherById,
-        gatherJobs,
         handleBlockPointerDown,
         handleBlockPointerMove,
         handleBlockPointerUp,

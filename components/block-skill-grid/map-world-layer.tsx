@@ -90,12 +90,10 @@ import {
 import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-sessions";
 import {
   DEFAULT_BLOCK_MAP_ICON,
-  ILE_GATHER_RUNNING_MAP_ICON,
   PREVIOUS_SESSIONS_MAP_ICON,
   isTimExploreMapIcon,
   resolveBlockMapGlyph,
 } from "@/lib/block-map-glyph";
-import { ileGatherRunningTileIds, type IleGatherJob } from "@/lib/ile-gather-resources";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 import {
   aestheticImageForId,
@@ -206,7 +204,6 @@ export function MapWorldLayer({
   onEmptyCircularMenuAction,
   blockProgressById,
   unseenGatherById,
-  gatherJobs = null,
 }: {
   visibleCells: GridCell[];
   occupancy: Map<string, string>;
@@ -277,7 +274,6 @@ export function MapWorldLayer({
   onEmptyCircularMenuAction?: (action: BlockCircularMenuActionId) => void;
   blockProgressById?: Readonly<Record<string, number>>;
   unseenGatherById?: Readonly<Record<string, boolean>>;
-  gatherJobs?: readonly IleGatherJob[] | null;
   handleBlockPointerDown: (id: string, cell: GridCell, e: PointerEvent) => void;
   handleBlockPointerMove: (e: PointerEvent) => void;
   handleBlockPointerUp: (e: PointerEvent) => void;
@@ -285,7 +281,6 @@ export function MapWorldLayer({
   renderStretchHandles: (blockId: string) => ReactNode;
   annotationLayers: AnnotationLayer[];
 }) {
-  const gatheringTileIds = ileGatherRunningTileIds(gatherJobs);
   const openWorkIdSet = new Set(openWorkIds ?? []);
   const aestheticPool =
     aestheticImages && aestheticImages.length > 0
@@ -790,10 +785,8 @@ export function MapWorldLayer({
               title: node.title,
             });
             const glyphKeyword = mapTitle === "?" ? "?" : mapGlyph.keyword;
-            const gathering = gatheringTileIds.has(node.id);
-            const glyphIcon = gathering
-              ? ILE_GATHER_RUNNING_MAP_ICON
-              : mapTitle === "?"
+            const glyphIcon =
+              mapTitle === "?"
                 ? DEFAULT_BLOCK_MAP_ICON
                 : hasPreviousSessions
                   ? PREVIOUS_SESSIONS_MAP_ICON

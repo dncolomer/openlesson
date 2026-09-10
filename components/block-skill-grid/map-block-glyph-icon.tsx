@@ -5,13 +5,11 @@ import {
   BLOCK_MAP_GRID_SIZE,
   CHAPTER_DONE_MAP_ICON,
   DEFAULT_BLOCK_MAP_ICON,
-  ILE_GATHER_RUNNING_MAP_ICON,
   PREVIOUS_SESSIONS_MAP_ICON,
   TIM_EXPLORE_MAP_ICON,
   blockMapPatternBits,
   blockMapPatternCells,
   isChapterDoneMapIcon,
-  isIleGatherRunningMapIcon,
   isPreviousSessionsMapIcon,
   isTimExploreMapIcon,
   parseBlockMapIconName,
@@ -42,30 +40,6 @@ export function BlockMapGlyphIcon({
         data-block-previous-sessions-icon="true"
         data-block-map-variant={variant}
       />
-    );
-  }
-
-  if (isIleGatherRunningMapIcon(name)) {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className={className ?? "h-8 w-8"}
-        aria-hidden
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        data-block-map-icon={ILE_GATHER_RUNNING_MAP_ICON}
-        data-ile-gather-running-icon="true"
-        data-block-map-variant={variant}
-      >
-        <path d="M10 10h4" />
-        <path d="M19 7V4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3" />
-        <path d="M20 21a2 2 0 0 0 2-2v-3.851c0-1.39-2-2.962-2-4.829V8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2z" />
-        <path d="M4 21a2 2 0 0 1-2-2v-3.851c0-1.39 2-2.962 2-4.829V8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2z" />
-        <path d="M9 7V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3" />
-      </svg>
     );
   }
 

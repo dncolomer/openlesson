@@ -606,15 +606,3 @@ function ileGatherJobTileId(job: Pick<IleGatherJob, "blockId" | "chapterId">): s
   return typeof job.blockId === "string" ? job.blockId.trim() : "";
 }
 
-/** Tiles with a running gather job — show the binoculars search icon until done. */
-export function ileGatherRunningTileIds(
-  jobs: readonly IleGatherJob[] | null | undefined,
-): Set<string> {
-  const out = new Set<string>();
-  for (const job of jobs || []) {
-    if (!job || job.status !== "running") continue;
-    const id = ileGatherJobTileId(job);
-    if (id) out.add(id);
-  }
-  return out;
-}

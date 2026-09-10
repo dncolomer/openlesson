@@ -67,6 +67,7 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
     expect(icons).toContain('from "lucide-react"');
     expect(icons).toContain("Pickaxe");
     expect(icons).toContain("isPreviousSessionsMapIcon");
+    expect(icons).not.toContain("data-ile-gather-running-icon");
     expect(icons).not.toContain("Cube");
   });
 

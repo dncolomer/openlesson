@@ -17,14 +17,6 @@ export type TimExploreMapIcon = typeof TIM_EXPLORE_MAP_ICON;
 export const CHAPTER_DONE_MAP_ICON = "chapter-done" as const;
 export type ChapterDoneMapIcon = typeof CHAPTER_DONE_MAP_ICON;
 
-/** Display-only: running Gather resources (binoculars). Not persisted. */
-export const ILE_GATHER_RUNNING_MAP_ICON = "gather-resources" as const;
-export type IleGatherRunningMapIcon = typeof ILE_GATHER_RUNNING_MAP_ICON;
-
-export function isIleGatherRunningMapIcon(value: unknown): value is IleGatherRunningMapIcon {
-  return value === ILE_GATHER_RUNNING_MAP_ICON;
-}
-
 /** Display-only: workspace block with saved previous sessions (Work pickaxe). */
 export const PREVIOUS_SESSIONS_MAP_ICON = "pickaxe" as const;
 export type PreviousSessionsMapIcon = typeof PREVIOUS_SESSIONS_MAP_ICON;

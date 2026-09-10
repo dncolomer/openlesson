@@ -25,7 +25,6 @@ import {
   ileGatherJobShowsFinishLink,
   ileGatherProgressFraction,
   ileGatherRateLimitKey,
-  ileGatherRunningTileIds,
   ileGatherResourceMeta,
   patchIleGatherJob,
   upsertIleGatherJob,
@@ -255,10 +254,6 @@ describe("ILE gather resources", () => {
     expect(jobs[0].openTool).toBe(ileGatherFinishOpensTool());
     expect(jobs[0].openTool).toBe(ILE_GATHER_RESOURCES_TOOL);
     expect(ileGatherJobShowsFinishLink(jobs[0])).toBe(true);
-    expect(ileGatherRunningTileIds([
-      createIleGatherJob({ id: "ile-gather-1", blockId: "block-9", chapterId: "ch-1" }),
-    ]).has("ch-1")).toBe(true);
-    expect(ileGatherRunningTileIds(jobs).has("block-9")).toBe(false);
 
     let concurrent: IleGatherJob[] = [
       createIleGatherJob({ id: "g-a", blockId: "b1", chapterId: "c1" }),
@@ -448,11 +443,11 @@ describe("ILE gather resources", () => {
 
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const glyph = read("components/block-skill-grid/map-block-glyph-icon.tsx");
-    expect(world).toContain("ileGatherRunningTileIds");
-    expect(world).toContain("ILE_GATHER_RUNNING_MAP_ICON");
-    expect(world).toContain("gatheringTileIds.has(node.id)");
-    expect(glyph).toContain("data-ile-gather-running-icon");
-    expect(glyph).toContain("ILE_GATHER_RUNNING_MAP_ICON");
+    expect(world).not.toContain("ileGatherRunningTileIds");
+    expect(world).not.toContain("ILE_GATHER_RUNNING_MAP_ICON");
+    expect(world).not.toContain("gatheringTileIds");
+    expect(glyph).not.toContain("data-ile-gather-running-icon");
+    expect(glyph).not.toContain("ILE_GATHER_RUNNING_MAP_ICON");
     expect(glyph).toContain("from \"lucide-react\"");
     expect(grid).toContain("gatherJobs,");
 

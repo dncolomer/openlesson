@@ -56,18 +56,20 @@ describe("Review work chrome (shipped source)", () => {
     expect(ILE_CHAPTER_WIDGET_TOOLS).not.toContain("thought-history");
 
     const chrome = read("components/session-view/session-chrome.tsx");
-    expect(chrome).toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("ILE_REVIEW_WORK_LABEL");
+    expect(chrome).toContain("onReviewWork");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
     );
-    const submitIdx = powBar.indexOf("IleSubmitWorkButton");
-    const reviewIdx = powBar.indexOf("data-ile-review-work");
+    expect(powBar).not.toContain("IleSubmitWorkButton");
+    expect(powBar).not.toContain("data-ile-review-work");
+    expect(powBar).toContain("data-ile-session-insights-count");
+    const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
     const identityIdx = powBar.indexOf("data-ile-identity-row");
-    expect(submitIdx).toBeGreaterThan(-1);
-    expect(reviewIdx).toBeGreaterThan(submitIdx);
-    expect(identityIdx).toBeGreaterThan(reviewIdx);
+    expect(insightsIdx).toBeGreaterThan(-1);
+    expect(identityIdx).toBeGreaterThan(insightsIdx);
 
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     expect(tabs).not.toContain("thought-history");
@@ -103,6 +105,8 @@ describe("Review work chrome (shipped source)", () => {
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).toContain("data-ile-review-work");
     expect(dockBar).toContain("showReview");
+    expect(dockBar).toContain("data-ile-end-turn-cluster");
+    expect(chrome).toContain("onReviewWork");
 
     const icons = read("components/session-view/ile-pow-icons.tsx");
     expect(icons).toContain("thoughts:");
@@ -115,7 +119,7 @@ describe("Review work chrome (shipped source)", () => {
     writeScratch(
       "ile-review-work.txt",
       [
-        "Review work left of identity, right of Submit work",
+        "Review work floats on the bottom-right dock; PoW bar has Insights counter",
         "overlay tool=thought-history",
         "tabs=tool/screen/video/eeg/thoughts",
         "chapter widget has no Thoughts tab",

@@ -25,6 +25,7 @@ export function IleSubmitWorkButton({
   disabled = false,
   square = false,
   compact = false,
+  emphasized = false,
 }: {
   label: string;
   onClick?: () => void;
@@ -32,21 +33,29 @@ export function IleSubmitWorkButton({
   disabled?: boolean;
   square?: boolean;
   compact?: boolean;
+  emphasized?: boolean;
 }) {
-  const squareSize = compact ? "size-16" : "size-24";
+  const squareSize = emphasized
+    ? compact
+      ? "size-[4.75rem]"
+      : "size-[7.25rem]"
+    : compact
+      ? "size-16"
+      : "size-24";
   return (
     <button
       type="button"
       data-ile-submit-turn
+      data-ile-end-turn=""
       onClick={onClick}
       disabled={disabled || busy}
       className={
         square
-          ? `flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border border-white bg-white px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_10px_32px_rgba(255,255,255,0.22)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
+          ? `flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
           : "flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
       }
     >
-      <Send className={square ? "size-4" : "size-3.5"} strokeWidth={2.3} aria-hidden />
+      <Send className={emphasized ? "size-5" : square ? "size-4" : "size-3.5"} strokeWidth={2.3} aria-hidden />
       {label}
     </button>
   );
@@ -89,20 +98,59 @@ export function IleWorkDockBar({
   const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
   const squareSize = compact ? "size-16" : "size-24";
   const showGlobalResources = Boolean(onOpenGlobalResources) && !compact;
-  const showSubmit = Boolean(onSubmitTurn) && compact;
-  const showReview = Boolean(onReviewWork) && compact;
+  const showSubmit = Boolean(onSubmitTurn);
+  const showReview = Boolean(onReviewWork);
 
   return (
     <div
       data-ile-work-dock-bar
-      className={`pointer-events-auto flex max-w-[min(100vw-1rem,52rem)] items-end gap-2 border border-white/20 bg-neutral-950/95 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.62)] ${
+      className={`pointer-events-auto flex max-w-[min(100vw-1rem,56rem)] items-end gap-2 border border-white/20 bg-neutral-950/95 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.62)] ${
         compact ? "w-full max-w-none" : ""
       }`}
     >
+      {showGlobalResources ? (
+        <button
+          type="button"
+          data-ile-global-resources
+          title={t("tools.planResources")}
+          aria-label={t("tools.planResources")}
+          aria-pressed={globalResourcesOpen}
+          onClick={() => onOpenGlobalResources?.()}
+          className={`relative flex ${squareSize} shrink-0 flex-col items-center justify-center overflow-hidden rounded-none border bg-neutral-950 text-neutral-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] ${
+            globalResourcesOpen
+              ? "border-white"
+              : "border-white/35 hover:border-white/70"
+          }`}
+        >
+          <span className="px-1 text-center font-mono text-[10px] font-semibold uppercase leading-tight tracking-wider text-white">
+            {t("tools.planResources")}
+          </span>
+        </button>
+      ) : null}
+      {showReview ? (
+        <button
+          type="button"
+          data-ile-review-work
+          aria-pressed={reviewWorkOpen}
+          onClick={() => onReviewWork?.()}
+          className={`flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider shadow-[0_10px_28px_rgba(255,255,255,0.12)] ${
+            reviewWorkOpen
+              ? "border-white bg-white text-neutral-950"
+              : "border-white bg-neutral-950 text-white hover:bg-white hover:text-neutral-950"
+          }`}
+        >
+          <ClipboardList className="size-4" strokeWidth={2.3} aria-hidden />
+          {reviewWorkLabel}
+        </button>
+      ) : null}
+      <div
+        data-ile-end-turn-cluster
+        className="flex min-w-0 flex-1 items-end justify-end"
+      >
       {openWorkLabels.length > 0 ? (
         <div
           data-ile-open-work-tabs
-          className="flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto"
+          className="flex min-w-0 items-end gap-1.5 overflow-x-auto"
         >
           {openWorkLabels.map((work) => {
             const expanded = Boolean(work.focused && heliosOpen);
@@ -183,51 +231,25 @@ export function IleWorkDockBar({
           })}
         </div>
       ) : null}
-      {showGlobalResources ? (
-        <button
-          type="button"
-          data-ile-global-resources
-          title={t("tools.planResources")}
-          aria-label={t("tools.planResources")}
-          aria-pressed={globalResourcesOpen}
-          onClick={() => onOpenGlobalResources?.()}
-          className={`relative flex ${squareSize} shrink-0 flex-col items-center justify-center overflow-hidden rounded-none border bg-neutral-950 text-neutral-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] ${
-            globalResourcesOpen
-              ? "border-white"
-              : "border-white/35 hover:border-white/70"
-          }`}
-        >
-          <span className="px-1 text-center font-mono text-[10px] font-semibold uppercase leading-tight tracking-wider text-white">
-            {t("tools.planResources")}
-          </span>
-        </button>
+      {openWorkLabels.length > 0 && showSubmit ? (
+        <span
+          data-ile-end-turn-stem
+          aria-hidden
+          className={`mb-[2.4rem] h-0.5 w-3 shrink-0 bg-white/70 ${compact ? "mb-8" : ""}`}
+        />
       ) : null}
       {showSubmit ? (
         <IleSubmitWorkButton
           square
           compact={compact}
+          emphasized
           label={submitTurnLabel}
           onClick={onSubmitTurn}
           busy={submitTurnBusy}
           disabled={submitTurnDisabled}
         />
       ) : null}
-      {showReview ? (
-        <button
-          type="button"
-          data-ile-review-work
-          aria-pressed={reviewWorkOpen}
-          onClick={() => onReviewWork?.()}
-          className={`flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider ${
-            reviewWorkOpen
-              ? "border-white bg-white text-neutral-950"
-              : "border-white/35 bg-neutral-950 text-neutral-100 hover:border-white/70"
-          }`}
-        >
-          <ClipboardList className="size-4" strokeWidth={2.3} aria-hidden />
-          {reviewWorkLabel}
-        </button>
-      ) : null}
+      </div>
     </div>
   );
 }

@@ -24,7 +24,7 @@ import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
 import { closeIleImDoneAnswering } from "@/lib/ile-im-done-answering";
 import {
   closeIleOpenWorkTurn,
-  ILE_SUBMIT_TURN_LABEL,
+  ILE_END_TURN_LABEL,
   ILE_SUBMIT_WORK_CONTINUE_TEXT,
   partitionIleThoughtsByOpenWork,
   resolveIleWorkChatTarget,
@@ -36,6 +36,10 @@ import {
   removeIleOpenWork,
   restoreIleOpenWorkIds,
 } from "@/lib/ile-pow-spend";
+import { unusedIlePowForInsights } from "@/lib/ile-turn-insights";
+import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
+import { IleTurnInsightCraft } from "@/components/session-view/ile-turn-insight-craft";
+import { IleSessionInsightsPanel } from "@/components/session-view/ile-session-insights-panel";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
@@ -68,7 +72,11 @@ import {
   markGatherResourcesSeen,
   parseGatherSeenBlockIds,
 } from "@/lib/block-circular-menu";
-import { countIleUnsubmittedPowDisplay, toIlePowDisplayCounts } from "@/lib/ile-pow-counters";
+import {
+  countIleSpokenThoughts,
+  countIleUnsubmittedPowDisplay,
+  toIlePowDisplayCounts,
+} from "@/lib/ile-pow-counters";
 import {
   assignIleWorkAestheticImages,
   ileWorkAestheticStorageKey,
@@ -288,6 +296,9 @@ export function SessionView({
   );
   const openWorkIdsRef = useRef<string[]>([]);
   const [submitTurnBusy, setSubmitTurnBusy] = useState(false);
+  const [craftingInsightsOpen, setCraftingInsightsOpen] = useState(false);
+  const [sessionInsightsOpen, setSessionInsightsOpen] = useState(false);
+  const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
   const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
   const dockSeenAssistantIdRef = useRef<Record<string, string | null>>({});
@@ -558,8 +569,8 @@ export function SessionView({
     dismissGatherWarning,
     openGatheredResources,
     tryStartWork,
-    spent: _spent,
-    spentUnits: _spentUnits,
+    spent,
+    spentUnits,
   } = useIleGatherResources({
     sessionId: session?.id,
     workspaceId:
@@ -1086,6 +1097,33 @@ export function SessionView({
     [activeTool, handleToolChange],
   );
 
+  const workspaceId =
+    typeof session?.metadata?.workspace_id === "string"
+      ? session.metadata.workspace_id
+      : undefined;
+  const unusedPowForInsights = unusedIlePowForInsights({
+    available: availableCounts,
+    thoughts: countIleSpokenThoughts(sessionPowArtifacts),
+    spentUnits,
+    spentTyped: spent,
+  });
+
+  const loadSessionInsights = useCallback(async () => {
+    if (!session?.id) return;
+    try {
+      const response = await fetch(insightsSessionListUrl(session.id));
+      const data = await response.json();
+      if (!response.ok) return;
+      setSessionInsights(Array.isArray(data.insights) ? data.insights : []);
+    } catch {
+      /* Guest sessions cannot list insights. */
+    }
+  }, [session?.id]);
+
+  useEffect(() => {
+    void loadSessionInsights();
+  }, [loadSessionInsights]);
+
   const handleSubmitTurn = useCallback(async () => {
     if (submitTurnBusy) return;
     setSubmitTurnBusy(true);
@@ -1155,6 +1193,7 @@ export function SessionView({
       ]);
     } finally {
       setSubmitTurnBusy(false);
+      setCraftingInsightsOpen(true);
     }
   }, [
     activeStep?.id,
@@ -1434,7 +1473,7 @@ export function SessionView({
         openWorkLabels={openWorkDockLabels}
         onFocusOpenWork={handleFocusOpenWork}
         onSubmitTurn={() => void handleSubmitTurn()}
-        submitTurnLabel={t("session.submitTurn") || ILE_SUBMIT_TURN_LABEL}
+        submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
         submitTurnBusy={submitTurnBusy}
         submitTurnDisabled={submitTurnBusy || openWorkIds.length < 1}
         onReviewWork={() => handleIleSessionToolChange(ILE_REVIEW_WORK_TOOL)}
@@ -1610,8 +1649,10 @@ export function SessionView({
         onFocusOpenWork={handleFocusOpenWork}
         onOpenGlobalResources={() => handleIleSessionToolChange("plan-resources")}
         onSubmitTurn={() => void handleSubmitTurn()}
-        submitTurnLabel={t("session.submitTurn") || ILE_SUBMIT_TURN_LABEL}
+        submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
         submitTurnBusy={submitTurnBusy}
+        sessionInsightCount={sessionInsights.length}
+        onOpenSessionInsights={() => setSessionInsightsOpen(true)}
         participantIdentity={participantIdentity}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
@@ -1742,6 +1783,37 @@ export function SessionView({
             onOpenPicInPic={openManualPicInPic}
           />
         }
+      />
+      <IleTurnInsightCraft
+        open={craftingInsightsOpen}
+        aestheticImage={
+          selectedAesthetic?.previewImage ||
+          selectedAesthetic?.images?.[0] ||
+          openWorkDockLabels[0]?.image ||
+          null
+        }
+        dockedChapters={openWorkDockLabels}
+        thoughts={sessionThoughtInterface.thoughts}
+        unusedPow={unusedPowForInsights}
+        workspaceId={workspaceId}
+        sessionId={session.id}
+        onCrafted={(insight) => {
+          setSessionInsights((current) => {
+            if (current.some((row) => row.id === insight.id)) return current;
+            return [insight, ...current];
+          });
+        }}
+        onContinue={() => setCraftingInsightsOpen(false)}
+        onSaveAndExit={() => {
+          setCraftingInsightsOpen(false);
+          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
+          setShowSaveExitNameDialog(true);
+        }}
+      />
+      <IleSessionInsightsPanel
+        open={sessionInsightsOpen}
+        onClose={() => setSessionInsightsOpen(false)}
+        insights={sessionInsights}
       />
     </div>
   );

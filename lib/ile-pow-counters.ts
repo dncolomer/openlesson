@@ -92,7 +92,7 @@ export function emptyIlePowDisplayCounts(): IlePowDisplayCounts {
   return { tool: 0, screen: 0, video: 0, eeg: 0, thoughts: 0 };
 }
 
-/** Pending work not yet sent via Submit work (stashed thoughts, forming speech, dirty tools). */
+/** Pending work not yet sent via End turn (stashed thoughts, forming speech, dirty tools). */
 export function countIleUnsubmittedPowDisplay(input: {
   unflaggedThoughtCount?: number;
   formingThought?: boolean;

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
-import { ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
+import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
 import {
   aestheticImageForId,
   assignIleWorkAestheticImages,
@@ -169,7 +169,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain("data-ile-pow-dual-pill");
     expect(chrome).toContain("data-ile-work-dock");
     expect(chrome).toContain("IleWorkDockBar");
-    expect(chrome).toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).toContain("IleChapterToolTabs");
     expect(chrome).not.toContain("data-ile-work-dock-shifted");
     expect(chrome).toContain("data-ile-chapter-dock-panel");
@@ -185,7 +185,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("data-ile-work-dock-bar");
     expect(dockBar).toContain("data-ile-global-resources");
     expect(dockBar).toContain("data-ile-submit-turn");
+    expect(dockBar).toContain("data-ile-end-turn");
+    expect(dockBar).toContain("data-ile-end-turn-cluster");
+    expect(dockBar).toContain("data-ile-end-turn-stem");
     expect(dockBar).toContain("data-ile-review-work");
+    expect(dockBar).toContain("emphasized");
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
     expect(dockBar).not.toContain("data-ile-pow-budget-remaining");
@@ -224,13 +228,36 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(tabs).not.toContain("thought-history");
     expect(tabs).not.toContain('"data-input"');
     expect(tabs).not.toContain("logs:");
-    expect(chrome).toContain("data-ile-review-work");
+    expect(chrome).toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("right-2");
     const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dockSlice).toContain("onOpenGlobalResources");
-    expect(dockSlice).not.toContain("onSubmitTurn");
+    expect(dockSlice).toContain("onSubmitTurn");
+    expect(dockSlice).toContain("onReviewWork");
+    const powBar = chrome.slice(
+      chrome.indexOf("data-ile-pow-resource-bar"),
+      chrome.indexOf("data-ile-session-modal"),
+    );
+    expect(powBar).toContain("data-ile-session-insights-count");
+    expect(powBar).not.toContain("IleSubmitWorkButton");
+    expect(powBar).not.toContain("data-ile-review-work");
+    expect(powBar).not.toContain("data-ile-submit-turn");
     expect(view).toContain("compact");
     expect(view).toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    expect(view).toContain("setCraftingInsightsOpen(true)");
+    expect(view).toContain("IleTurnInsightCraft");
+    expect(view).toContain("IleSessionInsightsPanel");
+    const craft = read("components/session-view/ile-turn-insight-craft.tsx");
+    expect(craft).toContain("data-ile-turn-insight-craft");
+    expect(craft).toContain("data-ile-turn-insight-craft-still");
+    expect(craft).toContain("data-ile-turn-insight-chapters");
+    expect(craft).toContain("data-ile-turn-insight-path=\"type\"");
+    expect(craft).toContain("data-ile-turn-insight-path=\"pool\"");
+    expect(craft).toContain("Continue with the next turn");
+    expect(craft).toContain("Save and go out of the workspace");
+    expect(craft).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
+    expect(craft).toContain("buildIleThoughtsPoolCandidateRequest");
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(view).toContain("openWorkIds={openWorkIds}");
@@ -254,12 +281,23 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(phase).toContain("openWorkIdsRef.current");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget-minimize");
-    expect(ILE_SUBMIT_TURN_LABEL.toLowerCase()).toMatch(/submit|work/);
+    expect(ILE_END_TURN_LABEL).toBe("End turn");
+    expect(ILE_SUBMIT_TURN_LABEL).toBe(ILE_END_TURN_LABEL);
+    expect(ILE_END_TURN_LABEL.toLowerCase()).toMatch(/end|turn/);
 
     expect(docs).toMatch(/Work expense/i);
-    expect(docs).toMatch(/Submit work/);
+    expect(docs).toMatch(/End turn/);
     expect(docs).toMatch(/Gather resources/);
 
+    writeScratch(
+      "ile-end-turn-chrome.txt",
+      [
+        "PoW bar: dual pills + session insights counter; no Submit work / Review work",
+        "bottom-right: Review work + End turn cluster; docked chips stem from End turn",
+        "End turn opens crafting modal (aesthetic still, chapter link chips, type + thoughts pool, continue / save-and-exit)",
+        `endTurnLabel=${ILE_END_TURN_LABEL}`,
+      ].join("\n"),
+    );
     writeScratch(
       "ile-work-chrome.txt",
       [
@@ -267,14 +305,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "PiP compact: no I'm done answering",
         "TAP: ImDoneAnsweringControl kept",
         "welcome: data-ile-pow-expense-slider beside aesthetics/map type",
-        "chrome: Submit work left of identity pill; dock is Global resources + chapter chips",
+        "chrome: Insights counter on PoW bar; End turn + Review work float bottom-right; chips stem from End turn",
         "minimized chips use aesthetic stills + map two-word keyword; bar has no bg image",
         "Work widget bg uses the same session-lived still as the chapter dock chip and map tile",
         "chapters open from the dock; minimize keeps chips on the bar",
         "save stores ile_open_work_ids; resume restores unclosed Work",
         "submit routes resolveIleWorkChatTarget + sendThought chapterId",
-        "PoW bar shows submitted + red unsubmitted; Submit work left of identity pill",
-        `submitLabel=${ILE_SUBMIT_TURN_LABEL}`,
+        "PoW bar shows submitted + unsubmitted + session insights count; End turn is the dock cluster",
+        `submitLabel=${ILE_END_TURN_LABEL}`,
       ].join("\n"),
     );
   });

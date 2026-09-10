@@ -31,9 +31,11 @@ export type IleWorkStartDecision = {
 };
 
 export const ILE_WORK_INSUFFICIENT_POW_WARNING =
-  "Not enough Proof of Work to start another chapter. Submit work or do more work first — or choose a cheaper Work expense in settings.";
+  "Not enough Proof of Work to start another chapter. End turn or do more work first — or choose a cheaper Work expense in settings.";
 
-export const ILE_SUBMIT_TURN_LABEL = "Submit work";
+export const ILE_END_TURN_LABEL = "End turn";
+/** Same control as End turn (legacy export name). */
+export const ILE_SUBMIT_TURN_LABEL = ILE_END_TURN_LABEL;
 
 const WORK_START_COST: Record<IlePowExpenseLevel, number> = {
   1: 1,

@@ -50,7 +50,7 @@ export function IleReviewWorkPanel({
           {ILE_REVIEW_WORK_LABEL}
         </p>
         <p className="mt-0.5 text-[11px] text-neutral-500">
-          Inspect unsubmitted proof of work before Submit work.
+          Inspect unsubmitted proof of work before End turn.
         </p>
       </div>
       <div

@@ -6,12 +6,18 @@ import {
   GENERATE_INSIGHTS_ACTION_LABEL,
   LEARNER_WORK_DRAWER_TITLE,
   buildGenerateInsightsSuggestBody,
+  insightPublicPath,
   insightsListUrl,
+  insightsSessionListUrl,
   insightsTracesUrl,
   resolveInsightSurfaceCapabilities,
   workspaceKnowledgeInsightsPath,
   workspacePlayInsightsPath,
 } from "@/lib/insights";
+import {
+  ILE_TURN_INSIGHT_CREATE_PATH,
+  ILE_TURN_INSIGHT_EVALUATE_PATH,
+} from "@/lib/ile-turn-insights";
 import { availableSectionsForMode } from "@/lib/workspace-mode";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -163,5 +169,38 @@ describe("shipped insight surface wiring", () => {
     expect(insightDetail).not.toContain("/dashboard?tab=insights");
     expect(insightDetail).toContain("workspaceKnowledgeInsightsPath");
     expect(thoughtMemory).toContain("workspaceKnowledgeInsightsPath");
+  });
+
+  it("plugs ILE turn crafts into existing insight list, share, and dedicated page", () => {
+    expect(insightsSessionListUrl("sess-1")).toBe("/api/insights?sessionId=sess-1");
+    expect(insightPublicPath({ id: "ins-1", share_token: "tok-1" })).toBe("/insights/tok-1");
+    expect(workspacePlayInsightsPath("ws-1")).toBe("/workspace/ws-1?section=insights");
+    expect(ILE_TURN_INSIGHT_EVALUATE_PATH).toBe("/api/insights/evaluate");
+    expect(ILE_TURN_INSIGHT_CREATE_PATH).toBe("/api/insights/create");
+
+    const create = fs.readFileSync(
+      path.join(REPO_ROOT, "app/api/insights/create/route.ts"),
+      "utf8",
+    );
+    const list = fs.readFileSync(path.join(REPO_ROOT, "app/api/insights/route.ts"), "utf8");
+    const evaluate = fs.readFileSync(
+      path.join(REPO_ROOT, "app/api/insights/evaluate/route.ts"),
+      "utf8",
+    );
+    const craft = fs.readFileSync(
+      path.join(REPO_ROOT, "components/session-view/ile-turn-insight-craft.tsx"),
+      "utf8",
+    );
+    expect(create).toContain("buildInsightCreateInsert");
+    expect(create).toContain("chapterId");
+    expect(create).toContain("evaluated");
+    expect(list).toContain('searchParams.get("sessionId")');
+    expect(list).toContain('.eq("session_id", sessionId)');
+    expect(evaluate).toContain("allowIleTypedInsightCreate");
+    expect(craft).toContain("insightPublicPath");
+    expect(craft).toContain("buildIleTurnInsightPersistPayload");
+    expect(sessionView).toContain("IleTurnInsightCraft");
+    expect(sessionView).toContain("insightsSessionListUrl");
+    expect(insightDetail).toContain("insightPublicPath");
   });
 });

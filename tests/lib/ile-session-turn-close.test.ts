@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   closeIleOpenWorkTurn,
+  ILE_END_TURN_LABEL,
   ILE_SUBMIT_TURN_LABEL,
   ILE_SUBMIT_WORK_CONTINUE_TEXT,
   partitionIleThoughtsByOpenWork,
@@ -31,6 +32,8 @@ function thought(id: string, text: string, chapterId?: string) {
 
 describe("closeIleOpenWorkTurn (shipped)", () => {
   it("one close submits both open Works and a second close does not re-expand flagged ids", async () => {
+    expect(ILE_END_TURN_LABEL).toBe("End turn");
+    expect(ILE_SUBMIT_TURN_LABEL).toBe(ILE_END_TURN_LABEL);
     expect(ILE_SUBMIT_TURN_LABEL.toLowerCase()).toMatch(/submit|turn/);
     expect(ILE_SUBMIT_WORK_CONTINUE_TEXT.toLowerCase()).toMatch(/submitted this turn/);
 

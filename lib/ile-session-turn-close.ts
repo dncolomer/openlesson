@@ -7,9 +7,13 @@ import {
   type IleEndOfChainOfThoughtEvent,
   type IleImDoneAnsweringThought,
 } from "@/lib/ile-im-done-answering";
-import { ILE_SUBMIT_TURN_LABEL, normalizeIleOpenWorkId } from "@/lib/ile-pow-spend";
+import {
+  ILE_END_TURN_LABEL,
+  ILE_SUBMIT_TURN_LABEL,
+  normalizeIleOpenWorkId,
+} from "@/lib/ile-pow-spend";
 
-export { ILE_SUBMIT_TURN_LABEL };
+export { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL };
 
 /** Fallback Helios send for an open Work that had no stashed thoughts this turn. */
 export const ILE_SUBMIT_WORK_CONTINUE_TEXT =

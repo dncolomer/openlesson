@@ -245,7 +245,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("data-ile-pow-dual-pill");
     const powCount = chrome.slice(
       chrome.indexOf("data-ile-pow-count={type}"),
-      chrome.indexOf("data-ile-review-work"),
+      chrome.indexOf("data-ile-session-insights-count"),
     );
     expect(powCount).toContain("data-ile-pow-dual-pill");
     expect(powCount).toContain("bg-white");
@@ -253,19 +253,22 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(powCount).toContain("bg-black");
     expect(powCount).toContain("text-white");
     expect(powCount).not.toContain("text-red-400");
-    expect(chrome).toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).toContain("data-ile-identity-row");
+    expect(chrome).toContain("data-ile-session-insights-count");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
     );
-    const submitIdx = powBar.indexOf("IleSubmitWorkButton");
+    const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
     const identityIdx = powBar.indexOf("data-ile-identity-row");
-    expect(submitIdx).toBeGreaterThan(-1);
-    expect(identityIdx).toBeGreaterThan(submitIdx);
+    expect(insightsIdx).toBeGreaterThan(-1);
+    expect(identityIdx).toBeGreaterThan(insightsIdx);
+    expect(powBar).not.toContain("data-ile-review-work");
+    expect(powBar).not.toContain("data-ile-submit-turn");
     expect(chrome).toContain("ILE_POW_COUNTER_LABELS[type]");
     expect(chrome).toContain("ILE_POW_COUNTER_ICONS[type]");
-    expect(chrome).toContain("data-ile-review-work");
+    expect(chrome).toContain("onReviewWork");
     expect(chrome).not.toContain(">Traces<");
     const powIcons = read("components/session-view/ile-pow-icons.tsx");
     expect(powIcons).toContain("thoughts:");

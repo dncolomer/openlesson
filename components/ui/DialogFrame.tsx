@@ -8,12 +8,13 @@ import { createPortal } from "react-dom";
  * ConfirmDialog and ILE form/welcome dialogs all render through this so
  * stacking, dismiss, and chrome stay one framework.
  */
-export type DialogSize = "md" | "lg" | "xl";
+export type DialogSize = "md" | "lg" | "xl" | "full";
 
 const DIALOG_SIZE: Record<DialogSize, string> = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-5xl",
+  full: "max-w-[min(72rem,calc(100vw-1.5rem))]",
 };
 
 export type DialogFrameProps = {

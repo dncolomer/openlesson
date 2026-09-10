@@ -23,10 +23,7 @@ import {
 } from "@/lib/ile-map-chrome";
 import { IleChapterWidgetFrame } from "@/components/session-view/ile-chapter-widget-frame";
 import { IleChapterToolTabs } from "@/components/session-view/ile-chapter-tool-tabs";
-import {
-  IleSubmitWorkButton,
-  IleWorkDockBar,
-} from "@/components/session-view/ile-work-dock-bar";
+import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import { ILE_POW_COUNTER_ICONS } from "@/components/session-view/ile-pow-icons";
 import {
   emptyIlePowDisplayCounts,
@@ -35,7 +32,7 @@ import {
   type IlePowDisplayCounts,
 } from "@/lib/ile-pow-counters";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
-import { ClipboardList } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -82,6 +79,8 @@ export type SessionChromeProps = {
   onSubmitTurn?: () => void;
   submitTurnLabel?: string;
   submitTurnBusy?: boolean;
+  sessionInsightCount?: number;
+  onOpenSessionInsights?: () => void;
   participantIdentity?: PowParticipantIdentity | null;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
@@ -143,8 +142,10 @@ export function SessionChrome({
   onFocusOpenWork,
   onOpenGlobalResources,
   onSubmitTurn,
-  submitTurnLabel = "Submit work",
+  submitTurnLabel = "End turn",
   submitTurnBusy = false,
+  sessionInsightCount = 0,
+  onOpenSessionInsights,
   participantIdentity = null,
   onCloseToolOverlay,
   allowEndSession,
@@ -237,27 +238,19 @@ export function SessionChrome({
           })}
           <>
             <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
-            {onSubmitTurn ? (
-              <IleSubmitWorkButton
-                label={submitTurnLabel}
-                onClick={onSubmitTurn}
-                busy={submitTurnBusy}
-                disabled={submitTurnBusy || openWorkCount < 1}
-              />
-            ) : null}
             <button
               type="button"
-              data-ile-review-work
-              aria-pressed={activeTool === ILE_REVIEW_WORK_TOOL}
-              onClick={() => onToolChange(ILE_REVIEW_WORK_TOOL)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-none border px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider ${
-                activeTool === ILE_REVIEW_WORK_TOOL
-                  ? "border-white bg-white text-neutral-950"
-                  : "border-neutral-500 bg-neutral-900 text-neutral-100 hover:border-white"
-              }`}
+              data-ile-session-insights-count
+              title="Session insights"
+              aria-label="Session insights"
+              onClick={() => onOpenSessionInsights?.()}
+              className="flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_0_18px_rgba(255,255,255,0.28)] hover:bg-neutral-100"
             >
-              <ClipboardList className="size-3.5" strokeWidth={2.3} aria-hidden />
-              {t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
+              <Lightbulb className="size-3.5" strokeWidth={2.3} aria-hidden />
+              Insights
+              <span data-ile-session-insights-value className="bg-neutral-950 px-1.5 py-0.5 text-white">
+                {sessionInsightCount}
+              </span>
             </button>
             {participantIdentity ? (
               <div data-ile-identity-row className="flex shrink-0 items-center">
@@ -349,7 +342,13 @@ export function SessionChrome({
             onFocusOpenWork={onFocusOpenWork}
             onOpenGlobalResources={onOpenGlobalResources}
             globalResourcesOpen={overlayOpen}
+            onSubmitTurn={onSubmitTurn}
             submitTurnLabel={submitTurnLabel}
+            submitTurnBusy={submitTurnBusy}
+            submitTurnDisabled={submitTurnBusy || openWorkCount < 1}
+            onReviewWork={() => onToolChange(ILE_REVIEW_WORK_TOOL)}
+            reviewWorkOpen={activeTool === ILE_REVIEW_WORK_TOOL}
+            reviewWorkLabel={t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
             aestheticImages={aestheticImages}
           />
         </div>

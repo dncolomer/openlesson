@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { buildInsightCreateInsert } from "@/lib/insights";
 import { INSIGHT_AESTHETIC_IMAGES } from "@/lib/insights-server";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
@@ -15,36 +16,61 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
 
-    const { thoughtIds, thoughts, workspaceId, blockId, sessionId, modifyingPrompt } = await req.json();
+    const {
+      thoughtIds,
+      thoughts,
+      workspaceId,
+      blockId,
+      chapterId,
+      sessionId,
+      modifyingPrompt,
+      title: providedTitle,
+      summary: providedSummary,
+      evaluated,
+    } = await req.json();
     const sourceThoughts = Array.isArray(thoughts)
       ? thoughts.filter((t: { text?: string }) => t?.text?.trim())
       : [];
-    if (sourceThoughts.length === 0) {
+    const preEvaluated =
+      evaluated === true &&
+      typeof providedTitle === "string" &&
+      typeof providedSummary === "string" &&
+      providedTitle.trim() &&
+      providedSummary.trim();
+
+    if (!preEvaluated && sourceThoughts.length === 0) {
       return jsonError(400, "At least one thought is required");
     }
 
-    const thoughtBlock = sourceThoughts
-      .map((t: { text: string }, i: number) => `${i + 1}. ${t.text.trim()}`)
-      .join("\n");
+    let title = preEvaluated ? String(providedTitle).trim() : "";
+    let summary = preEvaluated ? String(providedSummary).trim() : "";
 
-    const ai = await callXaiJSON<CreateInsightResponse>(
-      [
-        systemMessage(
-          'Turn learner thought traces into one insight bookmark. Return JSON: { "title": "4-12 words", "summary": "2-4 sentences, rephrased synthesis — not a quote dump." }',
-        ),
-        userMessage(
-          `Thought traces:\n${thoughtBlock}\n\nSynthesize into one durable insight the learner can revisit.${
-            typeof modifyingPrompt === "string" && modifyingPrompt.trim()
-              ? `\n\nModifying prompt from the learner:\n${modifyingPrompt.trim().slice(0, 2000)}`
-              : ""
-          }`,
-        ),
-      ],
-      { model: DEFAULT_MODEL, maxTokens: 500, temperature: 0.4 },
-    );
+    if (!preEvaluated) {
+      const thoughtBlock = sourceThoughts
+        .map((t: { text: string }, i: number) => `${i + 1}. ${t.text.trim()}`)
+        .join("\n");
 
-    if (!ai.success || !ai.data?.title?.trim() || !ai.data?.summary?.trim()) {
-      return jsonError(502, "Failed to synthesize insight");
+      const ai = await callXaiJSON<CreateInsightResponse>(
+        [
+          systemMessage(
+            'Turn learner thought traces into one insight bookmark. Return JSON: { "title": "4-12 words", "summary": "2-4 sentences, rephrased synthesis — not a quote dump." }',
+          ),
+          userMessage(
+            `Thought traces:\n${thoughtBlock}\n\nSynthesize into one durable insight the learner can revisit.${
+              typeof modifyingPrompt === "string" && modifyingPrompt.trim()
+                ? `\n\nModifying prompt from the learner:\n${modifyingPrompt.trim().slice(0, 2000)}`
+                : ""
+            }`,
+          ),
+        ],
+        { model: DEFAULT_MODEL, maxTokens: 500, temperature: 0.4 },
+      );
+
+      if (!ai.success || !ai.data?.title?.trim() || !ai.data?.summary?.trim()) {
+        return jsonError(502, "Failed to synthesize insight");
+      }
+      title = ai.data.title.trim();
+      summary = ai.data.summary.trim();
     }
 
     const aestheticImage =
@@ -52,18 +78,20 @@ export async function POST(req: NextRequest) {
 
     const { data: insight, error } = await supabase
       .from("insights")
-      .insert({
-        user_id: user.id,
-        workspace_id: workspaceId || null,
-        block_id: blockId || null,
-        session_id: sessionId || null,
-        title: ai.data.title.trim(),
-        summary: ai.data.summary.trim(),
-        thought_ids: Array.isArray(thoughtIds) ? thoughtIds : [],
-        source_thoughts: sourceThoughts,
-        aesthetic_image: aestheticImage,
-        is_public: true,
-      })
+      .insert(
+        buildInsightCreateInsert({
+          userId: user.id,
+          workspaceId,
+          sessionId,
+          blockId,
+          chapterId,
+          title,
+          summary,
+          thoughtIds,
+          sourceThoughts,
+          aestheticImage,
+        }),
+      )
       .select()
       .single();
 

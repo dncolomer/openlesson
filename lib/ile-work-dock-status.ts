@@ -1,5 +1,5 @@
 /**
- * Docked-chapter chip status after Submit work: loading until Helios replies,
+ * Docked-chapter chip status after End turn: loading until Helios replies,
  * then attention until the learner opens that chapter.
  */
 import { normalizeIleOpenWorkId } from "@/lib/ile-pow-spend";

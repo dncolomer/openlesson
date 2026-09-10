@@ -290,8 +290,10 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     expect(helios).not.toContain("See Your thoughts");
 
     const chrome = read("components/session-view/session-chrome.tsx");
-    expect(chrome).toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).toContain("data-ile-session-insights-count");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-end-turn");
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-transcription-box");
     expect(voice).toContain("<SlidingTranscript");
@@ -336,7 +338,7 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     writeScratch(
       "ile-im-done-answering-chrome.txt",
       [
-        "ILE: Submit work lives on the PoW bar; PiP dock keeps Submit work; chapter widget has no I'm done answering",
+        "ILE: End turn lives on the bottom-right dock; PiP dock keeps End turn; chapter widget has no I'm done answering",
         "no SVG bump",
         "no Submit last Thought on ILE or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",

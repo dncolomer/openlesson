@@ -1,15 +1,85 @@
+import { isUuid } from "@/lib/domain/types";
+
 export type InsightSummary = {
   id: string;
   title: string;
   summary: string;
   workspace_id?: string | null;
   block_id?: string | null;
+  chapter_id?: string | null;
   session_id?: string | null;
   aesthetic_image?: string | null;
   share_token?: string | null;
   created_at: string;
   archived_at?: string | null;
 };
+
+function uuidOrNull(value: unknown): string | null {
+  const id = String(value ?? "").trim();
+  return isUuid(id) ? id : null;
+}
+
+/**
+ * insights.block_id is uuid (workspace block). ILE docked chapters use
+ * string step ids like `step_1_seed`, which must not be written there.
+ */
+export function resolveInsightBlockAndChapterIds(input: {
+  blockId?: unknown;
+  chapterId?: unknown;
+}): { blockId: string | null; chapterId: string | null } {
+  const chapterId =
+    String(input.chapterId ?? "").trim() ||
+    String(input.blockId ?? "").trim() ||
+    null;
+  const blockId = uuidOrNull(input.blockId) || uuidOrNull(input.chapterId);
+  return { blockId, chapterId };
+}
+
+export type InsightCreateInsertRow = {
+  user_id: string;
+  workspace_id: string | null;
+  session_id: string | null;
+  block_id: string | null;
+  chapter_id: string | null;
+  title: string;
+  summary: string;
+  thought_ids: unknown;
+  source_thoughts: unknown;
+  aesthetic_image: string;
+  is_public: true;
+};
+
+/** Insert row for POST /api/insights/create — UUID-guards uuid columns. */
+export function buildInsightCreateInsert(input: {
+  userId: string;
+  workspaceId?: unknown;
+  sessionId?: unknown;
+  blockId?: unknown;
+  chapterId?: unknown;
+  title: string;
+  summary: string;
+  thoughtIds?: unknown;
+  sourceThoughts?: unknown;
+  aestheticImage: string;
+}): InsightCreateInsertRow {
+  const link = resolveInsightBlockAndChapterIds({
+    blockId: input.blockId,
+    chapterId: input.chapterId,
+  });
+  return {
+    user_id: input.userId,
+    workspace_id: uuidOrNull(input.workspaceId),
+    session_id: uuidOrNull(input.sessionId),
+    block_id: link.blockId,
+    chapter_id: link.chapterId,
+    title: input.title,
+    summary: input.summary,
+    thought_ids: Array.isArray(input.thoughtIds) ? input.thoughtIds : [],
+    source_thoughts: Array.isArray(input.sourceThoughts) ? input.sourceThoughts : [],
+    aesthetic_image: input.aestheticImage,
+    is_public: true,
+  };
+}
 
 /**
  * Product surfaces that host Thought Memory and/or Insights.
@@ -51,6 +121,11 @@ export function insightsListUrl(workspaceId?: string | null): string {
     return `/api/insights?workspaceId=${encodeURIComponent(workspaceId)}`;
   }
   return "/api/insights";
+}
+
+/** Session-scoped list for the ILE session insights counter. */
+export function insightsSessionListUrl(sessionId: string): string {
+  return `/api/insights?sessionId=${encodeURIComponent(sessionId)}`;
 }
 
 /** Path back to a workspace's Knowledge Insights surface after archive/detail actions. */

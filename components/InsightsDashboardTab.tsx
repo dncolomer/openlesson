@@ -6,6 +6,7 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   archiveInsight,
   formatInsightDate,
+  insightApiErrorMessage,
   insightPublicPath,
   insightsListUrl,
   type InsightSummary,
@@ -59,7 +60,7 @@ export function InsightsDashboardTab({
     try {
       const res = await fetch(insightsListUrl(workspaceId));
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load insights");
+      if (!res.ok) throw new Error(insightApiErrorMessage(data, "Failed to load insights"));
       setInsights(data.insights || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load insights");
@@ -74,7 +75,7 @@ export function InsightsDashboardTab({
     try {
       const res = await fetch(`/api/insights/traces?workspaceId=${encodeURIComponent(workspaceId)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load thought traces");
+      if (!res.ok) throw new Error(insightApiErrorMessage(data, "Failed to load thought traces"));
       setThoughts(Array.isArray(data.thoughts) ? data.thoughts : []);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to load thought traces");
@@ -134,7 +135,7 @@ export function InsightsDashboardTab({
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to suggest insights");
+      if (!response.ok) throw new Error(insightApiErrorMessage(data, "Failed to suggest insights"));
       const next = Array.isArray(data.suggestions) ? (data.suggestions as InsightSuggestion[]) : [];
       setSuggestions(next);
       if (next.length === 0) {
@@ -177,7 +178,7 @@ export function InsightsDashboardTab({
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to bookmark insight");
+      if (!response.ok) throw new Error(insightApiErrorMessage(data, "Failed to bookmark insight"));
       if (data.insight) {
         setInsights((current) => [data.insight as InsightSummary, ...current]);
         setLastInsightUrl(insightPublicPath(data.insight));

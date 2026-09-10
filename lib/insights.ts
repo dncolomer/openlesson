@@ -1,4 +1,10 @@
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { isUuid } from "@/lib/domain/types";
+
+/** Nested `{ error: { message } }` envelopes must not render as `[object Object]`. */
+export function insightApiErrorMessage(body: unknown, fallback: string): string {
+  return errorMessageFromBody(body, fallback);
+}
 
 export type InsightSummary = {
   id: string;
@@ -211,6 +217,6 @@ export async function archiveInsight(insightId: string): Promise<void> {
   const response = await fetch(`/api/insights/${insightId}/archive`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || "Failed to archive insight");
+    throw new Error(insightApiErrorMessage(data, "Failed to archive insight"));
   }
 }

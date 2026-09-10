@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   archiveInsight,
   formatInsightDate,
+  insightApiErrorMessage,
   insightPublicPath,
   insightsListUrl,
   resolveInsightSurfaceCapabilities,
@@ -155,7 +156,7 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
     try {
       const response = await fetch(insightsListUrl(workspaceId));
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to load insights");
+      if (!response.ok) throw new Error(insightApiErrorMessage(data, "Failed to load insights"));
       setInsights(data.insights || []);
     } catch (error) {
       setInsightError(error instanceof Error ? error.message : "Failed to load insights");
@@ -218,7 +219,7 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to suggest insights");
+      if (!response.ok) throw new Error(insightApiErrorMessage(data, "Failed to suggest insights"));
       const suggestions = Array.isArray(data.suggestions) ? (data.suggestions as InsightSuggestion[]) : [];
       setInsightSuggestions(suggestions);
       if (suggestions.length === 0) {
@@ -255,7 +256,7 @@ export function ThoughtMemoryPanel<T extends ThoughtMemoryEntry = ThoughtMemoryE
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to create insight");
+      if (!response.ok) throw new Error(insightApiErrorMessage(data, "Failed to create insight"));
       setLastInsightUrl(insightPublicPath(data.insight));
       setSelectedIds(new Set());
       setInsightSuggestions([]);

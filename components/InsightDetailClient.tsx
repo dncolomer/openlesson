@@ -7,6 +7,7 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   archiveInsight,
   formatInsightDate,
+  insightApiErrorMessage,
   insightPublicPath,
   insightShareUrl,
   workspaceKnowledgeInsightsPath,
@@ -30,7 +31,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
     void fetch(`/api/insights/${insightId}`)
       .then(async (res) => {
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load insight");
+        if (!res.ok) throw new Error(insightApiErrorMessage(data, "Failed to load insight"));
         setInsight(data.insight);
         setIsOwner(Boolean(data.isOwner));
         setIsAuthenticated(Boolean(data.isAuthenticated));

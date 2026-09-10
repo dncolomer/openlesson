@@ -56,6 +56,7 @@ import {
   LEARNER_WORK_DRAWER_TITLE,
   buildGenerateInsightsCreateBody,
   buildGenerateInsightsSuggestBody,
+  insightApiErrorMessage,
   insightsTracesUrl,
 } from "@/lib/insights";
 
@@ -446,7 +447,7 @@ export function WorkspaceLearnerBlockPane({
       const tracesRes = await fetch(insightsTracesUrl(workspaceId, block.id));
       const tracesData = await tracesRes.json();
       if (!tracesRes.ok) {
-        throw new Error(tracesData.error || "Failed to load Work traces");
+        throw new Error(insightApiErrorMessage(tracesData, "Failed to load Work traces"));
       }
       const thoughts = Array.isArray(tracesData.thoughts) ? tracesData.thoughts : [];
       if (thoughts.length < 1) {
@@ -463,7 +464,7 @@ export function WorkspaceLearnerBlockPane({
       });
       const suggestData = await suggestRes.json();
       if (!suggestRes.ok) {
-        throw new Error(suggestData.error || "Failed to suggest insights");
+        throw new Error(insightApiErrorMessage(suggestData, "Failed to suggest insights"));
       }
       const suggestions = Array.isArray(suggestData.suggestions)
         ? suggestData.suggestions
@@ -483,7 +484,7 @@ export function WorkspaceLearnerBlockPane({
         });
         const createData = await createRes.json();
         if (!createRes.ok) {
-          throw new Error(createData.error || "Failed to generate insights");
+          throw new Error(insightApiErrorMessage(createData, "Failed to generate insights"));
         }
         setInsightsStatus("Created 1 insight from this block’s Work.");
         return;

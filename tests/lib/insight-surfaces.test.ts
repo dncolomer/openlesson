@@ -6,6 +6,7 @@ import {
   GENERATE_INSIGHTS_ACTION_LABEL,
   LEARNER_WORK_DRAWER_TITLE,
   buildGenerateInsightsSuggestBody,
+  insightApiErrorMessage,
   insightPublicPath,
   insightsListUrl,
   insightsSessionListUrl,
@@ -42,6 +43,23 @@ describe("resolveInsightSurfaceCapabilities", () => {
       allowInsightGeneration: true,
       allowInsightList: true,
     });
+  });
+});
+
+describe("insightApiErrorMessage", () => {
+  it("reads nested insight API envelopes instead of [object Object]", () => {
+    const nested = {
+      error: { code: "unauthorized", message: "Sign in to view insights" },
+    };
+    expect(String(nested.error)).toBe("[object Object]");
+    expect(new Error(nested.error as unknown as string).message).toBe("[object Object]");
+    expect(insightApiErrorMessage(nested, "Failed to load insights")).toBe(
+      "Sign in to view insights",
+    );
+    expect(insightApiErrorMessage({ error: "plain" }, "Failed")).toBe("plain");
+    expect(insightApiErrorMessage({ error: { code: "x" } }, "Failed to load insights")).toBe(
+      "Failed to load insights",
+    );
   });
 });
 
@@ -142,6 +160,13 @@ describe("shipped insight surface wiring", () => {
     expect(insightsTab).toContain("insightsListUrl(workspaceId)");
     expect(insightsTab).toContain("workspaceId?: string");
     expect(insightsTab).toContain("export function InsightsDashboardTab");
+    expect(insightsTab).toContain("insightApiErrorMessage");
+    expect(insightsTab).not.toContain("data.error ||");
+    expect(insightsTab).toContain("border-red-900/50");
+    const insightsLib = fs.readFileSync(path.join(REPO_ROOT, "lib/insights.ts"), "utf8");
+    expect(insightsLib).toContain("insightApiErrorMessage(data, \"Failed to archive insight\")");
+    expect(insightDetail).toContain("insightApiErrorMessage");
+    expect(thoughtMemory).toContain("insightApiErrorMessage");
   });
 
   it("lets Knowledge Insights tab generate suggestions and bookmark them", () => {

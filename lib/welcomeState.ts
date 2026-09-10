@@ -11,6 +11,7 @@
  */
 
 const WELCOME_PREFIX = "session-welcome-seen:";
+const SETTINGS_PREFIX = "ile-settings-confirmed:";
 const TYPED_PREFIX = "probe-typed-seen:";
 const SPOKEN_PREFIX = "session-welcome-spoken:";
 
@@ -20,6 +21,26 @@ function storage(): Storage | null {
     return window.localStorage;
   } catch {
     return null;
+  }
+}
+
+export function isIleSessionSettingsConfirmed(sessionId: string): boolean {
+  const s = storage();
+  if (!s) return false;
+  try {
+    return s.getItem(SETTINGS_PREFIX + sessionId) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markIleSessionSettingsConfirmed(sessionId: string): void {
+  const s = storage();
+  if (!s) return;
+  try {
+    s.setItem(SETTINGS_PREFIX + sessionId, "1");
+  } catch {
+    /* quota */
   }
 }
 

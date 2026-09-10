@@ -27,6 +27,8 @@ export type DialogFrameProps = {
   panelClassName?: string;
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
+  /** When false, render in-tree (needed for Document PiP). Default true. */
+  portal?: boolean;
   /** Becomes `data-{testId}` on the dialog root. */
   testId?: string;
 };
@@ -41,6 +43,7 @@ export function DialogFrame({
   panelClassName,
   closeOnOverlay = true,
   closeOnEscape = true,
+  portal = true,
   testId,
 }: DialogFrameProps) {
   useEffect(() => {
@@ -78,6 +81,6 @@ export function DialogFrame({
     </div>
   );
 
-  if (typeof document === "undefined") return dialog;
+  if (!portal || typeof document === "undefined") return dialog;
   return createPortal(dialog, document.body);
 }

@@ -134,6 +134,12 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     const compact = read("components/IleCompactStashWindow.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
     const welcome = read("components/session-view/session-welcome-modal.tsx");
+    expect(welcome).toContain("data-ile-session-settings");
+    expect(welcome).toContain("h-screen");
+    expect(welcome).not.toContain("DialogFrame");
+    expect(existsSync(join(ROOT, "app/session/settings/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/ile/session/[token]/settings/page.tsx"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/learn/[token]/session/settings/page.tsx"))).toBe(true);
     const view = readSessionViewSurface();
     const speech = read("components/session-view/use-session-speech.ts");
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
@@ -183,12 +189,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(workFrame).not.toContain("onClose=");
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).toContain("data-ile-work-dock-bar");
-    expect(dockBar).toContain("data-ile-global-resources");
+    expect(dockBar).not.toContain("data-ile-global-resources");
     expect(dockBar).toContain("data-ile-submit-turn");
     expect(dockBar).toContain("data-ile-end-turn");
     expect(dockBar).toContain("data-ile-end-turn-cluster");
-    expect(dockBar).toContain("data-ile-end-turn-stem");
-    expect(dockBar).toContain("data-ile-review-work");
+    expect(dockBar).toContain("data-ile-end-turn-double-border");
+    expect(dockBar).toContain("ArrowRight");
+    expect(dockBar).not.toContain("data-ile-end-turn-stem");
+    expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).toContain("emphasized");
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
@@ -210,7 +218,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(helios).not.toContain("Math.random");
     expect(helios).not.toContain("THOUGHT_BACKGROUND_IMAGES");
     expect(dockBar).toContain("FALLBACK_AESTHETIC_IMAGES");
-    expect(dockBar).toContain("size-24");
+    expect(dockBar).toContain("h-24");
     expect(view).toContain("resolveBlockMapGlyph");
     expect(view).toContain("map_keyword");
     expect(view).toContain("countIleUnsubmittedPowDisplay");
@@ -232,20 +240,28 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("right-2");
     const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));
-    expect(dockSlice).toContain("onOpenGlobalResources");
+    expect(dockSlice).not.toContain("onOpenGlobalResources");
     expect(dockSlice).toContain("onSubmitTurn");
-    expect(dockSlice).toContain("onReviewWork");
+    expect(dockSlice).not.toContain("onReviewWork");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
     );
     expect(powBar).toContain("data-ile-session-insights-count");
+    expect(powBar).toContain("data-ile-global-resources");
+    expect(powBar.indexOf("data-ile-session-insights-count")).toBeLessThan(
+      powBar.indexOf("data-ile-global-resources"),
+    );
     expect(powBar).not.toContain("IleSubmitWorkButton");
     expect(powBar).not.toContain("data-ile-review-work");
     expect(powBar).not.toContain("data-ile-submit-turn");
     expect(view).toContain("compact");
     expect(view).toContain("onSubmitTurn={() => void handleSubmitTurn()}");
     expect(view).toContain("setCraftingInsightsOpen(true)");
+    expect(view).toContain("data-ile-compact-insight-craft");
+    expect(view).toContain("turnInsightCraft(false)");
+    expect(view).toContain("ileSessionSettingsPath");
+    expect(view).toContain("if (showWelcomeModal)");
     expect(view).toContain("IleTurnInsightCraft");
     expect(view).toContain("IleSessionInsightsPanel");
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
@@ -258,6 +274,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("Save and go out of the workspace");
     expect(craft).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
     expect(craft).toContain("buildIleThoughtsPoolCandidateRequest");
+    expect(craft).toContain("portal={portal}");
+    expect(read("components/ui/DialogFrame.tsx")).toContain("portal = true");
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(view).toContain("openWorkIds={openWorkIds}");
@@ -290,11 +308,22 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(docs).toMatch(/Gather resources/);
 
     writeScratch(
+      "ile-turn-followup-chrome.txt",
+      [
+        "PoW bar: Insights then quieter Global resources; no Review work",
+        "dock: End turn double border + ArrowRight; no stem; no Review work; no Global resources square",
+        "PiP: data-ile-compact-insight-craft + portal=false",
+        "settings: data-ile-session-settings full-screen route, not DialogFrame",
+        "help: Generate Work in turns / Create Insights / next turn",
+      ].join("\n"),
+    );
+    writeScratch(
       "ile-end-turn-chrome.txt",
       [
-        "PoW bar: dual pills + session insights counter; no Submit work / Review work",
-        "bottom-right: Review work + End turn cluster; docked chips stem from End turn",
-        "End turn opens crafting modal (aesthetic still, chapter link chips, type + thoughts pool, continue / save-and-exit)",
+        "PoW bar: dual pills + Insights + quieter Global resources; no Review work",
+        "bottom-right: End turn double border + ArrowRight; no stem; no Review work",
+        "PiP compact hosts crafting insights in-window (portal=false)",
+        "Welcome settings is a dedicated /settings route, not a map DialogFrame",
         `endTurnLabel=${ILE_END_TURN_LABEL}`,
       ].join("\n"),
     );
@@ -305,7 +334,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "PiP compact: no I'm done answering",
         "TAP: ImDoneAnsweringControl kept",
         "welcome: data-ile-pow-expense-slider beside aesthetics/map type",
-        "chrome: Insights counter on PoW bar; End turn + Review work float bottom-right; chips stem from End turn",
+        "chrome: Insights + Global resources on PoW bar; End turn on dock with double border",
         "minimized chips use aesthetic stills + map two-word keyword; bar has no bg image",
         "Work widget bg uses the same session-lived still as the chapter dock chip and map tile",
         "chapters open from the dock; minimize keeps chips on the bar",

@@ -2717,30 +2717,30 @@
   "onboardingGuide": {
     "ile": {
       "kicker": "Mission briefing",
-      "title": "Command the map",
+      "title": "Work in turns",
       "progressLabel": "Onboarding steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
       "back": "Back",
       "next": "Next",
       "step1": {
-        "title": "Tools & Chapters",
-        "imageAlt": "Tools panel and chapter blocks",
-        "body": "Your block is organized as Chapters on a spatial grid — pan, zoom, and place steps where they belong. Open any chapter to work through it.\n\nThe Tools strip gives you Notebook, Canvas, Thought Memory, Grokipedia, and more. Chapters are living documents: you can edit and expand them freely during the session, even while paused."
+        "title": "Generate Work in turns",
+        "imageAlt": "Open a chapter and do work",
+        "body": "Open a chapter to start a turn. Speak, write, and draw — that is your Work for this turn."
       },
       "step2": {
-        "title": "Think aloud, then send",
-        "titleProject": "Think aloud — stash and send",
-        "imageAlt": "Thought memory interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash speech. Auto-stash also fills thought memory when the bar is full. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory — select traces to submit or edit, or bookmark insights.",
-        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash it or close the turn.\n\nPress Del to stash. Auto-stash fills thought memory. When the chain of thought is finished, press I'm done answering. See Your thoughts opens Thought Memory so you can select, submit, or edit traces."
+        "title": "Create Insights",
+        "titleProject": "Create Insights",
+        "imageAlt": "Craft insights at end of turn",
+        "body": "When the turn is done, press End turn. You can create up to three Insights from what you learned — or none. That is okay.",
+        "bodyProject": "When the turn is done, press End turn. You can create up to three Insights from what you learned — or none. That is okay."
       },
       "step3": {
-        "title": "Explore the map",
-        "titleProject": "Explore the map",
-        "highlight": "Speak your thoughts out loud and use tools to explore the map. Fog lifts as you scout. You win by completing chapters — and this map can be further built.",
-        "body": "This map is yours. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. I'm done answering closes a turn.",
-        "bodyProject": "Each chapter is an exercise on this map. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. Del stashes. I'm done answering closes a turn.",
+        "title": "Then move on",
+        "titleProject": "Then move on",
+        "highlight": "Generate Work in turns. Create Insights. Then End turn and start the next one.",
+        "body": "The loop is simple. Generate Work in a turn — speak your thoughts out loud, open a chapter, and use tools on the map. Press End turn to Create Insights from that work (up to three, or skip). Then continue with the next turn, or save and leave.\n\nPan, zoom, and open a chapter to move in. You win by completing chapters, and this map can be further built. Press Start to begin.",
+        "bodyProject": "The loop is simple. Generate Work in a turn — speak your thoughts out loud, open a chapter, and use tools on the map. Press End turn to Create Insights from that work (up to three, or skip). Then continue with the next turn, or save and leave.\n\nPan, zoom, and open a chapter to move in. You win by completing chapters, and this map can be further built. Press Start to begin.",
         "quoteText": "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.",
         "quoteAuthor": "Sun Tzu",
         "start": "Start",

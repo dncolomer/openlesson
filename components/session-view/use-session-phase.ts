@@ -19,7 +19,12 @@ import {
   type Probe,
 } from "@/lib/storage";
 import { playArchiveSound } from "@/lib/sounds";
-import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
+import { decideIleSettingsEnterMap } from "@/lib/ile-session-routes";
+import {
+  isSessionWelcomeSeen,
+  markIleSessionSettingsConfirmed,
+  markSessionWelcomeSeen,
+} from "@/lib/welcomeState";
 import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
@@ -944,15 +949,6 @@ setSession(clearedSession);
 sessionRef.current = clearedSession;
 setActiveProbe(null);
 setViewingProbeIndex(-1);
-// A session is "fresh" if the user has not yet
-// clicked Play for it. In that case we show the
-// typed tutor welcome + Play button. Returning
-// sessions skip that guide and must arm capture now.
-const isFreshSession = !isSessionWelcomeSeen(session.id);
-if (isFreshSession) {
-  setShowWelcomePanel(true);
-}
-
 // Plan prep done
 setPlanLoading(false);
 setLanguageConfirmed(true);
@@ -971,15 +967,19 @@ if (localInferenceEnabled) {
     return; // Keep modal open to show error
   }
 }
-// All done - close modal and enter session
+// All done - leave settings route and enter the map session
 setPrepStage("done");
 setIsPaused(false); // Reset paused state from previous session load
+markIleSessionSettingsConfirmed(session.id);
 setShowWelcomeModal(false);
-// Arm monitoring + speech when the welcome guide is not shown.
-// Fresh sessions wait for Play inside the guide (handleWelcomePlay).
-if (!isFreshSession) {
-  await startRecording();
-}
+const enterMap = decideIleSettingsEnterMap({
+  settingsConfirmed: true,
+  onSettingsRoute: false,
+  welcomeSeen: isSessionWelcomeSeen(session.id),
+  recording: false,
+});
+if (enterMap === "help") setShowWelcomePanel(true);
+if (enterMap === "record") await startRecording();
 } catch (err) {
 console.error("Failed to prepare session:", err);
 setPlanError("Failed to prepare block");
@@ -1021,6 +1021,7 @@ const handleWelcomeReadyStart = useCallback(async () => {
   } else {
     await startRecording();
   }
+  if (session?.id) markIleSessionSettingsConfirmed(session.id);
   setShowWelcomeModal(false);
 }, [session]);
 

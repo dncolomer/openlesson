@@ -664,15 +664,18 @@ describe("Practice Portal structural wiring", () => {
     expect(enCopy.onboardingGuide?.tap?.step1?.body).toMatch(/Stay speaking/i);
     expect(enCopy.onboardingGuide?.tap?.step1?.body).not.toMatch(/^Think out loud on a timer\./);
     expect((enCopy.onboardingGuide?.tap?.step1?.body || "").length).toBeGreaterThan(180);
-    // Live ILE remaining first + last slides (step2 thought-interface tutorial is not the live intro)
-    expect(enCopy.onboardingGuide?.ile?.step1?.body).toMatch(/Chapters on a spatial grid/i);
+    // Live ILE remaining first + last slides (turn loop: Generate Work / Create Insights / next turn)
+    expect(enCopy.onboardingGuide?.ile?.step1?.body).toMatch(/Generate Work|start a turn/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/Generate Work in a turn/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/Create Insights/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/next turn/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/use tools/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/completing chapters/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/map can be further built/i);
-    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeGreaterThan(280);
-    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(700);
-    expect(enCopy.onboardingGuide?.ile?.step3?.highlight).toMatch(/speak your thoughts out loud/i);
+    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeGreaterThan(200);
+    expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(900);
+    expect(enCopy.onboardingGuide?.ile?.step3?.highlight).toMatch(/Generate Work in turns/i);
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);

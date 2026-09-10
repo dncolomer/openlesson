@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { pauseSession, type Session, type SessionPlan, type Probe, type ToolName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { MobileBlockScreen } from "./MobileBlockScreen";
@@ -37,6 +37,16 @@ import {
   restoreIleOpenWorkIds,
 } from "@/lib/ile-pow-spend";
 import { unusedIlePowForInsights } from "@/lib/ile-turn-insights";
+import {
+  decideIleSettingsEnterMap,
+  ileSessionMapPath,
+  ileSessionSettingsPath,
+  isIleSessionSettingsPath,
+} from "@/lib/ile-session-routes";
+import {
+  isIleSessionSettingsConfirmed,
+  isSessionWelcomeSeen,
+} from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import { IleTurnInsightCraft } from "@/components/session-view/ile-turn-insight-craft";
 import { IleSessionInsightsPanel } from "@/components/session-view/ile-session-insights-panel";
@@ -82,7 +92,7 @@ import {
   ileWorkAestheticStorageKey,
   parseIleWorkAestheticStored,
 } from "@/lib/aesthetics";
-import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
+
 import {
   chapterHasPendingHeliosReply,
   latestSettledAssistantId,
@@ -188,6 +198,8 @@ export function SessionView({
     [guestAccessKind, ayclToken, ileToken, stableEntryQueryParams],
   );
   const router = useRouter();
+  const pathname = usePathname();
+  const settingsRoute = isIleSessionSettingsPath(pathname);
   const { t, locale, supportedLocales } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -287,7 +299,10 @@ export function SessionView({
     setWebGPUAvailable(LocalInferenceManager.isWebGPUAvailable());
   }, []);
 
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(
+    () => !isIleSessionSettingsConfirmed(sessionId),
+  );
+  const mapEntryTailDoneRef = useRef(false);
   const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(false);
   const [powExpense, setPowExpense] = useState(ILE_POW_EXPENSE_DEFAULT);
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
@@ -920,9 +935,9 @@ export function SessionView({
     handleArchiveProbe,
     handleToggleFocus,
     handleConfirmEnd,
-    handleConfirmSettings,
+    handleConfirmSettings: handleConfirmSettingsPhase,
     handleContinueWithoutInference,
-    handleWelcomeReadyStart,
+    handleWelcomeReadyStart: handleWelcomeReadyStartPhase,
   } = useSessionPhase({
     session,
     setSession,
@@ -1009,6 +1024,15 @@ export function SessionView({
     openWorkIdsRef,
   });
 
+  const handleConfirmSettings = useCallback(async () => {
+    mapEntryTailDoneRef.current = true;
+    await handleConfirmSettingsPhase();
+  }, [handleConfirmSettingsPhase]);
+
+  const handleWelcomeReadyStart = useCallback(async () => {
+    mapEntryTailDoneRef.current = true;
+    await handleWelcomeReadyStartPhase();
+  }, [handleWelcomeReadyStartPhase]);
 
   const loadingChapterLabel = chapterLoadingIndex != null
     ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
@@ -1123,6 +1147,56 @@ export function SessionView({
   useEffect(() => {
     void loadSessionInsights();
   }, [loadSessionInsights]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const routeInput = {
+      sessionId,
+      ileToken,
+      ayclToken,
+      resume: resumeSession,
+    };
+    if (showWelcomeModal && !settingsRoute) {
+      router.replace(ileSessionSettingsPath(routeInput));
+      return;
+    }
+    if (!showWelcomeModal && settingsRoute) {
+      router.replace(ileSessionMapPath(routeInput));
+    }
+  }, [
+    ayclToken,
+    ileToken,
+    resumeSession,
+    router,
+    sessionId,
+    settingsRoute,
+    showWelcomeModal,
+  ]);
+
+  useEffect(() => {
+    if (!session?.id || showWelcomeModal || settingsRoute) return;
+    if (mapEntryTailDoneRef.current) return;
+    const action = decideIleSettingsEnterMap({
+      settingsConfirmed: isIleSessionSettingsConfirmed(session.id),
+      onSettingsRoute: settingsRoute,
+      welcomeSeen: isSessionWelcomeSeen(session.id),
+      recording: isRecording,
+    });
+    if (action === "idle") return;
+    mapEntryTailDoneRef.current = true;
+    if (action === "help") {
+      setShowWelcomePanel(true);
+      return;
+    }
+    void startRecording();
+  }, [
+    isRecording,
+    session?.id,
+    setShowWelcomePanel,
+    settingsRoute,
+    showWelcomeModal,
+    startRecording,
+  ]);
 
   const handleSubmitTurn = useCallback(async () => {
     if (submitTurnBusy) return;
@@ -1439,19 +1513,49 @@ export function SessionView({
     );
   };
 
+  const turnInsightCraft = (portal: boolean) =>
+    session ? (
+      <IleTurnInsightCraft
+        open={craftingInsightsOpen}
+        portal={portal}
+        aestheticImage={
+          chromeSelectedAesthetic?.previewImage ||
+          chromeSelectedAesthetic?.images?.[0] ||
+          openWorkDockLabels[0]?.image ||
+          null
+        }
+        dockedChapters={openWorkDockLabels}
+        thoughts={sessionThoughtInterface.thoughts}
+        unusedPow={unusedPowForInsights}
+        workspaceId={workspaceId}
+        sessionId={session.id}
+        onCrafted={(insight) => {
+          setSessionInsights((current) => {
+            if (current.some((row) => row.id === insight.id)) return current;
+            return [insight, ...current];
+          });
+        }}
+        onContinue={() => setCraftingInsightsOpen(false)}
+        onSaveAndExit={() => {
+          setCraftingInsightsOpen(false);
+          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
+          setShowSaveExitNameDialog(true);
+        }}
+      />
+    ) : null;
+
   const renderCompactWorkspace = () => {
-    const reviewOpen = activeTool === ILE_REVIEW_WORK_TOOL;
     return (
     <div
       data-ile-compact-chapter-workspace
-      className="flex h-full min-h-0 flex-col"
+      className="relative flex h-full min-h-0 flex-col"
     >
-      {reviewOpen ? (
+      {craftingInsightsOpen ? (
         <div
-          data-ile-compact-review-work
-          className="min-h-0 flex-1 overflow-hidden"
+          data-ile-compact-insight-craft
+          className="relative min-h-0 flex-1 overflow-hidden"
         >
-          {renderSessionToolPanes(() => {})}
+          {turnInsightCraft(false)}
         </div>
       ) : (
         <>
@@ -1464,23 +1568,20 @@ export function SessionView({
               ? renderSessionToolPanes(() => {})
               : renderChapterThoughtPane(true)}
           </div>
+          <IleWorkDockBar
+            t={t}
+            compact
+            heliosOpen
+            openWorkLabels={openWorkDockLabels}
+            onFocusOpenWork={handleFocusOpenWork}
+            onSubmitTurn={() => void handleSubmitTurn()}
+            submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
+            submitTurnBusy={submitTurnBusy}
+            submitTurnDisabled={submitTurnBusy || openWorkIds.length < 1}
+            aestheticImages={chromeSelectedAesthetic?.images}
+          />
         </>
       )}
-      <IleWorkDockBar
-        t={t}
-        compact
-        heliosOpen
-        openWorkLabels={openWorkDockLabels}
-        onFocusOpenWork={handleFocusOpenWork}
-        onSubmitTurn={() => void handleSubmitTurn()}
-        submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
-        submitTurnBusy={submitTurnBusy}
-        submitTurnDisabled={submitTurnBusy || openWorkIds.length < 1}
-        onReviewWork={() => handleIleSessionToolChange(ILE_REVIEW_WORK_TOOL)}
-        reviewWorkOpen={reviewOpen}
-        reviewWorkLabel={t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
-        aestheticImages={chromeSelectedAesthetic?.images}
-      />
     </div>
     );
   };
@@ -1549,49 +1650,51 @@ export function SessionView({
 
   const selectedAesthetic = chromeSelectedAesthetic;
 
+  if (showWelcomeModal) {
+    return (
+      <SessionWelcomeModal
+        t={t}
+        languageConfirmed={languageConfirmed}
+        planLoading={planLoading}
+        isPreparing={isPreparing}
+        tutoringLanguage={tutoringLanguage}
+        onTutoringLanguageChange={setTutoringLanguage}
+        aestheticPackages={aestheticPackages}
+        selectedAesthetic={selectedAesthetic}
+        selectedAestheticId={selectedAestheticId}
+        onSelectAesthetic={setSelectedAestheticId}
+        aestheticsLoading={aestheticsLoading}
+        chapterPlanStatus={chapterPlanStatus}
+        regenerateChapters={regenerateChapters}
+        onRegenerateChaptersChange={setRegenerateChapters}
+        initialChapters={initialChapters}
+        onInitialChaptersChange={setInitialChapters}
+        mapTypeCatalog={mapTypeCatalog}
+        powExpense={powExpense}
+        onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
+        autoAdvance={autoAdvance}
+        onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
+        localInferenceEnabled={localInferenceEnabled}
+        onToggleLocalInference={() => setLocalInferenceEnabled(!localInferenceEnabled)}
+        webGPUAvailable={webGPUAvailable}
+        planError={planError}
+        modelLoadError={modelLoadError}
+        modelLoadProgress={modelLoadProgress}
+        prepStage={prepStage}
+        onConfirmSettings={handleConfirmSettings}
+        onContinueWithoutInference={handleContinueWithoutInference}
+        onReadyStart={handleWelcomeReadyStart}
+        hasSessionPlan={Boolean(sessionPlan)}
+        sessionId={session.id}
+        sessionStartedAt={session.startedAt}
+        sessionPlan={sessionPlan}
+        resumeSession={resumeSession}
+      />
+    );
+  }
+
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
-      {showWelcomeModal && (
-        <SessionWelcomeModal
-          t={t}
-          languageConfirmed={languageConfirmed}
-          planLoading={planLoading}
-          isPreparing={isPreparing}
-          tutoringLanguage={tutoringLanguage}
-          onTutoringLanguageChange={setTutoringLanguage}
-          aestheticPackages={aestheticPackages}
-          selectedAesthetic={selectedAesthetic}
-          selectedAestheticId={selectedAestheticId}
-          onSelectAesthetic={setSelectedAestheticId}
-          aestheticsLoading={aestheticsLoading}
-          chapterPlanStatus={chapterPlanStatus}
-          regenerateChapters={regenerateChapters}
-          onRegenerateChaptersChange={setRegenerateChapters}
-          initialChapters={initialChapters}
-          onInitialChaptersChange={setInitialChapters}
-          mapTypeCatalog={mapTypeCatalog}
-          powExpense={powExpense}
-          onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
-          autoAdvance={autoAdvance}
-          onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
-          localInferenceEnabled={localInferenceEnabled}
-          onToggleLocalInference={() => setLocalInferenceEnabled(!localInferenceEnabled)}
-          webGPUAvailable={webGPUAvailable}
-          planError={planError}
-          modelLoadError={modelLoadError}
-          modelLoadProgress={modelLoadProgress}
-          prepStage={prepStage}
-          onConfirmSettings={handleConfirmSettings}
-          onContinueWithoutInference={handleContinueWithoutInference}
-          onReadyStart={handleWelcomeReadyStart}
-          hasSessionPlan={Boolean(sessionPlan)}
-          sessionId={session.id}
-          sessionStartedAt={session.startedAt}
-          sessionPlan={sessionPlan}
-          resumeSession={resumeSession}
-        />
-      )}
-
       <SessionChrome
         t={t}
         activeTool={activeTool}
@@ -1784,32 +1887,7 @@ export function SessionView({
           />
         }
       />
-      <IleTurnInsightCraft
-        open={craftingInsightsOpen}
-        aestheticImage={
-          selectedAesthetic?.previewImage ||
-          selectedAesthetic?.images?.[0] ||
-          openWorkDockLabels[0]?.image ||
-          null
-        }
-        dockedChapters={openWorkDockLabels}
-        thoughts={sessionThoughtInterface.thoughts}
-        unusedPow={unusedPowForInsights}
-        workspaceId={workspaceId}
-        sessionId={session.id}
-        onCrafted={(insight) => {
-          setSessionInsights((current) => {
-            if (current.some((row) => row.id === insight.id)) return current;
-            return [insight, ...current];
-          });
-        }}
-        onContinue={() => setCraftingInsightsOpen(false)}
-        onSaveAndExit={() => {
-          setCraftingInsightsOpen(false);
-          setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
-          setShowSaveExitNameDialog(true);
-        }}
-      />
+      {turnInsightCraft(true)}
       <IleSessionInsightsPanel
         open={sessionInsightsOpen}
         onClose={() => setSessionInsightsOpen(false)}

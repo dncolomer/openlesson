@@ -5,7 +5,6 @@ import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
-import { DialogFrame } from "@/components/ui/DialogFrame";
 import {
   ileWelcomeShowsContinuePreview,
   ileWelcomeShowsRegenerate,
@@ -56,14 +55,10 @@ export function SessionWelcomeModal({
   resumeSession = false,
 }: SessionWelcomeModalProps) {
   return (
-    <DialogFrame
-      open
-      onClose={() => {}}
-      closeOnOverlay={false}
-      closeOnEscape={false}
-      size="xl"
-      testId="session-welcome-modal"
-      panelClassName="flex max-h-[min(92vh,52rem)] flex-col"
+    <div
+      data-ile-session-settings
+      data-session-welcome-modal=""
+      className="flex h-screen min-h-0 w-full flex-col bg-[#0a0a0a]"
     >
         <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
           <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
@@ -447,6 +442,6 @@ export function SessionWelcomeModal({
           );
         })()}
         </div>
-    </DialogFrame>
+    </div>
   );
 }

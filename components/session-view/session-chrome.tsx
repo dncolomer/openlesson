@@ -32,7 +32,7 @@ import {
   type IlePowDisplayCounts,
 } from "@/lib/ile-pow-counters";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Boxes } from "lucide-react";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -252,6 +252,24 @@ export function SessionChrome({
                 {sessionInsightCount}
               </span>
             </button>
+            {onOpenGlobalResources ? (
+              <button
+                type="button"
+                data-ile-global-resources
+                title={t("tools.planResources")}
+                aria-label={t("tools.planResources")}
+                aria-pressed={overlayOpen}
+                onClick={() => onOpenGlobalResources()}
+                className={`flex shrink-0 items-center gap-1 rounded-none border px-1.5 py-1 font-mono text-[10px] uppercase tracking-wider ${
+                  overlayOpen && activeTool === "plan-resources"
+                    ? "border-neutral-400 bg-neutral-800 text-neutral-100"
+                    : "border-neutral-700 bg-transparent text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                <Boxes className="size-3" strokeWidth={2} aria-hidden />
+                {t("tools.planResources")}
+              </button>
+            ) : null}
             {participantIdentity ? (
               <div data-ile-identity-row className="flex shrink-0 items-center">
                 <SessionIdentityBadge identity={participantIdentity} />
@@ -340,15 +358,10 @@ export function SessionChrome({
             heliosOpen={heliosOpen}
             openWorkLabels={openWorkLabels}
             onFocusOpenWork={onFocusOpenWork}
-            onOpenGlobalResources={onOpenGlobalResources}
-            globalResourcesOpen={overlayOpen}
             onSubmitTurn={onSubmitTurn}
             submitTurnLabel={submitTurnLabel}
             submitTurnBusy={submitTurnBusy}
             submitTurnDisabled={submitTurnBusy || openWorkCount < 1}
-            onReviewWork={() => onToolChange(ILE_REVIEW_WORK_TOOL)}
-            reviewWorkOpen={activeTool === ILE_REVIEW_WORK_TOOL}
-            reviewWorkLabel={t("session.reviewWork") || ILE_REVIEW_WORK_LABEL}
             aestheticImages={aestheticImages}
           />
         </div>

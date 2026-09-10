@@ -58,6 +58,7 @@ export function IleTurnInsightCraft({
   onCrafted,
   onContinue,
   onSaveAndExit,
+  portal = true,
 }: {
   open: boolean;
   aestheticImage?: string | null;
@@ -69,6 +70,8 @@ export function IleTurnInsightCraft({
   onCrafted: (insight: InsightSummary) => void;
   onContinue: () => void;
   onSaveAndExit: () => void;
+  /** False inside Document PiP so the overlay stays in that window. */
+  portal?: boolean;
 }) {
   const slotCount = ileTurnInsightSlotCount(unusedPow);
   const [path, setPath] = useState<CraftPath>("type");
@@ -284,6 +287,7 @@ export function IleTurnInsightCraft({
       onClose={() => {}}
       closeOnOverlay={false}
       closeOnEscape={false}
+      portal={portal}
       size="full"
       testId="ile-turn-insight-craft"
       labelledBy="ile-turn-insight-craft-title"

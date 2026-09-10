@@ -123,7 +123,6 @@ describe("session intro visuals", () => {
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.start);
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.title);
 
-    expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step1.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.kicker);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.title);
@@ -133,28 +132,27 @@ describe("session intro visuals", () => {
     expect(ileLearningHtml).not.toContain("data-ile-intro-widget-close");
     expect(ileLearningText).not.toMatch(/Start block/i);
     expect(en.onboardingGuide.ile.step3.start).toBe("Start");
+    expect(ileLearningText).toMatch(/Generate Work in turns/i);
+    expect(ileLearningText).toMatch(/Create Insights/i);
+    expect(ileLearningText).toMatch(/next turn/i);
     expect(ileLearningText).toMatch(/speak your thoughts out loud/i);
-    expect(ileLearningText).toMatch(/use tools to explore the map/i);
     expect(ileLearningText).toMatch(/win by completing chapters/i);
     expect(ileLearningText).toMatch(/map can be further built/i);
     expect(en.onboardingGuide.ile.step3.body).not.toMatch(/Commander/);
     expect(en.onboardingGuide.ile.step3.body).toMatch(/Pan, zoom, and open a chapter/i);
-    expect(en.onboardingGuide.ile.step3.body).toMatch(/I'm done answering/i);
-    expect(en.onboardingGuide.ile.step3.body.length).toBeGreaterThan(280);
-    expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(700);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/End turn/i);
+    expect(en.onboardingGuide.ile.step3.body.length).toBeGreaterThan(200);
+    expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(900);
     expect(en.onboardingGuide.ile.step3.bodyProject).not.toMatch(/Commander/);
-    expect(en.onboardingGuide.ile.step3.bodyProject.length).toBeGreaterThan(280);
-    expect(en.onboardingGuide.ile.step3.highlight).toMatch(/Fog lifts as you scout/i);
+    expect(en.onboardingGuide.ile.step3.bodyProject.length).toBeGreaterThan(200);
+    expect(en.onboardingGuide.ile.step3.highlight).toMatch(/Generate Work in turns/i);
     expect(en.onboardingGuide.ile.step3.highlight.length).toBeLessThan(280);
-    expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step2.title);
 
-    expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step1.title);
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.start);
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.highlight);
     expect(ileProjectHtml).toContain("data-onboarding-start");
     expect(ileProjectText).toMatch(/win by completing chapters/i);
     expect(ileProjectText).toMatch(/map can be further built/i);
-    expect(ileProjectText).not.toContain(en.onboardingGuide.ile.step2.title);
 
     expect(tapBody).toMatch(/think out loud/i);
     expect(tapBody).toMatch(/I'm done answering/);

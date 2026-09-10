@@ -35,6 +35,8 @@ describe("ILE modals share DialogFrame / ConfirmDialog", () => {
     expect(frame).toContain("bg-black/70 backdrop-blur-md");
     expect(frame).toContain("bg-neutral-900 border border-neutral-800 rounded-none");
     expect(frame).toContain("createPortal");
+    expect(frame).toContain("portal = true");
+    expect(frame).toContain("if (!portal || typeof document === \"undefined\") return dialog");
     expect(frame).toContain('data-dialog-frame=""');
     expect(frame).toContain('role="dialog"');
     expect(frame).toContain('aria-modal="true"');
@@ -57,10 +59,10 @@ describe("ILE modals share DialogFrame / ConfirmDialog", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     const view = readSessionViewSurface();
 
-    expect(welcome).toContain('from "@/components/ui/DialogFrame"');
-    expect(welcome).toContain("<DialogFrame");
-    expect(welcome).toContain('testId="session-welcome-modal"');
-    expect(welcome).toContain("size=\"xl\"");
+    expect(welcome).not.toContain('from "@/components/ui/DialogFrame"');
+    expect(welcome).not.toContain("<DialogFrame");
+    expect(welcome).toContain("data-ile-session-settings");
+    expect(welcome).toContain("h-screen");
     expect(welcome).not.toMatch(CUSTOM_CENTERED_OVERLAY);
 
     expect(thought).toContain('from "@/components/ui/ConfirmDialog"');

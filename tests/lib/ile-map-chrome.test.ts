@@ -268,7 +268,8 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(powBar).not.toContain("data-ile-submit-turn");
     expect(chrome).toContain("ILE_POW_COUNTER_LABELS[type]");
     expect(chrome).toContain("ILE_POW_COUNTER_ICONS[type]");
-    expect(chrome).toContain("onReviewWork");
+    expect(chrome).not.toContain("onReviewWork");
+    expect(chrome).toContain("data-ile-global-resources");
     expect(chrome).not.toContain(">Traces<");
     const powIcons = read("components/session-view/ile-pow-icons.tsx");
     expect(powIcons).toContain("thoughts:");

@@ -304,8 +304,11 @@ describe("ILE + TAP speech wiring (structural)", () => {
     expect(viewSrc).toContain("isIleSpeechCaptureEnabled");
     expect(viewSrc).toContain("powSessionEnabled");
     expect(viewSrc).toContain("enabled: powSessionEnabled");
-    // Returning sessions arm capture without the welcome Play path.
-    expect(viewSrc).toMatch(/if \(!isFreshSession\)[\s\S]*await startRecording\(\)/);
+    // Returning sessions arm capture without the welcome Play path
+    // (settings confirm + map remount both go through decideIleSettingsEnterMap).
+    expect(viewSrc).toContain("decideIleSettingsEnterMap");
+    expect(viewSrc).toMatch(/enterMap === "record"[\s\S]*await startRecording\(\)/);
+    expect(viewSrc).toMatch(/action === "help"[\s\S]*startRecording\(\)/);
     expect(viewSrc).toMatch(/needsWelcome[\s\S]*await startRecording\(\)/);
   });
 

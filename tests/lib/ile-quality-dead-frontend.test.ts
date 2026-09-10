@@ -48,9 +48,13 @@ describe("ILE dead frontend is gone from the live session", () => {
     expect(chrome).toContain("data-ile-sensor-pair");
 
     const dock = read("components/session-view/ile-work-dock-bar.tsx");
-    expect(dock).toContain("data-ile-global-resources");
+    expect(dock).not.toContain("data-ile-global-resources");
+    expect(chrome).toContain("data-ile-global-resources");
     expect(view).toContain("IleSubmitWorkButton");
-    expect(view).toContain("data-ile-review-work");
+    expect(read("components/SessionView.tsx")).not.toContain("data-ile-review-work");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain(
+      "data-ile-review-work",
+    );
     expect(view).not.toContain("I'm Done Writing");
     expect(view).not.toContain("I'm Done Drawing");
 
@@ -66,7 +70,7 @@ describe("ILE dead frontend is gone from the live session", () => {
       [
         "ILE panes: no NotebookSubmitButton, no ThoughtMemoryPanel, IleReviewWorkPanel",
         "no ToolsPanel empty grid; sensors remain on data-ile-tools-widget",
-        "Global resources lives on the Work dock",
+        "Global resources lives on the PoW bar next to Insights",
         "TAP: ImDoneAnsweringControl + ThoughtMemoryPanel kept",
       ].join("\n"),
     );

@@ -58,7 +58,7 @@ describe("Review work chrome (shipped source)", () => {
     const chrome = read("components/session-view/session-chrome.tsx");
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("ILE_REVIEW_WORK_LABEL");
-    expect(chrome).toContain("onReviewWork");
+    expect(chrome).not.toContain("onReviewWork");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
@@ -89,24 +89,21 @@ describe("Review work chrome (shipped source)", () => {
     expect(panes).toContain('activeTool === "thought-history"');
 
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("data-ile-compact-review-work");
-    expect(view).toContain("onReviewWork");
-    expect(view).toContain("reviewWorkOpen");
+    expect(view).not.toContain("data-ile-compact-review-work");
+    expect(view).toContain("data-ile-compact-insight-craft");
     const compact = view.slice(
       view.indexOf("const renderCompactWorkspace"),
       view.indexOf("renderCompact: () => renderCompactWorkspace()"),
     );
-    expect(compact).toContain("data-ile-compact-review-work");
+    expect(compact).not.toContain("data-ile-compact-review-work");
     expect(compact).toContain("IleWorkDockBar");
-    expect(compact.indexOf("data-ile-compact-review-work")).toBeLessThan(
-      compact.indexOf("<IleWorkDockBar"),
-    );
-    expect(compact).toContain("onReviewWork={() => handleIleSessionToolChange(ILE_REVIEW_WORK_TOOL)}");
+    expect(compact).toContain("data-ile-compact-insight-craft");
+    expect(compact).toContain("turnInsightCraft(false)");
+    expect(compact).not.toContain("onReviewWork");
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
-    expect(dockBar).toContain("data-ile-review-work");
-    expect(dockBar).toContain("showReview");
+    expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).toContain("data-ile-end-turn-cluster");
-    expect(chrome).toContain("onReviewWork");
+    expect(chrome).not.toContain("onReviewWork");
 
     const icons = read("components/session-view/ile-pow-icons.tsx");
     expect(icons).toContain("thoughts:");
@@ -119,7 +116,7 @@ describe("Review work chrome (shipped source)", () => {
     writeScratch(
       "ile-review-work.txt",
       [
-        "Review work floats on the bottom-right dock; PoW bar has Insights counter",
+        "Review work has no ILE chrome button; panel remains as a buried overlay tool",
         "overlay tool=thought-history",
         "tabs=tool/screen/video/eeg/thoughts",
         "chapter widget has no Thoughts tab",

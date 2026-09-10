@@ -1,8 +1,7 @@
 "use client";
 
-import { AlertTriangle, ClipboardList, Send } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
-import { ILE_REVIEW_WORK_LABEL } from "@/lib/ile-review-work";
 import {
   FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
@@ -51,55 +50,48 @@ export function IleSubmitWorkButton({
       disabled={disabled || busy}
       className={
         square
-          ? `flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
+          ? `relative flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
           : "flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
       }
     >
-      <Send className={emphasized ? "size-5" : square ? "size-4" : "size-3.5"} strokeWidth={2.3} aria-hidden />
-      {label}
+      {square ? (
+        <span
+          data-ile-end-turn-double-border
+          aria-hidden
+          className="pointer-events-none absolute inset-[4px] border-2 border-neutral-950"
+        />
+      ) : null}
+      <ArrowRight className={`relative z-10 ${emphasized ? "size-5" : square ? "size-4" : "size-3.5"}`} strokeWidth={2.3} aria-hidden />
+      <span className="relative z-10">{label}</span>
     </button>
   );
 }
 
 export function IleWorkDockBar({
-  t,
   heliosOpen,
   openWorkLabels,
   onFocusOpenWork,
-  onOpenGlobalResources,
-  globalResourcesOpen = false,
   onSubmitTurn,
   submitTurnLabel,
   submitTurnBusy,
   submitTurnDisabled = false,
-  onReviewWork,
-  reviewWorkOpen = false,
-  reviewWorkLabel = ILE_REVIEW_WORK_LABEL,
   aestheticImages = [],
   compact = false,
 }: {
-  t: SessionViewTranslate;
+  t?: SessionViewTranslate;
   heliosOpen: boolean;
   openWorkLabels: IleWorkDockLabel[];
   onFocusOpenWork?: (id: string) => void;
-  onOpenGlobalResources?: () => void;
-  globalResourcesOpen?: boolean;
   onSubmitTurn?: () => void;
   submitTurnLabel: string;
   submitTurnBusy?: boolean;
   submitTurnDisabled?: boolean;
-  onReviewWork?: () => void;
-  reviewWorkOpen?: boolean;
-  reviewWorkLabel?: string;
   aestheticImages?: string[];
   compact?: boolean;
 }) {
   const dockImages = aestheticImages.length > 0 ? aestheticImages : FALLBACK_AESTHETIC_IMAGES;
   const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
-  const squareSize = compact ? "size-16" : "size-24";
-  const showGlobalResources = Boolean(onOpenGlobalResources) && !compact;
   const showSubmit = Boolean(onSubmitTurn);
-  const showReview = Boolean(onReviewWork);
 
   return (
     <div
@@ -108,41 +100,6 @@ export function IleWorkDockBar({
         compact ? "w-full max-w-none" : ""
       }`}
     >
-      {showGlobalResources ? (
-        <button
-          type="button"
-          data-ile-global-resources
-          title={t("tools.planResources")}
-          aria-label={t("tools.planResources")}
-          aria-pressed={globalResourcesOpen}
-          onClick={() => onOpenGlobalResources?.()}
-          className={`relative flex ${squareSize} shrink-0 flex-col items-center justify-center overflow-hidden rounded-none border bg-neutral-950 text-neutral-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] ${
-            globalResourcesOpen
-              ? "border-white"
-              : "border-white/35 hover:border-white/70"
-          }`}
-        >
-          <span className="px-1 text-center font-mono text-[10px] font-semibold uppercase leading-tight tracking-wider text-white">
-            {t("tools.planResources")}
-          </span>
-        </button>
-      ) : null}
-      {showReview ? (
-        <button
-          type="button"
-          data-ile-review-work
-          aria-pressed={reviewWorkOpen}
-          onClick={() => onReviewWork?.()}
-          className={`flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border px-1.5 text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider shadow-[0_10px_28px_rgba(255,255,255,0.12)] ${
-            reviewWorkOpen
-              ? "border-white bg-white text-neutral-950"
-              : "border-white bg-neutral-950 text-white hover:bg-white hover:text-neutral-950"
-          }`}
-        >
-          <ClipboardList className="size-4" strokeWidth={2.3} aria-hidden />
-          {reviewWorkLabel}
-        </button>
-      ) : null}
       <div
         data-ile-end-turn-cluster
         className="flex min-w-0 flex-1 items-end justify-end"
@@ -230,13 +187,6 @@ export function IleWorkDockBar({
             );
           })}
         </div>
-      ) : null}
-      {openWorkLabels.length > 0 && showSubmit ? (
-        <span
-          data-ile-end-turn-stem
-          aria-hidden
-          className={`mb-[2.4rem] h-0.5 w-3 shrink-0 bg-white/70 ${compact ? "mb-8" : ""}`}
-        />
       ) : null}
       {showSubmit ? (
         <IleSubmitWorkButton

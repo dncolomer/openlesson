@@ -1756,7 +1756,6 @@ export function SessionView({
         submitTurnBusy={submitTurnBusy}
         sessionInsightCount={sessionInsights.length}
         onOpenSessionInsights={() => setSessionInsightsOpen(true)}
-        participantIdentity={participantIdentity}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}

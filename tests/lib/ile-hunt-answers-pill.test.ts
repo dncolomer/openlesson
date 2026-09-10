@@ -32,8 +32,8 @@ describe("ILE hunt-for-answers pill (removed)", () => {
     expect(helios).not.toContain("SessionIdentityBadge");
     expect(helios).not.toContain("data-ile-identity-row");
     const chrome = read("components/session-view/session-chrome.tsx");
-    expect(chrome).toContain("SessionIdentityBadge");
-    expect(chrome).toContain("data-ile-identity-row");
+    expect(chrome).not.toContain("SessionIdentityBadge");
+    expect(chrome).not.toContain("data-ile-identity-row");
 
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     const tapSolo = read("components/exercise-tap/exercise-tap-phases.tsx");

@@ -197,7 +197,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("ArrowRight");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
-    expect(dockBar).toContain("emphasized");
+    expect(dockBar).toContain("sizeClass={chipSize}");
+    expect(dockBar).toContain("gap-1.5");
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
     expect(dockBar).not.toContain("data-ile-pow-budget-remaining");

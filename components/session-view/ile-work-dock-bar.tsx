@@ -24,7 +24,7 @@ export function IleSubmitWorkButton({
   disabled = false,
   square = false,
   compact = false,
-  emphasized = false,
+  sizeClass,
 }: {
   label: string;
   onClick?: () => void;
@@ -32,15 +32,10 @@ export function IleSubmitWorkButton({
   disabled?: boolean;
   square?: boolean;
   compact?: boolean;
-  emphasized?: boolean;
+  /** Match docked chapter chips (`h-24 w-[7rem]` / compact `h-16 w-[5.5rem]`). */
+  sizeClass?: string;
 }) {
-  const squareSize = emphasized
-    ? compact
-      ? "size-[4.75rem]"
-      : "size-[7.25rem]"
-    : compact
-      ? "size-16"
-      : "size-24";
+  const box = sizeClass ?? (compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]");
   return (
     <button
       type="button"
@@ -50,7 +45,7 @@ export function IleSubmitWorkButton({
       disabled={disabled || busy}
       className={
         square
-          ? `relative flex ${squareSize} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
+          ? `relative flex ${box} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
           : "flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
       }
     >
@@ -61,7 +56,7 @@ export function IleSubmitWorkButton({
           className="pointer-events-none absolute inset-[4px] border-2 border-neutral-950"
         />
       ) : null}
-      <ArrowRight className={`relative z-10 ${emphasized ? "size-5" : square ? "size-4" : "size-3.5"}`} strokeWidth={2.3} aria-hidden />
+      <ArrowRight className={`relative z-10 ${square ? "size-4" : "size-3.5"}`} strokeWidth={2.3} aria-hidden />
       <span className="relative z-10">{label}</span>
     </button>
   );
@@ -102,13 +97,9 @@ export function IleWorkDockBar({
     >
       <div
         data-ile-end-turn-cluster
-        className="flex min-w-0 flex-1 items-end justify-end"
+        data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
+        className="flex min-w-0 flex-1 items-end justify-end gap-1.5 overflow-x-auto"
       >
-      {openWorkLabels.length > 0 ? (
-        <div
-          data-ile-open-work-tabs
-          className="flex min-w-0 items-end gap-1.5 overflow-x-auto"
-        >
           {openWorkLabels.map((work) => {
             const expanded = Boolean(work.focused && heliosOpen);
             const chipImage = resolveIleWorkAestheticImage({
@@ -186,13 +177,11 @@ export function IleWorkDockBar({
               </button>
             );
           })}
-        </div>
-      ) : null}
       {showSubmit ? (
         <IleSubmitWorkButton
           square
           compact={compact}
-          emphasized
+          sizeClass={chipSize}
           label={submitTurnLabel}
           onClick={onSubmitTurn}
           busy={submitTurnBusy}

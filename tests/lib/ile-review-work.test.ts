@@ -67,9 +67,8 @@ describe("Review work chrome (shipped source)", () => {
     expect(powBar).not.toContain("data-ile-review-work");
     expect(powBar).toContain("data-ile-session-insights-count");
     const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
-    const identityIdx = powBar.indexOf("data-ile-identity-row");
     expect(insightsIdx).toBeGreaterThan(-1);
-    expect(identityIdx).toBeGreaterThan(insightsIdx);
+    expect(powBar).not.toContain("data-ile-identity-row");
 
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     expect(tabs).not.toContain("thought-history");

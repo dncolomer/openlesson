@@ -48,8 +48,8 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("data-ile-map-stage");
     expect(chrome).toContain("data-ile-tools-widget");
     expect(chrome).toContain("data-ile-pow-resource-bar");
-    expect(chrome).toContain("SessionIdentityBadge");
-    expect(chrome).toContain("data-ile-identity-row");
+    expect(chrome).not.toContain("SessionIdentityBadge");
+    expect(chrome).not.toContain("data-ile-identity-row");
     expect(chrome).not.toContain("<SensorStrip");
     expect(chrome).not.toContain("data-ile-signal-strip");
     expect(tools).toContain("data-ile-signal-strip");
@@ -254,16 +254,15 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(powCount).toContain("text-white");
     expect(powCount).not.toContain("text-red-400");
     expect(chrome).not.toContain("IleSubmitWorkButton");
-    expect(chrome).toContain("data-ile-identity-row");
+    expect(chrome).not.toContain("data-ile-identity-row");
     expect(chrome).toContain("data-ile-session-insights-count");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
     );
     const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
-    const identityIdx = powBar.indexOf("data-ile-identity-row");
     expect(insightsIdx).toBeGreaterThan(-1);
-    expect(identityIdx).toBeGreaterThan(insightsIdx);
+    expect(powBar).not.toContain("data-ile-identity-row");
     expect(powBar).not.toContain("data-ile-review-work");
     expect(powBar).not.toContain("data-ile-submit-turn");
     expect(chrome).toContain("ILE_POW_COUNTER_LABELS[type]");

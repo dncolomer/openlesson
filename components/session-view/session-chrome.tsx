@@ -9,8 +9,6 @@ import {
   WebcamMiniPreview,
   type Tool,
 } from "@/components/ToolsPanel";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
-import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
@@ -81,7 +79,6 @@ export type SessionChromeProps = {
   submitTurnBusy?: boolean;
   sessionInsightCount?: number;
   onOpenSessionInsights?: () => void;
-  participantIdentity?: PowParticipantIdentity | null;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
   showEndDialog: boolean;
@@ -146,7 +143,6 @@ export function SessionChrome({
   submitTurnBusy = false,
   sessionInsightCount = 0,
   onOpenSessionInsights,
-  participantIdentity = null,
   onCloseToolOverlay,
   allowEndSession,
   showEndDialog,
@@ -269,11 +265,6 @@ export function SessionChrome({
                 <Boxes className="size-3" strokeWidth={2} aria-hidden />
                 {t("tools.planResources")}
               </button>
-            ) : null}
-            {participantIdentity ? (
-              <div data-ile-identity-row className="flex shrink-0 items-center">
-                <SessionIdentityBadge identity={participantIdentity} />
-              </div>
             ) : null}
           </>
         </div>

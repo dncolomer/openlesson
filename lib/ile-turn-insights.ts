@@ -8,6 +8,7 @@
  */
 import {
   emptyIlePowTypeCounts,
+  type IlePowCounterArtifact,
   type IlePowTypeCounts,
 } from "@/lib/ile-pow-counters";
 import { ilePowUnifiedPool } from "@/lib/ile-pow-spend";
@@ -23,6 +24,13 @@ export const ILE_TURN_INSIGHT_SLOT_MAX = 3;
 export const ILE_TURN_INSIGHT_EVALUATE_PATH = "/api/insights/evaluate";
 export const ILE_TURN_INSIGHT_CREATE_PATH = "/api/insights/create";
 export const ILE_TURN_INSIGHT_SUGGEST_PATH = "/api/insights/suggest";
+
+/** Typed tool PoW for an accepted insight craft — not a thought-trace. */
+export const ILE_INSIGHT_CRAFT_TOOL_NAME = "insight-crafting" as const;
+export const ILE_INSIGHT_CRAFT_TOOL_ACTION = "accepted-craft" as const;
+export const ILE_INSIGHT_CRAFT_POW_FILE = "ile-insight-crafting.json" as const;
+export const ILE_INSIGHT_CRAFT_META_TYPE =
+  "uncertain_systems_ile_insight_craft" as const;
 
 export type IleTypedInsightVerdict = {
   accepted: boolean;
@@ -73,6 +81,16 @@ export function ileTurnInsightSlotCount(unusedPow: unknown): number {
   const n = Math.floor(Number(unusedPow));
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.min(ILE_TURN_INSIGHT_SLOT_MAX, n);
+}
+
+/**
+ * Capture leftover unused PoW at End turn. The open craft must keep using
+ * this number — newly recorded insight-craft PoW must not reopen slots.
+ */
+export function freezeIleTurnInsightUnusedPow(unusedPow: unknown): number {
+  const n = Math.floor(Number(unusedPow));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return n;
 }
 
 export function ileTurnInsightSlotsFromUnusedPow(input: {
@@ -256,6 +274,71 @@ export function buildIleTurnInsightPersistPayload(input: {
     thoughtIds,
     evaluated: true,
   };
+}
+
+/**
+ * Snapshot-eligible tool PoW for one accepted persist. Missing insight or
+ * session id → no event (refused / failed / zero crafts never call this
+ * with a saved row).
+ */
+export function buildIleInsightCraftPowArtifact(input: {
+  insightId: unknown;
+  sessionId: unknown;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  chapterId?: string | null;
+  title?: string | null;
+}): IlePowCounterArtifact | null {
+  const insightId = String(input.insightId ?? "").trim();
+  const sessionId = String(input.sessionId ?? "").trim();
+  if (!insightId || !sessionId) return null;
+  const workspaceId = String(input.workspaceId ?? "").trim() || null;
+  const blockId = String(input.blockId ?? "").trim() || null;
+  const chapterId = String(input.chapterId ?? "").trim() || null;
+  const title = String(input.title ?? "").trim() || null;
+  return {
+    type: "tool",
+    tool_name: ILE_INSIGHT_CRAFT_TOOL_NAME,
+    tool_action: ILE_INSIGHT_CRAFT_TOOL_ACTION,
+    block_id: blockId,
+    chapter_id: chapterId,
+    metadata: {
+      type: ILE_INSIGHT_CRAFT_META_TYPE,
+      insight_id: insightId,
+      session_id: sessionId,
+      ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      ...(title ? { title } : {}),
+    },
+  };
+}
+
+/** Only a successful insight create emits craft PoW. */
+export function ileInsightCraftPowFromAcceptedPersist(input: {
+  persistOk: boolean;
+  insight?: {
+    id?: string | null;
+    title?: string | null;
+    block_id?: string | null;
+    chapter_id?: string | null;
+    session_id?: string | null;
+    workspace_id?: string | null;
+  } | null;
+  sessionId: unknown;
+  workspaceId?: string | null;
+  blockId?: string | null;
+  chapterId?: string | null;
+}): IlePowCounterArtifact | null {
+  if (!input.persistOk) return null;
+  const insight = input.insight;
+  if (!insight?.id) return null;
+  return buildIleInsightCraftPowArtifact({
+    insightId: insight.id,
+    sessionId: insight.session_id || input.sessionId,
+    workspaceId: insight.workspace_id ?? input.workspaceId,
+    blockId: insight.block_id ?? input.blockId,
+    chapterId: insight.chapter_id ?? input.chapterId,
+    title: insight.title,
+  });
 }
 
 

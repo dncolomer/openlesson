@@ -36,7 +36,10 @@ import {
   removeIleOpenWork,
   restoreIleOpenWorkIds,
 } from "@/lib/ile-pow-spend";
-import { unusedIlePowForInsights } from "@/lib/ile-turn-insights";
+import {
+  freezeIleTurnInsightUnusedPow,
+  unusedIlePowForInsights,
+} from "@/lib/ile-turn-insights";
 import {
   decideIleSettingsEnterMap,
   ileSessionMapPath,
@@ -312,6 +315,7 @@ export function SessionView({
   const openWorkIdsRef = useRef<string[]>([]);
   const [submitTurnBusy, setSubmitTurnBusy] = useState(false);
   const [craftingInsightsOpen, setCraftingInsightsOpen] = useState(false);
+  const [craftUnusedPow, setCraftUnusedPow] = useState(0);
   const [sessionInsightsOpen, setSessionInsightsOpen] = useState(false);
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
@@ -1267,6 +1271,7 @@ export function SessionView({
       ]);
     } finally {
       setSubmitTurnBusy(false);
+      setCraftUnusedPow(freezeIleTurnInsightUnusedPow(unusedPowForInsights));
       setCraftingInsightsOpen(true);
     }
   }, [
@@ -1279,6 +1284,7 @@ export function SessionView({
     sessionThoughtInterface,
     submitHeliosChatMessageNow,
     submitTurnBusy,
+    unusedPowForInsights,
   ]);
 
   useEffect(() => {
@@ -1526,9 +1532,11 @@ export function SessionView({
         }
         dockedChapters={openWorkDockLabels}
         thoughts={sessionThoughtInterface.thoughts}
-        unusedPow={unusedPowForInsights}
+        unusedPow={craftUnusedPow}
         workspaceId={workspaceId}
         sessionId={session.id}
+        ileToken={ileToken}
+        recordSessionPowArtifact={recordSessionPowArtifact}
         onCrafted={(insight) => {
           setSessionInsights((current) => {
             if (current.some((row) => row.id === insight.id)) return current;

@@ -5,15 +5,27 @@
 import { describe, expect, it } from "vitest";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { emptyIlePowTypeCounts } from "@/lib/ile-pow-counters";
+import {
+  appendIlePowCounterArtifact,
+  countIlePowByType,
+  emptyIlePowTypeCounts,
+  isIleSpokenThoughtArtifact,
+} from "@/lib/ile-pow-counters";
 import {
   allowIleTypedInsightCreate,
+  buildIleInsightCraftPowArtifact,
   buildIleThoughtsPoolCandidateRequest,
   buildIleTurnInsightPersistPayload,
   buildIleTypedInsightEvaluateRequest,
   canCompleteIleTurnInsightCraft,
+  freezeIleTurnInsightUnusedPow,
+  ileInsightCraftPowFromAcceptedPersist,
   ileTurnInsightSlotCount,
   ileTurnInsightSlotsFromUnusedPow,
+  ILE_INSIGHT_CRAFT_META_TYPE,
+  ILE_INSIGHT_CRAFT_POW_FILE,
+  ILE_INSIGHT_CRAFT_TOOL_ACTION,
+  ILE_INSIGHT_CRAFT_TOOL_NAME,
   ILE_TURN_INSIGHT_CREATE_PATH,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
   ILE_TURN_INSIGHT_SLOT_MAX,
@@ -24,6 +36,11 @@ import {
   typedInsightRecordFromVerdict,
   unusedIlePowForInsights,
 } from "@/lib/ile-turn-insights";
+import {
+  classifyPowQuality,
+  isExcludedFromSnapshotPoW,
+  isScoredPoW,
+} from "@/lib/pow-api/pow-quality";
 import { ILE_END_TURN_LABEL } from "@/lib/ile-pow-spend";
 import {
   buildInsightCreateInsert,
@@ -32,7 +49,7 @@ import {
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-9f084e505d96/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-3f77a3e511a0/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -288,6 +305,153 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
         `createChapter=${createRow.chapter_id} createBlock=${createRow.block_id}`,
         `zeroCraftOk=${canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 3 })}`,
       ].join("\n"),
+    );
+  });
+});
+
+describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
+  it("counts as tool PoW, skips thoughts-only, and does not emit on refuse or zero crafts", () => {
+    const leftoverBefore = unusedIlePowForInsights({
+      available: { ...empty, tool: 2 },
+    });
+    expect(ileTurnInsightSlotCount(leftoverBefore)).toBe(2);
+    const frozen = freezeIleTurnInsightUnusedPow(leftoverBefore);
+    expect(frozen).toBe(leftoverBefore);
+
+    const accepted = parseIleTypedInsightVerdict({
+      accepted: true,
+      correct: true,
+      goodEnough: true,
+      title: "Gravity is geometry",
+      summary: "Mass curves spacetime.",
+    });
+    expect(allowIleTypedInsightCreate(accepted)).toBe(true);
+    const persist = buildIleTurnInsightPersistPayload({
+      title: accepted.title,
+      summary: accepted.summary,
+      sessionId: "sess-craft",
+      workspaceId: "ws-craft",
+      chapterId: "step_2_seed",
+    });
+    const pow = ileInsightCraftPowFromAcceptedPersist({
+      persistOk: true,
+      insight: {
+        id: "insight-aa",
+        title: persist.title,
+        session_id: persist.sessionId,
+        workspace_id: persist.workspaceId,
+        block_id: persist.blockId,
+        chapter_id: persist.chapterId,
+      },
+      sessionId: persist.sessionId,
+      workspaceId: persist.workspaceId,
+      chapterId: persist.chapterId,
+    });
+    expect(pow).not.toBeNull();
+    expect(pow?.type).toBe("tool");
+    expect(pow?.tool_name).toBe(ILE_INSIGHT_CRAFT_TOOL_NAME);
+    expect(pow?.tool_action).toBe(ILE_INSIGHT_CRAFT_TOOL_ACTION);
+    expect(pow?.chapter_id).toBe("step_2_seed");
+    expect(pow?.metadata?.type).toBe(ILE_INSIGHT_CRAFT_META_TYPE);
+    expect(pow?.metadata?.insight_id).toBe("insight-aa");
+    expect(pow?.metadata?.session_id).toBe("sess-craft");
+    expect(isIleSpokenThoughtArtifact(pow)).toBe(false);
+    expect(isExcludedFromSnapshotPoW(pow?.metadata)).toBe(false);
+    expect(isScoredPoW(pow?.metadata)).toBe(true);
+    expect(classifyPowQuality(pow?.metadata)).toBe("scored");
+    expect(countIlePowByType([pow!]).tool).toBe(1);
+
+    const before = [{ type: "tool" as const }, { type: "tool" as const }];
+    expect(countIlePowByType(before).tool).toBe(2);
+    const after = appendIlePowCounterArtifact(before, pow!);
+    expect(countIlePowByType(after).tool).toBe(3);
+    const liveAfter = unusedIlePowForInsights({
+      available: countIlePowByType(after),
+    });
+    expect(ileTurnInsightSlotCount(liveAfter)).toBe(3);
+    expect(ileTurnInsightSlotCount(frozen)).toBe(2);
+    expect(
+      remainingIleTurnInsightSlots({ unusedPow: frozen, craftedCount: 1 }),
+    ).toBe(1);
+    expect(
+      remainingIleTurnInsightSlots({ unusedPow: liveAfter, craftedCount: 1 }),
+    ).toBe(2);
+    expect(
+      remainingIleTurnInsightSlots({ unusedPow: frozen, craftedCount: 2 }),
+    ).toBe(0);
+    expect(ileTurnInsightSlotCount(frozen)).toBeLessThanOrEqual(
+      ILE_TURN_INSIGHT_SLOT_MAX,
+    );
+
+    const refused = parseIleTypedInsightVerdict({
+      accepted: false,
+      correct: false,
+      goodEnough: false,
+      reason: "too vague",
+    });
+    expect(allowIleTypedInsightCreate(refused)).toBe(false);
+    expect(
+      ileInsightCraftPowFromAcceptedPersist({
+        persistOk: false,
+        insight: null,
+        sessionId: "sess-craft",
+      }),
+    ).toBeNull();
+    expect(
+      buildIleInsightCraftPowArtifact({ insightId: "", sessionId: "sess-craft" }),
+    ).toBeNull();
+    expect(
+      canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: frozen }),
+    ).toBe(true);
+    expect(
+      ileInsightCraftPowFromAcceptedPersist({
+        persistOk: true,
+        insight: { id: "" },
+        sessionId: "sess-craft",
+      }),
+    ).toBeNull();
+
+    const craftSrc = readFileSync(
+      join(__dirname, "../../components/session-view/ile-turn-insight-craft.tsx"),
+      "utf8",
+    );
+    const viewSrc = readFileSync(
+      join(__dirname, "../../components/SessionView.tsx"),
+      "utf8",
+    );
+    expect(craftSrc).toContain("ileInsightCraftPowFromAcceptedPersist");
+    expect(craftSrc).toContain("persistOk: true");
+    expect(craftSrc).toContain("recordSessionPowArtifact?.(pow)");
+    expect(craftSrc).toContain("uploadIleProofOfWork");
+    expect(craftSrc).toContain("ILE_INSIGHT_CRAFT_POW_FILE");
+    expect(craftSrc).toContain('file_name: ILE_INSIGHT_CRAFT_POW_FILE');
+    expect(craftSrc).toContain("tool_name: ILE_INSIGHT_CRAFT_TOOL_NAME");
+    expect(craftSrc).toContain("tool_action: ILE_INSIGHT_CRAFT_TOOL_ACTION");
+    const persistSlice = craftSrc.slice(craftSrc.indexOf("const persistInsight"));
+    expect(persistSlice.indexOf("ileInsightCraftPowFromAcceptedPersist")).toBeGreaterThan(
+      persistSlice.indexOf('if (!insight?.id) throw new Error("Failed to save insight")'),
+    );
+    expect(viewSrc).toContain("freezeIleTurnInsightUnusedPow");
+    expect(viewSrc).toContain("setCraftUnusedPow");
+    expect(viewSrc).toContain("unusedPow={craftUnusedPow}");
+    expect(viewSrc).not.toContain("unusedPow={unusedPowForInsights}");
+    expect(viewSrc).toContain("recordSessionPowArtifact={recordSessionPowArtifact}");
+    expect(ILE_INSIGHT_CRAFT_POW_FILE).toBe("ile-insight-crafting.json");
+
+    writeScratch(
+      "ile-insight-craft-pow-surface.txt",
+      [
+        `tool=${pow?.tool_name} action=${pow?.tool_action} type=${pow?.type}`,
+        `meta=${String(pow?.metadata?.type)} insight=${String(pow?.metadata?.insight_id)} session=${String(pow?.metadata?.session_id)} chapter=${pow?.chapter_id}`,
+        `countTool=${countIlePowByType([pow!]).tool} spoken=${isIleSpokenThoughtArtifact(pow)} excluded=${isExcludedFromSnapshotPoW(pow?.metadata)} quality=${classifyPowQuality(pow?.metadata)}`,
+        `slotsFrozen=${ileTurnInsightSlotCount(frozen)} remainingAfterOne=${remainingIleTurnInsightSlots({ unusedPow: frozen, craftedCount: 1 })} liveWouldBe=${ileTurnInsightSlotCount(liveAfter)}`,
+        `refusePow=${ileInsightCraftPowFromAcceptedPersist({ persistOk: false, insight: null, sessionId: "sess-craft" })}`,
+        `zeroCraftOk=${canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: frozen })}`,
+        `file=${ILE_INSIGHT_CRAFT_POW_FILE}`,
+        "record=recordSessionPowArtifact?.(pow)",
+        "upload=uploadIleProofOfWork",
+        "freeze=freezeIleTurnInsightUnusedPow",
+      ].join("\n") + "\n",
     );
   });
 });

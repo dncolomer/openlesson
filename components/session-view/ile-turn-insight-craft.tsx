@@ -13,7 +13,11 @@ import {
   buildIleTurnInsightPersistPayload,
   buildIleTypedInsightEvaluateRequest,
   canCompleteIleTurnInsightCraft,
+  ileInsightCraftPowFromAcceptedPersist,
   ileTurnInsightSlotCount,
+  ILE_INSIGHT_CRAFT_POW_FILE,
+  ILE_INSIGHT_CRAFT_TOOL_ACTION,
+  ILE_INSIGHT_CRAFT_TOOL_NAME,
   ILE_TURN_INSIGHT_CREATE_PATH,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
   ILE_TURN_INSIGHT_SUGGEST_PATH,
@@ -22,6 +26,8 @@ import {
   typedInsightRecordFromVerdict,
   type IleTurnInsightThought,
 } from "@/lib/ile-turn-insights";
+import type { IlePowCounterArtifact } from "@/lib/ile-pow-counters";
+import { textToBase64, uploadIleProofOfWork } from "@/lib/ile-proof-of-work-client";
 import {
   insightPublicPath,
   type InsightSummary,
@@ -55,7 +61,9 @@ export function IleTurnInsightCraft({
   unusedPow,
   workspaceId,
   sessionId,
+  ileToken,
   onCrafted,
+  recordSessionPowArtifact,
   onContinue,
   onSaveAndExit,
   portal = true,
@@ -67,7 +75,9 @@ export function IleTurnInsightCraft({
   unusedPow: number;
   workspaceId?: string | null;
   sessionId: string;
+  ileToken?: string;
   onCrafted: (insight: InsightSummary) => void;
+  recordSessionPowArtifact?: (artifact: IlePowCounterArtifact) => void;
   onContinue: () => void;
   onSaveAndExit: () => void;
   /** False inside Document PiP so the overlay stays in that window. */
@@ -151,6 +161,33 @@ export function IleTurnInsightCraft({
         }
         const insight = data.insight as InsightSummary | undefined;
         if (!insight?.id) throw new Error("Failed to save insight");
+        const pow = ileInsightCraftPowFromAcceptedPersist({
+          persistOk: true,
+          insight,
+          sessionId,
+          workspaceId,
+          chapterId: linkedChapterId,
+        });
+        if (pow) {
+          recordSessionPowArtifact?.(pow);
+          const uploadWorkspaceId = String(
+            insight.workspace_id ?? workspaceId ?? "",
+          ).trim();
+          if (uploadWorkspaceId && sessionId) {
+            void uploadIleProofOfWork({
+              workspaceId: uploadWorkspaceId,
+              sessionId,
+              type: "tool",
+              mime_type: "application/json",
+              data: textToBase64(JSON.stringify(pow.metadata || {})),
+              file_name: ILE_INSIGHT_CRAFT_POW_FILE,
+              tool_name: ILE_INSIGHT_CRAFT_TOOL_NAME,
+              tool_action: ILE_INSIGHT_CRAFT_TOOL_ACTION,
+              metadata: (pow.metadata as Record<string, unknown>) || {},
+              ileToken,
+            });
+          }
+        }
         setCrafted((current) => [insight, ...current]);
         onCrafted(insight);
         setDraft("");
@@ -165,7 +202,7 @@ export function IleTurnInsightCraft({
         setBusy(null);
       }
     },
-    [linkedChapterId, onCrafted, sessionId, workspaceId],
+    [ileToken, linkedChapterId, onCrafted, recordSessionPowArtifact, sessionId, workspaceId],
   );
 
   const handleEvaluate = useCallback(async () => {

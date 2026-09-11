@@ -147,11 +147,12 @@ describe("OG share inventory (one unsys standard)", () => {
       "docs-proof-of-work-api",
     );
 
-    // Dynamic entity cards emit the unsys standard (no per-entity title overrides)
+    // Insights are the dynamic-title exception; other entity cards stay unsys standard
     const insightOg = read("app/insights/[id]/opengraph-image.tsx");
-    expect(insightOg).toContain("composeStandardOgImage");
-    expect(insightOg).not.toContain("insight?.title");
-    expect(insightOg).not.toContain("insight?.summary");
+    expect(insightOg).toContain("buildInsightOgShareInput");
+    expect(insightOg).toContain("composeOgImage");
+    expect(insightOg).toContain("getPublicInsightForMeta");
+    expect(insightOg).not.toContain("UNSYS_STANDARD_SHARE_TITLE");
 
     const publicOg = read("app/p/[id]/[slug]/opengraph-image.tsx");
     expect(publicOg).toContain("composeStandardOgImage");
@@ -217,8 +218,8 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(docs).toContain("standardShareSocialMetadata");
 
     const insightPage = read("app/insights/[id]/page.tsx");
-    expect(insightPage).toContain("standardShareSocialMetadata");
-    expect(insightPage).not.toContain("openGraph: {\n      title,");
+    expect(insightPage).toContain("insightShareSocialMetadata");
+    expect(insightPage).not.toContain("standardShareSocialMetadata");
 
     const publicPage = read("app/p/[id]/[slug]/page.tsx");
     expect(publicPage).toContain("standardShareSocialMetadata");

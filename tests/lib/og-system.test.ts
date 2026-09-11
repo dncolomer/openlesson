@@ -374,8 +374,12 @@ describe("OG entrypoint wiring (static audit)", () => {
       // No primary gradient-only ImageResponse trees left in entrypoints
       expect(source.includes("radial-gradient(circle at"), rel).toBe(false);
       expect(source.includes("linear-gradient(135deg, #0f172a"), rel).toBe(false);
-      // No per-entity title/description overrides in image handlers
-      expect(source.includes("insight?.title"), rel).toBe(false);
+      // Insights compose per-entity title via buildInsightOgShareInput; others stay standard
+      if (rel === "app/insights/[id]/opengraph-image.tsx") {
+        expect(source.includes("buildInsightOgShareInput"), rel).toBe(true);
+      } else {
+        expect(source.includes("insight?.title"), rel).toBe(false);
+      }
       expect(source.includes("planData?.title"), rel).toBe(false);
       expect(source.includes("assembleAyclLandingSummary"), rel).toBe(false);
     }

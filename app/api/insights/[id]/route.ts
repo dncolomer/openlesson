@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
-import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { resolvePublicInsightWorkspaceTitle } from "@/lib/insight-share";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,5 +26,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(404, "Insight not found");
   }
 
-  return NextResponse.json({ insight, isOwner, isAuthenticated: !!user });
+  const workspaceTitle = await resolvePublicInsightWorkspaceTitle({
+    workspaceId: insight.workspace_id,
+    userScoped: supabase,
+    admin: createAdminClient(),
+  });
+
+  return NextResponse.json({
+    insight: { ...insight, workspace_title: workspaceTitle },
+    isOwner,
+    isAuthenticated: !!user,
+  });
 }

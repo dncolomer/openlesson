@@ -18,6 +18,8 @@ export type InsightSummary = {
   share_token?: string | null;
   created_at: string;
   archived_at?: string | null;
+  thought_ids?: unknown;
+  workspace_title?: string | null;
 };
 
 function uuidOrNull(value: unknown): string | null {

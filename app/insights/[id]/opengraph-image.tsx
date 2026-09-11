@@ -1,16 +1,16 @@
-import {
-  composeStandardOgImage,
-  OG_CONTENT_TYPE,
-  OG_SIZE,
-} from "@/lib/og/compose";
-import { standardShareAlt } from "@/lib/og/standard";
+import { composeOgImage, composeStandardOgImage, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/og/compose";
+import { getPublicInsightForMeta } from "@/lib/insights-server";
+import { buildInsightOgShareInput } from "@/lib/insight-share";
 
 export const runtime = "nodejs";
-export const alt = standardShareAlt();
+export const alt = "Insight — Uncertain Systems";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 
-/** Entity routes still serve a dedicated OG path; card is always the unsys standard. */
-export default async function Image() {
-  return composeStandardOgImage();
+/** Dynamic per-insight share card: title + aesthetic, not the unsys standard. */
+export default async function Image({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const insight = await getPublicInsightForMeta(id);
+  if (!insight) return composeStandardOgImage();
+  return composeOgImage(buildInsightOgShareInput(insight));
 }

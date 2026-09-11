@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { InsightDetailClient } from "@/components/InsightDetailClient";
 import { getPublicInsightForMeta } from "@/lib/insights-server";
-import { standardShareSocialMetadata } from "@/lib/og/standard";
+import { insightShareSocialMetadata } from "@/lib/insight-share";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,11 +15,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "Insight" };
   }
 
-  // Page SEO title/description stay entity-specific; social share is unsys standard.
-  const social = standardShareSocialMetadata();
+  const social = insightShareSocialMetadata(insight);
   return {
-    title: insight.title,
-    description: insight.summary,
+    title: social.title,
+    description: social.description,
     openGraph: social.openGraph,
     twitter: social.twitter,
   };

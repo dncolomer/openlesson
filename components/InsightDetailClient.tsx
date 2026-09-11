@@ -6,16 +6,17 @@ import { useRouter } from "next/navigation";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   archiveInsight,
-  formatInsightDate,
   insightApiErrorMessage,
   insightPublicPath,
   insightShareUrl,
   workspaceKnowledgeInsightsPath,
   type InsightSummary,
 } from "@/lib/insights";
+import { deriveInsightPageStats } from "@/lib/insight-share";
 
 type InsightRecord = InsightSummary & {
-  source_thoughts?: Array<{ id?: string; text: string }>;
+  thought_ids?: unknown;
+  workspace_title?: string | null;
 };
 
 export function InsightDetailClient({ insightId }: { insightId: string }) {
@@ -86,6 +87,8 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
     );
   }
 
+  const stats = deriveInsightPageStats(insight);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white">
       {insight.aesthetic_image ? (
@@ -102,7 +105,6 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">Insight</p>
-            <p className="mt-1 text-xs text-neutral-500">{formatInsightDate(insight.created_at)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -149,18 +151,46 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
         <h1 className="text-4xl font-medium tracking-tight md:text-5xl">{insight.title}</h1>
         <p className="mt-6 text-lg leading-relaxed text-neutral-200">{insight.summary}</p>
 
-        {Array.isArray(insight.source_thoughts) && insight.source_thoughts.length > 0 ? (
-          <div className="mt-10 rounded-2xl border border-neutral-800/80 bg-black/40 p-5 backdrop-blur-sm">
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">Source thoughts</p>
-            <ul className="space-y-3 text-sm leading-relaxed text-neutral-400">
-              {insight.source_thoughts.map((thought, index) => (
-                <li key={thought.id || index} className="border-l border-neutral-700 pl-3">
-                  {thought.text}
-                </li>
-              ))}
-            </ul>
+        <div
+          data-insight-page-stats
+          className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          <div
+            data-insight-stat="pow"
+            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+              Proof of Work
+            </p>
+            <p className="mt-2 text-lg font-medium text-white">{stats.powLabel}</p>
           </div>
-        ) : null}
+          <div
+            data-insight-stat="time"
+            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+              Time
+            </p>
+            <p className="mt-2 text-lg font-medium text-white">{stats.timeLabel}</p>
+          </div>
+          <div
+            data-insight-stat="workspace"
+            className="rounded-none border border-neutral-800/80 bg-black/40 px-4 py-4"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+              Workspace
+            </p>
+            <p className="mt-2 text-lg font-medium text-white">{stats.workspaceName}</p>
+          </div>
+        </div>
+
+        <Link
+          href={stats.homeHref}
+          data-insight-home-link
+          className="mt-8 inline-flex w-fit text-sm text-neutral-400 underline decoration-neutral-700 underline-offset-4 transition hover:text-white hover:decoration-white"
+        >
+          {stats.homeLabel}
+        </Link>
       </div>
     </div>
   );

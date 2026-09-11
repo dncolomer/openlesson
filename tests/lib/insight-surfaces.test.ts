@@ -343,7 +343,14 @@ describe("public insight OG title + page stats", () => {
     expect(insightDetail).toContain('data-insight-stat="time"');
     expect(insightDetail).toContain('data-insight-stat="workspace"');
     expect(insightDetail).toContain("data-insight-home-link");
+    expect(insightDetail).toContain("data-insight-hero");
     expect(insightDetail).toContain("data-insight-hero-note");
+    const hero = insightDetail.slice(
+      insightDetail.indexOf("data-insight-hero"),
+      insightDetail.indexOf("data-insight-hero-note"),
+    );
+    expect(hero).toContain("rounded-none");
+    expect(hero).not.toContain("rounded-2xl");
     expect(insightDetail).toContain("INSIGHT_HERO_NOTE_TITLE");
     expect(insightDetail).toContain("INSIGHT_HERO_NOTE_BODY");
     expect(INSIGHT_HERO_NOTE_TITLE).toMatch(/unique and genuine insight/i);

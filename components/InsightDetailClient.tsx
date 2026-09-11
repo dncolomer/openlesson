@@ -148,7 +148,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
 
         <div
           data-insight-hero
-          className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50"
+          className="relative mb-8 overflow-hidden rounded-none border border-white/10 shadow-2xl shadow-black/50"
         >
           {insight.aesthetic_image ? (
             <img

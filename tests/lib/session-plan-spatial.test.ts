@@ -654,7 +654,7 @@ describe("create surface wiring (structural)", () => {
       path.join(process.cwd(), "components/session-view/session-welcome-modal.tsx"),
       "utf8",
     );
-    expect(welcomeSrc).toContain("fillHeight");
+    expect(welcomeSrc).toContain("catalogStrip");
     expect(welcomeSrc).toContain('data-ile-map-type-align="aesthetics"');
     expect(welcomeSrc).toContain(
       "flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]",

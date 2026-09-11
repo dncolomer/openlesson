@@ -130,6 +130,8 @@ export type MapTypePickerItem = {
   descKey?: string;
   cells: MiniMapCell[];
   band?: MapTypeBand;
+  playRule?: string;
+  useWhen?: string;
 };
 
 export const MAP_TYPE_GRID = DUMMY_PATTERN_FRAME;
@@ -1161,6 +1163,9 @@ export function mapTypeCellsToMiniMap(
 export function mapTypeToPickerItem(
   record: WorkspaceMapTypeRecord,
 ): MapTypePickerItem {
+  const lib =
+    MAP_TYPE_LIBRARY_BY_ID[record.id] ||
+    (record.libraryId ? MAP_TYPE_LIBRARY_BY_ID[record.libraryId] : undefined);
   return {
     id: record.id,
     label: record.label,
@@ -1170,6 +1175,8 @@ export function mapTypeToPickerItem(
     descKey: record.descKey,
     cells: mapTypeCellsToMiniMap(record),
     band: record.band,
+    playRule: lib?.playRule || record.layoutInstruction || "",
+    useWhen: lib?.useWhen || record.band?.audience || "",
   };
 }
 

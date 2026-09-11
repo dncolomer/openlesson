@@ -48,6 +48,9 @@ export function useIleGatherResources(input: {
   ileToken?: string;
   ayclToken?: string;
   expense?: unknown;
+  maxPerSession?: unknown;
+  allowGatherResources?: boolean;
+  allowParallelWork?: boolean;
 }) {
   const [spent, setSpent] = useState<IlePowTypeCounts>(emptyIlePowTypeCounts);
   const [spentUnits, setSpentUnits] = useState(0);
@@ -101,6 +104,8 @@ export function useIleGatherResources(input: {
         rateLimitKey,
         lastGatherKey,
         expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
+        maxPerSession: input.maxPerSession,
+        allowGatherResources: input.allowGatherResources,
       });
       if (!decision.allowed) {
         setGatherWarning(
@@ -178,6 +183,8 @@ export function useIleGatherResources(input: {
             rateLimitKey,
             lastGatherKey,
             expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
+            maxPerSession: input.maxPerSession,
+            allowGatherResources: input.allowGatherResources,
             ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),
             ...(input.ileToken ? { ileToken: input.ileToken } : {}),
           }),
@@ -247,6 +254,7 @@ export function useIleGatherResources(input: {
         spentUnits,
         spentTyped: spent,
         expense: input.expense ?? ILE_POW_EXPENSE_DEFAULT,
+        allowParallelWork: input.allowParallelWork,
       });
       if (!decision.allowed) {
         setGatherWarning(decision.warning);
@@ -259,7 +267,7 @@ export function useIleGatherResources(input: {
       }
       return decision;
     },
-    [availableCounts, input.artifacts, input.expense, spent, spentUnits],
+    [availableCounts, input.allowParallelWork, input.artifacts, input.expense, spent, spentUnits],
   );
 
   return {

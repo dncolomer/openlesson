@@ -52,6 +52,16 @@ export const ILE_GATHER_CONSUME: IlePowTypeCounts = {
 
 export const ILE_GATHER_RATE_LIMIT_MS = 90_000;
 export const ILE_GATHER_MAX_PER_SESSION = 4;
+export const ILE_GATHER_MAX_PER_SESSION_MIN = 1;
+export const ILE_GATHER_MAX_PER_SESSION_CEILING = 8;
+
+export function clampIleGatherMaxPerSession(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_GATHER_MAX_PER_SESSION;
+  if (n <= ILE_GATHER_MAX_PER_SESSION_MIN) return ILE_GATHER_MAX_PER_SESSION_MIN;
+  if (n >= ILE_GATHER_MAX_PER_SESSION_CEILING) return ILE_GATHER_MAX_PER_SESSION_CEILING;
+  return n;
+}
 
 export const ILE_GATHER_JOB_TOTAL_STEPS = 4;
 
@@ -68,7 +78,10 @@ export const ILE_GATHER_INSUFFICIENT_POW_WARNING =
 export const ILE_GATHER_RATE_LIMIT_WARNING =
   "Gather resources was just used. Wait before foraging again, or forage manually inside the chapter tool as usual.";
 
-export type IleGatherRefuseReason = "insufficient_pow" | "rate_limited";
+export const ILE_GATHER_DISABLED_WARNING =
+  "Gather resources is off for this session. Turn it on in Difficulty, or forage manually inside the chapter tool.";
+
+export type IleGatherRefuseReason = "insufficient_pow" | "rate_limited" | "disabled";
 
 export type IleGatherDecision = {
   allowed: boolean;
@@ -144,9 +157,13 @@ export function ileGatherRateLimited(input: {
   rateLimitKey?: string | null;
   /** Chapter/block that last started a gather. */
   lastGatherKey?: string | null;
+  maxPerSession?: unknown;
 }): boolean {
   const count = Math.max(0, Math.floor(input.gatherCount || 0));
-  if (count >= ILE_GATHER_MAX_PER_SESSION) return true;
+  const max = clampIleGatherMaxPerSession(
+    input.maxPerSession ?? ILE_GATHER_MAX_PER_SESSION,
+  );
+  if (count >= max) return true;
   const last = input.lastGatherAt;
   if (last == null || !Number.isFinite(last) || last <= 0) return false;
   const key = typeof input.rateLimitKey === "string" ? input.rateLimitKey.trim() : "";
@@ -185,6 +202,7 @@ export function formatIleGatherInsufficientWarning(input: {
   reason: IleGatherRefuseReason;
 }): string {
   if (input.reason === "rate_limited") return ILE_GATHER_RATE_LIMIT_WARNING;
+  if (input.reason === "disabled") return ILE_GATHER_DISABLED_WARNING;
   return ILE_GATHER_INSUFFICIENT_POW_WARNING;
 }
 
@@ -198,17 +216,29 @@ export function decideIleGatherResources(input: {
   rateLimitKey?: string | null;
   lastGatherKey?: string | null;
   expense?: unknown;
+  maxPerSession?: unknown;
+  allowGatherResources?: boolean;
 }): IleGatherDecision {
   const total =
     input.counts ?? countIlePowByType(input.artifacts ?? []);
   const spent = input.spent ?? emptyIlePowTypeCounts();
   const available = availableIlePowCounts(total, spent);
+  if (input.allowGatherResources === false) {
+    return {
+      allowed: false,
+      reason: "disabled",
+      warning: formatIleGatherInsufficientWarning({ reason: "disabled" }),
+      consume: emptyIlePowTypeCounts(),
+      available,
+    };
+  }
   const rateLimited = ileGatherRateLimited({
     lastGatherAt: input.lastGatherAt,
     gatherCount: input.gatherCount ?? 0,
     now: input.now,
     rateLimitKey: input.rateLimitKey,
     lastGatherKey: input.lastGatherKey,
+    maxPerSession: input.maxPerSession,
   });
   if (rateLimited) {
     return {

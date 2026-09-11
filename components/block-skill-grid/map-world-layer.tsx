@@ -198,6 +198,7 @@ export function MapWorldLayer({
   renderStretchHandles,
   annotationLayers,
   circularMenuSurface = "none",
+  allowGatherResources = true,
   circularMenuBlockId = null,
   circularMenuEmptyCell = null,
   onCircularMenuAction,
@@ -268,6 +269,7 @@ export function MapWorldLayer({
   handleCellSelect: (id: string, e: MouseEvent) => void;
   handleBlockDoubleClick: (id: string) => void;
   circularMenuSurface?: BlockCircularMenuSurface;
+  allowGatherResources?: boolean;
   circularMenuBlockId?: string | null;
   circularMenuEmptyCell?: { row: number; col: number } | null;
   onCircularMenuAction?: (blockId: string, action: BlockCircularMenuActionId) => void;
@@ -1040,7 +1042,10 @@ export function MapWorldLayer({
                             onAction={(action) => onCircularMenuAction?.(node.id, action)}
                             disabledIds={
                               circularMenuSurface === "ile"
-                                ? ileCircularMenuDisabledActionIds({ completed: itemDone })
+                                ? ileCircularMenuDisabledActionIds({
+                                  completed: itemDone,
+                                  allowGatherResources,
+                                })
                                 : undefined
                             }
                           />
@@ -1211,7 +1216,10 @@ export function MapWorldLayer({
                     onAction={(action) => onCircularMenuAction?.(node.id, action)}
                     disabledIds={
                       circularMenuSurface === "ile"
-                        ? ileCircularMenuDisabledActionIds({ completed: itemDone })
+                        ? ileCircularMenuDisabledActionIds({
+                                  completed: itemDone,
+                                  allowGatherResources,
+                                })
                         : undefined
                     }
                   />

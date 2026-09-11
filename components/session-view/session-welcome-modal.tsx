@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AestheticPicker } from "@/components/AestheticPicker";
 import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
@@ -11,6 +12,26 @@ import {
   ileWelcomeShowsSizePicker,
 } from "@/lib/ile-welcome-chapters";
 import {
+  ILE_PREGAME_DIFFICULTY_PRESETS,
+  ILE_PREGAME_PRESETS,
+  ILE_PREGAME_TABS,
+  applyIlePregameDifficultyPreset,
+  applyIlePregamePreset,
+  ilePregameMatchingDifficultyPresetId,
+  ilePregameMatchingPresetId,
+  type IlePregameTabId,
+} from "@/lib/ile-pregame-settings";
+import {
+  ILE_TURN_INSIGHT_SLOT_CEILING,
+  ILE_TURN_INSIGHT_SLOT_MAX,
+  ILE_TURN_INSIGHT_SLOT_MIN,
+} from "@/lib/ile-turn-insights";
+import {
+  ILE_GATHER_MAX_PER_SESSION,
+  ILE_GATHER_MAX_PER_SESSION_CEILING,
+  ILE_GATHER_MAX_PER_SESSION_MIN,
+} from "@/lib/ile-gather-resources";
+import {
   coerceSpokenLocale,
   spokenLanguageNames,
   spokenLocales,
@@ -19,7 +40,7 @@ import {
 export function SessionWelcomeModal({
   t,
   languageConfirmed,
-  planLoading,
+  planLoading: _planLoading,
   isPreparing,
   tutoringLanguage,
   onTutoringLanguageChange,
@@ -36,6 +57,16 @@ export function SessionWelcomeModal({
   mapTypeCatalog,
   powExpense = 3,
   onPowExpenseChange,
+  insightSlotMax = ILE_TURN_INSIGHT_SLOT_MAX,
+  onInsightSlotMaxChange,
+  gatherMaxPerSession = ILE_GATHER_MAX_PER_SESSION,
+  onGatherMaxPerSessionChange,
+  allowThoughtsPoolInsights = true,
+  onAllowThoughtsPoolInsightsChange,
+  allowParallelWork = true,
+  onAllowParallelWorkChange,
+  allowGatherResources = true,
+  onAllowGatherResourcesChange,
   autoAdvance,
   onToggleAutoAdvance,
   localInferenceEnabled,
@@ -46,145 +77,333 @@ export function SessionWelcomeModal({
   modelLoadProgress: _modelLoadProgress,
   prepStage: _prepStage,
   onConfirmSettings,
+  onBackToWorkspace,
   onContinueWithoutInference,
   onReadyStart,
-  hasSessionPlan,
+  hasSessionPlan: _hasSessionPlan,
   sessionId,
   sessionStartedAt,
   sessionPlan,
   resumeSession = false,
 }: SessionWelcomeModalProps) {
+  const [pregameTab, setPregameTab] = useState<IlePregameTabId>("economy");
   return (
     <div
       data-ile-session-settings
       data-session-welcome-modal=""
       className="flex h-screen min-h-0 w-full flex-col bg-[#0a0a0a]"
     >
-        <div className="shrink-0 border-b border-neutral-800/70 px-6 py-5 sm:px-8 sm:py-6">
-          <h2 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
+        <div className="shrink-0 border-b border-neutral-800/70 px-5 py-3 sm:px-6">
+          <h2 className="text-lg font-semibold leading-tight tracking-tight text-white sm:text-xl">
             {t("session.welcomeTitle")}
           </h2>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-neutral-400">
+          <p className="mt-1 max-w-3xl text-[12px] leading-snug text-neutral-400">
             {t("session.welcomeMessage")}
           </p>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
         {(() => {
-          const isSessionReady = hasSessionPlan && !planLoading;
-
-          // Phase 1: Language selection (before confirmation)
           if (!languageConfirmed) {
             const isButtonDisabled = isPreparing;
             const confirmBlocked = isIleConfirmSettingsBlocked(
               chapterPlanStatus,
               isPreparing,
             );
+            const welcomeExtras = {
+              resume: resumeSession,
+              stepCount: sessionPlan?.steps?.length ?? 0,
+            };
+            const showSizePicker = ileWelcomeShowsSizePicker(
+              chapterPlanStatus,
+              welcomeExtras,
+            );
+            const showContinuePreview = ileWelcomeShowsContinuePreview(
+              chapterPlanStatus,
+              welcomeExtras,
+            );
+            const showRegenerate = ileWelcomeShowsRegenerate(
+              chapterPlanStatus,
+              welcomeExtras,
+            );
+            const matchingPreset = ilePregameMatchingPresetId({
+              powExpense,
+              insightSlotMax,
+              gatherMaxPerSession,
+              mapType: String(initialChapters || ""),
+            });
+            const matchingDifficulty = ilePregameMatchingDifficultyPresetId({
+              allowThoughtsPoolInsights,
+              allowParallelWork,
+              allowGatherResources,
+            });
+            const applyDifficultyPreset = (presetId: string) => {
+              const next = applyIlePregameDifficultyPreset(presetId);
+              onAllowThoughtsPoolInsightsChange?.(next.allowThoughtsPoolInsights);
+              onAllowParallelWorkChange?.(next.allowParallelWork);
+              onAllowGatherResourcesChange?.(next.allowGatherResources);
+            };
+            const statusUnknown = chapterPlanStatus === "unknown";
+            const statusFailed = chapterPlanStatus === "failed";
+            const completedCount = (sessionPlan?.steps || []).filter(
+              (step) => step.status === "completed",
+            ).length;
+
+            const applyPreset = (presetId: string) => {
+              const knobs = applyIlePregamePreset(presetId, {
+                mapChoosable: showSizePicker,
+                currentMap: String(initialChapters || ""),
+              });
+              onPowExpenseChange?.(knobs.powExpense);
+              onInsightSlotMaxChange?.(knobs.insightSlotMax);
+              onGatherMaxPerSessionChange?.(knobs.gatherMaxPerSession);
+              if (showSizePicker) onInitialChaptersChange(knobs.mapType);
+            };
+
+            const panelClass = (id: IlePregameTabId) =>
+              pregameTab === id
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+                : "hidden";
 
             return (
               <>
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 sm:px-8 sm:py-6">
-                <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 lg:items-stretch">
-                  {/* Left column: language + aesthetics */}
-                  <div className="min-w-0 space-y-5">
-                    <div>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                        {t("session.tutorLanguage")}
-                      </label>
-                      <select
-                        value={tutoringLanguage}
-                        onChange={(e) => {
-                          onTutoringLanguageChange(coerceSpokenLocale(e.target.value));
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <nav
+                    data-ile-pregame-tabs
+                    role="tablist"
+                    aria-orientation="vertical"
+                    aria-label={t("session.welcomeTitle")}
+                    className="flex w-48 shrink-0 flex-col border-r border-neutral-800 bg-neutral-950"
+                  >
+                    {ILE_PREGAME_TABS.map((tab) => {
+                      const selected = pregameTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          id={`ile-pregame-tab-${tab.id}`}
+                          data-ile-pregame-tab={tab.id}
+                          aria-selected={selected}
+                          aria-controls={`ile-pregame-panel-${tab.id}`}
+                          disabled={isButtonDisabled}
+                          onClick={() => setPregameTab(tab.id)}
+                          className={`border-b border-neutral-800 px-3 py-3.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wider transition ${
+                            selected
+                              ? "bg-white text-neutral-950"
+                              : "bg-transparent text-neutral-300 hover:bg-neutral-900 hover:text-white"
+                          } disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          {t(tab.labelKey)}
+                        </button>
+                      );
+                    })}
+                    <div
+                      data-ile-confirm-settings-footer
+                      className="mt-auto shrink-0 border-t border-neutral-800 p-3"
+                    >
+                      {(planError || modelLoadError) && (
+                        <div className="mb-2 px-2 py-2 bg-red-500/5 border border-red-500/20">
+                          <p className="text-[11px] text-red-400 leading-relaxed">
+                            {planError || modelLoadError}
+                          </p>
+                        </div>
+                      )}
+                      {modelLoadError && (
+                        <button
+                          type="button"
+                          onClick={onContinueWithoutInference}
+                          className="mb-2 w-full py-1.5 text-left text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors"
+                        >
+                          {t("session.continueWithoutBrowserInference")}
+                        </button>
+                      )}
+                      {onBackToWorkspace ? (
+                        <button
+                          type="button"
+                          data-ile-back-to-workspace
+                          onClick={() => onBackToWorkspace()}
+                          className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-none border border-neutral-800 bg-black px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-200 transition-colors hover:border-neutral-600 hover:bg-neutral-950 hover:text-white"
+                        >
+                          {t("session.backToDashboard")}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        data-ile-confirm-settings
+                        onClick={() => {
+                          if (isIleConfirmSettingsBlocked(chapterPlanStatus, isPreparing)) {
+                            return;
+                          }
+                          void onConfirmSettings();
                         }}
-                        disabled={isButtonDisabled}
-                        className="w-full rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-sm text-white transition-colors hover:border-neutral-700 focus:border-neutral-600 focus:outline-none disabled:opacity-50"
+                        disabled={confirmBlocked}
+                        aria-busy={chapterPlanStatus === "unknown" || isButtonDisabled}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
                       >
-                        {spokenLocales.map((loc) => (
-                          <option key={loc} value={loc}>
-                            {spokenLanguageNames[loc]}
-                          </option>
-                        ))}
-                      </select>
+                        {isButtonDisabled ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : t("session.confirmSettings")}
+                      </button>
                     </div>
-
-                    <AestheticPicker
-                      packages={aestheticPackages}
-                      selectedId={selectedAesthetic?.id ?? selectedAestheticId}
-                      onSelect={onSelectAesthetic}
-                      disabled={isButtonDisabled}
-                      loading={aestheticsLoading}
-                      wide
-                    />
-
-                    <div data-ile-pow-expense-slider>
-                      <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                        {t("session.powExpense")}
-                      </label>
-                      <input
-                        type="range"
-                        min={1}
-                        max={5}
-                        step={1}
-                        value={powExpense}
-                        disabled={isButtonDisabled}
-                        onChange={(e) => onPowExpenseChange?.(Number(e.target.value))}
-                        className="w-full accent-white"
-                        aria-valuemin={1}
-                        aria-valuemax={5}
-                        aria-valuenow={powExpense}
-                      />
-                      <div className="mt-1.5 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
-                        <span>{t("session.powExpenseCheap")}</span>
-                        <span>{t("session.powExpenseExpensive")}</span>
+                  </nav>
+                <div
+                  data-ile-pregame-fit="viewport"
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-3 sm:px-6"
+                >
+                <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden">
+                  <section
+                    data-ile-pregame-presets
+                    id="ile-pregame-panel-economy"
+                    role="tabpanel"
+                    aria-labelledby="ile-pregame-tab-economy"
+                    hidden={pregameTab !== "economy"}
+                    className={panelClass("economy")}
+                  >
+                    <div
+                      data-ile-pregame-presets-band
+                      className="shrink-0 border border-neutral-800 bg-neutral-950/60 px-3 py-3"
+                    >
+                    <p className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-500">
+                      {t("session.pregamePresets")}
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      {ILE_PREGAME_PRESETS.map((preset) => {
+                        const selected = matchingPreset === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            data-ile-pregame-preset={preset.id}
+                            aria-pressed={selected}
+                            disabled={isButtonDisabled}
+                            onClick={() => applyPreset(preset.id)}
+                            className={`flex h-full flex-col rounded-none border px-3 py-3.5 text-left transition ${
+                              selected
+                                ? "border-white bg-white text-neutral-950"
+                                : "border-neutral-700 bg-neutral-900 text-white hover:border-neutral-400"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            <span className="block font-mono text-[12px] font-semibold uppercase tracking-wider">
+                              {t(preset.labelKey)}
+                            </span>
+                            <span
+                              className={`mt-2 block text-[12px] leading-snug ${
+                                selected ? "text-neutral-700" : "text-neutral-400"
+                              }`}
+                            >
+                              {t(preset.descKey)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    </div>
+                    <div
+                      data-ile-pregame-economy-map
+                      className="mt-5 grid h-0 min-h-0 flex-1 gap-5 overflow-hidden border-t border-neutral-800 pt-5 max-lg:grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:grid-rows-1 lg:items-start"
+                    >
+                    <div data-ile-pregame-economy className="flex min-h-0 flex-col justify-start gap-3 overflow-hidden">
+                      <p className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                        {t("session.pregameGroupEconomy")}
+                      </p>
+                      <div data-ile-pow-expense-slider>
+                        <label className="mb-0.5 block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
+                          {t("session.powExpense")}
+                        </label>
+                        <p className="mb-1 text-[11px] leading-snug text-neutral-500">
+                          {t("session.powExpenseDesc")}
+                        </p>
+                        <input
+                          type="range"
+                          min={1}
+                          max={5}
+                          step={1}
+                          value={powExpense}
+                          disabled={isButtonDisabled}
+                          onChange={(e) => onPowExpenseChange?.(Number(e.target.value))}
+                          className="w-full accent-white"
+                          aria-valuemin={1}
+                          aria-valuemax={5}
+                          aria-valuenow={powExpense}
+                        />
+                        <div className="mt-1 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
+                          <span>{t("session.powExpenseCheap")}</span>
+                          <span>{t("session.powExpenseExpensive")}</span>
+                        </div>
+                      </div>
+                      <div data-ile-insight-slot-slider>
+                        <label className="mb-0.5 block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
+                          {t("session.insightSlotMax")}
+                        </label>
+                        <p className="mb-1 text-[11px] leading-snug text-neutral-500">
+                          {t("session.insightSlotMaxDesc")}
+                        </p>
+                        <input
+                          type="range"
+                          min={ILE_TURN_INSIGHT_SLOT_MIN}
+                          max={ILE_TURN_INSIGHT_SLOT_CEILING}
+                          step={1}
+                          value={insightSlotMax}
+                          disabled={isButtonDisabled}
+                          onChange={(e) =>
+                            onInsightSlotMaxChange?.(Number(e.target.value))
+                          }
+                          className="w-full accent-white"
+                          aria-valuemin={ILE_TURN_INSIGHT_SLOT_MIN}
+                          aria-valuemax={ILE_TURN_INSIGHT_SLOT_CEILING}
+                          aria-valuenow={insightSlotMax}
+                        />
+                        <div className="mt-1 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
+                          <span>{t("session.insightSlotMaxCheap")}</span>
+                          <span>{t("session.insightSlotMaxExpensive")}</span>
+                        </div>
+                      </div>
+                      <div data-ile-gather-max-slider>
+                        <label className="mb-0.5 block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
+                          {t("session.gatherMax")}
+                        </label>
+                        <p className="mb-1 text-[11px] leading-snug text-neutral-500">
+                          {t("session.gatherMaxDesc")}
+                        </p>
+                        <input
+                          type="range"
+                          min={ILE_GATHER_MAX_PER_SESSION_MIN}
+                          max={ILE_GATHER_MAX_PER_SESSION_CEILING}
+                          step={1}
+                          value={gatherMaxPerSession}
+                          disabled={isButtonDisabled}
+                          onChange={(e) =>
+                            onGatherMaxPerSessionChange?.(Number(e.target.value))
+                          }
+                          className="w-full accent-white"
+                          aria-valuemin={ILE_GATHER_MAX_PER_SESSION_MIN}
+                          aria-valuemax={ILE_GATHER_MAX_PER_SESSION_CEILING}
+                          aria-valuenow={gatherMaxPerSession}
+                        />
+                        <div className="mt-1 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
+                          <span>{t("session.gatherMaxCheap")}</span>
+                          <span>{t("session.gatherMaxExpensive")}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Right column: chapter map size + primary CTA */}
-                  <div className="flex min-h-0 min-w-0 flex-col lg:h-full">
-                {/* Initial chapters — interactive only when no chapter set exists
-                    (or user opts in to regenerate). Status is persisted-plan aware
-                    so the regenerate checkbox does not flicker/disappear. */}
-                {(() => {
-                  const welcomeExtras = {
-                    resume: resumeSession,
-                    stepCount: sessionPlan?.steps?.length ?? 0,
-                  };
-                  const showSizePicker = ileWelcomeShowsSizePicker(
-                    chapterPlanStatus,
-                    welcomeExtras,
-                  );
-                  const showContinuePreview = ileWelcomeShowsContinuePreview(
-                    chapterPlanStatus,
-                    welcomeExtras,
-                  );
-                  const showRegenerate = ileWelcomeShowsRegenerate(
-                    chapterPlanStatus,
-                    welcomeExtras,
-                  );
-                  const statusUnknown = chapterPlanStatus === "unknown";
-                  const statusFailed = chapterPlanStatus === "failed";
-                  const completedCount = (sessionPlan?.steps || []).filter(
-                    (step) => step.status === "completed",
-                  ).length;
-
-                  return (
                     <div
-                      className={
-                        showContinuePreview || showSizePicker
-                          ? "flex min-h-0 flex-1 flex-col"
-                          : "mb-5"
-                      }
-                    >
-                      {showContinuePreview ? (
-                        <div
-                          data-ile-continue-welcome
-                          className="flex min-h-0 flex-1 flex-col"
-                        >
-                          <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                            {t("session.continueSession")}
-                          </label>
-                          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4 pb-0">
+                    data-ile-pregame-map
+                    id="ile-pregame-panel-map"
+                    className="flex h-full min-h-0 min-w-0 flex-col self-stretch overflow-hidden"
+                  >
+                    {showContinuePreview ? (
+                      <div
+                        data-ile-continue-welcome
+                        className="flex min-h-0 flex-1 flex-col"
+                      >
+                        <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                          {t("session.continueSession")}
+                        </label>
+                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4 pb-0">
                           <p className="text-[11px] leading-relaxed text-neutral-400">
                             {t("session.continueSessionDesc")}
                           </p>
@@ -224,105 +443,257 @@ export function SessionWelcomeModal({
                           >
                             <IleContinueMapPreview steps={sessionPlan?.steps} />
                           </div>
-                          </div>
                         </div>
-                      ) : (
-                        <div
-                          className={`transition-colors ${
-                            !showSizePicker
-                              ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
-                              : "flex min-h-0 flex-1 flex-col"
-                          }`}
-                        >
-                          <div className="mb-2.5 flex items-center justify-between gap-2">
-                            <label className="block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                              {t("session.initialChapters")}
-                            </label>
-                            {statusUnknown ? (
-                              <span className="text-[10px] text-neutral-600">
-                                {t("session.initialChaptersChecking")}
+                      </div>
+                    ) : (
+                      <div
+                        className={`min-h-0 flex-1 ${
+                          !showSizePicker
+                            ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
+                            : "flex h-full min-h-0 flex-col overflow-hidden"
+                        }`}
+                      >
+                        <div className="mb-2.5 flex shrink-0 items-center justify-between gap-2">
+                          <label className="block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                            {t("session.pregameGroupMap")}
+                          </label>
+                          {statusUnknown ? (
+                            <span className="text-[10px] text-neutral-600">
+                              {t("session.initialChaptersChecking")}
+                            </span>
+                          ) : statusFailed ? (
+                            <span className="text-[10px] text-neutral-600">
+                              {t("session.initialChaptersFailed")}
+                            </span>
+                          ) : null}
+                        </div>
+                        {showSizePicker ? (
+                          <div
+                            data-ile-map-type-align="aesthetics"
+                            data-ile-map-type-explain
+                            className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                          >
+                            <InitialChaptersPicker
+                              value={initialChapters}
+                              onChange={onInitialChaptersChange}
+                              disabled={isButtonDisabled}
+                              t={t}
+                              i18nPrefix="session"
+                              fillHeight
+                              explainFully
+                              catalogStrip
+                              catalog={mapTypeCatalog}
+                            />
+                          </div>
+                        ) : null}
+                        {statusUnknown && (
+                          <div
+                            className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-medium text-neutral-300 leading-tight">
+                                {t("session.initialChaptersLoading")}
                               </span>
-                            ) : statusFailed ? (
-                              <span className="text-[10px] text-neutral-600">
+                              <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                {t("session.initialChaptersLoadingDesc")}
+                              </span>
+                            </span>
+                          </div>
+                        )}
+                        {statusFailed && (
+                          <div
+                            className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                            role="status"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-medium text-neutral-300 leading-tight">
                                 {t("session.initialChaptersFailed")}
                               </span>
-                            ) : null}
+                              <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                {t("session.initialChaptersFailedDesc")}
+                              </span>
+                            </span>
                           </div>
-                          {showSizePicker ? (
-                            <div
-                              data-ile-map-type-align="aesthetics"
-                              className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]"
-                            >
-                              <InitialChaptersPicker
-                                value={initialChapters}
-                                onChange={onInitialChaptersChange}
-                                disabled={isButtonDisabled}
-                                t={t}
-                                i18nPrefix="session"
-                                fillHeight
-                                catalog={mapTypeCatalog}
-                              />
-                            </div>
-                          ) : null}
-                          {statusUnknown && (
-                            <div
-                              className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                              role="status"
-                              aria-live="polite"
-                            >
-                              <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
-                              <span className="min-w-0">
-                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                                  {t("session.initialChaptersLoading")}
-                                </span>
-                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                  {t("session.initialChaptersLoadingDesc")}
-                                </span>
+                        )}
+                        {showRegenerate ? (
+                          <label
+                            className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 ${
+                              isButtonDisabled ? "pointer-events-none opacity-50" : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={regenerateChapters}
+                              disabled={isButtonDisabled}
+                              onChange={(e) =>
+                                onRegenerateChaptersChange(e.target.checked)
+                              }
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
+                            />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-medium text-neutral-200 leading-tight">
+                                {t("session.regenerateChapters")}
                               </span>
-                            </div>
-                          )}
-                          {statusFailed && (
-                            <div
-                              className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                              role="status"
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                                  {t("session.initialChaptersFailed")}
-                                </span>
-                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                  {t("session.initialChaptersFailedDesc")}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          {showRegenerate ? (
-                            <label
-                              className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 ${
-                                isButtonDisabled ? "pointer-events-none opacity-50" : ""
+                            </span>
+                          </label>
+                        ) : null}
+                      </div>
+                    )}
+                    </div>
+                    </div>
+                  </section>
+
+                  <section
+                    id="ile-pregame-panel-difficulty"
+                    role="tabpanel"
+                    aria-labelledby="ile-pregame-tab-difficulty"
+                    hidden={pregameTab !== "difficulty"}
+                    className={panelClass("difficulty")}
+                    data-ile-pregame-difficulty
+                  >
+                    <p className="mb-3 text-[12px] leading-snug text-neutral-400">
+                      {t("session.difficultyHint")}
+                    </p>
+                    <div
+                      data-ile-pregame-difficulty-presets
+                      className="shrink-0 border border-neutral-800 bg-neutral-950/60 px-3 py-3"
+                    >
+                      <p className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-500">
+                        {t("session.pregamePresets")}
+                      </p>
+                      <div className="grid gap-4 sm:grid-cols-3">
+                      {ILE_PREGAME_DIFFICULTY_PRESETS.map((preset) => {
+                        const selected = matchingDifficulty === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            data-ile-pregame-difficulty-preset={preset.id}
+                            aria-pressed={selected}
+                            disabled={isButtonDisabled}
+                            onClick={() => applyDifficultyPreset(preset.id)}
+                            className={`rounded-none border px-3 py-3.5 text-left transition ${
+                              selected
+                                ? "border-white bg-white text-neutral-950"
+                                : "border-neutral-700 bg-neutral-900 text-white hover:border-neutral-400"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            <span className="block font-mono text-[12px] font-semibold uppercase tracking-wider">
+                              {t(preset.labelKey)}
+                            </span>
+                            <span
+                              className={`mt-2 block text-[12px] leading-snug ${
+                                selected ? "text-neutral-700" : "text-neutral-400"
                               }`}
                             >
-                              <input
-                                type="checkbox"
-                                checked={regenerateChapters}
-                                disabled={isButtonDisabled}
-                                onChange={(e) =>
-                                  onRegenerateChaptersChange(e.target.checked)
-                                }
-                                className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
-                              />
-                              <span className="min-w-0">
-                                <span className="block text-xs font-medium text-neutral-200 leading-tight">
-                                  {t("session.regenerateChapters")}
-                                </span>
-                              </span>
-                            </label>
-                          ) : null}
-                        </div>
-                      )}
+                              {t(preset.descKey)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      </div>
                     </div>
-                  );
-                })()}
+                    <div className="mt-5 flex w-full min-w-0 flex-col gap-2 border-t border-neutral-800 pt-5">
+                      {(
+                        [
+                          {
+                            id: "thoughts-pool",
+                            on: allowThoughtsPoolInsights,
+                            set: onAllowThoughtsPoolInsightsChange,
+                            title: t("session.difficultyThoughtsPool"),
+                            desc: t("session.difficultyThoughtsPoolDesc"),
+                          },
+                          {
+                            id: "parallel-work",
+                            on: allowParallelWork,
+                            set: onAllowParallelWorkChange,
+                            title: t("session.difficultyParallelWork"),
+                            desc: t("session.difficultyParallelWorkDesc"),
+                          },
+                          {
+                            id: "gather",
+                            on: allowGatherResources,
+                            set: onAllowGatherResourcesChange,
+                            title: t("session.difficultyGather"),
+                            desc: t("session.difficultyGatherDesc"),
+                          },
+                        ] as const
+                      ).map((row) => (
+                        <button
+                          key={row.id}
+                          type="button"
+                          data-ile-pregame-difficulty-toggle={row.id}
+                          aria-pressed={row.on}
+                          disabled={isButtonDisabled}
+                          onClick={() => row.set?.(!row.on)}
+                          className="flex w-full items-start gap-3 rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-left transition hover:border-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <span
+                            aria-hidden
+                            className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full ${
+                              row.on ? "bg-white" : "bg-neutral-700"
+                            }`}
+                          >
+                            <span
+                              className={`absolute top-0.5 h-4 w-4 rounded-full bg-neutral-950 shadow transition-transform ${
+                                row.on ? "translate-x-[18px]" : "translate-x-0.5"
+                              }`}
+                            />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-neutral-100">
+                              {row.title}
+                            </span>
+                            <span className="mt-1 block text-[12px] leading-snug text-neutral-400">
+                              {row.desc}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section
+                    data-ile-pregame-look
+                    id="ile-pregame-panel-other"
+                    role="tabpanel"
+                    aria-labelledby="ile-pregame-tab-other"
+                    hidden={pregameTab !== "other"}
+                    className={panelClass("other")}
+                  >
+                    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+                      <div className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                        <label className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                          {t("session.tutorLanguage")}
+                        </label>
+                        <select
+                          value={tutoringLanguage}
+                          onChange={(e) => {
+                            onTutoringLanguageChange(coerceSpokenLocale(e.target.value));
+                          }}
+                          disabled={isButtonDisabled}
+                          className="w-full max-w-md rounded-none border border-neutral-800 bg-neutral-950 px-2.5 py-2 text-sm text-white transition-colors hover:border-neutral-700 focus:border-neutral-600 focus:outline-none disabled:opacity-50"
+                        >
+                          {spokenLocales.map((loc) => (
+                            <option key={loc} value={loc}>
+                              {spokenLanguageNames[loc]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <AestheticPicker
+                        packages={aestheticPackages}
+                        selectedId={selectedAesthetic?.id ?? selectedAestheticId}
+                        onSelect={onSelectAesthetic}
+                        disabled={isButtonDisabled}
+                        loading={aestheticsLoading}
+                        fillHeight
+                      />
+                    </div>
+                  </section>
 
                 {/* Auto-advance toggle — hidden in UI (manual mode is the
                     default). Underlying state remains wired; remove the
@@ -377,56 +748,13 @@ export function SessionWelcomeModal({
                   </div>
                 </button>
 
-                  </div>
                 </div>
                 </div>
-                <div
-                  data-ile-confirm-settings-footer
-                  className="shrink-0 border-t border-neutral-800/70 px-6 py-4 sm:px-8"
-                >
-                {(planError || modelLoadError) && (
-                  <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-none">
-                    <p className="text-xs text-red-400 leading-relaxed">{planError || modelLoadError}</p>
-                  </div>
-                )}
-                {modelLoadError && (
-                  <button
-                    type="button"
-                    onClick={onContinueWithoutInference}
-                    className="mb-3 w-full py-2 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
-                  >
-                    {t("session.continueWithoutBrowserInference")}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  data-ile-confirm-settings
-                  onClick={() => {
-                    if (isIleConfirmSettingsBlocked(chapterPlanStatus, isPreparing)) {
-                      return;
-                    }
-                    void onConfirmSettings();
-                  }}
-                  disabled={confirmBlocked}
-                  aria-busy={chapterPlanStatus === "unknown" || isButtonDisabled}
-                  className="flex w-full items-center justify-center gap-2 rounded-none bg-neutral-100 px-4 py-3.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
-                >
-                  {isButtonDisabled ? (
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : t("session.confirmSettings")}
-                </button>
                 </div>
               </>
             );
           }
 
-          // Phase 2: Ready (already confirmed before, e.g. page refresh).
-          // If the user has never clicked Play on this session we drop
-          // them into the in-panel tutor welcome. Otherwise arm capture
-          // immediately so Helios speech is not stuck "off".
           return (
             <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-6 py-6 text-center sm:min-h-[14rem] sm:px-8">
               <p className="max-w-lg text-sm leading-relaxed text-neutral-400">

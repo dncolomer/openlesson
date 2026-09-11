@@ -51,7 +51,10 @@ describe("ILE welcome modal wires Confirm Settings to the chapters check", () =>
     );
     expect(footerAt).toBeGreaterThan(-1);
     expect(confirmAt).toBeGreaterThan(footerAt);
-    expect(src.slice(footerAt, confirmAt + 900)).toContain("w-full");
+    const confirmSlice = src.slice(confirmAt, confirmAt + 1600);
+    expect(confirmSlice).toContain("inline-flex w-full");
+    expect(confirmSlice).toContain('t("session.confirmSettings")');
+    expect(src.slice(footerAt, confirmAt)).toContain("mt-auto");
     expect(src.slice(footerAt, confirmAt)).toContain("shrink-0");
     expect(src).toContain("chapterPlanStatus === \"unknown\"");
     expect(src).toContain("chapterPlanStatus === \"failed\"");

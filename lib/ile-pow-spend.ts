@@ -17,7 +17,11 @@ export const ILE_POW_EXPENSE_DEFAULT = 3;
 
 export type IlePowExpenseLevel = 1 | 2 | 3 | 4 | 5;
 
-export type IleWorkStartReason = "ok" | "already_open" | "insufficient_pow";
+export type IleWorkStartReason =
+  | "ok"
+  | "already_open"
+  | "insufficient_pow"
+  | "parallel_disabled";
 
 export type IleWorkStartDecision = {
   allowed: boolean;
@@ -32,6 +36,9 @@ export type IleWorkStartDecision = {
 
 export const ILE_WORK_INSUFFICIENT_POW_WARNING =
   "Not enough Proof of Work to start another chapter. End turn or do more work first — or choose a cheaper Work expense in settings.";
+
+export const ILE_WORK_PARALLEL_DISABLED_WARNING =
+  "Parallel Work is off. Finish or close the open chapter before starting another.";
 
 export const ILE_END_TURN_LABEL = "End turn";
 /** Same control as End turn (legacy export name). */
@@ -266,6 +273,7 @@ export function decideIleWorkStart(input: {
   spentUnits?: number | null;
   spentTyped?: IlePowTypeCounts | null;
   expense?: unknown;
+  allowParallelWork?: boolean;
 }): IleWorkStartDecision {
   const expense = clampIlePowExpense(input.expense);
   const openWorkIds = (input.openWorkIds ?? [])
@@ -307,6 +315,18 @@ export function decideIleWorkStart(input: {
   }
 
   const nextIds = addIleOpenWork(openWorkIds, chapterId);
+  if (openWorkIds.length > 0 && input.allowParallelWork === false) {
+    return {
+      allowed: false,
+      reason: "parallel_disabled",
+      consumeUnits: 0,
+      consume: emptyIlePowTypeCounts(),
+      openWorkIds,
+      warning: ILE_WORK_PARALLEL_DISABLED_WARNING,
+      cost,
+      pool,
+    };
+  }
   if (openWorkIds.length === 0) {
     return {
       allowed: true,

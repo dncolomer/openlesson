@@ -14,6 +14,7 @@ import {
   stepMapTypeCatalog,
   type MapTypePickerItem,
 } from "@/lib/workspace-map-types";
+import { ileMapTypeSessionExplanation } from "@/lib/ile-pregame-settings";
 
 export function InitialChaptersPicker({
   value,
@@ -24,6 +25,8 @@ export function InitialChaptersPicker({
   showCountHint = false,
   fillHeight = false,
   catalog,
+  explainFully = false,
+  catalogStrip = false,
 }: {
   value: string;
   onChange: (level: string) => void;
@@ -33,6 +36,10 @@ export function InitialChaptersPicker({
   showCountHint?: boolean;
   /** Stretch to the parent column (welcome modal left-column match). */
   fillHeight?: boolean;
+  /** Pre-game settings: full shape + use-when + play-rule, no three-line clamp. */
+  explainFully?: boolean;
+  /** Compact preview plus a horizontally scrollable row of the other map types. */
+  catalogStrip?: boolean;
   /**
    * Workspace-resolved picker catalog (enabled built-ins + custom types).
    * When omitted, the frozen eight-id built-in catalog is used.
@@ -58,6 +65,12 @@ export function InitialChaptersPicker({
     option.descKey && option.source === "builtin"
       ? t(`${i18nPrefix}.${option.descKey}`)
       : option.description;
+  const explain = ileMapTypeSessionExplanation({
+    id: option.id,
+    description,
+    playRule: option.playRule,
+    useWhen: option.useWhen,
+  });
   const randomLabel =
     i18nPrefix === "planMode"
       ? t("planMode.initialChaptersPickRandom")
@@ -66,6 +79,8 @@ export function InitialChaptersPicker({
     option.cells && option.cells.length > 0
       ? option.cells
       : dummyDensityCells(option.id as InitialChaptersLevel);
+  const compact = catalogStrip || explainFully;
+  const fill = fillHeight || catalogStrip;
 
   function slide(delta: -1 | 1) {
     if (disabled) return;
@@ -81,9 +96,9 @@ export function InitialChaptersPicker({
     <div
       data-initial-chapters-picker
       data-initial-chapters-carousel
-      data-initial-chapters-fill={fillHeight ? "true" : "false"}
+      data-initial-chapters-fill={fill ? "true" : "false"}
       data-map-type-catalog-count={items.length}
-      className={fillHeight ? "flex h-full min-h-0 flex-col" : undefined}
+      className={fill ? "flex h-full min-h-0 flex-col overflow-hidden" : undefined}
     >
       {showCountHint && band ? (
         <p className="mb-2 text-[11px] text-neutral-500">
@@ -101,8 +116,8 @@ export function InitialChaptersPicker({
         {randomLabel}
       </button>
       <div
-        className={`flex items-stretch gap-2 ${
-          fillHeight ? "min-h-0 flex-1" : ""
+        className={`flex min-h-0 items-stretch gap-2 overflow-hidden ${
+          fill ? "h-0 flex-1" : ""
         }`}
       >
         <button
@@ -119,23 +134,31 @@ export function InitialChaptersPicker({
           data-density-level={option.id}
           data-map-type-id={option.id}
           data-initial-chapters-card
-          className={`min-w-0 flex-1 rounded-none border border-neutral-200 bg-neutral-900 px-4 py-4 ring-1 ring-neutral-200/30 ${
-            fillHeight ? "flex min-h-0 flex-col" : ""
+          className={`min-h-0 min-w-0 flex-1 overflow-hidden rounded-none border border-neutral-200 bg-neutral-900 px-4 py-4 ring-1 ring-neutral-200/30 ${
+            compact
+              ? "flex h-full min-h-0 flex-col sm:flex-row sm:items-stretch sm:gap-4"
+              : fill
+                ? "flex min-h-0 flex-col"
+                : ""
           }`}
         >
           <div
             data-map-type-preview
             className={
-              fillHeight
-                ? "flex min-h-[12rem] w-full flex-1 items-center justify-center [container-type:size]"
+              compact
+                ? "mx-auto aspect-square h-[min(100%,20rem)] w-[min(100%,20rem)] shrink-0 self-start sm:mx-0"
+                : fill
+                ? "flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]"
                 : "mx-auto aspect-square w-full max-w-[14rem]"
             }
           >
             <div
               className={
-                fillHeight
-                  ? "aspect-square w-full max-w-[100cqmin]"
-                  : "h-full w-full"
+                compact
+                  ? "h-full w-full"
+                  : fill
+                ? "aspect-square w-full max-w-[100cqmin]"
+                : "h-full w-full"
               }
             >
               <ChapterMiniMap
@@ -145,15 +168,57 @@ export function InitialChaptersPicker({
               />
             </div>
           </div>
-          <p className="mt-3 truncate text-sm font-medium leading-tight text-neutral-100">
+          <div
+            data-ile-map-type-copy
+            className={
+              compact
+                ? "mt-3 min-h-0 min-w-0 max-h-full flex-1 overflow-y-auto overscroll-contain sm:mt-0"
+                : fill
+                  ? "min-h-0 overflow-hidden"
+                  : undefined
+            }
+          >
+          <p className="truncate text-sm font-medium leading-tight text-neutral-100">
             {title}
           </p>
-          <p className="mt-1.5 min-h-[3.6rem] text-[12px] leading-snug text-neutral-400 line-clamp-3">
-            {description}
+          <p
+            data-ile-map-type-shape
+            className={
+              explainFully
+                ? "mt-1.5 text-[12px] leading-snug text-neutral-400"
+                : "mt-1.5 min-h-[3.6rem] text-[12px] leading-snug text-neutral-400 line-clamp-3"
+            }
+          >
+            {explain.shape || description}
           </p>
+          {explainFully && explain.useWhen ? (
+            <p
+              data-ile-map-type-use-when
+              className="mt-2 text-[12px] leading-snug text-neutral-400"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                {t(`${i18nPrefix}.mapTypeUseWhen`)}
+              </span>
+              <span className="mt-0.5 block">{explain.useWhen}</span>
+            </p>
+          ) : null}
+          {explainFully &&
+          explain.playRule &&
+          explain.playRule !== explain.shape ? (
+            <p
+              data-ile-map-type-play-rule
+              className="mt-2 text-[12px] leading-snug text-neutral-400"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                {t(`${i18nPrefix}.mapTypePlayRule`)}
+              </span>
+              <span className="mt-0.5 block">{explain.playRule}</span>
+            </p>
+          ) : null}
           <p className="mt-2 text-[10px] uppercase tracking-wider text-neutral-600">
             {index + 1} / {items.length || INITIAL_CHAPTERS_CATALOG.length}
           </p>
+          </div>
         </div>
         <button
           type="button"
@@ -166,6 +231,46 @@ export function InitialChaptersPicker({
           <ChevronRight className="size-5" strokeWidth={2.2} aria-hidden />
         </button>
       </div>
+      {catalogStrip ? (
+        <div
+          data-ile-map-type-strip
+          className="mt-3 flex shrink-0 gap-2 overflow-x-auto overscroll-x-contain pb-1"
+        >
+          {items.map((item) => {
+            const selected = item.id === option.id;
+            const label =
+              item.titleKey && item.source === "builtin"
+                ? t(`${i18nPrefix}.${item.titleKey}`)
+                : item.label;
+            const cells =
+              item.cells && item.cells.length > 0
+                ? item.cells
+                : dummyDensityCells(item.id as InitialChaptersLevel);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-ile-map-type-option={item.id}
+                aria-pressed={selected}
+                disabled={disabled}
+                onClick={() => onChange(item.id)}
+                className={`w-[5.75rem] shrink-0 rounded-none border px-1.5 py-1.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  selected
+                    ? "border-white bg-neutral-900 ring-1 ring-white/40"
+                    : "border-neutral-800 bg-neutral-950 hover:border-neutral-500"
+                }`}
+              >
+                <div className="aspect-square w-full">
+                  <ChapterMiniMap cells={cells} dummy density={item.id} />
+                </div>
+                <span className="mt-1 block truncate font-mono text-[10px] uppercase tracking-wide text-neutral-300">
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

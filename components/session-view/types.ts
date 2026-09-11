@@ -78,6 +78,16 @@ export type SessionWelcomeModalProps = {
   mapTypeCatalog?: MapTypePickerItem[] | null;
   powExpense?: number;
   onPowExpenseChange?: (value: number) => void;
+  insightSlotMax?: number;
+  onInsightSlotMaxChange?: (value: number) => void;
+  gatherMaxPerSession?: number;
+  onGatherMaxPerSessionChange?: (value: number) => void;
+  allowThoughtsPoolInsights?: boolean;
+  onAllowThoughtsPoolInsightsChange?: (value: boolean) => void;
+  allowParallelWork?: boolean;
+  onAllowParallelWorkChange?: (value: boolean) => void;
+  allowGatherResources?: boolean;
+  onAllowGatherResourcesChange?: (value: boolean) => void;
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
   localInferenceEnabled: boolean;
@@ -88,6 +98,7 @@ export type SessionWelcomeModalProps = {
   modelLoadProgress: InitProgress | null;
   prepStage: PrepStage;
   onConfirmSettings: () => Promise<void> | void;
+  onBackToWorkspace?: () => void;
   onContinueWithoutInference: () => void;
   onReadyStart: () => Promise<void> | void;
   hasSessionPlan: boolean;

@@ -20,7 +20,17 @@ import {
 
 export { insightsSessionListUrl };
 
+export const ILE_TURN_INSIGHT_SLOT_MIN = 1;
+export const ILE_TURN_INSIGHT_SLOT_CEILING = 5;
 export const ILE_TURN_INSIGHT_SLOT_MAX = 3;
+
+export function clampIleTurnInsightSlotMax(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_TURN_INSIGHT_SLOT_MAX;
+  if (n <= ILE_TURN_INSIGHT_SLOT_MIN) return ILE_TURN_INSIGHT_SLOT_MIN;
+  if (n >= ILE_TURN_INSIGHT_SLOT_CEILING) return ILE_TURN_INSIGHT_SLOT_CEILING;
+  return n;
+}
 export const ILE_TURN_INSIGHT_EVALUATE_PATH = "/api/insights/evaluate";
 export const ILE_TURN_INSIGHT_CREATE_PATH = "/api/insights/create";
 export const ILE_TURN_INSIGHT_SUGGEST_PATH = "/api/insights/suggest";
@@ -74,13 +84,16 @@ export function unusedIlePowForInsights(input: {
 }
 
 /**
- * Available insight slots this turn: unused PoW, capped at 3, never below 0.
- * Monotonic in unused PoW (1 leftover → 1 slot, 2 → 2, 3+ → 3).
+ * Available insight slots this turn: unused PoW, capped by the session
+ * slider (default 3, never below 0).
  */
-export function ileTurnInsightSlotCount(unusedPow: unknown): number {
+export function ileTurnInsightSlotCount(
+  unusedPow: unknown,
+  slotMax: unknown = ILE_TURN_INSIGHT_SLOT_MAX,
+): number {
   const n = Math.floor(Number(unusedPow));
   if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(ILE_TURN_INSIGHT_SLOT_MAX, n);
+  return Math.min(clampIleTurnInsightSlotMax(slotMax), n);
 }
 
 /**
@@ -98,19 +111,21 @@ export function ileTurnInsightSlotsFromUnusedPow(input: {
   thoughts?: number | null;
   spentUnits?: number | null;
   spentTyped?: IlePowTypeCounts | null;
+  slotMax?: unknown;
 }): number {
-  return ileTurnInsightSlotCount(unusedIlePowForInsights(input));
+  return ileTurnInsightSlotCount(unusedIlePowForInsights(input), input.slotMax);
 }
 
 export function remainingIleTurnInsightSlots(input: {
   unusedPow?: unknown;
   slotCount?: unknown;
   craftedCount: unknown;
+  slotMax?: unknown;
 }): number {
   const max =
     input.slotCount !== undefined
-      ? ileTurnInsightSlotCount(input.slotCount)
-      : ileTurnInsightSlotCount(input.unusedPow);
+      ? ileTurnInsightSlotCount(input.slotCount, input.slotMax)
+      : ileTurnInsightSlotCount(input.unusedPow, input.slotMax);
   const crafted = Math.max(0, Math.floor(Number(input.craftedCount) || 0));
   return Math.max(0, max - crafted);
 }
@@ -123,13 +138,14 @@ export function canCompleteIleTurnInsightCraft(input: {
   craftedCount: unknown;
   unusedPow?: unknown;
   slotCount?: unknown;
+  slotMax?: unknown;
 }): boolean {
   const crafted = Math.floor(Number(input.craftedCount));
   if (!Number.isFinite(crafted) || crafted < 0) return false;
   const max =
     input.slotCount !== undefined
-      ? ileTurnInsightSlotCount(input.slotCount)
-      : ileTurnInsightSlotCount(input.unusedPow);
+      ? ileTurnInsightSlotCount(input.slotCount, input.slotMax)
+      : ileTurnInsightSlotCount(input.unusedPow, input.slotMax);
   return crafted <= max;
 }
 

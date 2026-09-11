@@ -39,7 +39,13 @@ import {
 import {
   freezeIleTurnInsightUnusedPow,
   unusedIlePowForInsights,
+  ILE_TURN_INSIGHT_SLOT_MAX,
+  clampIleTurnInsightSlotMax,
 } from "@/lib/ile-turn-insights";
+import {
+  ILE_GATHER_MAX_PER_SESSION,
+  clampIleGatherMaxPerSession,
+} from "@/lib/ile-gather-resources";
 import {
   decideIleSettingsEnterMap,
   ileSessionMapPath,
@@ -308,6 +314,13 @@ export function SessionView({
   const mapEntryTailDoneRef = useRef(false);
   const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(false);
   const [powExpense, setPowExpense] = useState(ILE_POW_EXPENSE_DEFAULT);
+  const [insightSlotMax, setInsightSlotMax] = useState(ILE_TURN_INSIGHT_SLOT_MAX);
+  const [gatherMaxPerSession, setGatherMaxPerSession] = useState(
+    ILE_GATHER_MAX_PER_SESSION,
+  );
+  const [allowThoughtsPoolInsights, setAllowThoughtsPoolInsights] = useState(true);
+  const [allowParallelWork, setAllowParallelWork] = useState(true);
+  const [allowGatherResources, setAllowGatherResources] = useState(true);
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>(
     {},
@@ -605,6 +618,9 @@ export function SessionView({
     ileToken,
     ayclToken,
     expense: powExpense,
+    maxPerSession: gatherMaxPerSession,
+    allowGatherResources,
+    allowParallelWork,
   });
 
   const gatherReadyCountByBlock = useMemo(() => {
@@ -1533,6 +1549,8 @@ export function SessionView({
         dockedChapters={openWorkDockLabels}
         thoughts={sessionThoughtInterface.thoughts}
         unusedPow={craftUnusedPow}
+        insightSlotMax={insightSlotMax}
+        allowThoughtsPoolInsights={allowThoughtsPoolInsights}
         workspaceId={workspaceId}
         sessionId={session.id}
         ileToken={ileToken}
@@ -1680,6 +1698,20 @@ export function SessionView({
         mapTypeCatalog={mapTypeCatalog}
         powExpense={powExpense}
         onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
+        insightSlotMax={insightSlotMax}
+        onInsightSlotMaxChange={(value) =>
+          setInsightSlotMax(clampIleTurnInsightSlotMax(value))
+        }
+        gatherMaxPerSession={gatherMaxPerSession}
+        onGatherMaxPerSessionChange={(value) =>
+          setGatherMaxPerSession(clampIleGatherMaxPerSession(value))
+        }
+        allowThoughtsPoolInsights={allowThoughtsPoolInsights}
+        onAllowThoughtsPoolInsightsChange={setAllowThoughtsPoolInsights}
+        allowParallelWork={allowParallelWork}
+        onAllowParallelWorkChange={setAllowParallelWork}
+        allowGatherResources={allowGatherResources}
+        onAllowGatherResourcesChange={setAllowGatherResources}
         autoAdvance={autoAdvance}
         onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
         localInferenceEnabled={localInferenceEnabled}
@@ -1690,6 +1722,9 @@ export function SessionView({
         modelLoadProgress={modelLoadProgress}
         prepStage={prepStage}
         onConfirmSettings={handleConfirmSettings}
+        onBackToWorkspace={() => {
+          void pauseAndGoToDashboard();
+        }}
         onContinueWithoutInference={handleContinueWithoutInference}
         onReadyStart={handleWelcomeReadyStart}
         hasSessionPlan={Boolean(sessionPlan)}
@@ -1820,6 +1855,7 @@ export function SessionView({
             loading={planLoading}
             activeChapterIndex={activeChapterIndex}
             onWorkChapter={handleWorkChapter}
+            allowGatherResources={allowGatherResources}
             onAcceptTimChapter={(stepId) => {
               void handleAcceptTimChapter(stepId);
             }}

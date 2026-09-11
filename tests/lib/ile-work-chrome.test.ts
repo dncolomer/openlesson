@@ -157,10 +157,19 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(tapShell).toContain("ImDoneAnsweringControl");
 
     expect(welcome).toContain("data-ile-pow-expense-slider");
+    expect(welcome).toContain("data-ile-insight-slot-slider");
+    expect(welcome).toContain("data-ile-gather-max-slider");
+    expect(welcome).toContain("data-ile-pregame-preset");
+    expect(welcome).toContain("applyIlePregamePreset");
+    expect(welcome).toContain("explainFully");
     expect(welcome).toContain("AestheticPicker");
     expect(welcome).toContain("InitialChaptersPicker");
     expect(welcome).toContain("session.powExpense");
+    expect(welcome).toContain("session.confirmSettings");
+    expect(welcome).toContain("min-w-[14rem]");
     expect(view).toContain("powExpense={powExpense}");
+    expect(view).toContain("insightSlotMax={insightSlotMax}");
+    expect(view).toContain("maxPerSession: gatherMaxPerSession");
     expect(view).toContain("tryStartWork");
     expect(view).toContain("handleWorkChapter");
     expect(view).toContain("closeIleOpenWorkTurn");

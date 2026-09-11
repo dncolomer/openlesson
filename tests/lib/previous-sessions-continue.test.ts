@@ -291,7 +291,7 @@ describe("welcome branch continue vs new", () => {
     expect(picker).toContain("data-initial-chapters-random-pick");
     expect(picker).not.toContain('type="checkbox"');
     expect(picker).toContain("pickRandomMapType");
-    expect(welcome).toContain("fillHeight");
+    expect(welcome).toContain("catalogStrip");
     expect(welcome).toContain('data-ile-map-type-align="aesthetics"');
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
     const sizeAt = welcome.indexOf("showSizePicker");
@@ -371,7 +371,7 @@ describe("dummy density occupancy + continue mini read-only", () => {
       "max-lg:min-h-[min(14rem,28vh)]",
     );
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).not.toContain("28rem");
-    expect(welcome).toContain('lg:items-stretch');
+    expect(welcome).toContain("ile-pregame-panel-map");
     expect(welcome).toContain('data-ile-continue-map-align="aesthetics"');
     expect(welcome).toContain("flex-1");
     expect(welcome).toContain("pb-0");

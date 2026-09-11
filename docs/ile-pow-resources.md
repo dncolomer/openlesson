@@ -16,7 +16,7 @@ Counts are session-global. Switching the focused chapter does not split the econ
 
 ## Expense slider
 
-Welcome settings (same surface as aesthetics and map type) expose **Work expense** from 1 (cheaper) to 5 (more expensive).
+Welcome settings (same surface as aesthetics and map type) expose **Work expense** from 1 (cheaper) to 5 (more expensive), plus **Insight crafts per turn** and **Gather appetite**. Named setups (Skirmish, Campaign, Blitz) apply a combination of those sliders and, when the map is still choosable, a map type.
 
 - Cheaper → extra Work costs fewer units, so the same pool affords more chapters in parallel.
 - More expensive → extra Work costs more, so the journey stays more linear.

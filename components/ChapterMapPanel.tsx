@@ -46,6 +46,7 @@ interface ChapterMapPanelProps {
   onMarkChapterCompleted?: (stepId: string) => void;
   onGatherChapterResources?: (stepId: string, description: string) => void;
   onSeeChapterResources?: (stepId: string) => void;
+  allowGatherResources?: boolean;
   onUpdateChapter?: (stepId: string, description: string) => Promise<void>;
   blockActionProgress?: Readonly<Record<string, { running: boolean; completed: number; total: number }>>;
   unseenGatherBlockIds?: ReadonlySet<string> | readonly string[];
@@ -75,6 +76,7 @@ export function ChapterMapPanel({
   onMarkChapterCompleted,
   onGatherChapterResources,
   onSeeChapterResources,
+  allowGatherResources = true,
   onUpdateChapter,
   blockActionProgress,
   unseenGatherBlockIds,
@@ -301,6 +303,7 @@ export function ChapterMapPanel({
           setSelectedStepId(id);
         }}
         circularMenuSurface="ile"
+        allowGatherResources={allowGatherResources}
         onCircularMenuAction={handleCircularMenuAction}
         blockProgressById={blockProgressById}
         unseenGatherById={unseenGatherById}

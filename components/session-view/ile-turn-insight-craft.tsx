@@ -15,6 +15,7 @@ import {
   canCompleteIleTurnInsightCraft,
   ileInsightCraftPowFromAcceptedPersist,
   ileTurnInsightSlotCount,
+  ILE_TURN_INSIGHT_SLOT_MAX,
   ILE_INSIGHT_CRAFT_POW_FILE,
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
   ILE_INSIGHT_CRAFT_TOOL_NAME,
@@ -59,6 +60,8 @@ export function IleTurnInsightCraft({
   dockedChapters,
   thoughts,
   unusedPow,
+  insightSlotMax = ILE_TURN_INSIGHT_SLOT_MAX,
+  allowThoughtsPoolInsights = true,
   workspaceId,
   sessionId,
   ileToken,
@@ -73,6 +76,8 @@ export function IleTurnInsightCraft({
   dockedChapters: IleWorkDockLabel[];
   thoughts: readonly IleTurnInsightThought[];
   unusedPow: number;
+  insightSlotMax?: number;
+  allowThoughtsPoolInsights?: boolean;
   workspaceId?: string | null;
   sessionId: string;
   ileToken?: string;
@@ -83,7 +88,8 @@ export function IleTurnInsightCraft({
   /** False inside Document PiP so the overlay stays in that window. */
   portal?: boolean;
 }) {
-  const slotCount = ileTurnInsightSlotCount(unusedPow);
+  const slotCount = ileTurnInsightSlotCount(unusedPow, insightSlotMax);
+  const poolEnabled = allowThoughtsPoolInsights !== false;
   const [path, setPath] = useState<CraftPath>("type");
   const [draft, setDraft] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -101,10 +107,12 @@ export function IleTurnInsightCraft({
   const remaining = remainingIleTurnInsightSlots({
     unusedPow,
     craftedCount: crafted.length,
+    slotMax: insightSlotMax,
   });
   const canFinish = canCompleteIleTurnInsightCraft({
     craftedCount: crafted.length,
     unusedPow,
+    slotMax: insightSlotMax,
   });
   const slotsOpen = remaining > 0 && !busy;
 
@@ -113,6 +121,10 @@ export function IleTurnInsightCraft({
     () => thoughts.filter((thought) => thought?.id && String(thought.text || "").trim()),
     [thoughts],
   );
+
+  useEffect(() => {
+    if (!poolEnabled && path === "pool") setPath("type");
+  }, [poolEnabled, path]);
 
   useEffect(() => {
     if (!open) return;
@@ -429,6 +441,7 @@ export function IleTurnInsightCraft({
                 <PenLine className="size-3.5" strokeWidth={2.3} aria-hidden />
                 Type an insight
               </button>
+              {poolEnabled ? (
               <button
                 type="button"
                 data-ile-turn-insight-path="pool"
@@ -442,9 +455,10 @@ export function IleTurnInsightCraft({
                 <Sparkles className="size-3.5" strokeWidth={2.3} aria-hidden />
                 Thoughts pool
               </button>
+              ) : null}
             </div>
 
-            {path === "type" ? (
+            {path === "type" || !poolEnabled ? (
               <section data-ile-turn-insight-type className="flex min-h-[12rem] flex-col gap-2">
                 <textarea
                   data-ile-turn-insight-draft

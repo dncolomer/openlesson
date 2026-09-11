@@ -175,8 +175,13 @@ const ILE_COMPLETED_DISABLED_ACTIONS: ReadonlySet<IleCircularMenuActionId> = new
 /** Completed ILE chapters keep Work enabled; every other circular action is off. */
 export function ileCircularMenuDisabledActionIds(input: {
   completed?: boolean | null;
+  allowGatherResources?: boolean | null;
 }): ReadonlySet<IleCircularMenuActionId> {
-  return input.completed ? ILE_COMPLETED_DISABLED_ACTIONS : EMPTY_DISABLED_ACTIONS;
+  if (input.completed) return ILE_COMPLETED_DISABLED_ACTIONS;
+  if (input.allowGatherResources === false) {
+    return new Set<IleCircularMenuActionId>(["gather_resources"]);
+  }
+  return EMPTY_DISABLED_ACTIONS;
 }
 
 export function ileWorkOnCompletedRequiresConfirm(completed?: boolean | null): boolean {

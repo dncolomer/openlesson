@@ -129,6 +129,29 @@ export function formatAestheticName(id: string) {
     .join(" ");
 }
 
+/** Folder-id vibe lines written from the pack stills (fallback is generated). */
+export const AESTHETIC_PACKAGE_VIBES: Record<string, string> = {
+  architecture:
+    "A gilded sanctuary in the trees — teal domes, warm gold light, a palace grown into the forest.",
+  "galactic-stoneworks":
+    "Night-forest hideaway — moss, timber, and a single warm window in the blue dark.",
+  "greco-futurism":
+    "A classical future — marble colonnades, copper inlay, and sunlit cities under a new sky.",
+  lunar:
+    "Quiet lunar night — Earth on the horizon, glass domes, a cold industrial hush.",
+  mars:
+    "World-being-made — bronze lattice gardens, dust-lit halls, palms under an alien vault.",
+  "piotr-binkowski":
+    "Painterly sci-fi myth — colossal faces, overgrown ruins, gold light in impossible cities.",
+};
+
+export function aestheticPackageVibe(id: string): string {
+  const key = String(id || "").trim().toLowerCase();
+  if (key && AESTHETIC_PACKAGE_VIBES[key]) return AESTHETIC_PACKAGE_VIBES[key];
+  const name = formatAestheticName(id || "this pack");
+  return `${name} stills for this session — map, Work, and chrome share the same mood.`;
+}
+
 export async function fetchAestheticPackages(): Promise<AestheticPackage[]> {
   const response = await fetch("/api/aesthetics", { cache: "no-store" });
   if (!response.ok) return [];

@@ -40,6 +40,7 @@ export interface BlockSkillGridProps {
   /** Session-lived still per open Work id (stable until reload). */
   workAestheticById?: Readonly<Record<string, string>> | null;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
+  allowGatherResources?: boolean;
   onCircularMenuAction?: (
     blockId: string,
     action:

@@ -184,7 +184,15 @@ describe("ile word-box helpers (shipped)", () => {
     };
     expect(ileWordBoxHitTest({ document: pipDoc }, 20, 20)).toBe(4);
     expect(ileWordBoxHitTest({ document: pipDoc }, 0, 0)).toBeNull();
-    const pipWin = { addEventListener() {}, defaultView: null };
+    const hitView = resolveIleWordBoxView(null, {
+      document: pipDoc,
+      innerWidth: 320,
+      innerHeight: 180,
+      body: null,
+    });
+    expect(ileWordBoxHitTest(hitView, 20, 20)).toBe(4);
+    expect(ileWordBoxHitTest(hitView, 0, 0)).toBeNull();
+    const pipWin = { addEventListener() {}, defaultView: null as null };
     const pipOwner = { addEventListener() {}, defaultView: pipWin, body: { id: "pip" } };
     (pipWin as { document?: unknown }).document = pipOwner;
     expect(ileWordBoxEventTargets({ document: pipOwner, innerWidth: 1, innerHeight: 1, body: pipOwner.body })).toEqual(

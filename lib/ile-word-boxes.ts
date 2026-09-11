@@ -150,9 +150,7 @@ export function ileWordBoxIndexFromHit(hit: unknown): number | null {
  * pointerenter on sibling spans is unreliable while dragging.
  */
 export function ileWordBoxHitTest(
-  input: {
-    document?: { elementFromPoint?: (x: number, y: number) => unknown } | null;
-  } | null | undefined,
+  input: IleWordBoxView | { document?: IleWordBoxDocumentLike | null } | null | undefined,
   clientX: number,
   clientY: number,
 ): number | null {
@@ -221,11 +219,15 @@ export type IleWordBoxWindowLike = {
   innerWidth?: number;
   innerHeight?: number;
   document?: IleWordBoxDocumentLike | null;
+  defaultView?: IleWordBoxWindowLike | null;
+  addEventListener?: unknown;
 };
 
 export type IleWordBoxDocumentLike = {
   body?: unknown | null;
   defaultView?: IleWordBoxWindowLike | null;
+  elementFromPoint?: (x: number, y: number) => unknown;
+  addEventListener?: unknown;
 };
 
 export type IleWordBoxView = {

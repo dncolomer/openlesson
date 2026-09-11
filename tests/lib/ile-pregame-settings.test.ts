@@ -73,6 +73,15 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(skirmish.gatherMaxPerSession).toBe(ILE_GATHER_MAX_PER_SESSION);
     expect(skirmish.mapType).toBe(DEFAULT_INITIAL_CHAPTERS);
     expect(ilePregameMatchingPresetId(skirmish)).toBe("skirmish");
+    const liveExpense: number = ILE_POW_EXPENSE_DEFAULT;
+    expect(
+      ilePregameMatchingPresetId({
+        powExpense: liveExpense,
+        insightSlotMax: ILE_TURN_INSIGHT_SLOT_MAX,
+        gatherMaxPerSession: ILE_GATHER_MAX_PER_SESSION,
+        mapType: DEFAULT_INITIAL_CHAPTERS,
+      }),
+    ).toBe("skirmish");
     expect(ileTurnInsightSlotCount(8, skirmish.insightSlotMax)).toBe(3);
     expect(ilePowWorkStartCost(skirmish.powExpense)).toBe(3);
 

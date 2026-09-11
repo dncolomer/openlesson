@@ -216,7 +216,12 @@ export function applyIlePregamePreset(
 }
 
 export function ilePregameMatchingPresetId(
-  knobs: IlePregameKnobs,
+  knobs: {
+    powExpense?: unknown;
+    insightSlotMax?: unknown;
+    gatherMaxPerSession?: unknown;
+    mapType?: unknown;
+  },
 ): IlePregamePresetId | null {
   const clamped = clampIlePregameKnobs(knobs);
   for (const preset of ILE_PREGAME_PRESETS) {

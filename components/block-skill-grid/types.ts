@@ -40,6 +40,9 @@ export interface BlockSkillGridProps {
   /** Session-lived still per open Work id (stable until reload). */
   workAestheticById?: Readonly<Record<string, string>> | null;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
+  onEmptyCellSelect?: (selected: boolean) => void;
+  onBlockedCellSelect?: (selected: boolean) => void;
+  emptyAddNonce?: number;
   allowGatherResources?: boolean;
   onCircularMenuAction?: (
     blockId: string,
@@ -102,8 +105,9 @@ export interface BlockSkillGridProps {
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;
-  /** Occupied-cell double-click. ILE/Workspace-learner maps no-op this. */
+  /** Occupied-cell double-click. ILE maps skip peek (description lives in Work). */
   onNodeDoubleClick?: (nodeId: string) => void;
+  peekOnDoubleClick?: boolean;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   onGridOp?: (payload: {
     op: "generate_shape" | "merge" | "split" | "move" | "resize" | "update_block" | "delete_block";

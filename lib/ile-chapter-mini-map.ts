@@ -143,7 +143,7 @@ export function miniMapInteractive(): false {
 
 /** Fill the continue column so the preview bottom matches the aesthetic tiles. */
 export const ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS =
-  "relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/90 max-lg:min-h-[min(14rem,28vh)]";
+  "relative flex h-full min-h-[min(18rem,42vh)] w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/90 max-lg:min-h-[min(14rem,28vh)]";
 
 export const ILE_CONTINUE_MAP_PREVIEW_LABELS = {
   emptyCell: "",

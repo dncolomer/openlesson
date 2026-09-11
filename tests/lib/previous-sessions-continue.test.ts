@@ -358,6 +358,9 @@ describe("dummy density occupancy + continue mini read-only", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).toContain("IleContinueMapPreview");
     expect(welcome).toContain("sessionPlan?.steps");
+    expect(welcome).toContain("loading={");
+    expect(welcome).toContain("planLoading");
+    expect(welcome).toContain("initialChaptersLoading");
     const preview = read("components/session-view/ile-continue-map-preview.tsx");
     expect(preview).toContain("BlockSkillGrid");
     expect(preview).toContain("viewOnly");
@@ -365,6 +368,9 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(preview).toContain("learnerMode");
     expect(preview).toContain("canEdit={false}");
     expect(preview).toContain("sessionStepsToSkillGridNodes");
+    expect(preview).toContain("loading");
+    expect(preview).toContain("data-ile-continue-map-loading");
+    expect(preview).toContain("animate-spin");
     expect(preview).toContain("ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS");
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain("h-full");
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).toContain(

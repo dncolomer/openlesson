@@ -212,7 +212,7 @@ export function SessionOnboardingGuide({
 
   const closingSlide: GuideSlide = {
     kind: "closing",
-    title: lastStepTitle(),
+    title: variant === "ile" ? "" : lastStepTitle(),
     body: lastStepBody(),
     quoteText: tt("step3.quoteText"),
     quoteAuthor: tt("step3.quoteAuthor"),
@@ -303,8 +303,10 @@ export function SessionOnboardingGuide({
                 <OnboardingQuote text={slide.quoteText} author={slide.quoteAuthor} />
               )}
 
-              <h4 className="text-base font-medium text-white">{slide.title}</h4>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400 whitespace-pre-line">
+              {slide.title ? (
+                <h4 className="text-base font-medium text-white">{slide.title}</h4>
+              ) : null}
+              <p className={`text-sm leading-relaxed text-neutral-400 whitespace-pre-line ${slide.title ? "mt-2" : ""}`}>
                 {slide.body}
               </p>
               {slide.highlight ? (

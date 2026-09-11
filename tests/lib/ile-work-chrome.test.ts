@@ -10,6 +10,7 @@ import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-tur
 import {
   aestheticImageForId,
   assignIleWorkAestheticImages,
+  ileChapterAestheticIds,
   parseIleWorkAestheticStored,
   resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
@@ -96,6 +97,41 @@ describe("resolveIleWorkAestheticImage", () => {
     });
     expect(remount["ch-a"]).toBe(firstVisit["ch-a"]);
     expect(remount["ch-a"]).toBeTruthy();
+  });
+});
+
+describe("ileChapterAestheticIds", () => {
+  it("locks the bar still to the same pick Work will use", () => {
+    const pool = ["/a.jpg", "/b.jpg", "/c.jpg"];
+    expect(
+      ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        openWorkIds: [],
+        selectedId: "ch-b",
+      }),
+    ).toEqual(["ch-a", "ch-b"]);
+    const preview = assignIleWorkAestheticImages({
+      ids: ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        selectedId: "ch-b",
+      }),
+      images: pool,
+    });
+    const bar = resolveIleWorkAestheticImage({
+      id: "ch-b",
+      assigned: preview["ch-b"],
+      images: pool,
+    });
+    const afterWork = assignIleWorkAestheticImages({
+      ids: ileChapterAestheticIds({
+        stepIds: ["ch-a", "ch-b"],
+        openWorkIds: ["ch-b"],
+      }),
+      current: preview,
+      images: pool,
+    });
+    expect(afterWork["ch-b"]).toBe(bar);
+    expect(afterWork["ch-a"]).toBe(preview["ch-a"]);
   });
 });
 
@@ -218,6 +254,9 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("resolveIleWorkAestheticImage");
     expect(dockBar).toContain("assigned: work.image");
     expect(view).toContain("assignIleWorkAestheticImages");
+    expect(view).toContain("ileChapterAestheticIds");
+    expect(view).toContain("stepIds: sessionPlan?.steps?.map((step) => step.id)");
+    expect(view).toContain("selectedId: mapSelectedChapterId");
     expect(view).toContain("workAestheticById");
     expect(view).toContain("workAestheticImage={workAestheticById[activeChapterKey]}");
     const thoughtPane = read("components/session-view/session-thought-pane.tsx");
@@ -247,6 +286,35 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(tabs).not.toContain('"data-input"');
     expect(tabs).not.toContain("logs:");
     expect(chrome).toContain("data-ile-session-insights-count");
+    expect(helios).not.toContain("data-ile-chapter-brief");
+    expect(helios).not.toContain("fadeToRight");
+    const voiceBar = read("components/session-view/ile-voice-bar.tsx");
+    expect(voiceBar).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
+    expect(voiceBar).toContain("h-8");
+    expect(voiceBar).toContain("data-ile-voice-aesthetic");
+    expect(voiceBar).toContain("data-ile-voice-chapter-brief");
+    expect(voiceBar).toContain("IleVoiceActionPad");
+    expect(voiceBar).toContain("actionPad");
+    expect(read("components/session-view/ile-voice-action-pad.tsx")).toContain(
+      "data-ile-voice-action-pad",
+    );
+    expect(read("components/session-view/ile-voice-action-pad.tsx")).toContain(
+      "data-ile-voice-action=",
+    );
+    expect(view).toContain("onVoicePadChange");
+    expect(view).toContain("voicePadActionRef");
+    expect(view).toContain("onSelectChapter");
+    expect(view).toContain("onSelectEmptyCell");
+    expect(view).toContain("onSelectBlockedCell");
+    expect(view).toContain("session.emptyBlockTitle");
+    expect(view).toContain("session.blockedBlockTitle");
+    const en = JSON.parse(read("messages/en.json")) as {
+      session: Record<string, string>;
+    };
+    expect(en.session.emptyBlockTitle).toBe("That's an empty block");
+    expect(en.session.emptyBlockDesc).toMatch(/enough Work/i);
+    expect(en.session.blockedBlockTitle).toBe("This area is blocked");
+    expect(en.session.blockedBlockDesc).toMatch(/cannot build/i);
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("right-2");
     const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));

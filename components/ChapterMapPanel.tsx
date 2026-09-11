@@ -20,7 +20,10 @@ import {
   ileGatherJobTileId,
   ileWorkOnCompletedRequiresConfirm,
   type BlockCircularMenuActionId,
+  ileVoicePadSpec,
+  type IleVoicePadSpec,
 } from "@/lib/block-circular-menu";
+import { isTimUnopenedChapter } from "@/lib/ile-tim-chapter-complete";
 
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
@@ -54,6 +57,11 @@ interface ChapterMapPanelProps {
   openWorkIds?: readonly string[] | null;
   aestheticImages?: readonly string[] | null;
   workAestheticById?: Readonly<Record<string, string>> | null;
+  onSelectChapter?: (stepId: string | null) => void;
+  onSelectEmptyCell?: (selected: boolean) => void;
+  onSelectBlockedCell?: (selected: boolean) => void;
+  onVoicePadChange?: (pad: IleVoicePadSpec | null) => void;
+  voicePadActionRef?: { current: (id: BlockCircularMenuActionId) => void };
 }
 
 export function ChapterMapPanel({
@@ -84,9 +92,17 @@ export function ChapterMapPanel({
   openWorkIds = null,
   aestheticImages = null,
   workAestheticById = null,
+  onSelectChapter,
+  onSelectEmptyCell,
+  onSelectBlockedCell,
+  onVoicePadChange,
+  voicePadActionRef,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  useEffect(() => {
+    onSelectChapter?.(selectedStepId);
+  }, [onSelectChapter, selectedStepId]);
   const [adding, setAdding] = useState(false);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
@@ -95,6 +111,9 @@ export function ChapterMapPanel({
   const [suggestingEdit, setSuggestingEdit] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [undoWorkStepId, setUndoWorkStepId] = useState<string | null>(null);
+  const [emptySelected, setEmptySelected] = useState(false);
+  const [blockedSelected, setBlockedSelected] = useState(false);
+  const [emptyAddNonce, setEmptyAddNonce] = useState(0);
 
   const steps = plan?.steps ?? [];
   const nodes = useMemo(() => sessionStepsToSkillGridNodes(steps), [steps]);
@@ -256,6 +275,43 @@ export function ChapterMapPanel({
     ],
   );
 
+  const selectedStep = steps.find((s) => s.id === selectedStepId);
+  const voicePad = useMemo(() => {
+    const selection = blockedSelected
+      ? "blocked"
+      : emptySelected
+        ? "empty"
+        : selectedStepId
+          ? "chapter"
+          : "none";
+    return ileVoicePadSpec({
+      selection,
+      completed: selectedStep?.status === "completed",
+      timUnopened: isTimUnopenedChapter(selectedStep),
+      allowGatherResources,
+    });
+  }, [
+    allowGatherResources,
+    blockedSelected,
+    emptySelected,
+    selectedStep,
+    selectedStepId,
+  ]);
+
+  useEffect(() => {
+    onVoicePadChange?.(voicePad.actions.length > 0 ? voicePad : null);
+  }, [onVoicePadChange, voicePad]);
+
+  if (voicePadActionRef) {
+    voicePadActionRef.current = (id) => {
+      if (id === "add_chapter") {
+        setEmptyAddNonce((n) => n + 1);
+        return;
+      }
+      if (selectedStepId) handleCircularMenuAction(selectedStepId, id);
+    };
+  }
+
   const gridLabels = useMemo(
     () => ({
       emptyCell: t("chapterMap.gridEmptyCell"),
@@ -303,6 +359,24 @@ export function ChapterMapPanel({
           setSelectedStepId(id);
         }}
         circularMenuSurface="ile"
+        peekOnDoubleClick={false}
+        emptyAddNonce={emptyAddNonce}
+        onEmptyCellSelect={(selected) => {
+          setEmptySelected(selected);
+          if (selected) {
+            setBlockedSelected(false);
+            setSelectedStepId(null);
+          }
+          onSelectEmptyCell?.(selected);
+        }}
+        onBlockedCellSelect={(selected) => {
+          setBlockedSelected(selected);
+          if (selected) {
+            setEmptySelected(false);
+            setSelectedStepId(null);
+          }
+          onSelectBlockedCell?.(selected);
+        }}
         allowGatherResources={allowGatherResources}
         onCircularMenuAction={handleCircularMenuAction}
         blockProgressById={blockProgressById}

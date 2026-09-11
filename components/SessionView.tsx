@@ -90,6 +90,8 @@ import {
   ileGatherJobTileId,
   markGatherResourcesSeen,
   parseGatherSeenBlockIds,
+  type BlockCircularMenuActionId,
+  type IleVoicePadSpec,
 } from "@/lib/block-circular-menu";
 import {
   countIleSpokenThoughts,
@@ -98,6 +100,7 @@ import {
 } from "@/lib/ile-pow-counters";
 import {
   assignIleWorkAestheticImages,
+  ileChapterAestheticIds,
   ileWorkAestheticStorageKey,
   parseIleWorkAestheticStored,
 } from "@/lib/aesthetics";
@@ -109,6 +112,7 @@ import {
   sameIleIdList,
 } from "@/lib/ile-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
+import { resolveIleWorkAestheticImage } from "@/lib/aesthetics";
 import { ileTimProgressByTileId } from "@/lib/ile-tim-chapter-complete";
 import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import {
@@ -322,6 +326,11 @@ export function SessionView({
   const [allowParallelWork, setAllowParallelWork] = useState(true);
   const [allowGatherResources, setAllowGatherResources] = useState(true);
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
+  const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
+  const [mapSelectedEmpty, setMapSelectedEmpty] = useState(false);
+  const [mapSelectedBlocked, setMapSelectedBlocked] = useState(false);
+  const [voicePad, setVoicePad] = useState<IleVoicePadSpec | null>(null);
+  const voicePadActionRef = useRef<(id: BlockCircularMenuActionId) => void>(() => {});
   const [workAestheticById, setWorkAestheticById] = useState<Record<string, string>>(
     {},
   );
@@ -880,14 +889,33 @@ export function SessionView({
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { openWorkIdsRef.current = openWorkIds; }, [openWorkIds]);
   useEffect(() => {
-    setWorkAestheticById((current) =>
-      assignIleWorkAestheticImages({
-        ids: openWorkIds,
+    const ids = ileChapterAestheticIds({
+      stepIds: sessionPlan?.steps?.map((step) => step.id),
+      openWorkIds,
+      selectedId: mapSelectedChapterId,
+    });
+    setWorkAestheticById((current) => {
+      const next = assignIleWorkAestheticImages({
+        ids,
         current,
         images: chromeSelectedAesthetic?.images,
-      }),
-    );
-  }, [chromeSelectedAesthetic?.images, openWorkIds]);
+      });
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(next);
+      if (
+        currentKeys.length === nextKeys.length &&
+        nextKeys.every((id) => current[id] === next[id])
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [
+    chromeSelectedAesthetic?.images,
+    mapSelectedChapterId,
+    openWorkIds,
+    sessionPlan?.steps,
+  ]);
   useEffect(() => {
     if (!session?.id || typeof window === "undefined") return;
     try {
@@ -912,7 +940,9 @@ export function SessionView({
         restored = {};
       }
     }
-    setWorkAestheticById(restored);
+    setWorkAestheticById((current) =>
+      Object.keys(restored).length === 0 ? current : { ...current, ...restored },
+    );
     setOpenWorkIds(
       restoreIleOpenWorkIds({
         stored: parseIleOpenWorkIdsFromMetadata(session.metadata),
@@ -1349,6 +1379,11 @@ export function SessionView({
         : current,
     );
   }, [activeStep?.id, heliosWidgetOpen]);
+
+  const mapSelectedStep = useMemo(
+    () => sessionPlan?.steps?.find((row) => row.id === mapSelectedChapterId) ?? null,
+    [mapSelectedChapterId, sessionPlan?.steps],
+  );
 
   const openWorkDockLabels = useMemo(
     () =>
@@ -1803,7 +1838,7 @@ export function SessionView({
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
         onMinimizeHelios={() => setHeliosWidgetOpen(false)}
-        introOpen={showWelcomePanel || activeTool === "help"}
+        introOpen={showWelcomePanel}
         onCloseSessionModal={() => {
           setShowWelcomePanel(false);
           setActiveTool("chapters");
@@ -1875,6 +1910,29 @@ export function SessionView({
             gatherJobs={gatherJobs}
             onOpenGatherResources={openGatheredResources}
             openWorkIds={openWorkIds}
+            onSelectChapter={(id) => {
+              setMapSelectedChapterId(id);
+              if (id) {
+                setMapSelectedEmpty(false);
+                setMapSelectedBlocked(false);
+              }
+            }}
+            onSelectEmptyCell={(selected) => {
+              setMapSelectedEmpty(selected);
+              if (selected) {
+                setMapSelectedChapterId(null);
+                setMapSelectedBlocked(false);
+              }
+            }}
+            onSelectBlockedCell={(selected) => {
+              setMapSelectedBlocked(selected);
+              if (selected) {
+                setMapSelectedChapterId(null);
+                setMapSelectedEmpty(false);
+              }
+            }}
+            onVoicePadChange={setVoicePad}
+            voicePadActionRef={voicePadActionRef}
             aestheticImages={selectedAesthetic?.images}
             workAestheticById={workAestheticById}
             blockActionProgress={timBlockActionProgress}
@@ -1927,6 +1985,36 @@ export function SessionView({
             errorNotification={Boolean(error)}
             showOpenPicInPic={showManualPicInPic}
             onOpenPicInPic={openManualPicInPic}
+            chapterTitle={
+              mapSelectedBlocked
+                ? t("session.blockedBlockTitle")
+                : mapSelectedEmpty
+                  ? t("session.emptyBlockTitle")
+                  : mapSelectedStep
+                    ? resolveBlockMapGlyph({
+                        map_keyword: mapSelectedStep.map_keyword,
+                        title: mapSelectedStep.description,
+                      }).keyword
+                    : null
+            }
+            chapterDescription={
+              mapSelectedBlocked
+                ? t("session.blockedBlockDesc")
+                : mapSelectedEmpty
+                  ? t("session.emptyBlockDesc")
+                  : mapSelectedStep?.description ?? null
+            }
+            chapterAestheticSrc={
+              mapSelectedBlocked || mapSelectedEmpty || !mapSelectedStep
+                ? null
+                : resolveIleWorkAestheticImage({
+                    id: mapSelectedStep.id,
+                    assigned: workAestheticById[mapSelectedStep.id],
+                    images: selectedAesthetic?.images,
+                  })
+            }
+            actionPad={voicePad}
+            onActionPad={(id) => voicePadActionRef.current(id)}
           />
         }
       />

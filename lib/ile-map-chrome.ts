@@ -6,8 +6,11 @@ import { MINIMAP_FRAME_HEIGHT } from "@/lib/map-minimap-frame";
 /** top-2 (8px) + minimap height + 8px gap — leftover for overlays that still sit under the minimap. */
 export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
 
-/** Clearance above the full-width voice bar (tools widget + work dock). */
-export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-24";
+/** Voice bar inner height: action pad 7.25rem + py-2. */
+export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-[8.25rem]";
+
+/** Bar height + 0.5rem gutter (same as left-2). Chapter widget, sensors, work dock. */
+export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
 
 /**
  * Shared left-column map widget box (chapter, global resources, future overlays).

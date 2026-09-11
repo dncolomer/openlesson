@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AestheticPicker } from "@/components/AestheticPicker";
 import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
+import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import {
@@ -40,7 +41,7 @@ import {
 export function SessionWelcomeModal({
   t,
   languageConfirmed,
-  planLoading: _planLoading,
+  planLoading,
   isPreparing,
   tutoringLanguage,
   onTutoringLanguageChange,
@@ -87,6 +88,18 @@ export function SessionWelcomeModal({
   resumeSession = false,
 }: SessionWelcomeModalProps) {
   const [pregameTab, setPregameTab] = useState<IlePregameTabId>("economy");
+  if (isPreparing) {
+    return (
+      <div
+        data-ile-session-settings
+        data-session-welcome-modal=""
+        data-ile-start-loading-page
+        className="flex h-screen min-h-0 w-full flex-col bg-[#0a0a0a]"
+      >
+        <IleStartLoading t={t} />
+      </div>
+    );
+  }
   return (
     <div
       data-ile-session-settings
@@ -441,7 +454,16 @@ export function SessionWelcomeModal({
                             data-ile-continue-map-align="aesthetics"
                             className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]"
                           >
-                            <IleContinueMapPreview steps={sessionPlan?.steps} />
+                            <IleContinueMapPreview
+                              steps={sessionPlan?.steps}
+                              loading={
+                                planLoading ||
+                                chapterPlanStatus === "unknown" ||
+                                ((resumeSession || chapterPlanStatus === "exists") &&
+                                  !(sessionPlan?.steps?.length))
+                              }
+                              loadingLabel={t("session.initialChaptersLoading")}
+                            />
                           </div>
                         </div>
                       </div>

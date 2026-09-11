@@ -109,6 +109,9 @@ export function BlockSkillGrid({
   aestheticImages = null,
   workAestheticById = null,
   circularMenuSurface: circularMenuSurfaceProp,
+  onEmptyCellSelect,
+  onBlockedCellSelect,
+  emptyAddNonce = 0,
   allowGatherResources = true,
   onCircularMenuAction,
   blockProgressById,
@@ -146,6 +149,7 @@ export function BlockSkillGrid({
   followCell = null,
   onAddBlock,
   onNodeDoubleClick,
+  peekOnDoubleClick = true,
   onGridOp,
   unusableCells = null,
   onMapGround,
@@ -185,6 +189,16 @@ export function BlockSkillGrid({
   const [circularMenuEmptyCell, setCircularMenuEmptyCell] = useState<GridCell | null>(
     null,
   );
+  const [blockedCellKey, setBlockedCellKey] = useState<string | null>(null);
+  useEffect(() => {
+    onEmptyCellSelect?.(circularMenuEmptyCell != null);
+  }, [circularMenuEmptyCell, onEmptyCellSelect]);
+  useEffect(() => {
+    onBlockedCellSelect?.(blockedCellKey != null);
+  }, [blockedCellKey, onBlockedCellSelect]);
+  useEffect(() => {
+    if (circularMenuEmptyCell || circularMenuBlockId) setBlockedCellKey(null);
+  }, [circularMenuBlockId, circularMenuEmptyCell]);
   useEffect(() => {
     if (!mapExploreOpen) return;
     setCircularMenuBlockId(null);
@@ -763,6 +777,7 @@ export function BlockSkillGrid({
     onDynamicBlockToggle,
     onPeekBlock: setPeekBlockId,
     onNodeDoubleClick,
+    peekOnDoubleClick,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -825,7 +840,16 @@ export function BlockSkillGrid({
 
   const handleEmptyCellClick = useCallback(
     (cell: GridCell, event: ReactMouseEvent | ReactPointerEvent) => {
-      if (blockCircularMenuOpensOnEmpty(circularMenuSurface)) {
+      const cellKey = `${cell.row}:${cell.col}`;
+      if (unusableKeys.has(cellKey)) {
+        setCircularMenuBlockId(null);
+        setPeekBlockId(null);
+        setCircularMenuEmptyCell(null);
+        setBlockedCellKey((current) => (current === cellKey ? null : cellKey));
+        handleEmptyCellClickRaw(cell, event);
+        return;
+      }
+      if (blockCircularMenuOpensOnEmpty(circularMenuSurface, { unusable: false })) {
         const next = nextCircularMenuEmptyCellOnClick({
           surface: circularMenuSurface,
           clicked: cell,
@@ -834,6 +858,7 @@ export function BlockSkillGrid({
         setCircularMenuBlockId(null);
         setPeekBlockId(null);
         setCircularMenuEmptyCell(next);
+        setBlockedCellKey(null);
         if (next == null) {
           event.stopPropagation();
           clearSelection();
@@ -849,6 +874,7 @@ export function BlockSkillGrid({
       circularMenuSurface,
       clearSelection,
       handleEmptyCellClickRaw,
+      unusableKeys,
     ],
   );
 
@@ -862,11 +888,26 @@ export function BlockSkillGrid({
   const handleEmptyCircularMenuAction = useCallback(
     (action: BlockCircularMenuActionId) => {
       if (action !== "add_chapter" || !circularMenuEmptyCell) return;
+      if (
+        unusableKeys.has(
+          `${circularMenuEmptyCell.row}:${circularMenuEmptyCell.col}`,
+        )
+      ) {
+        return;
+      }
       setLocalPendingCell(circularMenuEmptyCell);
       setCircularMenuEmptyCell(null);
     },
-    [circularMenuEmptyCell, setLocalPendingCell],
+    [circularMenuEmptyCell, setLocalPendingCell, unusableKeys],
   );
+
+  const emptyAddSeenRef = useRef(0);
+  useEffect(() => {
+    const n = emptyAddNonce || 0;
+    if (n <= 0 || n === emptyAddSeenRef.current) return;
+    emptyAddSeenRef.current = n;
+    handleEmptyCircularMenuAction("add_chapter");
+  }, [emptyAddNonce, handleEmptyCircularMenuAction]);
 
   const {
     runSuggestTopics,

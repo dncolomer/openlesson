@@ -8,6 +8,7 @@ import {
   ILE_HELIOS_WIDGET_WIDTH_PX,
   ILE_MAP_OVERLAY_TOOLS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
+  ILE_VOICE_BAR_HEIGHT_CLASS,
   ILE_MAP_WIDGET_BOTTOM_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
   ILE_MAP_WIDGET_TOP_CLASS,
@@ -60,13 +61,16 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("IleChapterWidgetFrame");
     expect(chrome).toContain("heliosOpen");
     expect(view).toContain("heliosOpen={heliosWidgetOpen}");
-    expect(view).toContain("introOpen={showWelcomePanel || activeTool === \"help\"}");
+    expect(view).toContain("introOpen={showWelcomePanel}");
+    expect(view).not.toContain("introOpen={showWelcomePanel || activeTool === \"help\"}");
     expect(chrome).toContain("data-ile-intro-widget");
     expect(chrome).toContain("data-ile-session-modal");
     expect(chrome).toContain("data-ile-session-modal-close");
     expect(chrome).not.toContain("data-ile-intro-widget-close");
     expect(chrome).not.toContain(">Briefing</span>");
     expect(chrome).not.toContain(">Intro</span>");
+    expect(chrome).not.toContain(">Help</span>");
+    expect(chrome).toContain("session.beforeYouStart");
     const introWidgetIdx = chrome.indexOf("data-ile-intro-widget");
     const heliosOpenIdx = chrome.indexOf("{heliosOpen ? (");
     expect(introWidgetIdx).toBeGreaterThan(-1);
@@ -116,7 +120,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(overlay).not.toContain("top-14");
     expect(ILE_MAP_WIDGET_TOP_CLASS).toBe("top-14");
     expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS);
-    expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe("bottom-24");
+    expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe("bottom-[8.75rem]");
     expect(ILE_MAP_WIDGET_WIDTH_CLASS).toBe("w-[min(720px,calc(100%-28rem))]");
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_TOP_CLASS);
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
@@ -124,6 +128,13 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     const dock = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dock).toContain("z-50");
     expect(dock).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
+    const sensors = chrome.slice(
+      chrome.indexOf("data-ile-tools-widget"),
+      chrome.indexOf("{voiceBar}"),
+    );
+    expect(sensors).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
+    expect(sensors).toContain("z-[35]");
+    expect(sensors).not.toContain("z-40");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget");
     expect(frame).toContain(">Work</span>");
@@ -188,7 +199,20 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(tools).not.toContain("data-ile-tools-grid");
     expect(voice).toContain("VoiceBarUtilityRow");
     expect(tools).toContain("data-ile-voice-utility");
+    expect(tools).toContain('const utilityTools: Tool[] = ["data-input", "logs"]');
+    expect(tools).not.toContain('["help", "data-input", "logs"]');
+    expect(tools).toContain("flex-col");
+    expect(tools).not.toContain("grid-cols-4");
     expect(tools).toContain("data-save-and-exit");
+    const utility = tools.slice(
+      tools.indexOf("export function VoiceBarUtilityRow"),
+      tools.indexOf("const sensorHalfWidgetShell"),
+    );
+    expect(utility).toContain("h-full");
+    expect(utility).toContain("flex-1");
+    expect(utility).toContain("self-stretch");
+    expect(utility).not.toContain("justify-end");
+    expect(utility).not.toContain("h-8");
     const fade = read("components/thought-ui/SlidingTranscript.tsx");
     expect(fade).toContain("data-ile-transcript-fade");
     expect(fade).toContain("overflowing");
@@ -212,6 +236,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(voice).toContain("data-ile-voice-bar");
     expect(voice).toContain("w-full");
     expect(voice).toContain("inset-x-0 bottom-0");
+    expect(voice).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
+    expect(voice).not.toContain("min-h-[7.25rem]");
+    expect(ILE_VOICE_BAR_HEIGHT_CLASS).toBe("h-[8.25rem]");
     expect(voice).toContain("<SlidingTranscript");
     expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).not.toContain("data-ile-voice-bar");
@@ -220,7 +247,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chapter).not.toContain("data-ile-chapter-inspector");
     expect(chapter).not.toContain('t("chapterMap.markDone")');
     expect(chrome).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
-    expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-24");
+    expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-[8.75rem]");
     const heliosActions = read("components/session-view/ile-chapter-helios-actions.tsx");
     expect(heliosActions).toContain("data-ile-chapter-helios-actions");
     expect(heliosActions).toContain("data-ile-chapter-actions");

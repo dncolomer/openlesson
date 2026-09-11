@@ -246,3 +246,48 @@ export function ileMapTypeSessionExplanation(input: {
   const useWhen = String(input.useWhen ?? lib?.useWhen ?? "").trim();
   return { shape, playRule, useWhen };
 }
+
+export const ILE_START_TIP_IDS = [
+  "send-enter",
+  "stash-del",
+  "end-turn",
+  "gather",
+  "work-expense",
+  "mark-done",
+  "map-pan",
+  "thought-memory",
+] as const;
+
+export type IleStartTipId = (typeof ILE_START_TIP_IDS)[number];
+
+export const ILE_START_TIP_LABEL_KEYS: Record<IleStartTipId, string> = {
+  "send-enter": "session.startTipSendEnter",
+  "stash-del": "session.startTipStashDel",
+  "end-turn": "session.startTipEndTurn",
+  gather: "session.startTipGather",
+  "work-expense": "session.startTipWorkExpense",
+  "mark-done": "session.startTipMarkDone",
+  "map-pan": "session.startTipMapPan",
+  "thought-memory": "session.startTipThoughtMemory",
+};
+
+export const ILE_START_TIP_INTERVAL_MS = 5500;
+
+export function shuffleIleStartTipIds(
+  ids: readonly IleStartTipId[] = ILE_START_TIP_IDS,
+  random: () => number = Math.random,
+): IleStartTipId[] {
+  const next = [...ids];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.min(i, Math.max(0, Math.floor(random() * (i + 1))));
+    const swap = next[i];
+    next[i] = next[j] ?? swap;
+    next[j] = swap;
+  }
+  return next;
+}
+
+export function nextIleStartTipIndex(index: number, count: number): number {
+  if (count <= 0) return 0;
+  return (Math.max(0, index) + 1) % count;
+}

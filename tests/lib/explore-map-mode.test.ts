@@ -191,6 +191,14 @@ describe("Build / Play / Explore toggle helpers", () => {
         learnerMode: true,
       }),
     ).toBe("none");
+    expect(
+      resolveEmptyCellMarker({
+        exploreActive: false,
+        canEdit: true,
+        learnerMode: false,
+        isUnusable: true,
+      }),
+    ).toBe("none");
 
     writeScratch(
       "explore-mode-chrome.log",

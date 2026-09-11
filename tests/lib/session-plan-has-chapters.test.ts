@@ -20,6 +20,7 @@ import {
   chapterStatusAfterHydrate,
   createForceFromChapterStatus,
   fetchSessionPlanChaptersStatus,
+  welcomePlanFromPayload,
 } from "@/lib/session-plan-chapters-status";
 import { lookupSessionPlanChaptersForRequest } from "@/lib/session-plan-has-chapters-request";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
@@ -340,6 +341,21 @@ describe("createForceFromChapterStatus + hydrate", () => {
   });
 
   it("does not paint empty when hydrate misses after exists/failed", () => {
+    expect(welcomePlanFromPayload(null)).toBeNull();
+    expect(welcomePlanFromPayload({ sessionId: "s" })).toBeNull();
+    const fromArray = welcomePlanFromPayload({
+      sessionId: "s1",
+      steps: [{ id: "a", description: "One", status: "pending", type: "task", order: 0 }],
+    });
+    expect(fromArray?.steps).toHaveLength(1);
+    const fromJson = welcomePlanFromPayload({
+      session_id: "s2",
+      steps: JSON.stringify([
+        { id: "b", description: "Two", status: "pending", type: "task", order: 1 },
+      ]),
+    });
+    expect(fromJson?.sessionId).toBe("s2");
+    expect(fromJson?.steps).toHaveLength(1);
     expect(chapterStatusAfterHydrate("exists", null)).toBe("exists");
     expect(chapterStatusAfterHydrate("failed", null)).toBe("failed");
     expect(chapterStatusAfterHydrate("empty", null)).toBe("empty");
@@ -410,9 +426,15 @@ describe("Confirm is blocked only until the cheap existence result", () => {
     expect(blockerSrc).toContain('chapterPlanStatus === "unknown"');
 
     const load = read("components/session-view/use-session-phase.ts");
+    expect(read("lib/session-plan-chapters-status.ts")).toContain(
+      "welcomePlanFromPayload",
+    );
+    const startLoading = load.indexOf("setPlanLoading(true)");
     const startCheck = load.indexOf(
       "const chapterStatusPromise = fetchWelcomeChapterSnapshot",
     );
+    expect(startLoading).toBeGreaterThan(-1);
+    expect(startCheck).toBeGreaterThan(startLoading);
     const setFromCheap = load.indexOf(
       "void chapterStatusPromise.then((snapshot) => {",
     );

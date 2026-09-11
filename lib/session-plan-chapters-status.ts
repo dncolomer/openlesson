@@ -24,12 +24,27 @@ function parseWelcomeStatus(raw: unknown): SessionPlanChaptersStatus {
   return "failed";
 }
 
-function parseWelcomePlan(raw: unknown): SessionPlan | null {
+function coerceWelcomeSteps(raw: unknown): unknown[] | null {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Accept the has-chapters `plan` payload (array or JSON-string steps). */
+export function welcomePlanFromPayload(raw: unknown): SessionPlan | null {
   if (!raw || typeof raw !== "object") return null;
-  const rec = raw as { steps?: unknown; sessionId?: unknown; session_id?: unknown };
-  const steps = rec.steps;
-  if (!Array.isArray(steps) || steps.length === 0) return null;
-  return raw as SessionPlan;
+  const rec = raw as SessionPlan & { session_id?: unknown; steps?: unknown };
+  const steps = coerceWelcomeSteps(rec.steps);
+  if (!steps || steps.length === 0) return null;
+  const sessionId = String(rec.sessionId || rec.session_id || "").trim();
+  return { ...rec, sessionId: sessionId || rec.sessionId, steps: steps as SessionPlan["steps"] };
 }
 
 /** Shipped client entry that welcome load + Confirm Settings call. */
@@ -45,7 +60,7 @@ export async function fetchWelcomeChapterSnapshot(
     });
     if (!res.ok) return { status: "failed", plan: null };
     const json = (await res.json()) as { status?: unknown; plan?: unknown };
-    const plan = parseWelcomePlan(json.plan);
+    const plan = welcomePlanFromPayload(json.plan);
     const status =
       plan && (plan.steps?.length ?? 0) > 0
         ? "exists"

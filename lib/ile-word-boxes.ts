@@ -128,6 +128,56 @@ export function ileWordBoxPointerEnter(
   return { dragging: true, anchor: state.anchor, head: wordIndex };
 }
 
+/** Read data-ile-word-index from a hit target (elementFromPoint or event.target). */
+export function ileWordBoxIndexFromHit(hit: unknown): number | null {
+  if (!hit || typeof (hit as { closest?: unknown }).closest !== "function") {
+    return null;
+  }
+  try {
+    const node = (hit as { closest: (sel: string) => { getAttribute?: (name: string) => string | null } | null }).closest(
+      "[data-ile-word-index]",
+    );
+    if (!node || typeof node.getAttribute !== "function") return null;
+    const n = Number(node.getAttribute("data-ile-word-index"));
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Hit-test the word under the pointer in the owning document (opener or PiP).
+ * pointerenter on sibling spans is unreliable while dragging.
+ */
+export function ileWordBoxHitTest(
+  input: {
+    document?: { elementFromPoint?: (x: number, y: number) => unknown } | null;
+  } | null | undefined,
+  clientX: number,
+  clientY: number,
+): number | null {
+  const doc = input?.document;
+  if (!doc || typeof doc.elementFromPoint !== "function") return null;
+  return ileWordBoxIndexFromHit(doc.elementFromPoint(clientX, clientY));
+}
+
+export function ileWordBoxEventTargets(view: IleWordBoxView | null | undefined): unknown[] {
+  const targets: unknown[] = [];
+  const win = view?.document?.defaultView;
+  if (win && typeof (win as { addEventListener?: unknown }).addEventListener === "function") {
+    targets.push(win);
+  }
+  const doc = view?.document;
+  if (
+    doc &&
+    doc !== win &&
+    typeof (doc as { addEventListener?: unknown }).addEventListener === "function"
+  ) {
+    targets.push(doc);
+  }
+  return targets;
+}
+
 export function ileWordBoxPointerUp(
   state: IleWordBoxPointerState,
   tokens: readonly IleWordBoxToken[],

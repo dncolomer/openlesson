@@ -50,9 +50,30 @@ export function parseIleWorkAestheticStored(
   }
 }
 
+/** Chapter ids that share one still: plan tiles, open Work, and the map selection. */
+export function ileChapterAestheticIds(input: {
+  stepIds?: readonly (string | null | undefined)[] | null;
+  openWorkIds?: readonly (string | null | undefined)[] | null;
+  selectedId?: string | null;
+}): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string | null | undefined) => {
+    const id = String(raw || "").trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  };
+  for (const id of input.stepIds ?? []) push(id);
+  for (const id of input.openWorkIds ?? []) push(id);
+  push(input.selectedId);
+  return ids;
+}
+
 /**
  * Session-lived Work stills: keep an existing pick, assign a stable per-id
  * unused image for new ids so leave/return does not drop stills.
+ * Bar preview, map tile, dock chip, and Work widget all read these picks.
  */
 export function assignIleWorkAestheticImages(input: {
   ids: readonly string[] | null | undefined;
@@ -106,7 +127,7 @@ export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAG
   return images[hash % images.length];
 }
 
-/** Dock chip, map tile, and Work widget share this still for a chapter. */
+/** Dock chip, map tile, voice bar, and Work widget share this still for a chapter. */
 export function resolveIleWorkAestheticImage(input: {
   id: string;
   assigned?: string | null;

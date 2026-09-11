@@ -15,7 +15,10 @@ import {
 } from "@/lib/block-circular-menu";
 import { cn } from "@/lib/utils";
 
-const ACTION_ICONS: Record<BlockCircularMenuActionId, ReactNode> = {
+export const BLOCK_CIRCULAR_MENU_ACTION_ICONS: Record<
+  BlockCircularMenuActionId,
+  ReactNode
+> = {
   work: <Pickaxe className="size-4" strokeWidth={2.4} aria-hidden />,
   mark_completed: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
   edit: <Pencil className="size-4" strokeWidth={2.4} aria-hidden />,
@@ -97,7 +100,7 @@ export function BlockCircularMenuRing({
               data-block-circular-menu-icon
               className="flex items-center justify-center group-hover:hidden group-focus-visible:hidden"
             >
-              {ACTION_ICONS[action.id]}
+              {BLOCK_CIRCULAR_MENU_ACTION_ICONS[action.id]}
             </span>
             <span
               data-block-circular-menu-label

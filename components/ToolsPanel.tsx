@@ -93,7 +93,7 @@ export function ToolIcon({ id }: { id: Tool }) {
   }
 }
 
-const utilityTools: Tool[] = ["help", "data-input", "logs"];
+const utilityTools: Tool[] = ["data-input", "logs"];
 
 export function VoiceBarUtilityRow({
   activeTool,
@@ -120,15 +120,20 @@ export function VoiceBarUtilityRow({
     }
   };
 
+  const fillBtn =
+    "flex min-h-0 w-full flex-1 items-center justify-center gap-1 rounded-none px-2 text-[11px] font-medium";
+
   return (
-    <div data-ile-voice-utility className="flex justify-end">
-      <div className="inline-grid grid-cols-5 gap-1">
+    <div
+      data-ile-voice-utility
+      className="flex h-full w-[8.5rem] shrink-0 flex-col gap-px self-stretch"
+    >
       {showOpenPicInPic && onOpenPicInPic ? (
         <button
           type="button"
           data-ile-open-pic-in-pic
           onClick={onOpenPicInPic}
-          className="flex h-8 w-full items-center justify-center gap-1 rounded-none border border-neutral-700/50 bg-neutral-800/50 px-2 text-[11px] font-medium text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+          className={`${fillBtn} border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300`}
           title={ILE_OPEN_PIC_IN_PIC_LABEL}
         >
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -136,21 +141,18 @@ export function VoiceBarUtilityRow({
           </svg>
           <span className="truncate">PiP</span>
         </button>
-      ) : (
-        <span />
-      )}
+      ) : null}
       {utilityTools.map((toolId) => (
         <button
           key={toolId}
           type="button"
           onClick={() => onToolChange(toolId)}
-          className={`flex h-8 w-full items-center justify-center gap-1 rounded-none px-2 text-[11px] font-medium ${
+          className={`${fillBtn} ${
             activeTool === toolId
               ? "border border-neutral-600 bg-neutral-700/70 text-white"
               : "border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
           }`}
         >
-          <ToolIcon id={toolId} />
           <span className="truncate">{getToolLabel(toolId)}</span>
           {toolId === "logs" && errorNotification ? (
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
@@ -162,15 +164,12 @@ export function VoiceBarUtilityRow({
           type="button"
           data-save-and-exit
           onClick={onBackToDashboard}
-          className="flex h-8 w-full items-center justify-center rounded-none bg-neutral-100 px-2 text-[11px] font-semibold text-neutral-900 hover:bg-white"
+          className={`${fillBtn} bg-neutral-100 font-semibold text-neutral-900 hover:bg-white`}
           title={t("session.saveAndExit")}
         >
           <span className="truncate">{t("session.saveAndExit")}</span>
         </button>
-      ) : (
-        <span />
-      )}
-      </div>
+      ) : null}
     </div>
   );
 }

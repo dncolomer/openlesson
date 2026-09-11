@@ -14,6 +14,9 @@ import {
   ILE_WORD_BOX_OPEN_DANTES_LABEL,
   ILE_WORD_BOX_OPEN_GROK_LABEL,
   ileWordBoxApplyWindowPointerUp,
+  ileWordBoxEventTargets,
+  ileWordBoxHitTest,
+  ileWordBoxIndexFromHit,
   ileWordBoxMenuActions,
   ileWordBoxMenuPosition,
   ileWordBoxPortalTarget,
@@ -159,6 +162,35 @@ describe("ile word-box helpers (shipped)", () => {
     expect(pointer.dragging).toBe(false);
     expect(pointer.head).toBeNull();
 
+    expect(ileWordBoxIndexFromHit({ closest: () => null })).toBeNull();
+    expect(
+      ileWordBoxIndexFromHit({
+        closest: (sel: string) =>
+          sel === "[data-ile-word-index]"
+            ? { getAttribute: (name: string) => (name === "data-ile-word-index" ? "3" : null) }
+            : null,
+      }),
+    ).toBe(3);
+    const pipDoc = {
+      elementFromPoint: (x: number, y: number) =>
+        x > 10 && y > 10
+          ? {
+              closest: (sel: string) =>
+                sel === "[data-ile-word-index]"
+                  ? { getAttribute: (name: string) => (name === "data-ile-word-index" ? "4" : null) }
+                  : null,
+            }
+          : null,
+    };
+    expect(ileWordBoxHitTest({ document: pipDoc }, 20, 20)).toBe(4);
+    expect(ileWordBoxHitTest({ document: pipDoc }, 0, 0)).toBeNull();
+    const pipWin = { addEventListener() {}, defaultView: null };
+    const pipOwner = { addEventListener() {}, defaultView: pipWin, body: { id: "pip" } };
+    (pipWin as { document?: unknown }).document = pipOwner;
+    expect(ileWordBoxEventTargets({ document: pipOwner, innerWidth: 1, innerHeight: 1, body: pipOwner.body })).toEqual(
+      [pipWin, pipOwner],
+    );
+
     pointer = ileWordBoxPointerDown(ileWordBoxPointerIdle(), 2);
     pointer = ileWordBoxPointerEnter(pointer, 3);
     let menu: string | null = null;
@@ -274,6 +306,10 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(boxes).toContain("ileWordBoxMenuActions");
     expect(boxes).toContain("ileWordBoxPointerDown");
     expect(boxes).toContain("ileWordBoxPointerEnter");
+    expect(boxes).toContain("ileWordBoxHitTest");
+    expect(boxes).toContain("ileWordBoxEventTargets");
+    expect(boxes).toContain("setPointerCapture");
+    expect(boxes).toContain("pointermove");
     expect(boxes).toContain("ileWordBoxApplyWindowPointerUp");
     expect(boxes).toContain("if (!released.apply) return");
     expect(boxes).toContain("ileWordBoxMenuPosition");
@@ -282,7 +318,8 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(boxes).toContain("resolveIleWordBoxView");
     expect(boxes).toContain("ileWordBoxPortalTarget");
     expect(boxes).toContain('data-ile-word-box-menu-at="pointer"');
-    expect(boxes).toContain('viewWindow.addEventListener("pointerdown"');
+    expect(boxes).toContain('addEventListener("pointermove"');
+    expect(boxes).toContain('addEventListener("pointerdown"');
     expect(boxes).toContain("pointerRef");
     expect(boxes).toContain("data-ile-word-box-open");
     expect(boxes).toContain("data-ile-word-box-menu-text");

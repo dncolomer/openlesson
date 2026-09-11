@@ -484,9 +484,11 @@ export function DialogueSplit({
 export function ThoughtBackgroundLayers({
   bgImage,
   dimStrength = "strong",
+  fadeToRight = false,
 }: {
   bgImage: string;
   dimStrength?: "strong" | "medium" | "light";
+  fadeToRight?: boolean;
 }) {
   const dimClass =
     dimStrength === "light"
@@ -501,8 +503,9 @@ export function ThoughtBackgroundLayers({
         ? "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.16),transparent_33%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.45),transparent_32%)]"
         : "bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]";
 
-  const dimOverlay =
-    dimStrength === "light"
+  const dimOverlay = fadeToRight
+    ? "linear-gradient(to right, rgba(10,10,10,0.18) 0%, rgba(10,10,10,0.42) 42%, rgba(10,10,10,0.82) 78%, rgba(10,10,10,0.94) 100%)"
+    : dimStrength === "light"
       ? "rgba(10,10,10,0.48)"
       : dimStrength === "medium"
         ? "rgba(10,10,10,0.72)"
@@ -533,7 +536,8 @@ export function ThoughtBackgroundLayers({
         />
       )}
       <div
-        className={`absolute inset-0 ${dimClass}`}
+        className={`absolute inset-0 ${fadeToRight ? "" : dimClass}`}
+        data-ile-work-fade={fadeToRight ? "right" : undefined}
         style={{ position: "absolute", inset: 0, background: dimOverlay }}
       />
       <div

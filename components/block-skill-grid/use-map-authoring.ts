@@ -164,6 +164,7 @@ export function useMapAuthoring(input: {
   onDynamicBlockToggle?: (blockId: string) => void;
   onPeekBlock?: (blockId: string) => void;
   onNodeDoubleClick?: (blockId: string) => void;
+  peekOnDoubleClick?: boolean;
   suppressBlockClickRef: { current: boolean };
   suppressEmptyClickRef: { current: boolean };
   generationLockedBlockIdsRef: { current: Set<string> };
@@ -254,6 +255,7 @@ export function useMapAuthoring(input: {
     onDynamicBlockToggle,
     onPeekBlock,
     onNodeDoubleClick,
+    peekOnDoubleClick = true,
     suppressBlockClickRef,
     suppressEmptyClickRef,
     generationLockedBlockIdsRef,
@@ -437,9 +439,10 @@ export function useMapAuthoring(input: {
         onNodeDoubleClick(blockId);
         return;
       }
+      if (peekOnDoubleClick === false) return;
       onPeekBlock?.(blockId);
     },
-    [onPeekBlock, onNodeDoubleClick],
+    [onPeekBlock, onNodeDoubleClick, peekOnDoubleClick],
   );
 
   const resolveCellFromClient = useCallback(

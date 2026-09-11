@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from "react-dom";
 import {
   ileWordBoxApplyWindowPointerUp,
+  ileWordBoxEventTargets,
+  ileWordBoxHitTest,
   ileWordBoxMenuActions,
   ileWordBoxMenuPosition,
   ileWordBoxPointerDown,
@@ -47,7 +49,23 @@ export function IleWordBoxText({
     });
     const viewWindow =
       (view?.document?.defaultView as Window | null | undefined) ?? window;
+    const applyMove = (clientX: number, clientY: number) => {
+      if (!pointerRef.current.dragging) return;
+      const idx = ileWordBoxHitTest(view, clientX, clientY);
+      if (idx == null) return;
+      pointerRef.current = ileWordBoxPointerEnter(pointerRef.current, idx);
+      const live = pointerRef.current;
+      if (live.anchor == null || live.head == null) return;
+      setSelected({
+        from: Math.min(live.anchor, live.head),
+        to: Math.max(live.anchor, live.head),
+      });
+    };
+    const onMove = (event: PointerEvent) => {
+      applyMove(event.clientX, event.clientY);
+    };
     const onUp = (event: PointerEvent) => {
+      applyMove(event.clientX, event.clientY);
       const released = ileWordBoxApplyWindowPointerUp(
         pointerRef.current,
         tokensRef.current,
@@ -80,13 +98,23 @@ export function IleWordBoxText({
       setMenu(null);
       setSelected(null);
     };
-    viewWindow.addEventListener("pointerup", onUp);
-    viewWindow.addEventListener("pointercancel", onUp);
-    viewWindow.addEventListener("pointerdown", onDown);
+    const targets = ileWordBoxEventTargets(view);
+    if (targets.length === 0) targets.push(viewWindow);
+    for (const target of targets) {
+      const node = target as EventTarget;
+      node.addEventListener("pointermove", onMove as EventListener);
+      node.addEventListener("pointerup", onUp as EventListener);
+      node.addEventListener("pointercancel", onUp as EventListener);
+      node.addEventListener("pointerdown", onDown as EventListener);
+    }
     return () => {
-      viewWindow.removeEventListener("pointerup", onUp);
-      viewWindow.removeEventListener("pointercancel", onUp);
-      viewWindow.removeEventListener("pointerdown", onDown);
+      for (const target of targets) {
+        const node = target as EventTarget;
+        node.removeEventListener("pointermove", onMove as EventListener);
+        node.removeEventListener("pointerup", onUp as EventListener);
+        node.removeEventListener("pointercancel", onUp as EventListener);
+        node.removeEventListener("pointerdown", onDown as EventListener);
+      }
     };
   }, []);
 
@@ -95,7 +123,7 @@ export function IleWordBoxText({
       ref={surfaceRef}
       data-ile-word-box-surface
       className={className}
-      style={{ userSelect: "none", WebkitUserSelect: "none" }}
+      style={{ userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}
     >
       {tokens.map((token, index) => {
         if (token.kind === "gap") {
@@ -125,14 +153,29 @@ export function IleWordBoxText({
             data-ile-word-selected={isSelected ? "true" : "false"}
             onPointerDown={(event: ReactPointerEvent<HTMLSpanElement>) => {
               event.preventDefault();
+              event.stopPropagation();
+              try {
+                surfaceRef.current?.setPointerCapture(event.pointerId);
+              } catch {
+                /* PiP / tests may not implement capture */
+              }
               pointerRef.current = ileWordBoxPointerDown(pointerRef.current, token.wordIndex);
               setMenu(null);
               setSelected({ from: token.wordIndex, to: token.wordIndex });
             }}
-            onPointerEnter={() => {
-              pointerRef.current = ileWordBoxPointerEnter(pointerRef.current, token.wordIndex);
+            onPointerMove={(event: ReactPointerEvent<HTMLSpanElement>) => {
+              if (!pointerRef.current.dragging) return;
+              const view = resolveIleWordBoxView(surfaceRef.current, {
+                document,
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                body: document.body,
+              });
+              const idx = ileWordBoxHitTest(view, event.clientX, event.clientY);
+              if (idx == null) return;
+              pointerRef.current = ileWordBoxPointerEnter(pointerRef.current, idx);
               const live = pointerRef.current;
-              if (!live.dragging || live.anchor == null || live.head == null) return;
+              if (live.anchor == null || live.head == null) return;
               setSelected({
                 from: Math.min(live.anchor, live.head),
                 to: Math.max(live.anchor, live.head),

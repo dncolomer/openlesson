@@ -17,6 +17,11 @@ import {
   ileMapTypeSessionExplanation,
   ilePregameMatchingDifficultyPresetId,
   ilePregameMatchingPresetId,
+  ILE_START_TIP_IDS,
+  ILE_START_TIP_INTERVAL_MS,
+  ILE_START_TIP_LABEL_KEYS,
+  nextIleStartTipIndex,
+  shuffleIleStartTipIds,
 } from "@/lib/ile-pregame-settings";
 import {
   ileTurnInsightSlotCount,
@@ -294,6 +299,30 @@ describe("ILE pre-game settings surface", () => {
     expect(confirmBtn).toContain("inline-flex w-full");
     expect(welcome).toContain("mt-auto");
     expect(welcome).toContain("data-ile-back-to-workspace");
+    expect(welcome).toContain("data-ile-start-loading-page");
+    expect(welcome).toContain("IleStartLoading");
+    expect(welcome).toContain("isPreparing");
+    const startLoad = read("components/session-view/ile-start-loading.tsx");
+    expect(startLoad).toContain("data-ile-start-loading");
+    expect(startLoad).toContain("data-ile-start-tips");
+    expect(startLoad).toContain("LoadingStatusMessage");
+    expect(startLoad).toContain("shuffleIleStartTipIds");
+    expect(startLoad).toContain("nextIleStartTipIndex");
+    expect(startLoad).toContain("ILE_START_TIP_INTERVAL_MS");
+    expect(en.session.startLoading).toBe("Starting session");
+    expect(en.session.startTipsTitle).toBe("Tips & Tricks");
+    expect(ILE_START_TIP_IDS).toHaveLength(8);
+    expect(shuffleIleStartTipIds(["send-enter", "end-turn"], () => 0)).toEqual([
+      "end-turn",
+      "send-enter",
+    ]);
+    expect(nextIleStartTipIndex(7, 8)).toBe(0);
+    expect(nextIleStartTipIndex(0, 8)).toBe(1);
+    expect(ILE_START_TIP_INTERVAL_MS).toBeGreaterThanOrEqual(4000);
+    expect(en.session[ILE_START_TIP_LABEL_KEYS["end-turn"].replace("session.", "")]).toBeTruthy();
+    const continuePreview = read("components/session-view/ile-continue-map-preview.tsx");
+    expect(continuePreview).toContain("animate-spin");
+    expect(continuePreview).toContain("Checking for existing chapters");
     expect(welcome).toContain('t("session.backToDashboard")');
     expect(en.session.backToDashboard).toBe("Back to Workspace");
     expect(view).toContain("onBackToWorkspace");

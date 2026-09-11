@@ -210,6 +210,7 @@ useEffect(() => {
   async function load() {
     // Cheap existence check starts immediately — do not wait on session
     // fetch, objectives generation, or full-plan hydrate to leave "unknown".
+    setPlanLoading(true);
     const chapterStatusPromise = fetchWelcomeChapterSnapshot(
       sessionId,
       guestAccessBody,
@@ -326,6 +327,7 @@ useEffect(() => {
         setViewingProbeIndex(s.probes.length - 1);
       }
     } else {
+      if (!cancelled) setPlanLoading(false);
       router.push("/");
     }
   }

@@ -112,7 +112,9 @@ export function blockCircularMenuOpensOnSelect(
 /** Empty ILE cells get a one-action Add chapter ring instead of opening the modal. */
 export function blockCircularMenuOpensOnEmpty(
   surface: BlockCircularMenuSurface | null | undefined,
+  opts?: { unusable?: boolean | null },
 ): boolean {
+  if (opts?.unusable) return false;
   return surface === "ile";
 }
 
@@ -182,6 +184,38 @@ export function ileCircularMenuDisabledActionIds(input: {
     return new Set<IleCircularMenuActionId>(["gather_resources"]);
   }
   return EMPTY_DISABLED_ACTIONS;
+}
+
+export type IleVoicePadSelection = "chapter" | "empty" | "blocked" | "none";
+
+export type IleVoicePadSpec = {
+  actions: readonly BlockCircularMenuAction[];
+  disabledIds: ReadonlySet<string>;
+};
+
+export function ileVoicePadSpec(input: {
+  selection: IleVoicePadSelection;
+  completed?: boolean | null;
+  timUnopened?: boolean | null;
+  allowGatherResources?: boolean | null;
+}): IleVoicePadSpec {
+  if (input.selection === "none" || input.selection === "blocked") {
+    return { actions: [], disabledIds: EMPTY_DISABLED_ACTIONS };
+  }
+  const actions = blockCircularMenuActions("ile", {
+    empty: input.selection === "empty",
+    timUnopened: input.timUnopened,
+  });
+  if (input.selection === "empty") {
+    return { actions, disabledIds: EMPTY_DISABLED_ACTIONS };
+  }
+  return {
+    actions,
+    disabledIds: ileCircularMenuDisabledActionIds({
+      completed: input.completed,
+      allowGatherResources: input.allowGatherResources,
+    }),
+  };
 }
 
 export function ileWorkOnCompletedRequiresConfirm(completed?: boolean | null): boolean {

@@ -125,7 +125,7 @@ describe("session intro visuals", () => {
 
     expect(ileLearningText).toContain(en.onboardingGuide.ile.kicker);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.title);
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.title);
+    expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step3.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.start);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.highlight);
     expect(ileLearningHtml).toContain("data-onboarding-start");
@@ -210,7 +210,7 @@ describe("session intro visuals", () => {
     expect(ileHelios).not.toContain("SessionOnboardingGuide");
     expect(ileChrome).toContain("data-ile-intro-widget");
     expect(ileView).toContain("SessionOnboardingGuide");
-    expect(ileView).toContain("introOpen={showWelcomePanel || activeTool === \"help\"}");
+    expect(ileView).toContain("introOpen={showWelcomePanel}");
     expect(ileView).toContain("showStartAction");
     expect(ileView).toContain("projectMode={isProjectMode}");
 

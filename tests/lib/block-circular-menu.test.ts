@@ -18,6 +18,7 @@ import {
   filterPlannedResourcesByScope,
   gatherJobToBlockProgress,
   ileCircularMenuDisabledActionIds,
+  ileVoicePadSpec,
   ileWorkOnCompletedRequiresConfirm,
   markGatherResourcesSeen,
   parseGatherSeenBlockIds,
@@ -85,6 +86,19 @@ describe("block circular menu catalog", () => {
     expect(blockCircularMenuActions("ile", { empty: true }).map((a) => a.label)).toEqual([
       "Add chapter",
     ]);
+    expect(ileVoicePadSpec({ selection: "chapter" }).actions.map((a) => a.id)).toEqual(
+      ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
+    );
+    expect(ileVoicePadSpec({ selection: "empty" }).actions.map((a) => a.id)).toEqual([
+      "add_chapter",
+    ]);
+    expect(ileVoicePadSpec({ selection: "blocked" }).actions).toEqual([]);
+    expect(
+      ileVoicePadSpec({ selection: "blocked" }).actions.some((a) => a.id === "add_chapter"),
+    ).toBe(false);
+    expect(
+      ileVoicePadSpec({ selection: "chapter", completed: true }).disabledIds.has("edit"),
+    ).toBe(true);
     expect(blockCircularMenuActions("ile", { timUnopened: true }).map((a) => a.id)).toEqual(
       ILE_TIM_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
@@ -235,6 +249,7 @@ describe("circular menu source wiring", () => {
     expect(world).toMatch(/<\/button>\s*\{isLabel &&/);
     expect(world).not.toContain("<BlockCircularMenuRing\n                                surface={circularMenuSurface}");
     expect(chapter).toContain('circularMenuSurface="ile"');
+    expect(chapter).toContain("peekOnDoubleClick={false}");
     expect(chapter).toContain("onCircularMenuAction");
     expect(chapter).not.toContain("onChapterDoubleClick");
     expect(grid).toContain("blockCircularMenuDoubleClickIsNoop");
@@ -249,6 +264,7 @@ describe("circular menu source wiring", () => {
     expect(ring).toContain("data-block-circular-menu-empty");
     expect(authoring).toContain('suggestMode === "chapter"');
     expect(blockCircularMenuOpensOnEmpty("ile")).toBe(true);
+    expect(blockCircularMenuOpensOnEmpty("ile", { unusable: true })).toBe(false);
     expect(blockCircularMenuOpensOnEmpty("workspace-learner")).toBe(false);
     expect(
       nextCircularMenuEmptyCellOnClick({

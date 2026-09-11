@@ -172,8 +172,13 @@ export function SessionChrome({
     : isIleSessionModalTool(activeTool)
       ? activeTool
       : null;
-  const modalTitle =
-    modalTool === "help" ? "Help" : modalTool === "data-input" ? "Data" : modalTool === "logs" ? "Logs" : "";
+  const modalTitle = introOpen
+    ? t("session.beforeYouStart")
+    : modalTool === "data-input"
+      ? "Data"
+      : modalTool === "logs"
+        ? "Logs"
+        : "";
   const overlayTitle =
     activeTool === ILE_REVIEW_WORK_TOOL
       ? t("session.reviewWork") || ILE_REVIEW_WORK_LABEL
@@ -259,7 +264,7 @@ export function SessionChrome({
                 className={`flex shrink-0 items-center gap-1 rounded-none border px-1.5 py-1 font-mono text-[10px] uppercase tracking-wider ${
                   overlayOpen && activeTool === "plan-resources"
                     ? "border-neutral-400 bg-neutral-800 text-neutral-100"
-                    : "border-neutral-700 bg-transparent text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                    : "border-neutral-500 bg-neutral-900 text-neutral-200 hover:border-neutral-300 hover:bg-neutral-800 hover:text-white"
                 }`}
               >
                 <Boxes className="size-3" strokeWidth={2} aria-hidden />
@@ -282,12 +287,14 @@ export function SessionChrome({
             data-ile-intro-widget={modalTool === "help" ? "true" : undefined}
             className="pointer-events-auto absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           >
-            <button
-              type="button"
-              aria-label="Close"
-              className="absolute inset-0 cursor-default"
-              onClick={() => onCloseSessionModal?.()}
-            />
+            {introOpen ? null : (
+              <button
+                type="button"
+                aria-label="Close"
+                className="absolute inset-0 cursor-default"
+                onClick={() => onCloseSessionModal?.()}
+              />
+            )}
             <div
               className={`relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)] ${
                 modalTool === "logs" ? "h-[min(88vh,44rem)]" : ""
@@ -297,14 +304,16 @@ export function SessionChrome({
                 <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
                   {modalTitle}
                 </span>
-                <button
-                  type="button"
-                  data-ile-session-modal-close
-                  onClick={() => onCloseSessionModal?.()}
-                  className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
-                >
-                  ✕
-                </button>
+                {introOpen ? null : (
+                  <button
+                    type="button"
+                    data-ile-session-modal-close
+                    onClick={() => onCloseSessionModal?.()}
+                    className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
               <div className="min-h-0 flex-1 overflow-hidden">
                 {modalTool === "help" ? (
@@ -379,7 +388,7 @@ export function SessionChrome({
 
         <div
           data-ile-tools-widget
-          className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-30 flex flex-col items-stretch gap-1.5 rounded-none`}
+          className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-[35] flex flex-col items-stretch gap-1.5 rounded-none`}
         >
           <div
             data-ile-sensor-pair

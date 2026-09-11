@@ -442,7 +442,7 @@ export function MapWorldLayer({
                         />
                       </svg>
                     </span>
-                  ) : emptyMarker === "plus" ? (
+                  ) : !isUnusable && emptyMarker === "plus" ? (
                     <span
                       className="text-xl leading-none text-neutral-600"
                       data-empty-cell-plus
@@ -452,6 +452,7 @@ export function MapWorldLayer({
                   ) : null}
                 </button>
                 {circularMenuSurface === "ile" &&
+                !isUnusable &&
                 circularMenuEmptyCell?.row === cell.row &&
                 circularMenuEmptyCell?.col === cell.col ? (
                   <BlockCircularMenuRing

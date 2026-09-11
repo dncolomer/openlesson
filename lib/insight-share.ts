@@ -16,6 +16,11 @@ export const INSIGHT_HOME_LABEL = UNSYS_STANDARD_SHARE_SITE_NAME;
 export const INSIGHT_FALLBACK_TITLE = "Insight";
 export const INSIGHT_FALLBACK_WORKSPACE_NAME = "Workspace";
 
+/** White note on the public insight hero. */
+export const INSIGHT_HERO_NOTE_TITLE = "Proof of a unique and genuine insight";
+export const INSIGHT_HERO_NOTE_BODY =
+  "This page is an Insight: a public record crafted from Proof of Work — think-aloud traces recorded while someone worked. The still and the stats below are the evidence. It cannot be copied or faked.";
+
 function cleanText(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }

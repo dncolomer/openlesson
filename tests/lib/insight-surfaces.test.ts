@@ -18,6 +18,8 @@ import {
 } from "@/lib/insights";
 import {
   INSIGHT_FALLBACK_WORKSPACE_NAME,
+  INSIGHT_HERO_NOTE_BODY,
+  INSIGHT_HERO_NOTE_TITLE,
   INSIGHT_HOME_HREF,
   INSIGHT_HOME_LABEL,
   INSIGHT_WORKSPACE_TITLE_COLUMNS,
@@ -341,6 +343,12 @@ describe("public insight OG title + page stats", () => {
     expect(insightDetail).toContain('data-insight-stat="time"');
     expect(insightDetail).toContain('data-insight-stat="workspace"');
     expect(insightDetail).toContain("data-insight-home-link");
+    expect(insightDetail).toContain("data-insight-hero-note");
+    expect(insightDetail).toContain("INSIGHT_HERO_NOTE_TITLE");
+    expect(insightDetail).toContain("INSIGHT_HERO_NOTE_BODY");
+    expect(INSIGHT_HERO_NOTE_TITLE).toMatch(/unique and genuine insight/i);
+    expect(INSIGHT_HERO_NOTE_BODY).toMatch(/Proof of Work/i);
+    expect(INSIGHT_HERO_NOTE_BODY).toMatch(/crafted/i);
     expect(insightDetail).not.toContain("Source thoughts");
     expect(insightDetail).not.toContain("source_thoughts.map");
     expect(api).toContain("workspace_title");

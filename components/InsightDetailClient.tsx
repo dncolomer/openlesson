@@ -12,7 +12,11 @@ import {
   workspaceKnowledgeInsightsPath,
   type InsightSummary,
 } from "@/lib/insights";
-import { deriveInsightPageStats } from "@/lib/insight-share";
+import {
+  INSIGHT_HERO_NOTE_BODY,
+  INSIGHT_HERO_NOTE_TITLE,
+  deriveInsightPageStats,
+} from "@/lib/insight-share";
 
 type InsightRecord = InsightSummary & {
   thought_ids?: unknown;
@@ -142,11 +146,31 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
           </div>
         </div>
 
-        {insight.aesthetic_image ? (
-          <div className="mb-8 overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50">
-            <img src={insight.aesthetic_image} alt="" className="h-56 w-full object-cover md:h-72" />
+        <div
+          data-insight-hero
+          className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50"
+        >
+          {insight.aesthetic_image ? (
+            <img
+              src={insight.aesthetic_image}
+              alt=""
+              className="h-56 w-full object-cover md:h-72"
+            />
+          ) : (
+            <div className="h-56 w-full bg-neutral-900 md:h-72" />
+          )}
+          <div
+            data-insight-hero-note
+            className="absolute inset-x-0 top-0 border-b border-neutral-200 bg-white px-4 py-3 text-neutral-950 sm:px-5 sm:py-3.5"
+          >
+            <p className="text-sm font-semibold leading-snug text-neutral-950">
+              {INSIGHT_HERO_NOTE_TITLE}
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">
+              {INSIGHT_HERO_NOTE_BODY}
+            </p>
           </div>
-        ) : null}
+        </div>
 
         <h1 className="text-4xl font-medium tracking-tight md:text-5xl">{insight.title}</h1>
         <p className="mt-6 text-lg leading-relaxed text-neutral-200">{insight.summary}</p>

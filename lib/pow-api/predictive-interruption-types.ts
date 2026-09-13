@@ -66,6 +66,7 @@ export type ProofOfWorkApiEndpoint =
   | "upload_tap_chat"
   | "upload_tap_idle"
   | "upload_tap_speech"
+  | "upload_tap_canvas"
   | "upload_ile_trace"
   | "upload_ile_chat"
   | "upload_ile_idle"

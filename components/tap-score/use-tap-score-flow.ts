@@ -27,7 +27,11 @@ import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
-import type { IleWorkCanvasElement, IleWorkCanvasScene as TapWorkCanvasScene } from "@/lib/ile-work-canvas";
+import type {
+  IleWorkCanvasElement,
+  IleWorkCanvasScene as TapWorkCanvasScene,
+  IleWorkCanvasSkeleton,
+} from "@/lib/ile-work-canvas";
 
 /** Live TAP dialog session — data + one apply, not a setter-host bag. */
 export type TapScoreSession = {
@@ -183,7 +187,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: TapWorkCanvasScene;
-  }): Promise<{ text: string; elements?: TapWorkCanvasScene["elements"] | null }> {
+  }): Promise<{ text: string; elements?: IleWorkCanvasSkeleton[] | null }> {
     const s = current();
     const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
     const response = await fetch("/api/workspace-tap-score/chat", {

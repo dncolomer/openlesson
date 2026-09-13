@@ -989,7 +989,6 @@ export function TapScoreClient({
       clearTranscriptionDisplay={clearTranscriptionDisplay}
       restartSpeechRecognitionSession={restartSpeechRecognitionSession}
       tapSessionId={tapSessionId}
-      privateToken={privateToken}
       entryQueryParams={entryQueryParamsRef.current}
       workCanvasSceneRef={workCanvasSceneRef}
       sendCanvasAsk={sendCanvasAsk}

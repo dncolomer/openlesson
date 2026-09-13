@@ -48,7 +48,7 @@ import {
   uploadTapWorkCanvasPow,
 } from "@/lib/tap-work-canvas";
 import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
-import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
+import type { IleWorkCanvasElement, IleWorkCanvasScene, IleWorkCanvasSkeleton } from "@/lib/ile-work-canvas";
 import type { MutableRefObject } from "react";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -132,7 +132,7 @@ export function TapScorePhases(props: {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: IleWorkCanvasScene;
-  }) => Promise<{ text: string; elements?: unknown[] | null }>;
+  }) => Promise<{ text: string; elements?: IleWorkCanvasSkeleton[] | null }>;
 }) {
   const {
     phase,

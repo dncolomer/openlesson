@@ -60,7 +60,7 @@ type ExcalidrawAPIRef = any;
 const ILE_EXCALIDRAW_UI_OPTIONS = {
   canvasActions: {
     loadScene: false,
-    export: false,
+    export: false as false,
     saveAsImage: false,
     saveToActiveFile: false,
     toggleTheme: false,
@@ -826,9 +826,8 @@ export function ExcalidrawCanvas({
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] rounded-none overflow-hidden">
-      {onSubmitToHelios && (
+      {onSubmitToHelios ? (
       <div className="flex items-center justify-end gap-2 p-2 border-b border-neutral-800 bg-neutral-900/30">
-        {onSubmitToHelios && (
           <button
             onClick={handleSubmitToHelios}
             disabled={isSubmittingToHelios || !canSubmitToHelios}
@@ -877,9 +876,8 @@ export function ExcalidrawCanvas({
                 : submitButtonLabel}
             </span>
           </button>
-        )}
       </div>
-      )}
+      ) : null}
 
       {/* Excalidraw container — ownerDocument.defaultView for PiP pointer/resize */}
       <div ref={canvasHostRef} className="flex-1 min-h-0 relative" data-ile-excalidraw-host>

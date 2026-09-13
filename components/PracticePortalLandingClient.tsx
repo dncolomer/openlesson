@@ -53,12 +53,8 @@ function productAccent(id: PracticePortalProductId): "slate" | "amber" {
 }
 
 function productEyebrow(id: PracticePortalProductId): string {
-  if (id.startsWith("drill") || String(id).endsWith("_drill") || id === "timed_explore") {
-    return "Drill";
-  }
-  if (id.startsWith("explore") || String(id).startsWith("open_ended")) {
-    return "Explore";
-  }
+  if (id.startsWith("drill")) return "Drill";
+  if (id.startsWith("explore")) return "Explore";
   return "Practice";
 }
 

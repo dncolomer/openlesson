@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
-import { TapSessionMap } from "@/components/tap-score/tap-session-map";
-import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
-import { tapConvoBlocksFromAssistantTurns } from "@/lib/tap-session-map";
+import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import {
@@ -36,6 +34,22 @@ import {
   formatCountdown,
   normalize,
 } from "@/lib/tap-score-client-helpers";
+import {
+  applyTapAssistantTurnsToWorkCanvas,
+  applyTapHeliosReplyToWorkCanvas,
+  buildTapCanvasSnapshotUploadItem,
+  buildTapExcalidrawToolUploadItem,
+  emptyTapWorkCanvasScene,
+  serializeTapWorkCanvasScene,
+  tapHeliosCanvasBusy,
+  tapWorkCanvasAskUserMessage,
+  tapWorkCanvasBoardId,
+  tapWorkCanvasShouldAcceptSceneUpdate,
+  uploadTapWorkCanvasPow,
+} from "@/lib/tap-work-canvas";
+import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
+import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
+import type { MutableRefObject } from "react";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -111,6 +125,14 @@ export function TapScorePhases(props: {
   }) => void;
   clearTranscriptionDisplay: () => void;
   restartSpeechRecognitionSession: () => void;
+  tapSessionId?: string | null;
+  entryQueryParams?: Record<string, string | string[]>;
+  workCanvasSceneRef: MutableRefObject<IleWorkCanvasScene | null>;
+  sendCanvasAsk: (input: {
+    prompt: string;
+    selectedElements?: readonly IleWorkCanvasElement[] | null;
+    scene: IleWorkCanvasScene;
+  }) => Promise<{ text: string; elements?: unknown[] | null }>;
 }) {
   const {
     phase,
@@ -161,25 +183,169 @@ export function TapScorePhases(props: {
     logTapTrace,
     clearTranscriptionDisplay,
     restartSpeechRecognitionSession,
+    tapSessionId,
+    entryQueryParams,
+    workCanvasSceneRef,
+    sendCanvasAsk,
   } = props;
 
-  const assistantTurns = useMemo(
-    () => messages.filter((message) => message.role === "assistant"),
-    [messages],
+  const [workCanvasScene, setWorkCanvasScene] = useState<IleWorkCanvasScene>(() =>
+    emptyTapWorkCanvasScene(),
   );
-  const convoBlocks = useMemo(
-    () => tapConvoBlocksFromAssistantTurns(assistantTurns),
-    [assistantTurns],
+  const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
+  const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
+  const sceneRef = useRef(workCanvasScene);
+  const appliedAssistantIdsRef = useRef<Set<string>>(new Set());
+  const lastExcalidrawPowKeyRef = useRef("");
+  const lastCanvasPowHashRef = useRef("");
+  const canvasPowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const syncScene = useCallback(
+    (next: IleWorkCanvasScene) => {
+      sceneRef.current = next;
+      workCanvasSceneRef.current = next;
+      setWorkCanvasScene(next);
+    },
+    [workCanvasSceneRef],
   );
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (lastAssistantTurn?.id) setSelectedBlockId(lastAssistantTurn.id);
-  }, [lastAssistantTurn?.id]);
-  const selectedBlock =
-    convoBlocks.find((block) => block.id === selectedBlockId) ??
-    convoBlocks[convoBlocks.length - 1] ??
-    null;
-  const overlayWaiting = isSending || (isStartingSession && !lastAssistantTurn);
+    sceneRef.current = workCanvasScene;
+    workCanvasSceneRef.current = workCanvasScene;
+  }, [workCanvasScene, workCanvasSceneRef]);
+
+  useEffect(() => {
+    if (phase !== "live") {
+      appliedAssistantIdsRef.current = new Set();
+      const empty = emptyTapWorkCanvasScene();
+      syncScene(empty);
+      setCanvasApplyElements([]);
+    }
+  }, [phase, syncScene]);
+
+  const heliosBusy = tapHeliosCanvasBusy({
+    isSending,
+    isStartingSession,
+    hasAssistantTurn: Boolean(lastAssistantTurn),
+  });
+
+  useEffect(() => {
+    if (phase !== "live") return;
+    const assistantTurns = (messages ?? []).filter(
+      (message) => message.role === "assistant" && String(message.content || "").trim(),
+    );
+    if (!assistantTurns.length) return;
+    const missing = assistantTurns.filter((turn) => !appliedAssistantIdsRef.current.has(turn.id));
+    const boardEmpty = !sceneRef.current.elements.some((el) => !el.isDeleted);
+    if (!missing.length && !boardEmpty) return;
+    const prevIds = new Set(sceneRef.current.elements.map((el) => el.id));
+    const next = boardEmpty
+      ? applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
+      : applyTapHeliosReplyToWorkCanvas(
+          sceneRef.current,
+          lastAssistantTurn?.content,
+          null,
+          lastAssistantTurn?.id,
+        );
+    for (const turn of assistantTurns) appliedAssistantIdsRef.current.add(turn.id);
+    const added = next.elements.filter((el) => !prevIds.has(el.id));
+    if (!added.length && !boardEmpty) return;
+    syncScene(next);
+    setCanvasApplyElements(added.length ? added : next.elements);
+    setCanvasApplyNonce((n) => n + 1);
+  }, [lastAssistantTurn?.id, lastAssistantTurn?.content, messages, phase, syncScene]);
+
+  const handleExcalidrawTool = useCallback(
+    (input: { activeTool?: string | null; elementType?: string | null }) => {
+      const sessionKey = String(tapSessionId || sessionId || "").trim();
+      if (!sessionKey) return;
+      const item = buildTapExcalidrawToolUploadItem(sessionKey, {
+        ...input,
+        metadata: { via: "excalidraw", product: "tap" },
+      });
+      if (!item) return;
+      const key = `${item.toolName}:${item.toolAction}`;
+      if (lastExcalidrawPowKeyRef.current === key) return;
+      lastExcalidrawPowKeyRef.current = key;
+      void uploadTapWorkCanvasPow({
+        workspaceId,
+        blockId,
+        sessionId,
+        privateToken,
+        tapSessionId,
+        entryQueryParams,
+        practice: isPracticeMode,
+        item,
+      });
+    },
+    [
+      blockId,
+      entryQueryParams,
+      isPracticeMode,
+      privateToken,
+      sessionId,
+      tapSessionId,
+      workspaceId,
+    ],
+  );
+
+  const handleSceneChange = useCallback(
+    (data: { elements: unknown[]; appState: unknown; files: unknown }) => {
+      const scene = serializeTapWorkCanvasScene(data);
+      if (!tapWorkCanvasShouldAcceptSceneUpdate(sceneRef.current, scene)) return;
+      sceneRef.current = scene;
+      workCanvasSceneRef.current = scene;
+      setWorkCanvasScene(scene);
+      const sessionKey = String(tapSessionId || sessionId || "").trim();
+      if (!sessionKey) return;
+      const snapshot = JSON.stringify(scene);
+      if (snapshot === lastCanvasPowHashRef.current) return;
+      if (canvasPowTimerRef.current) clearTimeout(canvasPowTimerRef.current);
+      canvasPowTimerRef.current = setTimeout(() => {
+        lastCanvasPowHashRef.current = snapshot;
+        const item = buildTapCanvasSnapshotUploadItem(sessionKey, snapshot);
+        void uploadTapWorkCanvasPow({
+          workspaceId,
+          blockId,
+          sessionId,
+          privateToken,
+          tapSessionId,
+          entryQueryParams,
+          practice: isPracticeMode,
+          item,
+        });
+      }, ILE_POW_DEBOUNCE_MS);
+    },
+    [
+      blockId,
+      entryQueryParams,
+      isPracticeMode,
+      privateToken,
+      sessionId,
+      tapSessionId,
+      workCanvasSceneRef,
+      workspaceId,
+    ],
+  );
+
+  const handleAskSelected = useCallback(
+    async (input: {
+      prompt: string;
+      selectedElements: IleWorkCanvasElement[];
+      scene: IleWorkCanvasScene;
+    }) => {
+      const userText = tapWorkCanvasAskUserMessage({
+        prompt: input.prompt,
+        selectedElements: input.selectedElements,
+      });
+      return sendCanvasAsk({
+        prompt: userText,
+        selectedElements: input.selectedElements,
+        scene: input.scene,
+      });
+    },
+    [sendCanvasAsk],
+  );
 
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
@@ -243,29 +409,26 @@ export function TapScorePhases(props: {
               className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-1"
             >
               <div
-                data-tap-convo-map-pane
+                data-tap-convo-work-canvas-pane
                 className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
               >
-                <TapSessionMap
-                  blocks={convoBlocks}
-                  selectedId={selectedBlock?.id ?? null}
-                  onSelect={setSelectedBlockId}
-                  currentId={convoBlocks[convoBlocks.length - 1]?.id ?? null}
-                  overlay={
-                    <TapTurnOverlay
-                      kind="dialog"
-                      kicker={selectedBlock?.title || "Question"}
-                      body={selectedBlock?.prompt || ""}
-                      waiting={overlayWaiting}
-                      markdown
-                      extra={
-                        error ? (
-                          <p className="mt-2 text-xs text-red-300">{error}</p>
-                        ) : null
-                      }
-                    />
-                  }
+                <ExcalidrawCanvas
+                  key={`tap-work-canvas:${phase}`}
+                  boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
+                  peerId="work"
+                  initialSceneData={workCanvasScene}
+                  applyElements={canvasApplyElements}
+                  applyElementsNonce={canvasApplyNonce}
+                  heliosBusy={heliosBusy}
+                  onSceneChange={handleSceneChange}
+                  onExcalidrawTool={handleExcalidrawTool}
+                  onAskSelected={handleAskSelected}
                 />
+                {error ? (
+                  <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
+                    {error}
+                  </p>
+                ) : null}
               </div>
 
               <TapAestheticSection

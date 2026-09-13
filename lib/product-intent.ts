@@ -1,12 +1,14 @@
 /**
  * Product intent framing for learner/owner surfaces.
- * Technical products remain ILE/TAP in code; UI speaks Explore/Drill × Dialog/Solo.
+ * Technical products remain ILE/TAP in code; UI speaks Explore / Drill.
  *
- * Product axes (authoring model):
- * - Drill always → TAP; second choice = LLM Dialog vs Solo Exercise
- * - Explore always → ILE; second choice = LLM Dialog vs Solo Exercise
+ * New launches are always the With AI path:
+ * - Explore always → ILE learning
+ * - Drill always → TAP conversational
  *
- * Legacy open_ended_* / timed_* ids are accepted on read for stored rows.
+ * Solo / exercise / project second-axis tokens are accepted on read so stored
+ * guest tokens still classify, but they no longer produce a distinct new-launch
+ * target. Legacy open_ended_* / timed_* ids are accepted on read for stored rows.
  */
 
 /** What the learner wants to do. */
@@ -76,40 +78,40 @@ export const PRODUCT_INTENT_LABELS = {
   horizonOpen: "With AI",
   /** @deprecated Prefer modalitySolo */
   horizonTimed: "Solo",
-  exploreDialog: "Explore · Dialog",
-  exploreSolo: "Explore · Solo Exercise",
-  drillDialog: "Drill · Dialog",
-  drillSolo: "Drill · Solo Exercise",
+  exploreDialog: "Explore",
+  exploreSolo: "Explore",
+  drillDialog: "Drill",
+  drillSolo: "Drill",
   /** Legacy label keys — map to new names so old i18n/UI still resolve. */
-  openEndedExplore: "Explore · Dialog",
-  openEndedDrill: "Explore · Solo Exercise",
-  timedExplore: "Drill · Dialog",
-  timedDrill: "Drill · Solo Exercise",
+  openEndedExplore: "Explore",
+  openEndedDrill: "Explore",
+  timedExplore: "Drill",
+  timedDrill: "Drill",
   exploreDialogHint:
     "Guided dialogue practice with an LLM partner — no clock.",
   exploreSoloHint:
-    "Solo exercises per chapter — stash and solution stacks.",
+    "Guided dialogue practice with an LLM partner — no clock.",
   drillDialogHint:
     "Timed dialogue demonstration of what you know.",
   drillSoloHint:
-    "Timed solo exercise — speak and submit your solution.",
+    "Timed dialogue demonstration of what you know.",
   openEndedExploreHint:
     "Guided dialogue practice with an LLM partner — no clock.",
   openEndedDrillHint:
-    "Solo exercises per chapter — stash and solution stacks.",
+    "Guided dialogue practice with an LLM partner — no clock.",
   timedExploreHint:
     "Timed dialogue demonstration of what you know.",
   timedDrillHint:
-    "Timed solo exercise — speak and submit your solution.",
+    "Timed dialogue demonstration of what you know.",
   chooseStyle: "What do you want to do?",
   chooseModality: "How do you want to practice?",
   chooseHorizon: "How do you want to practice?",
   questionExplore: "Do you want to Explore?",
   questionDrill: "Do you want to Drill / Practice?",
-  questionDialog: "LLM-powered Dialog?",
-  questionSolo: "Solo Exercise?",
-  questionOpen: "LLM-powered Dialog?",
-  questionTimed: "Solo Exercise?",
+  questionDialog: "With AI?",
+  questionSolo: "With AI?",
+  questionOpen: "With AI?",
+  questionTimed: "With AI?",
 } as const;
 
 export const PRODUCT_INTENT_DEFAULT: ProductIntent = {
@@ -148,55 +150,63 @@ export function legacyHorizonToModality(horizon: unknown): PracticeModality {
   return normalizePracticeModality(horizon);
 }
 
-/**
- * Canonical resolve: Explore|Drill × Dialog|Solo → technical launch.
- *
- * Drill always TAP; Explore always ILE.
- * Dialog → conversational (TAP) / learning (ILE).
- * Solo → exercise (TAP) / project (ILE).
- *
- * Accepts second-arg tokens: dialog|solo|open_ended|timed|conversational|exercise|…
- * Defaults missing/invalid style → explore; modality → dialog.
- */
-export function resolveProductIntent(
-  style: unknown,
-  modalityOrHorizon: unknown,
-): ProductLaunchTarget {
-  const s: LearningStyle =
-    style === "drill" || style === "practice" || style === "project"
-      ? "drill"
-      : "explore";
-  const modality = normalizePracticeModality(modalityOrHorizon);
+/** New-launch Explore target (ILE learning). */
+export function exploreLearningLaunchTarget(): ProductLaunchTarget {
+  return {
+    id: "explore_dialog",
+    product: "ile",
+    session_mode: "learning",
+  };
+}
 
-  // Explore always → ILE
-  if (s === "explore") {
-    if (modality === "solo") {
-      return {
-        id: "explore_solo",
-        product: "ile",
-        session_mode: "project",
-      };
-    }
-    return {
-      id: "explore_dialog",
-      product: "ile",
-      session_mode: "learning",
-    };
-  }
-
-  // Drill always → TAP
-  if (modality === "solo") {
-    return {
-      id: "drill_solo",
-      product: "tap",
-      interaction_kind: "exercise",
-    };
-  }
+/** New-launch Drill target (TAP conversational). */
+export function drillConversationalLaunchTarget(): ProductLaunchTarget {
   return {
     id: "drill_dialog",
     product: "tap",
     interaction_kind: "conversational",
   };
+}
+
+/**
+ * Stored ILE project / TAP exercise targets — not offered as new launches.
+ * Used only to classify already-issued guest tokens.
+ */
+export function storedExploreProjectLaunchTarget(): ProductLaunchTarget {
+  return {
+    id: "explore_solo",
+    product: "ile",
+    session_mode: "project",
+  };
+}
+
+export function storedDrillExerciseLaunchTarget(): ProductLaunchTarget {
+  return {
+    id: "drill_solo",
+    product: "tap",
+    interaction_kind: "exercise",
+  };
+}
+
+/**
+ * Canonical resolve for NEW launches: Explore|Drill → technical launch.
+ *
+ * Drill always TAP conversational; Explore always ILE learning.
+ * Second-arg tokens (solo|exercise|project|timed|dialog|…) are accepted so
+ * callers keep compiling, but they no longer produce a distinct target.
+ *
+ * Defaults missing/invalid style → explore.
+ */
+export function resolveProductIntent(
+  style: unknown,
+  _modalityOrHorizon?: unknown,
+): ProductLaunchTarget {
+  const s: LearningStyle =
+    style === "drill" || style === "practice" || style === "project"
+      ? "drill"
+      : "explore";
+  if (s === "explore") return exploreLearningLaunchTarget();
+  return drillConversationalLaunchTarget();
 }
 
 /** Resolve from a full intent object (supports modality or legacy horizon). */
@@ -215,15 +225,13 @@ export function resolveProductIntentFromAxes(
 }
 
 /**
- * UI launch: Explore|Drill × Dialog/Solo via boolean "solo" flag.
- * soloEnabled true → solo; false → dialog.
- * (Replaces resolveLaunchFromStyleAndTimebox semantics.)
+ * UI launch: Explore|Drill. The solo flag is ignored — new work is always With AI.
  */
 export function resolveLaunchFromStyleAndModality(
   style: unknown,
-  soloEnabled: boolean,
+  _soloEnabled?: boolean,
 ): ProductLaunchTarget {
-  return resolveProductIntent(style, soloEnabled ? "solo" : "dialog");
+  return resolveProductIntent(style, "dialog");
 }
 
 /**
@@ -284,26 +292,21 @@ export function productIntentFromGuestLink(input: {
   if (kind === "ile") {
     const mode = String(input.session_mode || "learning").toLowerCase();
     if (mode === "project" || mode === "exercise" || mode === "drill" || mode === "solo") {
-      return resolveProductIntent("explore", "solo");
+      return storedExploreProjectLaunchTarget();
     }
-    return resolveProductIntent("explore", "dialog");
+    return exploreLearningLaunchTarget();
   }
   // TAP / default drill family
   const ik = String(input.interaction_kind || "conversational").toLowerCase();
   if (ik === "exercise" || ik === "solo" || ik === "drill") {
-    return resolveProductIntent("drill", "solo");
+    return storedDrillExerciseLaunchTarget();
   }
-  return resolveProductIntent("drill", "dialog");
+  return drillConversationalLaunchTarget();
 }
 
-/** All four launch targets in UI order (explore dialog, explore solo, drill dialog, drill solo). */
+/** New-launch targets in UI order (Explore, Drill). */
 export function allProductLaunchTargets(): ProductLaunchTarget[] {
-  return [
-    resolveProductIntent("explore", "dialog"),
-    resolveProductIntent("explore", "solo"),
-    resolveProductIntent("drill", "dialog"),
-    resolveProductIntent("drill", "solo"),
-  ];
+  return [exploreLearningLaunchTarget(), drillConversationalLaunchTarget()];
 }
 
 /**
@@ -318,23 +321,21 @@ export function resolveProductIntentFromId(
     .toLowerCase();
   switch (raw) {
     case "explore_dialog":
-    case "open_ended_explore":
-    case "ile_learning":
-      return resolveProductIntent("explore", "dialog");
     case "explore_solo":
+    case "open_ended_explore":
     case "open_ended_drill":
+    case "ile_learning":
     case "ile_project":
-      return resolveProductIntent("explore", "solo");
+      return exploreLearningLaunchTarget();
     case "drill_dialog":
-    case "timed_explore":
-    case "tap_conversational":
-      return resolveProductIntent("drill", "dialog");
     case "drill_solo":
+    case "timed_explore":
     case "timed_drill":
+    case "tap_conversational":
     case "tap_exercise":
-      return resolveProductIntent("drill", "solo");
+      return drillConversationalLaunchTarget();
     default:
-      return resolveProductIntent("explore", "dialog");
+      return exploreLearningLaunchTarget();
   }
 }
 

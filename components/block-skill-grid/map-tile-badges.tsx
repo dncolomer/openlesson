@@ -8,7 +8,7 @@ import type { BlockCreatorEffectKey } from "@/lib/block-creator-effects";
 import { BlockMapGlyphIcon } from "@/components/block-skill-grid/map-block-glyph-icon";
 import { isPreviousSessionsMapIcon } from "@/lib/block-map-glyph";
 
-/** Occupied tiles: keyword + 3×3 square mark (solid on workspace, outline on TAP/ILE). */
+/** Occupied tiles: keyword + 3×3 square mark (solid on workspace, outline on learner maps). */
 export function MapCellStatusGlyph({
   status,
   showProgress,
@@ -261,21 +261,9 @@ export function BlockPracticeOptionsBadge({
   keys: Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed">;
 }) {
   if (keys.length === 0) return null;
-  const displayKeys = keys.filter((k) => {
-    if (k === "open" && keys.includes("dialog")) return false;
-    if (k === "timed" && keys.includes("solo")) return false;
-    return true;
-  });
+  const displayKeys = keys.filter((k) => k === "explore" || k === "drill");
   const title = displayKeys
-    .map((k) =>
-      k === "explore"
-        ? "Explore"
-        : k === "drill"
-          ? "Drill"
-          : k === "dialog" || k === "open"
-            ? "With AI"
-            : "Solo",
-    )
+    .map((k) => (k === "explore" ? "Explore" : "Drill"))
     .join(" · ");
   return (
     <span
@@ -314,42 +302,7 @@ export function BlockPracticeOptionsBadge({
           <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
         </svg>
       ) : null}
-      {keys.includes("dialog") || keys.includes("open") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="dialog"
-          data-practice-icon-legacy="open"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M7 8h10M7 12h6m-8 7l2.5-2.5H17a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v7a2 2 0 002 2h.5L5 19z"
-          />
-        </svg>
-      ) : null}
-      {keys.includes("solo") || keys.includes("timed") ? (
-        <svg
-          className="h-2.5 w-2.5 text-white"
-          data-practice-icon="solo"
-          data-practice-icon-legacy="timed"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15.232 5.232l3.536 3.536M4 20h4.5L19.5 9 15 4.5 4 15.5V20z"
-          />
-        </svg>
-      ) : null}
+
     </span>
   );
 }

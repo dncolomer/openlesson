@@ -94,8 +94,6 @@ export function WorkspaceBlockEditPanel({
           {[
             savedPractice.allowExplore ? "Explore" : null,
             savedPractice.allowDrill ? "Drill" : null,
-            savedPractice.allowDialog ? "With AI" : null,
-            savedPractice.allowSolo ? "Solo" : null,
             savedPractice.allowDrill && savedPractice.allowedDurationsMinutes.length
               ? `Durations (${savedPractice.allowedDurationsMinutes.join("/")}m)`
               : null,
@@ -202,7 +200,7 @@ export function WorkspaceBlockEditPanel({
         </span>
       </label>
 
-      {/* Practice launch limits — Explore/Drill × Dialog/Solo + Drill durations */}
+      {/* Practice launch limits — Explore / Drill + Drill durations */}
       <div
         className="space-y-2.5 rounded-none border border-neutral-800 bg-neutral-950/50 p-2.5"
         data-block-edit-practice-options
@@ -231,43 +229,6 @@ export function WorkspaceBlockEditPanel({
               onChange={(e) => patchPractice({ allowDrill: e.target.checked })}
             />
             <span className="text-[11px] text-neutral-200">Drill</span>
-          </label>
-        </div>
-
-        <div
-          className="grid grid-cols-2 gap-1.5"
-          data-block-edit-practice-modalities
-          data-block-edit-practice-horizons
-        >
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
-            <input
-              type="checkbox"
-              data-block-edit-allow-dialog
-              data-block-edit-allow-open-ended
-              checked={editPractice.allowDialog}
-              disabled={disabled}
-              onChange={(e) =>
-                patchPractice({
-                  allowDialog: e.target.checked,
-                })
-              }
-            />
-            <span className="text-[11px] text-neutral-200">With AI</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
-            <input
-              type="checkbox"
-              data-block-edit-allow-solo
-              data-block-edit-allow-timed
-              checked={editPractice.allowSolo}
-              disabled={disabled}
-              onChange={(e) =>
-                patchPractice({
-                  allowSolo: e.target.checked,
-                })
-              }
-            />
-            <span className="text-[11px] text-neutral-200">Solo</span>
           </label>
         </div>
 

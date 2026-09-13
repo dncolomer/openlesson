@@ -5,9 +5,10 @@
  * may offer; visitors open the portal URL and mint a one-shot TAP/ILE
  * guest link without needing the map catalog or public workspace.
  *
- * Product axes: Explore|Drill × Dialog|Solo
- * - Explore → always ILE (dialog = learning, solo = project)
- * - Drill → always TAP (dialog = conversational, solo = exercise)
+ * Product axes: Explore | Drill (always With AI).
+ * - Explore → always ILE learning
+ * - Drill → always TAP conversational
+ * Stored solo/exercise/project portal ids still parse; new mints collapse to dialog.
  *
  * Pure helpers live here so unit tests do not need Supabase/API I/O.
  * Legacy open_ended_* / timed_* ids are accepted on read and canonicalized.
@@ -150,6 +151,38 @@ function isDrillProduct(id: PracticePortalProductId): boolean {
 
 function isExploreProduct(id: PracticePortalProductId): boolean {
   return id === "explore_dialog" || id === "explore_solo";
+}
+
+/** Collapse stored solo ids onto the With AI new-launch product. */
+export function canonicalizePracticePortalNewLaunchProductId(
+  value: unknown,
+): PracticePortalProductId | null {
+  const id = parsePracticePortalProductId(value);
+  if (!id) return null;
+  if (isExploreProduct(id)) return "explore_dialog";
+  if (isDrillProduct(id)) return "drill_dialog";
+  return id;
+}
+
+/** Public-desk / new-mint product ids (Explore and/or Drill, never solo). */
+export function newLaunchPracticePortalProductIds(
+  allowed: readonly PracticePortalProductId[],
+): PracticePortalProductId[] {
+  const out: PracticePortalProductId[] = [];
+  if (allowed.some((id) => isExploreProduct(id))) out.push("explore_dialog");
+  if (allowed.some((id) => isDrillProduct(id))) out.push("drill_dialog");
+  return out;
+}
+
+function drillTimingList(config: PracticePortalConfig): number[] {
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const n of [...config.timings.drill_dialog, ...config.timings.drill_solo]) {
+    if (!Number.isFinite(n) || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out.sort((a, b) => a - b);
 }
 
 /** @deprecated Prefer isExploreProduct — Explore = ILE (no duration). */
@@ -375,8 +408,11 @@ export function practicePortalProductsForScope(
   config: PracticePortalConfig,
 ): PracticePortalProductId[] {
   const cfg = normalizePracticePortalConfig(config);
-  if (cfg.scope_mode !== "workspace") return cfg.allowed_products;
-  return cfg.allowed_products.filter((id) => !isExploreProduct(id));
+  const scoped =
+    cfg.scope_mode !== "workspace"
+      ? cfg.allowed_products
+      : cfg.allowed_products.filter((id) => !isExploreProduct(id));
+  return newLaunchPracticePortalProductIds(scoped);
 }
 
 /**
@@ -410,7 +446,14 @@ export function isPracticePortalProductAllowed(
   if (!productId) return false;
   const id = parsePracticePortalProductId(productId);
   if (!id) return false;
-  return config.allowed_products.includes(id);
+  const launchId = canonicalizePracticePortalNewLaunchProductId(id);
+  return config.allowed_products.some((allowed) => {
+    if (allowed === id) return true;
+    if (launchId && canonicalizePracticePortalNewLaunchProductId(allowed) === launchId) {
+      return true;
+    }
+    return false;
+  });
 }
 
 /**
@@ -428,8 +471,8 @@ export function isPracticePortalTimingAllowed(
   if (!isPracticePortalProductAllowed(config, id)) return false;
   if (isExploreProduct(id)) return true;
 
-  const list =
-    id === "drill_solo" ? config.timings.drill_solo : config.timings.drill_dialog;
+  const launchId = canonicalizePracticePortalNewLaunchProductId(id) ?? id;
+  const list = launchId === "drill_dialog" ? drillTimingList(config) : [];
   if (list.length === 0) return false;
   const n = typeof minutes === "number" ? minutes : Number(minutes);
   if (!Number.isFinite(n)) return false;
@@ -444,7 +487,7 @@ export function validatePracticePortalMintRequest(
   config: PracticePortalConfig,
   body: PracticePortalMintRequest | null | undefined,
 ): PracticePortalMintValidation {
-  const productId = parsePracticePortalProductId(body?.product_id);
+  const productId = canonicalizePracticePortalNewLaunchProductId(body?.product_id);
   if (!productId) {
     return {
       ok: false,
@@ -493,13 +536,8 @@ export function validatePracticePortalMintRequest(
   }
 
   // Drill (TAP) products — workspace scope always yields block_id null (enforced above).
-  const timingList =
-    productId === "drill_solo"
-      ? config.timings.drill_solo
-      : config.timings.drill_dialog;
-  const defaultMinutes =
-    timingList[0] ??
-    (productId === "drill_solo" ? 30 : TAP_LINK_DEFAULT_MINUTES);
+  const timingList = drillTimingList(config);
+  const defaultMinutes = timingList[0] ?? TAP_LINK_DEFAULT_MINUTES;
 
   let minutes: number;
   if (body?.minutes === undefined || body?.minutes === null || body?.minutes === "") {
@@ -667,12 +705,7 @@ export function buildPracticePortalLandingView(input: {
   const productIds = practicePortalProductsForScope(config);
   const products = productIds.map((id) => {
     const launch = launchTargetForPracticePortalProduct(id);
-    const timings =
-      id === "drill_dialog"
-        ? config.timings.drill_dialog
-        : id === "drill_solo"
-          ? config.timings.drill_solo
-          : [];
+    const timings = id === "drill_dialog" || id === "drill_solo" ? drillTimingList(config) : [];
     return { id, launch, timings };
   });
 

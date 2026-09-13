@@ -19,6 +19,7 @@ import { buildTapInProgressPatch } from "@/lib/tap-started-at";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
+import { tapWorkCanvasTurnContextMessage } from "@/lib/tap-work-canvas";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -112,9 +113,15 @@ export async function POST(req: NextRequest) {
       conversationLanguage,
     );
 
+    const canvasContext = body.workCanvasScene
+      ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene)}`
+      : "";
+
     const response = await callXai([
       systemMessage(systemPrompt),
-      userMessage(`Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}`),
+      userMessage(
+        `Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}${canvasContext}`,
+      ),
     ], {
       maxTokens: practice ? 280 : 500,
       temperature: practice ? 0.4 : 0.55,

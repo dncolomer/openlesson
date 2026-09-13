@@ -214,8 +214,7 @@ export function useWorkspaceLearner(input: {
       }
       // Same product intent map as SessionItem / BlockDetailCard.
       if (target.product === "ile") {
-        const ileMode =
-          target.session_mode === "project" ? "project" : "learning";
+        const ileMode = "learning";
         const launchRes = await fetch(WORKSPACE_LEARNER_LAUNCH_PATH, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -213,18 +213,16 @@ describe("TAP solo problems", () => {
 });
 
 describe("TAP live map wiring", () => {
-  it("dialog + solo maps hide coordinates, skip load-other, and fix dual-list height", () => {
+  it("conversational live left pane is Work canvas; right pane keeps thought chrome", () => {
     const tap = readTapScoreSurface();
-    expect(tap).toContain("TapSessionMap");
-    expect(tap).toContain("TapTurnOverlay");
-    expect(tap).toContain("tapConvoBlocksFromAssistantTurns");
-    expect(tap).toContain("createMapFogLookup");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(tap).toContain("ExcalidrawCanvas");
+    expect(phases).toContain("data-tap-convo-work-canvas-pane");
+    expect(phases).not.toContain("TapSessionMap");
+    expect(phases).not.toContain("tapConvoBlocksFromAssistantTurns");
     expect(tap).not.toContain("<DialogueSplit");
-    expect(tap).not.toContain("formatGridCoordinate");
     expect(tap).not.toContain("Load other problems");
     expect(tap).not.toContain("data-tap-load-other-problems");
-    expect(tap).toContain("data-map-fog-veil");
-    expect(tap).toContain('data-tap-session-map-origin="0,0"');
     expect(tap).toContain("data-tap-convo-live-split");
     expect(tap).toContain("lg:grid-cols-2");
     expect(tap).toContain('kind="convo-stash"');
@@ -236,19 +234,6 @@ describe("TAP live map wiring", () => {
     expect(tap).toContain("ImDoneAnsweringControl");
     expect(tap).toContain("data-tap-thought-memory-always");
     expect(tap).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
-
-    const map = read("components/tap-score/tap-session-map.tsx");
-    expect(map).toContain("learnerMapCellChromeClasses");
-    expect(map).toContain("MapCellStatusGlyph");
-    expect(map).toContain('glyphVariant="outline"');
-    expect(map).toContain("resolveBlockMapGlyph");
-    expect(map).toContain("tapSessionMapCenterOnOrigin");
-    expect(map).toContain("data-tap-session-block-dimmed");
-    expect(map).toContain("opacity-25");
-    expect(map).toContain("Boolean(block.done)");
-    expect(map).not.toContain('status: block.done ? "completed"');
-    expect(map).not.toContain("formatGridCoordinate");
-    expect(tap).toContain("currentId={convoBlocks[convoBlocks.length - 1]?.id");
 
     const overlay = read("components/tap-score/tap-turn-overlay.tsx");
     expect(overlay).not.toContain("data-tap-submit-solution");
@@ -284,40 +269,35 @@ describe("TAP live map wiring", () => {
     writeScratch(
       "tap-map-chrome.txt",
       [
-        "no formatGridCoordinate on TAP map",
+        "conversational live left pane is Work canvas",
+        "no TapSessionMap on TAP conversational live",
         "no Load other problems",
-        "solo live 50/50 map | Stash Submit UI aesthetic",
-        "fog veil on empty cells",
+        "right pane ThoughtMemoryPanel + ImDoneAnswering",
       ].join("\n"),
     );
   });
 });
 
 describe("knowledge landing Drill labels", () => {
-  it("visitor-facing Drill products are Drill with AI and Drill Solo Exercises", () => {
+  it("visitor-facing Drill product is Drill (no Solo Exercises choice)", () => {
     const client = read("components/MapOfKnowledgeClient.tsx");
-    expect(client).toContain('label: "Drill with AI"');
-    expect(client).toContain('label: "Drill Solo Exercises"');
-    expect(client).toContain("Drill with AI");
-    expect(client).toContain("Drill Solo Exercises");
+    expect(client).toContain('label: "Drill"');
+    expect(client).not.toContain("Drill Solo Exercises");
+    expect(client).not.toContain("Drill with AI");
+    expect(client).not.toContain("data-mint-timed-drill-card");
     const exploreCard = client.slice(
       client.indexOf("data-mint-timed-explore-card"),
-      client.indexOf("data-mint-timed-drill-card"),
-    );
-    const drillCard = client.slice(
-      client.indexOf("data-mint-timed-drill-card"),
       client.indexOf("data-minted-link-card"),
     );
     expect(exploreCard).not.toMatch(/\bDialog\b/);
-    expect(drillCard).not.toMatch(/\bDialog\b/);
+    expect(exploreCard).not.toMatch(/\bSolo\b/);
 
     writeScratch(
       "knowledge-drill-labels.txt",
       [
-        "Drill with AI",
-        "Drill Solo Exercises",
+        "Drill",
         `exploreCardHasDialog=${/\bDialog\b/.test(exploreCard)}`,
-        `drillCardHasDialog=${/\bDialog\b/.test(drillCard)}`,
+        `hasSoloExercises=${client.includes("Drill Solo Exercises")}`,
       ].join("\n"),
     );
   });

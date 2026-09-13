@@ -43,19 +43,19 @@ type BlockDetailCardProps = {
   isLocked?: boolean;
   showActions: boolean;
   /**
-   * Launch by product intent (Explore/Drill × Dialog/Solo).
+   * Launch by product intent (Explore / Drill — always With AI).
    * Prefer this over the four technical callbacks.
    * Style buttons only select; Start triggers this.
-   * Drill always → TAP; Explore always → ILE.
+   * Drill always → TAP conversational; Explore always → ILE learning.
    */
   onLaunchIntent?: (target: ProductLaunchTarget, options?: ProductLaunchOptions) => void;
-  /** Explore · Dialog → ILE learning (fallback if onLaunchIntent omitted). */
+  /** Explore → ILE learning (fallback if onLaunchIntent omitted). */
   onStartIle?: () => void;
-  /** Explore · Solo → ILE project */
+  /** @deprecated New launches never use ILE project. Kept so stored tokens still compile. */
   onStartIleProject?: () => void;
-  /** Drill · Dialog → TAP conversational */
+  /** Drill → TAP conversational */
   onStartEval?: (event: React.MouseEvent, minutes?: number) => void;
-  /** Drill · Solo → TAP exercise */
+  /** @deprecated New launches never use TAP exercise. Kept so stored tokens still compile. */
   onStartExercise?: (event: React.MouseEvent, minutes?: number) => void;
   /**
    * When false, hide Drill (TAP) options / duration control.
@@ -63,8 +63,8 @@ type BlockDetailCardProps = {
    */
   allowTimed?: boolean;
   /**
-   * Author limits on Explore/Drill × Dialog/Solo + durations.
-   * When set, further constrains which styles/modalities/durations appear.
+   * Author limits on Explore/Drill + durations.
+   * When set, further constrains which styles/durations appear.
    */
   practiceOptions?: BlockPracticeOptions | null;
   forkCallout?: ReactNode;
@@ -116,48 +116,6 @@ function DrillIcon({ className = "h-5 w-5" }: { className?: string }) {
       <circle cx="12" cy="12" r="8" />
       <circle cx="12" cy="12" r="4" />
       <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function WithAiIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      data-modality-icon="dialog"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      aria-hidden
-    >
-      {/* Speech bubbles — dialog with AI */}
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M7 8h6m-6 3h4m-5 7l2-2h7a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v7a2 2 0 002 2h1l2 2z"
-      />
-    </svg>
-  );
-}
-
-function SoloIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      data-modality-icon="solo"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      aria-hidden
-    >
-      {/* Pencil — solo exercise */}
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15.232 5.232l3.536 3.536M4 20h4.5L19.5 9 15 4.5 4 15.5V20z"
-      />
     </svg>
   );
 }
@@ -255,8 +213,6 @@ export function BlockDetailCard({
     [practiceLimits],
   );
   const [style, setStyle] = useState<LearningStyle>(defaults.style);
-  /** Second axis: solo exercise (true) vs LLM dialog (false). */
-  const [solo, setSolo] = useState(defaults.solo);
   const [durationMinutes, setDurationMinutes] = useState<number>(
     defaults.durationMinutes,
   );
@@ -266,44 +222,32 @@ export function BlockDetailCard({
   // Re-seed when author limits change (e.g. after Edit save).
   useEffect(() => {
     setStyle(defaults.style);
-    setSolo(defaults.solo);
     setDurationMinutes(defaults.durationMinutes);
-  }, [defaults.style, defaults.solo, defaults.durationMinutes]);
+  }, [defaults.style, defaults.durationMinutes]);
 
   const allowedDurations = useMemo(() => {
     const list = blockAllowedDurations(practiceLimits);
     return list.length > 0 ? list : [...DURATIONS];
   }, [practiceLimits]);
 
-  const dialogAllowed = practiceLimits.allowDialog;
-  const soloAllowed = practiceLimits.allowSolo;
   // Drill family may be disabled entirely via allowTimed legacy prop (hide TAP).
   const drillFamilyAllowed = allowTimed && practiceLimits.allowDrill;
-  // If only one modality is allowed, force it.
-  const effectiveSolo =
-    soloAllowed && dialogAllowed
-      ? solo
-      : soloAllowed
-        ? true
-        : false;
 
   const resolvedTarget = useMemo(
-    () => resolveLaunchFromStyleAndModality(style, effectiveSolo),
-    [style, effectiveSolo],
+    () => resolveLaunchFromStyleAndModality(style, false),
+    [style],
   );
 
   const canLaunchStyle = (s: LearningStyle) => {
     if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
     if (s === "drill" && !drillFamilyAllowed) return false;
-    if (!blockAllowsLaunchTarget(practiceLimits, s, effectiveSolo)) {
+    if (!blockAllowsLaunchTarget(practiceLimits, s, false)) {
       return false;
     }
-    const target = resolveLaunchFromStyleAndModality(s, effectiveSolo);
+    const target = resolveLaunchFromStyleAndModality(s, false);
     if (onLaunchIntent) return true;
     if (target.id === "explore_dialog") return Boolean(onStartIle);
-    if (target.id === "explore_solo") return Boolean(onStartIleProject);
     if (target.id === "drill_dialog") return Boolean(onStartEval);
-    if (target.id === "drill_solo") return Boolean(onStartExercise);
     return false;
   };
 
@@ -322,16 +266,8 @@ export function BlockDetailCard({
       onStartIle?.();
       return;
     }
-    if (target.id === "explore_solo") {
-      onStartIleProject?.();
-      return;
-    }
     if (target.id === "drill_dialog") {
       onStartEval?.(event as React.MouseEvent, minutes);
-      return;
-    }
-    if (target.id === "drill_solo") {
-      onStartExercise?.(event as React.MouseEvent, minutes);
     }
   };
 
@@ -357,7 +293,7 @@ export function BlockDetailCard({
   );
 
   const actionButtons = showActions ? (
-    <div data-product-intent="workspace-start" data-product-intent-ui="style-modality">
+    <div data-product-intent="workspace-start" data-product-intent-ui="style">
       <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
         {PRODUCT_INTENT_LABELS.chooseStyle}
       </p>
@@ -390,7 +326,7 @@ export function BlockDetailCard({
           })
           .map(({ id, label, Icon }) => {
           const selected = style === id;
-          const target = resolveLaunchFromStyleAndModality(id, effectiveSolo);
+          const target = resolveLaunchFromStyleAndModality(id, false);
           return (
             <button
               key={id}
@@ -415,69 +351,6 @@ export function BlockDetailCard({
           );
         })}
       </div>
-
-      {dialogAllowed || soloAllowed ? (
-        <div className="mt-3" data-modality-control data-timebox-control>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-            {PRODUCT_INTENT_LABELS.chooseModality}
-          </p>
-          <div
-            className="grid grid-cols-2 gap-2"
-            data-product-intent-modality-grid
-            data-modality-toggle
-            data-timebox-toggle
-            data-timebox-on={effectiveSolo ? "true" : "false"}
-            data-modality={effectiveSolo ? "solo" : "dialog"}
-            role="group"
-            aria-label={PRODUCT_INTENT_LABELS.chooseModality}
-          >
-            {(
-              [
-                {
-                  id: "dialog" as const,
-                  solo: false,
-                  label: PRODUCT_INTENT_LABELS.modalityDialog,
-                  Icon: WithAiIcon,
-                },
-                {
-                  id: "solo" as const,
-                  solo: true,
-                  label: PRODUCT_INTENT_LABELS.modalitySolo,
-                  Icon: SoloIcon,
-                },
-              ] as const
-            )
-              .filter(({ solo: isSolo }) =>
-                isSolo ? soloAllowed : dialogAllowed,
-              )
-              .map(({ id, solo: isSolo, label, Icon }) => {
-                const selected = effectiveSolo === isSolo;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    data-modality-option={id}
-                    data-modality-select
-                    data-modality={id}
-                    aria-pressed={selected}
-                    disabled={isStarting || isLocked}
-                    onClick={() => setSolo(isSolo)}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-none border-2 px-3 text-left transition disabled:opacity-40 ${
-                      selected
-                        ? "border-white/55 bg-white/10 text-white"
-                        : "border-white/25 bg-transparent text-white hover:border-white/45 hover:bg-white/5"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 shrink-0 opacity-90" />
-                    <span className="text-xs font-semibold tracking-tight">
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-      ) : null}
 
       {/* Duration only for Drill (TAP) launches */}
       {style === "drill" && drillFamilyAllowed ? (

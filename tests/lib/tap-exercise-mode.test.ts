@@ -350,15 +350,13 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(panel).toContain("productIntent");
   });
 
-  it("block detail exposes Explore/Drill × Dialog/Solo intent tools", () => {
+  it("block detail exposes Explore/Drill intent tools (always With AI)", () => {
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("onStartExercise");
-    expect(card).toContain("onStartIleProject");
     expect(card).toContain("product-intent");
     expect(card).toContain("explore_dialog");
-    expect(card).toContain("explore_solo");
     expect(card).toContain("drill_dialog");
-    expect(card).toContain("drill_solo");
+    expect(card).not.toContain("explore_solo");
+    expect(card).not.toContain("drill_solo");
     expect(card).toContain("onLaunchIntent");
     expect(card).toContain("data-launch-start");
     expect(card).toContain("data-launch-duration-picker");
@@ -366,9 +364,8 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
 
     const item = read("components/SessionItem.tsx");
     expect(item).toContain("handleStartTimed");
-    expect(item).toMatch(/interactionKind.*exercise|"exercise"/);
     expect(item).toContain("onLaunchIntent");
-    expect(item).toContain('handleStart("project")');
+    expect(item).toContain('handleStart("learning")');
     expect(item).toContain("session_mode: ileMode");
     expect(item).toContain('params.set("minutes"');
   });

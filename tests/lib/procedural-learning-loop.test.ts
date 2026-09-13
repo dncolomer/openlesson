@@ -36,9 +36,10 @@ import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simul
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1a28af023b24/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-871793e0b32f/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -51,13 +52,13 @@ function writeLog(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", () => {
-  it("four style×modality combos resolve correctly", () => {
+describe("product-intent surfaces (Explore/Drill always With AI)", () => {
+  it("style×modality combos collapse onto With AI launches", () => {
     const cases: Array<[string, string, "ile" | "tap", string]> = [
       ["explore", "dialog", "ile", "learning"],
-      ["explore", "solo", "ile", "project"],
+      ["explore", "solo", "ile", "learning"],
       ["drill", "dialog", "tap", "conversational"],
-      ["drill", "solo", "tap", "exercise"],
+      ["drill", "solo", "tap", "conversational"],
     ];
     const lines: string[] = [];
     for (const [style, modality, product, mode] of cases) {
@@ -71,6 +72,7 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
     expect(resolveProductIntent("drill", "dialog").product).toBe("tap");
     expect(resolveProductIntent("explore", "solo").product).toBe("ile");
     writeLog("product-intent-remap.log", lines.join("\n") + "\n");
+    writeLog("product-intent-no-solo.log", lines.join("\n") + "\n");
   });
 
   it("reverse inference from guest-link technical fields", () => {
@@ -95,20 +97,20 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
   it("create fields + legacy id canonicalization", () => {
     expect(
       productIntentToCreateFields(resolveProductIntent("drill", "solo")),
-    ).toMatchObject({ linkKind: "tap", exercise: true });
+    ).toMatchObject({ linkKind: "tap", exercise: false });
     expect(
       productIntentToCreateFields(resolveProductIntent("explore", "dialog")),
     ).toMatchObject({ linkKind: "ile", session_mode: "learning" });
     expect(canonicalizeProductIntentId("open_ended_explore")).toBe(
       "explore_dialog",
     );
-    expect(canonicalizeProductIntentId("timed_drill")).toBe("drill_solo");
+    expect(canonicalizeProductIntentId("timed_drill")).toBe("drill_dialog");
   });
 
   it("surfaces do not present Open-ended/Timed as second product axis", () => {
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("modalityDialog");
-    expect(card).toContain("modalitySolo");
+    expect(card).not.toContain("modalityDialog");
+    expect(card).not.toContain("modalitySolo");
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).not.toContain("Timebox");
     expect(card).not.toContain("Open-ended session (no clock)");
@@ -116,7 +118,8 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
 
     const guest = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(guest).toContain("explore_dialog");
-    expect(guest).toContain("drill_solo");
+    expect(guest).toContain("drill_dialog");
+    expect(guest).not.toContain("drill_solo");
     expect(guest).not.toContain("Open-ended Exploration");
     expect(guest).not.toContain("Timed Exploration");
 
@@ -129,8 +132,8 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
     expect(landing).not.toMatch(/Open-ended sessions require a block/);
 
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
-    expect(edit).toContain("With AI");
-    expect(edit).toContain("Solo");
+    expect(edit).not.toContain("With AI");
+    expect(edit).not.toContain(">Solo<");
     expect(edit).toContain("allowExplore");
     expect(edit).toContain("allowDrill");
     // Must not restate Explore-always-dialog / Drill-always-timed contradiction
@@ -139,21 +142,24 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
 
     // SessionItem learner launch: Drill, not Timed
     const sessionItem = read("components/SessionItem.tsx");
-    expect(sessionItem).toContain("Start Drill · Dialog");
+    expect(sessionItem).toContain("Start Drill");
     expect(sessionItem).toContain("data-session-item-drill-dialog");
     expect(sessionItem).not.toContain("Start Timed Exploration");
     expect(sessionItem).not.toMatch(/>\s*Timed\s*</);
 
-    // Map practice badges: With AI / Solo, not Open-ended / Timed
+    // Map practice badges: Explore / Drill only
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
-    expect(badges).toContain('? "With AI"');
-    expect(badges).toContain(': "Solo"');
+    expect(badges).toContain('"Explore"');
+    expect(badges).toContain('"Drill"');
+    expect(badges).not.toContain('? "With AI"');
+    expect(badges).not.toContain(': "Solo"');
     expect(badges).not.toContain('? "Open-ended"');
     expect(badges).not.toContain(': "Timed"');
 
     // Guest-link settings shell
     const integration = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(integration).toMatch(/With AI or\s*Solo/);
+    expect(integration).toMatch(/Explore or Drill/);
+    expect(integration).not.toMatch(/With AI or\s*Solo/);
     expect(integration).not.toMatch(/open-ended or timed/i);
 
     // i18n product-axis keys for guest links / portal
@@ -171,15 +177,14 @@ describe("product-intent surfaces (Dialog/Solo, Drill→TAP, Explore→ILE)", ()
     writeLog(
       "product-intent-surfaces.log",
       [
-        "BlockDetailCard: modalityDialog+modalitySolo",
-        "GuestLinks: explore_dialog+drill_solo",
+        "BlockDetailCard: Explore/Drill only",
+        "GuestLinks: explore_dialog+drill_dialog",
         "KnowledgePortal: explore_dialog+drill_dialog",
         "PracticePortalLanding: Explore sessions require a block",
-        "BlockEdit: With AI + Solo (Explore→ILE Drill→TAP)",
-        "SessionItem: Start Drill · Dialog (not Timed)",
-        "BlockSkillGrid badges: With AI / Solo",
-        "IntegrationPanel: Explore/Drill × With AI/Solo",
-        "BlockDetailCard modality: two buttons (With AI / Solo)",
+        "BlockEdit: Explore + Drill (always With AI)",
+        "SessionItem: Start Drill (not Timed)",
+        "BlockSkillGrid badges: Explore / Drill",
+        "IntegrationPanel: Explore or Drill",
         "en.json: tapLinksExerciseMode/ileLinksProjectMode remapped",
       ].join("\n") + "\n",
     );

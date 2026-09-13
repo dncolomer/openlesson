@@ -24,6 +24,7 @@ import {
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
   ileWorkCanvasEmptyNearbyOrigin,
+  ileWorkCanvasHasLiveElements,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasSceneToViewport,
   ileWorkCanvasZoomValue,
@@ -137,6 +138,8 @@ interface ExcalidrawCanvasProps {
   /** When nonce changes, merge these elements onto the live board via updateScene. */
   applyElements?: readonly unknown[] | null;
   applyElementsNonce?: string | number | null;
+  /** Ids to drop before merging applyElements (loading-placeholder replace). */
+  applyRemoveElementIds?: readonly string[] | null;
   onExcalidrawTool?: (input: { activeTool?: string | null; elementType?: string | null }) => void;
   onAskSelected?: (input: {
     prompt: string;
@@ -146,6 +149,8 @@ interface ExcalidrawCanvasProps {
   /** Shared board id so session Work and PiP act as two collaborators. */
   boardId?: string | null;
   peerId?: IleWorkCanvasPeerId;
+  /** Helios/XAI in-flight (TAP wait, ILE send) — same overlay chip as ask-about-selection. */
+  heliosBusy?: boolean;
 }
 
 // Excalidraw's appState contains runtime-only fields like collaborators
@@ -185,10 +190,12 @@ export function ExcalidrawCanvas({
   submitLabel,
   applyElements = null,
   applyElementsNonce = null,
+  applyRemoveElementIds = null,
   onExcalidrawTool,
   onAskSelected,
   boardId = null,
   peerId = "work",
+  heliosBusy = false,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
@@ -232,6 +239,11 @@ export function ExcalidrawCanvas({
   const onSceneChangeRef = useRef(onSceneChange);
   const onExcalidrawToolRef = useRef(onExcalidrawTool);
   const lastApplyNonceRef = useRef<string | number | null>(null);
+  const pendingApplyRef = useRef<{
+    nonce: string | number;
+    elements: readonly unknown[];
+    removeIds: readonly string[];
+  } | null>(null);
   const exportTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
@@ -242,9 +254,47 @@ export function ExcalidrawCanvas({
   const sceneFingerprintRef = useRef("");
   const remoteNonceRef = useRef(0);
   const [collaborating, setCollaborating] = useState(false);
+  const flushPendingApply = useCallback(() => {
+    const api = excalidrawAPIRef.current;
+    const pending = pendingApplyRef.current;
+    if (!api) return;
+    const initial = initialSceneDataRef.current;
+    const live = (api.getSceneElements?.() ?? []) as { id?: string; isDeleted?: boolean }[];
+    const liveCount = live.filter((el) => !el.isDeleted).length;
+    if (liveCount === 0 && ileWorkCanvasHasLiveElements(initial as IleWorkCanvasScene)) {
+      applyingRemoteRef.current = true;
+      try {
+        api.updateScene({ elements: initial.elements });
+      } finally {
+        applyingRemoteRef.current = false;
+      }
+    }
+    if (!pending || pending.nonce === lastApplyNonceRef.current) {
+      pendingApplyRef.current = null;
+      return;
+    }
+    lastApplyNonceRef.current = pending.nonce;
+    pendingApplyRef.current = null;
+    const incoming = (pending.elements ?? []) as any[];
+    const removeIds = new Set(pending.removeIds ?? []);
+    const existing = (api.getSceneElements?.() ?? []).filter(
+      (el: { id?: string }) => !el?.id || !removeIds.has(el.id),
+    );
+    const existingIds = new Set(existing.map((el: { id?: string }) => el.id));
+    const toAdd = incoming.filter((el) => el && typeof el === "object" && !existingIds.has(el.id));
+    if (!toAdd.length && !removeIds.size) return;
+    applyingRemoteRef.current = true;
+    try {
+      api.updateScene({ elements: [...existing, ...toAdd] });
+    } finally {
+      applyingRemoteRef.current = false;
+    }
+  }, []);
+
   const setExcalidrawAPI = useCallback((api: ExcalidrawAPIRef) => {
     excalidrawAPIRef.current = api;
-  }, []);
+    flushPendingApply();
+  }, [flushPendingApply]);
 
   useEffect(() => {
     onSceneChangeRef.current = onSceneChange;
@@ -331,8 +381,10 @@ export function ExcalidrawCanvas({
     learnMoreUiRef.current = learnMoreUi;
   }, [learnMoreUi]);
 
+  const showHeliosThinking = askBusy || heliosBusy;
+
   useEffect(() => {
-    if (!askBusy) {
+    if (!showHeliosThinking) {
       setThinkingTick(0);
       return;
     }
@@ -340,7 +392,29 @@ export function ExcalidrawCanvas({
       setThinkingTick((n) => n + 1);
     }, ILE_HELIOS_THINKING_ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [askBusy]);
+  }, [showHeliosThinking]);
+
+  useEffect(() => {
+    if (askBusy) return;
+    if (!heliosBusy) {
+      thinkingSceneRef.current = null;
+      setThinkingOrigin(null);
+      return;
+    }
+    const api = excalidrawAPIRef.current;
+    const elements = (api?.getSceneElements?.() ?? sceneDataRef.current?.elements ?? []) as IleWorkCanvasElement[];
+    const origin = ileWorkCanvasEmptyNearbyOrigin({ elements });
+    const appState = api?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
+    const vp = ileWorkCanvasSceneToViewport(origin, appState);
+    thinkingSceneRef.current = origin;
+    setThinkingOrigin({
+      x: origin.x,
+      y: origin.y,
+      left: Math.round(vp.x),
+      top: Math.round(vp.y),
+      zoom: ileWorkCanvasZoomValue(appState),
+    });
+  }, [heliosBusy, askBusy, isLoaded]);
 
   const syncThinkingOverlay = useCallback((appState: any) => {
     const scene = thinkingSceneRef.current;
@@ -535,16 +609,19 @@ export function ExcalidrawCanvas({
 
   useEffect(() => {
     if (applyElementsNonce == null || applyElementsNonce === lastApplyNonceRef.current) return;
-    const api = excalidrawAPIRef.current;
-    if (!api || !applyElements?.length) return;
-    lastApplyNonceRef.current = applyElementsNonce;
-    const incoming = applyElements as any[];
-    const existing = api.getSceneElements?.() ?? [];
-    const existingIds = new Set(existing.map((el: { id?: string }) => el.id));
-    const toAdd = incoming.filter((el) => el && typeof el === "object" && !existingIds.has(el.id));
-    if (!toAdd.length) return;
-    api.updateScene({ elements: [...existing, ...toAdd] });
-  }, [applyElements, applyElementsNonce, isLoaded]);
+    pendingApplyRef.current = {
+      nonce: applyElementsNonce,
+      elements: applyElements ?? [],
+      removeIds: applyRemoveElementIds ?? [],
+    };
+    flushPendingApply();
+  }, [applyElements, applyElementsNonce, applyRemoveElementIds, isLoaded, flushPendingApply]);
+
+  useEffect(() => {
+    if (!ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)) return;
+    initialSceneDataRef.current = sanitizeSceneData(initialSceneData);
+    flushPendingApply();
+  }, [initialSceneData, flushPendingApply]);
 
   /**
    * Export current scene to PNG data URL
@@ -817,7 +894,7 @@ export function ExcalidrawCanvas({
             />
           </IleExcalidrawErrorBoundary>
         )}
-        {askBusy && thinkingOrigin ? (
+        {showHeliosThinking && thinkingOrigin ? (
           <div
             ref={thinkingHostRef}
             data-ile-canvas-thinking

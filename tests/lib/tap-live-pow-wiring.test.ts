@@ -66,14 +66,16 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(flow).toContain('action: isResend ? "resend" : "send"');
 
     const live = readTapScoreSurface();
+    const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(live).not.toContain("ExerciseStashHistory");
     expect(live).toContain("ImDoneAnsweringControl");
     expect(live).toContain("sendThought");
     expect(live).toContain("ThoughtMemoryPanel");
     expect(live).toContain("stashCurrentTranscription");
     expect(live).toContain("sendCurrentTranscription");
-    expect(live).toContain("TapSessionMap");
-    expect(live).toContain("TapTurnOverlay");
+    expect(live).toContain("ExcalidrawCanvas");
+    expect(phases).toContain("data-tap-convo-work-canvas-pane");
+    expect(phases).not.toContain("TapSessionMap");
 
     const exercise = readExerciseTapSurface();
     expect(exercise).toContain("tapTracePayload");

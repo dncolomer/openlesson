@@ -59,7 +59,7 @@ describe("Explore|Drill × Dialog/Solo → four launch targets", () => {
     expect(resolveLaunchFromStyleAndModality("explore", false).id).toBe(
       "explore_dialog",
     );
-    expect(resolveLaunchFromStyleAndModality("drill", true).id).toBe("drill_solo");
+    expect(resolveLaunchFromStyleAndModality("drill", true).id).toBe("drill_dialog");
 
     writeEvidence(
       "launch-intent-timebox.log",
@@ -87,19 +87,16 @@ describe("desktop layout + block detail chrome", () => {
     expect(aycl).toContain("WorkspaceView");
   });
 
-  it("BlockDetailCard is Explore/Drill + Dialog/Solo; no ? help", () => {
+  it("BlockDetailCard is Explore/Drill only; no ? help", () => {
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "drill"');
-    expect(card).toContain("data-modality-control");
-    expect(card).toContain("data-modality-toggle");
-    expect(card).toContain("data-modality-option");
-    expect(card).toContain("data-product-intent-modality-grid");
-    // Legacy timebox hooks kept as aliases for structural continuity
-    expect(card).toContain("data-timebox-control");
-    expect(card).toContain("data-timebox-toggle");
+    expect(card).not.toContain("data-modality-control");
+    expect(card).not.toContain("data-modality-toggle");
+    expect(card).not.toContain("data-modality-option");
+    expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).toContain('data-style-icon="explore"');
     expect(card).toContain('data-style-icon="drill"');
     // Style is select-only; Start + duration live on the card

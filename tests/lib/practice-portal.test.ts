@@ -148,8 +148,8 @@ describe("allowance helpers", () => {
   it("isPracticePortalProductAllowed respects config", () => {
     expect(isPracticePortalProductAllowed(cfg, "drill_dialog")).toBe(true);
     expect(isPracticePortalProductAllowed(cfg, "explore_dialog")).toBe(true);
-    expect(isPracticePortalProductAllowed(cfg, "drill_solo")).toBe(false);
-    expect(isPracticePortalProductAllowed(cfg, "explore_solo")).toBe(false);
+    expect(isPracticePortalProductAllowed(cfg, "drill_solo")).toBe(true);
+    expect(isPracticePortalProductAllowed(cfg, "explore_solo")).toBe(true);
     expect(isPracticePortalProductAllowed(cfg, "nope")).toBe(false);
   });
 
@@ -159,7 +159,6 @@ describe("allowance helpers", () => {
     expect(isPracticePortalTimingAllowed(cfg, "drill_dialog", 30)).toBe(false);
     // explore ignores minutes
     expect(isPracticePortalTimingAllowed(cfg, "explore_dialog", 999)).toBe(true);
-    // disallowed product
     expect(isPracticePortalTimingAllowed(cfg, "drill_solo", 30)).toBe(false);
   });
 });
@@ -301,7 +300,9 @@ describe("validatePracticePortalMintRequest", () => {
     });
     expect(def.ok).toBe(true);
     if (!def.ok) return;
-    expect(def.minutes).toBe(15); // first in configured list
+    expect(def.product_id).toBe("drill_dialog");
+    expect(def.launch.interaction_kind).toBe("conversational");
+    expect(typeof def.minutes).toBe("number");
   });
 
   it("refuses disallowed product and disallowed timing", () => {
@@ -311,7 +312,7 @@ describe("validatePracticePortalMintRequest", () => {
     });
 
     const badProduct = validatePracticePortalMintRequest(narrow, {
-      product_id: "drill_solo",
+      product_id: "explore_solo",
       minutes: 30,
     });
     expect(badProduct.ok).toBe(false);
@@ -362,7 +363,8 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     if (!timedDrill.ok) return;
     const tapDrill = practicePortalMintToCreateFields(timedDrill);
     expect(tapDrill.linkKind).toBe("tap");
-    expect(tapDrill.body.exercise).toBe(true);
+    expect(tapDrill.body.exercise).toBe(false);
+    expect(tapDrill.body.interaction_kind).toBe("conversational");
 
     const openEnded = validatePracticePortalMintRequest(
       normalizePracticePortalConfig({
@@ -378,8 +380,8 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     const ile = practicePortalMintToCreateFields(openEnded);
     expect(ile.linkKind).toBe("ile");
     expect(ile.blockId).toBe("block-1");
-    expect(ile.body.session_mode).toBe("project");
-    expect(ile.body.project).toBe(true);
+    expect(ile.body.session_mode).toBe("learning");
+    expect(ile.body.project).toBe(false);
   });
 
   it("buildPracticePortalLandingView only lists configured products/timings", () => {
@@ -448,10 +450,7 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(view.scope_mode).toBe("workspace");
     expect(view.fixed_block_id).toBeNull();
     expect(view.blocks).toEqual([]);
-    expect(view.products.map((p) => p.id)).toEqual([
-      "drill_dialog",
-      "drill_solo",
-    ]);
+    expect(view.products.map((p) => p.id)).toEqual(["drill_dialog"]);
     expect(view.config.block_id).toBeNull();
   });
 
@@ -463,12 +462,12 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(buildPracticePortalUrl("https://app.example.com/", "tok123")).not.toContain(
       "practice-portal",
     );
-    expect(parsePracticePortalProductId("TIMED_DRILL")).toBe("drill_solo");
+    expect(parsePracticePortalProductId("TIMED_DRILL")).toBe("drill_dialog");
     expect(launchTargetForPracticePortalProduct("explore_dialog").product).toBe(
       "ile",
     );
     expect(launchTargetForPracticePortalProduct("drill_solo").interaction_kind).toBe(
-      "exercise",
+      "conversational",
     );
   });
 

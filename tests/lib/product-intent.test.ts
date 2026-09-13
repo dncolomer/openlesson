@@ -1,6 +1,6 @@
 /**
- * Product intent: Explore/Drill × Dialog/Solo → technical ILE/TAP launch.
- * Drill always TAP; Explore always ILE.
+ * Product intent: Explore/Drill → technical ILE/TAP launch (always With AI).
+ * Drill always TAP conversational; Explore always ILE learning.
  * Drives shipped resolve helpers — no re-implementation of the matrix.
  */
 import { describe, expect, it } from "vitest";
@@ -21,9 +21,10 @@ import {
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1a28af023b24/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-871793e0b32f/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -36,8 +37,8 @@ function writeLog(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("resolveProductIntent four combinations (Dialog/Solo axes)", () => {
-  it("explore + dialog → ILE learning", () => {
+describe("resolveProductIntent new launches are always With AI", () => {
+  it("explore + any second axis → ILE learning", () => {
     const t = resolveProductIntent("explore", "dialog");
     expect(t).toEqual({
       id: "explore_dialog",
@@ -45,30 +46,19 @@ describe("resolveProductIntent four combinations (Dialog/Solo axes)", () => {
       session_mode: "learning",
     });
     expect(productIntentClusterLabel(t)).toBe(PRODUCT_INTENT_LABELS.exploreDialog);
+    expect(resolveProductIntent("explore", "solo")).toEqual(t);
+    expect(resolveProductIntent("explore", "project")).toEqual(t);
+    expect(resolveProductIntent("explore", "exercise")).toEqual(t);
   });
 
-  it("explore + solo → ILE project", () => {
-    const t = resolveProductIntent("explore", "solo");
-    expect(t.product).toBe("ile");
-    expect(t.session_mode).toBe("project");
-    expect(t.id).toBe("explore_solo");
-    expect(productIntentClusterLabel(t)).toBe(PRODUCT_INTENT_LABELS.exploreSolo);
-  });
-
-  it("drill + dialog → TAP conversational", () => {
+  it("drill + any second axis → TAP conversational", () => {
     const t = resolveProductIntent("drill", "dialog");
     expect(t.product).toBe("tap");
     expect(t.interaction_kind).toBe("conversational");
     expect(t.id).toBe("drill_dialog");
     expect(productIntentClusterLabel(t)).toBe(PRODUCT_INTENT_LABELS.drillDialog);
-  });
-
-  it("drill + solo → TAP exercise", () => {
-    const t = resolveProductIntent("drill", "solo");
-    expect(t.product).toBe("tap");
-    expect(t.interaction_kind).toBe("exercise");
-    expect(t.id).toBe("drill_solo");
-    expect(productIntentClusterLabel(t)).toBe(PRODUCT_INTENT_LABELS.drillSolo);
+    expect(resolveProductIntent("drill", "solo")).toEqual(t);
+    expect(resolveProductIntent("drill", "exercise")).toEqual(t);
   });
 
   it("Drill never launches ILE; Explore never launches TAP", () => {
@@ -78,12 +68,11 @@ describe("resolveProductIntent four combinations (Dialog/Solo axes)", () => {
     }
   });
 
-  it("accepts legacy open_ended/timed second-arg tokens", () => {
-    // open_ended → dialog; timed → solo under the new axes
+  it("accepts legacy open_ended/timed second-arg tokens without a distinct target", () => {
     expect(resolveProductIntent("explore", "open_ended").id).toBe("explore_dialog");
-    expect(resolveProductIntent("explore", "timed").id).toBe("explore_solo");
+    expect(resolveProductIntent("explore", "timed").id).toBe("explore_dialog");
     expect(resolveProductIntent("drill", "open_ended").id).toBe("drill_dialog");
-    expect(resolveProductIntent("drill", "timed").id).toBe("drill_solo");
+    expect(resolveProductIntent("drill", "timed").id).toBe("drill_dialog");
   });
 
   it("defaults invalid/missing to explore dialog", () => {
@@ -112,13 +101,13 @@ describe("productIntentFromGuestLink / create fields / id migration", () => {
   it("maps create fields for APIs", () => {
     expect(productIntentToCreateFields(resolveProductIntent("explore", "solo"))).toEqual({
       linkKind: "ile",
-      session_mode: "project",
-      project: true,
+      session_mode: "learning",
+      project: false,
     });
     expect(productIntentToCreateFields(resolveProductIntent("drill", "solo"))).toEqual({
       linkKind: "tap",
-      interaction_kind: "exercise",
-      exercise: true,
+      interaction_kind: "conversational",
+      exercise: false,
     });
     expect(productIntentToCreateFields(resolveProductIntent("drill", "dialog"))).toEqual({
       linkKind: "tap",
@@ -127,46 +116,40 @@ describe("productIntentFromGuestLink / create fields / id migration", () => {
     });
   });
 
-  it("canonicalizes legacy product ids", () => {
+  it("canonicalizes legacy product ids onto With AI launches", () => {
     expect(canonicalizeProductIntentId("open_ended_explore")).toBe("explore_dialog");
-    expect(canonicalizeProductIntentId("open_ended_drill")).toBe("explore_solo");
+    expect(canonicalizeProductIntentId("open_ended_drill")).toBe("explore_dialog");
     expect(canonicalizeProductIntentId("timed_explore")).toBe("drill_dialog");
-    expect(canonicalizeProductIntentId("timed_drill")).toBe("drill_solo");
+    expect(canonicalizeProductIntentId("timed_drill")).toBe("drill_dialog");
     expect(resolveProductIntentFromId("open_ended_explore").product).toBe("ile");
     expect(resolveProductIntentFromId("timed_drill").product).toBe("tap");
+    expect(resolveProductIntentFromId("timed_drill").interaction_kind).toBe("conversational");
   });
 
-  it("exposes all four targets", () => {
-    expect(allProductLaunchTargets()).toHaveLength(4);
+  it("exposes Explore + Drill new-launch targets", () => {
+    expect(allProductLaunchTargets()).toHaveLength(2);
     const ids = allProductLaunchTargets().map((t) => t.id);
-    expect(ids).toEqual([
-      "explore_dialog",
-      "explore_solo",
-      "drill_dialog",
-      "drill_solo",
-    ]);
+    expect(ids).toEqual(["explore_dialog", "drill_dialog"]);
   });
 });
 
-describe("structural: workspace + settings use Dialog/Solo axes", () => {
-  it("BlockDetailCard uses Explore/Drill + Dialog/Solo, not ILE/TAP CTAs", () => {
+describe("structural: workspace + settings have no With AI vs Solo choice", () => {
+  it("BlockDetailCard uses Explore/Drill only, not ILE/TAP CTAs or modality toggles", () => {
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("product-intent");
     expect(card).toContain("resolveLaunchFromStyleAndModality");
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "drill"');
-    expect(card).toContain("data-modality-toggle");
-    expect(card).toContain("data-modality-option");
-    expect(card).toContain("data-product-intent-modality-grid");
+    expect(card).not.toContain("data-modality-toggle");
+    expect(card).not.toContain("data-modality-option");
+    expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).toContain("data-style-select");
     expect(card).toContain("data-launch-start");
     expect(card).toContain("data-launch-duration-picker");
     expect(card).toContain("onClick={() => setStyle(id)}");
-    // Second axis: With AI / Solo buttons (not Open-ended/Timed switch)
-    expect(card).toContain("modalityDialog");
-    expect(card).toContain("modalitySolo");
-    expect(card).toContain("data-modality-option={id}");
+    expect(card).not.toContain("modalityDialog");
+    expect(card).not.toContain("modalitySolo");
     expect(card).not.toMatch(/ILE · Learning Mode|ILE · Project Mode|Exercise TAP|Think Aloud Protocol/);
     expect(card).not.toContain('data-block-tool="ile-learning"');
     expect(card).not.toContain('data-block-tool="tap-exercise"');
@@ -216,20 +199,25 @@ describe("structural: workspace + settings use Dialog/Solo axes", () => {
     expect(labels).not.toMatch(/\bTAP\b|\bILE\b/);
   });
 
-  it("second product axis is With AI / Solo buttons not Open-ended/Timed on authoring surfaces", () => {
+  it("authoring surfaces have no With AI vs Solo / Dialog vs Solo Exercise choice", () => {
     const card = read("components/BlockDetailCard.tsx");
-    expect(card).toContain("modalityDialog");
-    expect(card).toContain("modalitySolo");
-    expect(card).toContain("data-modality-option");
-    expect(card).toContain("data-product-intent-modality-grid");
-    // Timebox switch as the product axis is retired
+    expect(card).not.toContain("modalityDialog");
+    expect(card).not.toContain("modalitySolo");
+    expect(card).not.toContain("data-modality-option");
+    expect(card).not.toContain("data-product-intent-modality-grid");
     expect(card).not.toContain("Timebox");
     expect(card).not.toContain("Open-ended session (no clock)");
     expect(card).not.toContain('role="switch"');
 
     const edit = read("components/WorkspaceBlockEditPanel.tsx");
-    expect(edit).toContain("With AI");
-    expect(edit).toContain("Solo");
+    expect(edit).not.toContain("With AI");
+    expect(edit).not.toContain(">Solo<");
+    expect(edit).not.toContain("data-block-edit-allow-solo");
+    expect(edit).not.toContain("data-block-edit-allow-dialog");
+
+    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
+    expect(guest).not.toContain("explore_solo");
+    expect(guest).not.toContain("drill_solo");
   });
 
   it("workspace TAP route accepts minutes and locks duration in the client", () => {
@@ -250,13 +238,14 @@ describe("evidence: product-intent remap log", () => {
   it("writes resolver matrix evidence", () => {
     const lines = [
       "explore_dialog=" + JSON.stringify(resolveProductIntent("explore", "dialog")),
-      "explore_solo=" + JSON.stringify(resolveProductIntent("explore", "solo")),
+      "explore_solo_collapsed=" + JSON.stringify(resolveProductIntent("explore", "solo")),
       "drill_dialog=" + JSON.stringify(resolveProductIntent("drill", "dialog")),
-      "drill_solo=" + JSON.stringify(resolveProductIntent("drill", "solo")),
+      "drill_solo_collapsed=" + JSON.stringify(resolveProductIntent("drill", "solo")),
       "legacy_open_ended_explore=" + canonicalizeProductIntentId("open_ended_explore"),
       "legacy_timed_drill=" + canonicalizeProductIntentId("timed_drill"),
     ];
     writeLog("product-intent-remap.log", lines.join("\n") + "\n");
-    expect(existsSync(join(SCRATCH, "product-intent-remap.log"))).toBe(true);
+    writeLog("product-intent-no-solo.log", lines.join("\n") + "\n");
+    expect(existsSync(join(SCRATCH, "product-intent-no-solo.log"))).toBe(true);
   });
 });

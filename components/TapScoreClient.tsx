@@ -8,6 +8,7 @@ import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import type { IleWorkCanvasScene } from "@/lib/ile-work-canvas";
 import {
   THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
   shouldAutoStashOnContextFull,
@@ -216,17 +217,16 @@ export function TapScoreClient({
   const [userInitial, setUserInitial] = useState("Y");
   const [tapSessionId, setTapSessionId] = useState<string | null>(initialSession?.id ?? null);
   const tapSessionIdRef = useRef<string | null>(initialSession?.id ?? null);
+  const workCanvasSceneRef = useRef<IleWorkCanvasScene | null>(null);
   const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id;
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
-  /** Duration for the active live run (practice is always the warm-up length). */
   const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
   const isPracticeModeRef = useRef(false);
 
   const isEndingRef = useRef(false);
-  /** True while Helios chat is in flight — purity silence checks must not run. */
   const isSendingRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
@@ -862,7 +862,7 @@ export function TapScoreClient({
     if (patch.editingTranscription !== undefined) setEditingTranscription(patch.editingTranscription);
   }, []);
   const {
-    sendThought, sendCurrentTranscription, retryMicrophone, startSession, restartBriefingFlow, endSession,
+    sendThought, sendCanvasAsk, sendCurrentTranscription, retryMicrophone, startSession, restartBriefingFlow, endSession,
   } = useTapScoreSession({
     isSending, sentThoughtIds, messages, workspaceId, blockId, sessionId, privateToken,
     conversationLanguage, liveMinutes, minutes, startedAt, postSession, configuredRedirectUrl,
@@ -871,6 +871,7 @@ export function TapScoreClient({
     autoStashInFlightRef, speechBindings, tapThoughtSpeech, logTapTrace, bumpUserActivity,
     handlePowInterruption, clearPendingInterruption, resetIdleTracking, resetSpeechTracking,
     flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay, restartSpeechRecognitionSession,
+    workCanvasSceneRef,
     apply: applyTapSession,
   });
 
@@ -920,7 +921,6 @@ export function TapScoreClient({
     bumpUserActivity();
     setEditingTranscription({ draft: text, originalText: text });
   }
-
 
   if (isMobile) {
     return (
@@ -988,6 +988,11 @@ export function TapScoreClient({
       logTapTrace={logTapTrace}
       clearTranscriptionDisplay={clearTranscriptionDisplay}
       restartSpeechRecognitionSession={restartSpeechRecognitionSession}
+      tapSessionId={tapSessionId}
+      privateToken={privateToken}
+      entryQueryParams={entryQueryParamsRef.current}
+      workCanvasSceneRef={workCanvasSceneRef}
+      sendCanvasAsk={sendCanvasAsk}
     />
   );
 }

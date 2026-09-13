@@ -26,6 +26,8 @@ import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
+import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
+import type { IleWorkCanvasElement, IleWorkCanvasScene as TapWorkCanvasScene } from "@/lib/ile-work-canvas";
 
 /** Live TAP dialog session — data + one apply, not a setter-host bag. */
 export type TapScoreSession = {
@@ -56,6 +58,7 @@ export type TapScoreSession = {
   autoStashInFlightRef: MutableRefObject<boolean>;
   speechBindings: LiveSpeechRecognitionBindings;
   tapThoughtSpeech: { retryMicrophone: () => void; getFormingText?: () => string };
+  workCanvasSceneRef: MutableRefObject<TapWorkCanvasScene | null>;
   logTapTrace: (input: {
     traceType: TapTraceType;
     action: TapSystem1Action | TapSystem2Action;
@@ -145,6 +148,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       },
     });
     try {
+      const workCanvasScene = serializeTapWorkCanvasScene(s.workCanvasSceneRef.current);
       const response = await fetch("/api/workspace-tap-score/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,6 +164,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
           thought: clean,
           messages: nextMessages,
           conversationLanguage: s.conversationLanguage,
+          workCanvasScene,
         }),
       });
       const payload = await response.json();
@@ -172,6 +177,40 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     } finally {
       s.apply({ isSending: false });
     }
+  }
+
+  async function sendCanvasAsk(input: {
+    prompt: string;
+    selectedElements?: readonly IleWorkCanvasElement[] | null;
+    scene: TapWorkCanvasScene;
+  }): Promise<{ text: string; elements?: TapWorkCanvasScene["elements"] | null }> {
+    const s = current();
+    const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
+    const response = await fetch("/api/workspace-tap-score/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspaceId: s.workspaceId,
+        blockId: s.blockId,
+        sessionId: s.sessionId,
+        privateToken: s.privateToken,
+        entryQueryParams: s.entryQueryParamsRef.current,
+        tapSessionId: s.tapSessionIdRef.current,
+        minutes: s.liveMinutes,
+        practice: s.isPracticeModeRef.current,
+        thought: input.prompt,
+        messages: s.messages,
+        conversationLanguage: s.conversationLanguage,
+        workCanvasScene,
+        canvasAsk: true,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(errorMessageFromBody(payload, "Could not get TAP response"));
+    const content = String(payload.message || "").trim() || "No reply";
+    const parsed = parseTapXaiCanvasTurn(content);
+    s.handlePowInterruption(payload.interruption ?? null);
+    return { text: parsed.text || content, elements: parsed.elements };
   }
 
   async function sendCurrentTranscription() {
@@ -395,6 +434,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
 
   return {
     sendThought,
+    sendCanvasAsk,
     sendCurrentTranscription,
     retryMicrophone,
     startSession,

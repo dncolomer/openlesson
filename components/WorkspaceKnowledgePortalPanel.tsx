@@ -4,10 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import { useI18n } from "@/lib/i18n";
 import {
-  PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
   PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES,
-  PRACTICE_PORTAL_PRODUCT_IDS,
-  PRACTICE_PORTAL_TIMED_DRILL_OPTIONS,
   PRACTICE_PORTAL_TIMED_EXPLORE_OPTIONS,
   type PracticePortalConfig,
   type PracticePortalProductId,
@@ -35,11 +32,16 @@ interface PracticePortalRow {
   public_token?: string | null;
 }
 
+const PORTAL_CREATE_PRODUCT_IDS: PracticePortalProductId[] = [
+  "explore_dialog",
+  "drill_dialog",
+];
+
 const PRODUCT_CREATE_LABELS: Record<PracticePortalProductId, string> = {
   explore_dialog: PRODUCT_INTENT_LABELS.exploreDialog,
-  explore_solo: PRODUCT_INTENT_LABELS.exploreSolo,
+  explore_solo: PRODUCT_INTENT_LABELS.exploreDialog,
   drill_dialog: PRODUCT_INTENT_LABELS.drillDialog,
-  drill_solo: PRODUCT_INTENT_LABELS.drillSolo,
+  drill_solo: PRODUCT_INTENT_LABELS.drillDialog,
 };
 
 type PortalInnerTab = "create" | "browse";
@@ -64,14 +66,12 @@ export function WorkspaceKnowledgePortalPanel({
   const [blocks, setBlocks] = useState<WorkspaceBlock[]>([]);
   const [practicePortals, setPracticePortals] = useState<PracticePortalRow[]>([]);
   const [portalProducts, setPortalProducts] = useState<PracticePortalProductId[]>([
-    ...PRACTICE_PORTAL_PRODUCT_IDS,
+    ...PORTAL_CREATE_PRODUCT_IDS,
   ]);
   const [portalExploreMinutes, setPortalExploreMinutes] = useState<number[]>([
     ...PRACTICE_PORTAL_DEFAULT_TIMED_EXPLORE_MINUTES,
   ]);
-  const [portalDrillMinutes, setPortalDrillMinutes] = useState<number[]>([
-    ...PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES,
-  ]);
+  const [portalDrillMinutes, setPortalDrillMinutes] = useState<number[]>([]);
   const [portalLabel, setPortalLabel] = useState("");
   /** visitor_pick | fixed_block | workspace — workspace forces no block choice. */
   const [portalScopeMode, setPortalScopeMode] =
@@ -182,7 +182,7 @@ export function WorkspaceKnowledgePortalPanel({
           if (current.length <= 1) return current;
           return current.filter((p) => p !== id);
         }
-        return PRACTICE_PORTAL_PRODUCT_IDS.filter(
+        return PORTAL_CREATE_PRODUCT_IDS.filter(
           (p) => p === id || current.includes(p),
         );
       });
@@ -201,7 +201,7 @@ export function WorkspaceKnowledgePortalPanel({
         );
         return next.length > 0
           ? next
-          : (["drill_dialog", "drill_solo"] as PracticePortalProductId[]);
+          : (["drill_dialog"] as PracticePortalProductId[]);
       });
     }
     if (mode === "visitor_pick") {
@@ -240,12 +240,12 @@ export function WorkspaceKnowledgePortalPanel({
           drill_dialog: portalProducts.includes("drill_dialog")
             ? portalExploreMinutes
             : [],
-          drill_solo: portalProducts.includes("drill_solo") ? portalDrillMinutes : [],
+          drill_solo: [],
           // Legacy mirrors for older readers
           timed_explore: portalProducts.includes("drill_dialog")
             ? portalExploreMinutes
             : [],
-          timed_drill: portalProducts.includes("drill_solo") ? portalDrillMinutes : [],
+          timed_drill: [],
         },
         scope_mode: portalScopeMode,
         block_id:
@@ -511,7 +511,7 @@ export function WorkspaceKnowledgePortalPanel({
                 {t("planView.practicePortalProducts")}
               </legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {PRACTICE_PORTAL_PRODUCT_IDS.map((id) => {
+                {PORTAL_CREATE_PRODUCT_IDS.map((id) => {
                   const checked = portalProducts.includes(id);
                   const exploreDisabled =
                     portalScopeMode === "workspace" &&
@@ -565,36 +565,6 @@ export function WorkspaceKnowledgePortalPanel({
                         }`}
                         data-practice-portal-timing-explore={mins}
                         data-practice-portal-timing-drill-dialog={mins}
-                        aria-pressed={checked}
-                      >
-                        {mins} min
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            ) : null}
-
-            {portalProducts.includes("drill_solo") ? (
-              <fieldset data-practice-portal-timings-drill data-practice-portal-timings-drill-solo>
-                <legend className="text-xs text-neutral-400">
-                  {PRODUCT_INTENT_LABELS.drillSolo} durations
-                </legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {PRACTICE_PORTAL_TIMED_DRILL_OPTIONS.map((mins) => {
-                    const checked = portalDrillMinutes.includes(mins);
-                    return (
-                      <button
-                        key={mins}
-                        type="button"
-                        onClick={() => togglePortalMinutes("drill", mins)}
-                        className={`rounded-none border px-2.5 py-1.5 font-mono text-[11px] transition ${
-                          checked
-                            ? "border-white bg-white text-black"
-                            : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
-                        }`}
-                        data-practice-portal-timing-drill={mins}
-                        data-practice-portal-timing-drill-solo={mins}
                         aria-pressed={checked}
                       >
                         {mins} min

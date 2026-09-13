@@ -405,7 +405,7 @@ describe("exclusive map selection + product intent", () => {
     const explore = resolveProductIntent("explore", "dialog");
     const drill = resolveProductIntent("drill", "solo");
     expect(decodePracticeLaunchIntent("explore_dialog")).toEqual(explore);
-    expect(decodePracticeLaunchIntent("timed_drill").id).toBe("drill_solo");
+    expect(decodePracticeLaunchIntent("timed_drill").id).toBe("drill_dialog");
     expect(launchPracticeHref(explore, { workspaceId: "ws", sessionId: "s1" })).toContain(
       "/session",
     );

@@ -53,22 +53,13 @@ function productAccent(id: PracticePortalProductId): "slate" | "amber" {
 }
 
 function productEyebrow(id: PracticePortalProductId): string {
-  switch (id) {
-    case "drill_dialog":
-    case "timed_explore" as PracticePortalProductId:
-      return "LLM-powered Dialog";
-    case "drill_solo":
-    case "timed_drill" as PracticePortalProductId:
-      return "Solo Exercise";
-    case "explore_dialog":
-    case "open_ended_explore" as PracticePortalProductId:
-      return "LLM-powered Dialog";
-    case "explore_solo":
-    case "open_ended_drill" as PracticePortalProductId:
-      return "Solo Exercise";
-    default:
-      return "Practice";
+  if (id.startsWith("drill") || String(id).endsWith("_drill") || id === "timed_explore") {
+    return "Drill";
   }
+  if (id.startsWith("explore") || String(id).startsWith("open_ended")) {
+    return "Explore";
+  }
+  return "Practice";
 }
 
 const ACCENT_CLASSES: Record<

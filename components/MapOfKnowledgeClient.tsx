@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Maximize2,
   Minimize2,
-  Sparkles,
 } from "lucide-react";
 import {
   MAP_NEWSLETTER_SUBSCRIBE_NOTE,
@@ -83,23 +82,23 @@ const PLACEMENT_PRODUCTS: Record<
   }
 > = {
   timed_explore: {
-    label: "Drill with AI",
-    eyebrow: "With AI",
+    label: "Drill",
+    eyebrow: "Drill",
     shortDiff:
       "Timed practice with Helios. You still think aloud; Helios keeps the conversation going as you show what you know.",
-    mintingLabel: "Minting Drill with AI…",
-    mintLabel: "Mint Drill with AI link",
+    mintingLabel: "Minting Drill…",
+    mintLabel: "Mint Drill link",
     interaction_kind: "conversational",
     accent: "slate",
   },
   timed_drill: {
-    label: "Drill Solo Exercises",
-    eyebrow: "Solo Exercises",
+    label: "Drill",
+    eyebrow: "Drill",
     shortDiff:
-      "Timed solo work. You still think aloud as you work through and submit your solution.",
-    mintingLabel: "Minting Drill Solo Exercises…",
-    mintLabel: "Mint Drill Solo Exercises link",
-    interaction_kind: "exercise",
+      "Timed practice with Helios. You still think aloud; Helios keeps the conversation going as you show what you know.",
+    mintingLabel: "Minting Drill…",
+    mintLabel: "Mint Drill link",
+    interaction_kind: "conversational",
     accent: "amber",
   },
 };
@@ -404,8 +403,8 @@ export function MapOfKnowledgeClient() {
             block_id: selectedBlockId,
             // Technical surface is always timed TAP; product intent chooses shell.
             link_kind: "tap",
-            interaction_kind: product.interaction_kind,
-            placement_product: kind,
+            interaction_kind: "conversational",
+            placement_product: kind === "timed_drill" ? "timed_explore" : kind,
             guest_display_name: guestName,
             minutes,
           }),
@@ -1147,12 +1146,9 @@ export function MapOfKnowledgeClient() {
           Put yourself on the map
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Place yourself on the Map of Knowledge by running a short timed session on a public
-          workspace. Choose{" "}
-          <span className="text-zinc-300">Drill with AI</span> or{" "}
-          <span className="text-neutral-300/90">Drill Solo Exercises</span>.
-          In both cases you still <span className="text-zinc-300">think aloud</span> — then you
-          appear on the map after you practice.
+          Place yourself on the Map of Knowledge by running a short timed Drill session on a public
+          workspace. You still <span className="text-zinc-300">think aloud</span> with Helios — then
+          you appear on the map after you practice.
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
@@ -1246,7 +1242,7 @@ export function MapOfKnowledgeClient() {
 
           {/* Timed Exploration / Timed Drill product cards + result */}
           <div className="flex flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-1">
               {/* Timed Exploration card: duration options live inside the box so they aren't missed */}
               <div
                 className="flex flex-col rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 transition hover:border-zinc-500"
@@ -1320,74 +1316,6 @@ export function MapOfKnowledgeClient() {
                 </button>
               </div>
 
-              {/* Timed Drill card: duration options (15 / 30 / 45) inside the box */}
-              <div
-                className="flex flex-col rounded-sm border border-neutral-600/30 bg-neutral-950/20 p-4 transition hover:border-neutral-500/50"
-                data-mint-timed-drill-card
-                data-timed-drill-minutes={timedDrillMinutes}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-neutral-200 shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
-                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/70">
-                    {PLACEMENT_PRODUCTS.timed_drill.eyebrow}
-                  </span>
-                </span>
-                <span className="mt-2 text-base font-medium text-neutral-50">
-                  {PLACEMENT_PRODUCTS.timed_drill.label}
-                </span>
-                <span className="mt-1 text-xs leading-relaxed text-neutral-200/50">
-                  {PLACEMENT_PRODUCTS.timed_drill.shortDiff}
-                </span>
-
-                <div className="mt-3 w-full" data-timed-drill-duration-picker>
-                  <p
-                    className="mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300/60"
-                    id="timed-drill-duration-label"
-                  >
-                    Session length
-                  </p>
-                  <div
-                    className="inline-flex w-full rounded-sm border border-neutral-600/25 bg-black/30 p-0.5"
-                    role="group"
-                    aria-labelledby="timed-drill-duration-label"
-                    data-timed-drill-duration-options
-                  >
-                    {TIMED_DRILL_DURATION_OPTIONS.map((mins) => {
-                      const selected = timedDrillMinutes === mins;
-                      return (
-                        <button
-                          key={mins}
-                          type="button"
-                          onClick={() => setTimedDrillMinutes(mins)}
-                          disabled={minting !== null}
-                          className={`min-w-0 flex-1 rounded-sm px-2 py-1.5 font-mono text-[11px] tracking-wide transition ${
-                            selected
-                              ? "bg-neutral-800/20 text-neutral-50"
-                              : "text-neutral-200/45 hover:text-neutral-200/80"
-                          } disabled:opacity-40`}
-                          data-timed-drill-duration={mins}
-                          aria-pressed={selected}
-                        >
-                          {mins} min
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!selectedBlockId || minting !== null}
-                  onClick={() => void mintLink("timed_drill")}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-neutral-600/40 bg-neutral-950/40 px-3 py-2 text-xs font-medium text-neutral-50 transition hover:border-neutral-500/60 hover:bg-neutral-950/40 disabled:opacity-40"
-                  data-mint-timed-drill
-                >
-                  <Sparkles size={12} aria-hidden />
-                  {minting === "timed_drill"
-                    ? PLACEMENT_PRODUCTS.timed_drill.mintingLabel
-                    : `Get ${timedDrillMinutes}-minute session URL`}
-                </button>
-              </div>
             </div>
 
             {mintError && (

@@ -113,8 +113,9 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
     expect(ileFn).not.toContain("<HeliosProbeAvatar");
 
     const tap = readTapScoreSurface();
-    expect(tap).toContain("TapSessionMap");
-    expect(tap).toContain("TapTurnOverlay");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(tap).toContain("ExcalidrawCanvas");
+    expect(phases).not.toContain("TapSessionMap");
     expect(tap).not.toContain("<DialogueSplit");
 
     const comic = ui.slice(ui.indexOf("function DialogueSplitComic"), ui.indexOf("function DialogueSplitIle"));
@@ -127,7 +128,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
       [
         "SessionHeliosPanel: no See Your thoughts; Thoughts stays a tools-grid item",
         "DialogueSplitIle: resolveIleDialogueTurn, no Helios avatar",
-        "TAP live: TapSessionMap + overlay (comic helper unused on live)",
+        "TAP live: Excalidraw Work canvas (comic helper unused on live)",
         "Tools rail still has thought-history",
       ].join("\n"),
     );

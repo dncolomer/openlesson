@@ -75,17 +75,8 @@ interface OrgMember {
 
 type GuestLinksInnerTab = "create" | "browse";
 
-/** Single create surface product kind (portal-style compact selector). */
-type CreateProductKind =
-  | "drill_dialog"
-  | "drill_solo"
-  | "explore_dialog"
-  | "explore_solo"
-  /** @deprecated legacy aliases accepted during transition */
-  | "timed_explore"
-  | "timed_drill"
-  | "open_ended_explore"
-  | "open_ended_drill";
+/** Single create surface product kind. New links are always With AI. */
+type CreateProductKind = "drill_dialog" | "explore_dialog";
 
 function participantLabel(
   link: {
@@ -134,7 +125,7 @@ export function WorkspaceGuestLinksPanel({
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
-  /** Compact product selector: Explore/Drill × Dialog/Solo. */
+  /** Compact product selector: Explore / Drill (always With AI). */
   const [createProduct, setCreateProduct] =
     useState<CreateProductKind>("drill_dialog");
   /** anonymous (default) or assigned org member */
@@ -154,25 +145,15 @@ export function WorkspaceGuestLinksPanel({
   const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
   /** Drill = TAP (needs duration); Explore = ILE (needs block). */
-  const isDrillProduct =
-    createProduct === "drill_dialog" ||
-    createProduct === "drill_solo" ||
-    createProduct === "timed_explore" ||
-    createProduct === "timed_drill";
-  const isExploreProduct =
-    createProduct === "explore_dialog" ||
-    createProduct === "explore_solo" ||
-    createProduct === "open_ended_explore" ||
-    createProduct === "open_ended_drill";
+  const isDrillProduct = createProduct === "drill_dialog";
+  const isExploreProduct = createProduct === "explore_dialog";
   const isTimedProduct = isDrillProduct;
   const isOpenEndedProduct = isExploreProduct;
-  const drillModalitySolo =
-    createProduct === "drill_solo" || createProduct === "timed_drill";
-  const exploreModalitySolo =
-    createProduct === "explore_solo" || createProduct === "open_ended_drill";
-  // Back-compat data hooks for exercise / project mode markers
-  const exerciseTap = drillModalitySolo;
-  const ileProjectMode = exploreModalitySolo;
+  const drillModalitySolo = false;
+  const exploreModalitySolo = false;
+  // Back-compat data hooks — new creates never mint exercise / project.
+  const exerciseTap = false;
+  const ileProjectMode = false;
   const creatingBusy = creatingLink || creatingIleLink;
 
   const fieldClass =
@@ -273,11 +254,8 @@ export function WorkspaceGuestLinksPanel({
       setCreatingLink(true);
       setCreateError(null);
       try {
-        // Drill always → TAP. Dialog → conversational; Solo → exercise.
-        const launch = resolveProductIntent(
-          "drill",
-          drillModalitySolo ? "solo" : "dialog",
-        );
+        // Drill always → TAP conversational (With AI).
+        const launch = resolveProductIntent("drill", "dialog");
         const body: Record<string, unknown> = {
           workspaceId,
           minutes,
@@ -319,7 +297,6 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [
-      drillModalitySolo,
       loadTapResources,
       minutes,
       selectedBlockId,
@@ -436,12 +413,9 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           show_end_session: showEndSession,
           access_mode: "private",
-          // Explore always → ILE. Dialog → learning; Solo → project.
-          session_mode: resolveProductIntent(
-            "explore",
-            exploreModalitySolo ? "solo" : "dialog",
-          ).session_mode,
-          project: exploreModalitySolo,
+          // Explore always → ILE learning (With AI).
+          session_mode: resolveProductIntent("explore", "dialog").session_mode,
+          project: false,
         };
         if (participantType === "user") {
           if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -473,7 +447,6 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [
-      exploreModalitySolo,
       loadTapResources,
       selectedBlockId,
       selectedMemberId,
@@ -768,19 +741,9 @@ export function WorkspaceGuestLinksPanel({
       hint: PRODUCT_INTENT_LABELS.exploreDialogHint,
     },
     {
-      id: "explore_solo",
-      label: PRODUCT_INTENT_LABELS.exploreSolo,
-      hint: PRODUCT_INTENT_LABELS.exploreSoloHint,
-    },
-    {
       id: "drill_dialog",
       label: PRODUCT_INTENT_LABELS.drillDialog,
       hint: PRODUCT_INTENT_LABELS.drillDialogHint,
-    },
-    {
-      id: "drill_solo",
-      label: PRODUCT_INTENT_LABELS.drillSolo,
-      hint: PRODUCT_INTENT_LABELS.drillSoloHint,
     },
   ];
 

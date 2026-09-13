@@ -27,7 +27,7 @@ export function BlockMapGlyphIcon({
 }: {
   name?: string | null;
   className?: string;
-  /** Workspace tiles fill squares; TAP/ILE chapter tiles are outlines. */
+  /** Workspace tiles fill squares; learner chapter tiles are outlines. */
   variant?: "solid" | "outline";
 }) {
   if (isPreviousSessionsMapIcon(name)) {

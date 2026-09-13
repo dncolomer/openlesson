@@ -653,34 +653,21 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("data-map-surface");
     expect(clientSrc).toContain("Fullscreen");
     // Product language on placement cards (not TAP/ILE jargon)
-    expect(clientSrc).toContain("Timed Exploration");
-    expect(clientSrc).toContain("Timed Drill");
-    expect(clientSrc).toContain("Drill with AI");
-    expect(clientSrc).toContain("Drill Solo Exercises");
     expect(clientSrc).toContain("data-mint-timed-explore");
-    expect(clientSrc).toContain("data-mint-timed-drill");
+    expect(clientSrc).not.toContain("data-mint-timed-drill-card");
+    expect(clientSrc).not.toContain("Drill Solo Exercises");
+    expect(clientSrc).not.toContain("Drill with AI");
+    expect(clientSrc).toContain('label: "Drill"');
     expect(clientSrc).toContain("interaction_kind");
-    // Timed Exploration + Timed Drill duration pickers live inside their product cards
     expect(clientSrc).toContain("data-timed-explore-duration-picker");
     expect(clientSrc).toContain("data-mint-timed-explore-card");
     expect(clientSrc).toContain("TIMED_EXPLORE_DURATION_OPTIONS");
     expect(clientSrc).toContain("timedExploreMinutes");
-    expect(clientSrc).toContain("data-timed-drill-duration-picker");
-    expect(clientSrc).toContain("data-mint-timed-drill-card");
-    expect(clientSrc).toContain("TIMED_DRILL_DURATION_OPTIONS");
-    expect(clientSrc).toContain("timedDrillMinutes");
     expect(clientSrc).toContain("minutes");
-    // Duration options are nested under each product card
     const exploreCardIdx = clientSrc.indexOf("data-mint-timed-explore-card");
     const exploreDurationIdx = clientSrc.indexOf("data-timed-explore-duration-picker");
     expect(exploreCardIdx).toBeGreaterThan(-1);
     expect(exploreDurationIdx).toBeGreaterThan(exploreCardIdx);
-    const drillCardIdx = clientSrc.indexOf("data-mint-timed-drill-card");
-    const drillDurationIdx = clientSrc.indexOf("data-timed-drill-duration-picker");
-    expect(drillCardIdx).toBeGreaterThan(-1);
-    expect(drillDurationIdx).toBeGreaterThan(drillCardIdx);
-    // Drill offers 15 / 30 / 45 (not the explore set)
-    expect(clientSrc).toMatch(/TIMED_DRILL_DURATION_OPTIONS\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     const guestApiSrc = readFileSync(guestApi, "utf8");
     expect(guestApiSrc).toContain("MAP_TIMED_EXPLORE_MINUTES");
     expect(guestApiSrc).toContain("MAP_TIMED_DRILL_MINUTES");
@@ -689,15 +676,13 @@ describe("map-of-knowledge product surfaces", () => {
     expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
-    expect(clientSrc).toContain("Drill with AI");
-    expect(clientSrc).toContain("Drill Solo Exercises");
+    expect(clientSrc).toContain('label: "Drill"');
     const timedExploreCard = clientSrc.slice(
       clientSrc.indexOf("data-mint-timed-explore-card"),
-      clientSrc.indexOf("data-mint-timed-drill-card"),
+      clientSrc.indexOf("data-minted-link-card"),
     );
-    const timedDrillCard = clientSrc.slice(clientSrc.indexOf("data-mint-timed-drill-card"));
     expect(timedExploreCard).not.toMatch(/Dialog/);
-    expect(timedDrillCard.slice(0, 2500)).not.toMatch(/Dialog/);
+    expect(timedExploreCard).not.toMatch(/Solo Exercises/);
     expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
     expect(pageSrc).not.toMatch(/TAP or ILE/);
     // Map canvas appears before placement section

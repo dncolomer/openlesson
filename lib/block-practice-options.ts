@@ -1,10 +1,12 @@
 /**
  * Author limits on which practice launches a block allows:
- * Explore/Drill × Dialog/Solo, plus allowed Drill (TAP) durations.
- * Pure helpers — unit-tested without React/DB.
+ * Explore / Drill, plus allowed Drill (TAP) durations.
+ * New launches are always With AI (ILE learning / TAP conversational).
+ * allowDialog / allowSolo remain in the stored payload for older rows but
+ * are not a new-launch axis.
  *
  * Serialization keeps legacy snake_case keys (allow_open_ended / allow_timed)
- * for DB compatibility: open_ended → dialog, timed → solo.
+ * for DB compatibility.
  */
 
 import { DURATIONS } from "@/lib/tap-score-client-helpers";
@@ -132,10 +134,9 @@ export function normalizeBlockPracticeOptions(
     allowExplore = true;
     allowDrill = true;
   }
-  // At least one modality
+  // Stored modality flags stay, but new launches always use the With AI path.
   if (!allowDialog && !allowSolo) {
     allowDialog = true;
-    allowSolo = true;
   }
 
   let durations = parseDurationList(
@@ -265,22 +266,19 @@ export function blockAllowedDurations(
 }
 
 /**
- * Whether a launch target (style × solo flag) is allowed by author limits.
- * soloEnabled true → solo modality; false → dialog.
+ * Whether a launch target is allowed by author limits.
+ * New launches ignore the solo flag (always With AI).
  */
 export function blockAllowsLaunchTarget(
   opts: BlockPracticeOptions | null | undefined,
   style: LearningStyle,
-  soloEnabled: boolean,
+  _soloEnabled?: boolean,
 ): boolean {
-  const n = normalizeBlockPracticeOptions(opts ?? null);
-  if (!blockAllowsPracticeStyle(n, style)) return false;
-  if (soloEnabled) return n.allowSolo;
-  return n.allowDialog;
+  return blockAllowsPracticeStyle(opts, style);
 }
 
 /**
- * Default style/modality for the launch card given limits.
+ * Default style for the launch card given limits. New launches are never solo.
  */
 export function resolveDefaultPracticeLaunchUi(
   opts: BlockPracticeOptions | null | undefined,
@@ -291,16 +289,14 @@ export function resolveDefaultPracticeLaunchUi(
     : n.allowDrill
       ? "drill"
       : "explore";
-  // Prefer dialog when available; else solo.
-  const solo = n.allowDialog ? false : Boolean(n.allowSolo);
   const durations = blockAllowedDurations(n);
   const durationMinutes =
     durations.includes(15) ? 15 : durations[0] ?? 15;
   return {
     style,
-    solo,
+    solo: false,
     /** @deprecated alias of solo for older UI that still reads timebox */
-    timebox: solo,
+    timebox: false,
     durationMinutes,
   };
 }
@@ -318,7 +314,7 @@ export function clampPracticeDuration(
 }
 
 /**
- * Enabled product launch combos (up to 4) for map chrome / badges.
+ * Enabled new-launch combos (Explore and/or Drill — always With AI).
  */
 export function enabledPracticeLaunchCombos(
   opts: BlockPracticeOptions | null | undefined,
@@ -327,21 +323,14 @@ export function enabledPracticeLaunchCombos(
   const out: ProductLaunchTarget["id"][] = [];
   for (const style of ["explore", "drill"] as const) {
     if (!blockAllowsPracticeStyle(n, style)) continue;
-    if (n.allowDialog) {
-      out.push(resolveLaunchFromStyleAndModality(style, false).id);
-    }
-    if (n.allowSolo) {
-      out.push(resolveLaunchFromStyleAndModality(style, true).id);
-    }
+    out.push(resolveLaunchFromStyleAndModality(style, false).id);
   }
   return out;
 }
 
 /**
  * Compact icon keys for map badges (stable for tests/data attrs).
- * - explore / drill: style allowed
- * - dialog / solo: modality allowed
- * - open / timed: legacy aliases of dialog / solo
+ * New launches only badge Explore / Drill — no With AI vs Solo icons.
  */
 export function practiceOptionsIconKeys(
   opts: BlockPracticeOptions | null | undefined,
@@ -350,14 +339,6 @@ export function practiceOptionsIconKeys(
   const keys: Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed"> = [];
   if (n.allowExplore) keys.push("explore");
   if (n.allowDrill) keys.push("drill");
-  if (n.allowDialog) {
-    keys.push("dialog");
-    keys.push("open");
-  }
-  if (n.allowSolo) {
-    keys.push("solo");
-    keys.push("timed");
-  }
   return keys;
 }
 
@@ -369,8 +350,6 @@ export function practiceOptionsIsRestricted(
   const d = defaultBlockPracticeOptions();
   if (n.allowExplore !== d.allowExplore) return true;
   if (n.allowDrill !== d.allowDrill) return true;
-  if (n.allowDialog !== d.allowDialog) return true;
-  if (n.allowSolo !== d.allowSolo) return true;
   if (n.allowDrill) {
     if (n.allowedDurationsMinutes.length !== d.allowedDurationsMinutes.length) {
       return true;

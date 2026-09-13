@@ -88,7 +88,7 @@ describe("countIlePowByType (session-global)", () => {
         notebookDirty: true,
         canvasDirty: true,
       }),
-    ).toEqual({ tool: 2, screen: 0, video: 0, eeg: 0, thoughts: 3 });
+    ).toEqual({ tool: 1, screen: 0, video: 0, eeg: 0, thoughts: 3 });
     expect(display.screen).toBe(0);
 
     const speech = readFileSync(join(__dirname, "../../components/session-view/use-session-speech.ts"), "utf8");

@@ -74,17 +74,8 @@ export function listIleUnsubmittedReviewItems(input: {
     items.tool.push({
       id: "canvas",
       type: "tool",
-      label: "Canvas",
+      label: "Work canvas",
       detail: "Unsubmitted drawing",
-    });
-  }
-  if (input.notebookDirty) {
-    const notes = String(input.notebookContent || "").trim();
-    items.tool.push({
-      id: "notebook",
-      type: "tool",
-      label: "Notebook",
-      detail: notes ? clipDetail(notes) : "Unsubmitted notes",
     });
   }
   return items;

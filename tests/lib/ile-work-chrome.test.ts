@@ -221,7 +221,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain("data-ile-work-dock");
     expect(chrome).toContain("IleWorkDockBar");
     expect(chrome).not.toContain("IleSubmitWorkButton");
-    expect(chrome).toContain("IleChapterToolTabs");
+    expect(chrome).not.toContain("IleChapterToolTabs");
+    expect(chrome).toContain("workCanvas");
     expect(chrome).not.toContain("data-ile-work-dock-shifted");
     expect(chrome).toContain("data-ile-chapter-dock-panel");
     expect(chrome).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
@@ -280,8 +281,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("thought-history");
     expect(view).toContain("renderCompactWorkspace");
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
-    expect(tabs).toContain("data-ile-chapter-tool-tabs");
-    expect(tabs).toContain("ILE_CHAPTER_WIDGET_TOOLS");
+    expect(tabs).not.toContain("data-ile-chapter-tool-tabs");
+    expect(tabs).not.toContain("Grokipedia");
     expect(tabs).not.toContain("thought-history");
     expect(tabs).not.toContain('"data-input"');
     expect(tabs).not.toContain("logs:");
@@ -377,6 +378,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(phase).toContain("openWorkIdsRef.current");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget-minimize");
+    expect(frame).toContain("data-ile-work-canvas-wide-toggle");
+    expect(frame).toContain("Exit full screen");
+    expect(frame).toContain("Full screen canvas");
+    expect(chrome).toContain("ileMapWorkFrameClass(workCanvasWide)");
+    expect(chrome).toContain("onToggleWide");
     expect(ILE_END_TURN_LABEL).toBe("End turn");
     expect(ILE_SUBMIT_TURN_LABEL).toBe(ILE_END_TURN_LABEL);
     expect(ILE_END_TURN_LABEL.toLowerCase()).toMatch(/end|turn/);

@@ -169,11 +169,11 @@ describe("ILE chapter-scoped context store", () => {
       { id: "draw-ch1" },
     ]);
 
-    const panes = readFileSync(join(ROOT, "components/session-view/session-tool-panes.tsx"), "utf8");
-    expect(panes).toContain("ileChapterCanvasRemountKey");
-    expect(panes).toContain("ileChapterCanvasRemountKey(session.id, activeChapterKey)");
-    expect(panes).not.toMatch(/<ExcalidrawCanvas[\s\S]{0,80}key=\{session\.id\}/);
-    expect(panes).toContain("initialSceneData={whiteboardSceneData}");
+    const viewCanvas = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
+    expect(viewCanvas).toContain("ileChapterCanvasRemountKey");
+    expect(viewCanvas).toContain("ileChapterCanvasRemountKey(session.id, activeChapterKey)");
+    expect(viewCanvas).not.toMatch(/<ExcalidrawCanvas[\s\S]{0,80}key=\{session\.id\}/);
+    expect(viewCanvas).toContain("initialSceneData={whiteboardSceneData}");
 
     const canvas = readFileSync(join(ROOT, "components/ExcalidrawCanvas.tsx"), "utf8");
     expect(canvas).toContain("initialSceneDataRef = useRef(sanitizeSceneData(initialSceneData))");

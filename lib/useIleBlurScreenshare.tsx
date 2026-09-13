@@ -6,6 +6,7 @@ import { IleCompactStashWindow } from "@/components/IleCompactStashWindow";
 import { I18nProvider } from "@/lib/i18n";
 import {
   decideIleMiniAutoOpen,
+  ileCompactPaintKey,
   isIleAwayFromTab,
   readIleTabFocusedFromDocument,
   shouldHonorIleMiniHide,
@@ -343,11 +344,12 @@ export function useIleBlurScreenshare(input: {
     }
   }, [input.enabled, hideCompact]);
 
+  const compactPaintKey = ileCompactPaintKey(input.compact);
   useEffect(() => {
     const handle = compactRef.current;
     if (!handle || handle.window.closed || !compactRootLiveRef.current) return;
     paintCompact(handle.window);
-  }, [input.compact, input.renderCompact, paintCompact]);
+  }, [compactPaintKey, paintCompact]);
 
   useEffect(() => () => hideCompact({ destroy: true }), [hideCompact]);
 

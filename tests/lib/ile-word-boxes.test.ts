@@ -9,10 +9,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface, readTapScoreSurface, readExerciseTapSurface } from "@/tests/helpers/surface-source";
 import {
-  ILE_WORD_BOX_DANTES_TOOL,
-  ILE_WORD_BOX_GROK_TOOL,
-  ILE_WORD_BOX_OPEN_DANTES_LABEL,
-  ILE_WORD_BOX_OPEN_GROK_LABEL,
   ileWordBoxApplyWindowPointerUp,
   ileWordBoxEventTargets,
   ileWordBoxHitTest,
@@ -52,7 +48,7 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("ile word-box helpers (shipped)", () => {
-  it("splits every word, drag-range joins selection, menu is Open Grok + Open Dantes, concept marks are gone", () => {
+  it("splits every word, drag-range joins selection, menu does not open retired ILE tools, concept marks are gone", () => {
     const learningTurn = "Walk the recurrence relation with me.";
     const projectPrompt = "Implement binary search on a sorted array.";
 
@@ -87,18 +83,10 @@ describe("ile word-box helpers (shipped)", () => {
     ]);
 
     const one = ileWordBoxMenuActions("recurrence");
-    expect(one).toEqual([
-      { tool: ILE_WORD_BOX_GROK_TOOL, query: "recurrence", label: ILE_WORD_BOX_OPEN_GROK_LABEL },
-      { tool: ILE_WORD_BOX_DANTES_TOOL, query: "recurrence", label: ILE_WORD_BOX_OPEN_DANTES_LABEL },
-    ]);
-    expect(one.map((action) => action.tool)).toEqual(["grokipedia", "dantes"]);
-    expect(one.map((action) => action.label)).toEqual(["Open Grok", "Open Dantes"]);
-    expect(one[0]?.tool).toBe("grokipedia");
-    expect(one[1]?.tool).toBe("dantes");
+    expect(one).toEqual([]);
     expect(ileWordBoxMenuActions("")).toEqual([]);
     const many = ileWordBoxMenuActions("binary search");
-    expect(many[0]?.query).toBe("binary search");
-    expect(many[0]?.query).not.toBe(projectPrompt);
+    expect(many).toEqual([]);
 
     const tools: string[] = [];
     const prefills: string[] = [];
@@ -108,21 +96,16 @@ describe("ile word-box helpers (shipped)", () => {
       setActiveTool: (tool) => tools.push(tool),
       setPrefillQuery: (query) => prefills.push(query),
     });
-    expect(grok).toEqual({
-      tool: "grokipedia",
-      query: "binary search",
-      label: "Open Grok",
-    });
+    expect(grok).toBeNull();
     const dantes = openIleWordBoxTool({
       tool: "dantes",
       query: "binary search",
       setActiveTool: (tool) => tools.push(tool),
       setPrefillQuery: (query) => prefills.push(query),
     });
-    expect(dantes?.tool).toBe("dantes");
-    expect(dantes?.query).toBe("binary search");
-    expect(tools).toEqual(["grokipedia", "dantes"]);
-    expect(prefills).toEqual(["binary search", "binary search"]);
+    expect(dantes).toBeNull();
+    expect(tools).toEqual([]);
+    expect(prefills).toEqual([]);
 
     expect(
       resolveIleGrokipediaSearchValue({
@@ -146,16 +129,14 @@ describe("ile word-box helpers (shipped)", () => {
     const oneRelease = ileWordBoxPointerUp(pointer, learningTokens);
     expect(oneRelease.menuText).toBe("recurrence");
     const oneMenu = ileWordBoxMenuActions(oneRelease.menuText);
-    expect(oneMenu.map((action) => action.label)).toEqual(["Open Grok", "Open Dantes"]);
-    expect(oneMenu.map((action) => action.query)).toEqual(["recurrence", "recurrence"]);
+    expect(oneMenu).toEqual([]);
 
     pointer = ileWordBoxPointerDown(ileWordBoxPointerIdle(), 2);
     pointer = ileWordBoxPointerEnter(pointer, 3);
     const dragRelease = ileWordBoxPointerUp(pointer, learningTokens);
     expect(dragRelease.menuText).toBe("recurrence relation");
     const dragMenu = ileWordBoxMenuActions(dragRelease.menuText);
-    expect(dragMenu[0]).toMatchObject({ tool: "grokipedia", query: "recurrence relation", label: "Open Grok" });
-    expect(dragMenu[1]).toMatchObject({ tool: "dantes", query: "recurrence relation", label: "Open Dantes" });
+    expect(dragMenu).toEqual([]);
     expect(dragRelease.menuText).not.toBe(learningTurn);
 
     pointer = ileWordBoxPointerEnter(ileWordBoxPointerIdle(), 4);
@@ -212,8 +193,7 @@ describe("ile word-box helpers (shipped)", () => {
     if (idleClick.apply) menu = idleClick.menuText;
     expect(menu).toBe("recurrence relation");
     const stillOpen = ileWordBoxMenuActions(menu);
-    expect(stillOpen.map((action) => action.label)).toEqual(["Open Grok", "Open Dantes"]);
-    expect(stillOpen[0]?.query).toBe("recurrence relation");
+    expect(stillOpen).toEqual([]);
 
     const atPointer = ileWordBoxMenuPosition({ clientX: 120, clientY: 80 });
     expect(atPointer).toEqual({
@@ -270,16 +250,14 @@ describe("ile word-box helpers (shipped)", () => {
         `projectWords=${JSON.stringify(projectWords)}`,
         `oneWord=${ileWordBoxSelectionText(learningTokens, 2, 2)}`,
         `manyWords=${ileWordBoxSelectionText(learningTokens, 2, 3)}`,
-        `grokTool=${grok?.tool}`,
-        `grokQuery=${grok?.query}`,
-        `dantesTool=${dantes?.tool}`,
-        `dantesQuery=${dantes?.query}`,
+        `grokTool=${grok?.tool ?? "none"}`,
+        `dantesTool=${dantes?.tool ?? "none"}`,
         `stripped=${leftover}`,
         `htmlHasWordBoxes=${html.includes("data-ile-word-box")}`,
         `htmlHasConceptMark=${html.includes("data-ile-concept-mark")}`,
         `pointerOne=${oneRelease.menuText}`,
         `pointerDrag=${dragRelease.menuText}`,
-        `pointerMenu=${dragMenu.map((action) => action.label).join("|")}`,
+        `pointerMenu=${dragMenu.map((action) => action.label).join("|") || "none"}`,
         `idleUpClearsMenu=${idleClick.apply}`,
         `menuSurvivesIdleUp=${menu}`,
         `menuAtPointer=${atPointer.left},${atPointer.top}`,
@@ -291,7 +269,7 @@ describe("ile word-box helpers (shipped)", () => {
 });
 
 describe("ILE word-box surfaces (shipped source)", () => {
-  it("Learning and Project paint word boxes + Open Grok/Dantes; TAP overlay does not; concept highlighter is gone", () => {
+  it("Learning and Project paint word boxes without Open Grok/Dantes; TAP overlay does not; concept highlighter is gone", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     const boxes = read("components/thought-ui/IleWordBoxText.tsx");
@@ -366,17 +344,14 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(markdown).toContain("processHeliosMarkdown");
     expect(markdown).toContain("data-helios-markdown");
 
-    expect(view).toContain("openIleWordBoxTool");
     expect(view).toContain("onOpenWordBoxTool");
-    expect(view).toContain("toolPrefillQuery");
     expect(view).not.toContain("openIleGrokipediaWithConcept");
     expect(view).not.toContain("onOpenConcept");
-    expect(panes).toContain("prefillQuery={toolPrefillQuery}");
+    expect(panes).not.toContain("DantesTool");
+    expect(panes).not.toContain("GrokGrokipediaTool");
+    expect(panes).not.toContain("prefillQuery={toolPrefillQuery}");
     expect(grok).toContain("prefillQuery");
-    expect(grok).toContain("setGrokQuery");
-    expect(grok).toContain("data-ile-grok-search");
     expect(dantes).toContain("prefillQuery");
-    expect(dantes).toContain("data-ile-dantes-search");
 
     expect(overlay).not.toContain("IleWordBoxText");
     expect(overlay).not.toContain("data-ile-word-box");
@@ -396,8 +371,8 @@ describe("ILE word-box surfaces (shipped source)", () => {
       [
         "Learning: DialogueSplitIle IleWordBoxText onOpenWordBoxTool",
         "Project: IleWordBoxText on data-ile-project-exercise-prompt",
-        "menu: Open Grok → grokipedia + Open Dantes → dantes, both prefillQuery",
-        "GrokGrokipediaTool + DantesTool accept prefillQuery",
+        "menu: no Open Grok / Open Dantes (ILE Work is canvas-only)",
+        "ILE session panes do not mount GrokGrokipediaTool / DantesTool",
         "TAP overlay: HeliosMarkdown, no word boxes",
         `conceptMarksGone=${!existsSync(join(ROOT, "lib/ile-concept-marks.ts"))}`,
         `promptHasEqualsWrap=${ileSurface.includes("==binary search==")}`,

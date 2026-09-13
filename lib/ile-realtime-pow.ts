@@ -9,6 +9,10 @@ import {
   type IleBufferedToolEvent,
   type IleProofOfWorkUploadItem,
 } from "@/lib/ile-evidence-buffer";
+import {
+  isRetiredIleWorkToolName,
+  mapExcalidrawToolToIlePow,
+} from "@/lib/ile-work-canvas";
 
 export {
   ILE_EVIDENCE_THRESHOLDS,
@@ -62,8 +66,43 @@ export function buildIleCanvasUploadItem(sessionId: string, data: string, timest
     timestampMs,
     toolName: "canvas",
     toolAction: "canvas_draw",
-    metadata: { bytes: data.length },
+    metadata: { bytes: data.length, via: "excalidraw" },
   } satisfies IleProofOfWorkUploadItem;
+}
+
+/** PoW for an Excalidraw-internal tool (text, freedraw, rectangle, …). */
+export function buildIleExcalidrawToolUploadItem(
+  sessionId: string,
+  input: {
+    activeTool?: string | null;
+    elementType?: string | null;
+    action?: string | null;
+    timestampMs?: number;
+    metadata?: Record<string, unknown>;
+  },
+): IleProofOfWorkUploadItem | null {
+  if (isRetiredIleWorkToolName(input.activeTool) || isRetiredIleWorkToolName(input.elementType)) {
+    return null;
+  }
+  const mapped = mapExcalidrawToolToIlePow(input);
+  if (!mapped) return null;
+  const timestampMs = input.timestampMs ?? Date.now();
+  return {
+    kind: "tool",
+    mimeType: "application/json",
+    fileName: `ile-excalidraw-${mapped.toolName}-${mapped.toolAction}-${timestampMs}.json`,
+    payload: JSON.stringify({
+      session_id: sessionId,
+      tool: mapped.toolName,
+      action: mapped.toolAction,
+      timestamp_ms: timestampMs,
+      metadata: input.metadata ?? {},
+    }),
+    timestampMs,
+    toolName: mapped.toolName,
+    toolAction: mapped.toolAction,
+    metadata: { via: "excalidraw", ...(input.metadata ?? {}) },
+  };
 }
 
 export function buildIleNotebookUploadItem(sessionId: string, content: string, timestampMs = Date.now()) {

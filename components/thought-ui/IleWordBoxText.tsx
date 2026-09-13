@@ -191,7 +191,7 @@ export function IleWordBoxText({
           </span>
         );
       })}
-      {menu
+      {menu && ileWordBoxMenuActions(menu.text).length > 0
         ? createPortal(
             <span
               data-ile-word-box-menu

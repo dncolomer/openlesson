@@ -6,6 +6,11 @@ import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
+import {
+  ileWorkCanvasTurnContextMessage,
+  parseIleXaiCanvasTurn,
+  serializeIleWorkCanvasScene,
+} from "@/lib/ile-work-canvas";
 import { resolveIleDurableSessionMode } from "@/lib/ile-mode";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
@@ -33,7 +38,7 @@ function imageDataUrlToImageInput(dataUrl: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan } = body;
+    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan, workCanvasScene } = body;
 
     if (!problem) {
       return jsonError(400, "Missing problem");
@@ -80,11 +85,14 @@ export async function POST(request: NextRequest) {
     const activeChapterContext = activeStepDescription
       ? `The current message is about focused Chapter ${(activeStepIndex ?? 0) + 1}: ${activeStepDescription}. Use this chapter as the local focus, but you may use the whole session plan as context.`
       : "";
+    const canvasScene = serializeIleWorkCanvasScene(workCanvasScene);
+    const canvasContext = ileWorkCanvasTurnContextMessage(canvasScene);
     const conversationMessages = [
       systemMessage(systemPrompt),
       userMessage(`The user is working on: ${problem}`),
       ...(planContext ? [userMessage(planContext)] : []),
       ...(activeChapterContext ? [userMessage(activeChapterContext)] : []),
+      userMessage(canvasContext),
       ...inputMessages.map((m, index) => {
         const isLatestMessage = index === inputMessages.length - 1;
         const image = isLatestMessage && m.role === "user" && m.imageDataUrl
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
       conversationMessages,
       {
         model: model || DEFAULT_MODEL,
-        maxTokens: 400,
+        maxTokens: 800,
         temperature: RECOMMENDED_TEMPS.chat,
       }
     );
@@ -113,8 +121,9 @@ export async function POST(request: NextRequest) {
 
     const lastLearner =
       [...inputMessages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const canvasTurn = parseIleXaiCanvasTurn(sanitizeAssistantText(response.data));
     const extracted = ileChapterSuggestionPowFromCoachText({
-      coachText: sanitizeAssistantText(response.data),
+      coachText: canvasTurn.text || sanitizeAssistantText(response.data),
       learnerText: lastLearner,
       sessionMode,
       currentChapterId: typeof activeStepId === "string" ? activeStepId : null,
@@ -188,6 +197,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: extracted.visibleText,
+      canvasElements: canvasTurn.elements ?? [],
       chapterSuggestion: extracted.toolData,
     });
   } catch (error) {

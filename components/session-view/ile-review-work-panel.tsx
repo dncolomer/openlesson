@@ -16,8 +16,6 @@ import { IlePowTypeIcon } from "@/components/session-view/ile-pow-icons";
 export function IleReviewWorkPanel({
   thoughts = [],
   formingText = "",
-  notebookDirty = false,
-  notebookContent = "",
   canvasDirty = false,
 }: {
   thoughts?: readonly IleReviewWorkThought[];
@@ -31,11 +29,9 @@ export function IleReviewWorkPanel({
       listIleUnsubmittedReviewItems({
         thoughts,
         formingText,
-        notebookDirty,
-        notebookContent,
         canvasDirty,
       }),
-    [thoughts, formingText, notebookDirty, notebookContent, canvasDirty],
+    [thoughts, formingText, canvasDirty],
   );
   const [activeType, setActiveType] = useState<IlePowDisplayCounterType>("thoughts");
   const activeItems = items[activeType] ?? [];

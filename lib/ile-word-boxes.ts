@@ -1,5 +1,6 @@
 /**
- * ILE per-word bounding boxes: split, drag-range selection, Open Grok / Open Dantes.
+ * ILE per-word bounding boxes: split and drag-range selection.
+ * Retired ILE tools (Grok / Dantes) are not opened from word boxes.
  * Not a concept highlighter — every word is selectable.
  */
 
@@ -73,10 +74,8 @@ export function ileWordBoxSelectionText(
 export function ileWordBoxMenuActions(selection: string | null | undefined): IleWordBoxMenuAction[] {
   const query = normalizeQuery(selection);
   if (!query) return [];
-  return [
-    { tool: ILE_WORD_BOX_GROK_TOOL, query, label: ILE_WORD_BOX_OPEN_GROK_LABEL },
-    { tool: ILE_WORD_BOX_DANTES_TOOL, query, label: ILE_WORD_BOX_OPEN_DANTES_LABEL },
-  ];
+  // ILE Work is canvas-only: no Open Grok / Open Dantes from word boxes.
+  return [];
 }
 
 export function resolveIleGrokipediaSearchValue(input: {

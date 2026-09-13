@@ -104,6 +104,27 @@ export function decideIleMiniAutoOpen(input: {
 }
 
 /** Hide while away when auto-open said hide. Focused hide is the on-tab default. */
+/** Stable PiP paint key — omit the canvas so board strokes do not remount Excalidraw. */
+export function ileCompactPaintKey(compact: {
+  formingText?: string | null;
+  speechDisplay?: string | null;
+  speechError?: string | null;
+  speechSupported?: boolean | null;
+  isListening?: boolean;
+  speechEnabled?: boolean;
+  isScreenSharing?: boolean;
+}): string {
+  return [
+    compact.formingText ?? "",
+    compact.speechDisplay ?? "",
+    compact.speechError ?? "",
+    compact.speechSupported ? "1" : "0",
+    compact.isListening ? "1" : "0",
+    compact.speechEnabled ? "1" : "0",
+    compact.isScreenSharing ? "1" : "0",
+  ].join("\0");
+}
+
 export function shouldHonorIleMiniHide(input: {
   decision: IleMiniAutoOpenDecision;
   away: boolean;

@@ -280,29 +280,6 @@ export class IleEvidenceBuffer {
       }
     }
 
-    const notebook = this.notebookContent?.trim() || "";
-    const notebookMin = force ? 8 : ILE_EVIDENCE_THRESHOLDS.notebookMinChars;
-    if (notebook.length >= notebookMin) {
-      const hash = simpleHash(notebook);
-      if (hash !== this.lastFlushedNotebookHash) {
-        uploads.push({
-          kind: "tool",
-          mimeType: "application/json",
-          fileName: `ile-notebook-${now}.json`,
-          payload: JSON.stringify({
-            session_id: sessionId,
-            content: notebook,
-            timestamp_ms: now,
-          }),
-          timestampMs: now,
-          toolName: "notebook",
-          toolAction: "notebook_edit",
-          metadata: { char_count: notebook.length },
-        });
-        this.lastFlushedNotebookHash = hash;
-      }
-    }
-
     const facialMin = force ? 1 : ILE_EVIDENCE_THRESHOLDS.facialMinPoints;
     if (this.facialPoints.length >= facialMin) {
       const data = this.facialPoints.splice(0);

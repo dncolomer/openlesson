@@ -177,18 +177,6 @@ const handleStuckAction = useCallback((action: StuckAction) => {
     return;
   }
 
-  if (action === "canvas") {
-    ensureVisible("tools");
-    setActiveTool("canvas");
-    return;
-  }
-
-  if (action === "notebook") {
-    ensureVisible("tools");
-    setActiveTool("notebook");
-    return;
-  }
-
   if (action === "break") {
     if (isRecording && !isPaused) {
       setIsPaused(true);

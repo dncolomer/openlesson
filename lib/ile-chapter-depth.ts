@@ -46,21 +46,20 @@ CHAPTER PATH (what chapters exist and how they are typed):
 
 IN-CHAPTER MOVES (how Helios guides the next turn):
 - After a workable first answer, go deeper on the same topic: apply, contrast, debug, extend, or checkpoint. Ask another question only when it unblocks that act.
-- Pick the next move from the topic, not a fixed loop (forbidden as always-on defaults: "sketch this on the Canvas", "draw it", "make a list", "summarize what you understand").
-- Canvas / sketch / draw ONLY when the work is spatial, structural, visual, or the learner is stuck on a relationship that a diagram would actually clarify. For purely verbal, ethical, historical, legal, conversational, or definition-only work, do not send them to the Canvas.
+- Pick the next move from the topic, not a fixed loop (forbidden as always-on defaults: "sketch this", "draw it", "make a list", "summarize what you understand"). Never as a default.
+- Canvas / sketch / draw ONLY when the topic is spatial, structural, visual, or the learner is stuck on a relationship that a diagram would actually clarify. For purely verbal, ethical, historical, legal, conversational, or definition-only work, write as canvas text rather than forcing a diagram. Do not send them to the Canvas as ritual.
 
 TOOL FIT (use when the topic earns it — never as ritual):
-- Canvas: diagrams, systems, geometry, architecture, flow, spatial relations.
-- Notebook: decisions, written proofs, case notes, reflections.
+- Chapter canvas drawing tools (text, freedraw, rectangle, arrow, image): diagrams, systems, geometry, notes, and your own reply text blocks.
 - Screen share / IDE: when the artifact lives outside ILE.
-- Grokipedia: facts or examples that unblock practice — not a substitute for doing the work.`;
+- Do not name Notebook, Grok/Grokipedia, or Dantes — ILE Work is one canvas.`;
 }
 
 export function ileChapterGrainRules(mode: IleSessionMode): string {
   if (mode === "project") {
     return `PROJECT CHAPTER GRAIN (Explore Solo — standalone exercises):
 - Each chapter is a standalone longer-horizon exercise: one completable task per chapter, not a Dialog multi-turn script.
-- Write a self-contained exercise the learner can finish solo (Thoughts, Notebook, Canvas as needed). Do not script a conversation sequence.
+- Write a self-contained exercise the learner can finish solo (Thoughts and the chapter canvas as needed). Do not script a conversation sequence.
 - Do not split one exercise into micro-chapters such as "summarize what you understand as X", "draw X on a notebook", "make a list", then "finish the list from chapter 1".
 - Activity types (question | task | suggestion | checkpoint) name the chapter's primary exercise shape. They MUST NOT each become their own chapter.
 - After Mark as Done, the product may suggest adjacent follow-up exercise chapters. Do not pre-split those follow-ups into the initial map unless they are distinct standalone exercises.`;
@@ -74,7 +73,7 @@ export function ileChapterGrainRules(mode: IleSessionMode): string {
   * "Make a list" of the note taker / capture a list
   * "Finish the list from chapter 1" / continue the same artifact
 - Activity types (question | task | suggestion | checkpoint) mix inside a chapter as turns or as the chapter's primary type. They MUST NOT each become their own chapter.
-- Work that uses the same chapter-scoped tool (Notebook / Canvas) stays in that one chapter. Tools are chapter-scoped — do not send the learner to a new chapter to keep writing the same notebook or canvas.
+- Work that uses the same chapter canvas stays in that one chapter. Each chapter has its own board — do not send the learner to a new chapter to keep writing the same canvas.
 - Chapter descriptions name the topic-horizon (what they can do after a deep conversation), not a one-shot micro-task.`;
 }
 

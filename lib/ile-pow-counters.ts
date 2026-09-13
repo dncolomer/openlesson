@@ -101,7 +101,7 @@ export function countIleUnsubmittedPowDisplay(input: {
 }): IlePowDisplayCounts {
   const thoughts = Math.max(0, Math.floor(Number(input.unflaggedThoughtCount) || 0));
   return {
-    tool: Number(Boolean(input.notebookDirty)) + Number(Boolean(input.canvasDirty)),
+    tool: Number(Boolean(input.canvasDirty)),
     screen: 0,
     video: 0,
     eeg: 0,

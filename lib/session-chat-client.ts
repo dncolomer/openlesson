@@ -1,10 +1,14 @@
 /**
- * One ILE session-chat POST used by send, canvas/notebook submit, and chapter reload.
+ * One ILE session-chat POST used by send, Work canvas turns, and chapter reload.
  */
 
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import {
+  serializeIleWorkCanvasScene,
+  type IleWorkCanvasScene,
+} from "@/lib/ile-work-canvas";
 
-export type StuckAction = "ask" | "theory" | "practice" | "canvas" | "notebook" | "break";
+export type StuckAction = "ask" | "theory" | "practice" | "break";
 
 export interface ChatMessage {
   id: string;
@@ -33,6 +37,7 @@ export type IleSessionChatRequestInput = {
   activeStepIndex?: number;
   activeStepId?: string;
   activeStepDescription?: string;
+  workCanvasScene?: IleWorkCanvasScene | null;
 } & Record<string, unknown>;
 
 export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Record<string, unknown> {
@@ -49,6 +54,9 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
   if (input.activeStepIndex != null) body.activeStepIndex = input.activeStepIndex;
   if (input.activeStepId) body.activeStepId = input.activeStepId;
   if (input.activeStepDescription) body.activeStepDescription = input.activeStepDescription;
+  if (input.workCanvasScene != null) {
+    body.workCanvasScene = serializeIleWorkCanvasScene(input.workCanvasScene);
+  }
   return body;
 }
 

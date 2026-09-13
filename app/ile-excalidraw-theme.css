@@ -1,0 +1,91 @@
+/* ILE Work Excalidraw greyscale chrome.
+   https://docs.excalidraw.com/docs/@excalidraw/excalidraw/customizing-styles
+   Import after @excalidraw/excalidraw/index.css so these win on active tools. */
+
+[data-ile-excalidraw-host] .excalidraw {
+  --color-primary: #525252;
+  --color-primary-darker: #404040;
+  --color-primary-darkest: #262626;
+  --color-primary-light: #e5e5e5;
+  --color-primary-light-darker: #d4d4d4;
+  --color-primary-hover: #404040;
+  --color-primary-contrast-offset: #404040;
+  --color-selection: #525252;
+  --color-brand-hover: #404040;
+  --color-brand-active: #262626;
+  --color-surface-high: #e5e5e5;
+  --color-surface-mid: #f5f5f5;
+  --color-surface-low: #eeeeee;
+  --color-surface-lowest: #ffffff;
+  --color-surface-primary-container: #e5e5e5;
+  --color-on-surface: #171717;
+  --color-on-primary-container: #171717;
+  --color-border-outline: #737373;
+  --color-border-outline-variant: #a3a3a3;
+  --button-active-border: #262626;
+  --button-selected-bg: #e5e5e5;
+  --button-selected-hover-bg: #d4d4d4;
+  --button-selected-border: #d4d4d4;
+  --icon-fill-color: #171717;
+  --color-slider-track: #d4d4d4;
+  --link-color: #404040;
+  --focus-highlight-color: #a3a3a3;
+  --select-highlight-color: #a3a3a3;
+  --color-promo: #525252;
+  --color-logo-icon: #171717;
+  --color-logo-text: #171717;
+}
+
+[data-ile-excalidraw-host] .excalidraw.theme--dark {
+  --color-primary: #d4d4d4 !important;
+  --color-primary-darker: #e5e5e5 !important;
+  --color-primary-darkest: #f5f5f5 !important;
+  --color-primary-light: #2a2a2a !important;
+  --color-primary-light-darker: #1f1f1f !important;
+  --color-primary-hover: #f5f5f5 !important;
+  --color-primary-contrast-offset: #e5e5e5;
+  /* Drawn on the canvas then inverted by --theme-filter; keep this dark so
+     selection bounds render light (white/grey), not black. */
+  --color-selection: #111111 !important;
+  --color-brand-hover: #e5e5e5 !important;
+  --color-brand-active: #f5f5f5 !important;
+  --color-surface-high: #2a2a2a !important;
+  --color-surface-mid: #1a1a1a !important;
+  --color-surface-low: #171717 !important;
+  --color-surface-lowest: #121212;
+  --color-surface-primary-container: #3a3a3a !important;
+  --color-on-surface: #e5e5e5;
+  --color-on-primary-container: #f5f5f5 !important;
+  --color-border-outline: #737373;
+  --color-border-outline-variant: #404040;
+  --button-active-border: #e5e5e5;
+  --button-selected-bg: #3a3a3a !important;
+  --button-selected-hover-bg: #454545 !important;
+  --button-selected-border: #525252 !important;
+  --button-hover-bg: #2a2a2a;
+  --button-active-bg: #2a2a2a;
+  --icon-fill-color: #e5e5e5;
+  --color-slider-track: #737373;
+  --island-bg-color: #1a1a1a !important;
+  --island-bg-color-alt: #141414;
+  --default-bg-color: #0a0a0a;
+  --link-color: #d4d4d4;
+  --focus-highlight-color: #a3a3a3;
+  --select-highlight-color: #a3a3a3;
+  --color-promo: #d4d4d4;
+  --color-logo-icon: #e5e5e5;
+  --color-logo-text: #e5e5e5;
+}
+
+[data-ile-excalidraw-host] .excalidraw.theme--dark .ToolIcon .ToolIcon_type_radio:checked + .ToolIcon__icon,
+[data-ile-excalidraw-host] .excalidraw.theme--dark .ToolIcon .ToolIcon_type_checkbox:checked + .ToolIcon__icon,
+[data-ile-excalidraw-host] .excalidraw.theme--dark button.standalone.active,
+[data-ile-excalidraw-host] .excalidraw.theme--dark .excalidraw-button.active {
+  background: #3a3a3a;
+  background-color: #3a3a3a;
+  border-color: #525252;
+}
+
+[data-ile-excalidraw-host] .excalidraw.theme--dark .dropdown-menu-item--selected {
+  background-color: #2a2a2a !important;
+}

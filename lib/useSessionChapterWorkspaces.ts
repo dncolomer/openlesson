@@ -248,6 +248,7 @@ export function useSessionChapterWorkspaces(
     setCanvasDirtyForHelios,
     setNotebookDirtyForHelios,
     sessionContext,
+    coldContextRef,
   };
 }
 

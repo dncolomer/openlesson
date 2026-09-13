@@ -20,6 +20,9 @@ export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
 export const ILE_MAP_WIDGET_TOP_CLASS = "top-14";
 export const ILE_MAP_WIDGET_BOTTOM_CLASS = ILE_MAP_VOICE_BAR_CLEARANCE_CLASS;
 export const ILE_MAP_WIDGET_WIDTH_CLASS = "w-[min(720px,calc(100%-28rem))]";
+/** Work canvas full-screen overlay (covers the session viewport, including PoW and voice bar). */
+export const ILE_MAP_WIDGET_WIDE_FRAME_CLASS =
+  "fixed inset-0 z-[70] flex h-screen w-screen min-h-0 flex-col";
 export const ILE_MAP_WIDGET_FRAME_CLASS = [
   "absolute left-2",
   ILE_MAP_WIDGET_TOP_CLASS,
@@ -28,6 +31,18 @@ export const ILE_MAP_WIDGET_FRAME_CLASS = [
   ILE_MAP_WIDGET_WIDTH_CLASS,
   "flex-col",
 ].join(" ");
+
+export function ileMapWorkFrameClass(wide = false): string {
+  if (wide) return ILE_MAP_WIDGET_WIDE_FRAME_CLASS;
+  return [
+    "absolute left-2",
+    ILE_MAP_WIDGET_TOP_CLASS,
+    ILE_MAP_WIDGET_BOTTOM_CLASS,
+    "z-40",
+    "flex min-h-0 flex-col",
+    ILE_MAP_WIDGET_WIDTH_CLASS,
+  ].join(" ");
+}
 
 export const ILE_HELIOS_WIDGET_WIDTH_PX = 720;
 
@@ -51,13 +66,11 @@ export function isIleMapOverlayTool(tool: string | null | undefined): boolean {
   return (ILE_MAP_OVERLAY_TOOLS as readonly string[]).includes(tool);
 }
 
-/** Tools that swap the chapter widget body instead of a separate overlay. */
-export const ILE_CHAPTER_WIDGET_TOOLS = [
-  "canvas",
-  "notebook",
-  "grokipedia",
-  "dantes",
-] as const;
+/**
+ * Work is canvas-only: no chapter-tool tabs. Kept as an empty list so
+ * isIleChapterWidgetTool stays false (overlays/modals are separate).
+ */
+export const ILE_CHAPTER_WIDGET_TOOLS = [] as const;
 
 export type IleChapterWidgetTool = (typeof ILE_CHAPTER_WIDGET_TOOLS)[number];
 

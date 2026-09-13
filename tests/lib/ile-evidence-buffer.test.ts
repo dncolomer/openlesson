@@ -10,7 +10,7 @@ describe("IleEvidenceBuffer", () => {
     expect(drained.screenshots).toHaveLength(0);
   });
 
-  it("drains transcript, tool events, and notebook when thresholds are met", () => {
+  it("drains transcript and tool events when thresholds are met (no notebook Work tool)", () => {
     const buffer = new IleEvidenceBuffer();
     buffer.pushTranscript("this is long enough to flush");
     buffer.pushToolEvent({
@@ -25,7 +25,9 @@ describe("IleEvidenceBuffer", () => {
     const kinds = drained.uploads.map((item) => item.toolName);
     expect(kinds).toContain("transcript");
     expect(kinds).toContain("ile-session");
-    expect(kinds).toContain("notebook");
+    expect(kinds).not.toContain("notebook");
+    expect(kinds).not.toContain("grokipedia");
+    expect(kinds).not.toContain("dantes");
   });
 
   it("deduplicates canvas snapshots until content changes", () => {

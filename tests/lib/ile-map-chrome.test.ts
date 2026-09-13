@@ -13,6 +13,7 @@ import {
   ILE_MAP_WIDGET_FRAME_CLASS,
   ILE_MAP_WIDGET_TOP_CLASS,
   ILE_MAP_WIDGET_WIDTH_CLASS,
+  ileMapWorkFrameClass,
   isIleMapOverlayTool,
 } from "@/lib/ile-map-chrome";
 import { MINIMAP_FRAME_HEIGHT } from "@/lib/map-minimap-frame";
@@ -103,8 +104,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
       chrome.indexOf("data-ile-chapter-dock-panel"),
       chrome.indexOf("data-ile-work-dock"),
     );
-    expect(chapterPanel).toContain("z-40");
-    expect(chapterPanel).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
+    expect(chapterPanel).toContain("ileMapWorkFrameClass(workCanvasWide)");
+    expect(ileMapWorkFrameClass(false)).toContain("z-40");
+    expect(chapterPanel).toContain("data-ile-work-canvas-wide");
     expect(chapterPanel).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(chapterPanel).not.toContain("inset-0");
     expect(chapterPanel).not.toContain("bg-black/60");
@@ -125,6 +127,15 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_TOP_CLASS);
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_WIDTH_CLASS);
+    expect(ileMapWorkFrameClass(false)).toContain(ILE_MAP_WIDGET_WIDTH_CLASS);
+    expect(ileMapWorkFrameClass(true)).toContain("fixed");
+    expect(ileMapWorkFrameClass(true)).toContain("inset-0");
+    expect(ileMapWorkFrameClass(true)).toContain("h-screen");
+    expect(ileMapWorkFrameClass(true)).toContain("w-screen");
+    expect(ileMapWorkFrameClass(true)).toContain("z-[70]");
+    expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_WIDTH_CLASS);
+    expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_TOP_CLASS);
+    expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
     const dock = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dock).toContain("z-50");
     expect(dock).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
@@ -139,6 +150,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(frame).toContain("data-ile-helios-widget");
     expect(frame).toContain(">Work</span>");
     expect(frame).not.toContain(">Chapter</span>");
+    expect(frame).toContain("Exit full screen");
+    expect(frame).toContain("Full screen canvas");
+    expect(frame).toContain('wide ? "border-0" : "border border-neutral-700"');
     expect(chrome).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(ILE_HELIOS_WIDGET_WIDTH_PX).toBeGreaterThanOrEqual(520);
 

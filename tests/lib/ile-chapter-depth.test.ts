@@ -98,7 +98,7 @@ describe("composeSessionPlanCreatePrompt is mode-aware (shipped fill path)", () 
     expect(learning).toMatch(/question \| task \| suggestion \| checkpoint/);
     expect(learning).toMatch(/mix inside a chapter/i);
     expect(learning).toMatch(/MUST NOT each become their own chapter/i);
-    expect(learning).toMatch(/Notebook \/ Canvas/i);
+    expect(learning).toMatch(/chapter canvas/i);
     expect(learning).toMatch(/stays in that one chapter/i);
 
     // Dialog expansion + PoW

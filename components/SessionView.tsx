@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
-import { pauseSession, type Session, type SessionPlan, type Probe, type ToolName } from "@/lib/storage";
+import { pauseSession, type Session, type SessionPlan, type Probe, type ToolAction, type ToolName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 import { MobileBlockScreen } from "./MobileBlockScreen";
 import { useSessionChrome } from "@/components/session-view/use-session-chrome";
@@ -18,7 +18,7 @@ import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
 } from "@/lib/session-participant-identity";
-import { type ChatMessage, type PendingChatMessage, type StuckAction, postIleSessionChat } from "@/lib/session-chat-client";
+import { type ChatMessage, type PendingChatMessage, postIleSessionChat } from "@/lib/session-chat-client";
 import type { Tool } from "@/components/ToolsPanel";
 import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
 import { closeIleImDoneAnswering } from "@/lib/ile-im-done-answering";
@@ -74,15 +74,14 @@ import { SessionWelcomeModal } from "@/components/session-view/session-welcome-m
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChrome } from "@/components/session-view/session-chrome";
+import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
 import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
-  isIleChapterWidgetTool,
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
-import { IleChapterToolTabs } from "@/components/session-view/ile-chapter-tool-tabs";
 import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import { useIleGatherResources } from "@/components/session-view/use-ile-gather-resources";
 import {
@@ -121,9 +120,23 @@ import {
   resolveIleDurableSessionMode,
   type IleSessionMode,
 } from "@/lib/ile-mode";
-import { openIleWordBoxTool } from "@/lib/ile-word-boxes";
 import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
+import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
+import {
+  applyIleXaiTurnToWorkCanvas,
+  buildIleWorkCanvasAskUserMessage,
+  ileWorkCanvasScenesFromWorkspaces,
+  mapExcalidrawToolToIlePow,
+  parseIleXaiCanvasTurn,
+  pickIleWorkCanvasTurnScene,
+  seedIleChapterWorkCanvas,
+  serializeIleWorkCanvasScene,
+  type IleWorkCanvasElement,
+  type IleWorkCanvasScene,
+  type IleWorkCanvasSkeleton,
+} from "@/lib/ile-work-canvas";
+
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
 const EMPTY_ENTRY_QUERY_PARAMS: Record<string, string | string[]> = Object.freeze({});
@@ -286,7 +299,16 @@ export function SessionView({
     setNotebookContent,
     setCanvasDirtyForHelios,
     setNotebookDirtyForHelios,
+    sessionContext,
+    coldContextRef,
   } = useSessionChapterWorkspaces(sessionId, sessionPlan);
+
+  const whiteboardSceneDataRef = useRef(whiteboardSceneData);
+  useEffect(() => {
+    whiteboardSceneDataRef.current = whiteboardSceneData;
+  }, [whiteboardSceneData]);
+  const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
+  const [canvasApplyElements, setCanvasApplyElements] = useState<IleWorkCanvasElement[]>([]);
 
   const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
 
@@ -775,6 +797,14 @@ export function SessionView({
 
     try {
       const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
+      const picked = pickIleWorkCanvasTurnScene({
+        targetChapterId: chapterKey,
+        focusedChapterId: activeChapterKey,
+        liveSceneByChapter: ileWorkCanvasScenesFromWorkspaces(sessionContext),
+        coldSceneByChapter: ileWorkCanvasScenesFromWorkspaces(coldContextRef.current),
+        focusedSceneRef: whiteboardSceneDataRef,
+      });
+      const currentScene = picked.sceneToSend;
       const { ok, data, errorMessage } = await postIleSessionChat({
           problem: session.problem,
           activeStepIndex: target.stepIndex,
@@ -784,18 +814,37 @@ export function SessionView({
           sessionId: session.id,
           tutoringLanguage,
           ...guestAccessBody,
+          workCanvasScene: currentScene,
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
         });
       const content = ok && typeof data?.message === "string" && data.message.trim()
         ? data.message.trim()
         : errorMessage || t('heliosChat.errorMessage');
+      const parsedTurn = parseIleXaiCanvasTurn(content);
+      const extraSkeletons = Array.isArray(data?.canvasElements)
+        ? (data.canvasElements as IleWorkCanvasSkeleton[])
+        : parsedTurn.elements;
+      const nextScene = applyIleXaiTurnToWorkCanvas(currentScene, {
+        text: parsedTurn.text || content,
+        elements: extraSkeletons,
+        turnId: placeholderId,
+      });
+      const appended = nextScene.elements.slice(currentScene.elements.length);
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
-            ? { ...message, content, pending: false }
+            ? { ...message, content: parsedTurn.text || content, pending: false }
             : message
         ),
+        whiteboardSceneData: nextScene,
       }));
+      if (picked.applyLive) {
+        whiteboardSceneDataRef.current = nextScene;
+        if (appended.length) {
+          setCanvasApplyElements(appended);
+          setCanvasApplyNonce((n) => n + 1);
+        }
+      }
     } catch (error) {
       console.error("Helios direct chat error:", error);
       updateChapterWorkspace(chapterKey, workspace => ({
@@ -806,7 +855,7 @@ export function SessionView({
         ),
       }));
     }
-  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
+  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, coldContextRef, session, sessionContext, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
 
   useEffect(() => {
     if (!pendingChatMessage) return;
@@ -1101,12 +1150,54 @@ export function SessionView({
     });
   }, [sessionThoughtInterface]);
 
+  const seedChapterWorkCanvas = useCallback(
+    (chapterId: string, text: string | null | undefined) => {
+      const picked = pickIleWorkCanvasTurnScene({
+        targetChapterId: chapterId,
+        focusedChapterId: activeChapterKey,
+        liveSceneByChapter: ileWorkCanvasScenesFromWorkspaces(sessionContext),
+        coldSceneByChapter: ileWorkCanvasScenesFromWorkspaces(coldContextRef.current),
+        focusedSceneRef: whiteboardSceneDataRef,
+      });
+      const { scene, seeded } = seedIleChapterWorkCanvas(picked.sceneToSend, {
+        text,
+        chapterId,
+      });
+      if (!seeded) return;
+      updateChapterWorkspace(chapterId, { whiteboardSceneData: scene });
+      if (picked.applyLive || chapterId === activeChapterKey) {
+        whiteboardSceneDataRef.current = scene;
+        const appended = scene.elements.slice(picked.sceneToSend.elements.length);
+        if (heliosWidgetOpen && appended.length) {
+          setCanvasApplyElements(appended);
+          setCanvasApplyNonce((n) => n + 1);
+        }
+      }
+    },
+    [activeChapterKey, coldContextRef, heliosWidgetOpen, sessionContext, updateChapterWorkspace],
+  );
+
+  useEffect(() => {
+    if (!heliosWidgetOpen || !activeChapterKey) return;
+    const text = isProjectMode ? displayProjectChapterExercise : chapterDialoguePrompt;
+    seedChapterWorkCanvas(activeChapterKey, text);
+  }, [
+    activeChapterKey,
+    chapterDialoguePrompt,
+    displayProjectChapterExercise,
+    heliosWidgetOpen,
+    isProjectMode,
+    seedChapterWorkCanvas,
+  ]);
+
   const handleWorkChapter = useCallback(
     (stepId: string) => {
       const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
       const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
       const decision = tryStartWork(stepId, openWorkIds);
       if (!decision.allowed) return;
+      const step = idx >= 0 ? steps?.[idx] : undefined;
+      seedChapterWorkCanvas(stepId, step?.description);
       setOpenWorkIds(decision.openWorkIds);
       if (idx >= 0 && idx !== activeChapterIndexRef.current) {
         void handleLoadChapter(idx);
@@ -1114,7 +1205,7 @@ export function SessionView({
       setActiveTool("chapters");
       setHeliosWidgetOpen(true);
     },
-    [openWorkIds, sessionPlan?.steps, tryStartWork],
+    [openWorkIds, seedChapterWorkCanvas, sessionPlan?.steps, tryStartWork],
   );
 
   const handleFocusOpenWork = useCallback(
@@ -1131,23 +1222,16 @@ export function SessionView({
       if (idx >= 0 && idx !== activeChapterIndexRef.current) {
         void handleLoadChapter(idx);
       }
+      const step = idx >= 0 ? steps?.[idx] : undefined;
+      seedChapterWorkCanvas(stepId, step?.description);
       setActiveTool("chapters");
       setHeliosWidgetOpen(true);
     },
-    [heliosWidgetOpen, sessionPlan?.steps],
+    [heliosWidgetOpen, seedChapterWorkCanvas, sessionPlan?.steps],
   );
 
   const handleIleSessionToolChange = useCallback(
     (tool: Tool) => {
-      if (isIleChapterWidgetTool(tool)) {
-        if (tool === activeTool) {
-          setActiveTool("chapters");
-          return;
-        }
-        setActiveTool(tool);
-        setHeliosWidgetOpen(true);
-        return;
-      }
       if (isIleSessionModalTool(tool)) {
         if (tool === "help") {
           handleToolChange("help");
@@ -1276,9 +1360,6 @@ export function SessionView({
       if (canvasDirtyForHelios) {
         await handleSubmitToHelios("canvas");
       }
-      if (notebookDirtyForHelios) {
-        await handleSubmitToHelios("notebook");
-      }
       const thoughtChapterIds = new Set(
         works
           .filter((work) => {
@@ -1324,7 +1405,6 @@ export function SessionView({
     activeStep?.id,
     canvasDirtyForHelios,
     handleSubmitToHelios,
-    notebookDirtyForHelios,
     chapterWorkspaces,
     openWorkIds,
     sessionThoughtInterface,
@@ -1452,15 +1532,7 @@ export function SessionView({
       onSelectChapterFollowUp={(s) => void handleSelectChapterFollowUp(s)}
       onProjectStash={handleProjectStash}
       onProjectSubmitToSolution={handleProjectSubmitToSolution}
-      onOpenWordBoxTool={(action) => {
-        const payload = openIleWordBoxTool({
-          tool: action.tool,
-          query: action.query,
-          setActiveTool,
-          setPrefillQuery: setToolPrefillQuery,
-        });
-        if (payload?.query) ensureVisible("tools");
-      }}
+      onOpenWordBoxTool={undefined}
       chapterActions={
         activeStep
           ? {
@@ -1500,6 +1572,141 @@ export function SessionView({
     );
   };
 
+  const lastExcalidrawPowKeyRef = useRef("");
+  const handleExcalidrawTool = useCallback(
+    (input: { activeTool?: string | null; elementType?: string | null }) => {
+      const mapped = mapExcalidrawToolToIlePow(input);
+      if (!mapped) return;
+      const key = `${mapped.toolName}:${mapped.toolAction}`;
+      if (lastExcalidrawPowKeyRef.current === key) return;
+      lastExcalidrawPowKeyRef.current = key;
+      void logTool(mapped.toolName as ToolName, mapped.toolAction as ToolAction, {
+        via: "excalidraw",
+      });
+    },
+    [logTool],
+  );
+
+  const handleAskCanvasSelection = useCallback(
+    async (input: {
+      prompt: string;
+      selectedElements: IleWorkCanvasElement[];
+      scene: IleWorkCanvasScene;
+    }) => {
+      if (!session) return { text: "" };
+      const chapterKey = activeChapterKey;
+      const userText = buildIleWorkCanvasAskUserMessage({
+        prompt: input.prompt,
+        selectedElements: input.selectedElements,
+      });
+      const userMsg: ChatMessage = {
+        id: `${Date.now()}-u`,
+        role: "user",
+        content: userText,
+      };
+      const placeholderId = `${Date.now()}-pending`;
+      updateChapterWorkspace(chapterKey, (workspace) => ({
+        chatMessages: [
+          ...workspace.chatMessages,
+          userMsg,
+          { id: placeholderId, role: "assistant", content: "", pending: true },
+        ],
+      }));
+      try {
+        const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
+        const { ok, data, errorMessage } = await postIleSessionChat({
+          problem: session.problem,
+          activeStepIndex: activeChapterIndex,
+          activeStepId: activeStep?.id,
+          activeStepDescription: activeStep?.description,
+          sessionPlan,
+          sessionId: session.id,
+          tutoringLanguage,
+          ...guestAccessBody,
+          workCanvasScene: serializeIleWorkCanvasScene(input.scene),
+          messages: [...existingMessages, userMsg].map((m) => ({
+            role: m.role,
+            content: m.content,
+            imageDataUrl: m.imageDataUrl,
+          })),
+        });
+        const content =
+          ok && typeof data?.message === "string" && data.message.trim()
+            ? data.message.trim()
+            : errorMessage || t("heliosChat.errorMessage");
+        const parsedTurn = parseIleXaiCanvasTurn(content);
+        const extraSkeletons = Array.isArray(data?.canvasElements)
+          ? (data.canvasElements as IleWorkCanvasSkeleton[])
+          : parsedTurn.elements;
+        const text = parsedTurn.text || content;
+        updateChapterWorkspace(chapterKey, (workspace) => ({
+          chatMessages: workspace.chatMessages.map((message) =>
+            message.id === placeholderId
+              ? { ...message, content: text, pending: false }
+              : message,
+          ),
+        }));
+        return { text, elements: extraSkeletons };
+      } catch (error) {
+        console.error("Canvas ask XAI error:", error);
+        const fail = t("heliosChat.errorMessage");
+        updateChapterWorkspace(chapterKey, (workspace) => ({
+          chatMessages: workspace.chatMessages.map((message) =>
+            message.id === placeholderId
+              ? { ...message, content: fail, pending: false }
+              : message,
+          ),
+        }));
+        return { text: fail };
+      }
+    },
+    [
+      activeChapterIndex,
+      activeChapterKey,
+      activeStep,
+      chapterWorkspaces,
+      guestAccessBody,
+      session,
+      sessionPlan,
+      t,
+      tutoringLanguage,
+      updateChapterWorkspace,
+    ],
+  );
+
+  const renderWorkCanvas = (peerId: "work" | "pip" = "work") => {
+    if (!session) return null;
+    const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
+    return (
+      <ExcalidrawCanvas
+        key={`${boardId}:${peerId}`}
+        boardId={boardId}
+        peerId={peerId}
+        initialData={whiteboardData || undefined}
+        initialSceneData={whiteboardSceneData}
+        onCanvasChange={(data) => {
+          setWhiteboardData(data);
+          setCanvasDirtyForHelios(true);
+          if (sessionRef.current) {
+            sessionRef.current = {
+              ...sessionRef.current,
+              metadata: { ...sessionRef.current.metadata, whiteboardData: data },
+            };
+          }
+        }}
+        onSceneChange={(data) => {
+          const scene = serializeIleWorkCanvasScene(data);
+          whiteboardSceneDataRef.current = scene;
+          updateActiveChapterWorkspace({ whiteboardSceneData: scene });
+        }}
+        applyElements={canvasApplyElements}
+        applyElementsNonce={canvasApplyNonce}
+        onExcalidrawTool={handleExcalidrawTool}
+        onAskSelected={handleAskCanvasSelection}
+      />
+    );
+  };
+
   const renderSessionToolPanes = (onLeaveIleTab: (reason: "grok" | "grokipedia") => void) => {
     if (!session) return null;
     return (
@@ -1515,23 +1722,8 @@ export function SessionView({
         gatheredResources={gatheredResources}
         isRecording={isRecording}
         activeStep={activeStep}
-        whiteboardData={whiteboardData}
-        whiteboardSceneData={whiteboardSceneData}
-        onCanvasChange={(data) => {
-          setWhiteboardData(data);
-          setCanvasDirtyForHelios(true);
-          if (sessionRef.current) {
-            sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
-          }
-        }}
-        onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
         activeChapterLabel={activeChapterLabel}
         activeChapterKey={activeChapterKey}
-        notebookContent={notebookContent}
-        onNotebookChange={(value) => {
-          setNotebookContent(value);
-          setNotebookDirtyForHelios(true);
-        }}
         resolvedSessionMode={resolvedSessionMode}
         unsubmittedThoughts={sessionThoughtInterface.stashedThoughts}
         formingThoughtText={
@@ -1539,7 +1731,6 @@ export function SessionView({
           sessionThoughtInterface.crystallizableText
         }
         canvasDirtyForHelios={canvasDirtyForHelios}
-        notebookDirtyForHelios={notebookDirtyForHelios}
         stream={stream}
         museStatus={museStatus}
         museError={museError}
@@ -1565,7 +1756,6 @@ export function SessionView({
         }}
         isMobile={isMobile}
         onLeaveIleTab={onLeaveIleTab}
-        toolPrefillQuery={toolPrefillQuery}
       />
     );
   };
@@ -1620,14 +1810,8 @@ export function SessionView({
         </div>
       ) : (
         <>
-          <IleChapterToolTabs
-            activeTool={activeTool}
-            onToolChange={handleIleSessionToolChange}
-          />
           <div className="min-h-0 flex-1 overflow-hidden">
-            {isIleChapterWidgetTool(activeTool)
-              ? renderSessionToolPanes(() => {})
-              : renderChapterThoughtPane(true)}
+            {renderWorkCanvas("pip")}
           </div>
           <IleWorkDockBar
             t={t}
@@ -1821,7 +2005,6 @@ export function SessionView({
               ""
             ).trim(),
           ),
-          notebookDirty: notebookDirtyForHelios,
           canvasDirty: canvasDirtyForHelios,
         })}
         openWorkCount={openWorkIds.length}
@@ -1972,6 +2155,7 @@ export function SessionView({
           />
         }
         toolOverlay={renderSessionToolPanes(notifyLeaveTab)}
+        workCanvas={renderWorkCanvas()}
         heliosWidget={renderChapterThoughtPane(false)}
         voiceBar={
           <IleVoiceBar

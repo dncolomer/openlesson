@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   AudioMiniPreview,
@@ -15,12 +15,11 @@ import {
   ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
-  isIleChapterWidgetTool,
+  ileMapWorkFrameClass,
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
 import { IleChapterWidgetFrame } from "@/components/session-view/ile-chapter-widget-frame";
-import { IleChapterToolTabs } from "@/components/session-view/ile-chapter-tool-tabs";
 import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import { ILE_POW_COUNTER_ICONS } from "@/components/session-view/ile-pow-icons";
 import {
@@ -53,6 +52,7 @@ export type SessionChromeProps = {
   showWelcomeModal: boolean;
   map: ReactNode;
   toolOverlay: ReactNode;
+  workCanvas: ReactNode;
   heliosWidget: ReactNode;
   heliosOpen: boolean;
   onCloseHelios: () => void;
@@ -123,7 +123,8 @@ export function SessionChrome({
   showWelcomeModal,
   map,
   toolOverlay,
-  heliosWidget,
+  workCanvas,
+  heliosWidget: _heliosWidget,
   heliosOpen,
   onCloseHelios,
   onMinimizeHelios,
@@ -165,8 +166,8 @@ export function SessionChrome({
   onChapterDoneOverride,
   onDismissCloseReview,
 }: SessionChromeProps) {
+  const [workCanvasWide, setWorkCanvasWide] = useState(false);
   const overlayOpen = isIleMapOverlayTool(activeTool);
-  const chapterToolOpen = isIleChapterWidgetTool(activeTool);
   const modalTool = introOpen
     ? "help"
     : isIleSessionModalTool(activeTool)
@@ -333,17 +334,17 @@ export function SessionChrome({
         {heliosOpen ? (
           <div
             data-ile-chapter-dock-panel
-            className={`pointer-events-auto ${ILE_MAP_WIDGET_FRAME_CLASS} z-40`}
+            data-ile-work-canvas-wide={workCanvasWide ? "true" : "false"}
+            className={`pointer-events-auto ${ileMapWorkFrameClass(workCanvasWide)}`}
           >
             <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
               <IleChapterWidgetFrame
                 fill
+                wide={workCanvasWide}
+                onToggleWide={() => setWorkCanvasWide((open) => !open)}
                 onMinimize={onMinimizeHelios ?? onCloseHelios}
-                toolbar={
-                  <IleChapterToolTabs activeTool={activeTool} onToolChange={onToolChange} />
-                }
               >
-                {chapterToolOpen ? toolOverlay : heliosWidget}
+                {workCanvas}
               </IleChapterWidgetFrame>
             </div>
           </div>

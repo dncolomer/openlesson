@@ -27,14 +27,12 @@ import {
   buildIleCanvasUploadItem,
   buildGatedIleEegUploadItem,
   buildIleFacialUploadItem,
-  buildIleNotebookUploadItem,
   buildIleToolEventUploadItem,
   hashIlePowContent,
   ILE_POW_DEBOUNCE_MS,
   meetsCanvasUploadThreshold,
   meetsEegUploadThreshold,
   meetsFacialUploadThreshold,
-  meetsNotebookUploadThreshold,
   totalIleEegSamples,
 } from "@/lib/ile-realtime-pow";
 import type { LocalContextBuffer } from "@/lib/local-context";
@@ -457,22 +455,6 @@ const uploadCanvasPowNow = useCallback(
   [uploadPowItem],
 );
 
-const uploadNotebookPowNow = useCallback(
-  (force = false) => {
-    const currentSession = sessionRef.current;
-    const content = notebookContentRef.current?.trim() || "";
-    if (!currentSession || !content || !powSessionEnabledRef.current) return;
-    if (!meetsNotebookUploadThreshold(content.length, force)) return;
-
-    const hash = hashIlePowContent(content);
-    if (hash === lastUploadedNotebookHashRef.current) return;
-    lastUploadedNotebookHashRef.current = hash;
-
-    void uploadPowItem(buildIleNotebookUploadItem(currentSession.id, content), "tools");
-  },
-  [uploadPowItem],
-);
-
 const scheduleCanvasPowUpload = useCallback(() => {
   if (canvasPowDebounceRef.current) {
     clearTimeout(canvasPowDebounceRef.current);
@@ -482,16 +464,6 @@ const scheduleCanvasPowUpload = useCallback(() => {
     uploadCanvasPowNow();
   }, ILE_POW_DEBOUNCE_MS);
 }, [uploadCanvasPowNow]);
-
-const scheduleNotebookPowUpload = useCallback(() => {
-  if (notebookPowDebounceRef.current) {
-    clearTimeout(notebookPowDebounceRef.current);
-  }
-  notebookPowDebounceRef.current = setTimeout(() => {
-    notebookPowDebounceRef.current = null;
-    uploadNotebookPowNow();
-  }, ILE_POW_DEBOUNCE_MS);
-}, [uploadNotebookPowNow]);
 
 const flushRemainingIlePow = useCallback(
   async (options?: { force?: boolean }) => {
@@ -505,11 +477,10 @@ const flushRemainingIlePow = useCallback(
       notebookPowDebounceRef.current = null;
     }
     uploadCanvasPowNow(force);
-    uploadNotebookPowNow(force);
     tryUploadFacialBatch(force);
     tryUploadPendingEegChunk(force);
   },
-  [tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow, uploadNotebookPowNow],
+  [tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow],
 );
 
 // Speech + PoW uploads arm only while the learner is actively in-session.
@@ -537,11 +508,6 @@ useEffect(() => {
   if (!powSessionEnabled) return;
   scheduleCanvasPowUpload();
 }, [powSessionEnabled, whiteboardData, scheduleCanvasPowUpload]);
-
-useEffect(() => {
-  if (!powSessionEnabled) return;
-  scheduleNotebookPowUpload();
-}, [powSessionEnabled, notebookContent, scheduleNotebookPowUpload]);
 
 useEffect(() => {
   if (!powSessionEnabled || museStatus !== "streaming") return;

@@ -39,11 +39,11 @@ describe("listIleUnsubmittedReviewItems", () => {
     });
     expect(items.thoughts.map((row) => row.id)).toEqual(["forming-speech", "t1"]);
     expect(items.thoughts[0]?.live).toBe(true);
-    expect(items.tool.map((row) => row.id)).toEqual(["canvas", "notebook"]);
+    expect(items.tool.map((row) => row.id)).toEqual(["canvas"]);
     expect(items.screen).toEqual([]);
     expect(items.video).toEqual([]);
     expect(items.eeg).toEqual([]);
-    expect(items.tool[1]?.detail).toContain("draft notes");
+    expect(items.tool[0]?.label).toMatch(/canvas/i);
   });
 });
 
@@ -73,6 +73,7 @@ describe("Review work chrome (shipped source)", () => {
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     expect(tabs).not.toContain("thought-history");
     expect(tabs).not.toContain("Thoughts");
+    expect(tabs).not.toContain("Grokipedia");
 
     const panel = read("components/session-view/ile-review-work-panel.tsx");
     expect(panel).toContain("data-ile-review-work-panel");

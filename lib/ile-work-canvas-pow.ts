@@ -494,6 +494,16 @@ type CollectorObserveOpts = {
   gestureBusy?: boolean;
 };
 
+/** Bare `elements: []` while the board already has work — Excalidraw mount, not a learner wipe. */
+function isIleWorkCanvasMountEmptyWipe(
+  baseline: IleWorkCanvasScene | null | undefined,
+  incoming: IleWorkCanvasScene,
+): boolean {
+  if (!ileWorkCanvasHasLiveElements(baseline)) return false;
+  if (ileWorkCanvasHasLiveElements(incoming)) return false;
+  return incoming.elements.length === 0;
+}
+
 /**
  * Collapses a pointer-drag / in-progress text edit into one emit.
  * Hosts call `syncWithoutEmit` for XAI/remote applies so those are not learner work.
@@ -521,7 +531,9 @@ export class IleWorkCanvasPowCollector {
     opts?: CollectorObserveOpts,
   ): IleWorkCanvasPowEvent[] {
     const next = serializeIleWorkCanvasScene(scene);
-    if (!ileWorkCanvasHasLiveElements(next) && ileWorkCanvasHasLiveElements(this.baseline)) {
+    // Excalidraw fires a bare empty scene on mount. That is not last-element
+    // delete/erase, which leave isDeleted remnants the classifier must emit.
+    if (isIleWorkCanvasMountEmptyWipe(this.baseline, next)) {
       return [];
     }
     this.latest = next;

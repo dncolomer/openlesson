@@ -246,6 +246,39 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(shouldLogIleSidebarToolSwitch("chapters")).toBe(true);
   });
 
+  it("collector emits last-element delete and eraser-clear, not only mount-empty", () => {
+    const liveRect = el("rectangle", "last");
+    const liveBoard = scene([liveRect]);
+    const collector = new IleWorkCanvasPowCollector();
+
+    collector.reset(liveBoard);
+    expect(collector.observeScene(emptyIleWorkCanvasScene())).toEqual([]);
+
+    collector.reset(liveBoard);
+    const lastDeleted = collector.observeScene(scene([{ ...liveRect, isDeleted: true }]));
+    expect(actionsOf(lastDeleted)).toEqual(["canvas/delete"]);
+    expect(lastDeleted[0].metadata.element_ids).toEqual(["last"]);
+    const deleteUpload = buildIleWorkCanvasActionUploadItem("session-1", lastDeleted[0], 11);
+    const tapDeleteUpload = buildTapWorkCanvasActionUploadItem("session-1", lastDeleted[0], 11);
+    expect(deleteUpload?.toolName).toBe("canvas");
+    expect(deleteUpload?.toolAction).toBe("delete");
+    expect(JSON.parse(deleteUpload!.payload).action).toBe("delete");
+    expect(tapDeleteUpload?.toolName).toBe(deleteUpload?.toolName);
+    expect(tapDeleteUpload?.toolAction).toBe(deleteUpload?.toolAction);
+
+    collector.reset(liveBoard);
+    const lastErased = collector.observeScene(
+      scene([{ ...liveRect, isDeleted: true }], { activeTool: { type: "eraser" } }),
+    );
+    expect(actionsOf(lastErased)).toEqual(["canvas/erase"]);
+    const eraseUpload = buildIleWorkCanvasActionUploadItem("session-1", lastErased[0], 12);
+    expect(eraseUpload?.toolAction).toBe("erase");
+    expect(JSON.parse(eraseUpload!.payload).action).toBe("erase");
+    expect(buildTapWorkCanvasActionUploadItem("session-1", lastErased[0], 12)?.toolAction).toBe(
+      eraseUpload?.toolAction,
+    );
+  });
+
   it("ILE and TAP builders agree on the same classified events", () => {
     const rect = el("rectangle", "shared");
     const events = classifyIleWorkCanvasSceneDiff(emptyIleWorkCanvasScene(), scene([rect]));

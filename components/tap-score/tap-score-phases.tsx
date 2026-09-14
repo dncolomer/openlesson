@@ -38,15 +38,17 @@ import {
   applyTapAssistantTurnsToWorkCanvas,
   applyTapHeliosReplyToWorkCanvas,
   buildTapCanvasSnapshotUploadItem,
-  buildTapExcalidrawToolUploadItem,
+  buildTapWorkCanvasActionUploadItem,
   emptyTapWorkCanvasScene,
   serializeTapWorkCanvasScene,
   tapHeliosCanvasBusy,
   tapWorkCanvasAskUserMessage,
   tapWorkCanvasBoardId,
+  tapWorkCanvasElementContentFingerprint,
   tapWorkCanvasShouldAcceptSceneUpdate,
   uploadTapWorkCanvasPow,
 } from "@/lib/tap-work-canvas";
+import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
 import type { IleWorkCanvasElement, IleWorkCanvasScene, IleWorkCanvasSkeleton } from "@/lib/ile-work-canvas";
 import type { MutableRefObject } from "react";
@@ -200,7 +202,6 @@ export function TapScorePhases(props: {
   const [canvasApplyNonce, setCanvasApplyNonce] = useState(0);
   const sceneRef = useRef(workCanvasScene);
   const appliedAssistantIdsRef = useRef<Set<string>>(new Set());
-  const lastExcalidrawPowKeyRef = useRef("");
   const lastCanvasPowHashRef = useRef("");
   const canvasPowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -259,28 +260,27 @@ export function TapScorePhases(props: {
     setCanvasApplyNonce((n) => n + 1);
   }, [lastAssistantTurn?.id, lastAssistantTurn?.content, messages, phase, syncScene]);
 
-  const handleExcalidrawTool = useCallback(
-    (input: { activeTool?: string | null; elementType?: string | null }) => {
+  const handleCanvasPowActions = useCallback(
+    (events: IleWorkCanvasPowEvent[]) => {
       const sessionKey = String(tapSessionId || sessionId || "").trim();
       if (!sessionKey) return;
-      const item = buildTapExcalidrawToolUploadItem(sessionKey, {
-        ...input,
-        metadata: { via: "excalidraw", product: "tap" },
-      });
-      if (!item) return;
-      const key = `${item.toolName}:${item.toolAction}`;
-      if (lastExcalidrawPowKeyRef.current === key) return;
-      lastExcalidrawPowKeyRef.current = key;
-      void uploadTapWorkCanvasPow({
-        workspaceId,
-        blockId,
-        sessionId,
-        privateToken,
-        tapSessionId,
-        entryQueryParams,
-        practice: isPracticeMode,
-        item,
-      });
+      for (const event of events) {
+        const item = buildTapWorkCanvasActionUploadItem(sessionKey, {
+          ...event,
+          metadata: { ...event.metadata, product: "tap" },
+        });
+        if (!item) continue;
+        void uploadTapWorkCanvasPow({
+          workspaceId,
+          blockId,
+          sessionId,
+          privateToken,
+          tapSessionId,
+          entryQueryParams,
+          practice: isPracticeMode,
+          item,
+        });
+      }
     },
     [
       blockId,
@@ -302,12 +302,12 @@ export function TapScorePhases(props: {
       setWorkCanvasScene(scene);
       const sessionKey = String(tapSessionId || sessionId || "").trim();
       if (!sessionKey) return;
-      const snapshot = JSON.stringify(scene);
-      if (snapshot === lastCanvasPowHashRef.current) return;
+      const fingerprint = tapWorkCanvasElementContentFingerprint(scene);
+      if (!fingerprint || fingerprint === lastCanvasPowHashRef.current) return;
       if (canvasPowTimerRef.current) clearTimeout(canvasPowTimerRef.current);
       canvasPowTimerRef.current = setTimeout(() => {
-        lastCanvasPowHashRef.current = snapshot;
-        const item = buildTapCanvasSnapshotUploadItem(sessionKey, snapshot);
+        lastCanvasPowHashRef.current = fingerprint;
+        const item = buildTapCanvasSnapshotUploadItem(sessionKey, JSON.stringify(scene));
         void uploadTapWorkCanvasPow({
           workspaceId,
           blockId,
@@ -425,7 +425,7 @@ export function TapScorePhases(props: {
                   applyElementsNonce={canvasApplyNonce}
                   heliosBusy={heliosBusy}
                   onSceneChange={handleSceneChange}
-                  onExcalidrawTool={handleExcalidrawTool}
+                  onCanvasPowActions={handleCanvasPowActions}
                   onAskSelected={handleAskSelected}
                 />
                 {error ? (

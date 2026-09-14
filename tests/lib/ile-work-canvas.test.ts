@@ -755,18 +755,18 @@ describe("ILE session-chat board context (shipped builder)", () => {
 });
 
 describe("ILE Excalidraw-tool PoW (shipped)", () => {
-  it("maps Excalidraw tools and does not emit notebook / grokipedia / dantes", () => {
+  it("maps Excalidraw tools onto canvas actions and does not emit notebook / grokipedia / dantes", () => {
     expect(mapExcalidrawToolToIlePow({ activeTool: "text" })).toEqual({
-      toolName: "text",
-      toolAction: "text",
+      toolName: "canvas",
+      toolAction: "draw_text",
     });
     expect(mapExcalidrawToolToIlePow({ activeTool: "freedraw" })).toEqual({
-      toolName: "freedraw",
-      toolAction: "freedraw",
+      toolName: "canvas",
+      toolAction: "draw_freedraw",
     });
     expect(mapExcalidrawToolToIlePow({ elementType: "rectangle" })).toEqual({
-      toolName: "rectangle",
-      toolAction: "rectangle",
+      toolName: "canvas",
+      toolAction: "draw_rectangle",
     });
     expect(mapExcalidrawToolToIlePow({ activeTool: "notebook" })).toBeNull();
     expect(mapExcalidrawToolToIlePow({ activeTool: "grokipedia" })).toBeNull();
@@ -777,8 +777,8 @@ describe("ILE Excalidraw-tool PoW (shipped)", () => {
       activeTool: "text",
       timestampMs: 42,
     });
-    expect(item?.toolName).toBe("text");
-    expect(item?.toolAction).toBe("text");
+    expect(item?.toolName).toBe("canvas");
+    expect(item?.toolAction).toBe("draw_text");
     expect(item?.toolName).not.toBe("notebook");
 
     expect(buildIleExcalidrawToolUploadItem("session-1", { activeTool: "notebook" })).toBeNull();
@@ -788,10 +788,14 @@ describe("ILE Excalidraw-tool PoW (shipped)", () => {
     expect(legacy.toolName).toBe("notebook");
 
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("mapExcalidrawToolToIlePow");
-    expect(view).toContain('via: "excalidraw"');
+    expect(view).toContain("handleCanvasPowActions");
+    expect(view).toContain("onCanvasPowActions=");
+    expect(view).not.toContain("lastExcalidrawPowKeyRef");
+    expect(view).toContain("shouldLogIleSidebarToolSwitch");
     const runtime = read("components/session-view/use-session-runtime.ts");
     expect(runtime).not.toContain("buildIleNotebookUploadItem");
+    expect(runtime).not.toContain("lastUploadedNotebookHashRef");
+    expect(runtime).not.toContain("notebookPowDebounceRef");
   });
 });
 
@@ -1029,7 +1033,7 @@ describe("ILE and TAP Work canvas share one component (shipped)", () => {
       "applyElementsNonce=",
       "heliosBusy=",
       "onSceneChange=",
-      "onExcalidrawTool=",
+      "onCanvasPowActions=",
       "onAskSelected=",
     ];
     for (const feature of features) {

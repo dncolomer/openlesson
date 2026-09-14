@@ -180,7 +180,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
 
     expect(phases).toContain("<WorkCanvas");
     expect(phases).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
-    expect(phases).toContain("buildTapExcalidrawToolUploadItem");
+    expect(phases).toContain("buildTapWorkCanvasActionUploadItem");
     expect(phases).toContain("buildTapCanvasSnapshotUploadItem");
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("heliosBusy");
@@ -234,16 +234,16 @@ describe("TAP Work canvas live surface (shipped)", () => {
 describe("TAP Work canvas PoW (shipped ILE builders)", () => {
   it("maps Excalidraw tools and canvas snapshots the same class as ILE; TAP live wires them", () => {
     expect(mapExcalidrawToolToIlePow({ activeTool: "text" })).toEqual({
-      toolName: "text",
-      toolAction: "text",
+      toolName: "canvas",
+      toolAction: "draw_text",
     });
     const tool = buildTapExcalidrawToolUploadItem("tap-session-1", {
       activeTool: "freedraw",
       timestampMs: 42,
     });
-    expect(tool?.toolName).toBe("freedraw");
-    expect(tool?.toolAction).toBe("freedraw");
-    expect(tool?.fileName).toMatch(/excalidraw-freedraw/);
+    expect(tool?.toolName).toBe("canvas");
+    expect(tool?.toolAction).toBe("draw_freedraw");
+    expect(tool?.fileName).toMatch(/canvas-draw_freedraw/);
     expect(buildTapExcalidrawToolUploadItem("tap-session-1", { activeTool: "notebook" })).toBeNull();
 
     const snap = buildTapCanvasSnapshotUploadItem("tap-session-1", '{"elements":[]}', 99);
@@ -252,10 +252,10 @@ describe("TAP Work canvas PoW (shipped ILE builders)", () => {
     expect(snap.payload).toContain("tap-session-1");
 
     const live = readTapScoreSurface();
-    expect(live).toContain("buildTapExcalidrawToolUploadItem");
+    expect(live).toContain("buildTapWorkCanvasActionUploadItem");
     expect(live).toContain("buildTapCanvasSnapshotUploadItem");
     expect(live).toContain("uploadTapWorkCanvasPow");
-    expect(live).toContain("onExcalidrawTool");
+    expect(live).toContain("onCanvasPowActions");
     const runtime = read("lib/tap-session-runtime.ts");
     expect(runtime).toContain('canvas: "/api/workspace-tap-score/canvas"');
     expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);
@@ -265,7 +265,7 @@ describe("TAP Work canvas PoW (shipped ILE builders)", () => {
       [
         `tool=${tool?.toolName}/${tool?.toolAction}`,
         `snap=${snap.toolName}/${snap.toolAction}`,
-        "live wires buildTapExcalidrawToolUploadItem + buildTapCanvasSnapshotUploadItem",
+        "live wires buildTapWorkCanvasActionUploadItem + buildTapCanvasSnapshotUploadItem",
         "path=/api/workspace-tap-score/canvas",
       ].join("\n") + "\n",
     );

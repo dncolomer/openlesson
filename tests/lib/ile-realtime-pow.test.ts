@@ -3,13 +3,22 @@ import {
   buildGatedIleEegUploadItem,
   buildIleCanvasUploadItem,
   buildIleEegUploadItem,
+  buildIleExcalidrawToolUploadItem,
   buildIleToolEventUploadItem,
+  buildIleWorkCanvasActionUploadItem,
   hashIlePowContent,
   isCountableIleEegPow,
   meetsCanvasUploadThreshold,
   meetsEegUploadThreshold,
   totalIleEegSamples,
 } from "@/lib/ile-realtime-pow";
+import {
+  classifyIleWorkCanvasSceneDiff,
+} from "@/lib/ile-work-canvas-pow";
+import {
+  convertToExcalidrawElements,
+  emptyIleWorkCanvasScene,
+} from "@/lib/ile-work-canvas";
 import { IleEvidenceBuffer, ILE_EVIDENCE_THRESHOLDS } from "@/lib/ile-evidence-buffer";
 import { EEG_QUALITY_CHANNELS } from "@/lib/muse-eeg-quality";
 import { countIlePowByType } from "@/lib/ile-pow-counters";
@@ -91,6 +100,25 @@ describe("ile-realtime-pow", () => {
     expect(item.toolName).toBe("canvas");
     expect(JSON.parse(item.payload).data).toBe(data);
     expect(item.timestampMs).toBe(42);
+  });
+
+  it("builds classified Work-canvas action uploads from the shipped scene-diff classifier", () => {
+    const [rect] = convertToExcalidrawElements(
+      [{ type: "rectangle", id: "r1", x: 8, y: 8, width: 40, height: 20 }],
+      { regenerateIds: false },
+    );
+    const events = classifyIleWorkCanvasSceneDiff(emptyIleWorkCanvasScene(), {
+      elements: [rect],
+      appState: {},
+      files: {},
+    });
+    expect(events).toHaveLength(1);
+    const item = buildIleWorkCanvasActionUploadItem("session-1", events[0], 7);
+    expect(item?.toolName).toBe("canvas");
+    expect(item?.toolAction).toBe("draw_rectangle");
+    expect(JSON.parse(item!.payload).action).toBe("draw_rectangle");
+    expect(buildIleExcalidrawToolUploadItem("session-1", { activeTool: "notebook" })).toBeNull();
+    expect(buildIleWorkCanvasActionUploadItem("session-1", { toolName: "dantes", toolAction: "open" })).toBeNull();
   });
 
   it("gates calibrated EEG PoW with quality and band-power fields", () => {

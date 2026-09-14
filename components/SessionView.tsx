@@ -127,7 +127,6 @@ import {
   applyIleXaiTurnToWorkCanvas,
   buildIleWorkCanvasAskUserMessage,
   ileWorkCanvasScenesFromWorkspaces,
-  mapExcalidrawToolToIlePow,
   parseIleXaiCanvasTurn,
   pickIleWorkCanvasTurnScene,
   seedIleChapterWorkCanvas,
@@ -136,6 +135,10 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
+import {
+  shouldLogIleSidebarToolSwitch,
+  type IleWorkCanvasPowEvent,
+} from "@/lib/ile-work-canvas-pow";
 
 
 /** Stable empty map — never use `= {}` as a prop default (new identity every render). */
@@ -529,10 +532,12 @@ export function SessionView({
       ? Date.now() - new Date(session.startedAt).getTime() 
       : 0;
 
-    if (prevTool && prevTool !== activeTool) {
+    if (prevTool && prevTool !== activeTool && shouldLogIleSidebarToolSwitch(prevTool)) {
       logTool(prevTool as ToolName, "close", { via: "tool_switch" });
     }
-    logTool(activeTool as ToolName, "open", { via: "tool_switch" });
+    if (shouldLogIleSidebarToolSwitch(activeTool)) {
+      logTool(activeTool as ToolName, "open", { via: "tool_switch" });
+    }
     // Feed tool events into local context buffer
     if (localInferenceEnabledRef.current && localContextRef.current) {
       localContextRef.current.addToolEvent(`opened ${activeTool}`);
@@ -1574,17 +1579,11 @@ export function SessionView({
     );
   };
 
-  const lastExcalidrawPowKeyRef = useRef("");
-  const handleExcalidrawTool = useCallback(
-    (input: { activeTool?: string | null; elementType?: string | null }) => {
-      const mapped = mapExcalidrawToolToIlePow(input);
-      if (!mapped) return;
-      const key = `${mapped.toolName}:${mapped.toolAction}`;
-      if (lastExcalidrawPowKeyRef.current === key) return;
-      lastExcalidrawPowKeyRef.current = key;
-      void logTool(mapped.toolName as ToolName, mapped.toolAction as ToolAction, {
-        via: "excalidraw",
-      });
+  const handleCanvasPowActions = useCallback(
+    (events: IleWorkCanvasPowEvent[]) => {
+      for (const event of events) {
+        void logTool("canvas", event.toolAction as ToolAction, event.metadata);
+      }
     },
     [logTool],
   );
@@ -1704,7 +1703,7 @@ export function SessionView({
         }}
         applyElements={canvasApplyElements}
         applyElementsNonce={canvasApplyNonce}
-        onExcalidrawTool={handleExcalidrawTool}
+        onCanvasPowActions={handleCanvasPowActions}
         onAskSelected={handleAskCanvasSelection}
       />
     );

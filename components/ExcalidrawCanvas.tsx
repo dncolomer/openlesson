@@ -49,6 +49,11 @@ import {
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
 import {
+  IleWorkCanvasPowCollector,
+  ileWorkCanvasGestureBusy,
+  type IleWorkCanvasPowEvent,
+} from "@/lib/ile-work-canvas-pow";
+import {
   countIleWorkCanvasRoomPeers,
   ileWorkCanvasPeerLabel,
   ileWorkCanvasSceneFingerprint,
@@ -154,7 +159,8 @@ export interface ExcalidrawCanvasProps {
   applyElementsNonce?: string | number | null;
   /** Ids to drop before merging applyElements (loading-placeholder replace). */
   applyRemoveElementIds?: readonly string[] | null;
-  onExcalidrawTool?: (input: { activeTool?: string | null; elementType?: string | null }) => void;
+  /** Classified Work-canvas PoW (draw/move/rotate/delete/Expand More/board prompt). */
+  onCanvasPowActions?: (events: IleWorkCanvasPowEvent[]) => void;
   onAskSelected?: (input: {
     prompt: string;
     selectedElements: IleWorkCanvasElement[];
@@ -206,7 +212,7 @@ export function ExcalidrawCanvas({
   applyElements = null,
   applyElementsNonce = null,
   applyRemoveElementIds = null,
-  onExcalidrawTool,
+  onCanvasPowActions,
   onAskSelected,
   boardId = null,
   peerId = "work",
@@ -263,7 +269,8 @@ export function ExcalidrawCanvas({
     ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData)),
   );
   const onSceneChangeRef = useRef(onSceneChange);
-  const onExcalidrawToolRef = useRef(onExcalidrawTool);
+  const onCanvasPowActionsRef = useRef(onCanvasPowActions);
+  const canvasPowCollectorRef = useRef(new IleWorkCanvasPowCollector());
   const lastApplyNonceRef = useRef<string | number | null>(null);
   const pendingApplyRef = useRef<{
     nonce: string | number;
@@ -386,8 +393,12 @@ export function ExcalidrawCanvas({
   }, [onSceneChange]);
 
   useEffect(() => {
-    onExcalidrawToolRef.current = onExcalidrawTool;
-  }, [onExcalidrawTool]);
+    onCanvasPowActionsRef.current = onCanvasPowActions;
+  }, [onCanvasPowActions]);
+
+  useEffect(() => {
+    canvasPowCollectorRef.current.reset(sanitizeSceneData(initialSceneData));
+  }, [boardId]);
 
   useEffect(() => {
     onAskSelectedRef.current = onAskSelected;
@@ -709,7 +720,17 @@ export function ExcalidrawCanvas({
             reserved: reservedThinkingOrigins(turnId),
           },
         );
-        api.updateScene({ elements: next.elements });
+        applyingRemoteRef.current = true;
+        try {
+          api.updateScene({ elements: next.elements });
+        } finally {
+          applyingRemoteRef.current = false;
+        }
+        canvasPowCollectorRef.current.syncWithoutEmit({
+          elements: next.elements,
+          appState: api.getAppState?.() ?? {},
+          files: api.getFiles?.() ?? {},
+        });
       };
       try {
         const scene = serializeIleWorkCanvasScene({
@@ -763,6 +784,11 @@ export function ExcalidrawCanvas({
     ) as IleWorkCanvasElement[];
     if (!selected.length) return;
     setAskPrompt("");
+    const powEvents = canvasPowCollectorRef.current.expandMore({
+      prompt,
+      selectedElements: selected,
+    });
+    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     void runCanvasAsk({ prompt, selectedElements: selected });
   }, [askPrompt, runCanvasAsk]);
 
@@ -770,6 +796,8 @@ export function ExcalidrawCanvas({
     const prompt = boardPrompt.trim();
     if (!prompt) return;
     setBoardPrompt("");
+    const powEvents = canvasPowCollectorRef.current.boardPrompt({ prompt });
+    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     void runCanvasAsk({ prompt, selectedElements: [] });
   }, [boardPrompt, runCanvasAsk]);
 
@@ -965,15 +993,14 @@ export function ExcalidrawCanvas({
       // Store scene data for potential immediate export
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
       sceneDataRef.current = sceneData ?? null;
-      const activeTool =
-        typeof appState?.activeTool === "string"
-          ? appState.activeTool
-          : appState?.activeTool?.type ?? null;
-      const lastEl = elements.length ? elements[elements.length - 1] : null;
-      onExcalidrawToolRef.current?.({
-        activeTool: activeTool ? String(activeTool) : null,
-        elementType: lastEl && typeof lastEl.type === "string" ? lastEl.type : null,
-      });
+      if (applyingRemoteRef.current) {
+        canvasPowCollectorRef.current.syncWithoutEmit(sceneData);
+      } else {
+        const powEvents = canvasPowCollectorRef.current.observeScene(sceneData, {
+          gestureBusy: ileWorkCanvasGestureBusy(appState),
+        });
+        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+      }
       if (scenePersistTimeoutRef.current) clearTimeout(scenePersistTimeoutRef.current);
       scenePersistTimeoutRef.current = setTimeout(() => {
         if (!sceneData) return;
@@ -1011,6 +1038,17 @@ export function ExcalidrawCanvas({
       const api = excalidrawAPIRef.current;
       if (payload.button === "down" && api) {
         syncLearnMorePlacement(api.getSceneElements?.() ?? [], api.getAppState?.() ?? {});
+        canvasPowCollectorRef.current.markGestureBusy(true);
+      } else if (payload.button === "up") {
+        const scene = sanitizeSceneData({
+          elements: [...(api?.getSceneElements?.() ?? [])],
+          appState: api?.getAppState?.() ?? {},
+          files: api?.getFiles?.() ?? {},
+        });
+        const powEvents = canvasPowCollectorRef.current.observeScene(scene, {
+          gestureBusy: false,
+        });
+        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
       }
       const id = String(boardId || "").trim();
       if (!id) return;
@@ -1332,7 +1370,7 @@ export type WorkCanvasProps = ExcalidrawCanvasProps & {
   boardId: string;
   onSceneChange: NonNullable<ExcalidrawCanvasProps["onSceneChange"]>;
   onAskSelected: NonNullable<ExcalidrawCanvasProps["onAskSelected"]>;
-  onExcalidrawTool: NonNullable<ExcalidrawCanvasProps["onExcalidrawTool"]>;
+  onCanvasPowActions: NonNullable<ExcalidrawCanvasProps["onCanvasPowActions"]>;
   heliosBusy: boolean;
 };
 

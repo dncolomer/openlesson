@@ -1357,44 +1357,64 @@ function normalizeExcalidrawToolName(value: string | null | undefined): string {
     .replace(/\s+/g, "_");
 }
 
-const ELEMENT_TYPE_TO_TOOL: Record<string, IleExcalidrawPowTool> = {
-  text: "text",
-  freedraw: "freedraw",
-  rectangle: "rectangle",
-  diamond: "diamond",
-  ellipse: "ellipse",
-  arrow: "arrow",
-  line: "line",
-  image: "image",
-  frame: "frame",
-  selection: "selection",
+const ELEMENT_TYPE_TO_CANVAS_ACTION: Record<string, string> = {
+  text: "draw_text",
+  freedraw: "draw_freedraw",
+  rectangle: "draw_rectangle",
+  diamond: "draw_diamond",
+  ellipse: "draw_ellipse",
+  arrow: "draw_arrow",
+  line: "draw_line",
+  image: "draw_image",
+  frame: "draw_frame",
+  eraser: "erase",
 };
 
+const CANVAS_POW_ACTIONS = new Set([
+  "draw_text",
+  "draw_freedraw",
+  "draw_rectangle",
+  "draw_diamond",
+  "draw_ellipse",
+  "draw_arrow",
+  "draw_line",
+  "draw_image",
+  "draw_frame",
+  "erase",
+  "delete",
+  "move",
+  "rotate",
+  "multi_select",
+  "expand_more",
+  "board_prompt",
+]);
+
 /**
- * Map Excalidraw's internal active tool / element kind onto ILE PoW
- * `tool_name` / `tool_action`. Never emits retired ILE tools.
+ * Map Excalidraw's internal active tool / element kind onto shared canvas PoW
+ * `tool_name` / `tool_action` (`canvas` + draw_text / move / …). Never emits
+ * retired ILE tools. Selecting the selection tool is not work.
  */
 export function mapExcalidrawToolToIlePow(input: {
   activeTool?: string | null;
   elementType?: string | null;
   action?: string | null;
-}): { toolName: IleExcalidrawPowTool | string; toolAction: string } | null {
+}): { toolName: "canvas"; toolAction: string } | null {
   const toolRaw = normalizeExcalidrawToolName(input.activeTool);
   const elementRaw = normalizeExcalidrawToolName(input.elementType);
-  if (RETIRED_ILE_WORK_TOOLS.has(toolRaw) || RETIRED_ILE_WORK_TOOLS.has(elementRaw)) {
+  const actionRaw = normalizeExcalidrawToolName(input.action);
+  if (
+    RETIRED_ILE_WORK_TOOLS.has(toolRaw) ||
+    RETIRED_ILE_WORK_TOOLS.has(elementRaw) ||
+    RETIRED_ILE_WORK_TOOLS.has(actionRaw)
+  ) {
     return null;
   }
-  const mapped =
-    (ILE_EXCALIDRAW_POW_TOOLS as readonly string[]).includes(toolRaw)
-      ? (toolRaw as IleExcalidrawPowTool)
-      : ELEMENT_TYPE_TO_TOOL[elementRaw] ??
-        ((ILE_EXCALIDRAW_POW_TOOLS as readonly string[]).includes(elementRaw)
-          ? (elementRaw as IleExcalidrawPowTool)
-          : null);
+  if (actionRaw && CANVAS_POW_ACTIONS.has(actionRaw)) {
+    return { toolName: "canvas", toolAction: actionRaw };
+  }
+  const mapped = ELEMENT_TYPE_TO_CANVAS_ACTION[toolRaw] ?? ELEMENT_TYPE_TO_CANVAS_ACTION[elementRaw];
   if (!mapped) return null;
-  const actionRaw = normalizeExcalidrawToolName(input.action);
-  const toolAction = actionRaw || mapped;
-  return { toolName: mapped, toolAction };
+  return { toolName: "canvas", toolAction: mapped };
 }
 
 export function isRetiredIleWorkToolName(name: string | null | undefined): boolean {

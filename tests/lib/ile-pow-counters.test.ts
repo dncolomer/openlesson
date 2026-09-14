@@ -85,7 +85,6 @@ describe("countIlePowByType (session-global)", () => {
       countIleUnsubmittedPowDisplay({
         unflaggedThoughtCount: 2,
         formingThought: true,
-        notebookDirty: true,
         canvasDirty: true,
       }),
     ).toEqual({ tool: 1, screen: 0, video: 0, eeg: 0, thoughts: 3 });

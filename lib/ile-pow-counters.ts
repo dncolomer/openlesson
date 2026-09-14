@@ -92,11 +92,10 @@ export function emptyIlePowDisplayCounts(): IlePowDisplayCounts {
   return { tool: 0, screen: 0, video: 0, eeg: 0, thoughts: 0 };
 }
 
-/** Pending work not yet sent via End turn (stashed thoughts, forming speech, dirty tools). */
+/** Pending work not yet sent via End turn (stashed thoughts, forming speech, dirty canvas). */
 export function countIleUnsubmittedPowDisplay(input: {
   unflaggedThoughtCount?: number;
   formingThought?: boolean;
-  notebookDirty?: boolean;
   canvasDirty?: boolean;
 }): IlePowDisplayCounts {
   const thoughts = Math.max(0, Math.floor(Number(input.unflaggedThoughtCount) || 0));

@@ -13,6 +13,12 @@ import {
   isRetiredIleWorkToolName,
   mapExcalidrawToolToIlePow,
 } from "@/lib/ile-work-canvas";
+import {
+  buildIleWorkCanvasActionUploadItem,
+  mapExcalidrawToolToCanvasPow,
+} from "@/lib/ile-work-canvas-pow";
+
+export { buildIleWorkCanvasActionUploadItem, mapExcalidrawToolToCanvasPow };
 
 export {
   ILE_EVIDENCE_THRESHOLDS,
@@ -24,7 +30,7 @@ export {
   scoreIleEegChunk,
 };
 
-/** Debounce canvas/notebook uploads so rapid edits do not flood the PoW API. */
+/** Debounce canvas snapshot uploads so rapid edits do not flood the PoW API. */
 export const ILE_POW_DEBOUNCE_MS = 4_000;
 
 export function totalIleEegSamples(channels: Record<string, number[]>): number {
@@ -70,7 +76,7 @@ export function buildIleCanvasUploadItem(sessionId: string, data: string, timest
   } satisfies IleProofOfWorkUploadItem;
 }
 
-/** PoW for an Excalidraw-internal tool (text, freedraw, rectangle, …). */
+/** PoW for a classified Work-canvas action (draw_text, move, expand_more, …). */
 export function buildIleExcalidrawToolUploadItem(
   sessionId: string,
   input: {
@@ -84,25 +90,17 @@ export function buildIleExcalidrawToolUploadItem(
   if (isRetiredIleWorkToolName(input.activeTool) || isRetiredIleWorkToolName(input.elementType)) {
     return null;
   }
-  const mapped = mapExcalidrawToolToIlePow(input);
+  const mapped = mapExcalidrawToolToCanvasPow(input) ?? mapExcalidrawToolToIlePow(input);
   if (!mapped) return null;
-  const timestampMs = input.timestampMs ?? Date.now();
-  return {
-    kind: "tool",
-    mimeType: "application/json",
-    fileName: `ile-excalidraw-${mapped.toolName}-${mapped.toolAction}-${timestampMs}.json`,
-    payload: JSON.stringify({
-      session_id: sessionId,
-      tool: mapped.toolName,
-      action: mapped.toolAction,
-      timestamp_ms: timestampMs,
+  return buildIleWorkCanvasActionUploadItem(
+    sessionId,
+    {
+      toolName: mapped.toolName,
+      toolAction: mapped.toolAction,
       metadata: input.metadata ?? {},
-    }),
-    timestampMs,
-    toolName: mapped.toolName,
-    toolAction: mapped.toolAction,
-    metadata: { via: "excalidraw", ...(input.metadata ?? {}) },
-  };
+    },
+    input.timestampMs,
+  );
 }
 
 export function buildIleNotebookUploadItem(sessionId: string, content: string, timestampMs = Date.now()) {

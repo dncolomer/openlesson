@@ -111,9 +111,7 @@ const [logs, setLogs] = useState<LogEntry[]>([]);
 const logsRef = useRef<LogEntry[]>([]);
 const powSessionEnabledRef = useRef(false);
 const lastUploadedCanvasHashRef = useRef<string | null>(null);
-const lastUploadedNotebookHashRef = useRef<string | null>(null);
 const canvasPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-const notebookPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 const bandPowersRef = useRef(bandPowers);
 const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
 const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
@@ -472,10 +470,6 @@ const flushRemainingIlePow = useCallback(
       clearTimeout(canvasPowDebounceRef.current);
       canvasPowDebounceRef.current = null;
     }
-    if (notebookPowDebounceRef.current) {
-      clearTimeout(notebookPowDebounceRef.current);
-      notebookPowDebounceRef.current = null;
-    }
     uploadCanvasPowNow(force);
     tryUploadFacialBatch(force);
     tryUploadPendingEegChunk(force);
@@ -501,7 +495,6 @@ useEffect(() => {
 
 useEffect(() => {
   lastUploadedCanvasHashRef.current = null;
-  lastUploadedNotebookHashRef.current = null;
 }, [sessionId, activeChapterKey]);
 
 useEffect(() => {

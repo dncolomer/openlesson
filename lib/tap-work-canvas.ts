@@ -26,6 +26,13 @@ import {
   buildIleCanvasUploadItem,
   buildIleExcalidrawToolUploadItem,
 } from "@/lib/ile-realtime-pow";
+import {
+  buildIleWorkCanvasActionUploadItem,
+  buildIleWorkCanvasAskPowEvent,
+  classifyIleWorkCanvasSceneDiff,
+  ileWorkCanvasElementContentFingerprint,
+  type IleWorkCanvasPowEvent,
+} from "@/lib/ile-work-canvas-pow";
 import { textToBase64 } from "@/lib/ile-proof-of-work-client";
 import { TAP_SESSION_RUNTIME_PATHS } from "@/lib/tap-session-runtime";
 import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
@@ -158,6 +165,21 @@ export function buildTapExcalidrawToolUploadItem(
 ) {
   return buildIleExcalidrawToolUploadItem(sessionId, input);
 }
+
+/** Same classified canvas-action builder ILE uses. */
+export function buildTapWorkCanvasActionUploadItem(
+  sessionId: string,
+  event: IleWorkCanvasPowEvent | Parameters<typeof buildIleWorkCanvasActionUploadItem>[1],
+  timestampMs?: number,
+) {
+  return buildIleWorkCanvasActionUploadItem(sessionId, event, timestampMs);
+}
+
+export {
+  buildIleWorkCanvasAskPowEvent as buildTapWorkCanvasAskPowEvent,
+  classifyIleWorkCanvasSceneDiff as classifyTapWorkCanvasSceneDiff,
+  ileWorkCanvasElementContentFingerprint as tapWorkCanvasElementContentFingerprint,
+};
 
 /** Same canvas-snapshot PoW builder ILE uses. */
 export function buildTapCanvasSnapshotUploadItem(

@@ -55,13 +55,12 @@ export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] =
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
-  { id: "start_session", label: "Start a new Session" },
+  { id: "start_session", label: "Explore" },
   { id: "continue_session", label: "Continue prev Session" },
   { id: "mark_done", label: "Mark as Done" },
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_DRAWER_IDS = {
-  start_session: "practice",
   continue_session: PREVIOUS_SESSIONS_DRAWER_ID,
   mark_done: "progress",
 } as const;
@@ -225,10 +224,16 @@ export function ileWorkOnCompletedRequiresConfirm(completed?: boolean | null): b
 export function workspaceCircularMenuDrawerId(
   action: WorkspaceCircularMenuActionId | string,
 ): string | null {
-  if (action === "start_session") return WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.start_session;
   if (action === "continue_session") return WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session;
   if (action === "mark_done") return WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.mark_done;
   return null;
+}
+
+/** Explore on the workspace ring launches a new ILE session instead of a drawer. */
+export function workspaceCircularMenuStartsFreshExplore(
+  action: WorkspaceCircularMenuActionId | string,
+): boolean {
+  return action === "start_session";
 }
 
 export type LearnerDrawerRequest = {

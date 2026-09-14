@@ -207,6 +207,9 @@ export function bindIleSurfaceResize(
  * Excalidraw binds pointermove/up and wheel to `window` (the opener).
  * Document PiP has a different window, so strokes never finish unless we
  * forward those events onto the opener.
+ *
+ * Dispatch onto an HTMLElement (body), not the Window: Excalidraw's drag
+ * handler bails if `event.target instanceof HTMLElement` is false.
  */
 export const ILE_PIP_POINTER_BRIDGE_EVENTS = [
   "pointermove",
@@ -228,18 +231,80 @@ export function ileSurfaceNeedsPointerBridge(
   return Boolean(view && host && view.window !== host);
 }
 
+/** Opener body so cloned events have an HTMLElement target (not Window). */
+export function ileSurfacePointerBridgeDispatchTarget(
+  host: Window | null | undefined,
+): EventTarget | null {
+  if (!host) return null;
+  return host.document?.body ?? host.document?.documentElement ?? host;
+}
+
+function ileSurfaceEventInit(event: Event): EventInit {
+  const mouse = event as Partial<MouseEvent & PointerEvent & WheelEvent & KeyboardEvent>;
+  const init: Record<string, unknown> = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  };
+  if (typeof mouse.clientX === "number") {
+    init.clientX = mouse.clientX;
+    init.clientY = mouse.clientY;
+    init.screenX = mouse.screenX;
+    init.screenY = mouse.screenY;
+    init.ctrlKey = Boolean(mouse.ctrlKey);
+    init.shiftKey = Boolean(mouse.shiftKey);
+    init.altKey = Boolean(mouse.altKey);
+    init.metaKey = Boolean(mouse.metaKey);
+    init.button = mouse.button ?? 0;
+    init.buttons = mouse.buttons ?? 0;
+  }
+  if (typeof mouse.pointerId === "number") {
+    init.pointerId = mouse.pointerId;
+    init.pointerType = mouse.pointerType || "mouse";
+    init.isPrimary = mouse.isPrimary !== false;
+    init.pressure = mouse.pressure ?? (mouse.buttons ? 0.5 : 0);
+    init.width = mouse.width ?? 1;
+    init.height = mouse.height ?? 1;
+    init.tiltX = mouse.tiltX ?? 0;
+    init.tiltY = mouse.tiltY ?? 0;
+  }
+  if (typeof mouse.deltaY === "number" || typeof mouse.deltaX === "number") {
+    init.deltaX = mouse.deltaX ?? 0;
+    init.deltaY = mouse.deltaY ?? 0;
+    init.deltaZ = mouse.deltaZ ?? 0;
+    init.deltaMode = mouse.deltaMode ?? 0;
+  }
+  if (typeof mouse.key === "string") {
+    init.key = mouse.key;
+    init.code = mouse.code;
+    init.location = mouse.location ?? 0;
+    init.repeat = Boolean(mouse.repeat);
+  }
+  return init;
+}
+
+function stampIleSurfaceEventClone(clone: Event, init: Record<string, unknown>): Event {
+  for (const [key, value] of Object.entries(init)) {
+    if (key === "bubbles" || key === "cancelable" || key === "composed") continue;
+    try {
+      Object.defineProperty(clone, key, { value, configurable: true });
+    } catch {
+      (clone as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  Object.defineProperty(clone, ILE_PIP_FORWARDED, { value: true });
+  return clone;
+}
+
 export function cloneIleSurfaceEventForOpener(event: Event): Event | null {
   if ((event as { [ILE_PIP_FORWARDED]?: boolean })[ILE_PIP_FORWARDED]) return null;
+  const init = ileSurfaceEventInit(event) as Record<string, unknown>;
   try {
-    const Ctor = event.constructor as new (type: string, init?: Event) => Event;
-    const clone = new Ctor(event.type, event);
-    Object.defineProperty(clone, ILE_PIP_FORWARDED, { value: true });
-    return clone;
+    const Ctor = event.constructor as new (type: string, init?: EventInit) => Event;
+    return stampIleSurfaceEventClone(new Ctor(event.type, init), init);
   } catch {
     try {
-      const clone = new Event(event.type, event);
-      Object.defineProperty(clone, ILE_PIP_FORWARDED, { value: true });
-      return clone;
+      return stampIleSurfaceEventClone(new Event(event.type, init), init);
     } catch {
       return null;
     }
@@ -253,10 +318,12 @@ export function bindIleSurfacePointerBridge(
   const view = resolveIleSurfaceView(node ?? null);
   const host = opener ?? (typeof window !== "undefined" ? window : null);
   if (!view || !host || view.window === host) return () => {};
+  const target = ileSurfacePointerBridgeDispatchTarget(host);
+  if (!target) return () => {};
   const forward = (event: Event) => {
     const clone = cloneIleSurfaceEventForOpener(event);
     if (!clone) return;
-    host.dispatchEvent(clone);
+    target.dispatchEvent(clone);
   };
   for (const type of ILE_PIP_POINTER_BRIDGE_EVENTS) {
     view.window.addEventListener(type, forward, true);

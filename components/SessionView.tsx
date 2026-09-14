@@ -74,7 +74,7 @@ import { SessionWelcomeModal } from "@/components/session-view/session-welcome-m
 import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChrome } from "@/components/session-view/session-chrome";
-import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
+import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
 import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -1336,6 +1336,8 @@ export function SessionView({
   const handleSubmitTurn = useCallback(async () => {
     if (submitTurnBusy) return;
     setHeliosWidgetOpen(false);
+    setCraftUnusedPow(freezeIleTurnInsightUnusedPow(unusedPowForInsights));
+    setCraftingInsightsOpen(true);
     setSubmitTurnBusy(true);
     const formingText =
       sessionThoughtInterface.getFormingText?.() ||
@@ -1400,8 +1402,6 @@ export function SessionView({
       ]);
     } finally {
       setSubmitTurnBusy(false);
-      setCraftUnusedPow(freezeIleTurnInsightUnusedPow(unusedPowForInsights));
-      setCraftingInsightsOpen(true);
     }
   }, [
     activeStep?.id,
@@ -1680,12 +1680,13 @@ export function SessionView({
     if (!session) return null;
     const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
     return (
-      <ExcalidrawCanvas
+      <WorkCanvas
         key={`${boardId}:${peerId}`}
         boardId={boardId}
         peerId={peerId}
         initialData={whiteboardData || undefined}
         initialSceneData={whiteboardSceneData}
+        heliosBusy={isHeliosAssistantPending}
         onCanvasChange={(data) => {
           setWhiteboardData(data);
           setCanvasDirtyForHelios(true);

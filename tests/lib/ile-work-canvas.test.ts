@@ -54,6 +54,8 @@ import {
   ILE_XAI_LOADING_GAP,
   clampIleLearnMorePosition,
   ileCanvasPromptBarTop,
+  ileLearnMoreFollowOffset,
+  ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
   ileWorkCanvasCenterScroll,
@@ -444,7 +446,8 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("ileWorkCanvasViewportToHost");
-    expect(canvas).toContain("host: canvasHostOrigin()");
+    expect(canvas).toContain("ileWorkCanvasSelectionHostRect");
+    expect(canvas).toContain("canvasHostOrigin()");
 
     expect(ileLearnMoreSelectionKey({ a: true, c: true, b: false })).toBe("a,c");
     const dragged = clampIleLearnMorePosition({
@@ -461,6 +464,23 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(ileWorkCanvasPointerBusy({ cursorButton: "up", isResizing: true })).toBe(true);
     expect(ileWorkCanvasPointerBusy({ cursorButton: "up", draggingElement: { id: "el" } })).toBe(true);
     expect(ileWorkCanvasPointerBusy({ cursorButton: "up" })).toBe(false);
+
+    const selection = { left: 100, top: 80, right: 220, bottom: 120 };
+    const prompt = { left: 140, top: 128 };
+    expect(ileLearnMoreFollowOffset(prompt, selection)).toEqual({ dx: 40, dy: 48 });
+    expect(ileLearnMoreFollowPosition({ left: 160, top: 200 }, { dx: 40, dy: 48 })).toEqual({
+      left: 200,
+      top: 248,
+    });
+    expect(ileLearnMoreFollowOffset(null, selection)).toBeNull();
+    expect(ileLearnMoreFollowPosition(null, { dx: 1, dy: 1 })).toBeNull();
+    expect(canvas).toContain("ileLearnMoreFollowOffset");
+    expect(canvas).toContain("ileLearnMoreFollowPosition");
+    expect(canvas).toContain("paintLearnMoreUi");
+    expect(canvas).toContain("learnMoreHostRef");
+    expect(canvas).toContain('payload.button === "down" && api');
+    expect(canvas).toContain("syncLearnMorePlacement(api.getSceneElements?.() ?? [], api.getAppState?.() ?? {})");
+    expect(canvas).toContain("learnMorePinnedRef.current?.key !== selectionKey");
   });
 
   it("parks the thinking chip in empty space beside the closest object", () => {
@@ -814,7 +834,9 @@ describe("ILE Work chrome is canvas-only (shipped source)", () => {
     expect(chrome).not.toContain("IleChapterToolTabs");
     expect(view).toContain("renderWorkCanvas");
     expect(view).toContain("ileChapterCanvasRemountKey");
-    expect(view).toContain("<ExcalidrawCanvas");
+    expect(view).toContain("<WorkCanvas");
+    expect(view).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
+    expect(view).toContain("heliosBusy={isHeliosAssistantPending}");
     expect(view).toContain("applyIleXaiTurnToWorkCanvas");
     writeScratch(
       "ile-work-canvas-structure.txt",
@@ -986,5 +1008,33 @@ describe("ILE Work canvas parallel asks (shipped live merge)", () => {
     expect(canvas).toContain("disabled={!boardPrompt.trim()}");
     expect(canvas).not.toContain("disabled={askBusy");
     expect(canvas).not.toContain("if (!ask || !api || !prompt || askBusy)");
+  });
+});
+
+describe("ILE and TAP Work canvas share one component (shipped)", () => {
+  it("both hosts mount WorkCanvas with the same board features", () => {
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    const ile = read("components/SessionView.tsx");
+    const tap = read("components/tap-score/tap-score-phases.tsx");
+    expect(canvas).toContain("export function WorkCanvas(props: WorkCanvasProps)");
+    expect(canvas).toContain("return <ExcalidrawCanvas {...props} />");
+    expect(ile).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
+    expect(tap).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
+    expect(ile).not.toContain("<ExcalidrawCanvas");
+    expect(tap).not.toContain("<ExcalidrawCanvas");
+    const features = [
+      "boardId=",
+      "initialSceneData=",
+      "applyElements=",
+      "applyElementsNonce=",
+      "heliosBusy=",
+      "onSceneChange=",
+      "onExcalidrawTool=",
+      "onAskSelected=",
+    ];
+    for (const feature of features) {
+      expect(ile).toContain(feature);
+      expect(tap).toContain(feature);
+    }
   });
 });

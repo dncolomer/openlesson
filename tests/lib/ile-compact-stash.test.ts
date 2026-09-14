@@ -26,7 +26,9 @@ import { thoughtContextFillRatio } from "@/lib/thought-context-auto-stash";
 import {
   ILE_PIP_POINTER_BRIDGE_EVENTS,
   bindIleSurfacePointerBridge,
+  cloneIleSurfaceEventForOpener,
   ileSurfaceNeedsPointerBridge,
+  ileSurfacePointerBridgeDispatchTarget,
 } from "@/lib/ile-compact-window";
 
 const ROOT = join(__dirname, "../..");
@@ -119,7 +121,7 @@ describe("ILE vs TAP dialogue chrome (shipped source)", () => {
 
     const tap = readTapScoreSurface();
     const phases = read("components/tap-score/tap-score-phases.tsx");
-    expect(tap).toContain("ExcalidrawCanvas");
+    expect(tap).toContain("WorkCanvas");
     expect(phases).not.toContain("TapSessionMap");
     expect(tap).not.toContain("<DialogueSplit");
 
@@ -340,7 +342,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
 });
 
 describe("PiP Excalidraw pointer bridge (shipped)", () => {
-  it("forwards PiP pointermove/up onto the opener window and keeps the canvas editable", () => {
+  it("forwards PiP pointermove/up onto the opener document so Excalidraw can drag", () => {
     expect(ILE_PIP_POINTER_BRIDGE_EVENTS).toContain("pointermove");
     expect(ILE_PIP_POINTER_BRIDGE_EVENTS).toContain("pointerup");
 
@@ -365,24 +367,51 @@ describe("PiP Excalidraw pointer bridge (shipped)", () => {
     };
     const pipDoc = { defaultView: pipWin, body: {} };
     (pipWin as { document?: unknown }).document = pipDoc;
-    const opener = {
+    const openerBody = {
       dispatchEvent(event: Event) {
+        Object.defineProperty(event, "target", { value: openerBody, configurable: true });
         openerEvents.push(event);
         return true;
       },
+    };
+    const opener = {
+      document: { body: openerBody, documentElement: openerBody },
     } as unknown as Window;
+    expect(ileSurfacePointerBridgeDispatchTarget(opener)).toBe(openerBody);
     expect(
       ileSurfaceNeedsPointerBridge({ ownerDocument: pipDoc as Document }, opener),
     ).toBe(true);
 
     const unbind = bindIleSurfacePointerBridge({ ownerDocument: pipDoc as Document }, opener);
     expect(Object.keys(pipListeners)).toEqual(expect.arrayContaining(["pointermove", "pointerup", "pointercancel"]));
-    const move = new Event("pointermove");
+    const move = Object.assign(new Event("pointermove"), {
+      clientX: 40,
+      clientY: 80,
+      pointerId: 7,
+      buttons: 1,
+    });
     pipListeners.pointermove[0]!(move);
     expect(openerEvents.length).toBe(1);
     expect(openerEvents[0]?.type).toBe("pointermove");
+    expect(openerEvents[0]?.target).toBe(openerBody);
+    expect(openerEvents[0]?.target).not.toBe(opener);
+    expect((openerEvents[0] as Event & { clientX: number }).clientX).toBe(40);
+    expect((openerEvents[0] as Event & { pointerId: number }).pointerId).toBe(7);
+    expect((openerEvents[0] as Event & { buttons: number }).buttons).toBe(1);
     unbind();
     expect(pipListeners.pointermove).toEqual([]);
+
+    const cloned = cloneIleSurfaceEventForOpener(
+      Object.assign(new Event("pointerup"), { clientX: 12, clientY: 24, pointerId: 3, buttons: 0 }),
+    );
+    expect(cloned).toBeTruthy();
+    expect((cloned as Event & { clientX: number }).clientX).toBe(12);
+    expect((cloned as Event & { pointerId: number }).pointerId).toBe(3);
+
+    const compactWindow = read("lib/ile-compact-window.ts");
+    expect(compactWindow).toContain("ileSurfacePointerBridgeDispatchTarget");
+    expect(compactWindow).toContain("target.dispatchEvent(clone)");
+    expect(compactWindow).not.toContain("host.dispatchEvent(clone)");
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("bindIleSurfaceEditorEvents");

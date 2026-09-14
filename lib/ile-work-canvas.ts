@@ -1032,6 +1032,36 @@ export function ileLearnMoreSelectionKey(
     .join(",");
 }
 
+export type IleLearnMoreFollowOffset = { dx: number; dy: number };
+
+/** Prompt position relative to the selection's host-space top-left. */
+export function ileLearnMoreFollowOffset(
+  prompt: { left: number; top: number } | null | undefined,
+  selection: { left: number; top: number } | null | undefined,
+): IleLearnMoreFollowOffset | null {
+  if (!prompt || !selection) return null;
+  const left = Number(prompt.left);
+  const top = Number(prompt.top);
+  const selLeft = Number(selection.left);
+  const selTop = Number(selection.top);
+  if (![left, top, selLeft, selTop].every(Number.isFinite)) return null;
+  return { dx: left - selLeft, dy: top - selTop };
+}
+
+/** Apply a stored Expand More offset as the selection moves. */
+export function ileLearnMoreFollowPosition(
+  selection: { left: number; top: number } | null | undefined,
+  offset: IleLearnMoreFollowOffset | null | undefined,
+): { left: number; top: number } | null {
+  if (!selection || !offset) return null;
+  const selLeft = Number(selection.left);
+  const selTop = Number(selection.top);
+  const dx = Number(offset.dx);
+  const dy = Number(offset.dy);
+  if (![selLeft, selTop, dx, dy].every(Number.isFinite)) return null;
+  return { left: selLeft + dx, top: selTop + dy };
+}
+
 export function ileWorkCanvasPointerBusy(
   appState:
     | {

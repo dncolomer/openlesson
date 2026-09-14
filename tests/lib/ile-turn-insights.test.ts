@@ -27,6 +27,7 @@ import {
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
   ILE_INSIGHT_CRAFT_TOOL_NAME,
   ILE_TURN_INSIGHT_CREATE_PATH,
+  ILE_TURN_INSIGHT_DOCK_LINK_LABEL,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
   ILE_TURN_INSIGHT_SLOT_MAX,
   ILE_TURN_INSIGHT_SUGGEST_PATH,
@@ -293,6 +294,11 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
     );
     expect(craftSrc).toContain("chapterId: linkedChapterId");
     expect(craftSrc).not.toContain("blockId: linkedChapterId");
+    expect(ILE_TURN_INSIGHT_DOCK_LINK_LABEL).toBe("Linked to a docked chapter");
+    expect(craftSrc).toContain("ILE_TURN_INSIGHT_DOCK_LINK_LABEL");
+    expect(craftSrc).toContain("data-ile-turn-insight-chapter-list");
+    expect(craftSrc).toContain("dockedChapters.map");
+    expect(craftSrc).not.toContain("Link to an active chapter");
 
     writeScratch(
       "ile-turn-insights-helpers.txt",

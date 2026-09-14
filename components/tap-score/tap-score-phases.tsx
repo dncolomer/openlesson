@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { ImDoneAnsweringControl } from "@/components/thought-ui/ImDoneAnsweringButton";
-import { ExcalidrawCanvas } from "@/components/ExcalidrawCanvas";
+import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import {
@@ -416,7 +416,7 @@ export function TapScorePhases(props: {
                 data-tap-convo-work-canvas-pane
                 className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
               >
-                <ExcalidrawCanvas
+                <WorkCanvas
                   key={`tap-work-canvas:${phase}`}
                   boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
                   peerId="work"

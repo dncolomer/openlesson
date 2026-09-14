@@ -24,6 +24,7 @@ import {
   parseGatherSeenBlockIds,
   resolveBlockCircularMenuSurface,
   workspaceCircularMenuDrawerId,
+  workspaceCircularMenuStartsFreshExplore,
   applyLearnerDrawerRequest,
   nextLearnerDrawerRequest,
   BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX,
@@ -61,7 +62,7 @@ function resource(partial: Partial<WorkspaceExternalResource> & { id: string }):
 }
 
 describe("block circular menu catalog", () => {
-  it("ILE set is exactly Mark as completed / Edit / Gather resources / see resources; Workspace is Start/Continue/Mark as Done; TAP is empty", () => {
+  it("ILE set is exactly Mark as completed / Edit / Gather resources / see resources; Workspace is Explore/Continue/Mark as Done; TAP is empty", () => {
     expect(blockCircularMenuActions("ile").map((a) => a.label)).toEqual([
       "Work",
       "Mark as completed",
@@ -73,7 +74,7 @@ describe("block circular menu catalog", () => {
       ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
     expect(blockCircularMenuActions("workspace-learner").map((a) => a.label)).toEqual([
-      "Start a new Session",
+      "Explore",
       "Continue prev Session",
       "Mark as Done",
     ]);
@@ -390,11 +391,21 @@ describe("circular menu source wiring", () => {
     expect(wsView).toContain("nextLearnerDrawerRequest");
     expect(learner).toContain("requestedDrawerId");
     expect(drawers).toContain("requestedDrawerId");
-    expect(workspaceCircularMenuDrawerId("start_session")).toBe(
-      WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.start_session,
+    expect(workspaceCircularMenuDrawerId("start_session")).toBeNull();
+    expect(workspaceCircularMenuStartsFreshExplore("start_session")).toBe(true);
+    expect(workspaceCircularMenuStartsFreshExplore("continue_session")).toBe(false);
+    expect(nextLearnerDrawerRequest("start_session", 1)).toBeNull();
+    expect(wsView).toContain("workspaceCircularMenuStartsFreshExplore");
+    expect(wsView).toContain("exploreLearningLaunchTarget");
+    expect(wsView).toContain("handleLaunchIntent");
+    expect(ring).toContain("start_session: <Compass");
+    expect(workspaceCircularMenuDrawerId("continue_session")).toBe(
+      WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session,
     );
-    expect(workspaceCircularMenuDrawerId("continue_session")).toBe(PREVIOUS_SESSIONS_DRAWER_ID);
-    expect(workspaceCircularMenuDrawerId("mark_done")).toBe("progress");
+    expect(workspaceCircularMenuDrawerId("mark_done")).toBe(
+      WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.mark_done,
+    );
+    expect(WORKSPACE_CIRCULAR_MENU_DRAWER_IDS.continue_session).toBe(PREVIOUS_SESSIONS_DRAWER_ID);
     expect(applyLearnerDrawerRequest({ defaultOpenId: "practice" })).toBe("practice");
     expect(
       applyLearnerDrawerRequest({

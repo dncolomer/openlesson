@@ -19,6 +19,7 @@ import {
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
   ILE_INSIGHT_CRAFT_TOOL_NAME,
   ILE_TURN_INSIGHT_CREATE_PATH,
+  ILE_TURN_INSIGHT_DOCK_LINK_LABEL,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
   ILE_TURN_INSIGHT_SUGGEST_PATH,
   parseIleTypedInsightVerdict,
@@ -368,14 +369,18 @@ export function IleTurnInsightCraft({
           </header>
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4 sm:px-7">
-            {dockedChapters.length > 0 ? (
-              <section data-ile-turn-insight-chapters>
+            <section data-ile-turn-insight-chapters>
                 <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-white/55">
-                  Link to an active chapter
+                  {ILE_TURN_INSIGHT_DOCK_LINK_LABEL}
                 </p>
-                <div className="flex flex-wrap items-end gap-2">
+                {dockedChapters.length > 0 ? (
+                <div
+                  data-ile-turn-insight-chapter-list
+                  className="flex flex-wrap items-end gap-2"
+                >
                   {dockedChapters.map((work) => {
                     const selected = linkedChapterId === work.id;
+                    const status = work.status ?? "idle";
                     const chipImage = resolveIleWorkAestheticImage({
                       id: work.id,
                       assigned: work.image,
@@ -386,13 +391,14 @@ export function IleTurnInsightCraft({
                         key={work.id}
                         type="button"
                         data-ile-turn-insight-chapter={work.id}
+                        data-ile-chapter-chip-status={status}
                         aria-pressed={selected}
                         onClick={() =>
                           setLinkedChapterId((current) =>
                             current === work.id ? null : work.id,
                           )
                         }
-                        className={`relative flex h-20 w-[6.5rem] shrink-0 flex-col items-stretch justify-end overflow-hidden rounded-none border ${
+                        className={`relative flex h-24 w-[7rem] shrink-0 flex-col items-stretch justify-end overflow-hidden rounded-none border ${
                           selected
                             ? "border-white shadow-[0_0_0_1px_#fff]"
                             : "border-white/30 hover:border-white/70"
@@ -407,12 +413,28 @@ export function IleTurnInsightCraft({
                         <span className="relative z-10 px-1.5 pb-1.5 font-mono text-[10px] font-semibold uppercase leading-tight tracking-wide text-white">
                           {work.keyword || work.label}
                         </span>
+                        {status === "loading" ? (
+                          <span
+                            data-ile-chapter-chip-loading
+                            aria-hidden
+                            className="absolute inset-x-0 bottom-0 z-20 h-1 overflow-hidden bg-white/15"
+                          >
+                            <span className="block h-full w-1/3 animate-ile-dock-indeterminate bg-white" />
+                          </span>
+                        ) : null}
                       </button>
                     );
                   })}
                 </div>
+                ) : (
+                  <p
+                    data-ile-turn-insight-chapters-empty
+                    className="font-mono text-[11px] uppercase tracking-wider text-white/45"
+                  >
+                    No docked chapters this turn
+                  </p>
+                )}
               </section>
-            ) : null}
 
             <div className="flex shrink-0 gap-1 border border-white/20 bg-black/40 p-1">
               <button

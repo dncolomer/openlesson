@@ -589,6 +589,13 @@ describe("store + UI structural", () => {
     // Post-it drag + resize — dedicated non-button handle, commit from ref
     expect(postIt).toContain("data-learner-note-drag-handle");
     expect(postIt).toContain("data-learner-note-resize-handle");
+    expect(postIt).toContain("data-learner-note-edit");
+    expect(postIt).toContain("onBlur={commitDraft}");
+    expect(postIt).toContain("placeholder=\"Write a note…\"");
+    expect(postIt).not.toContain("data-learner-note-edit-start");
+    expect(postIt).not.toContain("data-learner-note-footer");
+    expect(postIt).not.toContain("data-learner-note-save");
+    expect(postIt).not.toMatch(/>\s*Edit\s*</);
     expect(postIt).toContain("onDragEnd");
     expect(postIt).toContain("onResizeEnd");
     expect(postIt).toContain("data-learner-map-note");

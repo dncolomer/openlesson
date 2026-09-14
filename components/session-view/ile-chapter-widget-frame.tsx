@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { ileCompactRootFillStyle } from "@/lib/ile-compact-window";
+import { ILE_SESSION_TOP_BAR_PAD_CLASS } from "@/lib/ile-map-chrome";
 
 export function IleChapterWidgetFrame({
   children,
@@ -36,12 +37,12 @@ export function IleChapterWidgetFrame({
       } ${fill ? "h-full" : ""} ${className}`}
       style={style}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-2 py-1">
+      <div className={`flex shrink-0 items-center justify-between border-b border-neutral-800 ${ILE_SESSION_TOP_BAR_PAD_CLASS}`}>
         <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
           {title}
         </span>
-        <div className="flex items-center gap-0.5">
-          {onMinimize ? (
+        {onMinimize ? (
+          <div className="flex items-center gap-0.5">
             <button
               type="button"
               data-ile-helios-widget-minimize
@@ -52,10 +53,8 @@ export function IleChapterWidgetFrame({
             >
               –
             </button>
-          ) : (
-            <span className="px-1.5 py-0.5 text-xs text-transparent">–</span>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
       {toolbar ? <div className="shrink-0">{toolbar}</div> : null}
       <div className="min-h-0 flex-1 overflow-hidden">{children}</div>

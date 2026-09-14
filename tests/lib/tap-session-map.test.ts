@@ -216,7 +216,7 @@ describe("TAP live map wiring", () => {
   it("conversational live left pane is Work canvas; right pane keeps thought chrome", () => {
     const tap = readTapScoreSurface();
     const phases = read("components/tap-score/tap-score-phases.tsx");
-    expect(tap).toContain("ExcalidrawCanvas");
+    expect(tap).toContain("WorkCanvas");
     expect(phases).toContain("data-tap-convo-work-canvas-pane");
     expect(phases).not.toContain("TapSessionMap");
     expect(phases).not.toContain("tapConvoBlocksFromAssistantTurns");

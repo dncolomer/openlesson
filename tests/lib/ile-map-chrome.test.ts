@@ -14,7 +14,12 @@ import {
   ILE_MAP_POW_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_TOP_CLASS,
   ILE_MAP_WIDGET_WIDTH_CLASS,
+  ILE_POW_RESOURCE_BAR_CLASS,
+  ILE_POW_RESOURCE_BAR_PAD_CLASS,
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
+  ILE_SESSION_TOP_BAR_PAD_CLASS,
+  ILE_MAP_INSIGHT_CRAFT_Z_CLASS,
+  ileMapInsightCraftFrameClass,
   ileMapWorkFrameClass,
   ileWorkCanvasCoversMap,
   isIleMapOverlayTool,
@@ -123,7 +128,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(overlay).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
     expect(overlay).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(overlay).not.toContain("top-14");
-    expect(ILE_MAP_WIDGET_TOP_CLASS).toBe("top-14");
+    expect(ILE_MAP_WIDGET_TOP_CLASS).toBe("top-2");
     expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS);
     expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe("bottom-[8.75rem]");
     expect(ILE_MAP_WIDGET_WIDTH_CLASS).toBe("w-[min(720px,calc(100%-28rem))]");
@@ -140,26 +145,25 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("data-ile-session-stage");
     expect(chrome).toContain("ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS");
     expect(ileMapWorkFrameClass(true)).not.toContain("fixed");
-    expect(ileMapWorkFrameClass(true)).not.toContain("inset-0");
+    expect(ileMapWorkFrameClass(true)).toContain("inset-0");
     expect(ileMapWorkFrameClass(true)).not.toContain("h-screen");
     expect(ileMapWorkFrameClass(true)).not.toContain("w-screen");
     expect(ileMapWorkFrameClass(true)).not.toContain("z-[70]");
     expect(ileMapWorkFrameClass(true)).toContain("absolute");
-    expect(ileMapWorkFrameClass(true)).toContain("left-2");
-    expect(ileMapWorkFrameClass(true)).toContain("right-2");
-    expect(ileMapWorkFrameClass(true)).toContain(ILE_MAP_POW_BAR_CLEARANCE_CLASS);
-    expect(ILE_MAP_POW_BAR_CLEARANCE_CLASS).toBe("top-12");
-    expect(ileMapWorkFrameClass(true)).not.toContain("top-2");
+    expect(ileMapWorkFrameClass(true)).not.toContain("left-2");
+    expect(ILE_MAP_POW_BAR_CLEARANCE_CLASS).toBe("top-0");
     expect(ileMapWorkFrameClass(true)).toContain("z-40");
-    expect(ileMapWorkFrameClass(true)).toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
+    expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
     expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_WIDTH_CLASS);
     expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_TOP_CLASS);
     const dock = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dock).toContain("ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS");
     expect(dock).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
     expect(chrome).toContain("data-ile-pow-resource-bar");
+    expect(chrome).toContain("data-ile-session-inner");
+    expect(chrome).toContain("ILE_POW_RESOURCE_BAR_CLASS");
     expect(chrome.slice(chrome.indexOf("data-ile-pow-resource-bar"), chrome.indexOf("data-ile-pow-resource-label"))).toContain(
-      "ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS",
+      "ILE_POW_RESOURCE_BAR_CLASS",
     );
     expect(voice).toContain("ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS");
     const globals = read("app/globals.css");
@@ -176,7 +180,19 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget");
     expect(frame).toContain('title = "Work"');
+    expect(frame).toContain("ILE_SESSION_TOP_BAR_PAD_CLASS");
+    expect(ILE_POW_RESOURCE_BAR_CLASS).toContain(ILE_POW_RESOURCE_BAR_PAD_CLASS);
+    expect(ILE_SESSION_TOP_BAR_PAD_CLASS).toBe("px-2 py-1");
+    expect(ILE_POW_RESOURCE_BAR_PAD_CLASS).toBe("px-2 py-1.5");
     expect(chrome).toContain("data-ile-insight-craft-widget");
+    expect(chrome).toContain("ileMapInsightCraftFrameClass()");
+    expect(chrome).toContain("data-ile-work-dock-covered");
+    expect(ileMapInsightCraftFrameClass()).toContain(ILE_MAP_INSIGHT_CRAFT_Z_CLASS);
+    expect(ileMapInsightCraftFrameClass()).toContain("inset-0");
+    expect(ileMapInsightCraftFrameClass()).not.toContain(ILE_MAP_POW_BAR_CLEARANCE_CLASS);
+    expect(ileMapInsightCraftFrameClass()).not.toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
+    expect(ILE_MAP_INSIGHT_CRAFT_Z_CLASS).toBe("z-[70]");
+    expect(ileMapInsightCraftFrameClass()).not.toContain("z-40");
     expect(chrome).toContain('title="Craft insights"');
     expect(frame).not.toContain(">Chapter</span>");
     expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");

@@ -330,10 +330,12 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockSlice).not.toContain("onReviewWork");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
-      chrome.indexOf("data-ile-session-modal"),
+      chrome.indexOf("data-ile-session-inner"),
     );
     expect(powBar).toContain("data-ile-session-insights-count");
     expect(powBar).toContain("data-ile-global-resources");
+    expect(powBar).toContain("data-ile-pow-resource-actions");
+    expect(powBar).toContain("ml-auto");
     expect(powBar.indexOf("data-ile-session-insights-count")).toBeLessThan(
       powBar.indexOf("data-ile-global-resources"),
     );
@@ -344,10 +346,17 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("onSubmitTurn={() => void handleSubmitTurn()}");
     const submitTurn = view.slice(
       view.indexOf("const handleSubmitTurn"),
-      view.indexOf("setCraftingInsightsOpen(true)"),
+      view.indexOf("setSubmitTurnBusy(false)"),
     );
     expect(submitTurn).toContain("setHeliosWidgetOpen(false)");
+    expect(submitTurn).toContain("setCraftingInsightsOpen(true)");
     expect(submitTurn.indexOf("setHeliosWidgetOpen(false)")).toBeLessThan(
+      submitTurn.indexOf("setCraftingInsightsOpen(true)"),
+    );
+    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeLessThan(
+      submitTurn.indexOf("closeIleOpenWorkTurn"),
+    );
+    expect(submitTurn.indexOf("setDockLoadingIds(awaitingIds)")).toBeLessThan(
       submitTurn.indexOf("closeIleOpenWorkTurn"),
     );
     expect(view).toContain("setCraftingInsightsOpen(true)");
@@ -364,6 +373,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("data-ile-turn-insight-craft");
     expect(craft).toContain("data-ile-turn-insight-craft-still");
     expect(craft).toContain("data-ile-turn-insight-chapters");
+    expect(craft).toContain("ILE_TURN_INSIGHT_DOCK_LINK_LABEL");
+    expect(craft).toContain("data-ile-turn-insight-chapter-list");
+    expect(craft).toContain("dockedChapters.map");
+    expect(craft).toContain("data-ile-chapter-chip-loading");
+    expect(craft).toContain('status === "loading"');
+    expect(craft).toContain("animate-ile-dock-indeterminate");
+    expect(craft).not.toContain("Link to an active chapter");
+    expect(view).toContain("dockedChapters={openWorkDockLabels}");
     expect(craft).toContain("data-ile-turn-insight-path=\"type\"");
     expect(craft).toContain("data-ile-turn-insight-path=\"pool\"");
     expect(craft).toContain("Continue with the next turn");
@@ -373,8 +390,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(craft).not.toContain("DialogFrame");
     expect(craft).not.toContain("portal={portal}");
     expect(chrome).toContain("data-ile-insight-craft-widget");
-    expect(chrome).toContain("ileMapWorkFrameClass()");
+    expect(chrome).toContain("ileMapInsightCraftFrameClass()");
+    expect(chrome).toContain("data-ile-work-dock-covered");
     expect(chrome).toContain('title="Craft insights"');
+    const craftFrame = chrome.slice(
+      chrome.indexOf('title="Craft insights"'),
+      chrome.indexOf("{insightCraft}"),
+    );
+    expect(craftFrame).not.toContain("onMinimize");
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(view).toContain("openWorkIds={openWorkIds}");

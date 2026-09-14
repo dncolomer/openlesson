@@ -156,7 +156,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
   it("conversational live left pane mounts Work canvas / Excalidraw, not the TAP map", () => {
     const live = readTapScoreSurface();
     const phases = read("components/tap-score/tap-score-phases.tsx");
-    expect(live).toContain("ExcalidrawCanvas");
+    expect(live).toContain("WorkCanvas");
     expect(phases).toContain("data-tap-convo-work-canvas-pane");
     expect(phases).toContain("onAskSelected");
     expect(phases).toContain("onAskSelected={handleAskSelected}");
@@ -178,7 +178,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(live).toContain("data-tap-transcript-container");
     expect(live).toContain("logTapTrace");
 
-    expect(phases).toContain("ExcalidrawCanvas");
+    expect(phases).toContain("<WorkCanvas");
+    expect(phases).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
     expect(phases).toContain("buildTapExcalidrawToolUploadItem");
     expect(phases).toContain("buildTapCanvasSnapshotUploadItem");
     const canvas = read("components/ExcalidrawCanvas.tsx");

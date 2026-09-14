@@ -61,7 +61,7 @@ describe("Review work chrome (shipped source)", () => {
     expect(chrome).not.toContain("onReviewWork");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
-      chrome.indexOf("data-ile-session-modal"),
+      chrome.indexOf("data-ile-session-inner"),
     );
     expect(powBar).not.toContain("IleSubmitWorkButton");
     expect(powBar).not.toContain("data-ile-review-work");

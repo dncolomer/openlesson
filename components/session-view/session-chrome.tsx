@@ -15,7 +15,9 @@ import {
   ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
+  ILE_POW_RESOURCE_BAR_CLASS,
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
+  ileMapInsightCraftFrameClass,
   ileMapWorkFrameClass,
   ileWorkCanvasCoversMap,
   isIleMapOverlayTool,
@@ -203,15 +205,11 @@ export function SessionChrome({
       <div
         data-ile-session-stage
         data-ile-work-covers-map={workCoversMap ? "true" : "false"}
-        className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
-        <div data-ile-map-stage className="absolute inset-0 z-0">
-          {map}
-        </div>
-
         <div
           data-ile-pow-resource-bar
-          className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-3 rounded-none border border-neutral-700 bg-neutral-950/95 px-3 py-1.5`}
+          className={ILE_POW_RESOURCE_BAR_CLASS}
         >
           <span
             data-ile-pow-resource-label
@@ -227,7 +225,7 @@ export function SessionChrome({
               key={type}
               data-ile-pow-count={type}
               title={`${ILE_POW_COUNTER_LABELS[type]}: ${submitted} submitted, ${unsubmitted} unsubmitted`}
-              className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-neutral-300"
+              className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-neutral-300"
             >
               <span className="text-neutral-400" aria-hidden>
                 {ILE_POW_COUNTER_ICONS[type]}
@@ -235,17 +233,17 @@ export function SessionChrome({
               <span className="sr-only">{ILE_POW_COUNTER_LABELS[type]}</span>
               <span
                 data-ile-pow-dual-pill
-                className="inline-flex overflow-hidden rounded-none border border-white font-mono text-[11px] leading-none"
+                className="inline-flex overflow-hidden rounded-none border border-white font-mono text-[10px] leading-none"
               >
                 <span
                   data-ile-pow-submitted
-                  className="bg-white px-1.5 py-0.5 text-neutral-950"
+                  className="bg-white px-1 py-0 text-neutral-950"
                 >
                   {submitted}
                 </span>
                 <span
                   data-ile-pow-unsubmitted
-                  className="bg-black px-1.5 py-0.5 text-white"
+                  className="bg-black px-1 py-0 text-white"
                 >
                   {unsubmitted}
                 </span>
@@ -253,19 +251,21 @@ export function SessionChrome({
             </div>
             );
           })}
-          <>
-            <div className="h-4 w-px shrink-0 bg-neutral-700" aria-hidden />
+          <div
+            data-ile-pow-resource-actions
+            className="ml-auto flex shrink-0 items-center gap-2"
+          >
             <button
               type="button"
               data-ile-session-insights-count
               title="Session insights"
               aria-label="Session insights"
               onClick={() => onOpenSessionInsights?.()}
-              className="flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_0_18px_rgba(255,255,255,0.28)] hover:bg-neutral-100"
+              className="flex shrink-0 items-center gap-1 rounded-none border border-white bg-white px-1.5 py-0 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100"
             >
-              <Lightbulb className="size-3.5" strokeWidth={2.3} aria-hidden />
+              <Lightbulb className="size-3" strokeWidth={2.3} aria-hidden />
               Insights
-              <span data-ile-session-insights-value className="bg-neutral-950 px-1.5 py-0.5 text-white">
+              <span data-ile-session-insights-value className="bg-neutral-950 px-1 py-0 text-white">
                 {sessionInsightCount}
               </span>
             </button>
@@ -277,7 +277,7 @@ export function SessionChrome({
                 aria-label={t("tools.planResources")}
                 aria-pressed={overlayOpen}
                 onClick={() => onOpenGlobalResources()}
-                className={`flex shrink-0 items-center gap-1 rounded-none border px-1.5 py-1 font-mono text-[10px] uppercase tracking-wider ${
+                className={`flex shrink-0 items-center gap-1 rounded-none border px-1.5 py-0 font-mono text-[10px] uppercase tracking-wider ${
                   overlayOpen && activeTool === "plan-resources"
                     ? "border-neutral-400 bg-neutral-800 text-neutral-100"
                     : "border-neutral-500 bg-neutral-900 text-neutral-200 hover:border-neutral-300 hover:bg-neutral-800 hover:text-white"
@@ -287,11 +287,19 @@ export function SessionChrome({
                 {t("tools.planResources")}
               </button>
             ) : null}
-          </>
+          </div>
+        </div>
+
+        <div
+          data-ile-session-inner
+          className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+        >
+        <div data-ile-map-stage className="absolute inset-0 z-0">
+          {map}
         </div>
 
         {error && !showWelcomeModal ? (
-          <div className={`pointer-events-auto absolute left-2 top-12 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
+          <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
             <span className="text-xs text-red-400">{error}</span>
             <button onClick={onDismissError} className="text-xs text-red-400/60 hover:text-red-400">✕</button>
           </div>
@@ -364,27 +372,9 @@ export function SessionChrome({
           </div>
         ) : null}
 
-        {insightCraftOpen && insightCraft ? (
-          <div
-            data-ile-insight-craft-widget
-            data-ile-work-canvas-wide="true"
-            className={`pointer-events-auto ${ileMapWorkFrameClass()}`}
-          >
-            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
-              <IleChapterWidgetFrame
-                fill
-                wide
-                title="Craft insights"
-                onMinimize={onMinimizeInsightCraft}
-              >
-                {insightCraft}
-              </IleChapterWidgetFrame>
-            </div>
-          </div>
-        ) : null}
-
         <div
           data-ile-work-dock
+          data-ile-work-dock-covered={insightCraftOpen ? "true" : undefined}
           className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex flex-col items-end`}
         >
           <IleWorkDockBar
@@ -454,6 +444,25 @@ export function SessionChrome({
         </div>
 
         {voiceBar}
+        </div>
+
+        {insightCraftOpen && insightCraft ? (
+          <div
+            data-ile-insight-craft-widget
+            data-ile-work-canvas-wide="true"
+            className={`pointer-events-auto ${ileMapInsightCraftFrameClass()}`}
+          >
+            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
+              <IleChapterWidgetFrame
+                fill
+                wide
+                title="Craft insights"
+              >
+                {insightCraft}
+              </IleChapterWidgetFrame>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {allowEndSession ? (

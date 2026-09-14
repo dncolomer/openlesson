@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Binoculars, BookOpen, Check, History, Pencil, Pickaxe, Play, Plus, X } from "lucide-react";
+import { Binoculars, BookOpen, Check, Compass, History, Pencil, Pickaxe, Plus, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   BLOCK_CIRCULAR_MENU_ACTION_BORDER_PX,
@@ -27,7 +27,7 @@ export const BLOCK_CIRCULAR_MENU_ACTION_ICONS: Record<
   add_chapter: <Plus className="size-4" strokeWidth={2.4} aria-hidden />,
   accept_chapter: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
   reject_chapter: <X className="size-4" strokeWidth={2.4} aria-hidden />,
-  start_session: <Play className="size-4" strokeWidth={2.4} aria-hidden />,
+  start_session: <Compass className="size-4" strokeWidth={2.4} aria-hidden />,
   continue_session: <History className="size-4" strokeWidth={2.4} aria-hidden />,
   mark_done: <Check className="size-4" strokeWidth={2.4} aria-hidden />,
 };
@@ -69,7 +69,7 @@ export function BlockCircularMenuRing({
       {actions.map((action, index) => {
         const pos = circularMenuActionPosition(index, actions.length);
         const disabled = disabledIds?.has(action.id);
-        const prominent = action.id === "work";
+        const prominent = action.id === "work" || action.id === "start_session";
         return (
           <button
             key={action.id}

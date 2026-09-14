@@ -83,6 +83,16 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
     const dock = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dock).toContain("data-ile-chapter-chip-status");
     expect(dock).toContain("data-ile-chapter-chip-loading");
+    const craft = read("components/session-view/ile-turn-insight-craft.tsx");
+    expect(craft).toContain("data-ile-chapter-chip-loading");
+    expect(craft).toContain('status === "loading"');
+    expect(view).toContain("setCraftingInsightsOpen(true)");
+    const submitStart = view.indexOf("const handleSubmitTurn");
+    const submitTurn = view.slice(submitStart, view.indexOf("setSubmitTurnBusy(false)", submitStart));
+    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeGreaterThan(-1);
+    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeLessThan(
+      submitTurn.indexOf("closeIleOpenWorkTurn"),
+    );
     expect(dock).toContain("data-ile-chapter-chip-attention");
     expect(dock).toContain("AlertTriangle");
     expect(dock).toContain("animate-ile-dock-indeterminate");

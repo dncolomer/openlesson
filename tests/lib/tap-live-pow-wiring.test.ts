@@ -73,7 +73,7 @@ describe("TAP live PoW after map/stash UI swap", () => {
     expect(live).toContain("ThoughtMemoryPanel");
     expect(live).toContain("stashCurrentTranscription");
     expect(live).toContain("sendCurrentTranscription");
-    expect(live).toContain("ExcalidrawCanvas");
+    expect(live).toContain("WorkCanvas");
     expect(phases).toContain("data-tap-convo-work-canvas-pane");
     expect(phases).not.toContain("TapSessionMap");
 

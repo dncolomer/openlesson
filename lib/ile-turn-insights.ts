@@ -31,6 +31,7 @@ export function clampIleTurnInsightSlotMax(value: unknown): number {
   if (n >= ILE_TURN_INSIGHT_SLOT_CEILING) return ILE_TURN_INSIGHT_SLOT_CEILING;
   return n;
 }
+export const ILE_TURN_INSIGHT_DOCK_LINK_LABEL = "Linked to a docked chapter";
 export const ILE_TURN_INSIGHT_EVALUATE_PATH = "/api/insights/evaluate";
 export const ILE_TURN_INSIGHT_CREATE_PATH = "/api/insights/create";
 export const ILE_TURN_INSIGHT_SUGGEST_PATH = "/api/insights/suggest";

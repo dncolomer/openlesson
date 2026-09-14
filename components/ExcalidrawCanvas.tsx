@@ -24,8 +24,11 @@ import {
   ILE_LEARN_MORE_BOX_WIDTH,
   ILE_LEARN_MORE_LABEL,
   ileCanvasPromptBarTop,
+  ileLearnMoreFollowOffset,
+  ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
+  ileWorkCanvasSelectionHostRect,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasHasLiveElements,
@@ -135,7 +138,7 @@ class IleExcalidrawErrorBoundary extends Component<{ children: ReactNode }, { cr
   }
 }
 
-interface ExcalidrawCanvasProps {
+export interface ExcalidrawCanvasProps {
   initialData?: string;
    
   initialSceneData?: { elements: any[]; appState: any; files: any } | null;
@@ -188,12 +191,9 @@ function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any }
 }
 
 /**
- * Excalidraw-based whiteboard canvas for desktop SessionView.
- * Replaces the old custom canvas implementation with Excalidraw's
- * full-featured drawing capabilities.
- * 
- * Exports PNG data URL on changes (debounced) for compatibility with
- * the existing storage/analysis pipeline.
+ * Shared ILE + TAP Work board. Hosts must not fork this — both surfaces
+ * mount `WorkCanvas` so Expand More, the board prompt, thinking overlay,
+ * XAI apply, and center-on-open stay one implementation.
  */
 export function ExcalidrawCanvas({
   initialData,
@@ -240,7 +240,14 @@ export function ExcalidrawCanvas({
   const thinkingHostByIdRef = useRef(new Map<string, HTMLDivElement>());
   const learnMoreUiRef = useRef(learnMoreUi);
   const learnMoreKeyRef = useRef("");
-  const learnMorePinnedRef = useRef<{ key: string; left: number; top: number } | null>(null);
+  const learnMoreHostRef = useRef<HTMLFormElement>(null);
+  const learnMorePinnedRef = useRef<{
+    key: string;
+    left: number;
+    top: number;
+    dx?: number;
+    dy?: number;
+  } | null>(null);
   const learnMoreDragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -579,6 +586,19 @@ export function ExcalidrawCanvas({
     };
   }, [canvasHostOrigin]);
 
+  const paintLearnMoreUi = useCallback((next: { count: number; left: number; top: number } | null) => {
+    const key = next ? `${next.count}:${next.left}:${next.top}` : "";
+    if (key === learnMoreKeyRef.current) return;
+    learnMoreKeyRef.current = key;
+    learnMoreUiRef.current = next;
+    const node = learnMoreHostRef.current;
+    if (node && next) {
+      node.style.left = `${next.left}px`;
+      node.style.top = `${next.top}px`;
+    }
+    setLearnMoreUi(next);
+  }, []);
+
   const syncLearnMorePlacement = useCallback((elements: readonly any[], appState: any) => {
     if (!onAskSelectedRef.current) {
       learnMorePinnedRef.current = null;
@@ -588,20 +608,36 @@ export function ExcalidrawCanvas({
       }
       return;
     }
-    if (ileWorkCanvasPointerBusy(appState) && !learnMoreDragRef.current) return;
     const selectedIds = appState?.selectedElementIds ?? {};
     const selectionKey = ileLearnMoreSelectionKey(selectedIds);
+    const busy = ileWorkCanvasPointerBusy(appState) && !learnMoreDragRef.current;
+    if (busy && learnMorePinnedRef.current?.key !== selectionKey) return;
     const viewport = learnMoreViewport(appState);
+    const host = canvasHostOrigin();
+    const selected = ((elements ?? []) as IleWorkCanvasElement[]).filter(
+      (el) => el?.id && selectedIds[el.id] && !el.isDeleted,
+    );
+    const selectionRect = ileWorkCanvasSelectionHostRect(selected, appState, host);
     const pinned = learnMorePinnedRef.current;
     if (pinned && pinned.key !== selectionKey) learnMorePinnedRef.current = null;
     let next: { count: number; left: number; top: number } | null = null;
-    if (learnMorePinnedRef.current && learnMorePinnedRef.current.key === selectionKey) {
-      const held = clampIleLearnMorePosition({
-        left: learnMorePinnedRef.current.left,
-        top: learnMorePinnedRef.current.top,
-        viewport,
-      });
-      learnMorePinnedRef.current = { key: selectionKey, ...held };
+    const follow = learnMorePinnedRef.current;
+    if (follow && follow.key === selectionKey) {
+      const offset =
+        follow.dx != null && follow.dy != null
+          ? { dx: follow.dx, dy: follow.dy }
+          : ileLearnMoreFollowOffset(follow, selectionRect);
+      const raw = ileLearnMoreFollowPosition(selectionRect, offset) ?? {
+        left: follow.left,
+        top: follow.top,
+      };
+      const held = clampIleLearnMorePosition({ ...raw, viewport });
+      learnMorePinnedRef.current = {
+        key: selectionKey,
+        ...held,
+        dx: offset?.dx,
+        dy: offset?.dy,
+      };
       next = {
         count: selectionKey ? selectionKey.split(",").length : learnMoreUiRef.current?.count ?? 1,
         ...held,
@@ -612,17 +648,19 @@ export function ExcalidrawCanvas({
         selectedElementIds: selectedIds,
         appState,
         viewport,
-        host: canvasHostOrigin(),
+        host,
       });
       next =
         placed ??
         (askInFlightRef.current > 0 && learnMoreUiRef.current ? learnMoreUiRef.current : null);
+      const offset = ileLearnMoreFollowOffset(next, selectionRect);
+      learnMorePinnedRef.current =
+        next && selectionKey
+          ? { key: selectionKey, ...next, dx: offset?.dx, dy: offset?.dy }
+          : null;
     }
-    const key = next ? `${next.count}:${next.left}:${next.top}` : "";
-    if (key === learnMoreKeyRef.current) return;
-    learnMoreKeyRef.current = key;
-    setLearnMoreUi(next);
-  }, [canvasHostOrigin, learnMoreViewport]);
+    paintLearnMoreUi(next);
+  }, [canvasHostOrigin, learnMoreViewport, paintLearnMoreUi]);
 
   const enqueueCanvasAskApply = useCallback((task: () => void) => {
     const run = applyChainRef.current.then(task, task);
@@ -751,13 +789,26 @@ export function ExcalidrawCanvas({
     };
     const api = excalidrawAPIRef.current;
     const appState = api?.getAppState?.() ?? {};
+    const selectedIds = appState?.selectedElementIds ?? {};
+    const selected = (api?.getSceneElements?.() ?? []).filter(
+      (el: { id?: string; isDeleted?: boolean }) =>
+        el?.id && selectedIds[el.id] && !el.isDeleted,
+    ) as IleWorkCanvasElement[];
+    const selectionRect = ileWorkCanvasSelectionHostRect(
+      selected,
+      appState,
+      canvasHostOrigin(),
+    );
+    const offset = ileLearnMoreFollowOffset({ left: origLeft, top: origTop }, selectionRect);
     learnMorePinnedRef.current = {
-      key: ileLearnMoreSelectionKey(appState?.selectedElementIds) || "*",
+      key: ileLearnMoreSelectionKey(selectedIds) || "*",
       left: origLeft,
       top: origTop,
+      dx: offset?.dx,
+      dy: offset?.dy,
     };
     setLearnMoreDragging(true);
-  }, []);
+  }, [canvasHostOrigin]);
 
   const handleLearnMorePointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -770,20 +821,29 @@ export function ExcalidrawCanvas({
       top: drag.origTop + (event.clientY - drag.startY),
       viewport: learnMoreViewport(appState),
     });
-    const selectionKey = ileLearnMoreSelectionKey(appState?.selectedElementIds);
+    const selectedIds = appState?.selectedElementIds ?? {};
+    const selected = (api?.getSceneElements?.() ?? []).filter(
+      (el: { id?: string; isDeleted?: boolean }) =>
+        el?.id && selectedIds[el.id] && !el.isDeleted,
+    ) as IleWorkCanvasElement[];
+    const selectionRect = ileWorkCanvasSelectionHostRect(
+      selected,
+      appState,
+      canvasHostOrigin(),
+    );
+    const offset = ileLearnMoreFollowOffset(next, selectionRect);
+    const selectionKey = ileLearnMoreSelectionKey(selectedIds);
     learnMorePinnedRef.current = {
       key: selectionKey || learnMorePinnedRef.current?.key || "*",
       ...next,
+      dx: offset?.dx,
+      dy: offset?.dy,
     };
-    const ui = {
+    paintLearnMoreUi({
       count: learnMoreUiRef.current?.count ?? 1,
       ...next,
-    };
-    const key = `${ui.count}:${ui.left}:${ui.top}`;
-    if (key === learnMoreKeyRef.current) return;
-    learnMoreKeyRef.current = key;
-    setLearnMoreUi(ui);
-  }, [learnMoreViewport]);
+    });
+  }, [canvasHostOrigin, learnMoreViewport, paintLearnMoreUi]);
 
   const handleLearnMorePointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -948,9 +1008,13 @@ export function ExcalidrawCanvas({
       pointer: { x: number; y: number; tool: "pointer" | "laser" };
       button: "up" | "down";
     }) => {
+      const api = excalidrawAPIRef.current;
+      if (payload.button === "down" && api) {
+        syncLearnMorePlacement(api.getSceneElements?.() ?? [], api.getAppState?.() ?? {});
+      }
       const id = String(boardId || "").trim();
       if (!id) return;
-      const appState = excalidrawAPIRef.current?.getAppState?.() ?? {};
+      const appState = api?.getAppState?.() ?? {};
       publishIleWorkCanvasRoom(id, {
         kind: "pointer",
         from: peerId,
@@ -959,7 +1023,7 @@ export function ExcalidrawCanvas({
         selectedElementIds: appState.selectedElementIds,
       });
     },
-    [boardId, peerId],
+    [boardId, peerId, syncLearnMorePlacement],
   );
 
   /**
@@ -1029,7 +1093,8 @@ export function ExcalidrawCanvas({
   }, [isLoaded, syncPromptBarPlacement]);
 
   useEffect(() => {
-    return bindIleSurfaceEditorEvents(canvasHostRef.current, () => {
+    const host = canvasHostRef.current;
+    const refreshSurface = () => {
       const api = excalidrawAPIRef.current;
       if (api && typeof api.refresh === "function") {
         api.refresh();
@@ -1043,7 +1108,10 @@ export function ExcalidrawCanvas({
         syncLearnMorePlacement(api.getSceneElements?.() ?? [], appState);
         syncThinkingOverlay(appState);
       }
-    });
+    };
+    const unbind = bindIleSurfaceEditorEvents(host, refreshSurface);
+    refreshSurface();
+    return unbind;
   }, [isLoaded, scheduleCenterOnOpen, syncLearnMorePlacement, syncPromptBarPlacement, syncThinkingOverlay]);
 
   if (
@@ -1171,6 +1239,7 @@ export function ExcalidrawCanvas({
         ))}
         {onAskSelected && learnMoreUi ? (
           <form
+            ref={learnMoreHostRef}
             data-ile-excalidraw-ask
             data-ile-learn-more
             data-ile-learn-more-dragging={learnMoreDragging ? "true" : undefined}
@@ -1253,4 +1322,20 @@ export function ExcalidrawCanvas({
       </div>
     </div>
   );
+}
+
+/**
+ * ILE and TAP Work board — same component, same features. Required props
+ * keep Expand More, the board prompt, Helios thinking, and XAI apply on.
+ */
+export type WorkCanvasProps = ExcalidrawCanvasProps & {
+  boardId: string;
+  onSceneChange: NonNullable<ExcalidrawCanvasProps["onSceneChange"]>;
+  onAskSelected: NonNullable<ExcalidrawCanvasProps["onAskSelected"]>;
+  onExcalidrawTool: NonNullable<ExcalidrawCanvasProps["onExcalidrawTool"]>;
+  heliosBusy: boolean;
+};
+
+export function WorkCanvas(props: WorkCanvasProps) {
+  return <ExcalidrawCanvas {...props} />;
 }

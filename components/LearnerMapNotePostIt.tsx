@@ -26,7 +26,7 @@ type DragSession = {
 };
 
 /**
- * Free continuous-plane post-it: collapsible, inline edit/delete,
+ * Free continuous-plane post-it: collapsible, click-inside to write,
  * drag to move, corner resize. Lives on the map world layer (pan/zoom).
  *
  * Drag surface is a dedicated non-button handle; collapse/delete are separate
@@ -68,18 +68,23 @@ export function LearnerMapNotePostIt({
   ) => void;
 }) {
   const [draft, setDraft] = useState(note.body);
-  const [editing, setEditing] = useState(false);
   const [live, setLive] = useState<LearnerNoteGestureBox | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const didAutofocusRef = useRef(false);
 
   const dragRef = useRef<DragSession | null>(null);
 
   useEffect(() => {
-    if (!editing) setDraft(note.body);
-  }, [note.body, note.id, editing]);
+    if (textareaRef.current && document.activeElement === textareaRef.current) return;
+    setDraft(note.body);
+  }, [note.body, note.id]);
 
   useEffect(() => {
-    if (!canEdit && editing) setEditing(false);
-  }, [canEdit, editing]);
+    if (didAutofocusRef.current) return;
+    if (!canEdit || note.collapsed || note.body.trim()) return;
+    didAutofocusRef.current = true;
+    textareaRef.current?.focus();
+  }, [canEdit, note.body, note.collapsed]);
 
   // Clear live override when note props change from host (e.g. after persist).
   useEffect(() => {
@@ -99,9 +104,9 @@ export function LearnerMapNotePostIt({
     height: style.height,
   };
 
-  const commit = () => {
+  const commitDraft = () => {
+    if (draft === note.body) return;
     onSaveBody(note.id, draft);
-    setEditing(false);
   };
 
   const z = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
@@ -228,27 +233,22 @@ export function LearnerMapNotePostIt({
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className={`relative flex h-full min-h-0 flex-col rounded-none border border-neutral-300/90 bg-white text-neutral-900 shadow-[0_4px_16px_rgba(0,0,0,0.22)] ${
-          collapsed ? "px-1 py-1" : ""
-        }`}
+        className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-500/80 bg-[#efece4] text-neutral-900 shadow-[0_10px_28px_rgba(0,0,0,0.4)]"
         data-learner-note-postit
         style={collapsed ? undefined : { height: "100%" }}
       >
-        {/* Header: clear drag zone + separate control buttons */}
         <div
-          className={`flex shrink-0 items-stretch gap-1 ${
-            collapsed ? "gap-1" : "border-b border-neutral-200 px-1 py-1"
-          }`}
+          className="flex shrink-0 items-stretch gap-0.5 border-b border-neutral-400/40 bg-black/[0.04]"
           data-learner-note-header
         >
           <div
             role="presentation"
             data-learner-note-drag-handle
             title={canDragResize ? "Drag to move" : "Note (fixed)"}
-            className={`flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 rounded-none border border-dashed px-1.5 py-1 ${
+            className={`flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 px-1.5 py-1 ${
               canDragResize
-                ? "cursor-grab border-neutral-300 bg-neutral-50 active:cursor-grabbing active:border-neutral-400 active:bg-neutral-100"
-                : "cursor-default border-neutral-200 bg-neutral-50/80"
+                ? "cursor-grab active:cursor-grabbing"
+                : "cursor-default"
             }`}
             onPointerDown={startMoveDrag}
             onPointerMove={(e) => applyPointerMove(e, "move")}
@@ -265,22 +265,18 @@ export function LearnerMapNotePostIt({
                 {Array.from({ length: 6 }).map((_, i) => (
                   <span
                     key={i}
-                    className="h-0.5 w-0.5 rounded-full bg-neutral-400"
+                    className="h-0.5 w-0.5 rounded-full bg-neutral-500/70"
                   />
                 ))}
               </span>
             ) : null}
-            <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-600">
+            <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-500">
               {collapsed ? (
-                <span className="truncate">{preview}</span>
-              ) : canDragResize ? (
-                <span className="uppercase tracking-[0.12em] text-neutral-500">
-                  Drag
-                </span>
+                <span className="truncate text-neutral-800">{preview}</span>
+              ) : note.source === "creator" ? (
+                <span>Author</span>
               ) : (
-                <span className="uppercase tracking-[0.12em] text-neutral-500">
-                  {note.source === "creator" ? "Author note" : "Note"}
-                </span>
+                <span>Note</span>
               )}
             </span>
           </div>
@@ -291,7 +287,7 @@ export function LearnerMapNotePostIt({
             title={collapsed ? "Expand note" : "Collapse note"}
             aria-expanded={!collapsed}
             onClick={() => onToggleCollapsed(note.id)}
-            className="shrink-0 self-center rounded-none border border-neutral-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-900"
+            className="shrink-0 self-center px-1.5 py-1 text-[10px] font-semibold text-neutral-500 hover:text-neutral-900"
           >
             {collapsed ? "▸" : "▾"}
           </button>
@@ -303,7 +299,7 @@ export function LearnerMapNotePostIt({
               title="Delete note"
               aria-label="Delete note"
               onClick={() => onDelete(note.id)}
-              className="shrink-0 self-center rounded-none border border-neutral-200 bg-white px-1.5 py-1 text-[11px] leading-none text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              className="shrink-0 self-center px-1.5 py-1 text-[11px] leading-none text-neutral-500 hover:text-red-700"
             >
               ×
             </button>
@@ -311,92 +307,46 @@ export function LearnerMapNotePostIt({
         </div>
 
         {!collapsed ? (
-          <div
-            className="flex min-h-0 flex-1 flex-col bg-white"
-            data-learner-note-body
-          >
-            {/* Scrollable content — leaves room for the pinned footer */}
+          <div className="flex min-h-0 flex-1 flex-col" data-learner-note-body>
             <div
-              className="min-h-0 flex-1 overflow-auto p-1.5 pb-1"
+              className="min-h-0 flex-1 overflow-auto"
               data-learner-note-scroll
             >
-              {editing ? (
+              {canEdit ? (
                 <textarea
+                  ref={textareaRef}
                   data-learner-note-edit
                   data-learner-note-input
                   value={draft}
                   maxLength={LEARNER_NOTE_BODY_MAX}
-                  autoFocus
                   onChange={(e) => setDraft(e.target.value)}
+                  onBlur={commitDraft}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") {
                       setDraft(note.body);
-                      setEditing(false);
+                      (e.currentTarget as HTMLTextAreaElement).blur();
                     }
                     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                      commit();
+                      commitDraft();
+                      (e.currentTarget as HTMLTextAreaElement).blur();
                     }
                   }}
-                  className="h-full min-h-[3rem] w-full resize-none rounded-none border border-neutral-200 bg-neutral-50 px-1.5 py-1 text-[11px] leading-snug text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
-                  placeholder="Short note…"
+                  className="h-full min-h-[3rem] w-full resize-none border-0 bg-transparent px-2 py-1.5 text-[12px] leading-snug text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                  placeholder="Write a note…"
                 />
               ) : (
                 <p
-                  className="min-h-[2rem] whitespace-pre-wrap break-words text-[11px] leading-snug text-neutral-800"
+                  className="min-h-[2rem] whitespace-pre-wrap break-words px-2 py-1.5 text-[12px] leading-snug text-neutral-800"
                   data-learner-note-text
                 >
                   {note.body.trim() ? (
                     note.body
                   ) : (
-                    <span className="text-neutral-400 italic">Empty note</span>
+                    <span className="italic text-neutral-400">Empty note</span>
                   )}
                 </p>
               )}
             </div>
-
-            {/* Footer always pinned to the bottom of the note */}
-            {canEdit || editing ? (
-              <div
-                className="shrink-0 border-t border-neutral-100 bg-white px-1.5 py-1"
-                data-learner-note-footer
-              >
-                {editing && canEdit ? (
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      data-learner-note-cancel-edit
-                      onClick={() => {
-                        setDraft(note.body);
-                        setEditing(false);
-                      }}
-                      className="rounded-none px-1.5 py-0.5 text-[10px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      data-learner-note-save
-                      onClick={commit}
-                      className="rounded-none bg-neutral-900 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black"
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : canEdit ? (
-                  <button
-                    type="button"
-                    data-learner-note-edit-start
-                    onClick={() => {
-                      setDraft(note.body);
-                      setEditing(true);
-                    }}
-                    className="w-full rounded-none border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-medium text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100"
-                  >
-                    Edit
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
           </div>
         ) : null}
 

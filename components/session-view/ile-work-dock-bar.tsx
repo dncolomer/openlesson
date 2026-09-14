@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Map } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
 import {
   FALLBACK_AESTHETIC_IMAGES,
@@ -62,10 +62,42 @@ export function IleSubmitWorkButton({
   );
 }
 
+export const ILE_SHOW_MAP_LABEL = "Map";
+
+export function IleShowMapButton({
+  onClick,
+  disabled = false,
+  compact = false,
+  sizeClass,
+}: {
+  onClick?: () => void;
+  disabled?: boolean;
+  compact?: boolean;
+  sizeClass?: string;
+}) {
+  const box = sizeClass ?? (compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]");
+  return (
+    <button
+      type="button"
+      data-ile-show-map
+      onClick={onClick}
+      disabled={disabled}
+      title={ILE_SHOW_MAP_LABEL}
+      aria-label={ILE_SHOW_MAP_LABEL}
+      className={`relative flex ${box} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-neutral-950 p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-white hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40`}
+    >
+      <Map className={`relative z-10 ${compact ? "size-3.5" : "size-4"}`} strokeWidth={2.3} aria-hidden />
+      <span className="relative z-10">{ILE_SHOW_MAP_LABEL}</span>
+    </button>
+  );
+}
+
 export function IleWorkDockBar({
   heliosOpen,
   openWorkLabels,
   onFocusOpenWork,
+  onShowMap,
+  showMapDisabled = false,
   onSubmitTurn,
   submitTurnLabel,
   submitTurnBusy,
@@ -77,6 +109,8 @@ export function IleWorkDockBar({
   heliosOpen: boolean;
   openWorkLabels: IleWorkDockLabel[];
   onFocusOpenWork?: (id: string) => void;
+  onShowMap?: () => void;
+  showMapDisabled?: boolean;
   onSubmitTurn?: () => void;
   submitTurnLabel: string;
   submitTurnBusy?: boolean;
@@ -177,6 +211,14 @@ export function IleWorkDockBar({
               </button>
             );
           })}
+      {onShowMap ? (
+        <IleShowMapButton
+          compact={compact}
+          sizeClass={chipSize}
+          onClick={onShowMap}
+          disabled={showMapDisabled}
+        />
+      ) : null}
       {showSubmit ? (
         <IleSubmitWorkButton
           square

@@ -3,7 +3,7 @@
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { VoiceBarUtilityRow, type Tool } from "@/components/ToolsPanel";
 import { IleVoiceActionPad } from "@/components/session-view/ile-voice-action-pad";
-import { ILE_VOICE_BAR_HEIGHT_CLASS } from "@/lib/ile-map-chrome";
+import { ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS, ILE_VOICE_BAR_HEIGHT_CLASS } from "@/lib/ile-map-chrome";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import type { IleVoicePadSpec } from "@/lib/block-circular-menu";
@@ -46,7 +46,7 @@ export function IleVoiceBar({
       data-ile-voice-bar
       data-ile-transcription-region
       data-ile-voice-chapter={hasChapter ? "true" : undefined}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 w-full overflow-hidden rounded-none border-t border-neutral-800 bg-neutral-950/95"
+      className={`pointer-events-auto absolute inset-x-0 bottom-0 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} w-full overflow-hidden rounded-none border-t border-neutral-800 bg-neutral-950/95`}
     >
       {aesthetic ? (
         <>

@@ -10,6 +10,7 @@ import {
   emptyIleWorkCanvasScene,
   ileWorkCanvasEmptyNearbyOrigin,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasTurnContextMessage,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
   parseIleXaiCanvasTurn,
@@ -61,8 +62,7 @@ export function tapHeliosCanvasBusy(input: {
 export function tapWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
 ): string {
-  const restorable = serializeIleWorkCanvasScene(scene);
-  return `CURRENT SESSION WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. Optional extra geometric marks or images go in "elements".\n${JSON.stringify(restorable)}`;
+  return ileWorkCanvasTurnContextMessage(scene, { boardLabel: "SESSION" });
 }
 
 /**
@@ -80,6 +80,7 @@ export function applyTapHeliosReplyToWorkCanvas(
     text: parsed.text,
     elements: [...(parsed.elements ?? []), ...(extras ?? [])],
     turnId: turnId ?? parsed.turnId,
+    origin: parsed.origin,
   });
 }
 

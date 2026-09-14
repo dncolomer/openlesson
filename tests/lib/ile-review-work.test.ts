@@ -98,7 +98,7 @@ describe("Review work chrome (shipped source)", () => {
     expect(compact).not.toContain("data-ile-compact-review-work");
     expect(compact).toContain("IleWorkDockBar");
     expect(compact).toContain("data-ile-compact-insight-craft");
-    expect(compact).toContain("turnInsightCraft(false)");
+    expect(compact).toContain("turnInsightCraft()");
     expect(compact).not.toContain("onReviewWork");
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).not.toContain("data-ile-review-work");

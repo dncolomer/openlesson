@@ -58,7 +58,7 @@ describe("ILE dead frontend is gone from the live session", () => {
     expect(view).not.toContain("I'm Done Writing");
     expect(view).not.toContain("I'm Done Drawing");
 
-    expect(canvas).toContain("onSubmitToHelios &&");
+    expect(canvas).toContain("onSubmitToHelios ?");
 
     expect(tapPhases).toContain("ImDoneAnsweringControl");
     expect(tapShell).toContain("ImDoneAnsweringControl");

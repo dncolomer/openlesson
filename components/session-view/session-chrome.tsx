@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   AudioMiniPreview,
@@ -15,7 +15,9 @@ import {
   ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
+  ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
   ileMapWorkFrameClass,
+  ileWorkCanvasCoversMap,
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
@@ -57,6 +59,9 @@ export type SessionChromeProps = {
   heliosOpen: boolean;
   onCloseHelios: () => void;
   onMinimizeHelios?: () => void;
+  insightCraft?: ReactNode;
+  insightCraftOpen?: boolean;
+  onMinimizeInsightCraft?: () => void;
   introOpen: boolean;
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
@@ -128,6 +133,9 @@ export function SessionChrome({
   heliosOpen,
   onCloseHelios,
   onMinimizeHelios,
+  insightCraft = null,
+  insightCraftOpen = false,
+  onMinimizeInsightCraft,
   introOpen,
   introWidget,
   onCloseSessionModal,
@@ -166,7 +174,10 @@ export function SessionChrome({
   onChapterDoneOverride,
   onDismissCloseReview,
 }: SessionChromeProps) {
-  const [workCanvasWide, setWorkCanvasWide] = useState(false);
+  const workCoversMap = ileWorkCanvasCoversMap({
+    heliosOpen,
+    insightCraftOpen,
+  });
   const overlayOpen = isIleMapOverlayTool(activeTool);
   const modalTool = introOpen
     ? "help"
@@ -189,14 +200,18 @@ export function SessionChrome({
 
   return (
     <>
-      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        data-ile-session-stage
+        data-ile-work-covers-map={workCoversMap ? "true" : "false"}
+        className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+      >
         <div data-ile-map-stage className="absolute inset-0 z-0">
           {map}
         </div>
 
         <div
           data-ile-pow-resource-bar
-          className="pointer-events-auto absolute left-2 top-2 z-30 flex items-center gap-3 rounded-none border border-neutral-700 bg-neutral-950/95 px-3 py-1.5"
+          className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-3 rounded-none border border-neutral-700 bg-neutral-950/95 px-3 py-1.5`}
         >
           <span
             data-ile-pow-resource-label
@@ -276,7 +291,7 @@ export function SessionChrome({
         </div>
 
         {error && !showWelcomeModal ? (
-          <div className="pointer-events-auto absolute left-2 top-12 z-30 flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5">
+          <div className={`pointer-events-auto absolute left-2 top-12 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
             <span className="text-xs text-red-400">{error}</span>
             <button onClick={onDismissError} className="text-xs text-red-400/60 hover:text-red-400">✕</button>
           </div>
@@ -334,14 +349,13 @@ export function SessionChrome({
         {heliosOpen ? (
           <div
             data-ile-chapter-dock-panel
-            data-ile-work-canvas-wide={workCanvasWide ? "true" : "false"}
-            className={`pointer-events-auto ${ileMapWorkFrameClass(workCanvasWide)}`}
+            data-ile-work-canvas-wide="true"
+            className={`pointer-events-auto ${ileMapWorkFrameClass()}`}
           >
             <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
               <IleChapterWidgetFrame
                 fill
-                wide={workCanvasWide}
-                onToggleWide={() => setWorkCanvasWide((open) => !open)}
+                wide
                 onMinimize={onMinimizeHelios ?? onCloseHelios}
               >
                 {workCanvas}
@@ -350,15 +364,39 @@ export function SessionChrome({
           </div>
         ) : null}
 
+        {insightCraftOpen && insightCraft ? (
+          <div
+            data-ile-insight-craft-widget
+            data-ile-work-canvas-wide="true"
+            className={`pointer-events-auto ${ileMapWorkFrameClass()}`}
+          >
+            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
+              <IleChapterWidgetFrame
+                fill
+                wide
+                title="Craft insights"
+                onMinimize={onMinimizeInsightCraft}
+              >
+                {insightCraft}
+              </IleChapterWidgetFrame>
+            </div>
+          </div>
+        ) : null}
+
         <div
           data-ile-work-dock
-          className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} z-50 flex flex-col items-end`}
+          className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex flex-col items-end`}
         >
           <IleWorkDockBar
             t={t}
             heliosOpen={heliosOpen}
             openWorkLabels={openWorkLabels}
             onFocusOpenWork={onFocusOpenWork}
+            onShowMap={() => {
+              (onMinimizeHelios ?? onCloseHelios)();
+              onMinimizeInsightCraft?.();
+            }}
+            showMapDisabled={!heliosOpen && !insightCraftOpen}
             onSubmitTurn={onSubmitTurn}
             submitTurnLabel={submitTurnLabel}
             submitTurnBusy={submitTurnBusy}

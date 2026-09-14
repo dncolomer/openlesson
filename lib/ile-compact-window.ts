@@ -203,6 +203,85 @@ export function bindIleSurfaceResize(
   };
 }
 
+/**
+ * Excalidraw binds pointermove/up and wheel to `window` (the opener).
+ * Document PiP has a different window, so strokes never finish unless we
+ * forward those events onto the opener.
+ */
+export const ILE_PIP_POINTER_BRIDGE_EVENTS = [
+  "pointermove",
+  "pointerup",
+  "pointercancel",
+  "wheel",
+  "keydown",
+  "keyup",
+] as const;
+
+const ILE_PIP_FORWARDED = "__ilePipForwarded";
+
+export function ileSurfaceNeedsPointerBridge(
+  node?: { ownerDocument?: Document | null } | null,
+  opener?: Window | null,
+): boolean {
+  const view = resolveIleSurfaceView(node ?? null);
+  const host = opener ?? (typeof window !== "undefined" ? window : null);
+  return Boolean(view && host && view.window !== host);
+}
+
+export function cloneIleSurfaceEventForOpener(event: Event): Event | null {
+  if ((event as { [ILE_PIP_FORWARDED]?: boolean })[ILE_PIP_FORWARDED]) return null;
+  try {
+    const Ctor = event.constructor as new (type: string, init?: Event) => Event;
+    const clone = new Ctor(event.type, event);
+    Object.defineProperty(clone, ILE_PIP_FORWARDED, { value: true });
+    return clone;
+  } catch {
+    try {
+      const clone = new Event(event.type, event);
+      Object.defineProperty(clone, ILE_PIP_FORWARDED, { value: true });
+      return clone;
+    } catch {
+      return null;
+    }
+  }
+}
+
+export function bindIleSurfacePointerBridge(
+  node: { ownerDocument?: Document | null } | null | undefined,
+  opener?: Window | null,
+): () => void {
+  const view = resolveIleSurfaceView(node ?? null);
+  const host = opener ?? (typeof window !== "undefined" ? window : null);
+  if (!view || !host || view.window === host) return () => {};
+  const forward = (event: Event) => {
+    const clone = cloneIleSurfaceEventForOpener(event);
+    if (!clone) return;
+    host.dispatchEvent(clone);
+  };
+  for (const type of ILE_PIP_POINTER_BRIDGE_EVENTS) {
+    view.window.addEventListener(type, forward, true);
+  }
+  return () => {
+    for (const type of ILE_PIP_POINTER_BRIDGE_EVENTS) {
+      view.window.removeEventListener(type, forward, true);
+    }
+  };
+}
+
+/** Resize + PiP pointer/keyboard bridge for Excalidraw in a foreign window. */
+export function bindIleSurfaceEditorEvents(
+  node: { ownerDocument?: Document | null } | null | undefined,
+  onResize: () => void,
+  opener?: Window | null,
+): () => void {
+  const unbindResize = bindIleSurfaceResize(node, onResize);
+  const unbindPointer = bindIleSurfacePointerBridge(node, opener);
+  return () => {
+    unbindResize();
+    unbindPointer();
+  };
+}
+
 export function styleIleCompactDocument(doc: Document): void {
   const fill = ileCompactDocumentFillStyles();
   doc.documentElement.style.height = fill.html.height;

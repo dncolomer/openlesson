@@ -828,6 +828,7 @@ export function SessionView({
         text: parsedTurn.text || content,
         elements: extraSkeletons,
         turnId: placeholderId,
+        origin: parsedTurn.origin,
       });
       const appended = nextScene.elements.slice(currentScene.elements.length);
       updateChapterWorkspace(chapterKey, workspace => ({
@@ -1334,6 +1335,7 @@ export function SessionView({
 
   const handleSubmitTurn = useCallback(async () => {
     if (submitTurnBusy) return;
+    setHeliosWidgetOpen(false);
     setSubmitTurnBusy(true);
     const formingText =
       sessionThoughtInterface.getFormingText?.() ||
@@ -1646,7 +1648,7 @@ export function SessionView({
               : message,
           ),
         }));
-        return { text, elements: extraSkeletons };
+        return { text, elements: extraSkeletons, origin: parsedTurn.origin };
       } catch (error) {
         console.error("Canvas ask XAI error:", error);
         const fail = t("heliosChat.errorMessage");
@@ -1760,11 +1762,10 @@ export function SessionView({
     );
   };
 
-  const turnInsightCraft = (portal: boolean) =>
+  const turnInsightCraft = () =>
     session ? (
       <IleTurnInsightCraft
         open={craftingInsightsOpen}
-        portal={portal}
         aestheticImage={
           chromeSelectedAesthetic?.previewImage ||
           chromeSelectedAesthetic?.images?.[0] ||
@@ -1806,7 +1807,7 @@ export function SessionView({
           data-ile-compact-insight-craft
           className="relative min-h-0 flex-1 overflow-hidden"
         >
-          {turnInsightCraft(false)}
+          {turnInsightCraft()}
         </div>
       ) : (
         <>
@@ -1819,6 +1820,7 @@ export function SessionView({
             heliosOpen
             openWorkLabels={openWorkDockLabels}
             onFocusOpenWork={handleFocusOpenWork}
+            onShowMap={() => setHeliosWidgetOpen(false)}
             onSubmitTurn={() => void handleSubmitTurn()}
             submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
             submitTurnBusy={submitTurnBusy}
@@ -2021,6 +2023,9 @@ export function SessionView({
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
         onMinimizeHelios={() => setHeliosWidgetOpen(false)}
+        insightCraftOpen={craftingInsightsOpen}
+        insightCraft={turnInsightCraft()}
+        onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
         introOpen={showWelcomePanel}
         onCloseSessionModal={() => {
           setShowWelcomePanel(false);
@@ -2202,7 +2207,6 @@ export function SessionView({
           />
         }
       />
-      {turnInsightCraft(true)}
       <IleSessionInsightsPanel
         open={sessionInsightsOpen}
         onClose={() => setSessionInsightsOpen(false)}

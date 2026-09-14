@@ -187,7 +187,11 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: TapWorkCanvasScene;
-  }): Promise<{ text: string; elements?: IleWorkCanvasSkeleton[] | null }> {
+  }): Promise<{
+    text: string;
+    elements?: IleWorkCanvasSkeleton[] | null;
+    origin?: { x?: number; y?: number } | null;
+  }> {
     const s = current();
     const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
     const response = await fetch("/api/workspace-tap-score/chat", {
@@ -214,7 +218,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     const content = String(payload.message || "").trim() || "No reply";
     const parsed = parseTapXaiCanvasTurn(content);
     s.handlePowInterruption(payload.interruption ?? null);
-    return { text: parsed.text || content, elements: parsed.elements };
+    return { text: parsed.text || content, elements: parsed.elements, origin: parsed.origin };
   }
 
   async function sendCurrentTranscription() {

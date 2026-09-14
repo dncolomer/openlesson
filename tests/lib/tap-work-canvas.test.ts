@@ -15,20 +15,29 @@ import {
   emptyTapWorkCanvasScene,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
+  parseTapXaiCanvasTurn,
   placeThenReplaceTapXaiLoading,
   serializeTapWorkCanvasScene,
   tapHeliosCanvasBusy,
   tapWorkCanvasAskUserMessage,
   tapWorkCanvasShouldAcceptSceneUpdate,
+  tapWorkCanvasTurnContextMessage,
 } from "@/lib/tap-work-canvas";
-import { mapExcalidrawToolToIlePow } from "@/lib/ile-work-canvas";
-import { convertToExcalidrawElements } from "@/lib/ile-work-canvas";
+import {
+  convertToExcalidrawElements,
+  ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
+  ILE_XAI_LOADING_BOX_HEIGHT,
+  ILE_XAI_LOADING_BOX_WIDTH,
+  ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasThinkingOverlayStyle,
+  mapExcalidrawToolToIlePow,
+} from "@/lib/ile-work-canvas";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-871793e0b32f/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b56fab79f1b5/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -118,6 +127,10 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
         selectedElements: selected,
       }),
     );
+    const boardAsk = tapWorkCanvasAskUserMessage({ prompt: "Sketch the first swap." });
+    expect(boardAsk).toContain("Sketch the first swap.");
+    expect(boardAsk).not.toContain("Selected elements:");
+    expect(boardAsk).toBe(buildTapWorkCanvasAskUserMessage({ prompt: "Sketch the first swap." }));
 
     writeScratch(
       "tap-work-canvas-apply.log",
@@ -146,6 +159,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(live).toContain("ExcalidrawCanvas");
     expect(phases).toContain("data-tap-convo-work-canvas-pane");
     expect(phases).toContain("onAskSelected");
+    expect(phases).toContain("onAskSelected={handleAskSelected}");
     expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
     expect(phases).toContain("applyTapAssistantTurnsToWorkCanvas");
     expect(phases).toContain("tapWorkCanvasShouldAcceptSceneUpdate");
@@ -174,6 +188,13 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).toContain("ileHeliosThinkingLine");
     expect(canvas).toContain("flushPendingApply");
     expect(canvas).toContain("pendingApplyRef");
+    expect(canvas).toContain("scheduleCenterOnOpen");
+    expect(canvas).toContain("scrollToContent");
+    expect(canvas).toContain("data-ile-canvas-prompt-bar");
+    expect(canvas).toContain("style={{ top: promptBarTop }}");
+    expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
+    expect(canvas).toContain("handleBoardAsk");
+    expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
 
     const propsType = phases.slice(
       phases.indexOf("export function TapScorePhases(props: {"),
@@ -245,6 +266,65 @@ describe("TAP Work canvas PoW (shipped ILE builders)", () => {
         `snap=${snap.toolName}/${snap.toolAction}`,
         "live wires buildTapExcalidrawToolUploadItem + buildTapCanvasSnapshotUploadItem",
         "path=/api/workspace-tap-score/canvas",
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
+  it("honors a suggested origin, falls back without one, and wires the anchored bar", () => {
+    const empty = emptyTapWorkCanvasScene();
+    const parsed = parseTapXaiCanvasTurn(
+      JSON.stringify({
+        text: "Name the parent index.",
+        origin: { x: 310, y: 90 },
+        elements: [{ type: "ellipse", x: 12, y: 40, width: 60, height: 40 }],
+      }),
+    );
+    expect(parsed.origin).toEqual({ x: 310, y: 90 });
+    const placed = applyTapHeliosReplyToWorkCanvas(
+      empty,
+      JSON.stringify({
+        text: "Name the parent index.",
+        origin: { x: 310, y: 90 },
+        elements: [{ type: "ellipse", x: 12, y: 40, width: 60, height: 40 }],
+      }),
+    );
+    const reply = placed.elements.find((el) => (el.originalText || el.text) === "Name the parent index.");
+    expect(reply?.x).toBe(310);
+    expect(reply?.y).toBe(90);
+    const extra = placed.elements.find((el) => el.type === "ellipse");
+    expect(extra?.x).toBe(12);
+    expect(extra?.y).toBe(40);
+
+    const prose = applyTapHeliosReplyToWorkCanvas(empty, "Walk the first swap.");
+    expect(prose.elements.some((el) => String(el.originalText || el.text || "").includes("first swap"))).toBe(true);
+    expect(ileWorkCanvasFiniteOrigin(parseTapXaiCanvasTurn("Walk the first swap.").origin)).toBeNull();
+
+    const ctx = tapWorkCanvasTurnContextMessage(placed);
+    expect(ctx).toContain("SESSION");
+    expect(ctx).toContain("Name the parent index.");
+    expect(ctx).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("data-ile-canvas-prompt-bar");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(phases).toContain("onAskSelected={handleAskSelected}");
+
+    const box = ileWorkCanvasThinkingOverlayStyle();
+    expect(box.width).toBe(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(box.height).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(box.width).toBe(box.height);
+    expect(box.height).toBeGreaterThan(52);
+
+    writeScratch(
+      "tap-xai-canvas-origin.log",
+      [
+        `origin=${JSON.stringify(parsed.origin)}`,
+        `placed=${reply?.x},${reply?.y}`,
+        `contextAsksOrigin=${ctx.includes(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION)}`,
+        `bar=${canvas.includes("data-ile-canvas-prompt-bar")}`,
+        `overlay=${box.width}x${box.height}`,
       ].join("\n") + "\n",
     );
   });

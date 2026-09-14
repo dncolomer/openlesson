@@ -34,6 +34,66 @@ export const ILE_EXCALIDRAW_POW_TOOLS = [
 
 export type IleExcalidrawPowTool = (typeof ILE_EXCALIDRAW_POW_TOOLS)[number];
 
+/** Scene primitives XAI may emit in JSON "elements" (eraser/selection are learner-only). */
+export const ILE_XAI_CANVAS_SHAPE_TYPES = [
+  "text",
+  "freedraw",
+  "rectangle",
+  "diamond",
+  "ellipse",
+  "arrow",
+  "line",
+  "frame",
+  "image",
+] as const;
+
+export type IleXaiCanvasShapeType = (typeof ILE_XAI_CANVAS_SHAPE_TYPES)[number];
+
+const ILE_XAI_CANVAS_SHAPE_SET = new Set<string>(ILE_XAI_CANVAS_SHAPE_TYPES);
+
+const ILE_XAI_CANVAS_SHAPE_ALIASES: Record<string, IleXaiCanvasShapeType> = {
+  text: "text",
+  rectangle: "rectangle",
+  rect: "rectangle",
+  box: "rectangle",
+  square: "rectangle",
+  diamond: "diamond",
+  rhombus: "diamond",
+  ellipse: "ellipse",
+  circle: "ellipse",
+  oval: "ellipse",
+  arrow: "arrow",
+  line: "line",
+  freedraw: "freedraw",
+  scribble: "freedraw",
+  draw: "freedraw",
+  frame: "frame",
+  image: "image",
+};
+
+export function ileWorkCanvasXaiShapeType(raw: unknown): IleXaiCanvasShapeType | null {
+  const key = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (!key) return null;
+  const aliased = ILE_XAI_CANVAS_SHAPE_ALIASES[key];
+  if (aliased) return aliased;
+  return ILE_XAI_CANVAS_SHAPE_SET.has(key) ? (key as IleXaiCanvasShapeType) : null;
+}
+
+/** Turn + system instruction: tools on the board and how to draw them in JSON. */
+export function ileWorkCanvasXaiToolsInstruction(): string {
+  const tools = ILE_EXCALIDRAW_POW_TOOLS.join(", ");
+  const shapes = ILE_XAI_CANVAS_SHAPE_TYPES.filter((type) => type !== "image").join(", ");
+  return [
+    `EXCALIDRAW DRAWING TOOLS on this board (name these when routing work): ${tools}.`,
+    `You can CREATE the same marks in your reply via JSON "elements" (types: ${shapes}).`,
+    "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
+    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","origin":{"x":number,"y":number},"elements":[{"type":"rectangle","x":120,"y":240,"width":160,"height":80,"label":{"text":"optional caption"}}]}.`,
+    `"elements" may include ${shapes}. Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
+  ].join(" ");
+}
+
 const RETIRED_ILE_WORK_TOOLS = new Set(["notebook", "grokipedia", "dantes"]);
 
 export type IleWorkCanvasAppState = Record<string, unknown>;
@@ -110,6 +170,18 @@ export type IleXaiCanvasTurnPayload = {
   turnId?: string | null;
   origin?: { x?: number; y?: number } | null;
 };
+
+/** Finite scene origin from XAI JSON (or apply payload). Invalid → null (fallback). */
+export function ileWorkCanvasFiniteOrigin(
+  raw: { x?: unknown; y?: unknown } | null | undefined,
+): { x: number; y: number } | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (raw.x == null || raw.y == null) return null;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
 
 const DEFAULT_FONT_SIZE = 20;
 const DEFAULT_LINE_HEIGHT = 1.25;
@@ -341,7 +413,7 @@ export function convertIleWorkCanvasSkeletons(
   const out: IleWorkCanvasElement[] = [];
   for (const skeleton of skeletons) {
     if (!skeleton || typeof skeleton !== "object") continue;
-    const type = String(skeleton.type || "").trim();
+    const type = ileWorkCanvasXaiShapeType(skeleton.type);
     if (!type) continue;
     if (type === "text") {
       const text = String(skeleton.text ?? skeleton.label?.text ?? "");
@@ -447,6 +519,36 @@ export function ileWorkCanvasContentBounds(
   return { minX, minY, maxX, maxY };
 }
 
+/**
+ * Excalidraw `scrollToContent` options for opening a Work board: pan so
+ * content is centered, keep the current zoom, no animation.
+ */
+export const ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS = { animate: false } as const;
+
+/**
+ * Scroll offsets that place `bounds` at the viewport center (same formula as
+ * Excalidraw `centerScrollOn` without sidebar offsets). Null when the viewport
+ * size is unknown — do not write fake scroll into a seed scene.
+ */
+export function ileWorkCanvasCenterScroll(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number } | null | undefined,
+  viewport: Pick<IleWorkCanvasViewportAppState, "width" | "height" | "zoom"> | null | undefined,
+): { scrollX: number; scrollY: number } | null {
+  if (!bounds) return null;
+  const width = Number(viewport?.width);
+  const height = Number(viewport?.height);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return null;
+  }
+  const zoom = ileWorkCanvasZoomValue(viewport);
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  return {
+    scrollX: width / 2 / zoom - centerX,
+    scrollY: height / 2 / zoom - centerY,
+  };
+}
+
 function nextXaiTextOrigin(elements: readonly IleWorkCanvasElement[]): { x: number; y: number } {
   const bounds = ileWorkCanvasContentBounds(elements);
   if (!bounds) return { x: TEXT_ORIGIN_X, y: TEXT_ORIGIN_Y };
@@ -455,16 +557,30 @@ function nextXaiTextOrigin(elements: readonly IleWorkCanvasElement[]): { x: numb
 
 function normalizeExtraSkeletons(raw: unknown): IleWorkCanvasSkeleton[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((item): item is IleWorkCanvasSkeleton => {
-    if (!item || typeof item !== "object") return false;
-    return typeof (item as IleWorkCanvasSkeleton).type === "string";
-  });
+  const out: IleWorkCanvasSkeleton[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as IleWorkCanvasSkeleton;
+    const type = ileWorkCanvasXaiShapeType(rec.type);
+    if (!type) continue;
+    if (type === "image" && typeof rec.fileId !== "string") continue;
+    out.push({ ...rec, type });
+  }
+  return out;
 }
 
 export function ileWorkCanvasHasLiveElements(
   scene: IleWorkCanvasScene | null | undefined,
 ): boolean {
   return serializeIleWorkCanvasScene(scene).elements.some((el) => !el.isDeleted);
+}
+
+/** Excalidraw `initialData` flag: center on live elements at first paint. */
+export function ileWorkCanvasWithScrollToContent<T extends { elements?: unknown[] }>(
+  scene: T,
+): T & { scrollToContent?: boolean } {
+  if (!ileWorkCanvasHasLiveElements(scene as unknown as IleWorkCanvasScene)) return scene;
+  return { ...scene, scrollToContent: true };
 }
 
 /**
@@ -519,10 +635,7 @@ export function applyIleXaiTurnToWorkCanvas(
   const extra = normalizeExtraSkeletons(payload.elements);
   if (!text && extra.length === 0) return current;
 
-  const origin =
-    payload.origin && Number.isFinite(Number(payload.origin.x)) && Number.isFinite(Number(payload.origin.y))
-      ? { x: Number(payload.origin.x), y: Number(payload.origin.y) }
-      : nextXaiTextOrigin(current.elements);
+  const origin = ileWorkCanvasFiniteOrigin(payload.origin) ?? nextXaiTextOrigin(current.elements);
   const turnId = String(payload.turnId || `turn-${Date.now()}`);
   const customData = {
     [ILE_XAI_CANVAS_CUSTOM_DATA_KEY]: true,
@@ -567,10 +680,31 @@ export function isIleXaiLoadingElement(el: IleWorkCanvasElement | null | undefin
   return Boolean(el?.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY]);
 }
 
-export const ILE_XAI_LOADING_BOX_WIDTH = 220;
-export const ILE_XAI_LOADING_BOX_HEIGHT = 52;
+/** Fixed thinking overlay / empty-nearby occupancy — square, not a shrink-to-copy chip. */
+export const ILE_XAI_LOADING_BOX_SIZE = 128;
+export const ILE_XAI_LOADING_BOX_WIDTH = ILE_XAI_LOADING_BOX_SIZE;
+export const ILE_XAI_LOADING_BOX_HEIGHT = ILE_XAI_LOADING_BOX_SIZE;
 export const ILE_XAI_LOADING_GAP = 28;
 export const ILE_XAI_LOADING_CLEARANCE = 16;
+
+/** Same box occupancy and overlay markup share so rotating copy cannot resize it. */
+export function ileWorkCanvasThinkingOverlayStyle(): {
+  width: number;
+  height: number;
+  minWidth: number;
+  minHeight: number;
+  maxWidth: number;
+  maxHeight: number;
+} {
+  return {
+    width: ILE_XAI_LOADING_BOX_WIDTH,
+    height: ILE_XAI_LOADING_BOX_HEIGHT,
+    minWidth: ILE_XAI_LOADING_BOX_WIDTH,
+    minHeight: ILE_XAI_LOADING_BOX_HEIGHT,
+    maxWidth: ILE_XAI_LOADING_BOX_WIDTH,
+    maxHeight: ILE_XAI_LOADING_BOX_HEIGHT,
+  };
+}
 
 export function ileWorkCanvasElementRect(
   el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height">,
@@ -650,6 +784,60 @@ export function ileWorkCanvasEmptyNearbyOrigin(input: {
   };
 }
 
+/** Treat in-flight wait boxes as occupied so parallel asks do not share an origin. */
+export function ileWorkCanvasOriginOccupants(
+  origins: readonly { x: number; y: number }[] | null | undefined,
+  box?: { width?: number; height?: number },
+): Array<Pick<IleWorkCanvasElement, "id" | "x" | "y" | "width" | "height" | "isDeleted">> {
+  const width = Number(box?.width) || ILE_XAI_LOADING_BOX_WIDTH;
+  const height = Number(box?.height) || ILE_XAI_LOADING_BOX_HEIGHT;
+  return (origins ?? []).map((origin, index) => ({
+    id: `ile-origin-slot-${index}`,
+    x: origin.x,
+    y: origin.y,
+    width,
+    height,
+    isDeleted: false,
+  }));
+}
+
+export function ileWorkCanvasEmptyNearbyOriginWithReserved(input: {
+  elements?: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[] | null;
+  reserved?: readonly { x: number; y: number }[] | null;
+  near?: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[] | null;
+  box?: { width?: number; height?: number };
+  gap?: number;
+}): { x: number; y: number } {
+  return ileWorkCanvasEmptyNearbyOrigin({
+    ...input,
+    elements: [...(input.elements ?? []), ...ileWorkCanvasOriginOccupants(input.reserved, input.box)],
+  });
+}
+
+/**
+ * Append an XAI turn onto the live board. Parallel asks must pass the current
+ * scene (not the snapshot from when the prompt was sent) or later replies
+ * replace earlier ones.
+ */
+export function mergeIleXaiTurnOntoLiveWorkCanvas(
+  liveScene: IleWorkCanvasScene | null | undefined,
+  payload: IleXaiCanvasTurnPayload,
+  input?: {
+    fallbackOrigin?: { x?: number; y?: number } | null;
+    reserved?: readonly { x: number; y: number }[] | null;
+  },
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(liveScene);
+  const origin =
+    ileWorkCanvasFiniteOrigin(payload.origin) ??
+    ileWorkCanvasFiniteOrigin(input?.fallbackOrigin) ??
+    ileWorkCanvasEmptyNearbyOriginWithReserved({
+      elements: current.elements,
+      reserved: input?.reserved,
+    });
+  return applyIleXaiTurnToWorkCanvas(current, { ...payload, origin });
+}
+
 export function ileWorkCanvasReplyOriginFromSelection(
   elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
   sceneElements?: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[] | null,
@@ -665,6 +853,25 @@ export const ILE_LEARN_MORE_BOX_WIDTH = 288;
 export const ILE_LEARN_MORE_BOX_HEIGHT = 80;
 export const ILE_LEARN_MORE_GAP = 8;
 export const ILE_LEARN_MORE_VIEWPORT_PAD = 8;
+
+/** Desktop Excalidraw shape island (not the mobile bottom bar). */
+export const ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR =
+  ".App-top-bar .App-toolbar, .shapes-section .App-toolbar";
+export const ILE_CANVAS_PROMPT_BAR_GAP = 8;
+/** 1rem editor pad + tool island + gap, until the toolbar is measured. */
+export const ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP = 72;
+
+/** Host-relative top so the board prompt floats just under Excalidraw's toolbar. */
+export function ileCanvasPromptBarTop(
+  toolbar: { bottom?: number } | null | undefined,
+  host: { top?: number } | null | undefined,
+  gap = ILE_CANVAS_PROMPT_BAR_GAP,
+): number {
+  const bottom = Number(toolbar?.bottom);
+  const top = Number(host?.top);
+  if (!Number.isFinite(bottom) || !Number.isFinite(top)) return ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP;
+  return Math.max(0, Math.round(bottom - top + gap));
+}
 
 export type IleWorkCanvasViewportAppState = {
   zoom?: { value?: number } | number | null;
@@ -720,6 +927,36 @@ export function ileWorkCanvasSelectionViewportRect(
   };
 }
 
+export type IleWorkCanvasHostRect = { left?: number; top?: number };
+
+/** Excalidraw viewport coords → overlay host (absolute child of the canvas host). */
+export function ileWorkCanvasViewportToHost(
+  point: { x: number; y: number },
+  host?: IleWorkCanvasHostRect | null,
+): { x: number; y: number } {
+  return {
+    x: point.x - (Number(host?.left) || 0),
+    y: point.y - (Number(host?.top) || 0),
+  };
+}
+
+export function ileWorkCanvasSelectionHostRect(
+  elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  appState: IleWorkCanvasViewportAppState | null | undefined,
+  host?: IleWorkCanvasHostRect | null,
+): { left: number; top: number; right: number; bottom: number } | null {
+  const rect = ileWorkCanvasSelectionViewportRect(elements, appState);
+  if (!rect) return null;
+  const originLeft = Number(host?.left) || 0;
+  const originTop = Number(host?.top) || 0;
+  return {
+    left: rect.left - originLeft,
+    top: rect.top - originTop,
+    right: rect.right - originLeft,
+    bottom: rect.bottom - originTop,
+  };
+}
+
 export function placeIleLearnMorePrompt(input: {
   selection: { left: number; top: number; right: number; bottom: number } | null | undefined;
   viewport: { left?: number; top?: number; width: number; height: number };
@@ -760,19 +997,26 @@ export function ileLearnMorePromptPlacement(input: {
   selectedElementIds?: Record<string, unknown> | null;
   appState?: IleWorkCanvasViewportAppState | null;
   viewport?: { left?: number; top?: number; width?: number; height?: number } | null;
+  /** Canvas host bounding origin; Expand More is absolutely positioned inside it. */
+  host?: IleWorkCanvasHostRect | null;
 }): { count: number; left: number; top: number } | null {
   const ids = input.selectedElementIds ?? {};
   const selected = input.elements.filter((el) => el?.id && ids[el.id] && !el.isDeleted);
   if (!selected.length) return null;
   const appState = input.appState ?? {};
+  const hasHost = input.host != null;
   const viewport = {
-    left: (input.viewport?.left ?? Number(appState.offsetLeft)) || 0,
-    top: (input.viewport?.top ?? Number(appState.offsetTop)) || 0,
+    left: hasHost
+      ? Number(input.viewport?.left) || 0
+      : (input.viewport?.left ?? Number(appState.offsetLeft)) || 0,
+    top: hasHost
+      ? Number(input.viewport?.top) || 0
+      : (input.viewport?.top ?? Number(appState.offsetTop)) || 0,
     width: Number(input.viewport?.width) || Number(appState.width) || 0,
     height: Number(input.viewport?.height) || Number(appState.height) || 0,
   };
   const placed = placeIleLearnMorePrompt({
-    selection: ileWorkCanvasSelectionViewportRect(selected, appState),
+    selection: ileWorkCanvasSelectionHostRect(selected, appState, input.host),
     viewport,
   });
   if (!placed) return null;
@@ -905,7 +1149,11 @@ export function buildIleWorkCanvasAskUserMessage(input: {
   selectedElements?: readonly IleWorkCanvasElement[] | null;
 }): string {
   const prompt = String(input.prompt || "").trim();
-  const selected = ileWorkCanvasSelectionSummary(input.selectedElements);
+  const live = (input.selectedElements ?? []).filter((el) => !el.isDeleted);
+  if (!live.length) {
+    return `Ask about the Work canvas.\n\nQuestion:\n${prompt}`;
+  }
+  const selected = ileWorkCanvasSelectionSummary(live);
   return `Ask about the selected Work canvas elements.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${selected}`;
 }
 
@@ -926,7 +1174,15 @@ function extractJsonObject(raw: string): Record<string, unknown> | null {
   }
 }
 
-/** Parse an XAI reply into text + optional extra canvas skeletons. */
+function originFromParsedCanvasJson(parsed: Record<string, unknown>): { x: number; y: number } | null {
+  return (
+    ileWorkCanvasFiniteOrigin(asRecord(parsed.origin)) ??
+    ileWorkCanvasFiniteOrigin(asRecord(parsed.position)) ??
+    ileWorkCanvasFiniteOrigin({ x: parsed.x, y: parsed.y })
+  );
+}
+
+/** Parse an XAI reply into text + optional extra canvas skeletons + suggested origin. */
 export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCanvasTurnPayload {
   const source = String(raw || "").trim();
   if (!source) return { text: "", elements: [] };
@@ -939,7 +1195,13 @@ export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCan
         ? parsed.message
         : source;
   const elements = normalizeExtraSkeletons(parsed.elements ?? parsed.canvas_elements);
-  return { text: String(text || "").trim() || source, elements, turnId: typeof parsed.turnId === "string" ? parsed.turnId : null };
+  const origin = originFromParsedCanvasJson(parsed);
+  return {
+    text: String(text || "").trim() || source,
+    elements,
+    turnId: typeof parsed.turnId === "string" ? parsed.turnId : null,
+    origin,
+  };
 }
 
 export function applyIleXaiReplyToWorkCanvas(
@@ -1115,10 +1377,16 @@ export function ileWorkCanvasSceneForTurn(
   return serializeIleWorkCanvasScene(scene);
 }
 
+/** Instruct XAI to suggest a scene origin alongside the restorable board. */
+export const ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION =
+  'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} so it lands in empty space near related marks.';
+
 /** User-message payload: the focused chapter's full restorable board. */
 export function ileWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
+  input?: { boardLabel?: string },
 ): string {
   const restorable = serializeIleWorkCanvasScene(scene);
-  return `CURRENT CHAPTER WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. Optional extra geometric marks or images go in "elements".\n${JSON.stringify(restorable)}`;
+  const board = String(input?.boardLabel || "CHAPTER").trim() || "CHAPTER";
+  return `CURRENT ${board} WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${JSON.stringify(restorable)}`;
 }

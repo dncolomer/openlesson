@@ -9,8 +9,16 @@ import {
   applyIleXaiTurnToWorkCanvas,
   convertToExcalidrawElements,
   createIleWorkCanvasChapterStore,
+  ileWorkCanvasFiniteOrigin,
   ileWorkCanvasScenesFromWorkspaces,
+  ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasTurnContextMessage,
+  ileWorkCanvasXaiShapeType,
+  ileWorkCanvasXaiToolsInstruction,
+  ILE_EXCALIDRAW_POW_TOOLS,
+  ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
+  ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
+  ILE_XAI_CANVAS_SHAPE_TYPES,
   isRetiredIleWorkToolName,
   mapExcalidrawToolToIlePow,
   parseIleXaiCanvasTurn,
@@ -32,6 +40,9 @@ import {
   buildIleWorkCanvasAskUserMessage,
   createIleXaiLoadingPlaceholder,
   replaceIleXaiLoadingPlaceholder,
+  ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
+  ILE_CANVAS_PROMPT_BAR_GAP,
+  ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ILE_LEARN_MORE_BOX_HEIGHT,
   ILE_LEARN_MORE_BOX_WIDTH,
   ILE_LEARN_MORE_GAP,
@@ -42,14 +53,22 @@ import {
   ILE_XAI_LOADING_CLEARANCE,
   ILE_XAI_LOADING_GAP,
   clampIleLearnMorePosition,
+  ileCanvasPromptBarTop,
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
+  ileWorkCanvasCenterScroll,
+  ileWorkCanvasContentBounds,
   ileWorkCanvasEmptyNearbyOrigin,
+  ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasRectsOverlap,
+  ileWorkCanvasViewportToHost,
+  ileWorkCanvasWithScrollToContent,
+  mergeIleXaiTurnOntoLiveWorkCanvas,
   placeIleLearnMorePrompt,
   type IleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
+import { ileHeliosThinkingLine } from "@/lib/ile-dialogue-turn";
 import { buildIleSessionChatBody } from "@/lib/session-chat-client";
 import {
   buildIleExcalidrawToolUploadItem,
@@ -66,7 +85,7 @@ import { DEFAULT_PROMPTS } from "@/lib/prompts";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-1d00e45436b7/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b56fab79f1b5/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -199,6 +218,51 @@ describe("ILE Work canvas chapter seed (shipped)", () => {
     const view = read("components/SessionView.tsx");
     expect(view).toContain("seedIleChapterWorkCanvas");
     expect(view).toContain("seedChapterWorkCanvas(stepId, step?.description)");
+    expect(seeded.scene.appState).not.toHaveProperty("scrollX");
+    expect(seeded.scene.appState).not.toHaveProperty("scrollY");
+    expect(seeded.scene).not.toHaveProperty("scrollToContent");
+  });
+});
+
+describe("ILE Work canvas center on open (shipped)", () => {
+  it("centers first-time XAI/chapter text in the viewport and scrolls once per board open", () => {
+    const seeded = seedIleChapterWorkCanvas(null, {
+      text: "Walk a case through just-war criteria",
+      chapterId: "chapter-center",
+    });
+    const textEl = seeded.scene.elements.find((el) => el.type === "text");
+    expect(textEl).toBeTruthy();
+    const bounds = ileWorkCanvasContentBounds(seeded.scene.elements);
+    expect(bounds).toBeTruthy();
+    expect(bounds!.minX).toBe(textEl!.x);
+    expect(bounds!.minY).toBe(textEl!.y);
+
+    expect(ileWorkCanvasCenterScroll(bounds, null)).toBeNull();
+    expect(ileWorkCanvasCenterScroll(bounds, { width: 0, height: 600 })).toBeNull();
+    expect(ileWorkCanvasCenterScroll(null, { width: 800, height: 600 })).toBeNull();
+
+    const viewport = { width: 800, height: 600, zoom: { value: 1 } };
+    const scroll = ileWorkCanvasCenterScroll(bounds, viewport);
+    expect(scroll).toEqual({
+      scrollX: viewport.width / 2 - (bounds!.minX + bounds!.maxX) / 2,
+      scrollY: viewport.height / 2 - (bounds!.minY + bounds!.maxY) / 2,
+    });
+    expect(scroll!.scrollX).not.toBe(0);
+    expect(scroll!.scrollY).not.toBe(0);
+
+    const empty = ileWorkCanvasWithScrollToContent(emptyIleWorkCanvasScene());
+    expect(empty).not.toHaveProperty("scrollToContent");
+    const withFlag = ileWorkCanvasWithScrollToContent(seeded.scene);
+    expect(withFlag.scrollToContent).toBe(true);
+    expect(ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS).toEqual({ animate: false });
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasWithScrollToContent");
+    expect(canvas).toContain("scheduleCenterOnOpen");
+    expect(canvas).toContain("centeredOnOpenRef");
+    expect(canvas).toContain("scrollToContent");
+    expect(canvas).toContain("ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS");
+    expect(canvas).toContain("api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
   });
 });
 
@@ -213,6 +277,21 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     });
     expect(message).toContain("What is missing?");
     expect(message).toContain("[text] just-war criteria");
+    expect(message).toContain("Selected elements:");
+
+    const boardWide = buildIleWorkCanvasAskUserMessage({
+      prompt: "Add a worked example on the board.",
+    });
+    expect(boardWide).toContain("Add a worked example on the board.");
+    expect(boardWide).toContain("Ask about the Work canvas.");
+    expect(boardWide).not.toContain("Selected elements:");
+    expect(boardWide).not.toContain("(none)");
+    const emptySelection = buildIleWorkCanvasAskUserMessage({
+      prompt: "Put a definition here.",
+      selectedElements: [],
+    });
+    expect(emptySelection).toContain("Put a definition here.");
+    expect(emptySelection).not.toContain("Selected elements:");
 
     const loading = createIleXaiLoadingPlaceholder({
       x: 200,
@@ -262,11 +341,35 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("ileWorkCanvasEmptyNearbyOrigin");
     expect(canvas).toContain("data-ile-canvas-thinking");
     expect(canvas).toContain("ileHeliosThinkingLine");
-    expect(canvas).toContain("applyIleXaiTurnToWorkCanvas");
+    expect(canvas).toContain("mergeIleXaiTurnOntoLiveWorkCanvas");
+    expect(canvas).toContain("enqueueCanvasAskApply");
     expect(canvas).not.toContain("createIleXaiLoadingPlaceholder");
+    expect(canvas).toContain("data-ile-canvas-prompt-bar");
+    expect(canvas).toContain("ileCanvasPromptBarTop");
+    expect(canvas).toContain("syncPromptBarPlacement");
+    expect(canvas).toContain("style={{ top: promptBarTop }}");
+    expect(canvas).toContain("ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR");
+    expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
+    expect(ileCanvasPromptBarTop({ bottom: 120 }, { top: 40 })).toBe(120 - 40 + ILE_CANVAS_PROMPT_BAR_GAP);
+    expect(ileCanvasPromptBarTop(null, { top: 0 })).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
+    expect(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR).toContain(".App-toolbar");
+    expect(canvas).toContain("handleBoardAsk");
+    expect(canvas).toContain("selectedElements: []");
+    expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("onAskSelected={handleAskCanvasSelection}");
     expect(view).toContain("buildIleWorkCanvasAskUserMessage");
+    writeScratch(
+      "canvas-prompt-bar.log",
+      [
+        `selectionAsk=${message.includes("What is missing?") && message.includes("just-war criteria")}`,
+        `boardAskHasQuestion=${boardWide.includes("Add a worked example on the board.")}`,
+        `boardAskRequiresSelection=${boardWide.includes("Selected elements:")}`,
+        "bar=data-ile-canvas-prompt-bar",
+        "ileWires=onAskSelected={handleAskCanvasSelection}",
+        "expandMore=data-ile-learn-more",
+      ].join("\n") + "\n",
+    );
   });
 
   it("floats Learn more under the selection and keeps it inside the canvas viewport", () => {
@@ -318,6 +421,30 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(placed?.count).toBe(1);
     expect(placed!.left).toBeGreaterThanOrEqual(64 + ILE_LEARN_MORE_VIEWPORT_PAD);
     expect(placed!.top).toBe(Math.round(8 + el.y + el.height + ILE_LEARN_MORE_GAP));
+
+    const ileInset = { left: 16, top: 96 };
+    expect(ileWorkCanvasViewportToHost({ x: 80, y: 180 }, ileInset)).toEqual({ x: 64, y: 84 });
+    const tight = ileLearnMorePromptPlacement({
+      elements: selected,
+      selectedElementIds: { [el.id]: true },
+      appState: {
+        zoom: { value: 1 },
+        scrollX: 0,
+        scrollY: 0,
+        offsetLeft: ileInset.left,
+        offsetTop: ileInset.top,
+        width: 800,
+        height: 600,
+      },
+      viewport: { left: 0, top: 0, width: 800, height: 600 },
+      host: ileInset,
+    });
+    expect(tight!.top).toBe(Math.round(el.y + el.height + ILE_LEARN_MORE_GAP));
+    expect(tight!.top).toBeLessThan(placed!.top);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasViewportToHost");
+    expect(canvas).toContain("host: canvasHostOrigin()");
 
     expect(ileLearnMoreSelectionKey({ a: true, c: true, b: false })).toBe("a,c");
     const dragged = clampIleLearnMorePosition({
@@ -444,6 +571,62 @@ describe("ILE Work canvas XAI apply (shipped convertToExcalidrawElements wrapper
     expect(parsed.text).toBe("Coach reply");
     expect(parsed.elements?.[0]?.type).toBe("arrow");
   });
+
+  it("parses and applies every Excalidraw shape XAI may emit, including aliases", () => {
+    expect(ileWorkCanvasXaiShapeType("circle")).toBe("ellipse");
+    expect(ileWorkCanvasXaiShapeType("box")).toBe("rectangle");
+    expect(ileWorkCanvasXaiShapeType("scribble")).toBe("freedraw");
+    expect(ileWorkCanvasXaiShapeType("eraser")).toBeNull();
+    expect(ileWorkCanvasXaiShapeType("selection")).toBeNull();
+    const parsed = parseIleXaiCanvasTurn(
+      JSON.stringify({
+        text: "Here is the diagram.",
+        origin: { x: 40, y: 40 },
+        elements: [
+          { type: "rectangle", x: 40, y: 120, width: 100, height: 60, label: { text: "node" } },
+          { type: "diamond", x: 160, y: 120, width: 80, height: 80 },
+          { type: "circle", x: 260, y: 120, width: 70, height: 70 },
+          { type: "arrow", x: 40, y: 200, width: 120, height: 0 },
+          { type: "line", x: 40, y: 220, width: 80, height: 20 },
+          { type: "frame", x: 20, y: 100, width: 340, height: 160 },
+          { type: "freedraw", x: 40, y: 280, points: [[0, 0], [12, 8], [24, 0]] },
+          { type: "eraser", x: 0, y: 0 },
+        ],
+      }),
+    );
+    expect(parsed.elements?.map((el) => el.type)).toEqual([
+      "rectangle",
+      "diamond",
+      "ellipse",
+      "arrow",
+      "line",
+      "frame",
+      "freedraw",
+    ]);
+    const applied = applyIleXaiTurnToWorkCanvas(emptyIleWorkCanvasScene(), parsed);
+    const types = new Set(applied.elements.map((el) => el.type));
+    expect(types.has("rectangle")).toBe(true);
+    expect(types.has("diamond")).toBe(true);
+    expect(types.has("ellipse")).toBe(true);
+    expect(types.has("arrow")).toBe(true);
+    expect(types.has("line")).toBe(true);
+    expect(types.has("frame")).toBe(true);
+    expect(types.has("freedraw")).toBe(true);
+    expect(types.has("text")).toBe(true);
+    expect(applied.elements.some((el) => (el.originalText || el.text) === "node")).toBe(true);
+    expect(applied.elements.some((el) => el.type === "eraser")).toBe(false);
+
+    const tools = ileWorkCanvasXaiToolsInstruction();
+    for (const tool of ILE_EXCALIDRAW_POW_TOOLS) {
+      expect(tools).toContain(tool);
+    }
+    for (const shape of ILE_XAI_CANVAS_SHAPE_TYPES.filter((type) => type !== "image")) {
+      expect(tools).toContain(shape);
+    }
+    const ctx = ileWorkCanvasTurnContextMessage(emptyIleWorkCanvasScene());
+    expect(ctx).toContain(ileWorkCanvasXaiToolsInstruction());
+    expect(ILE_TOOLS_BLOCK).toContain(ileWorkCanvasXaiToolsInstruction());
+  });
 });
 
 describe("ILE session-chat board context (shipped builder)", () => {
@@ -460,7 +643,10 @@ describe("ILE session-chat board context (shipped builder)", () => {
     const scene1 = body1.workCanvasScene as IleWorkCanvasScene;
     expect(scene1.elements.some((el) => el.text === "first board")).toBe(true);
     expect(scene1.appState).not.toHaveProperty("collaborators");
-    expect(ileWorkCanvasTurnContextMessage(first)).toContain("first board");
+    const turnContext = ileWorkCanvasTurnContextMessage(first);
+    expect(turnContext).toContain("first board");
+    expect(turnContext).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+    expect(turnContext).toContain('"origin": {"x": number, "y": number}');
 
     const mutated = applyIleXaiTurnToWorkCanvas(first, { text: "coach on turn 1" });
     const body2 = buildIleSessionChatBody({
@@ -639,5 +825,166 @@ describe("ILE Work chrome is canvas-only (shipped source)", () => {
         "prompts: one chapter canvas with drawing tools",
       ].join("\n"),
     );
+  });
+});
+
+describe("ILE Work canvas XAI suggested origin (shipped parse+apply)", () => {
+  it("places JSON origin when finite and falls back when missing or invalid", () => {
+    const existing = sceneWith("user-1", "learner sketch");
+    const parsed = parseIleXaiCanvasTurn(
+      JSON.stringify({
+        text: "Park this beside the heap.",
+        origin: { x: 420, y: 180 },
+        elements: [{ type: "rectangle", x: 40, y: 200, width: 80, height: 40 }],
+      }),
+    );
+    expect(parsed.text).toBe("Park this beside the heap.");
+    expect(parsed.origin).toEqual({ x: 420, y: 180 });
+    const placed = applyIleXaiTurnToWorkCanvas(existing, parsed);
+    const reply = placed.elements.find((el) => el.originalText === "Park this beside the heap.");
+    expect(reply?.x).toBe(420);
+    expect(reply?.y).toBe(180);
+    const extra = placed.elements.find((el) => el.type === "rectangle");
+    expect(extra?.x).toBe(40);
+    expect(extra?.y).toBe(200);
+
+    const prose = parseIleXaiCanvasTurn("plain prose reply with no JSON");
+    expect(ileWorkCanvasFiniteOrigin(prose.origin)).toBeNull();
+    const stacked = applyIleXaiTurnToWorkCanvas(existing, prose);
+    expect(stacked.elements.some((el) => (el.originalText || el.text) === "plain prose reply with no JSON")).toBe(
+      true,
+    );
+
+    const invalid = parseIleXaiCanvasTurn(
+      JSON.stringify({ text: "no coords", origin: { x: "nope", y: 1 } }),
+    );
+    expect(ileWorkCanvasFiniteOrigin(invalid.origin)).toBeNull();
+    const fallback = applyIleXaiTurnToWorkCanvas(existing, invalid);
+    expect(fallback.elements.some((el) => (el.originalText || el.text) === "no coords")).toBe(true);
+
+    expect(ileWorkCanvasFiniteOrigin({ x: Number.POSITIVE_INFINITY, y: 0 })).toBeNull();
+    expect(ileWorkCanvasFiniteOrigin({ x: 10, y: null })).toBeNull();
+
+    const ctx = ileWorkCanvasTurnContextMessage(existing);
+    expect(ctx).toContain("learner sketch");
+    expect(ctx).toContain(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION);
+
+    writeScratch(
+      "xai-canvas-origin.log",
+      [
+        `parsedOrigin=${JSON.stringify(parsed.origin)}`,
+        `placedAt=${reply?.x},${reply?.y}`,
+        `extraAt=${extra?.x},${extra?.y}`,
+        `proseHasText=${stacked.elements.some((el) => (el.originalText || el.text) === "plain prose reply with no JSON")}`,
+        `invalidFallsBack=${fallback.elements.some((el) => (el.originalText || el.text) === "no coords")}`,
+        `contextAsksOrigin=${ctx.includes(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION)}`,
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("ILE Work canvas thinking overlay box (shipped occupancy+style)", () => {
+  it("uses a fixed square that rotating copy cannot resize", () => {
+    expect(ILE_XAI_LOADING_BOX_WIDTH).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(ILE_XAI_LOADING_BOX_WIDTH).toBeGreaterThan(52);
+    expect(ILE_XAI_LOADING_BOX_HEIGHT).toBeGreaterThan(52);
+    const style = ileWorkCanvasThinkingOverlayStyle();
+    expect(style.width).toBe(style.height);
+    expect(style.width).toBe(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(style.height).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(style.minWidth).toBe(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(style.minHeight).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(style.maxWidth).toBe(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(style.maxHeight).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
+    expect(ileWorkCanvasThinkingOverlayStyle()).toEqual(style);
+    expect(ileHeliosThinkingLine(0)).not.toBe(ileHeliosThinkingLine(1));
+    expect(ileHeliosThinkingLine(0).length).not.toBe(ileHeliosThinkingLine(1).length);
+
+    const selected = {
+      id: "sel",
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 40,
+      isDeleted: false,
+    };
+    const occA = ileWorkCanvasEmptyNearbyOrigin({
+      elements: [selected],
+      near: [selected],
+      box: { width: style.width, height: style.height },
+    });
+    const occB = ileWorkCanvasEmptyNearbyOrigin({
+      elements: [selected],
+      near: [selected],
+      box: { width: ileWorkCanvasThinkingOverlayStyle().width, height: ileWorkCanvasThinkingOverlayStyle().height },
+    });
+    expect(occA).toEqual(occB);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
+    expect(canvas).toContain("minWidth");
+    expect(canvas).toContain("minHeight");
+    expect(canvas).toContain("data-ile-canvas-thinking-chip");
+    expect(canvas).toContain("overflow-hidden");
+
+    writeScratch(
+      "thinking-overlay-box.log",
+      [
+        `width=${style.width}`,
+        `height=${style.height}`,
+        `minWidth=${style.minWidth}`,
+        `minHeight=${style.minHeight}`,
+        `square=${style.width === style.height}`,
+        `largerThanChip=${style.width > 52 && style.height > 52}`,
+        `occupancyStable=${occA.x === occB.x && occA.y === occB.y}`,
+        "markup=ileWorkCanvasThinkingOverlayStyle+minWidth+minHeight",
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("ILE Work canvas parallel asks (shipped live merge)", () => {
+  it("keeps both replies when applying onto the live scene instead of a stale snapshot", () => {
+    const start = sceneWith("user-1", "learner sketch");
+    const first = applyIleXaiTurnToWorkCanvas(start, {
+      text: "first reply",
+      turnId: "ask-a",
+      origin: { x: 20, y: 200 },
+    });
+    const staleSecond = applyIleXaiTurnToWorkCanvas(start, {
+      text: "second reply",
+      turnId: "ask-b",
+      origin: { x: 420, y: 200 },
+    });
+    expect(staleSecond.elements.some((el) => (el.originalText || el.text) === "first reply")).toBe(false);
+
+    const live = mergeIleXaiTurnOntoLiveWorkCanvas(first, {
+      text: "second reply",
+      turnId: "ask-b",
+      origin: { x: 420, y: 200 },
+    });
+    expect(live.elements.some((el) => (el.originalText || el.text) === "first reply")).toBe(true);
+    expect(live.elements.some((el) => (el.originalText || el.text) === "second reply")).toBe(true);
+    expect(live.elements.find((el) => (el.originalText || el.text) === "first reply")?.x).toBe(20);
+    expect(live.elements.find((el) => (el.originalText || el.text) === "second reply")?.x).toBe(420);
+
+    const block = { id: "block", x: 0, y: 0, width: 100, height: 40, isDeleted: false };
+    const slotA = ileWorkCanvasEmptyNearbyOriginWithReserved({ elements: [block] });
+    const slotB = ileWorkCanvasEmptyNearbyOriginWithReserved({
+      elements: [block],
+      reserved: [slotA],
+    });
+    expect(slotB).not.toEqual(slotA);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("mergeIleXaiTurnOntoLiveWorkCanvas");
+    expect(canvas).toContain("enqueueCanvasAskApply");
+    expect(canvas).toContain("ileWorkCanvasEmptyNearbyOriginWithReserved");
+    expect(canvas).toContain("data-ile-canvas-thinking-id");
+    expect(canvas).toContain("disabled={!askPrompt.trim()}");
+    expect(canvas).toContain("disabled={!boardPrompt.trim()}");
+    expect(canvas).not.toContain("disabled={askBusy");
+    expect(canvas).not.toContain("if (!ask || !api || !prompt || askBusy)");
   });
 });

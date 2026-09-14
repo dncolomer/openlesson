@@ -113,7 +113,7 @@ Previous probes already asked (don't repeat these):
 {previous_probes}
 
 ENVIRONMENT CONTEXT:
-The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, arrow, image) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not TAP System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
+The learner has one chapter Work canvas (Excalidraw drawing tools: text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame) plus screen sharing. Prefer canvas-augmented tasks when they clear the gap faster than another pure question. This is not TAP System 1/System 2 elicitation. Do not name Notebook, Grok/Grokipedia, or Dantes.
 
 Generate ONE next move: a focused question, practice task, or tool suggestion that unblocks progress toward SOLVING this problem / completing the current chapter. Rules:
 - Optimize for chapter/problem progress and observable practice artifacts — not endless validation.
@@ -322,7 +322,9 @@ The student has one shared Work canvas per chapter (Excalidraw drawing tools). A
 
 - **text**: write a note or worked attempt on the chapter canvas
 - **freedraw**: sketch when the topic is spatial/visual
-- **rectangle** / **arrow**: diagrams, systems, relationships
+- **rectangle** / **diamond** / **ellipse**: boxes, nodes, regions
+- **arrow** / **line**: diagrams, systems, relationships
+- **frame**: group related marks
 - **image**: drop a picture onto the board
 Do NOT name Notebook, Grok/Grokipedia, or Dantes. Do NOT default to "sketch this" for verbal, ethical, historical, legal, or definition-only work — use a text block instead.
 
@@ -419,7 +421,7 @@ If plan_changed is false, updated_steps can be omitted or be the same as current
 If no probes should be archived, probes_to_archive should be an empty array.
 Set can_generate_probe to false if at probe cap (5) and cannot archive any.
 The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current chapter/step topic. If CHAPTER CLOSURE POLICY says they are ready to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done" (and optionally open a next/adjacent chapter), not another validation question. In Dialog mode after only the first interaction, next_request must deepen the conversation instead. Never put "out loud" stage directions or Uncertain Systems / PoW / TAP product jargon in next_request text.
-suggested_tools is optional - only include it for "task" or "suggestion" types where drawing tools would help. Use Excalidraw tool IDs (text, freedraw, rectangle, arrow, image).
+suggested_tools is optional - only include it for "task" or "suggestion" types where drawing tools would help. Use Excalidraw tool IDs (text, freedraw, rectangle, diamond, ellipse, arrow, line, image, frame).
 can_auto_advance: Set to true only when CHAPTER CLOSURE POLICY is satisfied (Dialog: multi-turn chapter-objective depth; Project: standalone exercise complete). Do not hold a ready chapter open for perfection — and do not set true after the first Dialog turn.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog. Use domain/practice language — not platform product terms.`,
 

@@ -132,7 +132,11 @@ export function TapScorePhases(props: {
     prompt: string;
     selectedElements?: readonly IleWorkCanvasElement[] | null;
     scene: IleWorkCanvasScene;
-  }) => Promise<{ text: string; elements?: IleWorkCanvasSkeleton[] | null }>;
+  }) => Promise<{
+    text: string;
+    elements?: IleWorkCanvasSkeleton[] | null;
+    origin?: { x?: number; y?: number } | null;
+  }>;
 }) {
   const {
     phase,

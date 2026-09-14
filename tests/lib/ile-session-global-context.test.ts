@@ -176,7 +176,8 @@ describe("ILE chapter-scoped context store", () => {
     expect(viewCanvas).toContain("initialSceneData={whiteboardSceneData}");
 
     const canvas = readFileSync(join(ROOT, "components/ExcalidrawCanvas.tsx"), "utf8");
-    expect(canvas).toContain("initialSceneDataRef = useRef(sanitizeSceneData(initialSceneData))");
+    expect(canvas).toContain("initialSceneDataRef = useRef(");
+    expect(canvas).toContain("ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData))");
 
     const view = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
     expect(view).toContain("activeChapterKey={activeChapterKey}");

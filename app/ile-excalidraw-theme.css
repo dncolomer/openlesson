@@ -3,6 +3,8 @@
    Import after @excalidraw/excalidraw/index.css so these win on active tools. */
 
 [data-ile-excalidraw-host] .excalidraw {
+  height: 100%;
+  width: 100%;
   --color-primary: #525252;
   --color-primary-darker: #404040;
   --color-primary-darkest: #262626;

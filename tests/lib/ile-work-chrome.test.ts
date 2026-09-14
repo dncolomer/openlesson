@@ -240,6 +240,12 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("data-ile-end-turn");
     expect(dockBar).toContain("data-ile-end-turn-cluster");
     expect(dockBar).toContain("data-ile-end-turn-double-border");
+    expect(dockBar).toContain("data-ile-show-map");
+    expect(dockBar).toContain('ILE_SHOW_MAP_LABEL = "Map"');
+    expect(dockBar.indexOf("data-ile-show-map")).toBeLessThan(dockBar.indexOf("<IleSubmitWorkButton"));
+    expect(dockBar).toContain("onShowMap");
+    expect(chrome).toContain("onShowMap=");
+    expect(view).toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
     expect(dockBar).toContain("ArrowRight");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
@@ -336,9 +342,20 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(powBar).not.toContain("data-ile-submit-turn");
     expect(view).toContain("compact");
     expect(view).toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    const submitTurn = view.slice(
+      view.indexOf("const handleSubmitTurn"),
+      view.indexOf("setCraftingInsightsOpen(true)"),
+    );
+    expect(submitTurn).toContain("setHeliosWidgetOpen(false)");
+    expect(submitTurn.indexOf("setHeliosWidgetOpen(false)")).toBeLessThan(
+      submitTurn.indexOf("closeIleOpenWorkTurn"),
+    );
     expect(view).toContain("setCraftingInsightsOpen(true)");
     expect(view).toContain("data-ile-compact-insight-craft");
-    expect(view).toContain("turnInsightCraft(false)");
+    expect(view).toContain("turnInsightCraft()");
+    expect(view).toContain("insightCraftOpen={craftingInsightsOpen}");
+    expect(view).toContain("insightCraft={turnInsightCraft()}");
+    expect(view).not.toContain("turnInsightCraft(true)");
     expect(view).toContain("ileSessionSettingsPath");
     expect(view).toContain("if (showWelcomeModal)");
     expect(view).toContain("IleTurnInsightCraft");
@@ -353,8 +370,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("Save and go out of the workspace");
     expect(craft).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
     expect(craft).toContain("buildIleThoughtsPoolCandidateRequest");
-    expect(craft).toContain("portal={portal}");
-    expect(read("components/ui/DialogFrame.tsx")).toContain("portal = true");
+    expect(craft).not.toContain("DialogFrame");
+    expect(craft).not.toContain("portal={portal}");
+    expect(chrome).toContain("data-ile-insight-craft-widget");
+    expect(chrome).toContain("ileMapWorkFrameClass()");
+    expect(chrome).toContain('title="Craft insights"');
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(view).toContain("openWorkIds={openWorkIds}");
@@ -378,11 +398,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(phase).toContain("openWorkIdsRef.current");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget-minimize");
-    expect(frame).toContain("data-ile-work-canvas-wide-toggle");
-    expect(frame).toContain("Exit full screen");
-    expect(frame).toContain("Full screen canvas");
-    expect(chrome).toContain("ileMapWorkFrameClass(workCanvasWide)");
-    expect(chrome).toContain("onToggleWide");
+    expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
+    expect(frame).not.toContain("onToggleWide");
+    expect(chrome).toContain("ileMapWorkFrameClass()");
+    expect(chrome).not.toContain("onToggleWide");
+    expect(chrome).not.toContain("workCanvasWide");
     expect(ILE_END_TURN_LABEL).toBe("End turn");
     expect(ILE_SUBMIT_TURN_LABEL).toBe(ILE_END_TURN_LABEL);
     expect(ILE_END_TURN_LABEL.toLowerCase()).toMatch(/end|turn/);

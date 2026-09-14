@@ -18,11 +18,24 @@ export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
  * Width matches Global resources: 720px capped so 28rem stays for right-side chrome.
  */
 export const ILE_MAP_WIDGET_TOP_CLASS = "top-14";
+/** Clear the PoW resources bar (top-2 + bar height) with a tight gutter. */
+export const ILE_MAP_POW_BAR_CLEARANCE_CLASS = "top-12";
 export const ILE_MAP_WIDGET_BOTTOM_CLASS = ILE_MAP_VOICE_BAR_CLEARANCE_CLASS;
 export const ILE_MAP_WIDGET_WIDTH_CLASS = "w-[min(720px,calc(100%-28rem))]";
-/** Work canvas full-screen overlay (covers the session viewport, including PoW and voice bar). */
-export const ILE_MAP_WIDGET_WIDE_FRAME_CLASS =
-  "fixed inset-0 z-[70] flex h-screen w-screen min-h-0 flex-col";
+/** PoW resources / dock / voice stay above the Work canvas in full screen. */
+export const ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS = "z-[55]";
+/**
+ * Work / Craft-insights widget: cover the map stage (minimap, layers, tool strip)
+ * while sitting under the PoW bar, chapter dock, and voice bar.
+ * Open = this full frame; closed = minimized to the dock. No in-between size.
+ */
+export const ILE_MAP_WIDGET_WIDE_FRAME_CLASS = [
+  "absolute left-2 right-2",
+  ILE_MAP_POW_BAR_CLEARANCE_CLASS,
+  ILE_MAP_WIDGET_BOTTOM_CLASS,
+  "z-40",
+  "flex min-h-0 flex-col",
+].join(" ");
 export const ILE_MAP_WIDGET_FRAME_CLASS = [
   "absolute left-2",
   ILE_MAP_WIDGET_TOP_CLASS,
@@ -32,16 +45,16 @@ export const ILE_MAP_WIDGET_FRAME_CLASS = [
   "flex-col",
 ].join(" ");
 
-export function ileMapWorkFrameClass(wide = false): string {
-  if (wide) return ILE_MAP_WIDGET_WIDE_FRAME_CLASS;
-  return [
-    "absolute left-2",
-    ILE_MAP_WIDGET_TOP_CLASS,
-    ILE_MAP_WIDGET_BOTTOM_CLASS,
-    "z-40",
-    "flex min-h-0 flex-col",
-    ILE_MAP_WIDGET_WIDTH_CLASS,
-  ].join(" ");
+export function ileMapWorkFrameClass(_wide = true): string {
+  return ILE_MAP_WIDGET_WIDE_FRAME_CLASS;
+}
+
+export function ileWorkCanvasCoversMap(input: {
+  heliosOpen?: boolean;
+  wide?: boolean;
+  insightCraftOpen?: boolean;
+}): boolean {
+  return Boolean(input.heliosOpen || input.insightCraftOpen);
 }
 
 export const ILE_HELIOS_WIDGET_WIDTH_PX = 720;

@@ -23,6 +23,11 @@ import {
   shouldShowIleMiniShareCta,
 } from "@/lib/ile-compact-chrome";
 import { thoughtContextFillRatio } from "@/lib/thought-context-auto-stash";
+import {
+  ILE_PIP_POINTER_BRIDGE_EVENTS,
+  bindIleSurfacePointerBridge,
+  ileSurfaceNeedsPointerBridge,
+} from "@/lib/ile-compact-window";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -243,13 +248,14 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
 
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
     expect(frame).toContain("data-ile-helios-widget");
-    expect(frame).toContain(">Work</span>");
+    expect(frame).toContain('title = "Work"');
     expect(frame).toContain("ileCompactRootFillStyle");
     const compactWindow = read("lib/ile-compact-window.ts");
     expect(compactWindow).toContain("bindIleSurfaceResize");
     expect(compactWindow).toContain("resolveIleSurfaceView");
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("bindIleSurfaceResize");
+    expect(canvas).toContain("bindIleSurfaceEditorEvents");
+    expect(canvas).toContain("viewModeEnabled={false}");
     expect(canvas).toContain("data-ile-excalidraw-host");
     expect(frame).toContain('data-ile-compact-stash={compact ? "true" : undefined}');
 
@@ -330,5 +336,59 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
         `viewHeliosTranscript=${view.includes("transcriptText: lastDialogueAssistantTurn")}`,
       ].join("\n"),
     );
+  });
+});
+
+describe("PiP Excalidraw pointer bridge (shipped)", () => {
+  it("forwards PiP pointermove/up onto the opener window and keeps the canvas editable", () => {
+    expect(ILE_PIP_POINTER_BRIDGE_EVENTS).toContain("pointermove");
+    expect(ILE_PIP_POINTER_BRIDGE_EVENTS).toContain("pointerup");
+
+    const sameWin = { innerWidth: 1, innerHeight: 1 };
+    const sameDoc = { defaultView: sameWin, body: {} };
+    (sameWin as { document?: unknown }).document = sameDoc;
+    expect(
+      ileSurfaceNeedsPointerBridge({ ownerDocument: sameDoc as Document }, sameWin as unknown as Window),
+    ).toBe(false);
+
+    const pipListeners: Record<string, Array<(event: Event) => void>> = {};
+    const openerEvents: Event[] = [];
+    const pipWin = {
+      innerWidth: 420,
+      innerHeight: 320,
+      addEventListener(type: string, fn: (event: Event) => void) {
+        (pipListeners[type] ??= []).push(fn);
+      },
+      removeEventListener(type: string, fn: (event: Event) => void) {
+        pipListeners[type] = (pipListeners[type] ?? []).filter((item) => item !== fn);
+      },
+    };
+    const pipDoc = { defaultView: pipWin, body: {} };
+    (pipWin as { document?: unknown }).document = pipDoc;
+    const opener = {
+      dispatchEvent(event: Event) {
+        openerEvents.push(event);
+        return true;
+      },
+    } as unknown as Window;
+    expect(
+      ileSurfaceNeedsPointerBridge({ ownerDocument: pipDoc as Document }, opener),
+    ).toBe(true);
+
+    const unbind = bindIleSurfacePointerBridge({ ownerDocument: pipDoc as Document }, opener);
+    expect(Object.keys(pipListeners)).toEqual(expect.arrayContaining(["pointermove", "pointerup", "pointercancel"]));
+    const move = new Event("pointermove");
+    pipListeners.pointermove[0]!(move);
+    expect(openerEvents.length).toBe(1);
+    expect(openerEvents[0]?.type).toBe("pointermove");
+    unbind();
+    expect(pipListeners.pointermove).toEqual([]);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("bindIleSurfaceEditorEvents");
+    expect(canvas).toContain("viewModeEnabled={false}");
+    const theme = read("app/ile-excalidraw-theme.css");
+    expect(theme).toContain("height: 100%");
+    expect(theme).toContain("width: 100%");
   });
 });

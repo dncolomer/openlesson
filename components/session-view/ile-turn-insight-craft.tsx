@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Lightbulb, PenLine, Sparkles } from "lucide-react";
-import { DialogFrame } from "@/components/ui/DialogFrame";
 import {
   FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
@@ -69,7 +68,6 @@ export function IleTurnInsightCraft({
   recordSessionPowArtifact,
   onContinue,
   onSaveAndExit,
-  portal = true,
 }: {
   open: boolean;
   aestheticImage?: string | null;
@@ -85,8 +83,6 @@ export function IleTurnInsightCraft({
   recordSessionPowArtifact?: (artifact: IlePowCounterArtifact) => void;
   onContinue: () => void;
   onSaveAndExit: () => void;
-  /** False inside Document PiP so the overlay stays in that window. */
-  portal?: boolean;
 }) {
   const slotCount = ileTurnInsightSlotCount(unusedPow, insightSlotMax);
   const poolEnabled = allowThoughtsPoolInsights !== false;
@@ -330,21 +326,12 @@ export function IleTurnInsightCraft({
     });
   };
 
+  if (!open) return null;
+
   return (
-    <DialogFrame
-      open={open}
-      onClose={() => {}}
-      closeOnOverlay={false}
-      closeOnEscape={false}
-      portal={portal}
-      size="full"
-      testId="ile-turn-insight-craft"
-      labelledBy="ile-turn-insight-craft-title"
-      panelClassName="flex max-h-[min(94vh,56rem)] min-h-[min(86vh,40rem)] flex-col bg-neutral-950"
-    >
       <div
         data-ile-turn-insight-craft
-        className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+        className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden"
       >
         <div
           data-ile-turn-insight-craft-still
@@ -604,6 +591,5 @@ export function IleTurnInsightCraft({
           </footer>
         </div>
       </div>
-    </DialogFrame>
   );
 }

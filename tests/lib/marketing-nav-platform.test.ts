@@ -54,10 +54,12 @@ describe("marketing nav and platform rename", () => {
     expect(footer).toContain('href: "/support"');
   });
 
-  it("home is the two-product platform umbrella (no #platform suite, no optimization cards)", () => {
+  it("home leads with hard-domain learning experiences (no #platform suite, no optimization cards)", () => {
     const page = read("app/page.tsx");
-    expect(page).toContain("A Human Knowledge Platform.");
-    expect(page).toContain("PLATFORM_PRODUCT_LIST");
+    expect(page).toContain("{PLATFORM_HERO.h1}");
+    expect(page).toContain("PLATFORM_LAYER_LIST");
+    expect(page).not.toContain("A Human Knowledge Platform.");
+    expect(page).not.toContain("PLATFORM_PRODUCT_LIST");
     expect(page).not.toContain('id="platform"');
     expect(page).not.toContain('eyebrow="PLATFORM"');
     expect(page).not.toContain("See the platform");

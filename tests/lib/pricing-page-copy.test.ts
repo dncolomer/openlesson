@@ -11,6 +11,8 @@ import {
   PRICING_AYCL_LABEL,
 } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
+import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
+import { AUTHORING_PRICING_PATH } from "@/lib/marketing/paths";
 import {
   formatHarnessMonthlyPrice,
   formatHarnessTrialPrice,
@@ -84,5 +86,36 @@ describe("verification pricing page source", () => {
     expect(src).toContain("lightWeight.image");
     expect(existsSync(join(ROOT, "public/deep-verification.png"))).toBe(true);
     expect(existsSync(join(ROOT, "public/shallow_verification.png"))).toBe(true);
+  });
+});
+
+describe("authoring pricing page source", () => {
+  it("is contact-only starting at $15,000 for a 40h course package", () => {
+    const pagePath = join(ROOT, "app/pricing/authoring/page.tsx");
+    expect(existsSync(pagePath)).toBe(true);
+    const src = read("app/pricing/authoring/page.tsx");
+
+    expect(src).toContain("{AUTHORING_PRICING_COPY.title}");
+    expect(src).toContain("{AUTHORING_PRICING_COPY.lead}");
+    expect(src).toContain("{coursePackage.price}");
+    expect(src).toContain("{coursePackage.body}");
+    expect(src).toContain("{AUTHORING_PRICING_COPY.contactMailto}");
+    expect(src).toContain("{AUTHORING_PRICING_COPY.contactCta}");
+    expect(src).not.toContain("create-checkout");
+    expect(src).not.toContain("handleCheckout");
+    expect(src).not.toContain("api_metered");
+    expect(src).not.toContain("trial_3day");
+    expect(src).not.toMatch(/pay|checkout|buy now|purchase/i);
+
+    expect(AUTHORING_PRICING_PATH).toBe("/pricing/authoring");
+    expect(AUTHORING_PRICING_COPY.title).toBe("Learning Experience Authoring");
+    expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
+    expect(AUTHORING_PRICING_COPY.package.price).toMatch(/Starting at \$15,000/);
+    expect(AUTHORING_PRICING_COPY.package.name).toMatch(/40h/);
+    expect(AUTHORING_PRICING_COPY.lead).toMatch(/lifetime workspace access/);
+    expect(AUTHORING_PRICING_COPY.package.body).toMatch(/lifetime workspace access/);
+    expect(AUTHORING_PRICING_COPY.contactBody).toMatch(/custom packages/);
+    expect(AUTHORING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
+    expect(AUTHORING_PRICING_COPY.contactMailto).toBe("mailto:daniel@uncertain.systems");
   });
 });

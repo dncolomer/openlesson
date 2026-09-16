@@ -3,7 +3,7 @@ import { SCIENCE_EPISTEMIC_FORAGING_PATH } from "@/lib/science/epistemic-foragin
 
 export const HARNESS_PRODUCT_COPY = {
   eyebrow: "LEARNING HARNESS",
-  title: "A Learning Harness for humans",
+  title: "A Learning Harness for Humans",
   lead: "A harness designed to help you learn in the age of AI. It steers your learning process so you can use tools like AI to outsource certain parts of the work without accidentally outsourcing the learning itself.",
   body: "Guardrails sit in the flow. You stay in the driver's seat when you pull data from different sources. The harness does not build content or a course for you — it steers you into the right learning actions and the internal model updates that make knowledge actually held.",
   foraging:

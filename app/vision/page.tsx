@@ -25,11 +25,6 @@ export const metadata: Metadata = {
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
-const PARTNERS = [
-  { name: "TheWiser.org", href: "https://thewiser.org", label: "Learning and knowledge infrastructure project" },
-  { name: "Dantes.io", href: "https://dantes.io", label: "Current client project" },
-];
-
 export default function VisionPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
@@ -166,24 +161,6 @@ export default function VisionPage() {
             {VISION_TOMOGRAPHY_INDUCTION_COPY.links.paperLabel}
             <ArrowRight size={14} />
           </Link>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
-        <SectionHeading eyebrow="WHO TRUSTS US" title="Current projects using Uncertain Systems work." />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {PARTNERS.map((partner) => (
-            <a
-              key={partner.name}
-              href={partner.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700 sm:p-6"
-            >
-              <h3 className="text-lg font-medium text-white group-hover:text-zinc-200">{partner.name}</h3>
-              <p className="mt-2 text-sm text-zinc-500">{partner.label}</p>
-            </a>
-          ))}
         </div>
       </section>
 

@@ -89,13 +89,14 @@
     "skillFile": "Agent skill file",
     "createWorkspace": "Create workspace",
     "demo": "Demo",
-    "seoBlurb": "A Human Knowledge Platform: a Learning Harness for humans and Knowledge Verification for enterprise.",
+    "seoBlurb": "Hard-domain learning experiences where experts are scarce.",
     "vision": "Vision",
     "science": "Science",
     "learningHarness": "Learning Harness",
     "knowledgeVerification": "Knowledge Verification",
     "harnessPricing": "Harness-Preise",
     "verificationPricing": "Verification-Preise",
+    "authoringPricing": "Authoring-Preise",
     "supportThisProject": "Support this Project"
   },
   "home": {

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   title: rootHtml.title,
   description: rootHtml.description,
   keywords: [
-    "Human Knowledge Platform",
+    "hard-domain learning experiences",
     "Learning Harness",
     "Knowledge Verification",
     "think aloud protocol",

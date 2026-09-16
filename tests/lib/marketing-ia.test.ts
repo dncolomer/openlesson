@@ -18,6 +18,7 @@ import {
 import { SUPPORT_COPY, SUPPORT_PAGE_TITLE } from "@/lib/marketing/support";
 import { HARNESS_PRICING_COPY } from "@/lib/pricing/harness-copy";
 import { VERIFICATION_PRICING_COPY } from "@/lib/pricing/verification-copy";
+import { AUTHORING_PRICING_COPY } from "@/lib/pricing/authoring-copy";
 import {
   harnessMonthlyCheckoutPriceData,
   harnessTrialCheckoutPriceData,
@@ -35,23 +36,26 @@ function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("landing: Human Knowledge Platform two-product split", () => {
-  it("ships Human Knowledge Platform in the hero and the two-product split", () => {
+describe("landing: hard-domain learning experiences with product layers", () => {
+  it("ships the new hero lead and keeps harness / verification / mapping as layers, TAPBench in catalog", () => {
     const landing = read("app/page.tsx");
     const platform = read("lib/marketing/platform.ts");
     const corpus = `${landing}\n${platform}`;
 
-    expect(corpus).toContain("Human Knowledge Platform");
-    expect(landing).toContain("A Human Knowledge Platform.");
+    expect(corpus).toMatch(/hard-domain learning experiences/);
+    expect(landing).toContain("{PLATFORM_HERO.h1}");
+    expect(landing).not.toContain("A Human Knowledge Platform.");
     expect(landing).not.toContain("Two products. One to learn. One to verify.");
-    expect(landing).toContain("HUMAN KNOWLEDGE PLATFORM");
-    expect(PLATFORM_HERO.h1).toContain(PLATFORM_PHRASE);
-    expect(PLATFORM_HERO.p1).toContain(PLATFORM_PHRASE);
-    expect(landing).toContain("Learning Harness");
-    expect(landing).toContain("Knowledge Verification");
+    expect(landing).toContain("{PLATFORM_HERO.pill}");
+    expect(PLATFORM_HERO.h1.toLowerCase()).toContain(PLATFORM_PHRASE.toLowerCase());
+    expect(PLATFORM_HERO.p1).toMatch(/won't build the course|will not build the course/);
+    expect(landing).toContain("PLATFORM_LAYER_LIST");
+    expect(landing).toContain("PLATFORM_LAYERS");
+    expect(landing).toContain("{product.name}");
+    expect(landing).not.toContain("The Unsys workspace is a course-seeded Learning Harness.");
     expect(corpus.toLowerCase()).toMatch(/cannot be cheated|cannot be faked/);
     expect(corpus.toLowerCase()).toMatch(/without traditional tests/);
-    expect(landing).toContain("PLATFORM_PRODUCT_LIST");
+    expect(landing).not.toContain("PLATFORM_PRODUCT_LIST");
     expect(PLATFORM_PRODUCTS.harness.name).toBe("Learning Harness");
     expect(PLATFORM_PRODUCTS.harness.body).toBe(HARNESS_PRODUCT_COPY.lead);
     expect(PLATFORM_PRODUCTS.verification.name).toBe("Knowledge Verification");
@@ -133,7 +137,8 @@ describe("product pages: verification owns platform/approach/scale; harness owns
   it("harness product path includes All-You-Can-Learn", () => {
     expect(existsSync(join(ROOT, "app/learning-harness/page.tsx"))).toBe(true);
     const page = read("app/learning-harness/page.tsx");
-    expect(page).toContain("A Learning Harness for humans");
+    expect(page).toContain("{HARNESS_PRODUCT_COPY.title}");
+    expect(HARNESS_PRODUCT_COPY.title).toBe("A Learning Harness for Humans");
     expect(HARNESS_PRODUCT_COPY.lead.toLowerCase()).toMatch(/age of ai/);
     expect(HARNESS_PRODUCT_COPY.body.toLowerCase()).toMatch(/does not build content or a course/);
     expect(HARNESS_PRODUCT_COPY.foraging.toLowerCase()).toMatch(/epistemic foraging/);
@@ -265,6 +270,20 @@ describe("split pricing + public harness checkout", () => {
     expect(page).not.toContain("/aesthetics/");
   });
 
+  it("authoring pricing is contact-only starting at $15,000 for a 40h package", () => {
+    const page = read("app/pricing/authoring/page.tsx");
+    expect(existsSync(join(ROOT, "app/pricing/authoring/page.tsx"))).toBe(true);
+    expect(page).toContain("{AUTHORING_PRICING_COPY.title}");
+    expect(page).toContain("{coursePackage.price}");
+    expect(page).toContain("AUTHORING_PRICING_COPY.contactMailto");
+    expect(page).not.toContain("create-checkout");
+    expect(page).not.toContain("handleCheckout");
+    expect(AUTHORING_PRICING_COPY.package.priceAmount).toBe("$15,000");
+    expect(AUTHORING_PRICING_COPY.package.name).toMatch(/40h/);
+    expect(AUTHORING_PRICING_COPY.lead).toMatch(/lifetime workspace access/);
+    expect(AUTHORING_PRICING_COPY.contactEmail).toBe("daniel@uncertain.systems");
+  });
+
   it("public checkout price_data is 2499 monthly and 1499 trial — not $99 / $19.99", () => {
     expect(HARNESS_MONTHLY_PRICE_CENTS).toBe(2499);
     expect(TRIAL_PRICE_CENTS).toBe(1499);
@@ -290,6 +309,7 @@ describe("sitemap lists new public pages", () => {
     expect(sitemap).toContain("/learning-harness");
     expect(sitemap).toContain("/knowledge-verification");
     expect(sitemap).toContain("/pricing/verification");
+    expect(sitemap).toContain("/pricing/authoring");
     expect(sitemap).toContain("/support");
     expect(sitemap).toContain("/all-you-can-learn");
     expect(sitemap).toContain("/community-events");

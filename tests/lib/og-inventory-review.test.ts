@@ -57,8 +57,8 @@ describe("OG share inventory (one unsys standard)", () => {
     );
 
     expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p2);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Human Knowledge Platform/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/hard-domain learning experiences/);
 
     for (const s of surfaces) {
       expect(s.title).toBe(UNSYS_STANDARD_SHARE_TITLE);
@@ -83,12 +83,14 @@ describe("OG share inventory (one unsys standard)", () => {
     const src = read("lib/og/surfaces.ts");
     const standard = read("lib/og/standard.ts");
     expect(standard).toContain("PLATFORM_HERO.h1");
-    expect(UNSYS_STANDARD_SHARE_TITLE).toBe("A Human Knowledge Platform.");
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/Human Knowledge Platform/);
-    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p2);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toBe(PLATFORM_HERO.h1);
+    expect(UNSYS_STANDARD_SHARE_TITLE).toMatch(/hard-domain learning experiences/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).toMatch(/hard-domain learning experiences/);
+    expect(UNSYS_STANDARD_SHARE_DESCRIPTION).not.toBe(PLATFORM_HERO.p1);
     expect(standard).not.toContain("Beyond benchmarks for AI. Beyond tests for humans.");
     expect(standard).not.toContain("three verticals for human and agentic learning");
-    expect(standard).toContain("Human Knowledge Platform");
+    expect(standard).toContain("hard-domain learning experiences");
+    expect(standard).not.toContain("Human Knowledge Platform");
     expect(standard).not.toContain("Verification · Optimization · Augmentation");
     expect(standard).toContain("/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg");
     expect(src).toContain("UNSYS_STANDARD_SHARE");
@@ -184,7 +186,8 @@ describe("OG share inventory (one unsys standard)", () => {
     expect(layout).not.toContain("Learning Efficiency for Humans & Agents");
     expect(layout).not.toContain("Optimize learning efficiency for humans and agentic systems");
     expect(layout).not.toContain("learning efficiency platform");
-    expect(layout).toContain("Human Knowledge Platform");
+    expect(layout).toContain("hard-domain learning experiences");
+    expect(layout).not.toContain("Human Knowledge Platform");
     expect(read("app/manifest.ts")).toContain("UNSYS_STANDARD_SHARE_DESCRIPTION");
     expect(read("app/manifest.ts")).not.toContain(
       "Learning efficiency for humans and agents",

@@ -1,4 +1,5 @@
 import {
+  AUTHORING_PRICING_PATH,
   HARNESS_PRICING_PATH,
   KNOWLEDGE_VERIFICATION_PATH,
   LEARNING_HARNESS_PATH,
@@ -14,6 +15,7 @@ export const MAIN_NAV_PRODUCT_LINKS = [
 export const PRICING_NAV_LINKS = [
   { href: HARNESS_PRICING_PATH, label: "Harness" },
   { href: VERIFICATION_PRICING_PATH, label: "Verification" },
+  { href: AUTHORING_PRICING_PATH, label: "Authoring" },
 ] as const;
 
 /** Community dropdown — AYCL lives under the Learning Harness product, not here. */

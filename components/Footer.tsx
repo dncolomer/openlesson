@@ -9,6 +9,7 @@ const productLinks = [
   { labelKey: "footer.knowledgeVerification", href: "/knowledge-verification" },
   { labelKey: "footer.harnessPricing", href: "/pricing" },
   { labelKey: "footer.verificationPricing", href: "/pricing/verification" },
+  { labelKey: "footer.authoringPricing", href: "/pricing/authoring" },
   { labelKey: "footer.vision", href: "/vision" },
   { labelKey: "footer.science", href: "/science" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },

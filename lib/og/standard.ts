@@ -1,13 +1,13 @@
 /**
  * Single Uncertain Systems (“unsys”) social share standard.
- * Social copy stays on Human Knowledge Platform (not product split).
+ * Social copy stays on the homepage lead (hard-domain learning experiences).
  * All public OG/Twitter metadata and opengraph-image entrypoints should use this.
  */
 
 import type { Metadata } from "next";
 import { PLATFORM_HERO, PLATFORM_PHRASE } from "@/lib/marketing/platform";
 
-/** Social card title — Human Knowledge Platform, not product split. */
+/** Social card title — homepage hero lead, not product split. */
 export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
 
 /**
@@ -15,20 +15,20 @@ export const UNSYS_STANDARD_SHARE_TITLE = PLATFORM_HERO.h1;
  * `UNSYS_STANDARD_SHARE_TITLE`.
  */
 export const UNSYS_STANDARD_HTML_TITLE =
-  "Uncertain Systems builds a Human Knowledge Platform" as const;
+  "Hard-domain learning experiences | Uncertain Systems" as const;
 
 /**
- * Share + meta description: Human Knowledge Platform, no product split.
+ * Share + meta description: homepage lead, no product-split headline.
  * Length is 120–160 for SERP and under ~200 for X.
  */
 export const UNSYS_STANDARD_SHARE_DESCRIPTION =
-  "Uncertain Systems is a Human Knowledge Platform. Confirm knowledge is actually held without tests, with results that cannot be cheated or faked." as const;
+  "We author and run hard-domain learning experiences where experts are scarce. Curriculum, Unsys workspace, optional skill validation, and on-site training." as const;
 
-/** LP hero platform phrase — Human Knowledge Platform */
+/** LP hero platform phrase — hard-domain learning experiences */
 export const UNSYS_STANDARD_SHARE_EYEBROW = PLATFORM_PHRASE;
 
 /** Footer pill chrome on composed cards. */
-export const UNSYS_STANDARD_SHARE_FOOTER = "HUMAN KNOWLEDGE PLATFORM";
+export const UNSYS_STANDARD_SHARE_FOOTER = PLATFORM_HERO.pill;
 
 /** Brand aesthetics image used on the LP hero set. */
 export const UNSYS_STANDARD_SHARE_AESTHETIC =

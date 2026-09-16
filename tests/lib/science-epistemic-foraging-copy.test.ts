@@ -145,7 +145,8 @@ describe("landing approach names foraging without rewriting the hero", () => {
     expect(page).toContain("foragingHref");
     expect(page).not.toContain("Epistemic Foraging Platform");
     const landing = read("app/page.tsx");
-    expect(landing).toContain("A Human Knowledge Platform.");
+    expect(landing).toContain("{PLATFORM_HERO.h1}");
+    expect(landing).not.toContain("A Human Knowledge Platform.");
     expect(landing).not.toContain('id="approach"');
   });
 });

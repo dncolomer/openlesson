@@ -29,7 +29,7 @@ export default function LearningHarnessPage() {
           {HARNESS_PRODUCT_COPY.eyebrow}
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[68px]">
-          A Learning Harness for humans
+          {HARNESS_PRODUCT_COPY.title}
         </h1>
         <div className="mt-7 max-w-3xl space-y-4 text-lg leading-relaxed text-zinc-400">
           <p>{HARNESS_PRODUCT_COPY.lead}</p>

@@ -134,6 +134,7 @@ import {
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
+  type IleWorkCanvasWorkspaceInput,
 } from "@/lib/ile-work-canvas";
 import {
   shouldLogIleSidebarToolSwitch,
@@ -749,6 +750,24 @@ export function SessionView({
   const activeChapterFollowUpsLoading = chapterFollowUpsLoadingId === activeProjectChapterId;
   const activeChapterFollowUpsError = chapterFollowUpsErrorById[activeProjectChapterId] ?? null;
 
+  const canvasWorkspaceContext = useMemo((): IleWorkCanvasWorkspaceInput => {
+    return {
+      workspaceTitle: ilePromptMaterials?.workspaceTitle || session?.problem || null,
+      workspaceGoal: ilePromptMaterials?.workspaceGoal ?? null,
+      workspaceDescription: null,
+      rootTopic: ilePromptMaterials?.rootTopic ?? null,
+      notes: ilePromptMaterials?.notes ?? null,
+      blockTitle: ilePromptMaterials?.blockTitle || session?.problem || null,
+      blockDescription: ilePromptMaterials?.blockDescription ?? null,
+      chapterDescription: activeStep?.description || null,
+      files: ilePromptMaterials?.files ?? null,
+      blocks: ilePromptMaterials?.blocks ?? null,
+      focusedBlockId: ilePromptMaterials?.focusedBlockId ?? null,
+      blockLocalContext: ilePromptMaterials?.blockLocalContext ?? null,
+      unusableCells: ilePromptMaterials?.unusableCells ?? null,
+    };
+  }, [activeStep?.description, ilePromptMaterials, session?.problem]);
+
   const bumpUserActivityRef = useRef<() => void>(() => {});
   const { handlePowInterruption, clearPendingInterruption, mapDelay, mapDelayList, beginMapDelay, clearMapDelay } = useSessionIdle({
     activeChapterKey,
@@ -820,6 +839,7 @@ export function SessionView({
           tutoringLanguage,
           ...guestAccessBody,
           workCanvasScene: currentScene,
+          workspaceContext: canvasWorkspaceContext,
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
         });
       const content = ok && typeof data?.message === "string" && data.message.trim()
@@ -861,7 +881,7 @@ export function SessionView({
         ),
       }));
     }
-  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, coldContextRef, session, sessionContext, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
+  }, [activeChapterIndex, activeChapterKey, activeStep, canvasWorkspaceContext, chapterWorkspaces, coldContextRef, session, sessionContext, sessionPlan, t, tutoringLanguage, updateChapterWorkspace, resolvedSessionMode, guestAccessBody]);
 
   useEffect(() => {
     if (!pendingChatMessage) return;
@@ -1599,6 +1619,7 @@ export function SessionView({
       const userText = buildIleWorkCanvasAskUserMessage({
         prompt: input.prompt,
         selectedElements: input.selectedElements,
+        workspace: canvasWorkspaceContext,
       });
       const userMsg: ChatMessage = {
         id: `${Date.now()}-u`,
@@ -1625,6 +1646,7 @@ export function SessionView({
           tutoringLanguage,
           ...guestAccessBody,
           workCanvasScene: serializeIleWorkCanvasScene(input.scene),
+          workspaceContext: canvasWorkspaceContext,
           messages: [...existingMessages, userMsg].map((m) => ({
             role: m.role,
             content: m.content,
@@ -1665,6 +1687,7 @@ export function SessionView({
       activeChapterIndex,
       activeChapterKey,
       activeStep,
+      canvasWorkspaceContext,
       chapterWorkspaces,
       guestAccessBody,
       session,

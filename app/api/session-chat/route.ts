@@ -8,9 +8,11 @@ import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
 import {
   ileWorkCanvasTurnContextMessage,
+  ileWorkCanvasWorkspaceFromChatBody,
   parseIleXaiCanvasTurn,
   serializeIleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
+import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { resolveIleDurableSessionMode } from "@/lib/ile-mode";
 import { powAttributionColumnsFromIds } from "@/lib/session-participant-identity";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
@@ -86,7 +88,15 @@ export async function POST(request: NextRequest) {
       ? `The current message is about focused Chapter ${(activeStepIndex ?? 0) + 1}: ${activeStepDescription}. Use this chapter as the local focus, but you may use the whole session plan as context.`
       : "";
     const canvasScene = serializeIleWorkCanvasScene(workCanvasScene);
-    const canvasContext = ileWorkCanvasTurnContextMessage(canvasScene);
+    const workspaceInput = ileWorkCanvasWorkspaceFromChatBody({
+      ...(body as Record<string, unknown>),
+      activeStepDescription,
+      problem,
+    });
+    const assembledWorkspace = assemblePromptWorkspaceContext(workspaceInput);
+    const canvasContext = ileWorkCanvasTurnContextMessage(canvasScene, {
+      workspace: assembledWorkspace,
+    });
     const conversationMessages = [
       systemMessage(systemPrompt),
       userMessage(`The user is working on: ${problem}`),

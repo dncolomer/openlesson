@@ -37,7 +37,7 @@ import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b56fab79f1b5/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-43f631c11586/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -92,6 +92,11 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
     expect(tapWorkCanvasShouldAcceptSceneUpdate(fromTurns, empty)).toBe(false);
     expect(tapWorkCanvasShouldAcceptSceneUpdate(empty, fromTurns)).toBe(true);
     expect(tapWorkCanvasShouldAcceptSceneUpdate(empty, empty)).toBe(true);
+    const deletedAll = {
+      ...fromTurns,
+      elements: fromTurns.elements.map((el) => ({ ...el, isDeleted: true })),
+    };
+    expect(tapWorkCanvasShouldAcceptSceneUpdate(fromTurns, deletedAll)).toBe(true);
 
     const loadingTurn = "pending-ask";
     const placed = placeThenReplaceTapXaiLoading(applied, loadingTurn, {
@@ -162,6 +167,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(phases).toContain("onAskSelected={handleAskSelected}");
     expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
     expect(phases).toContain("applyTapAssistantTurnsToWorkCanvas");
+    expect(phases).toContain("if (!missing.length) return");
+    expect(phases).not.toContain("if (!missing.length && !boardEmpty) return");
     expect(phases).toContain("tapWorkCanvasShouldAcceptSceneUpdate");
     expect(phases).toContain("tapHeliosCanvasBusy");
     expect(phases).toContain("heliosBusy");
@@ -328,5 +335,50 @@ describe("TAP Work canvas XAI origin + board ask (shipped)", () => {
         `overlay=${box.width}x${box.height}`,
       ].join("\n") + "\n",
     );
+  });
+});
+
+describe("TAP Work canvas workspace+block domain context (shipped)", () => {
+  it("canvas ask and turn context carry workspace title/goal and focused block", () => {
+    const workspace = {
+      workspaceTitle: "Heap Lab",
+      workspaceGoal: "Insert into a binary heap without breaking the heap property",
+      blockTitle: "Heap insert",
+      blockDescription: "Sift up after append until the parent is smaller.",
+    };
+    const selected = convertToExcalidrawElements([
+      { type: "text", text: "heap insert walk", x: 10, y: 10 },
+    ]);
+    const ask = tapWorkCanvasAskUserMessage({
+      prompt: "Why this parent?",
+      selectedElements: selected,
+      workspace,
+    });
+    expect(ask).toContain("Heap Lab");
+    expect(ask).toContain("Insert into a binary heap without breaking the heap property");
+    expect(ask).toContain("Heap insert");
+    expect(ask).toContain("Sift up after append until the parent is smaller.");
+    expect(ask).toMatch(/do not invent unrelated topics/i);
+    expect(ask).toContain("Why this parent?");
+
+    const scene = applyTapHeliosReplyToWorkCanvas(emptyTapWorkCanvasScene(), "Name the parent index.");
+    const ctx = tapWorkCanvasTurnContextMessage(scene, { workspace });
+    expect(ctx).toContain("SESSION");
+    expect(ctx).toContain("Heap Lab");
+    expect(ctx).toContain("Heap insert");
+    expect(ctx).toContain("Name the parent index.");
+    expect(ctx).toMatch(/do not invent unrelated topics/i);
+
+    const route = read("app/api/workspace-tap-score/chat/route.ts");
+    expect(route).toContain("tapWorkCanvasTurnContextMessage");
+    expect(route).toContain("tapScoreBriefToPromptWorkspaceInput");
+    expect(route).toContain("assemblePromptWorkspaceContext");
+    expect(route).toContain("focusedBlockId: blockId || access.blockId");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(phases).toContain("workspace: { workspaceTitle }");
+    expect(phases).toContain("onAskSelected={handleAskSelected}");
+    expect(phases).toContain("heliosBusy={heliosBusy}");
+    expect(phases).toContain("onSceneChange={handleSceneChange}");
+    expect(phases).toContain("onCanvasPowActions={handleCanvasPowActions}");
   });
 });

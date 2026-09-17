@@ -11,6 +11,11 @@ import {
   readIleFocusedChapterWorkspace,
   resolveIleChapterContextKey,
 } from "@/lib/ile-session-global-context";
+import {
+  assemblePromptWorkspaceContext,
+  type PromptWorkspaceContext,
+  type PromptWorkspaceContextInput,
+} from "@/lib/prompt-workspace-context";
 
 export const ILE_XAI_CANVAS_CUSTOM_DATA_KEY = "ileXaiTurn" as const;
 export const ILE_XAI_LOADING_CUSTOM_DATA_KEY = "ileXaiLoading" as const;
@@ -575,6 +580,31 @@ export function ileWorkCanvasHasLiveElements(
   return serializeIleWorkCanvasScene(scene).elements.some((el) => !el.isDeleted);
 }
 
+/**
+ * Mount-only empty recovery. After the learner has cleared a live board,
+ * do not paste the previous scene back.
+ */
+export function ileWorkCanvasShouldRestoreEmptyBoard(input: {
+  liveNonDeletedCount: number;
+  initialHasLive: boolean;
+  userCleared?: boolean;
+}): boolean {
+  if (input.liveNonDeletedCount > 0) return false;
+  if (!input.initialHasLive) return false;
+  if (input.userCleared) return false;
+  return true;
+}
+
+/** True when incoming is a user delete of a previously live board (not a mount wipe). */
+export function ileWorkCanvasIncomingClearsLiveScene(
+  current: IleWorkCanvasScene | null | undefined,
+  incoming: IleWorkCanvasScene | null | undefined,
+): boolean {
+  if (!ileWorkCanvasHasLiveElements(current)) return false;
+  if (ileWorkCanvasHasLiveElements(incoming)) return false;
+  return serializeIleWorkCanvasScene(incoming).elements.some((el) => el.isDeleted);
+}
+
 /** Excalidraw `initialData` flag: center on live elements at first paint. */
 export function ileWorkCanvasWithScrollToContent<T extends { elements?: unknown[] }>(
   scene: T,
@@ -704,6 +734,27 @@ export function ileWorkCanvasThinkingOverlayStyle(): {
     maxWidth: ILE_XAI_LOADING_BOX_WIDTH,
     maxHeight: ILE_XAI_LOADING_BOX_HEIGHT,
   };
+}
+
+/**
+ * One overlay id per in-flight prompt. A canvas ask occupies that prompt so
+ * `heliosBusy` does not add a second "helios" chip for the same wait.
+ */
+export function ileWorkCanvasThinkingOccupancy(input: {
+  heliosBusy?: boolean;
+  canvasAskTurnIds?: readonly string[] | null;
+}): string[] {
+  const askIds: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of input.canvasAskTurnIds ?? []) {
+    const id = String(raw || "").trim();
+    if (!id || id === "helios" || seen.has(id)) continue;
+    seen.add(id);
+    askIds.push(id);
+  }
+  if (askIds.length > 0) return askIds;
+  if (input.heliosBusy) return ["helios"];
+  return [];
 }
 
 export function ileWorkCanvasElementRect(
@@ -850,7 +901,8 @@ export function ileWorkCanvasReplyOriginFromSelection(
 
 export const ILE_LEARN_MORE_LABEL = "Expand More";
 export const ILE_LEARN_MORE_BOX_WIDTH = 288;
-export const ILE_LEARN_MORE_BOX_HEIGHT = 80;
+/** Handle + quick-action icons + prompt row, used for viewport collision. */
+export const ILE_LEARN_MORE_BOX_HEIGHT = 116;
 export const ILE_LEARN_MORE_GAP = 8;
 export const ILE_LEARN_MORE_VIEWPORT_PAD = 8;
 
@@ -887,6 +939,48 @@ export function ileWorkCanvasZoomValue(appState: IleWorkCanvasViewportAppState |
   const zoom = appState?.zoom;
   const value = typeof zoom === "number" ? zoom : zoom?.value;
   return Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 1;
+}
+
+export const ILE_WORK_CANVAS_MIN_ZOOM = 0.1;
+export const ILE_WORK_CANVAS_MAX_ZOOM = 30;
+
+export function ileWorkCanvasNormalizedZoom(zoom: number): number {
+  if (!Number.isFinite(zoom) || zoom <= 0) return 1;
+  return Math.min(ILE_WORK_CANVAS_MAX_ZOOM, Math.max(ILE_WORK_CANVAS_MIN_ZOOM, zoom));
+}
+
+/**
+ * Zoom about a viewport point (same formula as Excalidraw `getStateForZoom`).
+ * Negative deltaY zooms in.
+ */
+export function ileWorkCanvasZoomAtPoint(input: {
+  zoom: number;
+  scrollX: number;
+  scrollY: number;
+  offsetLeft?: number;
+  offsetTop?: number;
+  viewportX: number;
+  viewportY: number;
+  deltaY: number;
+}): { zoom: number; scrollX: number; scrollY: number } {
+  const current = ileWorkCanvasNormalizedZoom(input.zoom);
+  const sign = Math.sign(input.deltaY) || 1;
+  const absDelta = Math.abs(Number(input.deltaY) || 0);
+  const maxStep = 10;
+  const delta = absDelta > maxStep ? maxStep * sign : Number(input.deltaY) || 0;
+  let nextZoom = current - delta / 100;
+  nextZoom +=
+    Math.log10(Math.max(1, current)) * -sign * Math.min(1, absDelta / 20);
+  nextZoom = ileWorkCanvasNormalizedZoom(nextZoom);
+  const appLayerX = Number(input.viewportX) - (Number(input.offsetLeft) || 0);
+  const appLayerY = Number(input.viewportY) - (Number(input.offsetTop) || 0);
+  const baseScrollX = input.scrollX + (appLayerX - appLayerX / current);
+  const baseScrollY = input.scrollY + (appLayerY - appLayerY / current);
+  return {
+    zoom: nextZoom,
+    scrollX: baseScrollX - (appLayerX - appLayerX / nextZoom),
+    scrollY: baseScrollY - (appLayerY - appLayerY / nextZoom),
+  };
 }
 
 function clampIleRange(value: number, min: number, max: number): number {
@@ -1032,6 +1126,20 @@ export function ileLearnMoreSelectionKey(
     .join(",");
 }
 
+/**
+ * Expand More is visible only while a selection exists. Empty ids hide it
+ * even when the pointer is down (click-away must not leave it pinned).
+ */
+export function ileLearnMoreVisiblePlacement(input: {
+  selectedElementIds?: Record<string, unknown> | null;
+  pointerBusy?: boolean;
+  placed?: { count: number; left: number; top: number } | null;
+}): { count: number; left: number; top: number } | null {
+  void input.pointerBusy;
+  if (!ileLearnMoreSelectionKey(input.selectedElementIds)) return null;
+  return input.placed ?? null;
+}
+
 export type IleLearnMoreFollowOffset = { dx: number; dy: number };
 
 /** Prompt position relative to the selection's host-space top-left. */
@@ -1174,17 +1282,102 @@ export function ileWorkCanvasSelectionSummary(
     .join("\n");
 }
 
+export type IleWorkCanvasWorkspaceInput = PromptWorkspaceContextInput;
+
+/** Stay-on-domain line attached to seed/ask/turn prompts so XAI does not drift. */
+export const ILE_WORK_CANVAS_STAY_ON_DOMAIN =
+  "Stay on this workspace and focused-block domain. Do not invent unrelated topics.";
+
+export function ileWorkCanvasWorkspaceFromChatBody(body: {
+  workspaceContext?: unknown;
+  workspaceTitle?: unknown;
+  workspaceGoal?: unknown;
+  workspaceDescription?: unknown;
+  blockTitle?: unknown;
+  blockDescription?: unknown;
+  chapterDescription?: unknown;
+  activeStepDescription?: unknown;
+  problem?: unknown;
+  notes?: unknown;
+  focusedBlockId?: unknown;
+  rootTopic?: unknown;
+} | null | undefined): PromptWorkspaceContextInput {
+  const rec = asRecord(body);
+  const nested = asRecord(rec.workspaceContext);
+  const str = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+    const t = value.replace(/\s+/g, " ").trim();
+    return t || null;
+  };
+  const pick = (key: string, fallback?: unknown): string | null =>
+    str(nested[key]) || str(rec[key]) || str(fallback);
+  const files = Array.isArray(nested.files)
+    ? nested.files
+    : Array.isArray(rec.files)
+      ? rec.files
+      : undefined;
+  const blocks = Array.isArray(nested.blocks)
+    ? nested.blocks
+    : Array.isArray(rec.blocks)
+      ? rec.blocks
+      : undefined;
+  const unusableCells = Array.isArray(nested.unusableCells)
+    ? nested.unusableCells
+    : Array.isArray(rec.unusableCells)
+      ? rec.unusableCells
+      : undefined;
+  const blockLocalContext = nested.blockLocalContext ?? rec.blockLocalContext ?? undefined;
+  return {
+    workspaceTitle: pick("workspaceTitle", rec.problem),
+    rootTopic: pick("rootTopic"),
+    workspaceGoal: pick("workspaceGoal"),
+    workspaceDescription: pick("workspaceDescription"),
+    notes: pick("notes"),
+    blockTitle: pick("blockTitle"),
+    blockDescription: pick("blockDescription"),
+    chapterDescription: pick("chapterDescription", rec.activeStepDescription),
+    focusedBlockId: pick("focusedBlockId"),
+    files: files as PromptWorkspaceContextInput["files"],
+    blocks: blocks as PromptWorkspaceContextInput["blocks"],
+    blockLocalContext: blockLocalContext as PromptWorkspaceContextInput["blockLocalContext"],
+    unusableCells: unusableCells as PromptWorkspaceContextInput["unusableCells"],
+  };
+}
+
+export function ileWorkCanvasDomainContextBlock(
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null,
+): string {
+  if (!workspace) return "";
+  const assembled =
+    "contextBlock" in workspace && typeof workspace.contextBlock === "string"
+      ? workspace
+      : assemblePromptWorkspaceContext(workspace);
+  const trimmed = String(assembled.contextBlock || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.includes(ILE_WORK_CANVAS_STAY_ON_DOMAIN)) return trimmed;
+  return `${trimmed}\n${ILE_WORK_CANVAS_STAY_ON_DOMAIN}`;
+}
+
+function ileWorkCanvasWithDomainPrefix(
+  body: string,
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null,
+): string {
+  const domain = ileWorkCanvasDomainContextBlock(workspace);
+  if (!domain) return body;
+  return `${domain}\n\n${body}`;
+}
+
 export function buildIleWorkCanvasAskUserMessage(input: {
   prompt: string;
   selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
 }): string {
   const prompt = String(input.prompt || "").trim();
   const live = (input.selectedElements ?? []).filter((el) => !el.isDeleted);
-  if (!live.length) {
-    return `Ask about the Work canvas.\n\nQuestion:\n${prompt}`;
-  }
-  const selected = ileWorkCanvasSelectionSummary(live);
-  return `Ask about the selected Work canvas elements.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${selected}`;
+  const body = !live.length
+    ? `Ask about the Work canvas.\n\nQuestion:\n${prompt}`
+    : `Ask about the selected Work canvas elements.\n\nQuestion:\n${prompt}\n\nSelected elements:\n${ileWorkCanvasSelectionSummary(live)}`;
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
 function extractJsonObject(raw: string): Record<string, unknown> | null {
@@ -1434,9 +1627,117 @@ export const ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION =
 /** User-message payload: the focused chapter's full restorable board. */
 export function ileWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
-  input?: { boardLabel?: string },
+  input?: {
+    boardLabel?: string;
+    workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+  },
 ): string {
   const restorable = serializeIleWorkCanvasScene(scene);
   const board = String(input?.boardLabel || "CHAPTER").trim() || "CHAPTER";
-  return `CURRENT ${board} WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${JSON.stringify(restorable)}`;
+  const body = `CURRENT ${board} WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${JSON.stringify(restorable)}`;
+  return ileWorkCanvasWithDomainPrefix(body, input?.workspace);
+}
+
+export const ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE = "rephrase" as const;
+export const ILE_WORK_CANVAS_QUICK_ACTION_SPLIT = "split" as const;
+export const ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE = "elaborate more pls" as const;
+
+export type IleWorkCanvasQuickActionId =
+  | typeof ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE
+  | typeof ILE_WORK_CANVAS_QUICK_ACTION_SPLIT
+  | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE;
+
+/** Canned Expand More intents. Rephrase / elaborate go through the ask path. */
+export function ileWorkCanvasQuickActionPrompt(
+  action: typeof ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE,
+): string {
+  if (action === ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE) {
+    return "Rephrase this selection. Keep the same meaning, stay on the workspace/block domain, and do not invent unrelated topics.";
+  }
+  return "Elaborate more pls. Expand this selection with more concrete detail, stay on the workspace/block domain, and do not invent unrelated topics.";
+}
+
+function groupIleWorkCanvasSplitParts(parts: string[], joiner: string): string[] {
+  if (parts.length <= 3) return parts;
+  const groups: string[][] = [[], [], []];
+  parts.forEach((part, index) => {
+    groups[Math.min(2, Math.floor((index * 3) / parts.length))].push(part);
+  });
+  return groups.map((group) => group.join(joiner)).filter((chunk) => chunk.trim());
+}
+
+/** Split source text into 2 or 3 chunks. Empty / single-token text cannot split. */
+export function ileWorkCanvasSplitTextChunks(text: string | null | undefined): string[] {
+  const original = String(text || "").replace(/\r\n/g, "\n").trim();
+  if (!original) return [];
+  const paragraphs = original.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (paragraphs.length >= 2) return groupIleWorkCanvasSplitParts(paragraphs, "\n\n");
+  const lines = original.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length >= 2) return groupIleWorkCanvasSplitParts(lines, "\n");
+  const sentences = original.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  if (sentences.length >= 2) return groupIleWorkCanvasSplitParts(sentences, " ");
+  const words = original.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return [];
+  const n = words.length >= 9 ? 3 : 2;
+  const groups: string[][] = Array.from({ length: n }, () => []);
+  words.forEach((word, index) => {
+    groups[Math.min(n - 1, Math.floor((index * n) / words.length))].push(word);
+  });
+  return groups.map((group) => group.join(" ")).filter(Boolean);
+}
+
+/**
+ * Replace one text element with 2 or 3 live text blocks. Non-text is a no-op.
+ * Concatenated chunks preserve the source modulo whitespace.
+ */
+export function splitIleWorkCanvasTextElement(
+  scene: IleWorkCanvasScene | null | undefined,
+  element: Pick<IleWorkCanvasElement, "id" | "type" | "text" | "originalText" | "x" | "y" | "width" | "height" | "isDeleted"> | null | undefined,
+): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  if (!element || element.isDeleted || element.type !== "text") {
+    return { scene: current, split: false, parts: [] };
+  }
+  const source = String(element.originalText || element.text || "");
+  const chunks = ileWorkCanvasSplitTextChunks(source);
+  if (chunks.length < 2) return { scene: current, split: false, parts: [] };
+  const boxWidth = Number(element.width) > 0 ? Number(element.width) : ILE_WORK_CANVAS_TEXT_BOX_WIDTH;
+  const skeletons: IleWorkCanvasSkeleton[] = [];
+  let y = Number(element.y) || 0;
+  const x = Number(element.x) || 0;
+  for (const chunk of chunks) {
+    const wrapped = wrapIleWorkCanvasText(chunk, boxWidth);
+    skeletons.push({
+      type: "text",
+      text: chunk,
+      x,
+      y,
+      width: wrapped.width,
+      autoResize: false,
+    });
+    y += wrapped.height + 16;
+  }
+  const parts = convertToExcalidrawElements(skeletons);
+  if (parts.length < 2) return { scene: current, split: false, parts: [] };
+  return {
+    scene: {
+      ...current,
+      elements: [...current.elements.filter((el) => el.id !== element.id), ...parts],
+    },
+    split: true,
+    parts,
+  };
+}
+
+export function splitIleWorkCanvasSelectedText(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): { scene: IleWorkCanvasScene; split: boolean; parts: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const target = (selectedElements ?? []).find(
+    (el) => el && !el.isDeleted && el.type === "text" && String(el.originalText || el.text || "").trim(),
+  );
+  if (!target) return { scene: current, split: false, parts: [] };
+  const live = current.elements.find((el) => el.id === target.id) ?? target;
+  return splitIleWorkCanvasTextElement(current, live);
 }

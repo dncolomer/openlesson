@@ -12,6 +12,7 @@ import {
   formatPromptWorkspaceContextBlock,
   parseBlockLocalContext,
   type PromptBlockInventoryItem,
+  type PromptWorkspaceContextInput,
 } from "@/lib/prompt-workspace-context";
 import { normalizeUnusableCells } from "@/lib/map-ground-rules";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
@@ -290,25 +291,14 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
   };
 }
 
-export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMode, minutes: number) {
-  const nodeSummary = brief.nodes
-    .map((node, index) => `${index + 1}. ${node.title}${node.status ? ` (${node.status})` : ""}: ${node.description || "No description"}`)
-    .join("\n");
-
-  const sessionSummary = brief.sessions
-    .map((session, index) => `${index + 1}. ${session.block_title || session.problem || "Session"}: ${session.report ? session.report.slice(0, 1200) : "No report yet"}`)
-    .join("\n\n");
-
-  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
-  const assessmentTarget = focusedBlock
-    ? `the performance block "${focusedBlock.title}"`
-    : `the full workspace "${brief.plan.title}"`;
-  const focusSessionSummary = brief.focusSession
-    ? `Related workspace session:\nTitle: ${brief.focusSession.block_title || brief.focusSession.problem || "Session"}\nStatus: ${brief.focusSession.status || "unknown"}\nProblem: ${brief.focusSession.problem || "None"}\nReport: ${brief.focusSession.report || "No report yet"}`
-    : focusedBlock
-      ? "No related completed session. Evaluate the selected performance block directly."
-      : "No focused block. Evaluate learning across the whole workspace.";
-
+export function tapScoreBriefToPromptWorkspaceInput(
+  brief: TapScoreBrief,
+  extra?: { focusedBlockId?: string | null },
+): PromptWorkspaceContextInput {
+  const focusedId = String(extra?.focusedBlockId || "").trim() || null;
+  const focusedBlock =
+    (focusedId && brief.nodes.find((node) => node.id === focusedId)) ||
+    (brief.nodes.length === 1 ? brief.nodes[0] : null);
   const inventoryBlocks: PromptBlockInventoryItem[] = (brief.nodes || []).map((node) => ({
     id: node.id,
     title: node.title,
@@ -324,8 +314,7 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
     lock_until_block_ids: node.lock_until_block_ids,
     local_context: node.local_context,
   }));
-
-  const sharedContext = formatPromptWorkspaceContextBlock({
+  return {
     workspaceTitle: brief.plan.title,
     rootTopic: brief.plan.root_topic,
     workspaceGoal: brief.plan.workspace_goal || brief.plan.description,
@@ -338,7 +327,31 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
     blocks: inventoryBlocks,
     blockLocalContext: focusedBlock?.local_context ?? null,
     unusableCells: brief.unusableCells,
-  });
+  };
+}
+
+export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMode, minutes: number) {
+  const nodeSummary = brief.nodes
+    .map((node, index) => `${index + 1}. ${node.title}${node.status ? ` (${node.status})` : ""}: ${node.description || "No description"}`)
+    .join("\n");
+
+  const sessionSummary = brief.sessions
+    .map((session, index) => `${index + 1}. ${session.block_title || session.problem || "Session"}: ${session.report ? session.report.slice(0, 1200) : "No report yet"}`)
+    .join("\n\n");
+
+  const workspaceInput = tapScoreBriefToPromptWorkspaceInput(brief);
+  const focusedBlock = brief.nodes.find((node) => node.id === workspaceInput.focusedBlockId) ||
+    (brief.nodes.length === 1 ? brief.nodes[0] : null);
+  const assessmentTarget = focusedBlock
+    ? `the performance block "${focusedBlock.title}"`
+    : `the full workspace "${brief.plan.title}"`;
+  const focusSessionSummary = brief.focusSession
+    ? `Related workspace session:\nTitle: ${brief.focusSession.block_title || brief.focusSession.problem || "Session"}\nStatus: ${brief.focusSession.status || "unknown"}\nProblem: ${brief.focusSession.problem || "None"}\nReport: ${brief.focusSession.report || "No report yet"}`
+    : focusedBlock
+      ? "No related completed session. Evaluate the selected performance block directly."
+      : "No focused block. Evaluate learning across the whole workspace.";
+
+  const sharedContext = formatPromptWorkspaceContextBlock(workspaceInput);
 
   const workspaceBlock = `${sharedContext}
 

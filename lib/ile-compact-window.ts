@@ -215,10 +215,65 @@ export const ILE_PIP_POINTER_BRIDGE_EVENTS = [
   "pointermove",
   "pointerup",
   "pointercancel",
-  "wheel",
   "keydown",
   "keyup",
 ] as const;
+
+/**
+ * PiP window-level `wheel` listeners are passive, so ctrl/pinch never
+ * preventDefault and Chrome zooms the PiP chrome instead of the board.
+ * Bind on the canvas host with `{passive:false}` instead.
+ *
+ * Trackpad two-finger pan (pixel deltas, no ctrl) stays native.
+ * Ctrl/meta (pinch) and mouse-wheel line mode zoom the board.
+ */
+export function ileSurfaceWheelIsZoomIntent(event: {
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  deltaX?: number;
+  deltaY?: number;
+  deltaMode?: number;
+}): boolean {
+  if (event.ctrlKey || event.metaKey) return true;
+  const mode = Number(event.deltaMode) || 0;
+  const dx = Number(event.deltaX) || 0;
+  return mode !== 0 && Math.abs(dx) < 1;
+}
+
+export type IleSurfaceWheelZoomInput = {
+  clientX: number;
+  clientY: number;
+  deltaY: number;
+};
+
+export function bindIleSurfaceWheelZoom(
+  node: { ownerDocument?: Document | null; addEventListener?: EventTarget["addEventListener"]; removeEventListener?: EventTarget["removeEventListener"] } | null | undefined,
+  onZoom: (input: IleSurfaceWheelZoomInput) => void,
+  opener?: Window | null,
+): () => void {
+  if (!node || typeof node.addEventListener !== "function") return () => {};
+  if (!ileSurfaceNeedsPointerBridge(node, opener)) return () => {};
+  const opts: AddEventListenerOptions = { capture: true, passive: false };
+  const onWheel = (event: Event) => {
+    const wheel = event as WheelEvent;
+    if (!ileSurfaceWheelIsZoomIntent(wheel)) return;
+    if (typeof wheel.preventDefault === "function") wheel.preventDefault();
+    if (typeof wheel.stopImmediatePropagation === "function") {
+      wheel.stopImmediatePropagation();
+    } else if (typeof wheel.stopPropagation === "function") {
+      wheel.stopPropagation();
+    }
+    onZoom({
+      clientX: Number(wheel.clientX) || 0,
+      clientY: Number(wheel.clientY) || 0,
+      deltaY: Number(wheel.deltaY) || 0,
+    });
+  };
+  node.addEventListener("wheel", onWheel, opts);
+  return () => {
+    node.removeEventListener?.("wheel", onWheel, opts);
+  };
+}
 
 const ILE_PIP_FORWARDED = "__ilePipForwarded";
 

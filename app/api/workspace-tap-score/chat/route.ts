@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
-import { buildTapScoreInstructions, TapScoreMode } from "@/lib/tap-score";
+import {
+  buildTapScoreInstructions,
+  tapScoreBriefToPromptWorkspaceInput,
+  TapScoreMode,
+} from "@/lib/tap-score";
 import { buildTapSelectiveThoughtSystemPrompt } from "@/lib/prompt-kernel/surfaces/tap";
 import {
   authContextFromTapAccess,
@@ -20,6 +24,7 @@ import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-lin
 import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 import { withConversationLanguageInstruction } from "@/lib/tutoring-languages";
 import { tapWorkCanvasTurnContextMessage } from "@/lib/tap-work-canvas";
+import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -114,7 +119,13 @@ export async function POST(req: NextRequest) {
     );
 
     const canvasContext = body.workCanvasScene
-      ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene)}`
+      ? `\n\n${tapWorkCanvasTurnContextMessage(body.workCanvasScene, {
+          workspace: assemblePromptWorkspaceContext(
+            tapScoreBriefToPromptWorkspaceInput(brief, {
+              focusedBlockId: blockId || access.blockId,
+            }),
+          ),
+        })}`
       : "";
 
     const response = await callXai([

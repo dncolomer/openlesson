@@ -58,18 +58,30 @@ import {
   ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
+  ileLearnMoreVisiblePlacement,
   ileWorkCanvasCenterScroll,
+  ileWorkCanvasZoomAtPoint,
   ileWorkCanvasContentBounds,
   ileWorkCanvasEmptyNearbyOrigin,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasPointerBusy,
+  ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasRectsOverlap,
+  ileWorkCanvasSplitTextChunks,
+  ileWorkCanvasThinkingOccupancy,
+  ileWorkCanvasIncomingClearsLiveScene,
+  ileWorkCanvasShouldRestoreEmptyBoard,
+  ileWorkCanvasWorkspaceFromChatBody,
   ileWorkCanvasViewportToHost,
   ileWorkCanvasWithScrollToContent,
   mergeIleXaiTurnOntoLiveWorkCanvas,
   placeIleLearnMorePrompt,
+  splitIleWorkCanvasSelectedText,
+  splitIleWorkCanvasTextElement,
+  ILE_WORK_CANVAS_STAY_ON_DOMAIN,
   type IleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
+import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
 import { ileHeliosThinkingLine } from "@/lib/ile-dialogue-turn";
 import { buildIleSessionChatBody } from "@/lib/session-chat-client";
 import {
@@ -87,7 +99,7 @@ import { DEFAULT_PROMPTS } from "@/lib/prompts";
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b56fab79f1b5/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-43f631c11586/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -265,6 +277,27 @@ describe("ILE Work canvas center on open (shipped)", () => {
     expect(canvas).toContain("scrollToContent");
     expect(canvas).toContain("ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS");
     expect(canvas).toContain("api.scrollToContent(elements, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+  });
+});
+
+describe("ILE Work canvas zoom at point (shipped)", () => {
+  it("increases zoom for negative wheel delta and keeps the cursor scene point", () => {
+    const before = { zoom: 1, scrollX: 40, scrollY: 20, offsetLeft: 0, offsetTop: 0 };
+    const cursor = { viewportX: 200, viewportY: 150 };
+    const sceneX = (cursor.viewportX - before.offsetLeft) / before.zoom - before.scrollX;
+    const sceneY = (cursor.viewportY - before.offsetTop) / before.zoom - before.scrollY;
+    const zoomed = ileWorkCanvasZoomAtPoint({
+      ...before,
+      ...cursor,
+      deltaY: -40,
+    });
+    expect(zoomed.zoom).toBeGreaterThan(before.zoom);
+    const afterX = (cursor.viewportX - before.offsetLeft) / zoomed.zoom - zoomed.scrollX;
+    const afterY = (cursor.viewportY - before.offsetTop) / zoomed.zoom - zoomed.scrollY;
+    expect(afterX).toBeCloseTo(sceneX, 6);
+    expect(afterY).toBeCloseTo(sceneY, 6);
+    const out = ileWorkCanvasZoomAtPoint({ ...before, ...cursor, deltaY: 40 });
+    expect(out.zoom).toBeLessThan(before.zoom);
   });
 });
 
@@ -1040,5 +1073,261 @@ describe("ILE and TAP Work canvas share one component (shipped)", () => {
       expect(ile).toContain(feature);
       expect(tap).toContain(feature);
     }
+    expect(canvas).not.toContain("SessionView");
+    expect(canvas).not.toContain("tap-score-phases");
+    expect(canvas).not.toContain("session-chat-client");
+    const lib = read("lib/ile-work-canvas.ts");
+    expect(lib).not.toContain("SessionView");
+    expect(lib).not.toContain("tap-score-phases");
+    expect(lib).not.toContain("session-chat-client");
+    writeScratch(
+      "work-canvas-hosts.log",
+      [
+        "ILE SessionView mounts WorkCanvas with onAskSelected, heliosBusy, onSceneChange, onCanvasPowActions",
+        "TAP tap-score-phases mounts WorkCanvas with onAskSelected, heliosBusy, onSceneChange, onCanvasPowActions",
+        "canvas module does not import SessionView, tap-score-phases, or session-chat-client",
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("ILE Work canvas thinking occupancy (shipped)", () => {
+  it("keeps one overlay id when heliosBusy overlaps an in-flight canvas ask", () => {
+    expect(
+      ileWorkCanvasThinkingOccupancy({
+        heliosBusy: true,
+        canvasAskTurnIds: ["ask-1"],
+      }),
+    ).toEqual(["ask-1"]);
+    expect(
+      ileWorkCanvasThinkingOccupancy({
+        heliosBusy: true,
+        canvasAskTurnIds: [],
+      }),
+    ).toEqual(["helios"]);
+    expect(
+      ileWorkCanvasThinkingOccupancy({
+        heliosBusy: false,
+        canvasAskTurnIds: ["ask-1", "ask-2"],
+      }),
+    ).toEqual(["ask-1", "ask-2"]);
+    expect(ileWorkCanvasThinkingOccupancy({ heliosBusy: false })).toEqual([]);
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasThinkingOccupancy");
+    expect(canvas).toContain('removeThinkingChip("helios")');
+  });
+});
+
+describe("ILE Work canvas Expand More unselect (shipped)", () => {
+  it("hides Expand More on empty selection even while pointer-busy", () => {
+    expect(
+      ileLearnMoreVisiblePlacement({
+        selectedElementIds: {},
+        pointerBusy: true,
+        placed: { count: 1, left: 40, top: 80 },
+      }),
+    ).toBeNull();
+    expect(
+      ileLearnMoreVisiblePlacement({
+        selectedElementIds: { "el-1": false },
+        pointerBusy: true,
+        placed: { count: 1, left: 40, top: 80 },
+      }),
+    ).toBeNull();
+    const selected = convertToExcalidrawElements([
+      { type: "text", text: "just-war", x: 100, y: 80, width: 120, height: 40 },
+    ]);
+    const el = selected[0]!;
+    const placed = ileLearnMorePromptPlacement({
+      elements: selected,
+      selectedElementIds: { [el.id]: true },
+      appState: { zoom: { value: 1 }, scrollX: 0, scrollY: 0, offsetLeft: 64, offsetTop: 8, width: 800, height: 600 },
+    });
+    expect(placed).not.toBeNull();
+    expect(
+      ileLearnMoreVisiblePlacement({
+        selectedElementIds: { [el.id]: true },
+        pointerBusy: false,
+        placed,
+      }),
+    ).toEqual(placed);
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileLearnMoreVisiblePlacement");
+  });
+});
+
+describe("ILE Work canvas workspace+block prompt context (shipped)", () => {
+  it("ask-user and turn-context include workspace, focused block, and stay-on-domain language", () => {
+    const workspace = {
+      workspaceTitle: "Just War Ethics",
+      workspaceGoal: "Apply last-resort tests to a live case",
+      blockTitle: "Last resort",
+      blockDescription: "Force is justified only after every peaceful option is exhausted.",
+      chapterDescription: "Walk a case through just-war criteria",
+    };
+    const selected = convertToExcalidrawElements([
+      { type: "text", text: "just-war criteria", x: 10, y: 20 },
+    ]);
+    const ask = buildIleWorkCanvasAskUserMessage({
+      prompt: "What is missing?",
+      selectedElements: selected,
+      workspace,
+    });
+    expect(ask).toContain("Just War Ethics");
+    expect(ask).toContain("Apply last-resort tests to a live case");
+    expect(ask).toContain("Last resort");
+    expect(ask).toContain("Force is justified only after every peaceful option is exhausted.");
+    expect(ask).toContain(ILE_WORK_CANVAS_STAY_ON_DOMAIN);
+    expect(ask).toMatch(/do not invent unrelated topics/i);
+    expect(ask).toContain("What is missing?");
+    expect(ask).toContain("[text] just-war criteria");
+
+    const seeded = seedIleChapterWorkCanvas(null, {
+      text: "Walk a case through just-war criteria",
+      chapterId: "chapter-a",
+    });
+    const turn = ileWorkCanvasTurnContextMessage(seeded.scene, { workspace });
+    expect(turn).toContain("Just War Ethics");
+    expect(turn).toContain("Apply last-resort tests to a live case");
+    expect(turn).toContain("Last resort");
+    expect(turn).toContain("Force is justified only after every peaceful option is exhausted.");
+    expect(turn).toContain(ILE_WORK_CANVAS_STAY_ON_DOMAIN);
+    expect(turn).toContain("Walk a case through just-war criteria");
+
+    const fromBody = ileWorkCanvasWorkspaceFromChatBody({
+      workspaceContext: workspace,
+      problem: "BST insert",
+      activeStepDescription: "Walk a case through just-war criteria",
+    });
+    expect(fromBody.workspaceTitle).toBe("Just War Ethics");
+    expect(fromBody.blockTitle).toBe("Last resort");
+    const assembled = assemblePromptWorkspaceContext(fromBody);
+    expect(assembled.contextBlock).toContain("Just War Ethics");
+    expect(assembled.contextBlock).toContain("Last resort");
+
+    const route = read("app/api/session-chat/route.ts");
+    expect(route).toContain("assemblePromptWorkspaceContext");
+    expect(route).toContain("ileWorkCanvasWorkspaceFromChatBody");
+    expect(route).toContain("ileWorkCanvasTurnContextMessage");
+    expect(route).toContain("assembledWorkspace");
+    const client = read("lib/session-chat-client.ts");
+    expect(client).toContain("workspaceContext");
+    const view = read("components/SessionView.tsx");
+    expect(view).toContain("workspaceContext: canvasWorkspaceContext");
+    expect(view).toContain("workspace: canvasWorkspaceContext");
+  });
+});
+
+describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
+  it("splits a text element into 2 or 3 live blocks and keeps icon-only quick actions", () => {
+    const source =
+      "First clause names the last-resort test. Second clause names discrimination. Third clause names proportionality of means.";
+    const chunks = ileWorkCanvasSplitTextChunks(source);
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+    expect(chunks.length).toBeLessThanOrEqual(3);
+    expect(chunks.join(" ").replace(/\s+/g, " ")).toBe(source.replace(/\s+/g, " "));
+
+    const scene = {
+      elements: convertToExcalidrawElements([{ type: "text", text: source, x: 40, y: 80 }]),
+      appState: {},
+      files: {},
+    };
+    const original = scene.elements[0]!;
+    const split = splitIleWorkCanvasTextElement(scene, original);
+    expect(split.split).toBe(true);
+    const liveText = split.scene.elements.filter((el) => el.type === "text" && !el.isDeleted);
+    expect(liveText.length).toBeGreaterThanOrEqual(2);
+    expect(liveText.length).toBeLessThanOrEqual(3);
+    expect(liveText.some((el) => el.id === original.id)).toBe(false);
+    const joined = liveText
+      .map((el) => String(el.originalText || el.text || ""))
+      .join(" ")
+      .replace(/\s+/g, " ");
+    expect(joined).toBe(source.replace(/\s+/g, " "));
+
+    const rect = convertToExcalidrawElements([
+      { type: "rectangle", x: 0, y: 0, width: 80, height: 40 },
+    ])[0]!;
+    const noSplit = splitIleWorkCanvasSelectedText(scene, [rect]);
+    expect(noSplit.split).toBe(false);
+    expect(noSplit.scene.elements.map((el) => el.id)).toEqual(scene.elements.map((el) => el.id));
+
+    expect(ileWorkCanvasQuickActionPrompt("rephrase")).toMatch(/rephrase/i);
+    expect(ileWorkCanvasQuickActionPrompt("elaborate more pls")).toMatch(/elaborate more pls/i);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
+    expect(canvas).toContain('data-ile-learn-more-quick="split"');
+    expect(canvas).toContain('data-ile-learn-more-quick="elaborate"');
+    expect(canvas).toContain("ileWorkCanvasQuickActionPrompt");
+    expect(canvas).toContain("splitIleWorkCanvasSelectedText");
+    expect(canvas).toContain('handleQuickAction("rephrase")');
+    expect(canvas).toContain('handleQuickAction("split")');
+    expect(canvas).toContain('handleQuickAction("elaborate more pls")');
+    expect(canvas).not.toMatch(/>\s*rephrase\s*</i);
+    expect(canvas).not.toMatch(/>\s*split\s*</i);
+    expect(canvas).not.toMatch(/>\s*elaborate more pls\s*</i);
+    const domainAsk = buildIleWorkCanvasAskUserMessage({
+      prompt: "What is missing?",
+      workspace: {
+        workspaceTitle: "Just War Ethics",
+        workspaceGoal: "Apply last-resort tests to a live case",
+        blockTitle: "Last resort",
+        blockDescription: "Force is justified only after every peaceful option is exhausted.",
+      },
+    });
+    writeScratch(
+      "work-canvas-packaging.log",
+      [
+        `occupancyOverlap=${ileWorkCanvasThinkingOccupancy({ heliosBusy: true, canvasAskTurnIds: ["ask-1"] }).join(",")}`,
+        `expandMoreEmptyBusy=${ileLearnMoreVisiblePlacement({ selectedElementIds: {}, pointerBusy: true, placed: { count: 1, left: 1, top: 1 } }) === null}`,
+        `askHasWorkspace=${domainAsk.includes("Just War Ethics") && domainAsk.includes("Last resort")}`,
+        `splitCount=${liveText.length}`,
+        `splitPreserves=${joined === source.replace(/\s+/g, " ")}`,
+        "quickActions=icon-only rephrase/split/elaborate",
+        "packaging=WorkCanvas injected ask, no host imports",
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("ILE Work canvas user delete stays empty (shipped)", () => {
+  it("does not restore the previous scene after the learner deletes live elements", () => {
+    expect(
+      ileWorkCanvasShouldRestoreEmptyBoard({
+        liveNonDeletedCount: 0,
+        initialHasLive: true,
+        userCleared: false,
+      }),
+    ).toBe(true);
+    expect(
+      ileWorkCanvasShouldRestoreEmptyBoard({
+        liveNonDeletedCount: 0,
+        initialHasLive: true,
+        userCleared: true,
+      }),
+    ).toBe(false);
+    expect(
+      ileWorkCanvasShouldRestoreEmptyBoard({
+        liveNonDeletedCount: 2,
+        initialHasLive: true,
+        userCleared: false,
+      }),
+    ).toBe(false);
+
+    const live = sceneWith("keep-me", "keep me");
+    const deleted: IleWorkCanvasScene = {
+      ...live,
+      elements: live.elements.map((el) => ({ ...el, isDeleted: true })),
+    };
+    expect(ileWorkCanvasIncomingClearsLiveScene(live, deleted)).toBe(true);
+    expect(ileWorkCanvasIncomingClearsLiveScene(live, emptyIleWorkCanvasScene())).toBe(false);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasShouldRestoreEmptyBoard");
+    expect(canvas).toContain("userClearedRef");
+    expect(canvas).toContain("getSceneElementsIncludingDeleted");
+    expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
+    expect(canvas).toContain("M4 4v6h6");
   });
 });

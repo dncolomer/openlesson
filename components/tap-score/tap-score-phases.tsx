@@ -241,17 +241,18 @@ export function TapScorePhases(props: {
     );
     if (!assistantTurns.length) return;
     const missing = assistantTurns.filter((turn) => !appliedAssistantIdsRef.current.has(turn.id));
+    if (!missing.length) return;
     const boardEmpty = !sceneRef.current.elements.some((el) => !el.isDeleted);
-    if (!missing.length && !boardEmpty) return;
     const prevIds = new Set(sceneRef.current.elements.map((el) => el.id));
-    const next = boardEmpty
-      ? applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
-      : applyTapHeliosReplyToWorkCanvas(
-          sceneRef.current,
-          lastAssistantTurn?.content,
-          null,
-          lastAssistantTurn?.id,
-        );
+    const next =
+      boardEmpty && missing.length === assistantTurns.length
+        ? applyTapAssistantTurnsToWorkCanvas(emptyTapWorkCanvasScene(), assistantTurns)
+        : applyTapHeliosReplyToWorkCanvas(
+            sceneRef.current,
+            lastAssistantTurn?.content,
+            null,
+            lastAssistantTurn?.id,
+          );
     for (const turn of assistantTurns) appliedAssistantIdsRef.current.add(turn.id);
     const added = next.elements.filter((el) => !prevIds.has(el.id));
     if (!added.length && !boardEmpty) return;
@@ -341,6 +342,7 @@ export function TapScorePhases(props: {
       const userText = tapWorkCanvasAskUserMessage({
         prompt: input.prompt,
         selectedElements: input.selectedElements,
+        workspace: { workspaceTitle },
       });
       return sendCanvasAsk({
         prompt: userText,
@@ -348,7 +350,7 @@ export function TapScorePhases(props: {
         scene: input.scene,
       });
     },
-    [sendCanvasAsk],
+    [sendCanvasAsk, workspaceTitle],
   );
 
   return (

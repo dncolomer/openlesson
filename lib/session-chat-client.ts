@@ -6,6 +6,7 @@ import { errorMessageFromBody } from "@/lib/api-error-envelope";
 import {
   serializeIleWorkCanvasScene,
   type IleWorkCanvasScene,
+  type IleWorkCanvasWorkspaceInput,
 } from "@/lib/ile-work-canvas";
 
 export type StuckAction = "ask" | "theory" | "practice" | "break";
@@ -38,6 +39,7 @@ export type IleSessionChatRequestInput = {
   activeStepId?: string;
   activeStepDescription?: string;
   workCanvasScene?: IleWorkCanvasScene | null;
+  workspaceContext?: IleWorkCanvasWorkspaceInput | null;
 } & Record<string, unknown>;
 
 export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Record<string, unknown> {
@@ -56,6 +58,9 @@ export function buildIleSessionChatBody(input: IleSessionChatRequestInput): Reco
   if (input.activeStepDescription) body.activeStepDescription = input.activeStepDescription;
   if (input.workCanvasScene != null) {
     body.workCanvasScene = serializeIleWorkCanvasScene(input.workCanvasScene);
+  }
+  if (input.workspaceContext != null) {
+    body.workspaceContext = input.workspaceContext;
   }
   return body;
 }

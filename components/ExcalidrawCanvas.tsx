@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { useI18n } from "@/lib/i18n";
-import { bindIleSurfaceEditorEvents } from "@/lib/ile-compact-window";
+import { bindIleSurfaceEditorEvents, bindIleSurfaceWheelZoom } from "@/lib/ile-compact-window";
 import {
   ILE_HELIOS_THINKING_ROTATE_MS,
   ileHeliosThinkingLine,
@@ -28,18 +28,24 @@ import {
   ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
   ileLearnMoreSelectionKey,
+  ileLearnMoreVisiblePlacement,
+  ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasSelectionHostRect,
+  ileWorkCanvasThinkingOccupancy,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasSceneToViewport,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasViewportToHost,
   ileWorkCanvasWithScrollToContent,
+  ileWorkCanvasZoomAtPoint,
   ileWorkCanvasZoomValue,
   mergeIleXaiTurnOntoLiveWorkCanvas,
   serializeIleWorkCanvasScene,
+  splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   ILE_XAI_LOADING_BOX_HEIGHT,
@@ -282,6 +288,7 @@ export function ExcalidrawCanvas({
   const isExportingRef = useRef(false);
   const lastPersistedSceneJsonRef = useRef("");
   const applyingRemoteRef = useRef(false);
+  const userClearedRef = useRef(false);
   const sceneFingerprintRef = useRef("");
   const remoteNonceRef = useRef(0);
   const [collaborating, setCollaborating] = useState(false);
@@ -330,9 +337,19 @@ export function ExcalidrawCanvas({
     const pending = pendingApplyRef.current;
     if (!api) return;
     const initial = initialSceneDataRef.current;
-    const live = (api.getSceneElements?.() ?? []) as { id?: string; isDeleted?: boolean }[];
+    const live = (
+      typeof api.getSceneElementsIncludingDeleted === "function"
+        ? api.getSceneElementsIncludingDeleted()
+        : (api.getSceneElements?.() ?? [])
+    ) as { id?: string; isDeleted?: boolean }[];
     const liveCount = live.filter((el) => !el.isDeleted).length;
-    if (liveCount === 0 && ileWorkCanvasHasLiveElements(initial as IleWorkCanvasScene)) {
+    if (
+      ileWorkCanvasShouldRestoreEmptyBoard({
+        liveNonDeletedCount: liveCount,
+        initialHasLive: ileWorkCanvasHasLiveElements(initial as IleWorkCanvasScene),
+        userCleared: userClearedRef.current || live.some((el) => el.isDeleted),
+      })
+    ) {
       applyingRemoteRef.current = true;
       try {
         api.updateScene({ elements: initial.elements });
@@ -558,7 +575,14 @@ export function ExcalidrawCanvas({
   }, [showHeliosThinking]);
 
   useEffect(() => {
-    if (!heliosBusy) {
+    const askIds = thinkingChipsRef.current
+      .filter((chip) => chip.turnId !== "helios")
+      .map((chip) => chip.turnId);
+    const occupancy = ileWorkCanvasThinkingOccupancy({
+      heliosBusy,
+      canvasAskTurnIds: askIds,
+    });
+    if (!occupancy.includes("helios")) {
       removeThinkingChip("helios");
       return;
     }
@@ -572,7 +596,7 @@ export function ExcalidrawCanvas({
     });
     const appState = api?.getAppState?.() ?? sceneDataRef.current?.appState ?? {};
     upsertThinkingChip(projectThinkingChip("helios", origin, appState));
-  }, [heliosBusy, isLoaded, projectThinkingChip, removeThinkingChip, reservedThinkingOrigins, upsertThinkingChip]);
+  }, [askInFlight, heliosBusy, isLoaded, projectThinkingChip, removeThinkingChip, reservedThinkingOrigins, upsertThinkingChip]);
 
   const syncThinkingOverlay = useCallback((appState: any) => {
     const host = canvasHostOrigin();
@@ -621,6 +645,17 @@ export function ExcalidrawCanvas({
     }
     const selectedIds = appState?.selectedElementIds ?? {};
     const selectionKey = ileLearnMoreSelectionKey(selectedIds);
+    if (!selectionKey) {
+      learnMorePinnedRef.current = null;
+      paintLearnMoreUi(
+        ileLearnMoreVisiblePlacement({
+          selectedElementIds: selectedIds,
+          pointerBusy: ileWorkCanvasPointerBusy(appState),
+          placed: learnMoreUiRef.current,
+        }),
+      );
+      return;
+    }
     const busy = ileWorkCanvasPointerBusy(appState) && !learnMoreDragRef.current;
     if (busy && learnMorePinnedRef.current?.key !== selectionKey) return;
     const viewport = learnMoreViewport(appState);
@@ -670,7 +705,13 @@ export function ExcalidrawCanvas({
           ? { key: selectionKey, ...next, dx: offset?.dx, dy: offset?.dy }
           : null;
     }
-    paintLearnMoreUi(next);
+    paintLearnMoreUi(
+      ileLearnMoreVisiblePlacement({
+        selectedElementIds: selectedIds,
+        pointerBusy: busy,
+        placed: next,
+      }),
+    );
   }, [canvasHostOrigin, learnMoreViewport, paintLearnMoreUi]);
 
   const enqueueCanvasAskApply = useCallback((task: () => void) => {
@@ -694,6 +735,7 @@ export function ExcalidrawCanvas({
         box: { width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT },
       });
       const liveAppState = api.getAppState?.() ?? {};
+      removeThinkingChip("helios");
       upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
       askInFlightRef.current += 1;
       setAskInFlight(askInFlightRef.current);
@@ -772,17 +814,19 @@ export function ExcalidrawCanvas({
     ],
   );
 
-  const handleAskSelected = useCallback(() => {
+  const selectedCanvasElements = useCallback((): IleWorkCanvasElement[] => {
     const api = excalidrawAPIRef.current;
-    const prompt = askPrompt.trim();
-    if (!api || !prompt) return;
-    const appState = api.getAppState?.() ?? {};
+    const appState = api?.getAppState?.() ?? {};
     const selectedIds = appState.selectedElementIds ?? {};
-    const selected = (api.getSceneElements?.() ?? []).filter(
-      (el: { id?: string; isDeleted?: boolean }) =>
-        el?.id && selectedIds[el.id] && !el.isDeleted,
-    ) as IleWorkCanvasElement[];
-    if (!selected.length) return;
+    return ((api?.getSceneElements?.() ?? []) as IleWorkCanvasElement[]).filter(
+      (el) => el?.id && selectedIds[el.id] && !el.isDeleted,
+    );
+  }, []);
+
+  const handleAskSelected = useCallback(() => {
+    const prompt = askPrompt.trim();
+    const selected = selectedCanvasElements();
+    if (!prompt || !selected.length) return;
     setAskPrompt("");
     const powEvents = canvasPowCollectorRef.current.expandMore({
       prompt,
@@ -790,7 +834,44 @@ export function ExcalidrawCanvas({
     });
     if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     void runCanvasAsk({ prompt, selectedElements: selected });
-  }, [askPrompt, runCanvasAsk]);
+  }, [askPrompt, runCanvasAsk, selectedCanvasElements]);
+
+  const handleQuickAction = useCallback(
+    (action: "rephrase" | "split" | "elaborate more pls") => {
+      const api = excalidrawAPIRef.current;
+      const selected = selectedCanvasElements();
+      if (!api || !selected.length) return;
+      if (action === "split") {
+        const live = serializeIleWorkCanvasScene({
+          elements: api.getSceneElements?.() ?? [],
+          appState: api.getAppState?.() ?? {},
+          files: api.getFiles?.() ?? {},
+        });
+        const result = splitIleWorkCanvasSelectedText(live, selected);
+        if (!result.split) return;
+        applyingRemoteRef.current = true;
+        try {
+          api.updateScene({ elements: result.scene.elements });
+        } finally {
+          applyingRemoteRef.current = false;
+        }
+        const powEvents = canvasPowCollectorRef.current.expandMore({
+          prompt: "split",
+          selectedElements: selected,
+        });
+        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        return;
+      }
+      const prompt = ileWorkCanvasQuickActionPrompt(action);
+      const powEvents = canvasPowCollectorRef.current.expandMore({
+        prompt,
+        selectedElements: selected,
+      });
+      if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+      void runCanvasAsk({ prompt, selectedElements: selected });
+    },
+    [runCanvasAsk, selectedCanvasElements],
+  );
 
   const handleBoardAsk = useCallback(() => {
     const prompt = boardPrompt.trim();
@@ -896,11 +977,12 @@ export function ExcalidrawCanvas({
   }, [applyElements, applyElementsNonce, applyRemoveElementIds, isLoaded, flushPendingApply]);
 
   useEffect(() => {
-    if (!ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)) return;
-    initialSceneDataRef.current = ileWorkCanvasWithScrollToContent(
-      sanitizeSceneData(initialSceneData),
-    );
-    flushPendingApply();
+    const next = ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData));
+    initialSceneDataRef.current = next;
+    if (ileWorkCanvasHasLiveElements(initialSceneData as IleWorkCanvasScene)) {
+      userClearedRef.current = false;
+      flushPendingApply();
+    }
   }, [initialSceneData, flushPendingApply]);
 
   /**
@@ -991,7 +1073,19 @@ export function ExcalidrawCanvas({
       files: any
     ) => {
       // Store scene data for potential immediate export
+      const previous = sceneDataRef.current;
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
+      const prevLive = ileWorkCanvasHasLiveElements(previous as IleWorkCanvasScene);
+      const nextLive = ileWorkCanvasHasLiveElements(sceneData);
+      const deletedSnapshot = (sceneData.elements ?? []).some(
+        (el: { isDeleted?: boolean }) => el.isDeleted,
+      );
+      if (!applyingRemoteRef.current && prevLive && !nextLive && deletedSnapshot) {
+        userClearedRef.current = true;
+        initialSceneDataRef.current = sceneData;
+      } else if (nextLive) {
+        userClearedRef.current = false;
+      }
       sceneDataRef.current = sceneData ?? null;
       if (applyingRemoteRef.current) {
         canvasPowCollectorRef.current.syncWithoutEmit(sceneData);
@@ -1148,8 +1242,37 @@ export function ExcalidrawCanvas({
       }
     };
     const unbind = bindIleSurfaceEditorEvents(host, refreshSurface);
+    const unbindZoom = bindIleSurfaceWheelZoom(host, (input) => {
+      const api = excalidrawAPIRef.current;
+      if (!api || typeof api.updateScene !== "function") return;
+      const appState = api.getAppState?.() ?? {};
+      const next = ileWorkCanvasZoomAtPoint({
+        zoom: ileWorkCanvasZoomValue(appState),
+        scrollX: Number(appState.scrollX) || 0,
+        scrollY: Number(appState.scrollY) || 0,
+        offsetLeft: Number(appState.offsetLeft) || 0,
+        offsetTop: Number(appState.offsetTop) || 0,
+        viewportX: input.clientX,
+        viewportY: input.clientY,
+        deltaY: input.deltaY,
+      });
+      try {
+        api.updateScene({
+          appState: {
+            zoom: { value: next.zoom },
+            scrollX: next.scrollX,
+            scrollY: next.scrollY,
+          },
+        });
+      } catch (err) {
+        console.error("[ExcalidrawCanvas] PiP zoom failed:", err);
+      }
+    });
     refreshSurface();
-    return unbind;
+    return () => {
+      unbind();
+      unbindZoom();
+    };
   }, [isLoaded, scheduleCenterOnOpen, syncLearnMorePlacement, syncPromptBarPlacement, syncThinkingOverlay]);
 
   if (
@@ -1306,6 +1429,50 @@ export function ExcalidrawCanvas({
             >
               {ILE_LEARN_MORE_LABEL}
             </span>
+            <div
+              data-ile-learn-more-actions
+              className="pointer-events-auto flex items-center gap-1"
+            >
+              <button
+                type="button"
+                data-ile-learn-more-quick="rephrase"
+                aria-label="Rephrase"
+                title="Rephrase"
+                onClick={() => handleQuickAction("rephrase")}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 20v-6h-6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 9A7 7 0 0119 7.4L20 10" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.5 15A7 7 0 015 16.6L4 14" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="split"
+                aria-label="Split"
+                title="Split"
+                onClick={() => handleQuickAction("split")}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16M5 7h5v10H5zM14 7h5v10h-5z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="elaborate"
+                aria-label="Elaborate more"
+                title="Elaborate more"
+                onClick={() => handleQuickAction("elaborate more pls")}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14M7 7l10 10M17 7L7 17" />
+                </svg>
+              </button>
+            </div>
             <div className="pointer-events-auto flex items-stretch gap-1">
               <input
                 data-ile-excalidraw-ask-input

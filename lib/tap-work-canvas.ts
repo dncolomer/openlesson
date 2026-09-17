@@ -10,6 +10,7 @@ import {
   emptyIleWorkCanvasScene,
   ileWorkCanvasEmptyNearbyOrigin,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasIncomingClearsLiveScene,
   ileWorkCanvasTurnContextMessage,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
@@ -68,8 +69,9 @@ export function tapHeliosCanvasBusy(input: {
 /** Prompt context so Helios co-authors the session Work canvas. */
 export function tapWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
+  input?: Parameters<typeof ileWorkCanvasTurnContextMessage>[1],
 ): string {
-  return ileWorkCanvasTurnContextMessage(scene, { boardLabel: "SESSION" });
+  return ileWorkCanvasTurnContextMessage(scene, { ...input, boardLabel: "SESSION" });
 }
 
 /**
@@ -122,7 +124,10 @@ export function tapWorkCanvasShouldAcceptSceneUpdate(
   incoming: IleWorkCanvasScene | null | undefined,
 ): boolean {
   if (ileWorkCanvasHasLiveElements(incoming)) return true;
-  return !ileWorkCanvasHasLiveElements(current);
+  if (!ileWorkCanvasHasLiveElements(current)) return true;
+  // Mount fires an empty [] onChange — reject that wipe. A user delete
+  // keeps the elements as isDeleted and must persist.
+  return ileWorkCanvasIncomingClearsLiveScene(current, incoming);
 }
 
 /**
@@ -190,10 +195,9 @@ export function buildTapCanvasSnapshotUploadItem(
   return buildIleCanvasUploadItem(sessionId, data, timestampMs);
 }
 
-export function tapWorkCanvasAskUserMessage(input: {
-  prompt: string;
-  selectedElements?: readonly IleWorkCanvasElement[] | null;
-}): string {
+export function tapWorkCanvasAskUserMessage(
+  input: Parameters<typeof buildIleWorkCanvasAskUserMessage>[0],
+): string {
   return buildIleWorkCanvasAskUserMessage(input);
 }
 

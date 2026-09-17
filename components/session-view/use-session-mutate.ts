@@ -153,13 +153,36 @@ export function useSessionMutate(input: SessionMutateInput) {
 const [ilePromptMaterials, setIlePromptMaterials] = useState<IlePromptMaterials | null>(null);
 
 useEffect(() => {
-  if (!isProjectMode || !session) return;
+  if (!session) return;
   const meta = (session.metadata || {}) as Record<string, unknown>;
   const workspaceId =
     typeof meta.workspace_id === "string" && meta.workspace_id.trim()
       ? meta.workspace_id.trim()
       : null;
-  if (!workspaceId) return;
+  if (!workspaceId) {
+    setIlePromptMaterials({
+      workspaceId: null,
+      workspaceTitle: session.problem ?? null,
+      workspaceGoal: typeof meta.workspace_goal === "string" ? meta.workspace_goal : null,
+      rootTopic: typeof meta.root_topic === "string" ? meta.root_topic : null,
+      notes: typeof meta.notes === "string" ? meta.notes : null,
+      files: [],
+      blocks: [],
+      unusableCells: [],
+      focusedBlockId:
+        typeof meta.block_id === "string" && meta.block_id.trim()
+          ? meta.block_id.trim()
+          : null,
+      blockTitle:
+        (typeof meta.block_title === "string" ? meta.block_title : null) ||
+        session.problem ||
+        null,
+      blockDescription:
+        typeof meta.block_description === "string" ? meta.block_description : null,
+      blockLocalContext: null,
+    });
+    return;
+  }
   const focusedBlockId =
     typeof meta.block_id === "string" && meta.block_id.trim()
       ? meta.block_id.trim()
@@ -251,7 +274,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [isProjectMode, session]);
+}, [session]);
 
 const projectChapterExercisePrompt = useMemo(() => {
   if (!isProjectMode) return chapterDialoguePrompt;

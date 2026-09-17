@@ -26,9 +26,11 @@ import { thoughtContextFillRatio } from "@/lib/thought-context-auto-stash";
 import {
   ILE_PIP_POINTER_BRIDGE_EVENTS,
   bindIleSurfacePointerBridge,
+  bindIleSurfaceWheelZoom,
   cloneIleSurfaceEventForOpener,
   ileSurfaceNeedsPointerBridge,
   ileSurfacePointerBridgeDispatchTarget,
+  ileSurfaceWheelIsZoomIntent,
 } from "@/lib/ile-compact-window";
 
 const ROOT = join(__dirname, "../..");
@@ -419,5 +421,107 @@ describe("PiP Excalidraw pointer bridge (shipped)", () => {
     const theme = read("app/ile-excalidraw-theme.css");
     expect(theme).toContain("height: 100%");
     expect(theme).toContain("width: 100%");
+  });
+});
+
+describe("PiP Excalidraw wheel zoom (shipped)", () => {
+  it("zooms on ctrl/pinch and mouse-wheel, not two-finger pan", () => {
+    expect(ileSurfaceWheelIsZoomIntent({ ctrlKey: true, deltaX: 0, deltaY: 40, deltaMode: 0 })).toBe(
+      true,
+    );
+    expect(ileSurfaceWheelIsZoomIntent({ metaKey: true, deltaX: 0, deltaY: -20, deltaMode: 0 })).toBe(
+      true,
+    );
+    expect(ileSurfaceWheelIsZoomIntent({ deltaX: 0, deltaY: 120, deltaMode: 1 })).toBe(true);
+    expect(ileSurfaceWheelIsZoomIntent({ deltaX: 12, deltaY: 18, deltaMode: 0 })).toBe(false);
+
+    const sameWin = { innerWidth: 1, innerHeight: 1 };
+    const sameDoc = { defaultView: sameWin, body: {} };
+    (sameWin as { document?: unknown }).document = sameDoc;
+    let sameBound = 0;
+    const sameHost = {
+      ownerDocument: sameDoc as unknown as Document,
+      addEventListener() {
+        sameBound += 1;
+      },
+      removeEventListener() {},
+    };
+    bindIleSurfaceWheelZoom(sameHost, () => {}, sameWin as unknown as Window)();
+    expect(sameBound).toBe(0);
+
+    const listeners: Array<{
+      type: string;
+      fn: (event: Event) => void;
+      opts: AddEventListenerOptions | boolean | undefined;
+    }> = [];
+    const pipWin = {
+      innerWidth: 420,
+      innerHeight: 320,
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    const pipDoc = { defaultView: pipWin, body: {} };
+    (pipWin as { document?: unknown }).document = pipDoc;
+    const opener = { document: { body: {}, documentElement: {} } } as unknown as Window;
+    const host = {
+      ownerDocument: pipDoc as unknown as Document,
+      addEventListener(
+        type: string,
+        fn: (event: Event) => void,
+        opts?: AddEventListenerOptions | boolean,
+      ) {
+        listeners.push({ type, fn, opts: opts as AddEventListenerOptions });
+      },
+      removeEventListener(
+        type: string,
+        fn: (event: Event) => void,
+        opts?: AddEventListenerOptions | boolean,
+      ) {
+        const idx = listeners.findIndex((item) => item.type === type && item.fn === fn);
+        if (idx >= 0) listeners.splice(idx, 1);
+      },
+    };
+    const zooms: Array<{ clientX: number; clientY: number; deltaY: number }> = [];
+    const unbind = bindIleSurfaceWheelZoom(host, (input) => zooms.push(input), opener);
+    expect(listeners).toHaveLength(1);
+    expect(listeners[0]?.type).toBe("wheel");
+    expect(listeners[0]?.opts).toMatchObject({ capture: true, passive: false });
+
+    const prevented: string[] = [];
+    const pinch = Object.assign(new Event("wheel"), {
+      ctrlKey: true,
+      clientX: 80,
+      clientY: 40,
+      deltaY: -30,
+      deltaX: 0,
+      deltaMode: 0,
+      preventDefault() {
+        prevented.push("pinch");
+      },
+      stopImmediatePropagation() {
+        prevented.push("stop");
+      },
+    });
+    listeners[0]!.fn(pinch);
+    expect(prevented).toEqual(["pinch", "stop"]);
+    expect(zooms).toEqual([{ clientX: 80, clientY: 40, deltaY: -30 }]);
+
+    const pan = Object.assign(new Event("wheel"), {
+      ctrlKey: false,
+      clientX: 10,
+      clientY: 10,
+      deltaY: 18,
+      deltaX: 12,
+      deltaMode: 0,
+    });
+    listeners[0]!.fn(pan);
+    expect(zooms).toHaveLength(1);
+
+    unbind();
+    expect(listeners).toHaveLength(0);
+    expect(ILE_PIP_POINTER_BRIDGE_EVENTS).not.toContain("wheel");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("bindIleSurfaceWheelZoom");
+    expect(canvas).toContain("ileWorkCanvasZoomAtPoint");
   });
 });

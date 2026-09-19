@@ -2,6 +2,7 @@
 
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
+import { SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE } from "@/lib/block-skill-grid";
 import {
   ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS,
   ILE_CONTINUE_MAP_PREVIEW_LABELS,
@@ -47,6 +48,7 @@ export function IleContinueMapPreview({
           nodes={nodes}
           selectedNodeId={null}
           onSelectNode={() => {}}
+          defaultZoomAtReference={SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE}
           canEdit={false}
           viewOnly
           showMinimap={false}

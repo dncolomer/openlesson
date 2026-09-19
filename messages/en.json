@@ -806,6 +806,14 @@
     "insightSlotMaxCheap": "Fewer crafts",
     "insightSlotMaxExpensive": "More crafts this turn",
     "insightSlotMaxDesc": "Cap on insights you can keep at End turn. Still limited by leftover unused PoW — never above this slider.",
+    "minInsightsPerChapter": "Insights required per chapter",
+    "minInsightsPerChapterCheap": "One insight",
+    "minInsightsPerChapterExpensive": "More insights to End turn",
+    "minInsightsPerChapterDesc": "Each active chapter needs at least this many accepted canvas insights before End turn can mark them done.",
+    "canvasTimer": "Work canvas timer",
+    "canvasTimerCheap": "10 min",
+    "canvasTimerExpensive": "60 min",
+    "canvasTimerDesc": "Countdown on each Work canvas. At zero the board clears; crafted insights stay.",
     "gatherMax": "Gather appetite",
     "gatherMaxCheap": "Fewer forages",
     "gatherMaxExpensive": "More forages this session",
@@ -821,7 +829,7 @@
     "pregameTabEconomy": "Map & Economy",
     "pregameTabDifficulty": "Difficulty",
     "pregameTabOther": "Other Settings",
-    "difficultyHint": "Turning a toggle off makes the session harder.",
+    "difficultyHint": "Turning a toggle off, raising the insight quota, or shortening the canvas timer makes the session harder.",
     "difficultyThoughtsPool": "Insight recommendations from thoughts",
     "difficultyThoughtsPoolDesc": "When on, End turn can suggest insights from the thoughts pool. Off is harder — you type every insight yourself.",
     "difficultyParallelWork": "Parallel Work",
@@ -2773,8 +2781,9 @@
   },
   "onboardingGuide": {
     "ile": {
-      "kicker": "Mission briefing",
-      "title": "Work in turns",
+      "kicker": "Session goal",
+      "title": "Craft {count} insights",
+      "titleOne": "Craft 1 insight",
       "progressLabel": "Onboarding steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
@@ -2783,23 +2792,25 @@
       "step1": {
         "title": "Generate Work in turns",
         "imageAlt": "Open a chapter and do work",
-        "body": "Open a chapter to start a turn. Speak, write, and draw — that is your Work for this turn."
+        "body": "Open a chapter to start a turn. Speak, write, and draw on the Work canvas — that is your Work. A timer is running: when it hits zero the canvas clears, but crafted insights stay."
       },
       "step2": {
-        "title": "Create Insights",
-        "titleProject": "Create Insights",
-        "imageAlt": "Craft insights at end of turn",
-        "body": "When the turn is done, press End turn. You can create up to three Insights from what you learned — or none. That is okay.",
-        "bodyProject": "When the turn is done, press End turn. You can create up to three Insights from what you learned — or none. That is okay."
+        "title": "Craft insights on the canvas",
+        "titleProject": "Craft insights on the canvas",
+        "imageAlt": "Craft insights from a canvas selection",
+        "body": "Press craft insight on the Work canvas. Write what you learned and submit it. A valid insight unlocks on the Work header and the map.",
+        "bodyProject": "Press craft insight on the Work canvas. Write what you learned and submit it. A valid insight unlocks on the Work header and the map."
       },
       "step3": {
         "title": "Then move on",
         "titleProject": "Then move on",
-        "highlight": "Generate Work in turns. Create Insights. Then End turn and start the next one.",
-        "body": "The loop is simple. Generate Work in a turn — speak your thoughts out loud, open a chapter, and use tools on the map. Press End turn to Create Insights from that work (up to three, or skip). Then continue with the next turn, or save and leave.\n\nPan, zoom, and open a chapter to move in. You win by completing chapters, and this map can be further built. Press Start to begin.",
-        "bodyProject": "The loop is simple. Generate Work in a turn — speak your thoughts out loud, open a chapter, and use tools on the map. Press End turn to Create Insights from that work (up to three, or skip). Then continue with the next turn, or save and leave.\n\nPan, zoom, and open a chapter to move in. You win by completing chapters, and this map can be further built. Press Start to begin.",
-        "quoteText": "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.",
-        "quoteAuthor": "Sun Tzu",
+        "highlight": "",
+        "slotsLabel": "{count} empty insight slots",
+        "emptySlot": "Empty",
+        "body": "You craft insights by working on the different areas of the map.",
+        "bodyProject": "You craft insights by working on the different areas of the map.",
+        "quoteText": "",
+        "quoteAuthor": "",
         "start": "Start",
         "starting": "Deploying…"
       }

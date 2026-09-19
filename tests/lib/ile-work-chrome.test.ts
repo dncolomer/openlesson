@@ -350,15 +350,22 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     );
     expect(submitTurn).toContain("setHeliosWidgetOpen(false)");
     expect(submitTurn).toContain("setCraftingInsightsOpen(true)");
+    expect(submitTurn).toContain("evaluateIleEndTurnInsightGate");
+    expect(submitTurn).toContain("if (!gate.canComplete) return");
     expect(submitTurn.indexOf("setHeliosWidgetOpen(false)")).toBeLessThan(
       submitTurn.indexOf("setCraftingInsightsOpen(true)"),
     );
     expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeLessThan(
       submitTurn.indexOf("closeIleOpenWorkTurn"),
     );
+    expect(submitTurn.indexOf("if (!gate.canComplete) return")).toBeLessThan(
+      submitTurn.indexOf("closeIleOpenWorkTurn"),
+    );
     expect(submitTurn.indexOf("setDockLoadingIds(awaitingIds)")).toBeLessThan(
       submitTurn.indexOf("closeIleOpenWorkTurn"),
     );
+    expect(submitTurn).toContain("ileEndTurnChaptersToMarkDone");
+    expect(submitTurn).toContain("handleMarkChapterDone({ stepId, closeOverride: true })");
     expect(view).toContain("setCraftingInsightsOpen(true)");
     expect(view).toContain("data-ile-compact-insight-craft");
     expect(view).toContain("turnInsightCraft()");
@@ -371,30 +378,31 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("IleSessionInsightsPanel");
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
     expect(craft).toContain("data-ile-turn-insight-craft");
-    expect(craft).toContain("data-ile-turn-insight-craft-still");
+    expect(craft).toContain("data-ile-end-turn-screen");
+    expect(craft).toContain("data-ile-end-turn-blocked-reason");
     expect(craft).toContain("data-ile-turn-insight-chapters");
-    expect(craft).toContain("ILE_TURN_INSIGHT_DOCK_LINK_LABEL");
     expect(craft).toContain("data-ile-turn-insight-chapter-list");
     expect(craft).toContain("dockedChapters.map");
-    expect(craft).toContain("data-ile-chapter-chip-loading");
-    expect(craft).toContain('status === "loading"');
-    expect(craft).toContain("animate-ile-dock-indeterminate");
+    expect(craft).toContain("IleWorkDockChip");
+    expect(craft).toContain("compact");
+    expect(craft).not.toContain("bg-amber-300/10");
+    expect(craft).not.toContain("text-amber-100");
+    expect(craft).not.toContain("data-ile-turn-insight-draft");
+    expect(craft).not.toContain("data-ile-turn-insight-evaluate");
+    expect(craft).not.toContain("Thoughts pool");
     expect(craft).not.toContain("Link to an active chapter");
     expect(view).toContain("dockedChapters={openWorkDockLabels}");
-    expect(craft).toContain("data-ile-turn-insight-path=\"type\"");
-    expect(craft).toContain("data-ile-turn-insight-path=\"pool\"");
     expect(craft).toContain("Continue with the next turn");
     expect(craft).toContain("Save and go out of the workspace");
-    expect(craft).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
-    expect(craft).toContain("buildIleThoughtsPoolCandidateRequest");
+    expect(craft).toContain("Back to work");
     expect(craft).not.toContain("DialogFrame");
     expect(craft).not.toContain("portal={portal}");
     expect(chrome).toContain("data-ile-insight-craft-widget");
     expect(chrome).toContain("ileMapInsightCraftFrameClass()");
     expect(chrome).toContain("data-ile-work-dock-covered");
-    expect(chrome).toContain('title="Craft insights"');
+    expect(chrome).toContain('title="End turn"');
     const craftFrame = chrome.slice(
-      chrome.indexOf('title="Craft insights"'),
+      chrome.indexOf('title="End turn"'),
       chrome.indexOf("{insightCraft}"),
     );
     expect(craftFrame).not.toContain("onMinimize");
@@ -411,6 +419,53 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(world).toContain("resolveIleWorkAestheticImage");
     expect(world).toContain("aestheticImageForId");
     expect(world).toContain("hideIcon={Boolean(tileAesthetic)}");
+    expect(world).toContain("IleChapterInsightCountBadge");
+    expect(view).toContain("IleInsightTrophyStrip");
+    expect(view).toContain("slotCount={minInsightsPerChapter}");
+    expect(view).toContain("workCanvasHeaderLeading={workCanvasInsightSlots}");
+    expect(view).toContain("compactHeaderLeading: workCanvasInsightSlots");
+    expect(view).toContain("compactHeaderExtra: workCanvasHeaderExtra");
+    expect(view).toContain("IleMapInsightsWidget");
+    expect(view).toContain("workCanvasHeaderExtra");
+    expect(chrome).toContain("workCanvasHeaderExtra");
+    expect(chrome).toContain("workCanvasHeaderLeading");
+    expect(chrome).toContain("headerLeading={workCanvasHeaderLeading}");
+    expect(chrome).toContain("mapInsightsWidget");
+    const trophies = read("components/session-view/ile-insight-trophies.tsx");
+    expect(trophies).toContain("data-ile-insight-trophy");
+    expect(trophies).toContain("data-ile-insight-slot-empty");
+    expect(trophies).toContain("data-ile-map-insights-widget");
+    expect(trophies).toContain("ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3");
+    expect(trophies).toContain('data-ile-insight-slot-card="empty"');
+    expect(trophies).toContain("ILE_INSIGHT_EMPTY_SLOT_LABEL");
+    expect(trophies).not.toContain("Craft insights on the Work canvas.");
+    expect(trophies).toContain("data-ile-work-canvas-timer");
+    expect(trophies).toContain("data-ile-insight-trophy-icon");
+    expect(trophies).toContain("data-ile-chapter-insight-count");
+    const expand = read("components/session-view/ile-canvas-craft-insight.tsx");
+    expect(expand).toContain("data-ile-craft-insight");
+    expect(expand).toContain("ILE_CRAFT_INSIGHT_LABEL");
+    const enHelp = JSON.parse(read("messages/en.json")) as {
+      onboardingGuide: {
+        ile: {
+          title: string;
+          titleOne: string;
+          step3: { body: string; highlight: string; quoteText: string };
+        };
+      };
+    };
+    expect(enHelp.onboardingGuide.ile.title).toMatch(/Craft \{count\} insights/);
+    expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Craft 1 insight/);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/different areas of the map/i);
+    expect(enHelp.onboardingGuide.ile.step3.highlight).toBe("");
+    expect(enHelp.onboardingGuide.ile.step3.quoteText).toBe("");
+    const guide = read("components/SessionOnboardingGuide.tsx");
+    expect(guide).toContain('variant === "ile"');
+    expect(guide).toContain("IleInsightEmptySlots");
+    expect(guide).toContain("insightGoalCount");
+    expect(trophies).toContain("data-ile-welcome-insight-slots");
+    expect(trophies).toContain("IleInsightEmptySlots");
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
     expect(badges).toContain("hideIcon");
     expect(view).toContain("parseIleOpenWorkIdsFromMetadata");
@@ -420,6 +475,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(phase).toContain("applyIleOpenWorkIdsToMetadata");
     expect(phase).toContain("openWorkIdsRef.current");
     const frame = read("components/session-view/ile-chapter-widget-frame.tsx");
+    expect(frame).toContain("headerLeading");
     expect(frame).toContain("data-ile-helios-widget-minimize");
     expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
     expect(frame).not.toContain("onToggleWide");
@@ -441,7 +497,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "dock: End turn double border + ArrowRight; no stem; no Review work; no Global resources square",
         "PiP: data-ile-compact-insight-craft + portal=false",
         "settings: data-ile-session-settings full-screen route, not DialogFrame",
-        "help: Generate Work in turns / Create Insights / next turn",
+        "help: session goal Craft X insights + empty slots; craft by working map areas",
       ].join("\n"),
     );
     writeScratch(
@@ -449,10 +505,21 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
       [
         "PoW bar: dual pills + Insights + quieter Global resources; no Review work",
         "bottom-right: End turn double border + ArrowRight; no stem; no Review work",
-        "PiP compact hosts crafting insights in-window (portal=false)",
+        "PiP compact hosts End-turn overlay in-window (portal=false)",
         "Welcome settings is a dedicated /settings route, not a map DialogFrame",
         `endTurnLabel=${ILE_END_TURN_LABEL}`,
       ].join("\n"),
+    );
+    writeScratch(
+      "ile-turn-insights-chrome.txt",
+      [
+        "prompt bar: Compress work + craft insight (not Expand More)",
+        "end-turn: data-ile-end-turn-screen, no draft/evaluate/thoughts-pool form",
+        "header: empty insight slots left of Work; timer on the right",
+        "map: data-ile-map-insights-widget 3 empty full-width cards",
+        "tiles: data-ile-chapter-insight-count",
+        "help: Craft X insights + empty slots; map areas; Sun Tzu gone",
+      ].join("\n") + "\n",
     );
     writeScratch(
       "ile-work-chrome.txt",

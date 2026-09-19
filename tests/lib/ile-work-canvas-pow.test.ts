@@ -165,6 +165,13 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     expect(board?.toolAction).toBe("board_prompt");
     expect(board?.metadata.prompt).toContain("first swap");
 
+    const compress = buildIleWorkCanvasAskPowEvent("compress_work", {
+      prompt: "Compress work",
+      selectedElements: [el("text", "sel", { text: "heap parent" })],
+    });
+    expect(compress?.toolAction).toBe("compress_work");
+    expect(compress?.metadata.prompt).toBe("Compress work");
+
     const secondDelete = classifyIleWorkCanvasSceneDiff(
       scene([el("rectangle", "gone")]),
       scene([]),
@@ -195,6 +202,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       "multi_select",
       "expand_more",
       "board_prompt",
+      "compress_work",
     ]);
     expect(distinct.size).toBe(ILE_WORK_CANVAS_POW_ACTIONS.length);
 
@@ -324,6 +332,7 @@ describe("Work-canvas PoW host wiring (shipped)", () => {
     expect(canvas).toContain("IleWorkCanvasPowCollector");
     expect(canvas).toContain("expandMore");
     expect(canvas).toContain("boardPrompt");
+    expect(canvas).toContain("compressWork");
     expect(canvas).toContain("ileWorkCanvasGestureBusy");
     expect(canvas).not.toContain("lastEl && typeof lastEl.type");
 

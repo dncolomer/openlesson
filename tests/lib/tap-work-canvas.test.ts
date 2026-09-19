@@ -199,9 +199,12 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).toContain("scheduleCenterOnOpen");
     expect(canvas).toContain("scrollToContent");
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
-    expect(canvas).toContain("style={{ top: promptBarTop }}");
+    expect(canvas).toContain("top: promptBarTop");
+    expect(canvas).toContain("width: promptBarWidth");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).toContain("handleBoardAsk");
+    expect(canvas).toContain("data-ile-compress-work");
+    expect(canvas).toContain("handleCompressWork");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
 
     const propsType = phases.slice(

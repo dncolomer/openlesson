@@ -25,16 +25,22 @@ export function IleCompactStashWindow({
   children,
   isScreenSharing = false,
   onStartShare,
+  headerLeading,
+  headerExtra,
 }: {
   children: ReactNode;
   isScreenSharing?: boolean;
   onStartShare?: () => void | Promise<boolean | void>;
+  headerLeading?: ReactNode;
+  headerExtra?: ReactNode;
 }) {
   const showShare = shouldShowIleMiniShareCta(isScreenSharing);
   const shareLabel = ileMiniModeShareCtaLabel();
 
   return (
     <IleChapterPipFrame
+      headerLeading={headerLeading}
+      headerExtra={headerExtra}
       footer={
         showShare ? (
           <button

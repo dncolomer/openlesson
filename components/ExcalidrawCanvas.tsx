@@ -19,11 +19,18 @@ import {
 } from "@/lib/ile-dialogue-turn";
 import {
   clampIleLearnMorePosition,
+  compressIleWorkCanvasScene,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
+  ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
+  ILE_CANVAS_TIMER_RESET_LOADING_MS,
+  ILE_COMPRESS_WORK_LABEL,
+  ILE_COMPRESS_WORK_PROMPT,
   ILE_LEARN_MORE_BOX_WIDTH,
   ILE_LEARN_MORE_LABEL,
+  ileWorkCanvasCanCompress,
   ileCanvasPromptBarTop,
+  ileCanvasPromptBarWidth,
   ileLearnMoreFollowOffset,
   ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
@@ -54,6 +61,12 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
+import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
+import {
+  IleCanvasCraftInsightForm,
+  IleCraftInsightButton,
+  type IleCanvasCraftInsightConfig,
+} from "@/components/session-view/ile-canvas-craft-insight";
 import {
   IleWorkCanvasPowCollector,
   ileWorkCanvasGestureBusy,
@@ -171,6 +184,7 @@ export interface ExcalidrawCanvasProps {
     prompt: string;
     selectedElements: IleWorkCanvasElement[];
     scene: IleWorkCanvasScene;
+    kind?: "ask" | "compress";
   }) => Promise<{
     text: string;
     elements?: IleWorkCanvasSkeleton[] | null;
@@ -181,6 +195,11 @@ export interface ExcalidrawCanvasProps {
   peerId?: IleWorkCanvasPeerId;
   /** Helios/XAI in-flight (TAP wait, ILE send) — same overlay chip as ask-about-selection. */
   heliosBusy?: boolean;
+  /** ILE: craft an insight linked to this chapter. */
+  craftInsight?: IleCanvasCraftInsightConfig | null;
+  /** When nonce changes, replace the live board (timer expiry reset). */
+  replaceScene?: IleWorkCanvasScene | null;
+  replaceSceneNonce?: string | number | null;
 }
 
 // Excalidraw's appState contains runtime-only fields like collaborators
@@ -223,6 +242,9 @@ export function ExcalidrawCanvas({
   boardId = null,
   peerId = "work",
   heliosBusy = false,
+  craftInsight = null,
+  replaceScene = null,
+  replaceSceneNonce = null,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
@@ -232,7 +254,12 @@ export function ExcalidrawCanvas({
   const [isLoaded, setIsLoaded] = useState(false);
   const [askPrompt, setAskPrompt] = useState("");
   const [boardPrompt, setBoardPrompt] = useState("");
+  const [hasLiveCanvas, setHasLiveCanvas] = useState(() =>
+    ileWorkCanvasCanCompress(initialSceneData as IleWorkCanvasScene),
+  );
   const [askInFlight, setAskInFlight] = useState(0);
+  const [craftInsightOpen, setCraftInsightOpen] = useState(false);
+  const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [learnMoreUi, setLearnMoreUi] = useState<{
     count: number;
     left: number;
@@ -240,6 +267,7 @@ export function ExcalidrawCanvas({
   } | null>(null);
   const [learnMoreDragging, setLearnMoreDragging] = useState(false);
   const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
+  const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
   const [thinkingTick, setThinkingTick] = useState(0);
   const [thinkingChips, setThinkingChips] = useState<
     Array<{ turnId: string; x: number; y: number; left: number; top: number; zoom: number }>
@@ -394,7 +422,11 @@ export function ExcalidrawCanvas({
       toolbarRect ? { bottom: toolbarRect.bottom } : null,
       { top: hostRect.top },
     );
+    const width = ileCanvasPromptBarWidth(
+      toolbarRect ? { width: toolbarRect.width } : null,
+    );
     setPromptBarTop((prev) => (prev === top ? prev : top));
+    setPromptBarWidth((prev) => (prev === width ? prev : width));
   }, []);
 
   const setExcalidrawAPI = useCallback((api: ExcalidrawAPIRef) => {
@@ -721,7 +753,12 @@ export function ExcalidrawCanvas({
   }, []);
 
   const runCanvasAsk = useCallback(
-    async (input: { prompt: string; selectedElements: IleWorkCanvasElement[] }) => {
+    async (input: {
+      prompt: string;
+      selectedElements: IleWorkCanvasElement[];
+      kind?: "ask" | "compress";
+      replaceWithSummary?: boolean;
+    }) => {
       const ask = onAskSelectedRef.current;
       const api = excalidrawAPIRef.current;
       const prompt = input.prompt.trim();
@@ -749,22 +786,27 @@ export function ExcalidrawCanvas({
           appState: api.getAppState?.() ?? {},
           files: api.getFiles?.() ?? {},
         });
-        const next = mergeIleXaiTurnOntoLiveWorkCanvas(
-          live,
-          {
-            text: payload.text,
-            elements: payload.elements,
-            turnId,
-            origin: payload.origin,
-          },
-          {
-            fallbackOrigin: origin,
-            reserved: reservedThinkingOrigins(turnId),
-          },
-        );
+        const next = input.replaceWithSummary
+          ? compressIleWorkCanvasScene(live, payload.text)
+          : mergeIleXaiTurnOntoLiveWorkCanvas(
+              live,
+              {
+                text: payload.text,
+                elements: payload.elements,
+                turnId,
+                origin: payload.origin,
+              },
+              {
+                fallbackOrigin: origin,
+                reserved: reservedThinkingOrigins(turnId),
+              },
+            );
         applyingRemoteRef.current = true;
         try {
-          api.updateScene({ elements: next.elements });
+          api.updateScene({
+            elements: next.elements,
+            ...(input.replaceWithSummary ? { appState: next.appState } : {}),
+          });
         } finally {
           applyingRemoteRef.current = false;
         }
@@ -784,10 +826,11 @@ export function ExcalidrawCanvas({
           prompt,
           selectedElements: input.selectedElements,
           scene,
+          kind: input.kind,
         });
         await enqueueCanvasAskApply(() => {
           applyReply({
-            text: reply?.text || "No reply",
+            text: reply?.text || (input.replaceWithSummary ? "" : "No reply"),
             elements: reply?.elements,
             origin: ileWorkCanvasFiniteOrigin(reply?.origin),
           });
@@ -795,9 +838,11 @@ export function ExcalidrawCanvas({
         return true;
       } catch (err) {
         console.error("[ExcalidrawCanvas] Ask XAI failed:", err);
-        await enqueueCanvasAskApply(() => {
-          applyReply({ text: "Learn more failed. Try again." });
-        });
+        if (!input.replaceWithSummary) {
+          await enqueueCanvasAskApply(() => {
+            applyReply({ text: "Learn more failed. Try again." });
+          });
+        }
         return false;
       } finally {
         removeThinkingChip(turnId);
@@ -881,6 +926,29 @@ export function ExcalidrawCanvas({
     if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     void runCanvasAsk({ prompt, selectedElements: [] });
   }, [boardPrompt, runCanvasAsk]);
+
+  const handleCompressWork = useCallback(() => {
+    const api = excalidrawAPIRef.current;
+    if (!api || askInFlightRef.current > 0) return;
+    const scene = serializeIleWorkCanvasScene({
+      elements: api.getSceneElements?.() ?? [],
+      appState: api.getAppState?.() ?? {},
+      files: api.getFiles?.() ?? {},
+    });
+    if (!ileWorkCanvasCanCompress(scene)) return;
+    const selected = scene.elements.filter((el) => !el.isDeleted);
+    const powEvents = canvasPowCollectorRef.current.compressWork({
+      prompt: ILE_COMPRESS_WORK_LABEL,
+      selectedElements: selected,
+    });
+    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+    void runCanvasAsk({
+      prompt: ILE_COMPRESS_WORK_PROMPT,
+      selectedElements: selected,
+      kind: "compress",
+      replaceWithSummary: true,
+    });
+  }, [runCanvasAsk]);
 
   const handleLearnMorePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -975,6 +1043,51 @@ export function ExcalidrawCanvas({
     };
     flushPendingApply();
   }, [applyElements, applyElementsNonce, applyRemoveElementIds, isLoaded, flushPendingApply]);
+
+  useEffect(() => {
+    if (replaceSceneNonce == null || replaceSceneNonce === lastReplaceNonceRef.current) {
+      return;
+    }
+    lastReplaceNonceRef.current = replaceSceneNonce;
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+    const turnId = `timer-reset-${String(replaceSceneNonce)}`;
+    const liveElements = (api.getSceneElements?.() ?? []) as IleWorkCanvasElement[];
+    const origin = ileWorkCanvasEmptyNearbyOriginWithReserved({
+      elements: liveElements,
+      reserved: reservedThinkingOrigins(),
+      box: { width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT },
+    });
+    const liveAppState = api.getAppState?.() ?? {};
+    upsertThinkingChip(projectThinkingChip(turnId, origin, liveAppState));
+    const timer = window.setTimeout(() => {
+      const next = sanitizeSceneData(replaceScene ?? { elements: [], appState: {}, files: {} });
+      applyingRemoteRef.current = true;
+      try {
+        api.updateScene({ elements: next.elements, appState: next.appState });
+      } finally {
+        applyingRemoteRef.current = false;
+      }
+      canvasPowCollectorRef.current.syncWithoutEmit({
+        elements: next.elements,
+        appState: api.getAppState?.() ?? next.appState,
+        files: api.getFiles?.() ?? next.files,
+      });
+      onSceneChangeRef.current?.(next);
+      removeThinkingChip(turnId);
+    }, ILE_CANVAS_TIMER_RESET_LOADING_MS);
+    return () => {
+      window.clearTimeout(timer);
+      removeThinkingChip(turnId);
+    };
+  }, [
+    projectThinkingChip,
+    removeThinkingChip,
+    replaceScene,
+    replaceSceneNonce,
+    reservedThinkingOrigins,
+    upsertThinkingChip,
+  ]);
 
   useEffect(() => {
     const next = ileWorkCanvasWithScrollToContent(sanitizeSceneData(initialSceneData));
@@ -1077,6 +1190,7 @@ export function ExcalidrawCanvas({
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
       const prevLive = ileWorkCanvasHasLiveElements(previous as IleWorkCanvasScene);
       const nextLive = ileWorkCanvasHasLiveElements(sceneData);
+      setHasLiveCanvas(nextLive);
       const deletedSnapshot = (sceneData.elements ?? []).some(
         (el: { isDeleted?: boolean }) => el.isDeleted,
       );
@@ -1497,30 +1611,58 @@ export function ExcalidrawCanvas({
           <form
             data-ile-canvas-prompt-bar
             data-ile-canvas-prompt-bar-busy={askInFlight > 0 ? "true" : undefined}
-            className="pointer-events-none absolute inset-x-0 z-[58] flex justify-center px-16"
-            style={{ top: promptBarTop }}
+            className="pointer-events-none absolute left-1/2 z-[58] flex -translate-x-1/2 justify-center"
+            style={{ top: promptBarTop, width: promptBarWidth }}
             onSubmit={(event) => {
               event.preventDefault();
               void handleBoardAsk();
             }}
           >
-            <div className="pointer-events-auto flex w-full max-w-xl items-stretch gap-1 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
-              <input
-                data-ile-canvas-prompt-bar-input
-                type="text"
-                value={boardPrompt}
-                onChange={(event) => setBoardPrompt(event.target.value)}
-                placeholder="Put something on the canvas"
-                className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
-              />
-              <button
-                type="submit"
-                data-ile-canvas-prompt-bar-send
-                disabled={!boardPrompt.trim()}
-                className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Send
-              </button>
+            <div className="pointer-events-auto flex w-full flex-col gap-1.5">
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex min-w-0 flex-1 items-stretch gap-1 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+                  <input
+                    data-ile-canvas-prompt-bar-input
+                    type="text"
+                    value={boardPrompt}
+                    onChange={(event) => setBoardPrompt(event.target.value)}
+                    placeholder="Put something on the canvas"
+                    className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    data-ile-canvas-prompt-bar-send
+                    disabled={!boardPrompt.trim()}
+                    className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  data-ile-compress-work
+                  disabled={!hasLiveCanvas || askInFlight > 0}
+                  onClick={handleCompressWork}
+                  className="shrink-0 rounded-none border border-white bg-white px-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
+                >
+                  {ILE_COMPRESS_WORK_LABEL}
+                </button>
+                {craftInsight ? (
+                  <IleCraftInsightButton
+                    usable={ileCanvasCraftInsightUsable()}
+                    onClick={() => setCraftInsightOpen(true)}
+                  />
+                ) : null}
+              </div>
+              {craftInsight ? (
+                <IleCanvasCraftInsightForm
+                  open={craftInsightOpen}
+                  enabled={ileCanvasCraftInsightUsable()}
+                  selectedElements={selectedCanvasElements()}
+                  config={craftInsight}
+                  onClose={() => setCraftInsightOpen(false)}
+                />
+              ) : null}
             </div>
           </form>
         ) : null}

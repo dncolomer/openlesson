@@ -231,7 +231,7 @@ describe("shipped insight surface wiring", () => {
       "utf8",
     );
     const craft = fs.readFileSync(
-      path.join(REPO_ROOT, "components/session-view/ile-turn-insight-craft.tsx"),
+      path.join(REPO_ROOT, "components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
     );
     expect(create).toContain("buildInsightCreateInsert");
@@ -240,8 +240,12 @@ describe("shipped insight surface wiring", () => {
     expect(list).toContain('searchParams.get("sessionId")');
     expect(list).toContain('.eq("session_id", sessionId)');
     expect(evaluate).toContain("allowIleTypedInsightCreate");
-    expect(craft).toContain("insightPublicPath");
     expect(craft).toContain("buildIleTurnInsightPersistPayload");
+    const trophies = fs.readFileSync(
+      path.join(REPO_ROOT, "components/session-view/ile-insight-trophies.tsx"),
+      "utf8",
+    );
+    expect(trophies).toContain("insightPublicPath");
     expect(sessionView).toContain("IleTurnInsightCraft");
     expect(sessionView).toContain("insightsSessionListUrl");
     expect(insightDetail).toContain("insightPublicPath");

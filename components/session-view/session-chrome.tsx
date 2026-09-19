@@ -13,6 +13,7 @@ import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
   ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
+  ILE_MAP_INSIGHTS_WIDGET_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
   ILE_POW_RESOURCE_BAR_CLASS,
@@ -64,6 +65,9 @@ export type SessionChromeProps = {
   insightCraft?: ReactNode;
   insightCraftOpen?: boolean;
   onMinimizeInsightCraft?: () => void;
+  workCanvasHeaderExtra?: ReactNode;
+  workCanvasHeaderLeading?: ReactNode;
+  mapInsightsWidget?: ReactNode;
   introOpen: boolean;
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
@@ -138,6 +142,9 @@ export function SessionChrome({
   insightCraft = null,
   insightCraftOpen = false,
   onMinimizeInsightCraft,
+  workCanvasHeaderExtra = null,
+  workCanvasHeaderLeading = null,
+  mapInsightsWidget = null,
   introOpen,
   introWidget,
   onCloseSessionModal,
@@ -297,6 +304,9 @@ export function SessionChrome({
         <div data-ile-map-stage className="absolute inset-0 z-0">
           {map}
         </div>
+        {!workCoversMap && mapInsightsWidget ? (
+          <div className={ILE_MAP_INSIGHTS_WIDGET_CLASS}>{mapInsightsWidget}</div>
+        ) : null}
 
         {error && !showWelcomeModal ? (
           <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
@@ -365,6 +375,8 @@ export function SessionChrome({
                 fill
                 wide
                 onMinimize={onMinimizeHelios ?? onCloseHelios}
+                headerLeading={workCanvasHeaderLeading}
+                headerExtra={workCanvasHeaderExtra}
               >
                 {workCanvas}
               </IleChapterWidgetFrame>
@@ -456,7 +468,7 @@ export function SessionChrome({
               <IleChapterWidgetFrame
                 fill
                 wide
-                title="Craft insights"
+                title="End turn"
               >
                 {insightCraft}
               </IleChapterWidgetFrame>

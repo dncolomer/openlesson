@@ -7,7 +7,10 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { BlockCircularEditForm } from "@/components/block-skill-grid/block-circular-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { buildSkillGridLayout } from "@/lib/block-skill-grid";
+import {
+  buildSkillGridLayout,
+  SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE,
+} from "@/lib/block-skill-grid";
 import {
   ensureChapterGridPositions,
   sessionStepsToSkillGridNodes,
@@ -62,6 +65,7 @@ interface ChapterMapPanelProps {
   onSelectBlockedCell?: (selected: boolean) => void;
   onVoicePadChange?: (pad: IleVoicePadSpec | null) => void;
   voicePadActionRef?: { current: (id: BlockCircularMenuActionId) => void };
+  insightCountByChapterId?: Readonly<Record<string, number>> | null;
 }
 
 export function ChapterMapPanel({
@@ -97,6 +101,7 @@ export function ChapterMapPanel({
   onSelectBlockedCell,
   onVoicePadChange,
   voicePadActionRef,
+  insightCountByChapterId = null,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -355,6 +360,7 @@ export function ChapterMapPanel({
         nodes={nodes}
         selectedNodeId={selectedStepId}
         focusedNodeId={activeStep?.id ?? null}
+        defaultZoomAtReference={SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE}
         onSelectNode={(id) => {
           setSelectedStepId(id);
         }}
@@ -399,6 +405,7 @@ export function ChapterMapPanel({
         openWorkIds={openWorkIds}
         aestheticImages={aestheticImages}
         workAestheticById={workAestheticById}
+        insightCountByChapterId={insightCountByChapterId}
       />
       {editingStepId ? (
         <BlockCircularEditForm

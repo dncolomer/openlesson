@@ -33,6 +33,7 @@ export const ILE_WORK_CANVAS_POW_ACTIONS = [
   "multi_select",
   "expand_more",
   "board_prompt",
+  "compress_work",
 ] as const;
 
 export type IleWorkCanvasPowAction = (typeof ILE_WORK_CANVAS_POW_ACTIONS)[number];
@@ -61,7 +62,7 @@ export type IleWorkCanvasPowEvent = {
   metadata: Record<string, unknown>;
 };
 
-export type IleWorkCanvasAskPowKind = "expand_more" | "board_prompt";
+export type IleWorkCanvasAskPowKind = "expand_more" | "board_prompt" | "compress_work";
 
 function normalizeToolToken(value: string | null | undefined): string {
   return String(value || "")
@@ -393,7 +394,9 @@ export function buildIleWorkCanvasAskPowEvent(
     selectedIds?: readonly string[] | null;
   } = {},
 ): IleWorkCanvasPowEvent | null {
-  if (kind !== "expand_more" && kind !== "board_prompt") return null;
+  if (kind !== "expand_more" && kind !== "board_prompt" && kind !== "compress_work") {
+    return null;
+  }
   const selected = [...(input.selectedElements ?? [])];
   const ids =
     input.selectedIds?.length
@@ -402,6 +405,7 @@ export function buildIleWorkCanvasAskPowEvent(
   const prompt = String(input.prompt || "").trim();
   if (kind === "expand_more" && !ids.length && !prompt) return null;
   if (kind === "board_prompt" && !prompt) return null;
+  if (kind === "compress_work" && !ids.length && !prompt) return null;
   return {
     toolName: ILE_WORK_CANVAS_POW_TOOL_NAME,
     toolAction: kind,
@@ -574,6 +578,17 @@ export class IleWorkCanvasPowCollector {
     selectedElements?: readonly IleWorkCanvasElement[] | null;
   }): IleWorkCanvasPowEvent[] {
     const event = buildIleWorkCanvasAskPowEvent("board_prompt", input);
+    return event ? [event] : [];
+  }
+
+  compressWork(input: {
+    prompt?: string | null;
+    selectedElements?: readonly IleWorkCanvasElement[] | null;
+  } = {}): IleWorkCanvasPowEvent[] {
+    const event = buildIleWorkCanvasAskPowEvent("compress_work", {
+      prompt: input.prompt || "Compress work",
+      selectedElements: input.selectedElements,
+    });
     return event ? [event] : [];
   }
 }

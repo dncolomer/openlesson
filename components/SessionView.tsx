@@ -37,10 +37,15 @@ import {
   restoreIleOpenWorkIds,
 } from "@/lib/ile-pow-spend";
 import {
-  freezeIleTurnInsightUnusedPow,
-  unusedIlePowForInsights,
+  clampIleMinInsightsPerChapter,
+  evaluateIleEndTurnInsightGate,
+  ileChapterInsightCounts,
+  ileEndTurnChaptersToMarkDone,
+  ileInsightsForChapter,
+  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_SLOT_MAX,
   clampIleTurnInsightSlotMax,
+  type IleEndTurnInsightGate,
 } from "@/lib/ile-turn-insights";
 import {
   ILE_GATHER_MAX_PER_SESSION,
@@ -93,7 +98,6 @@ import {
   type IleVoicePadSpec,
 } from "@/lib/block-circular-menu";
 import {
-  countIleSpokenThoughts,
   countIleUnsubmittedPowDisplay,
   toIlePowDisplayCounts,
 } from "@/lib/ile-pow-counters";
@@ -126,9 +130,15 @@ import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
 import {
   applyIleXaiTurnToWorkCanvas,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasCompressUserMessage,
+  clampIleCanvasTimerSeconds,
+  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   ileWorkCanvasScenesFromWorkspaces,
+  ileWorkCanvasTimerExpired,
+  ileWorkCanvasTimerRemainingSeconds,
   parseIleXaiCanvasTurn,
   pickIleWorkCanvasTurnScene,
+  resetIleWorkCanvasSceneOnTimerExpiry,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasElement,
@@ -136,6 +146,11 @@ import {
   type IleWorkCanvasSkeleton,
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/ile-work-canvas";
+import {
+  IleInsightTrophyStrip,
+  IleMapInsightsWidget,
+  IleWorkCanvasTimer,
+} from "@/components/session-view/ile-insight-trophies";
 import {
   shouldLogIleSidebarToolSwitch,
   type IleWorkCanvasPowEvent,
@@ -351,6 +366,12 @@ export function SessionView({
   const [allowThoughtsPoolInsights, setAllowThoughtsPoolInsights] = useState(true);
   const [allowParallelWork, setAllowParallelWork] = useState(true);
   const [allowGatherResources, setAllowGatherResources] = useState(true);
+  const [minInsightsPerChapter, setMinInsightsPerChapter] = useState(
+    ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  );
+  const [canvasTimerSeconds, setCanvasTimerSeconds] = useState(
+    ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  );
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
   const [mapSelectedEmpty, setMapSelectedEmpty] = useState(false);
@@ -363,7 +384,19 @@ export function SessionView({
   const openWorkIdsRef = useRef<string[]>([]);
   const [submitTurnBusy, setSubmitTurnBusy] = useState(false);
   const [craftingInsightsOpen, setCraftingInsightsOpen] = useState(false);
-  const [craftUnusedPow, setCraftUnusedPow] = useState(0);
+  const [endTurnGate, setEndTurnGate] = useState<IleEndTurnInsightGate>(() =>
+    evaluateIleEndTurnInsightGate({ activeChapterIds: [], insights: [] }),
+  );
+  const [canvasTimerStartedAt, setCanvasTimerStartedAt] = useState<
+    Record<string, number>
+  >({});
+  const [canvasTimerNow, setCanvasTimerNow] = useState(() => Date.now());
+  const [canvasReplaceScene, setCanvasReplaceScene] =
+    useState<IleWorkCanvasScene | null>(null);
+  const [canvasReplaceNonce, setCanvasReplaceNonce] = useState(0);
+  const [canvasTimerResetChapterIds, setCanvasTimerResetChapterIds] = useState<
+    string[]
+  >([]);
   const [sessionInsightsOpen, setSessionInsightsOpen] = useState(false);
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
@@ -1285,13 +1318,6 @@ export function SessionView({
     typeof session?.metadata?.workspace_id === "string"
       ? session.metadata.workspace_id
       : undefined;
-  const unusedPowForInsights = unusedIlePowForInsights({
-    available: availableCounts,
-    thoughts: countIleSpokenThoughts(sessionPowArtifacts),
-    spentUnits,
-    spentTyped: spent,
-  });
-
   const loadSessionInsights = useCallback(async () => {
     if (!session?.id) return;
     try {
@@ -1361,8 +1387,14 @@ export function SessionView({
   const handleSubmitTurn = useCallback(async () => {
     if (submitTurnBusy) return;
     setHeliosWidgetOpen(false);
-    setCraftUnusedPow(freezeIleTurnInsightUnusedPow(unusedPowForInsights));
+    const gate = evaluateIleEndTurnInsightGate({
+      activeChapterIds: openWorkIds,
+      insights: sessionInsights,
+      minPerChapter: minInsightsPerChapter,
+    });
+    setEndTurnGate(gate);
     setCraftingInsightsOpen(true);
+    if (!gate.canComplete) return;
     setSubmitTurnBusy(true);
     const formingText =
       sessionThoughtInterface.getFormingText?.() ||
@@ -1425,19 +1457,112 @@ export function SessionView({
           ),
         ),
       ]);
+      const toComplete = ileEndTurnChaptersToMarkDone(gate);
+      for (const stepId of toComplete) {
+        await handleMarkChapterDone({ stepId, closeOverride: true });
+      }
     } finally {
       setSubmitTurnBusy(false);
     }
   }, [
     activeStep?.id,
     canvasDirtyForHelios,
+    handleMarkChapterDone,
     handleSubmitToHelios,
     chapterWorkspaces,
+    minInsightsPerChapter,
     openWorkIds,
+    sessionInsights,
     sessionThoughtInterface,
     submitHeliosChatMessageNow,
     submitTurnBusy,
-    unusedPowForInsights,
+  ]);
+
+  useEffect(() => {
+    setCanvasTimerStartedAt((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const id of openWorkIds) {
+        if (next[id] == null) {
+          next[id] = Date.now();
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [openWorkIds]);
+
+  useEffect(() => {
+    if (openWorkIds.length === 0) return;
+    const tick = () => setCanvasTimerNow(Date.now());
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [openWorkIds.length]);
+
+  useEffect(() => {
+    if (openWorkIds.length === 0) return;
+    let resetIds = canvasTimerResetChapterIds;
+    let recorded = false;
+    for (const chapterId of openWorkIds) {
+      const startedAt = canvasTimerStartedAt[chapterId];
+      if (startedAt == null) continue;
+      if (
+        !ileWorkCanvasTimerExpired({
+          durationSeconds: canvasTimerSeconds,
+          startedAtMs: startedAt,
+          nowMs: canvasTimerNow,
+        })
+      ) {
+        continue;
+      }
+      const workspace = chapterWorkspaces[chapterId];
+      const liveScene =
+        chapterId === activeChapterKey
+          ? whiteboardSceneDataRef.current
+          : workspace?.whiteboardSceneData;
+      const step = sessionPlan?.steps?.find((row) => row.id === chapterId);
+      const seedText =
+        isProjectMode && chapterId === (activeStep?.id ?? "")
+          ? displayProjectChapterExercise
+          : step?.description;
+      const reset = resetIleWorkCanvasSceneOnTimerExpiry({
+        scene: liveScene,
+        insights: sessionInsights,
+        chapterId,
+        seedText,
+        resetChapterIds: resetIds,
+      });
+      resetIds = reset.resetChapterIds;
+      recorded = true;
+      updateChapterWorkspace(chapterId, {
+        whiteboardSceneData: reset.scene,
+      });
+      if (chapterId === activeChapterKey) {
+        whiteboardSceneDataRef.current = reset.scene;
+        setCanvasReplaceScene(reset.scene);
+        setCanvasReplaceNonce((n) => n + 1);
+      }
+      setCanvasTimerStartedAt((current) => ({
+        ...current,
+        [chapterId]: Date.now(),
+      }));
+    }
+    if (recorded) setCanvasTimerResetChapterIds(resetIds);
+  }, [
+    activeChapterKey,
+    activeStep?.id,
+    canvasTimerNow,
+    canvasTimerResetChapterIds,
+    canvasTimerSeconds,
+    canvasTimerStartedAt,
+    chapterWorkspaces,
+    displayProjectChapterExercise,
+    isProjectMode,
+    openWorkIds,
+    sessionInsights,
+    sessionPlan?.steps,
+    updateChapterWorkspace,
   ]);
 
   useEffect(() => {
@@ -1613,14 +1738,21 @@ export function SessionView({
       prompt: string;
       selectedElements: IleWorkCanvasElement[];
       scene: IleWorkCanvasScene;
+      kind?: "ask" | "compress";
     }) => {
       if (!session) return { text: "" };
       const chapterKey = activeChapterKey;
-      const userText = buildIleWorkCanvasAskUserMessage({
-        prompt: input.prompt,
-        selectedElements: input.selectedElements,
-        workspace: canvasWorkspaceContext,
-      });
+      const userText =
+        input.kind === "compress"
+          ? buildIleWorkCanvasCompressUserMessage({
+              scene: input.scene,
+              workspace: canvasWorkspaceContext,
+            })
+          : buildIleWorkCanvasAskUserMessage({
+              prompt: input.prompt,
+              selectedElements: input.selectedElements,
+              workspace: canvasWorkspaceContext,
+            });
       const userMsg: ChatMessage = {
         id: `${Date.now()}-u`,
         role: "user",
@@ -1698,6 +1830,26 @@ export function SessionView({
     ],
   );
 
+  const focusedChapterInsights = ileInsightsForChapter(
+    sessionInsights,
+    activeStep?.id,
+  );
+  const insightCountByChapterId = ileChapterInsightCounts(sessionInsights);
+  const canvasRemainingSeconds = ileWorkCanvasTimerRemainingSeconds({
+    durationSeconds: canvasTimerSeconds,
+    startedAtMs: activeStep?.id ? canvasTimerStartedAt[activeStep.id] : null,
+    nowMs: canvasTimerNow,
+  });
+  const workCanvasInsightSlots = (
+    <IleInsightTrophyStrip
+      insights={focusedChapterInsights}
+      slotCount={minInsightsPerChapter}
+    />
+  );
+  const workCanvasHeaderExtra = (
+    <IleWorkCanvasTimer remainingSeconds={canvasRemainingSeconds} />
+  );
+
   const renderWorkCanvas = (peerId: "work" | "pip" = "work") => {
     if (!session) return null;
     const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
@@ -1726,8 +1878,28 @@ export function SessionView({
         }}
         applyElements={canvasApplyElements}
         applyElementsNonce={canvasApplyNonce}
+        replaceScene={canvasReplaceScene}
+        replaceSceneNonce={canvasReplaceNonce}
         onCanvasPowActions={handleCanvasPowActions}
         onAskSelected={handleAskCanvasSelection}
+        craftInsight={
+          activeStep?.id
+            ? {
+                chapterId: activeStep.id,
+                chapterLabel: activeChapterLabel,
+                sessionId: session.id,
+                workspaceId,
+                ileToken,
+                recordSessionPowArtifact,
+                onCrafted: (insight) => {
+                  setSessionInsights((current) => {
+                    if (current.some((row) => row.id === insight.id)) return current;
+                    return [insight, ...current];
+                  });
+                },
+              }
+            : null
+        }
       />
     );
   };
@@ -1796,22 +1968,22 @@ export function SessionView({
           null
         }
         dockedChapters={openWorkDockLabels}
-        thoughts={sessionThoughtInterface.thoughts}
-        unusedPow={craftUnusedPow}
-        insightSlotMax={insightSlotMax}
-        allowThoughtsPoolInsights={allowThoughtsPoolInsights}
-        workspaceId={workspaceId}
-        sessionId={session.id}
-        ileToken={ileToken}
-        recordSessionPowArtifact={recordSessionPowArtifact}
-        onCrafted={(insight) => {
-          setSessionInsights((current) => {
-            if (current.some((row) => row.id === insight.id)) return current;
-            return [insight, ...current];
-          });
+        gate={endTurnGate}
+        onBack={() => setCraftingInsightsOpen(false)}
+        onContinue={() => {
+          if (endTurnGate.canComplete) {
+            for (const stepId of endTurnGate.chaptersToComplete) {
+              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
+            }
+          }
+          setCraftingInsightsOpen(false);
         }}
-        onContinue={() => setCraftingInsightsOpen(false)}
         onSaveAndExit={() => {
+          if (endTurnGate.canComplete) {
+            for (const stepId of endTurnGate.chaptersToComplete) {
+              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
+            }
+          }
           setCraftingInsightsOpen(false);
           setSaveExitName(ileSessionNameFromMetadata(session.metadata) ?? "");
           setShowSaveExitNameDialog(true);
@@ -1834,7 +2006,7 @@ export function SessionView({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {renderWorkCanvas("pip")}
           </div>
           <IleWorkDockBar
@@ -1883,6 +2055,8 @@ export function SessionView({
       isScreenSharing: isScreenCapturing,
     },
     renderCompact: () => renderCompactWorkspace(),
+    compactHeaderLeading: workCanvasInsightSlots,
+    compactHeaderExtra: workCanvasHeaderExtra,
   });
 
   const isSpeaking = useVoiceActivity({
@@ -1956,6 +2130,14 @@ export function SessionView({
         onAllowParallelWorkChange={setAllowParallelWork}
         allowGatherResources={allowGatherResources}
         onAllowGatherResourcesChange={setAllowGatherResources}
+        minInsightsPerChapter={minInsightsPerChapter}
+        onMinInsightsPerChapterChange={(value) =>
+          setMinInsightsPerChapter(clampIleMinInsightsPerChapter(value))
+        }
+        canvasTimerSeconds={canvasTimerSeconds}
+        onCanvasTimerSecondsChange={(value) =>
+          setCanvasTimerSeconds(clampIleCanvasTimerSeconds(value))
+        }
         autoAdvance={autoAdvance}
         onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
         localInferenceEnabled={localInferenceEnabled}
@@ -2049,6 +2231,11 @@ export function SessionView({
         insightCraftOpen={craftingInsightsOpen}
         insightCraft={turnInsightCraft()}
         onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
+        workCanvasHeaderExtra={workCanvasHeaderExtra}
+        workCanvasHeaderLeading={workCanvasInsightSlots}
+        mapInsightsWidget={
+          <IleMapInsightsWidget insights={sessionInsights} visible />
+        }
         introOpen={showWelcomePanel}
         onCloseSessionModal={() => {
           setShowWelcomePanel(false);
@@ -2063,6 +2250,7 @@ export function SessionView({
             language={tutoringLanguage}
             showStartAction
             projectMode={isProjectMode}
+            insightGoalCount={minInsightsPerChapter}
             onStart={() => { void handleWelcomePlay(); }}
             isStarting={isStartingSession}
           />
@@ -2146,6 +2334,7 @@ export function SessionView({
             voicePadActionRef={voicePadActionRef}
             aestheticImages={selectedAesthetic?.images}
             workAestheticById={workAestheticById}
+            insightCountByChapterId={insightCountByChapterId}
             blockActionProgress={timBlockActionProgress}
             onMarkChapterCompleted={(stepId) => {
               completeTargetStepIdRef.current = stepId;

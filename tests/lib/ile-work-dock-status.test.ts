@@ -83,9 +83,10 @@ describe("docked chapter loading / attention chrome (shipped source)", () => {
     const dock = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dock).toContain("data-ile-chapter-chip-status");
     expect(dock).toContain("data-ile-chapter-chip-loading");
+    expect(dock).toContain("export function IleWorkDockChip");
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
-    expect(craft).toContain("data-ile-chapter-chip-loading");
-    expect(craft).toContain('status === "loading"');
+    expect(craft).toContain("IleWorkDockChip");
+    expect(craft).toContain('status: missing ? "attention"');
     expect(view).toContain("setCraftingInsightsOpen(true)");
     const submitStart = view.indexOf("const handleSubmitTurn");
     const submitTurn = view.slice(submitStart, view.indexOf("setSubmitTurnBusy(false)", submitStart));

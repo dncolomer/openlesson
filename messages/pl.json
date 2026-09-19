@@ -2557,8 +2557,9 @@
   },
   "onboardingGuide": {
     "ile": {
-      "kicker": "Mission briefing",
-      "title": "Command the map",
+      "kicker": "Session goal",
+      "title": "Craft {count} insights",
+      "titleOne": "Craft 1 insight",
       "progressLabel": "Onboarding steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
@@ -2577,15 +2578,17 @@
         "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them."
       },
       "step3": {
-        "title": "Explore the map",
-        "highlight": "Speak your thoughts out loud and use tools to explore the map. Fog lifts as you scout. You win by completing chapters — and this map can be further built.",
-        "body": "This map is yours. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. I'm done answering closes a turn.",
-        "quoteText": "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.",
-        "quoteAuthor": "Sun Tzu",
+        "title": "Then move on",
+        "highlight": "",
+        "slotsLabel": "{count} empty insight slots",
+        "emptySlot": "Empty",
+        "body": "You craft insights by working on the different areas of the map.",
+        "quoteText": "",
+        "quoteAuthor": "",
         "start": "Start",
         "starting": "Deploying…",
-        "titleProject": "Explore the map",
-        "bodyProject": "Each chapter is an exercise on this map. Pan, zoom, and open a chapter to move in. Speak your thoughts out loud while you work, and use tools as you explore.\n\nYou win by completing chapters — that is the objective. The map can be further built: add, edit, and expand chapters as you learn. Press Start to begin. Recording starts; talk as you work. Del stashes. I'm done answering closes a turn."
+        "titleProject": "Then move on",
+        "bodyProject": "You craft insights by working on the different areas of the map."
       }
     },
     "tap": {

@@ -15,6 +15,8 @@ export function IleChapterWidgetFrame({
   style,
   toolbar,
   footer,
+  headerLeading,
+  headerExtra,
 }: {
   children: ReactNode;
   onMinimize?: () => void;
@@ -26,6 +28,8 @@ export function IleChapterWidgetFrame({
   style?: CSSProperties;
   toolbar?: ReactNode;
   footer?: ReactNode;
+  headerLeading?: ReactNode;
+  headerExtra?: ReactNode;
 }) {
   return (
     <div
@@ -37,24 +41,28 @@ export function IleChapterWidgetFrame({
       } ${fill ? "h-full" : ""} ${className}`}
       style={style}
     >
-      <div className={`flex shrink-0 items-center justify-between border-b border-neutral-800 ${ILE_SESSION_TOP_BAR_PAD_CLASS}`}>
-        <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
-          {title}
-        </span>
-        {onMinimize ? (
-          <div className="flex items-center gap-0.5">
+      <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-neutral-800 ${ILE_SESSION_TOP_BAR_PAD_CLASS}`}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="font-mono text-[13px] font-semibold uppercase tracking-wider text-neutral-400">
+            {title}
+          </span>
+          {headerLeading}
+        </div>
+        <div className="flex min-w-0 items-center gap-3">
+          {headerExtra}
+          {onMinimize ? (
             <button
               type="button"
               data-ile-helios-widget-minimize
               onClick={onMinimize}
               title="Minimize"
               aria-label={`Minimize ${title.toLowerCase()}`}
-              className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
+              className="rounded-none px-2 py-1 text-base leading-none text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
             >
               –
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
       {toolbar ? <div className="shrink-0">{toolbar}</div> : null}
       <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
@@ -74,15 +82,21 @@ export function IleChapterWidgetFrame({
 export function IleChapterPipFrame({
   children,
   footer,
+  headerLeading,
+  headerExtra,
 }: {
   children: ReactNode;
   footer?: ReactNode;
+  headerLeading?: ReactNode;
+  headerExtra?: ReactNode;
 }) {
   return (
     <IleChapterWidgetFrame
       fill
       compact
       footer={footer}
+      headerLeading={headerLeading}
+      headerExtra={headerExtra}
       className="pointer-events-auto"
       style={{
         position: "relative",

@@ -30,9 +30,18 @@ type EnOnboarding = {
     ile: {
       kicker: string;
       title: string;
+      titleOne: string;
       step1: { title: string; body: string };
       step2: { title: string; body: string; bodyProject: string };
-      step3: { title: string; body: string; bodyProject: string; start: string; highlight: string };
+      step3: {
+        title: string;
+        body: string;
+        bodyProject: string;
+        start: string;
+        highlight: string;
+        quoteText: string;
+        slotsLabel: string;
+      };
     };
     tap: {
       step1: { title: string; body: string; highlight: string };
@@ -41,6 +50,10 @@ type EnOnboarding = {
     };
   };
 };
+
+function countWelcomeInsightSlots(html: string): number {
+  return html.match(/data-ile-welcome-insight-slot="/g)?.length ?? 0;
+}
 
 function countAriaSteps(html: string): number {
   const matches = html.match(/aria-label="Go to step \d+"/g) ?? [];
@@ -90,6 +103,20 @@ describe("session intro visuals", () => {
         showStartAction: true,
       }),
     );
+    const ileThreeHtml = renderToStaticMarkup(
+      createElement(SessionOnboardingGuide, {
+        variant: "ile",
+        showStartAction: true,
+        insightGoalCount: 3,
+      }),
+    );
+    const ileFiveHtml = renderToStaticMarkup(
+      createElement(SessionOnboardingGuide, {
+        variant: "ile",
+        showStartAction: true,
+        insightGoalCount: 5,
+      }),
+    );
 
     for (const html of [tapHtml, tapPlayHtml]) {
       expect(countAriaSteps(html)).toBe(2);
@@ -124,35 +151,49 @@ describe("session intro visuals", () => {
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.title);
 
     expect(ileLearningText).toContain(en.onboardingGuide.ile.kicker);
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.title);
+    expect(ileLearningText).toContain(en.onboardingGuide.ile.titleOne);
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step3.title);
     expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.start);
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.highlight);
     expect(ileLearningHtml).toContain("data-onboarding-start");
+    expect(ileLearningHtml).not.toContain("data-onboarding-highlight");
     expect(ileLearningHtml).not.toContain("data-ile-intro-widget-close");
     expect(ileLearningText).not.toMatch(/Start block/i);
     expect(en.onboardingGuide.ile.step3.start).toBe("Start");
-    expect(ileLearningText).toMatch(/Generate Work in turns/i);
-    expect(ileLearningText).toMatch(/Create Insights/i);
-    expect(ileLearningText).toMatch(/next turn/i);
-    expect(ileLearningText).toMatch(/speak your thoughts out loud/i);
-    expect(ileLearningText).toMatch(/win by completing chapters/i);
-    expect(ileLearningText).toMatch(/map can be further built/i);
+    expect(ileLearningText).toMatch(/craft insights/i);
+    expect(ileLearningText).toMatch(/different areas of the map/i);
+    expect(ileLearningText).not.toMatch(/Generate Work in a turn/i);
+    expect(ileLearningText).not.toMatch(/next turn/i);
+    expect(ileLearningText).not.toMatch(/speak your thoughts out loud/i);
+    expect(ileLearningText).not.toMatch(/win by completing chapters/i);
+    expect(ileLearningText).not.toMatch(/map can be further built/i);
+    expect(ileLearningText).not.toMatch(/timer/i);
+    expect(ileLearningText).not.toMatch(/End turn/i);
+    expect(ileLearningText).not.toMatch(/Victorious warriors/i);
+    expect(ileLearningText).not.toMatch(/Sun Tzu/i);
     expect(en.onboardingGuide.ile.step3.body).not.toMatch(/Commander/);
-    expect(en.onboardingGuide.ile.step3.body).toMatch(/Pan, zoom, and open a chapter/i);
-    expect(en.onboardingGuide.ile.step3.body).toMatch(/End turn/i);
-    expect(en.onboardingGuide.ile.step3.body.length).toBeGreaterThan(200);
-    expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(900);
-    expect(en.onboardingGuide.ile.step3.bodyProject).not.toMatch(/Commander/);
-    expect(en.onboardingGuide.ile.step3.bodyProject.length).toBeGreaterThan(200);
-    expect(en.onboardingGuide.ile.step3.highlight).toMatch(/Generate Work in turns/i);
-    expect(en.onboardingGuide.ile.step3.highlight.length).toBeLessThan(280);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/different areas of the map/i);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
+    expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(120);
+    expect(en.onboardingGuide.ile.step3.bodyProject).toBe(en.onboardingGuide.ile.step3.body);
+    expect(en.onboardingGuide.ile.step3.highlight).toBe("");
+    expect(en.onboardingGuide.ile.step3.quoteText).toBe("");
+    expect(ileLearningHtml).toContain('data-ile-welcome-insight-slot-count="3"');
+    expect(countWelcomeInsightSlots(ileLearningHtml)).toBe(3);
+    expect(ileLearningText).toContain("Empty");
+    expect(ileLearningHtml).toContain('data-ile-insight-slot-card="empty"');
+    expect(ileThreeHtml).toContain('data-ile-welcome-insight-slot-count="3"');
+    expect(countWelcomeInsightSlots(ileThreeHtml)).toBe(3);
+    expect(decodeHtml(ileThreeHtml)).toContain("Craft 3 insights");
+    expect(ileFiveHtml).toContain('data-ile-welcome-insight-slot-count="5"');
+    expect(countWelcomeInsightSlots(ileFiveHtml)).toBe(5);
+    expect(tapHtml).not.toContain("data-ile-welcome-insight-slots");
 
     expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.start);
-    expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.highlight);
+    expect(ileProjectText).toContain(en.onboardingGuide.ile.titleOne);
     expect(ileProjectHtml).toContain("data-onboarding-start");
-    expect(ileProjectText).toMatch(/win by completing chapters/i);
-    expect(ileProjectText).toMatch(/map can be further built/i);
+    expect(ileProjectHtml).not.toContain("data-onboarding-highlight");
+    expect(ileProjectText).toMatch(/different areas of the map/i);
+    expect(countWelcomeInsightSlots(ileProjectHtml)).toBe(3);
 
     expect(tapBody).toMatch(/think out loud/i);
     expect(tapBody).toMatch(/I'm done answering/);
@@ -165,7 +206,6 @@ describe("session intro visuals", () => {
     const ileBodies = [
       en.onboardingGuide.ile.step3.body,
       en.onboardingGuide.ile.step3.bodyProject,
-      en.onboardingGuide.ile.step3.highlight,
       en.onboardingGuide.tap.step3.body,
     ];
     for (const body of ileBodies) {
@@ -213,6 +253,9 @@ describe("session intro visuals", () => {
     expect(ileView).toContain("introOpen={showWelcomePanel}");
     expect(ileView).toContain("showStartAction");
     expect(ileView).toContain("projectMode={isProjectMode}");
+    expect(ileView).toContain("insightGoalCount={minInsightsPerChapter}");
+    expect(guide).toContain("IleInsightEmptySlots");
+    expect(guide).toContain("insightGoalCount");
 
     for (const rel of ["public/animations/grid_pan.mp4", "public/animations/speaking.mp4"] as const) {
       const path = join(ROOT, rel);
@@ -228,7 +271,7 @@ describe("session intro visuals", () => {
         "tapModes=conversational+exercise lastSlide=topic-cards/Play",
         "ileModes=learning+project lastSlide=Start",
         `tapTitles=${en.onboardingGuide.tap.step1.title} | ${en.onboardingGuide.tap.step3.title}`,
-        `ileTitle=${en.onboardingGuide.ile.step3.title}`,
+        `ileTitle=${en.onboardingGuide.ile.titleOne}`,
       ].join("\n") + "\n",
     );
     writeScratch("tap-intro-copy.txt", tapBody + "\n---highlight---\n" + tapHighlight + "\n");

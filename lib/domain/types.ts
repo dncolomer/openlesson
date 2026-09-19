@@ -28,6 +28,7 @@ export type ToolAction =
   | "multi_select"
   | "expand_more"
   | "board_prompt"
+  | "compress_work"
   | "notebook_edit"
   | "notebook_save"
   | "prep_material_load"

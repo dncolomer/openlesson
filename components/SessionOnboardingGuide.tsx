@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { IleInsightEmptySlots } from "@/components/session-view/ile-insight-trophies";
 import { translateWithLocale } from "@/lib/i18n";
+import {
+  clampIleMinInsightsPerChapter,
+  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+} from "@/lib/ile-turn-insights";
 
 type OnboardingVariant = "ile" | "tap";
 
@@ -29,6 +34,11 @@ export type SessionOnboardingGuideProps = {
   stepImages?: [string | undefined, string | undefined];
   /** Optional override for ILE step 1 grid-pan clip. */
   step1VideoSrc?: string;
+  /**
+   * ILE session goal: empty insight slots to fill. Comes from difficulty
+   * `minInsightsPerChapter` (clamped 1–5). Ignored for TAP.
+   */
+  insightGoalCount?: number;
   className?: string;
 };
 
@@ -150,11 +160,13 @@ export function SessionOnboardingGuide({
   hideStep3Quote = false,
   stepImages,
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
+  insightGoalCount = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   className = "",
 }: SessionOnboardingGuideProps) {
   const [step, setStep] = useState(0);
   const lang = language ?? "en";
   const prefix = `onboardingGuide.${variant}`;
+  const insightCount = clampIleMinInsightsPerChapter(insightGoalCount);
 
   const tt = (key: string, params?: Record<string, string | number>) =>
     translateWithLocale(lang, `${prefix}.${key}`, params);
@@ -239,6 +251,12 @@ export function SessionOnboardingGuide({
   const isLastStep = step === lastSlideIndex;
   const startLabel = isStarting ? tt("step3.starting") : tt("step3.start");
   const isFloating = presentation === "floating";
+  const headingTitle =
+    variant === "ile"
+      ? insightCount === 1
+        ? tt("titleOne")
+        : tt("title", { count: insightCount })
+      : tt("title");
 
   const guide = (
     <div
@@ -258,7 +276,7 @@ export function SessionOnboardingGuide({
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
               {tt("kicker")}
             </p>
-            <h3 className="mt-1 text-sm font-medium text-neutral-100">{tt("title")}</h3>
+            <h3 className="mt-1 text-sm font-medium text-neutral-100">{headingTitle}</h3>
           </div>
           {slideCount > 1 ? (
             <div className="flex items-center gap-1.5" aria-label={tt("progressLabel")}>
@@ -299,7 +317,15 @@ export function SessionOnboardingGuide({
                     isActive={step === index}
                   />
                 </div>
-              ) : hideStep3Quote ? null : (
+              ) : hideStep3Quote || variant === "ile" || !slide.quoteText.trim() ? (
+                variant === "ile" && slide.kind === "closing" ? (
+                  <IleInsightEmptySlots
+                    count={insightCount}
+                    label={tt("step3.slotsLabel", { count: insightCount })}
+                    emptyLabel={tt("step3.emptySlot")}
+                  />
+                ) : null
+              ) : (
                 <OnboardingQuote text={slide.quoteText} author={slide.quoteAuthor} />
               )}
 

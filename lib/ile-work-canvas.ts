@@ -20,6 +20,7 @@ import {
 export const ILE_XAI_CANVAS_CUSTOM_DATA_KEY = "ileXaiTurn" as const;
 export const ILE_XAI_LOADING_CUSTOM_DATA_KEY = "ileXaiLoading" as const;
 export const ILE_CHAPTER_SEED_CUSTOM_DATA_KEY = "ileChapterSeed" as const;
+export const ILE_COMPRESS_WORK_CUSTOM_DATA_KEY = "ileCompressWork" as const;
 export const ILE_XAI_LOADING_TEXT = "Thinking ...";
 
 /** Excalidraw drawing tools that map to ILE Work PoW. */
@@ -241,6 +242,143 @@ export function withIleWorkCanvasGridAppState(
 
 export function emptyIleWorkCanvasScene(): IleWorkCanvasScene {
   return { elements: [], appState: withIleWorkCanvasGridAppState({}), files: {} };
+}
+
+/** Difficulty: Work-canvas countdown before the board resets (insights stay). */
+export const ILE_CANVAS_TIMER_SECONDS_MIN = 10 * 60;
+export const ILE_CANVAS_TIMER_SECONDS_DEFAULT = 15 * 60;
+export const ILE_CANVAS_TIMER_SECONDS_CEILING = 60 * 60;
+export const ILE_CANVAS_TIMER_SECONDS_STEP = 60;
+
+export function clampIleCanvasTimerSeconds(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return ILE_CANVAS_TIMER_SECONDS_DEFAULT;
+  if (n < ILE_CANVAS_TIMER_SECONDS_MIN) return ILE_CANVAS_TIMER_SECONDS_MIN;
+  if (n > ILE_CANVAS_TIMER_SECONDS_CEILING) return ILE_CANVAS_TIMER_SECONDS_CEILING;
+  return n;
+}
+
+export function ileWorkCanvasTimerRemainingSeconds(input: {
+  durationSeconds: unknown;
+  startedAtMs: unknown;
+  nowMs: unknown;
+}): number {
+  const duration = clampIleCanvasTimerSeconds(input.durationSeconds);
+  const started = Number(input.startedAtMs);
+  const now = Number(input.nowMs);
+  if (!Number.isFinite(started) || !Number.isFinite(now)) return duration;
+  const elapsed = Math.max(0, (now - started) / 1000);
+  return Math.max(0, Math.ceil(duration - elapsed));
+}
+
+export function ileWorkCanvasTimerExpired(input: {
+  durationSeconds: unknown;
+  startedAtMs: unknown;
+  nowMs: unknown;
+}): boolean {
+  return ileWorkCanvasTimerRemainingSeconds(input) <= 0;
+}
+
+export function formatIleWorkCanvasTimer(remainingSeconds: unknown): string {
+  const s = Math.max(0, Math.floor(Number(remainingSeconds) || 0));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+/** Overlay duration so timer reset is visible before the seed returns. */
+export const ILE_CANVAS_TIMER_RESET_LOADING_MS = 700;
+
+/**
+ * Timer hit zero: clear learner work, then re-seed the original chapter
+ * prompt as a single text element. Insights stay off-canvas.
+ */
+export const ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS = [
+  "gridModeEnabled",
+  "gridSize",
+  "currentItemStrokeColor",
+  "currentItemFontFamily",
+] as const;
+
+/** What survives an Excalidraw restoreAppState / updateScene round-trip. */
+export function ileWorkCanvasAppStateKeepingDefaultKeys(
+  appState: IleWorkCanvasAppState | null | undefined,
+): IleWorkCanvasAppState {
+  const rec = asRecord(appState);
+  const kept: Record<string, unknown> = {};
+  for (const key of ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS) {
+    if (key in rec) kept[key] = rec[key];
+  }
+  return withIleWorkCanvasGridAppState(kept);
+}
+
+export function recordIleWorkCanvasTimerResetChapter(
+  resetChapterIds: readonly string[] | ReadonlySet<string> | null | undefined,
+  chapterId: unknown,
+): string[] {
+  const id = String(chapterId ?? "").trim();
+  const next: string[] = [];
+  const seen = new Set<string>();
+  const source =
+    resetChapterIds instanceof Set
+      ? resetChapterIds
+      : (resetChapterIds ?? []);
+  for (const row of source) {
+    const key = String(row || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    next.push(key);
+  }
+  if (id && !seen.has(id)) next.push(id);
+  return next;
+}
+
+export function ileWorkCanvasTimerResetBlocksSeed(input: {
+  chapterId?: unknown;
+  resetChapterIds?: readonly string[] | ReadonlySet<string> | null;
+  canvasTimerReset?: boolean | null;
+}): boolean {
+  if (input.canvasTimerReset === true) return true;
+  const id = String(input.chapterId ?? "").trim();
+  if (!id) return false;
+  const ids = input.resetChapterIds
+    ? Array.from(input.resetChapterIds)
+    : [];
+  return ids.some((row) => String(row || "").trim() === id);
+}
+
+export function ileWorkCanvasInitialSeedText(
+  scene: IleWorkCanvasScene | null | undefined,
+): string {
+  const live = serializeIleWorkCanvasScene(scene).elements.filter((el) => !el.isDeleted);
+  const seed = live.find(
+    (el) => el.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true,
+  );
+  return String(seed?.originalText || seed?.text || "").trim();
+}
+
+export function resetIleWorkCanvasSceneOnTimerExpiry<T>(input: {
+  scene?: IleWorkCanvasScene | null;
+  insights?: readonly T[] | null;
+  chapterId?: unknown;
+  seedText?: unknown;
+  resetChapterIds?: readonly string[] | ReadonlySet<string> | null;
+}): { scene: IleWorkCanvasScene; insights: T[]; resetChapterIds: string[] } {
+  const seedText =
+    ileWorkCanvasInitialSeedText(input.scene) || String(input.seedText ?? "").trim();
+  const empty = emptyIleWorkCanvasScene();
+  const seeded = seedIleChapterWorkCanvas(empty, {
+    text: seedText || null,
+    chapterId: String(input.chapterId ?? "").trim() || null,
+  });
+  return {
+    scene: seeded.scene,
+    insights: [...(input.insights ?? [])],
+    resetChapterIds: recordIleWorkCanvasTimerResetChapter(
+      input.resetChapterIds,
+      input.chapterId,
+    ),
+  };
 }
 
 function coerceElement(raw: unknown): IleWorkCanvasElement | null {
@@ -619,12 +757,26 @@ export function ileWorkCanvasWithScrollToContent<T extends { elements?: unknown[
  */
 export function seedIleChapterWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
-  input: { text?: string | null; chapterId?: string | null },
+  input: {
+    text?: string | null;
+    chapterId?: string | null;
+    resetChapterIds?: readonly string[] | ReadonlySet<string> | null;
+    canvasTimerReset?: boolean | null;
+  },
 ): { scene: IleWorkCanvasScene; seeded: boolean } {
   const current = serializeIleWorkCanvasScene(scene);
   const text = String(input.text || "").trim();
   if (!text) return { scene: current, seeded: false };
   if (ileWorkCanvasHasLiveElements(current)) return { scene: current, seeded: false };
+  if (
+    ileWorkCanvasTimerResetBlocksSeed({
+      chapterId: input.chapterId,
+      resetChapterIds: input.resetChapterIds,
+      canvasTimerReset: input.canvasTimerReset,
+    })
+  ) {
+    return { scene: current, seeded: false };
+  }
   const origin = nextXaiTextOrigin(current.elements);
   const converted = convertToExcalidrawElements([
     {
@@ -912,6 +1064,8 @@ export const ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR =
 export const ILE_CANVAS_PROMPT_BAR_GAP = 8;
 /** 1rem editor pad + tool island + gap, until the toolbar is measured. */
 export const ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP = 72;
+/** Excalidraw shape island width until the toolbar is measured. */
+export const ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH = 480;
 
 /** Host-relative top so the board prompt floats just under Excalidraw's toolbar. */
 export function ileCanvasPromptBarTop(
@@ -923,6 +1077,16 @@ export function ileCanvasPromptBarTop(
   const top = Number(host?.top);
   if (!Number.isFinite(bottom) || !Number.isFinite(top)) return ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP;
   return Math.max(0, Math.round(bottom - top + gap));
+}
+
+/** Match the prompt cluster to the measured Excalidraw toolbox width. */
+export function ileCanvasPromptBarWidth(
+  toolbar: { width?: number } | null | undefined,
+  fallback = ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
+): number {
+  const width = Number(toolbar?.width);
+  if (!Number.isFinite(width) || width <= 0) return fallback;
+  return Math.round(width);
 }
 
 export type IleWorkCanvasViewportAppState = {
@@ -1380,6 +1544,74 @@ export function buildIleWorkCanvasAskUserMessage(input: {
   return ileWorkCanvasWithDomainPrefix(body, input.workspace);
 }
 
+export const ILE_COMPRESS_WORK_LABEL = "Compress work";
+export const ILE_COMPRESS_WORK_PROMPT =
+  "Compress this Work canvas into one concise knowledge summary. Distill every mark, note, and relation into a single dense takeaway. Stay on the workspace/block domain. Do not invent unrelated topics.";
+
+export function ileWorkCanvasLiveElements(
+  scene: IleWorkCanvasScene | null | undefined,
+): IleWorkCanvasElement[] {
+  return serializeIleWorkCanvasScene(scene).elements.filter((el) => !el.isDeleted);
+}
+
+export function ileWorkCanvasCanCompress(
+  scene: IleWorkCanvasScene | null | undefined,
+): boolean {
+  return ileWorkCanvasHasLiveElements(scene);
+}
+
+/** LLM user message: compress the whole board into one knowledge summary. */
+export function buildIleWorkCanvasCompressUserMessage(input: {
+  scene?: IleWorkCanvasScene | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = ileWorkCanvasLiveElements(input.scene);
+  const body = [
+    "Compress the current Work canvas the way an expert compresses knowledge: one dense summary that preserves the essential structure, claims, and relations.",
+    "The board will be replaced with that single summary. Do not add new topics.",
+    "",
+    "Board contents:",
+    ileWorkCanvasSelectionSummary(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+/**
+ * Replace the board with one text element — the compressed summary.
+ * Empty summary leaves the current scene unchanged.
+ */
+export function compressIleWorkCanvasScene(
+  scene: IleWorkCanvasScene | null | undefined,
+  summary: unknown,
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(scene);
+  const text = String(summary ?? "").trim();
+  if (!text) return current;
+  const converted = convertToExcalidrawElements([
+    {
+      type: "text",
+      text,
+      x: TEXT_ORIGIN_X,
+      y: TEXT_ORIGIN_Y,
+      width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+      autoResize: false,
+      customData: {
+        [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
+        author: "xai",
+      },
+    },
+  ]);
+  if (!converted.length) return current;
+  return {
+    elements: converted,
+    appState: withIleWorkCanvasGridAppState({
+      ...asRecord(current.appState),
+      selectedElementIds: {},
+    }),
+    files: {},
+  };
+}
+
 function extractJsonObject(raw: string): Record<string, unknown> | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -1580,6 +1812,7 @@ const CANVAS_POW_ACTIONS = new Set([
   "multi_select",
   "expand_more",
   "board_prompt",
+  "compress_work",
 ]);
 
 /**

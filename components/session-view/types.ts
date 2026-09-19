@@ -88,6 +88,10 @@ export type SessionWelcomeModalProps = {
   onAllowParallelWorkChange?: (value: boolean) => void;
   allowGatherResources?: boolean;
   onAllowGatherResourcesChange?: (value: boolean) => void;
+  minInsightsPerChapter?: number;
+  onMinInsightsPerChapterChange?: (value: number) => void;
+  canvasTimerSeconds?: number;
+  onCanvasTimerSecondsChange?: (value: number) => void;
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
   localInferenceEnabled: boolean;

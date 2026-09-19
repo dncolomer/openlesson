@@ -9,6 +9,8 @@ export type ChapterWorkspace = {
   notebookContent: string;
   canvasDirtyForHelios: boolean;
   notebookDirtyForHelios: boolean;
+  /** Timer emptied this chapter's board; not stored in Excalidraw appState. */
+  canvasTimerReset?: boolean;
 };
 
 export const createChapterWorkspace = (): ChapterWorkspace => ({
@@ -19,6 +21,7 @@ export const createChapterWorkspace = (): ChapterWorkspace => ({
   notebookContent: "",
   canvasDirtyForHelios: true,
   notebookDirtyForHelios: true,
+  canvasTimerReset: false,
 });
 
 /** Check if a new probe is a duplicate of any existing probe (normalized comparison) */

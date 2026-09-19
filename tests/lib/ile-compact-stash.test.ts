@@ -236,6 +236,8 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
 
     const compact = read("components/IleCompactStashWindow.tsx");
     expect(compact).toContain("IleChapterPipFrame");
+    expect(compact).toContain("headerLeading={headerLeading}");
+    expect(compact).toContain("headerExtra={headerExtra}");
     expect(compact).toContain("data-ile-compact-share-cta");
     expect(compact).toContain("ileMiniModeShareCtaLabel");
     expect(compact).toContain("shouldShowIleMiniShareCta");
@@ -268,11 +270,18 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(hook).toContain("paintCompact");
     expect(hook).toContain("IleCompactStashWindow");
     expect(hook).toContain("renderCompactRef");
+    expect(hook).toContain("headerLeading={compactHeaderLeadingRef.current}");
+    expect(hook).toContain("headerExtra={compactHeaderExtraRef.current}");
     expect(hook).not.toContain("createPortal");
     expect(hook).not.toContain("compactHost");
 
     const view = readSessionViewSurface();
     expect(view).toContain("renderCompact: () => renderCompactWorkspace()");
+    expect(view).toContain("compactHeaderLeading: workCanvasInsightSlots");
+    expect(view).toContain("compactHeaderExtra: workCanvasHeaderExtra");
+    expect(view).not.toContain(
+      "flex shrink-0 items-center justify-between gap-3 border-b border-neutral-800 px-3 py-2.5",
+    );
     expect(view).toContain("renderChapterThoughtPane(false)");
     expect(view).toContain("replica={replica}");
     expect(view).toContain("onDoneAnswering: handleCompactDoneAnswering");

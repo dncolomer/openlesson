@@ -30,6 +30,16 @@ import {
   writeIleChapterWorkCanvas,
   withIleWorkCanvasGridAppState,
   emptyIleWorkCanvasScene,
+  clampIleCanvasTimerSeconds,
+  formatIleWorkCanvasTimer,
+  ileWorkCanvasTimerExpired,
+  ileWorkCanvasTimerRemainingSeconds,
+  resetIleWorkCanvasSceneOnTimerExpiry,
+  ILE_CANVAS_TIMER_SECONDS_CEILING,
+  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  ILE_CANVAS_TIMER_SECONDS_MIN,
+  ILE_CANVAS_TIMER_RESET_LOADING_MS,
+  ileWorkCanvasInitialSeedText,
   ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_DEFAULT_GRID_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
@@ -38,9 +48,16 @@ import {
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasCompressUserMessage,
+  compressIleWorkCanvasScene,
+  ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
+  ILE_COMPRESS_WORK_LABEL,
+  ILE_COMPRESS_WORK_PROMPT,
+  ileWorkCanvasCanCompress,
   createIleXaiLoadingPlaceholder,
   replaceIleXaiLoadingPlaceholder,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
+  ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_GAP,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ILE_LEARN_MORE_BOX_HEIGHT,
@@ -54,6 +71,7 @@ import {
   ILE_XAI_LOADING_GAP,
   clampIleLearnMorePosition,
   ileCanvasPromptBarTop,
+  ileCanvasPromptBarWidth,
   ileLearnMoreFollowOffset,
   ileLearnMoreFollowPosition,
   ileLearnMorePromptPlacement,
@@ -382,13 +400,22 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(canvas).toContain("data-ile-canvas-prompt-bar");
     expect(canvas).toContain("ileCanvasPromptBarTop");
     expect(canvas).toContain("syncPromptBarPlacement");
-    expect(canvas).toContain("style={{ top: promptBarTop }}");
+    expect(canvas).toContain("top: promptBarTop");
+    expect(canvas).toContain("width: promptBarWidth");
     expect(canvas).toContain("ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
+    expect(canvas).not.toContain("max-w-4xl");
     expect(ileCanvasPromptBarTop({ bottom: 120 }, { top: 40 })).toBe(120 - 40 + ILE_CANVAS_PROMPT_BAR_GAP);
     expect(ileCanvasPromptBarTop(null, { top: 0 })).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
+    expect(ileCanvasPromptBarWidth({ width: 512 })).toBe(512);
+    expect(ileCanvasPromptBarWidth(null)).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
     expect(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR).toContain(".App-toolbar");
     expect(canvas).toContain("handleBoardAsk");
+    expect(canvas).toContain("handleCompressWork");
+    expect(canvas).toContain("data-ile-compress-work");
+    expect(canvas).toContain("ILE_COMPRESS_WORK_LABEL");
+    expect(canvas).toContain("replaceWithSummary: true");
+    expect(canvas).toContain("compressIleWorkCanvasScene");
     expect(canvas).toContain("selectedElements: []");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
     const view = read("components/SessionView.tsx");
@@ -1259,6 +1286,14 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
     expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
     expect(canvas).toContain('data-ile-learn-more-quick="split"');
     expect(canvas).toContain('data-ile-learn-more-quick="elaborate"');
+    expect(canvas).toContain("IleCraftInsightButton");
+    expect(canvas).toContain("ileCanvasCraftInsightUsable");
+    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
+      canvas.indexOf("<IleCraftInsightButton"),
+    );
+    const craftBtn = read("components/session-view/ile-canvas-craft-insight.tsx");
+    expect(craftBtn).toContain("data-ile-craft-insight");
+    expect(craftBtn).toContain("ILE_CRAFT_INSIGHT_LABEL");
     expect(canvas).toContain("ileWorkCanvasQuickActionPrompt");
     expect(canvas).toContain("splitIleWorkCanvasSelectedText");
     expect(canvas).toContain('handleQuickAction("rephrase")');
@@ -1329,5 +1364,226 @@ describe("ILE Work canvas user delete stays empty (shipped)", () => {
     expect(canvas).toContain("getSceneElementsIncludingDeleted");
     expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
     expect(canvas).toContain("M4 4v6h6");
+  });
+});
+
+describe("ILE Work canvas timer expiry (shipped)", () => {
+  it("counts down a positive duration, then reseeds the initial chapter element while keeping insights", () => {
+    expect(clampIleCanvasTimerSeconds(undefined)).toBe(ILE_CANVAS_TIMER_SECONDS_DEFAULT);
+    expect(ILE_CANVAS_TIMER_SECONDS_MIN).toBe(10 * 60);
+    expect(ILE_CANVAS_TIMER_SECONDS_DEFAULT).toBe(15 * 60);
+    expect(ILE_CANVAS_TIMER_SECONDS_CEILING).toBe(60 * 60);
+    expect(clampIleCanvasTimerSeconds(30)).toBe(ILE_CANVAS_TIMER_SECONDS_MIN);
+    expect(clampIleCanvasTimerSeconds(180)).toBe(ILE_CANVAS_TIMER_SECONDS_MIN);
+    expect(clampIleCanvasTimerSeconds(15 * 60)).toBe(15 * 60);
+    expect(clampIleCanvasTimerSeconds(60 * 60)).toBe(60 * 60);
+    expect(clampIleCanvasTimerSeconds(2 * 60 * 60)).toBe(ILE_CANVAS_TIMER_SECONDS_CEILING);
+    const started = 1_000_000;
+    expect(
+      ileWorkCanvasTimerRemainingSeconds({
+        durationSeconds: 30 * 60,
+        startedAtMs: started,
+        nowMs: started + 60_000,
+      }),
+    ).toBe(29 * 60);
+    expect(
+      ileWorkCanvasTimerExpired({
+        durationSeconds: 30 * 60,
+        startedAtMs: started,
+        nowMs: started + 60_000,
+      }),
+    ).toBe(false);
+    expect(
+      ileWorkCanvasTimerRemainingSeconds({
+        durationSeconds: 15 * 60,
+        startedAtMs: started,
+        nowMs: started + 15 * 60 * 1000,
+      }),
+    ).toBe(0);
+    expect(
+      ileWorkCanvasTimerExpired({
+        durationSeconds: 15 * 60,
+        startedAtMs: started,
+        nowMs: started + 15 * 60 * 1000,
+      }),
+    ).toBe(true);
+    expect(formatIleWorkCanvasTimer(65)).toBe("1:05");
+
+    const scene: IleWorkCanvasScene = {
+      ...emptyIleWorkCanvasScene(),
+      elements: [
+        {
+          id: "el-1",
+          type: "rectangle",
+          x: 10,
+          y: 10,
+          width: 40,
+          height: 20,
+          angle: 0,
+          strokeColor: "#fff",
+          backgroundColor: "transparent",
+          fillStyle: "solid",
+          strokeWidth: 2,
+          strokeStyle: "solid",
+          roughness: 0,
+          opacity: 100,
+          groupIds: [],
+          frameId: null,
+          roundness: null,
+          seed: 1,
+          version: 1,
+          versionNonce: 1,
+          isDeleted: false,
+          boundElements: null,
+          updated: started,
+          link: null,
+          locked: false,
+        },
+      ],
+    };
+    const seedText = "Walk a case through just-war criteria";
+    const firstOpen = seedIleChapterWorkCanvas(emptyIleWorkCanvasScene(), {
+      text: seedText,
+      chapterId: "ch-a",
+    });
+    expect(firstOpen.seeded).toBe(true);
+    const withWork: IleWorkCanvasScene = {
+      ...firstOpen.scene,
+      elements: [...firstOpen.scene.elements, scene.elements[0]!],
+    };
+    expect(withWork.elements.length).toBeGreaterThan(1);
+    expect(ileWorkCanvasInitialSeedText(withWork)).toContain("Walk a case");
+
+    const insights = [{ id: "ins-1", chapter_id: "ch-a", title: "Kept" }];
+    const reset = resetIleWorkCanvasSceneOnTimerExpiry({
+      scene: withWork,
+      insights,
+      chapterId: "ch-a",
+      seedText,
+    });
+    const live = reset.scene.elements.filter((el) => !el.isDeleted);
+    expect(live).toHaveLength(1);
+    expect(live[0]?.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY]).toBe(true);
+    expect(String(live[0]?.originalText || live[0]?.text || "").replace(/\s+/g, " ")).toContain(
+      "Walk a case through just-war criteria",
+    );
+    expect(live.some((el) => el.id === "el-1")).toBe(false);
+    expect(reset.insights).toEqual(insights);
+    expect(reset.insights[0]?.title).toBe("Kept");
+    expect(reset.resetChapterIds).toEqual(["ch-a"]);
+
+    const noSeedLeft: IleWorkCanvasScene = {
+      ...emptyIleWorkCanvasScene(),
+      elements: [scene.elements[0]!],
+    };
+    const fromFallback = resetIleWorkCanvasSceneOnTimerExpiry({
+      scene: noSeedLeft,
+      insights,
+      chapterId: "ch-a",
+      seedText,
+    });
+    expect(fromFallback.scene.elements.filter((el) => !el.isDeleted)).toHaveLength(1);
+    expect(
+      String(
+        fromFallback.scene.elements[0]?.originalText || fromFallback.scene.elements[0]?.text || "",
+      ),
+    ).toContain("Walk a case");
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("replaceSceneNonce");
+    expect(canvas).toContain("ILE_CANVAS_TIMER_RESET_LOADING_MS");
+    expect(canvas).toContain("timer-reset-");
+    expect(canvas).toContain("upsertThinkingChip");
+    expect(ILE_CANVAS_TIMER_RESET_LOADING_MS).toBeGreaterThan(0);
+    const view = read("components/SessionView.tsx");
+    expect(view).toContain("resetIleWorkCanvasSceneOnTimerExpiry");
+    expect(view).toContain("seedText");
+    expect(view).toContain("IleWorkCanvasTimer");
+
+    writeScratch(
+      "ile-canvas-timer-reset.txt",
+      [
+        `default=${ILE_CANVAS_TIMER_SECONDS_DEFAULT}`,
+        `min=${ILE_CANVAS_TIMER_SECONDS_MIN}`,
+        `ceiling=${ILE_CANVAS_TIMER_SECONDS_CEILING}`,
+        `remaining60sInto30m=${ileWorkCanvasTimerRemainingSeconds({ durationSeconds: 30 * 60, startedAtMs: started, nowMs: started + 60_000 })}`,
+        `expiredAt15m=${ileWorkCanvasTimerExpired({ durationSeconds: 15 * 60, startedAtMs: started, nowMs: started + 15 * 60 * 1000 })}`,
+        `resetLive=${live.length}`,
+        `seedKept=${live[0]?.customData?.[ILE_CHAPTER_SEED_CUSTOM_DATA_KEY] === true}`,
+        `insightsKept=${reset.insights.map((row) => row.id).join(",")}`,
+        `loadingMs=${ILE_CANVAS_TIMER_RESET_LOADING_MS}`,
+        `fallbackSeed=${fromFallback.scene.elements.filter((el) => !el.isDeleted).length}`,
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("ILE Work canvas compress work (shipped)", () => {
+  it("replaces the board with one summary element and keeps the Compress work control next to the prompt bar", () => {
+    expect(ILE_COMPRESS_WORK_LABEL).toBe("Compress work");
+    expect(ileWorkCanvasCanCompress(emptyIleWorkCanvasScene())).toBe(false);
+    const seeded = seedIleChapterWorkCanvas(emptyIleWorkCanvasScene(), {
+      text: "Force is not the same as field. The metric encodes curvature.",
+      chapterId: "ch-compress",
+    });
+    expect(seeded.seeded).toBe(true);
+    expect(ileWorkCanvasCanCompress(seeded.scene)).toBe(true);
+
+    const prompt = buildIleWorkCanvasCompressUserMessage({
+      scene: seeded.scene,
+      workspace: { workspaceTitle: "General Relativity", blockTitle: "Fields" },
+    });
+    expect(prompt).toMatch(/Compress the current Work canvas/i);
+    expect(prompt).toContain("Force is not the same as field");
+    expect(prompt).toContain("Stay on this workspace");
+
+    const emptyKeep = compressIleWorkCanvasScene(seeded.scene, "   ");
+    expect(emptyKeep.elements.length).toBe(seeded.scene.elements.length);
+
+    const compressed = compressIleWorkCanvasScene(
+      seeded.scene,
+      "Gravity is geometry: mass curves spacetime.",
+    );
+    expect(compressed.elements.filter((el) => !el.isDeleted)).toHaveLength(1);
+    const only = compressed.elements.find((el) => !el.isDeleted);
+    expect(only?.type).toBe("text");
+    expect(String(only?.originalText || only?.text || "").replace(/\s+/g, " ").trim()).toBe(
+      "Gravity is geometry: mass curves spacetime.",
+    );
+    expect(only?.customData?.[ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]).toBe(true);
+    expect(
+      compressed.elements.some((el) =>
+        String(el.text || "").includes("Force is not the same as field"),
+      ),
+    ).toBe(false);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("data-ile-compress-work");
+    expect(canvas).toContain("handleCompressWork");
+    expect(canvas.indexOf("data-ile-canvas-prompt-bar")).toBeLessThan(
+      canvas.indexOf("data-ile-compress-work"),
+    );
+    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
+      canvas.indexOf("<IleCraftInsightButton"),
+    );
+    expect(canvas).toContain('kind: "compress"');
+    expect(canvas).toContain("replaceWithSummary: true");
+    const view = read("components/SessionView.tsx");
+    expect(view).toContain("buildIleWorkCanvasCompressUserMessage");
+    expect(view).toContain('input.kind === "compress"');
+    expect(ILE_COMPRESS_WORK_PROMPT.toLowerCase()).toContain("compress");
+
+    writeScratch(
+      "ile-compress-work.txt",
+      [
+        `label=${ILE_COMPRESS_WORK_LABEL}`,
+        `emptyCan=${ileWorkCanvasCanCompress(emptyIleWorkCanvasScene())}`,
+        `seededCan=${ileWorkCanvasCanCompress(seeded.scene)}`,
+        `emptyKeep=${emptyKeep.elements.length === seeded.scene.elements.length}`,
+        `compressedCount=${compressed.elements.filter((el) => !el.isDeleted).length}`,
+        `summary=${only?.text}`,
+        "button=data-ile-compress-work next-to=data-ile-canvas-prompt-bar",
+      ].join("\n") + "\n",
+    );
   });
 });

@@ -217,5 +217,7 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(chapter).toContain("BlockSkillGrid");
     expect(list).toContain("BlockSkillGrid");
     expect(chapter).toContain('from "@/components/BlockSkillGrid"');
+    expect(chapter).toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
+    expect(list).not.toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
   });
 });

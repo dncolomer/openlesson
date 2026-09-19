@@ -8,9 +8,16 @@ import {
   clampIleGatherMaxPerSession,
 } from "@/lib/ile-gather-resources";
 import {
+  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_SLOT_MAX,
+  clampIleMinInsightsPerChapter,
   clampIleTurnInsightSlotMax,
 } from "@/lib/ile-turn-insights";
+import {
+  ILE_CANVAS_TIMER_SECONDS_CEILING,
+  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  clampIleCanvasTimerSeconds,
+} from "@/lib/ile-work-canvas";
 import {
   ILE_POW_EXPENSE_DEFAULT,
   clampIlePowExpense,
@@ -34,6 +41,8 @@ export type IlePregameDifficulty = {
   allowThoughtsPoolInsights: boolean;
   allowParallelWork: boolean;
   allowGatherResources: boolean;
+  minInsightsPerChapter: number;
+  canvasTimerSeconds: number;
 };
 
 export function clampIlePregameDifficulty(
@@ -43,6 +52,12 @@ export function clampIlePregameDifficulty(
     allowThoughtsPoolInsights: input?.allowThoughtsPoolInsights !== false,
     allowParallelWork: input?.allowParallelWork !== false,
     allowGatherResources: input?.allowGatherResources !== false,
+    minInsightsPerChapter: clampIleMinInsightsPerChapter(
+      input?.minInsightsPerChapter ?? ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+    ),
+    canvasTimerSeconds: clampIleCanvasTimerSeconds(
+      input?.canvasTimerSeconds ?? ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+    ),
   };
 }
 
@@ -71,6 +86,8 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowThoughtsPoolInsights: true,
         allowParallelWork: true,
         allowGatherResources: true,
+        minInsightsPerChapter: 1,
+        canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_CEILING,
       },
     },
     {
@@ -81,6 +98,8 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowThoughtsPoolInsights: false,
         allowParallelWork: true,
         allowGatherResources: true,
+        minInsightsPerChapter: 1,
+        canvasTimerSeconds: 30 * 60,
       },
     },
     {
@@ -91,6 +110,8 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowThoughtsPoolInsights: false,
         allowParallelWork: false,
         allowGatherResources: false,
+        minInsightsPerChapter: 2,
+        canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_DEFAULT,
       },
     },
   ];
@@ -105,7 +126,7 @@ export function applyIlePregameDifficultyPreset(
 }
 
 export function ilePregameMatchingDifficultyPresetId(
-  difficulty: IlePregameDifficulty,
+  difficulty: Partial<IlePregameDifficulty> | IlePregameDifficulty,
 ): IlePregameDifficultyPresetId | null {
   const clamped = clampIlePregameDifficulty(difficulty);
   for (const preset of ILE_PREGAME_DIFFICULTY_PRESETS) {
@@ -113,7 +134,9 @@ export function ilePregameMatchingDifficultyPresetId(
     if (
       want.allowThoughtsPoolInsights === clamped.allowThoughtsPoolInsights &&
       want.allowParallelWork === clamped.allowParallelWork &&
-      want.allowGatherResources === clamped.allowGatherResources
+      want.allowGatherResources === clamped.allowGatherResources &&
+      want.minInsightsPerChapter === clamped.minInsightsPerChapter &&
+      want.canvasTimerSeconds === clamped.canvasTimerSeconds
     ) {
       return preset.id;
     }

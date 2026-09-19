@@ -200,16 +200,21 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     ]);
     const casual = applyIlePregameDifficultyPreset("casual");
     expect(casual.allowThoughtsPoolInsights).toBe(true);
+    expect(casual.minInsightsPerChapter).toBe(1);
+    expect(casual.canvasTimerSeconds).toBe(60 * 60);
     expect(ilePregameMatchingDifficultyPresetId(casual)).toBe("casual");
     const veteran = applyIlePregameDifficultyPreset("veteran");
     expect(veteran.allowThoughtsPoolInsights).toBe(false);
     expect(veteran.allowParallelWork).toBe(true);
     expect(veteran.allowGatherResources).toBe(true);
+    expect(veteran.canvasTimerSeconds).toBe(30 * 60);
     const ironman = applyIlePregameDifficultyPreset("ironman");
     expect(ironman).toEqual({
       allowThoughtsPoolInsights: false,
       allowParallelWork: false,
       allowGatherResources: false,
+      minInsightsPerChapter: 2,
+      canvasTimerSeconds: 15 * 60,
     });
     expect(ilePregameMatchingDifficultyPresetId(ironman)).toBe("ironman");
     expect(
@@ -268,6 +273,15 @@ describe("ILE pre-game settings surface", () => {
     expect(welcome).toContain("ile-pregame-panel-other");
     expect(welcome).toContain("aria-orientation=\"vertical\"");
     expect(welcome).toContain("data-ile-pregame-difficulty-toggle");
+    expect(welcome).toContain("data-ile-min-insights-slider");
+    expect(welcome).toContain("data-ile-canvas-timer-slider");
+    expect(en.session.minInsightsPerChapter).toBeTruthy();
+    expect(en.session.canvasTimer).toBeTruthy();
+    expect(en.session.canvasTimerCheap).toBe("10 min");
+    expect(en.session.canvasTimerExpensive).toBe("60 min");
+    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_STEP");
+    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_MIN");
+    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_CEILING");
     const toggleAt = welcome.indexOf("data-ile-pregame-difficulty-toggle");
     expect(toggleAt).toBeGreaterThan(-1);
     expect(welcome.slice(welcome.lastIndexOf("<div", toggleAt), toggleAt)).toContain(
@@ -290,8 +304,8 @@ describe("ILE pre-game settings surface", () => {
     expect(view).toContain("allowParallelWork");
     expect(view).toContain("allowGatherResources");
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
-    expect(craft).toContain("poolEnabled");
-    expect(craft).toContain("allowThoughtsPoolInsights");
+    expect(craft).toContain("data-ile-end-turn-screen");
+    expect(craft).not.toContain("allowThoughtsPoolInsights");
     const tabsAt = welcome.indexOf("data-ile-pregame-tabs");
     const footerForTabs = welcome.indexOf("data-ile-confirm-settings-footer");
     expect(tabsAt).toBeGreaterThan(-1);

@@ -38,7 +38,6 @@ export type BlockCircularMenuAction = {
 
 export const ILE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "work", label: "Work" },
-  { id: "mark_completed", label: "Mark as completed" },
   { id: "edit", label: "Edit" },
   { id: "gather_resources", label: "Gather resources" },
   { id: "see_resources", label: "See resources" },
@@ -167,7 +166,6 @@ export function nextCircularMenuBlockIdOnClick(input: {
 
 const EMPTY_DISABLED_ACTIONS: ReadonlySet<IleCircularMenuActionId> = new Set();
 const ILE_COMPLETED_DISABLED_ACTIONS: ReadonlySet<IleCircularMenuActionId> = new Set([
-  "mark_completed",
   "edit",
   "gather_resources",
   "see_resources",

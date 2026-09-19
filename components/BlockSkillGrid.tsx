@@ -108,6 +108,7 @@ export function BlockSkillGrid({
   openWorkIds = null,
   aestheticImages = null,
   workAestheticById = null,
+  insightCountByChapterId = null,
   circularMenuSurface: circularMenuSurfaceProp,
   onEmptyCellSelect,
   onBlockedCellSelect,
@@ -147,6 +148,7 @@ export function BlockSkillGrid({
   locale = "en",
   recenterCell = null,
   followCell = null,
+  defaultZoomAtReference,
   onAddBlock,
   onNodeDoubleClick,
   peekOnDoubleClick = true,
@@ -548,6 +550,7 @@ export function BlockSkillGrid({
     appearingNodeIds,
     onAppearingComplete,
     occupiedByBlockId,
+    defaultZoomAtReference,
   });
 
   const handleMapNoteAddAtCenter = useCallback(() => {
@@ -1141,6 +1144,7 @@ export function BlockSkillGrid({
         openWorkIds,
         aestheticImages: resolvedAestheticImages,
         workAestheticById,
+        insightCountByChapterId,
         previousSessionBlockIds,
         generationLockedBlockIds,
         dynamicUnlockHighlightIds,

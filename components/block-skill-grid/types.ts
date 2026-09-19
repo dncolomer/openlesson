@@ -39,6 +39,8 @@ export interface BlockSkillGridProps {
   aestheticImages?: readonly string[] | null;
   /** Session-lived still per open Work id (stable until reload). */
   workAestheticById?: Readonly<Record<string, string>> | null;
+  /** Accepted insights already tracked per chapter id. */
+  insightCountByChapterId?: Readonly<Record<string, number>> | null;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
   onEmptyCellSelect?: (selected: boolean) => void;
   onBlockedCellSelect?: (selected: boolean) => void;
@@ -105,6 +107,8 @@ export interface BlockSkillGridProps {
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;
+  /** Override default camera zoom (workspace is closer; ILE starts further out). */
+  defaultZoomAtReference?: number;
   /** Occupied-cell double-click. ILE maps skip peek (description lives in Work). */
   onNodeDoubleClick?: (nodeId: string) => void;
   peekOnDoubleClick?: boolean;

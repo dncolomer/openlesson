@@ -20,6 +20,7 @@ import {
 } from "@/lib/skill-grid-ops";
 import type { AnnotationLayer } from "@/lib/map-annotation-layers";
 import { MapAnnotationStrokes } from "@/components/block-skill-grid/map-annotation-strokes";
+import { IleChapterInsightCountBadge } from "@/components/session-view/ile-insight-trophies";
 import {
   canDeleteMapNote,
   canEditMapNoteContent,
@@ -181,6 +182,7 @@ export function MapWorldLayer({
   openWorkIds = null,
   aestheticImages = null,
   workAestheticById = null,
+  insightCountByChapterId = null,
   previousSessionBlockIds = new Set<string>(),
   generationLockedBlockIds,
   dynamicUnlockHighlightIds,
@@ -258,6 +260,7 @@ export function MapWorldLayer({
   openWorkIds?: readonly string[] | null;
   aestheticImages?: readonly string[] | null;
   workAestheticById?: Readonly<Record<string, string>> | null;
+  insightCountByChapterId?: Readonly<Record<string, number>> | null;
   previousSessionBlockIds?: Set<string>;
   generationLockedBlockIds: Set<string>;
   dynamicUnlockHighlightIds: Set<string>;
@@ -1016,6 +1019,11 @@ export function MapWorldLayer({
                           {tileAesthetic ? (
                             <OpenWorkTileAesthetic src={tileAesthetic} />
                           ) : null}
+                          {suggestMode === "chapter" ? (
+                            <IleChapterInsightCountBadge
+                              count={insightCountByChapterId?.[node.id] ?? 0}
+                            />
+                          ) : null}
                           {isLabel ? (
                             <>
                               <span className="relative z-10 flex max-w-full flex-col items-center">
@@ -1194,6 +1202,11 @@ export function MapWorldLayer({
                 >
                   {tileAesthetic ? (
                     <OpenWorkTileAesthetic src={tileAesthetic} />
+                  ) : null}
+                  {suggestMode === "chapter" ? (
+                    <IleChapterInsightCountBadge
+                      count={insightCountByChapterId?.[node.id] ?? 0}
+                    />
                   ) : null}
                   <span className="relative z-10 flex max-w-full flex-col items-center">
                   {statusGlyph}

@@ -182,7 +182,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(frame).toContain('title = "Work"');
     expect(frame).toContain("ILE_SESSION_TOP_BAR_PAD_CLASS");
     expect(ILE_POW_RESOURCE_BAR_CLASS).toContain(ILE_POW_RESOURCE_BAR_PAD_CLASS);
-    expect(ILE_SESSION_TOP_BAR_PAD_CLASS).toBe("px-2 py-1");
+    expect(ILE_SESSION_TOP_BAR_PAD_CLASS).toBe("px-3 py-2.5");
     expect(ILE_POW_RESOURCE_BAR_PAD_CLASS).toBe("px-2 py-1.5");
     expect(chrome).toContain("data-ile-insight-craft-widget");
     expect(chrome).toContain("ileMapInsightCraftFrameClass()");
@@ -193,7 +193,11 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(ileMapInsightCraftFrameClass()).not.toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
     expect(ILE_MAP_INSIGHT_CRAFT_Z_CLASS).toBe("z-[70]");
     expect(ileMapInsightCraftFrameClass()).not.toContain("z-40");
-    expect(chrome).toContain('title="Craft insights"');
+    expect(chrome).toContain('title="End turn"');
+    expect(chrome).toContain("mapInsightsWidget");
+    expect(chrome).toContain("workCanvasHeaderExtra");
+    expect(chrome).toContain("workCanvasHeaderLeading");
+    expect(chrome).toContain("ILE_MAP_INSIGHTS_WIDGET_CLASS");
     expect(frame).not.toContain(">Chapter</span>");
     expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
     expect(frame).not.toContain("Exit full screen");
@@ -289,6 +293,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(rail).toContain("overflow-hidden");
     expect(rail).not.toContain("overflow-y-auto");
     const grid = read("components/BlockSkillGrid.tsx");
+    const chapterMap = read("components/ChapterMapPanel.tsx");
+    expect(chapterMap).toContain("SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE");
+    expect(grid).toContain("defaultZoomAtReference");
     expect(grid).toContain("overlayAnchorClass");
     expect(grid).toContain('suggestMode === "chapter" ? "top-12" : "top-2"');
     expect(grid).toContain('hidden: suggestMode === "chapter"');

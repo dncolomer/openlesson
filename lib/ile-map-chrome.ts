@@ -18,6 +18,11 @@ export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
  * Width matches Global resources: 720px capped so 28rem stays for right-side chrome.
  */
 export const ILE_MAP_WIDGET_TOP_CLASS = "top-2";
+/** Floating Insights trophies when the map is visible (not covered by Work). */
+export const ILE_MAP_INSIGHTS_WIDGET_CLASS = [
+  "pointer-events-auto absolute left-2 top-2 z-[36]",
+  "flex max-w-[min(20rem,calc(100vw-2rem))] flex-col",
+].join(" ");
 /** Inner map/work region starts below the in-flow PoW bar. */
 export const ILE_MAP_POW_BAR_CLEARANCE_CLASS = "top-0";
 export const ILE_MAP_WIDGET_BOTTOM_CLASS = ILE_MAP_VOICE_BAR_CLEARANCE_CLASS;
@@ -25,8 +30,8 @@ export const ILE_MAP_WIDGET_WIDTH_CLASS = "w-[min(720px,calc(100%-28rem))]";
 /** PoW resources / dock / voice stay above the Work canvas in full screen. */
 export const ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS = "z-[55]";
 /** Work canvas title bar (`IleChapterWidgetFrame` header). */
-export const ILE_SESSION_TOP_BAR_PAD_CLASS = "px-2 py-1";
-/** PoW strip: a step taller than the Work title bar. */
+export const ILE_SESSION_TOP_BAR_PAD_CLASS = "px-3 py-2.5";
+/** PoW strip padding. */
 export const ILE_POW_RESOURCE_BAR_PAD_CLASS = "px-2 py-1.5";
 /** Full-width strip at the top of the session stage. */
 export const ILE_POW_RESOURCE_BAR_CLASS = [

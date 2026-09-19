@@ -36,6 +36,7 @@ export function useMapViewport(input: {
   appearingNodeIds: string[];
   onAppearingComplete?: (nodeIds: string[]) => void;
   occupiedByBlockId: Map<string, GridCell[]>;
+  defaultZoomAtReference?: number;
 }) {
   const {
     viewportCenterCell,
@@ -43,6 +44,7 @@ export function useMapViewport(input: {
     appearingNodeIds,
     onAppearingComplete,
     occupiedByBlockId,
+    defaultZoomAtReference = SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
   } = input;
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -50,7 +52,7 @@ export function useMapViewport(input: {
   const panMovedRef = useRef(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE);
+  const [zoom, setZoom] = useState(defaultZoomAtReference);
   const spaceHeldRef = useRef(false);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [visibleAppearing, setVisibleAppearing] = useState<Set<string>>(new Set());
@@ -270,7 +272,11 @@ export function useMapViewport(input: {
     if (viewportSize.width <= 0 || viewportSize.height <= 0 || hasInitialCenterRef.current) {
       return;
     }
-    const initialZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
+    const initialZoom = getDefaultSkillGridZoom(
+      viewportSize.width,
+      viewportSize.height,
+      defaultZoomAtReference,
+    );
     setZoom(initialZoom);
     setPan(
       getPanToCenterCell(
@@ -281,7 +287,7 @@ export function useMapViewport(input: {
       ),
     );
     hasInitialCenterRef.current = true;
-  }, [viewportSize.width, viewportSize.height, viewportCenterCell]);
+  }, [viewportSize.width, viewportSize.height, viewportCenterCell, defaultZoomAtReference]);
 
   useEffect(() => {
     if (!followCell || viewportSize.width <= 0 || viewportSize.height <= 0) return;
@@ -325,10 +331,14 @@ export function useMapViewport(input: {
   }, [appearingKey]);
 
   const recenter = useCallback(() => {
-    const nextZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
+    const nextZoom = getDefaultSkillGridZoom(
+      viewportSize.width,
+      viewportSize.height,
+      defaultZoomAtReference,
+    );
     setZoom(nextZoom);
     applyCenterOnStart(nextZoom);
-  }, [applyCenterOnStart, viewportSize.width, viewportSize.height]);
+  }, [applyCenterOnStart, defaultZoomAtReference, viewportSize.width, viewportSize.height]);
 
   const zoomBy = useCallback(
     (factor: number, focalX?: number, focalY?: number) => {

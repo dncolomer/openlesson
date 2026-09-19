@@ -1,10 +1,11 @@
 /**
- * ILE turn-close insight craft: unused-PoW slot math, typed XAI verdict
- * allow/refuse, thoughts-pool candidate requests, and persist payloads
- * that plug into existing insight records.
+ * ILE insights: canvas craft (evaluate/persist), per-chapter quota for
+ * End turn, and trophy grouping. Unused-PoW slot math remains for economy
+ * sliders; it no longer gates completing a turn.
  *
- * Pure — no React. End turn still runs closeIleOpenWorkTurn first; these
- * helpers only govern the crafting phase that follows.
+ * Pure — no React. Insights are crafted on a chapter Work canvas and
+ * linked to that chapter. End turn only completes when each active
+ * chapter already meets the difficulty min-insight quota.
  */
 import {
   emptyIlePowTypeCounts,
@@ -23,6 +24,32 @@ export { insightsSessionListUrl };
 export const ILE_TURN_INSIGHT_SLOT_MIN = 1;
 export const ILE_TURN_INSIGHT_SLOT_CEILING = 5;
 export const ILE_TURN_INSIGHT_SLOT_MAX = 3;
+
+/** Difficulty: accepted insights required per currently active chapter. */
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT = 1;
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_MIN = 1;
+export const ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING = 5;
+
+export const ILE_CRAFT_INSIGHT_LABEL = "craft insight";
+
+export const ILE_END_TURN_BLOCKED_NO_ACTIVE =
+  "Open a chapter and craft insights on its Work canvas before you can End turn.";
+
+export function clampIleMinInsightsPerChapter(value: unknown): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT;
+  if (n <= ILE_MIN_INSIGHTS_PER_CHAPTER_MIN) return ILE_MIN_INSIGHTS_PER_CHAPTER_MIN;
+  if (n >= ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING) {
+    return ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING;
+  }
+  return n;
+}
+
+export function formatIleEndTurnBlockedMissingInsights(minPerChapter: unknown): string {
+  const n = clampIleMinInsightsPerChapter(minPerChapter);
+  const noun = n === 1 ? "insight" : "insights";
+  return `Craft at least ${n} ${noun} on each active chapter before you can End turn.`;
+}
 
 export function clampIleTurnInsightSlotMax(value: unknown): number {
   const n = Math.round(Number(value));
@@ -131,23 +158,195 @@ export function remainingIleTurnInsightSlots(input: {
   return Math.max(0, max - crafted);
 }
 
+export function insightLinkedChapterId(insight: {
+  chapterId?: string | null;
+  chapter_id?: string | null;
+} | null | undefined): string {
+  return String(insight?.chapter_id ?? insight?.chapterId ?? "").trim();
+}
+
+export function countIleInsightsForChapter(
+  insights:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null
+    | undefined,
+  chapterId: unknown,
+): number {
+  const wanted = String(chapterId ?? "").trim();
+  if (!wanted) return 0;
+  let n = 0;
+  for (const insight of insights ?? []) {
+    if (insightLinkedChapterId(insight) === wanted) n += 1;
+  }
+  return n;
+}
+
+export function ileInsightsForChapter<
+  T extends { chapterId?: string | null; chapter_id?: string | null },
+>(insights: readonly T[] | null | undefined, chapterId: unknown): T[] {
+  const wanted = String(chapterId ?? "").trim();
+  if (!wanted) return [];
+  return (insights ?? []).filter((row) => insightLinkedChapterId(row) === wanted);
+}
+
+export function ileChapterInsightCounts(
+  insights:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null
+    | undefined,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const insight of insights ?? []) {
+    const id = insightLinkedChapterId(insight);
+    if (!id) continue;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export type IleActiveChapterInsightQuotaRow = {
+  chapterId: string;
+  count: number;
+  needed: number;
+  met: boolean;
+};
+
+export function ileActiveChapterInsightQuota(input: {
+  activeChapterIds: readonly string[] | null | undefined;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
+}): {
+  minPerChapter: number;
+  chapters: IleActiveChapterInsightQuotaRow[];
+  unmetChapterIds: string[];
+  met: boolean;
+} {
+  const minPerChapter = clampIleMinInsightsPerChapter(input.minPerChapter);
+  const seen = new Set<string>();
+  const chapters: IleActiveChapterInsightQuotaRow[] = [];
+  for (const raw of input.activeChapterIds ?? []) {
+    const chapterId = String(raw || "").trim();
+    if (!chapterId || seen.has(chapterId)) continue;
+    seen.add(chapterId);
+    const count = countIleInsightsForChapter(input.insights, chapterId);
+    chapters.push({
+      chapterId,
+      count,
+      needed: minPerChapter,
+      met: count >= minPerChapter,
+    });
+  }
+  const unmetChapterIds = chapters.filter((row) => !row.met).map((row) => row.chapterId);
+  return {
+    minPerChapter,
+    chapters,
+    unmetChapterIds,
+    met: chapters.length > 0 && unmetChapterIds.length === 0,
+  };
+}
+
+export type IleEndTurnInsightGate = {
+  canComplete: boolean;
+  reason: string | null;
+  minPerChapter: number;
+  unmetChapterIds: string[];
+  chaptersToComplete: string[];
+};
+
+/** End turn completes only when every active chapter already meets N insights. */
+export function evaluateIleEndTurnInsightGate(input: {
+  activeChapterIds: readonly string[] | null | undefined;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
+}): IleEndTurnInsightGate {
+  const quota = ileActiveChapterInsightQuota(input);
+  if (quota.chapters.length === 0) {
+    return {
+      canComplete: false,
+      reason: ILE_END_TURN_BLOCKED_NO_ACTIVE,
+      minPerChapter: quota.minPerChapter,
+      unmetChapterIds: [],
+      chaptersToComplete: [],
+    };
+  }
+  if (!quota.met) {
+    return {
+      canComplete: false,
+      reason: formatIleEndTurnBlockedMissingInsights(quota.minPerChapter),
+      minPerChapter: quota.minPerChapter,
+      unmetChapterIds: quota.unmetChapterIds,
+      chaptersToComplete: [],
+    };
+  }
+  return {
+    canComplete: true,
+    reason: null,
+    minPerChapter: quota.minPerChapter,
+    unmetChapterIds: [],
+    chaptersToComplete: quota.chapters.map((row) => row.chapterId),
+  };
+}
+
+export function ileEndTurnChaptersToMarkDone(
+  gate: IleEndTurnInsightGate | null | undefined,
+): string[] {
+  if (!gate?.canComplete) return [];
+  return [...gate.chaptersToComplete];
+}
+
 /**
- * Completing the crafting step is always allowed, including zero crafts.
- * Over-cap crafts are not a valid complete.
+ * @deprecated Unused-PoW slot-cap complete is replaced by
+ * `evaluateIleEndTurnInsightGate`. Kept as a thin wrapper so leftover
+ * callers fail closed unless the per-chapter quota is met.
  */
 export function canCompleteIleTurnInsightCraft(input: {
-  craftedCount: unknown;
+  craftedCount?: unknown;
   unusedPow?: unknown;
   slotCount?: unknown;
   slotMax?: unknown;
+  activeChapterIds?: readonly string[] | null;
+  insights?:
+    | readonly { chapterId?: string | null; chapter_id?: string | null }[]
+    | null;
+  minPerChapter?: unknown;
 }): boolean {
-  const crafted = Math.floor(Number(input.craftedCount));
-  if (!Number.isFinite(crafted) || crafted < 0) return false;
-  const max =
-    input.slotCount !== undefined
-      ? ileTurnInsightSlotCount(input.slotCount, input.slotMax)
-      : ileTurnInsightSlotCount(input.unusedPow, input.slotMax);
-  return crafted <= max;
+  if (input.activeChapterIds !== undefined || input.insights !== undefined) {
+    return evaluateIleEndTurnInsightGate({
+      activeChapterIds: input.activeChapterIds,
+      insights: input.insights,
+      minPerChapter: input.minPerChapter,
+    }).canComplete;
+  }
+  return false;
+}
+
+export function ileCanvasCraftInsightSelectionCount(
+  selectedElementIds?: Record<string, unknown> | null,
+): number {
+  return Object.keys(selectedElementIds ?? {}).filter((id) =>
+    Boolean(selectedElementIds?.[id]),
+  ).length;
+}
+
+/** Craft insight is always usable from the Work prompt bar — no selection required. */
+export function ileCanvasCraftInsightUsable(_selectedCount?: unknown): boolean {
+  return true;
+}
+
+export function buildIleCanvasCraftInsightEvaluateRequest(input: {
+  text: unknown;
+  chapterLabel?: string | null;
+  selectedElements?: readonly { id?: string; text?: string; originalText?: string }[] | null;
+}): { text: string; chapterLabel?: string } {
+  void input.selectedElements;
+  return buildIleTypedInsightEvaluateRequest({
+    text: input.text,
+    chapterLabel: input.chapterLabel,
+  });
 }
 
 function asRecord(raw: unknown): Record<string, unknown> {

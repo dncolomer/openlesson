@@ -23,10 +23,19 @@ import {
   type IlePregameTabId,
 } from "@/lib/ile-pregame-settings";
 import {
+  ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING,
+  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  ILE_MIN_INSIGHTS_PER_CHAPTER_MIN,
   ILE_TURN_INSIGHT_SLOT_CEILING,
   ILE_TURN_INSIGHT_SLOT_MAX,
   ILE_TURN_INSIGHT_SLOT_MIN,
 } from "@/lib/ile-turn-insights";
+import {
+  ILE_CANVAS_TIMER_SECONDS_CEILING,
+  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  ILE_CANVAS_TIMER_SECONDS_MIN,
+  ILE_CANVAS_TIMER_SECONDS_STEP,
+} from "@/lib/ile-work-canvas";
 import {
   ILE_GATHER_MAX_PER_SESSION,
   ILE_GATHER_MAX_PER_SESSION_CEILING,
@@ -68,6 +77,10 @@ export function SessionWelcomeModal({
   onAllowParallelWorkChange,
   allowGatherResources = true,
   onAllowGatherResourcesChange,
+  minInsightsPerChapter = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+  onMinInsightsPerChapterChange,
+  canvasTimerSeconds = ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  onCanvasTimerSecondsChange,
   autoAdvance,
   onToggleAutoAdvance,
   localInferenceEnabled,
@@ -149,12 +162,16 @@ export function SessionWelcomeModal({
               allowThoughtsPoolInsights,
               allowParallelWork,
               allowGatherResources,
+              minInsightsPerChapter,
+              canvasTimerSeconds,
             });
             const applyDifficultyPreset = (presetId: string) => {
               const next = applyIlePregameDifficultyPreset(presetId);
               onAllowThoughtsPoolInsightsChange?.(next.allowThoughtsPoolInsights);
               onAllowParallelWorkChange?.(next.allowParallelWork);
               onAllowGatherResourcesChange?.(next.allowGatherResources);
+              onMinInsightsPerChapterChange?.(next.minInsightsPerChapter);
+              onCanvasTimerSecondsChange?.(next.canvasTimerSeconds);
             };
             const statusUnknown = chapterPlanStatus === "unknown";
             const statusFailed = chapterPlanStatus === "failed";
@@ -616,6 +633,66 @@ export function SessionWelcomeModal({
                           </button>
                         );
                       })}
+                      </div>
+                    </div>
+                    <div className="mt-5 flex w-full min-w-0 flex-col gap-4 border-t border-neutral-800 pt-5">
+                      <div data-ile-min-insights-slider>
+                        <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                          <label className="text-sm font-medium text-neutral-100">
+                            {t("session.minInsightsPerChapter")}
+                          </label>
+                          <span className="font-mono text-[11px] text-neutral-300">
+                            {minInsightsPerChapter}
+                          </span>
+                        </div>
+                        <p className="mb-2 text-[12px] leading-snug text-neutral-400">
+                          {t("session.minInsightsPerChapterDesc")}
+                        </p>
+                        <input
+                          type="range"
+                          min={ILE_MIN_INSIGHTS_PER_CHAPTER_MIN}
+                          max={ILE_MIN_INSIGHTS_PER_CHAPTER_CEILING}
+                          step={1}
+                          value={minInsightsPerChapter}
+                          disabled={isButtonDisabled}
+                          onChange={(e) =>
+                            onMinInsightsPerChapterChange?.(Number(e.target.value))
+                          }
+                          className="w-full accent-white"
+                        />
+                        <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                          <span>{t("session.minInsightsPerChapterCheap")}</span>
+                          <span>{t("session.minInsightsPerChapterExpensive")}</span>
+                        </div>
+                      </div>
+                      <div data-ile-canvas-timer-slider>
+                        <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                          <label className="text-sm font-medium text-neutral-100">
+                            {t("session.canvasTimer")}
+                          </label>
+                          <span className="font-mono text-[11px] text-neutral-300">
+                            {Math.round(canvasTimerSeconds / 60)}m
+                          </span>
+                        </div>
+                        <p className="mb-2 text-[12px] leading-snug text-neutral-400">
+                          {t("session.canvasTimerDesc")}
+                        </p>
+                        <input
+                          type="range"
+                          min={ILE_CANVAS_TIMER_SECONDS_MIN}
+                          max={ILE_CANVAS_TIMER_SECONDS_CEILING}
+                          step={ILE_CANVAS_TIMER_SECONDS_STEP}
+                          value={canvasTimerSeconds}
+                          disabled={isButtonDisabled}
+                          onChange={(e) =>
+                            onCanvasTimerSecondsChange?.(Number(e.target.value))
+                          }
+                          className="w-full accent-white"
+                        />
+                        <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                          <span>{t("session.canvasTimerCheap")}</span>
+                          <span>{t("session.canvasTimerExpensive")}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="mt-5 flex w-full min-w-0 flex-col gap-2 border-t border-neutral-800 pt-5">

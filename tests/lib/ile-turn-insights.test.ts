@@ -1,6 +1,6 @@
 /**
- * Shipped ILE turn-insight helpers: unused-PoW slots, typed XAI verdict,
- * thoughts-pool candidates, persist payload, zero-craft complete.
+ * Shipped ILE turn-insight helpers: per-chapter End-turn quota, canvas
+ * craft evaluate/persist, typed XAI verdict, trophy grouping.
  */
 import { describe, expect, it } from "vitest";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -17,17 +17,29 @@ import {
   buildIleThoughtsPoolCandidateRequest,
   buildIleTurnInsightPersistPayload,
   buildIleTypedInsightEvaluateRequest,
+  buildIleCanvasCraftInsightEvaluateRequest,
   canCompleteIleTurnInsightCraft,
+  clampIleMinInsightsPerChapter,
+  countIleInsightsForChapter,
+  evaluateIleEndTurnInsightGate,
   freezeIleTurnInsightUnusedPow,
+  formatIleEndTurnBlockedMissingInsights,
+  ileActiveChapterInsightQuota,
+  ileCanvasCraftInsightUsable,
+  ileChapterInsightCounts,
+  ileEndTurnChaptersToMarkDone,
   ileInsightCraftPowFromAcceptedPersist,
+  ileInsightsForChapter,
   ileTurnInsightSlotCount,
   ileTurnInsightSlotsFromUnusedPow,
+  ILE_CRAFT_INSIGHT_LABEL,
+  ILE_END_TURN_BLOCKED_NO_ACTIVE,
   ILE_INSIGHT_CRAFT_META_TYPE,
   ILE_INSIGHT_CRAFT_POW_FILE,
   ILE_INSIGHT_CRAFT_TOOL_ACTION,
   ILE_INSIGHT_CRAFT_TOOL_NAME,
+  ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_CREATE_PATH,
-  ILE_TURN_INSIGHT_DOCK_LINK_LABEL,
   ILE_TURN_INSIGHT_EVALUATE_PATH,
   ILE_TURN_INSIGHT_SLOT_MAX,
   ILE_TURN_INSIGHT_SUGGEST_PATH,
@@ -50,7 +62,7 @@ import {
 
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-3f77a3e511a0/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-5a952e28c903/implementer";
 
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
@@ -268,18 +280,6 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
     expect(uuidRow.workspace_id).toBe("22222222-2222-4222-8222-222222222222");
     expect(uuidRow.session_id).toBe("33333333-3333-4333-8333-333333333333");
 
-    expect(canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 5 })).toBe(
-      true,
-    );
-    expect(canCompleteIleTurnInsightCraft({ craftedCount: 2, unusedPow: 3 })).toBe(
-      true,
-    );
-    expect(canCompleteIleTurnInsightCraft({ craftedCount: 4, unusedPow: 8 })).toBe(
-      false,
-    );
-    expect(canCompleteIleTurnInsightCraft({ craftedCount: -1, unusedPow: 3 })).toBe(
-      false,
-    );
     expect(ILE_END_TURN_LABEL).toBe("End turn");
 
     const createSrc = readFileSync(
@@ -289,16 +289,14 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
     expect(createSrc).toContain("buildInsightCreateInsert");
     expect(createSrc).toContain("chapterId");
     const craftSrc = readFileSync(
-      join(__dirname, "../../components/session-view/ile-turn-insight-craft.tsx"),
+      join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
     );
-    expect(craftSrc).toContain("chapterId: linkedChapterId");
+    expect(craftSrc).toContain("chapterId: config.chapterId");
     expect(craftSrc).not.toContain("blockId: linkedChapterId");
-    expect(ILE_TURN_INSIGHT_DOCK_LINK_LABEL).toBe("Linked to a docked chapter");
-    expect(craftSrc).toContain("ILE_TURN_INSIGHT_DOCK_LINK_LABEL");
-    expect(craftSrc).toContain("data-ile-turn-insight-chapter-list");
-    expect(craftSrc).toContain("dockedChapters.map");
-    expect(craftSrc).not.toContain("Link to an active chapter");
+    expect(craftSrc).toContain("buildIleTurnInsightPersistPayload");
+    expect(craftSrc).toContain("ILE_TURN_INSIGHT_EVALUATE_PATH");
+    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("craft insight");
 
     writeScratch(
       "ile-turn-insights-helpers.txt",
@@ -311,6 +309,199 @@ describe("thoughts-pool candidates + persist (session + optional chapter)", () =
         `createChapter=${createRow.chapter_id} createBlock=${createRow.block_id}`,
         `zeroCraftOk=${canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 3 })}`,
       ].join("\n"),
+    );
+  });
+});
+
+describe("evaluateIleEndTurnInsightGate (per-chapter quota)", () => {
+  it("blocks complete when any active chapter is under N, and marks those chapters done when met", () => {
+    expect(clampIleMinInsightsPerChapter(undefined)).toBe(
+      ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
+    );
+    expect(clampIleMinInsightsPerChapter(0)).toBe(1);
+    expect(clampIleMinInsightsPerChapter(9)).toBe(5);
+
+    const insights = [
+      { id: "i1", chapter_id: "ch-a" },
+      { id: "i2", chapter_id: "ch-a" },
+      { id: "i3", chapter_id: "ch-b" },
+    ];
+    expect(countIleInsightsForChapter(insights, "ch-a")).toBe(2);
+    expect(ileChapterInsightCounts(insights)["ch-b"]).toBe(1);
+    expect(ileInsightsForChapter(insights, "ch-a").map((row) => row.id)).toEqual([
+      "i1",
+      "i2",
+    ]);
+
+    const missing = evaluateIleEndTurnInsightGate({
+      activeChapterIds: ["ch-a", "ch-b"],
+      insights: [{ chapter_id: "ch-a" }],
+      minPerChapter: 1,
+    });
+    expect(missing.canComplete).toBe(false);
+    expect(missing.unmetChapterIds).toEqual(["ch-b"]);
+    expect(missing.reason).toBe(formatIleEndTurnBlockedMissingInsights(1));
+    expect(ileEndTurnChaptersToMarkDone(missing)).toEqual([]);
+    expect(
+      canCompleteIleTurnInsightCraft({
+        activeChapterIds: ["ch-a", "ch-b"],
+        insights: [{ chapter_id: "ch-a" }],
+        minPerChapter: 1,
+      }),
+    ).toBe(false);
+
+    const zeroCraft = evaluateIleEndTurnInsightGate({
+      activeChapterIds: ["ch-a"],
+      insights: [],
+      minPerChapter: 1,
+    });
+    expect(zeroCraft.canComplete).toBe(false);
+    expect(canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 5 })).toBe(
+      false,
+    );
+
+    const noActive = evaluateIleEndTurnInsightGate({
+      activeChapterIds: [],
+      insights,
+    });
+    expect(noActive.canComplete).toBe(false);
+    expect(noActive.reason).toBe(ILE_END_TURN_BLOCKED_NO_ACTIVE);
+
+    const n2 = evaluateIleEndTurnInsightGate({
+      activeChapterIds: ["ch-a", "ch-b"],
+      insights,
+      minPerChapter: 2,
+    });
+    expect(n2.canComplete).toBe(false);
+    expect(n2.unmetChapterIds).toEqual(["ch-b"]);
+
+    const met = evaluateIleEndTurnInsightGate({
+      activeChapterIds: ["ch-a", "ch-b"],
+      insights,
+      minPerChapter: 1,
+    });
+    expect(met.canComplete).toBe(true);
+    expect(met.reason).toBeNull();
+    expect(ileEndTurnChaptersToMarkDone(met)).toEqual(["ch-a", "ch-b"]);
+    expect(ileActiveChapterInsightQuota({
+      activeChapterIds: ["ch-a", "ch-b"],
+      insights,
+      minPerChapter: 1,
+    }).met).toBe(true);
+
+    const screen = readFileSync(
+      join(__dirname, "../../components/session-view/ile-turn-insight-craft.tsx"),
+      "utf8",
+    );
+    expect(screen).toContain("data-ile-end-turn-screen");
+    expect(screen).toContain("data-ile-end-turn-blocked-reason");
+    expect(screen).not.toContain("data-ile-turn-insight-draft");
+    expect(screen).not.toContain("data-ile-turn-insight-evaluate");
+    expect(screen).not.toContain("Thoughts pool");
+
+    writeScratch(
+      "ile-end-turn-insight-gate.txt",
+      [
+        `defaultN=${ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT}`,
+        `zeroCraft=${zeroCraft.canComplete}`,
+        `missing=${missing.canComplete} unmet=${missing.unmetChapterIds.join(",")}`,
+        `n2=${n2.canComplete} unmet=${n2.unmetChapterIds.join(",")}`,
+        `met=${met.canComplete} done=${ileEndTurnChaptersToMarkDone(met).join(",")}`,
+        `noActive=${noActive.canComplete}`,
+        `legacyZero=${canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: 3 })}`,
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+describe("canvas craft insight (evaluate + persist)", () => {
+  it("is usable with no selection, refuses a failed verdict, and persists linked to the chapter on accept", () => {
+    expect(ileCanvasCraftInsightUsable(0)).toBe(true);
+    expect(ileCanvasCraftInsightUsable(1)).toBe(true);
+    expect(ileCanvasCraftInsightUsable()).toBe(true);
+    expect(ILE_CRAFT_INSIGHT_LABEL).toBe("craft insight");
+
+    const evaluateBody = buildIleCanvasCraftInsightEvaluateRequest({
+      text: "  gravity is curvature  ",
+      chapterLabel: "Ch 2",
+      selectedElements: [{ id: "a", text: "mass" }, { id: "b", text: "metric" }],
+    });
+    expect(evaluateBody.text).toBe("gravity is curvature");
+    expect(evaluateBody.chapterLabel).toBe("Ch 2");
+
+    const refused = parseIleTypedInsightVerdict({
+      accepted: false,
+      correct: false,
+      goodEnough: false,
+      reason: "too vague",
+    });
+    expect(allowIleTypedInsightCreate(refused)).toBe(false);
+    expect(
+      typedInsightRecordFromVerdict({ draft: evaluateBody.text, verdict: refused }),
+    ).toBeNull();
+
+    const accepted = parseIleTypedInsightVerdict({
+      accepted: true,
+      correct: true,
+      goodEnough: true,
+      title: "Gravity is geometry",
+      summary: "Mass curves spacetime.",
+    });
+    expect(allowIleTypedInsightCreate(accepted)).toBe(true);
+    const record = typedInsightRecordFromVerdict({
+      draft: evaluateBody.text,
+      verdict: accepted,
+    });
+    expect(record?.title).toBe(accepted.title);
+    const persist = buildIleTurnInsightPersistPayload({
+      title: record!.title,
+      summary: record!.summary,
+      sessionId: "sess-canvas",
+      workspaceId: "ws-1",
+      chapterId: "step_2_seed",
+    });
+    expect(persist.chapterId).toBe("step_2_seed");
+    expect(persist.evaluated).toBe(true);
+    expect(persist.sessionId).toBe("sess-canvas");
+
+    const canvas = readFileSync(
+      join(__dirname, "../../components/ExcalidrawCanvas.tsx"),
+      "utf8",
+    );
+    const form = readFileSync(
+      join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
+      "utf8",
+    );
+    expect(canvas).toContain("IleCraftInsightButton");
+    expect(canvas).toContain("ileCanvasCraftInsightUsable");
+    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
+      canvas.indexOf("<IleCraftInsightButton"),
+    );
+    expect(form).toContain("ILE_CRAFT_INSIGHT_LABEL");
+    expect(form).toContain("data-ile-craft-insight");
+    expect(form).toContain("data-ile-canvas-craft-insight-submit");
+    expect(form).toContain("data-ile-canvas-craft-insight-close");
+    expect(form).toContain("bg-neutral-950");
+    expect(form).toContain("bg-neutral-900");
+    expect(form).not.toContain("bg-black/55");
+    expect(form).not.toContain("bg-amber-300/10");
+    expect(form).toContain("buildIleCanvasCraftInsightEvaluateRequest");
+    expect(form).toContain("allowIleTypedInsightCreate");
+    expect(form).toContain("chapterId: config.chapterId");
+    expect(form).toContain("ILE_TURN_INSIGHT_CREATE_PATH");
+
+    writeScratch(
+      "ile-canvas-craft-insight.txt",
+      [
+        `usable0=${ileCanvasCraftInsightUsable(0)} usableNone=${ileCanvasCraftInsightUsable()}`,
+        `label=${ILE_CRAFT_INSIGHT_LABEL}`,
+        `refuse=${allowIleTypedInsightCreate(refused)}`,
+        `allow=${allowIleTypedInsightCreate(accepted)}`,
+        `persistChapter=${persist.chapterId} evaluated=${persist.evaluated}`,
+        "button=data-ile-craft-insight",
+        "submit=data-ile-canvas-craft-insight-submit",
+        "close=data-ile-canvas-craft-insight-close",
+      ].join("\n") + "\n",
     );
   });
 });
@@ -408,7 +599,7 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     ).toBeNull();
     expect(
       canCompleteIleTurnInsightCraft({ craftedCount: 0, unusedPow: frozen }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       ileInsightCraftPowFromAcceptedPersist({
         persistOk: true,
@@ -418,7 +609,7 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     ).toBeNull();
 
     const craftSrc = readFileSync(
-      join(__dirname, "../../components/session-view/ile-turn-insight-craft.tsx"),
+      join(__dirname, "../../components/session-view/ile-canvas-craft-insight.tsx"),
       "utf8",
     );
     const viewSrc = readFileSync(
@@ -427,7 +618,7 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     );
     expect(craftSrc).toContain("ileInsightCraftPowFromAcceptedPersist");
     expect(craftSrc).toContain("persistOk: true");
-    expect(craftSrc).toContain("recordSessionPowArtifact?.(pow)");
+    expect(craftSrc).toContain("config.recordSessionPowArtifact?.(pow)");
     expect(craftSrc).toContain("uploadIleProofOfWork");
     expect(craftSrc).toContain("ILE_INSIGHT_CRAFT_POW_FILE");
     expect(craftSrc).toContain('file_name: ILE_INSIGHT_CRAFT_POW_FILE');
@@ -437,11 +628,11 @@ describe("accepted insight craft emits snapshot-eligible tool PoW", () => {
     expect(persistSlice.indexOf("ileInsightCraftPowFromAcceptedPersist")).toBeGreaterThan(
       persistSlice.indexOf('if (!insight?.id) throw new Error("Failed to save insight")'),
     );
-    expect(viewSrc).toContain("freezeIleTurnInsightUnusedPow");
-    expect(viewSrc).toContain("setCraftUnusedPow");
-    expect(viewSrc).toContain("unusedPow={craftUnusedPow}");
-    expect(viewSrc).not.toContain("unusedPow={unusedPowForInsights}");
-    expect(viewSrc).toContain("recordSessionPowArtifact={recordSessionPowArtifact}");
+    expect(viewSrc).toContain("evaluateIleEndTurnInsightGate");
+    expect(viewSrc).toContain("ileEndTurnChaptersToMarkDone");
+    expect(viewSrc).toContain("handleMarkChapterDone({ stepId, closeOverride: true })");
+    expect(viewSrc).toContain("craftInsight=");
+    expect(viewSrc).toContain("recordSessionPowArtifact");
     expect(ILE_INSIGHT_CRAFT_POW_FILE).toBe("ile-insight-crafting.json");
 
     writeScratch(

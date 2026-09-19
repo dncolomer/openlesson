@@ -59,6 +59,8 @@ export function useIleBlurScreenshare(input: {
   compact: IleBlurScreenshareCompactProps;
   /** Chapter widget clone painted inside the PiP / popup document. */
   renderCompact?: () => ReactNode;
+  compactHeaderLeading?: ReactNode;
+  compactHeaderExtra?: ReactNode;
 }): {
   notifyLeaveTab: (reason: IleLeaveFocusReason) => void;
   openManualPicInPic: () => void;
@@ -71,6 +73,10 @@ export function useIleBlurScreenshare(input: {
   compactPropsRef.current = input.compact;
   const renderCompactRef = useRef(input.renderCompact);
   renderCompactRef.current = input.renderCompact;
+  const compactHeaderLeadingRef = useRef(input.compactHeaderLeading);
+  compactHeaderLeadingRef.current = input.compactHeaderLeading;
+  const compactHeaderExtraRef = useRef(input.compactHeaderExtra);
+  compactHeaderExtraRef.current = input.compactHeaderExtra;
 
   const enabledRef = useRef(input.enabled);
   enabledRef.current = input.enabled;
@@ -111,6 +117,8 @@ export function useIleBlurScreenshare(input: {
           <IleCompactStashWindow
             isScreenSharing={compact.isScreenSharing}
             onStartShare={() => startRef.current()}
+            headerLeading={compactHeaderLeadingRef.current}
+            headerExtra={compactHeaderExtraRef.current}
           >
             {renderCompactRef.current?.() ?? null}
           </IleCompactStashWindow>

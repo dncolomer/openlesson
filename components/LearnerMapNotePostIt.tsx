@@ -27,10 +27,8 @@ type DragSession = {
 
 /**
  * Free continuous-plane post-it: collapsible, click-inside to write,
- * drag to move, corner resize. Lives on the map world layer (pan/zoom).
- *
- * Drag surface is a dedicated non-button handle; collapse/delete are separate
- * controls so pointerdown is never swallowed by `closest("button")`.
+ * drag to move from anywhere on the chrome, corner resize. Lives on the
+ * map world layer (pan/zoom). Collapse/delete/resize/text do not start a move.
  */
 export function LearnerMapNotePostIt({
   note,
@@ -221,7 +219,9 @@ export function LearnerMapNotePostIt({
       data-learner-note-y={String(note.y)}
       data-learner-note-width={String(note.width)}
       data-learner-note-height={String(note.height)}
-      className="absolute z-[25] pointer-events-auto"
+      className={`absolute z-[25] pointer-events-auto ${
+        canDragResize ? "cursor-grab active:cursor-grabbing" : ""
+      }`}
       style={{
         left: box.left,
         top: box.top,
@@ -229,33 +229,30 @@ export function LearnerMapNotePostIt({
         height: collapsed ? undefined : box.height,
         minHeight: collapsed ? undefined : 56,
       }}
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        startMoveDrag(e);
+      }}
+      onPointerMove={(e) => applyPointerMove(e, "move")}
+      onPointerUp={endPointer}
+      onPointerCancel={endPointer}
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-500/80 bg-[#efece4] text-neutral-900 shadow-[0_10px_28px_rgba(0,0,0,0.4)]"
+        className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 text-neutral-100 shadow-[0_10px_28px_rgba(0,0,0,0.65)]"
         data-learner-note-postit
         style={collapsed ? undefined : { height: "100%" }}
       >
         <div
-          className="flex shrink-0 items-stretch gap-0.5 border-b border-neutral-400/40 bg-black/[0.04]"
+          className="flex shrink-0 items-stretch gap-0.5 border-b border-neutral-800 bg-black"
           data-learner-note-header
         >
           <div
             role="presentation"
-            data-learner-note-drag-handle
+            data-learner-note-chrome
             title={canDragResize ? "Drag to move" : "Note (fixed)"}
-            className={`flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 px-1.5 py-1 ${
-              canDragResize
-                ? "cursor-grab active:cursor-grabbing"
-                : "cursor-default"
-            }`}
-            onPointerDown={startMoveDrag}
-            onPointerMove={(e) => applyPointerMove(e, "move")}
-            onPointerUp={endPointer}
-            onPointerCancel={endPointer}
+            className="flex min-w-0 flex-1 touch-none select-none items-center gap-1.5 px-1.5 py-1"
           >
-            {/* Grip dots — visual affordance for the drag zone */}
             {canDragResize ? (
               <span
                 className="grid shrink-0 grid-cols-2 gap-0.5"
@@ -265,14 +262,14 @@ export function LearnerMapNotePostIt({
                 {Array.from({ length: 6 }).map((_, i) => (
                   <span
                     key={i}
-                    className="h-0.5 w-0.5 rounded-full bg-neutral-500/70"
+                    className="h-0.5 w-0.5 rounded-full bg-neutral-500"
                   />
                 ))}
               </span>
             ) : null}
-            <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-500">
+            <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-neutral-400">
               {collapsed ? (
-                <span className="truncate text-neutral-800">{preview}</span>
+                <span className="truncate text-neutral-200">{preview}</span>
               ) : note.source === "creator" ? (
                 <span>Author</span>
               ) : (
@@ -287,7 +284,7 @@ export function LearnerMapNotePostIt({
             title={collapsed ? "Expand note" : "Collapse note"}
             aria-expanded={!collapsed}
             onClick={() => onToggleCollapsed(note.id)}
-            className="shrink-0 self-center px-1.5 py-1 text-[10px] font-semibold text-neutral-500 hover:text-neutral-900"
+            className="shrink-0 self-center px-1.5 py-1 text-[10px] font-semibold text-neutral-400 hover:text-neutral-100"
           >
             {collapsed ? "▸" : "▾"}
           </button>
@@ -299,7 +296,7 @@ export function LearnerMapNotePostIt({
               title="Delete note"
               aria-label="Delete note"
               onClick={() => onDelete(note.id)}
-              className="shrink-0 self-center px-1.5 py-1 text-[11px] leading-none text-neutral-500 hover:text-red-700"
+              className="shrink-0 self-center px-1.5 py-1 text-[11px] leading-none text-neutral-400 hover:text-red-400"
             >
               ×
             </button>
@@ -321,6 +318,7 @@ export function LearnerMapNotePostIt({
                   maxLength={LEARNER_NOTE_BODY_MAX}
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={commitDraft}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {
                     if (e.key === "Escape") {
                       setDraft(note.body);
@@ -331,18 +329,18 @@ export function LearnerMapNotePostIt({
                       (e.currentTarget as HTMLTextAreaElement).blur();
                     }
                   }}
-                  className="h-full min-h-[3rem] w-full resize-none border-0 bg-transparent px-2 py-1.5 text-[12px] leading-snug text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                  className="h-full min-h-[3rem] w-full cursor-text resize-none border-0 bg-transparent px-2 py-1.5 text-[12px] leading-snug text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
                   placeholder="Write a note…"
                 />
               ) : (
                 <p
-                  className="min-h-[2rem] whitespace-pre-wrap break-words px-2 py-1.5 text-[12px] leading-snug text-neutral-800"
+                  className="min-h-[2rem] whitespace-pre-wrap break-words px-2 py-1.5 text-[12px] leading-snug text-neutral-200"
                   data-learner-note-text
                 >
                   {note.body.trim() ? (
                     note.body
                   ) : (
-                    <span className="italic text-neutral-400">Empty note</span>
+                    <span className="italic text-neutral-500">Empty note</span>
                   )}
                 </p>
               )}
@@ -354,6 +352,7 @@ export function LearnerMapNotePostIt({
         {!collapsed && canDragResize ? (
           <div
             data-learner-note-resize-handle
+            data-learner-note-no-drag
             title="Resize"
             className="absolute bottom-0 right-0 z-[2] h-3.5 w-3.5 cursor-se-resize touch-none"
             onPointerDown={startResizeDrag}
@@ -362,7 +361,7 @@ export function LearnerMapNotePostIt({
             onPointerCancel={endPointer}
           >
             <svg
-              className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 text-neutral-400"
+              className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 text-neutral-500"
               viewBox="0 0 12 12"
               fill="currentColor"
               aria-hidden

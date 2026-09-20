@@ -54,7 +54,7 @@ const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.LEARNER_NOTES_PLANE_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-59c66ba00923/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b038908e4597/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -62,10 +62,12 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
-function writeEvidence(name: string, body: string) {
+function writeEvidence(name: string, body: string, append = false) {
   try {
     mkdirSync(SCRATCH, { recursive: true });
-    writeFileSync(join(SCRATCH, name), body, "utf8");
+    const path = join(SCRATCH, name);
+    const prev = append && existsSync(path) ? `${readFileSync(path, "utf8").trimEnd()}\n` : "";
+    writeFileSync(path, `${prev}${body.trimEnd()}\n`, "utf8");
   } catch {
     /* optional */
   }
@@ -298,16 +300,18 @@ function matchesSelector(
 }
 
 describe("drag-start gate + pure gesture commit path", () => {
-  it("allows drag on dedicated handle surface; rejects button-covered targets", () => {
-    // Shipped layout: drag-handle div (non-button) + separate collapse/delete buttons.
-    const label = makePointerTree({
+  it("allows drag from note surface / body chrome; rejects textarea, collapse/delete, resize", () => {
+    const chrome = makePointerTree({
       tag: "span",
-      attrs: { "data-learner-note-label": "true" },
+      attrs: { "data-learner-note-chrome": "true" },
     });
-    const dragHandle = makePointerTree({
+    const bodyChrome = makePointerTree({
       tag: "div",
-      attrs: { "data-learner-note-drag-handle": "true" },
-      children: [label],
+      attrs: { "data-learner-note-body": "true" },
+    });
+    const textarea = makePointerTree({
+      tag: "textarea",
+      attrs: { "data-learner-note-edit": "true" },
     });
     const collapseBtn = makePointerTree({
       tag: "button",
@@ -316,37 +320,40 @@ describe("drag-start gate + pure gesture commit path", () => {
         "data-learner-note-no-drag": "true",
       },
     });
-    const header = makePointerTree({
-      tag: "div",
-      attrs: { "data-learner-note-header": "true" },
-      children: [dragHandle, collapseBtn],
-    });
-    void header;
-
-    // Pointer on label inside drag handle → drag allowed
-    expect(learnerNotePointerAllowsDragStart(label)).toBe(true);
-    expect(learnerNotePointerAllowsDragStart(dragHandle)).toBe(true);
-    // Pointer on collapse button → drag rejected (control)
-    expect(learnerNotePointerAllowsDragStart(collapseBtn)).toBe(false);
-
-    // Anti-pattern: button-covered header (old bug) — entire surface is a button
-    const coveredLabel = makePointerTree({ tag: "span" });
-    const coveredButton = makePointerTree({
+    const deleteBtn = makePointerTree({
       tag: "button",
-      attrs: { "data-learner-note-collapse": "true", class: "flex-1" },
-      children: [coveredLabel],
+      attrs: {
+        "data-learner-note-delete": "true",
+        "data-learner-note-no-drag": "true",
+      },
     });
-    const brokenHandle = makePointerTree({
+    const resizeHandle = makePointerTree({
       tag: "div",
-      attrs: { "data-learner-note-drag-handle": "true" },
-      children: [coveredButton],
+      attrs: {
+        "data-learner-note-resize-handle": "true",
+        "data-learner-note-no-drag": "true",
+      },
     });
-    void brokenHandle;
-    // Clicking the visible "drag" label inside the button must NOT start drag
-    expect(learnerNotePointerAllowsDragStart(coveredLabel)).toBe(false);
-    expect(learnerNotePointerAllowsDragStart(coveredButton)).toBe(false);
+    const postit = makePointerTree({
+      tag: "div",
+      attrs: { "data-learner-note-postit": "true" },
+      children: [chrome, bodyChrome, textarea, collapseBtn, deleteBtn, resizeHandle],
+    });
+    const note = makePointerTree({
+      tag: "div",
+      attrs: { "data-learner-map-note": "true" },
+      children: [postit],
+    });
+    void note;
 
-    // Outside any handle
+    expect(learnerNotePointerAllowsDragStart(chrome)).toBe(true);
+    expect(learnerNotePointerAllowsDragStart(bodyChrome)).toBe(true);
+    expect(learnerNotePointerAllowsDragStart(postit)).toBe(true);
+    expect(learnerNotePointerAllowsDragStart(textarea)).toBe(false);
+    expect(learnerNotePointerAllowsDragStart(collapseBtn)).toBe(false);
+    expect(learnerNotePointerAllowsDragStart(deleteBtn)).toBe(false);
+    expect(learnerNotePointerAllowsDragStart(resizeHandle)).toBe(false);
+
     const orphan = makePointerTree({ tag: "div" });
     expect(learnerNotePointerAllowsDragStart(orphan)).toBe(false);
     expect(learnerNotePointerAllowsDragStart(null)).toBe(false);
@@ -405,12 +412,15 @@ describe("drag-start gate + pure gesture commit path", () => {
     }
 
     writeEvidence(
-      "learner-notes-plane-drag-gate.log",
+      "learner-map-notes.txt",
       [
-        "handle_label_allows=" + learnerNotePointerAllowsDragStart(label),
+        "surface_chrome_allows=" + learnerNotePointerAllowsDragStart(chrome),
+        "body_chrome_allows=" + learnerNotePointerAllowsDragStart(bodyChrome),
+        "textarea_rejects=" + !learnerNotePointerAllowsDragStart(textarea),
         "collapse_button_rejects=" + !learnerNotePointerAllowsDragStart(collapseBtn),
-        "button_covered_label_rejects=" +
-          !learnerNotePointerAllowsDragStart(coveredLabel),
+        "delete_button_rejects=" + !learnerNotePointerAllowsDragStart(deleteBtn),
+        "resize_handle_rejects=" + !learnerNotePointerAllowsDragStart(resizeHandle),
+        "orphan_rejects=" + !learnerNotePointerAllowsDragStart(orphan),
         "commit_move=" + JSON.stringify(commitMove),
         "commit_resize=" + JSON.stringify(commitResize),
         "zero_move_commit=" +
@@ -586,8 +596,12 @@ describe("store + UI structural", () => {
     // Creator strip still gated for authoring tools (not notes)
     expect(grid).toMatch(/!learnerMode\s*\?\s*\(/);
 
-    // Post-it drag + resize — dedicated non-button handle, commit from ref
-    expect(postIt).toContain("data-learner-note-drag-handle");
+    // Post-it: grey/black, full-chrome move, in-place text, corner resize
+    expect(postIt).not.toContain("bg-[#efece4]");
+    expect(postIt).not.toMatch(/\bbg-white\b/);
+    expect(postIt).toContain("bg-neutral-950");
+    expect(postIt).toContain("bg-black");
+    expect(postIt).toContain("text-neutral-100");
     expect(postIt).toContain("data-learner-note-resize-handle");
     expect(postIt).toContain("data-learner-note-edit");
     expect(postIt).toContain("onBlur={commitDraft}");
@@ -605,22 +619,32 @@ describe("store + UI structural", () => {
     expect(postIt).toContain("learnerNoteLiveBoxFromPointerMove");
     expect(postIt).toContain("learnerNoteCommitFromGestureBox");
     expect(postIt).toContain("drag.last");
-    // Drag handle is a non-button presentation surface; collapse is a sibling button
-    expect(postIt).toMatch(
-      /role="presentation"[\s\S]{0,80}data-learner-note-drag-handle/,
-    );
-    // Old bug: flex-1 collapse button inside the drag handle covering the surface
-    const handleBlock = postIt.slice(
-      postIt.indexOf("data-learner-note-drag-handle"),
-      postIt.indexOf("data-learner-note-collapse"),
-    );
-    expect(handleBlock).not.toMatch(/<button/);
-    expect(handleBlock).not.toMatch(/flex-1/);
-    // Collapse/delete are separate controls with no-drag marker
+    expect(postIt).toContain("startMoveDrag");
+    expect(postIt).not.toContain("data-learner-note-drag-handle");
+    expect(lib).not.toContain("[data-learner-note-drag-handle]");
+    expect(lib).toContain("[data-learner-map-note], [data-learner-note-postit]");
+    expect(lib).toContain("[data-learner-note-resize-handle]");
+    expect(postIt).toContain("onPointerDown={(e) => e.stopPropagation()}");
+    expect(postIt).toContain("cursor-text");
     expect(postIt).toContain("data-learner-note-collapse");
     expect(postIt).toContain("data-learner-note-no-drag");
-    // Must not gate move solely on React `live` state
     expect(postIt).not.toMatch(/if\s*\(\s*!live\s*\)\s*return/);
+
+    expect(grid).toContain("LearnerMapNotePostIt");
+    writeEvidence(
+      "learner-map-notes.txt",
+      [
+        "no_cream=" + !postIt.includes("bg-[#efece4]"),
+        "no_bg_white=" + !/\bbg-white\b/.test(postIt),
+        "has_neutral_950=" + postIt.includes("bg-neutral-950"),
+        "has_resize=" + postIt.includes("data-learner-note-resize-handle"),
+        "has_inplace_edit=" + postIt.includes("data-learner-note-edit"),
+        "move_not_handle_only=" + !lib.includes("[data-learner-note-drag-handle]"),
+        "workspace_and_ile_share_LearnerMapNotePostIt=" +
+          String(grid.includes("LearnerMapNotePostIt")),
+      ].join("\n"),
+      true,
+    );
 
     expect(lib).toContain("createLearnerMapNoteAtViewportCenter");
     expect(lib).toContain("applyLearnerNoteDragDelta");

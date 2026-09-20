@@ -930,19 +930,20 @@ export type LearnerNotePointerTargetLike = {
 
 /**
  * Whether pointerdown on `target` should start a **move** drag.
- * Requires being inside `[data-learner-note-drag-handle]` and **not** inside an
- * interactive control (button, input, etc.). The shipped post-it keeps collapse/
- * delete as separate buttons outside the drag surface so this returns true for
- * normal header drags.
+ * True anywhere on the note chrome (`[data-learner-map-note]` /
+ * `[data-learner-note-postit]`). False for the in-place text field, collapse/
+ * delete, and the resize handle so those keep their own pointer behavior.
  */
 export function learnerNotePointerAllowsDragStart(
   target: LearnerNotePointerTargetLike | null | undefined,
 ): boolean {
   if (!target || typeof target.closest !== "function") return false;
-  const handle = target.closest("[data-learner-note-drag-handle]");
-  if (!handle) return false;
+  const note = target.closest(
+    "[data-learner-map-note], [data-learner-note-postit]",
+  );
+  if (!note) return false;
   const control = target.closest(
-    "button, a, input, textarea, select, [data-learner-note-no-drag]",
+    "button, a, input, textarea, select, [data-learner-note-no-drag], [data-learner-note-resize-handle], [data-learner-note-edit]",
   );
   if (control) return false;
   return true;

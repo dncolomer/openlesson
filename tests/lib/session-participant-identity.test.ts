@@ -82,15 +82,21 @@ describe("guest-link + map attribution wiring", () => {
     }
   });
 
-  it("TAP and ILE UIs render identity badge", () => {
+  it("TAP live chrome does not render the signed-in identity badge", () => {
     const tap = readTapScoreSurface();
-    const ile = readSessionViewSurface();
+    const exercise = fs.readFileSync(
+      path.join(ROOT, "components/exercise-tap/exercise-tap-phases.tsx"),
+      "utf8",
+    );
+    const scout = fs.readFileSync(
+      path.join(ROOT, "components/scout-tap/scout-tap-phases.tsx"),
+      "utf8",
+    );
     const badge = fs.readFileSync(path.join(ROOT, "components/SessionIdentityBadge.tsx"), "utf8");
     expect(badge).toContain("data-session-identity-badge");
-    expect(tap).toContain("SessionIdentityBadge");
-    expect(ile).toContain("participantIdentity={participantIdentity}");
-    const chrome = fs.readFileSync(path.join(ROOT, "components/session-view/session-chrome.tsx"), "utf8");
-    expect(chrome).toContain("SessionIdentityBadge");
+    expect(tap).not.toContain("SessionIdentityBadge");
+    expect(exercise).not.toContain("SessionIdentityBadge");
+    expect(scout).not.toContain("SessionIdentityBadge");
     const helios = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
     expect(helios).not.toContain("SessionIdentityBadge");
   });

@@ -12,7 +12,6 @@ import { getIlePostSessionPath } from "@/lib/storage";
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { MobileBlockScreen } from "@/components/MobileBlockScreen";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";

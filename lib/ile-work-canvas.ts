@@ -1505,6 +1505,10 @@ export function ileWorkCanvasWorkspaceFromChatBody(body: {
     blocks: blocks as PromptWorkspaceContextInput["blocks"],
     blockLocalContext: blockLocalContext as PromptWorkspaceContextInput["blockLocalContext"],
     unusableCells: unusableCells as PromptWorkspaceContextInput["unusableCells"],
+    scoutArtifacts:
+      (nested.scoutArtifacts as PromptWorkspaceContextInput["scoutArtifacts"]) ??
+      (rec.scoutArtifacts as PromptWorkspaceContextInput["scoutArtifacts"]) ??
+      null,
   };
 }
 

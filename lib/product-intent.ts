@@ -1,6 +1,6 @@
 /**
  * Product intent framing for learner/owner surfaces.
- * Technical products remain ILE/TAP in code; UI speaks Explore / Drill.
+ * Technical products remain ILE/TAP in code; UI speaks Work / Drill / Scout.
  *
  * New launches are always the With AI path:
  * - Explore always → ILE learning
@@ -12,7 +12,7 @@
  */
 
 /** What the learner wants to do. */
-export type LearningStyle = "explore" | "drill";
+export type LearningStyle = "explore" | "drill" | "scout";
 
 /**
  * Second product axis: Dialog (LLM-powered conversation) vs Solo Exercise.
@@ -40,14 +40,15 @@ export type ProductIntent = {
 export type TechnicalProductKind = "ile" | "tap";
 
 export type IleSessionModeTech = "learning" | "project";
-export type TapInteractionKindTech = "conversational" | "exercise";
+export type TapInteractionKindTech = "conversational" | "exercise" | "scout";
 
 /** Canonical product intent ids (new Dialog/Solo axes). */
 export type ProductIntentId =
   | "explore_dialog"
   | "explore_solo"
   | "drill_dialog"
-  | "drill_solo";
+  | "drill_solo"
+  | "scout_dialog";
 
 /** Legacy ids still present in stored portal configs / guest-link metadata. */
 export type LegacyProductIntentId =
@@ -68,8 +69,9 @@ export type ProductLaunchTarget = {
 
 /** Human labels used on workspace + settings (English defaults; i18n keys mirror these). */
 export const PRODUCT_INTENT_LABELS = {
-  styleExplore: "Explore",
+  styleExplore: "Learn",
   styleDrill: "Drill / Practice",
+  styleScout: "Prepare",
   /** LLM-powered dialog practice (user-facing: "With AI"). */
   modalityDialog: "With AI",
   /** Solo exercise practice (user-facing: "Solo"). */
@@ -78,10 +80,11 @@ export const PRODUCT_INTENT_LABELS = {
   horizonOpen: "With AI",
   /** @deprecated Prefer modalitySolo */
   horizonTimed: "Solo",
-  exploreDialog: "Explore",
-  exploreSolo: "Explore",
+  exploreDialog: "Learn",
+  exploreSolo: "Learn",
   drillDialog: "Drill",
   drillSolo: "Drill",
+  scoutDialog: "Prepare",
   /** Legacy label keys — map to new names so old i18n/UI still resolve. */
   openEndedExplore: "Explore",
   openEndedDrill: "Explore",
@@ -95,6 +98,8 @@ export const PRODUCT_INTENT_LABELS = {
     "Timed dialogue demonstration of what you know.",
   drillSoloHint:
     "Timed dialogue demonstration of what you know.",
+  scoutDialogHint:
+    "Timed mind-map prepare: follow-up questions, no speaking.",
   openEndedExploreHint:
     "Guided dialogue practice with an LLM partner — no clock.",
   openEndedDrillHint:
@@ -106,8 +111,9 @@ export const PRODUCT_INTENT_LABELS = {
   chooseStyle: "What do you want to do?",
   chooseModality: "How do you want to practice?",
   chooseHorizon: "How do you want to practice?",
-  questionExplore: "Do you want to Explore?",
+  questionExplore: "Do you want to Learn?",
   questionDrill: "Do you want to Drill / Practice?",
+  questionScout: "Do you want to Prepare?",
   questionDialog: "With AI?",
   questionSolo: "With AI?",
   questionOpen: "With AI?",
@@ -168,6 +174,15 @@ export function drillConversationalLaunchTarget(): ProductLaunchTarget {
   };
 }
 
+/** New-launch Scout target (TAP-shaped, no think-aloud). */
+export function scoutDialogLaunchTarget(): ProductLaunchTarget {
+  return {
+    id: "scout_dialog",
+    product: "tap",
+    interaction_kind: "scout",
+  };
+}
+
 /**
  * Stored ILE project / TAP exercise targets — not offered as new launches.
  * Used only to classify already-issued guest tokens.
@@ -201,6 +216,9 @@ export function resolveProductIntent(
   style: unknown,
   _modalityOrHorizon?: unknown,
 ): ProductLaunchTarget {
+  if (style === "scout" || style === "scouting") {
+    return scoutDialogLaunchTarget();
+  }
   const s: LearningStyle =
     style === "drill" || style === "practice" || style === "project"
       ? "drill"
@@ -258,6 +276,8 @@ export function productIntentClusterLabel(target: ProductLaunchTarget): string {
       return PRODUCT_INTENT_LABELS.drillDialog;
     case "drill_solo":
       return PRODUCT_INTENT_LABELS.drillSolo;
+    case "scout_dialog":
+      return PRODUCT_INTENT_LABELS.scoutDialog;
     default:
       return PRODUCT_INTENT_LABELS.exploreDialog;
   }
@@ -273,6 +293,8 @@ export function productIntentClusterHint(target: ProductLaunchTarget): string {
       return PRODUCT_INTENT_LABELS.drillDialogHint;
     case "drill_solo":
       return PRODUCT_INTENT_LABELS.drillSoloHint;
+    case "scout_dialog":
+      return PRODUCT_INTENT_LABELS.scoutDialogHint;
     default:
       return PRODUCT_INTENT_LABELS.exploreDialogHint;
   }
@@ -298,15 +320,27 @@ export function productIntentFromGuestLink(input: {
   }
   // TAP / default drill family
   const ik = String(input.interaction_kind || "conversational").toLowerCase();
+  if (ik === "scout" || ik === "scouting") {
+    return scoutDialogLaunchTarget();
+  }
   if (ik === "exercise" || ik === "solo" || ik === "drill") {
     return storedDrillExerciseLaunchTarget();
   }
   return drillConversationalLaunchTarget();
 }
 
-/** New-launch targets in UI order (Explore, Drill). */
+/** New-launch targets in UI order (Work, Drill). Portal mint stays Work+Drill. */
 export function allProductLaunchTargets(): ProductLaunchTarget[] {
   return [exploreLearningLaunchTarget(), drillConversationalLaunchTarget()];
+}
+
+/** Block play/work surface: Work, Drill, Scout. */
+export function allBlockPracticeLaunchTargets(): ProductLaunchTarget[] {
+  return [
+    scoutDialogLaunchTarget(),
+    exploreLearningLaunchTarget(),
+    drillConversationalLaunchTarget(),
+  ];
 }
 
 /**
@@ -334,6 +368,10 @@ export function resolveProductIntentFromId(
     case "tap_conversational":
     case "tap_exercise":
       return drillConversationalLaunchTarget();
+    case "scout_dialog":
+    case "scout":
+    case "tap_scout":
+      return scoutDialogLaunchTarget();
     default:
       return exploreLearningLaunchTarget();
   }
@@ -366,10 +404,15 @@ export function productIntentToCreateFields(target: ProductLaunchTarget): {
       project: target.session_mode === "project",
     };
   }
+  const interaction_kind =
+    target.interaction_kind === "exercise"
+      ? "exercise"
+      : target.interaction_kind === "scout"
+        ? "scout"
+        : "conversational";
   return {
     linkKind: "tap",
-    interaction_kind:
-      target.interaction_kind === "exercise" ? "exercise" : "conversational",
+    interaction_kind,
     exercise: target.interaction_kind === "exercise",
   };
 }
@@ -417,6 +460,15 @@ export function launchPracticeHref(
     const q = params.toString();
     return q ? `/session?${q}` : "/session";
   }
+  if (target.interaction_kind === "scout") {
+    const scoutParams = new URLSearchParams();
+    if (input.blockId) scoutParams.set("blockId", String(input.blockId));
+    if (input.sessionId) scoutParams.set("sessionId", String(input.sessionId));
+    const scoutQ = scoutParams.toString();
+    return scoutQ
+      ? `/workspace/${workspaceId}/scout?${scoutQ}`
+      : `/workspace/${workspaceId}/scout`;
+  }
   const params = new URLSearchParams();
   if (input.blockId) params.set("block", String(input.blockId));
   if (target.interaction_kind) params.set("interaction_kind", target.interaction_kind);
@@ -428,6 +480,7 @@ export function launchPracticeHref(
 
 /** Style extracted from a launch target. */
 export function productIntentStyle(target: ProductLaunchTarget): LearningStyle {
+  if (target.id.startsWith("scout")) return "scout";
   return target.id.startsWith("drill") ? "drill" : "explore";
 }
 

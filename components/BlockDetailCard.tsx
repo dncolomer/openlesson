@@ -101,6 +101,24 @@ function ExploreIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+function ScoutIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      data-style-icon="scout"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      aria-hidden
+    >
+      <circle cx="10" cy="10" r="6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 14.5L20 20" />
+      <circle cx="10" cy="10" r="2.2" />
+    </svg>
+  );
+}
+
 function DrillIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg
@@ -241,6 +259,7 @@ export function BlockDetailCard({
   const canLaunchStyle = (s: LearningStyle) => {
     if (!blockAllowsPracticeStyle(practiceLimits, s)) return false;
     if (s === "drill" && !drillFamilyAllowed) return false;
+    if (s === "scout" && !practiceLimits.allowScout) return false;
     if (!blockAllowsLaunchTarget(practiceLimits, s, false)) {
       return false;
     }
@@ -248,6 +267,7 @@ export function BlockDetailCard({
     if (onLaunchIntent) return true;
     if (target.id === "explore_dialog") return Boolean(onStartIle);
     if (target.id === "drill_dialog") return Boolean(onStartEval);
+    if (target.id === "scout_dialog") return Boolean(onLaunchIntent || onStartEval);
     return false;
   };
 
@@ -266,7 +286,7 @@ export function BlockDetailCard({
       onStartIle?.();
       return;
     }
-    if (target.id === "drill_dialog") {
+    if (target.id === "drill_dialog" || target.id === "scout_dialog") {
       onStartEval?.(event as React.MouseEvent, minutes);
     }
   };
@@ -300,14 +320,24 @@ export function BlockDetailCard({
 
       {/* Select-only style tools — Explore = ILE, Drill = TAP; launch via Start */}
       <div
-        className="grid grid-cols-2 gap-2"
+        className={`grid gap-2 ${
+          practiceLimits.allowScout && practiceLimits.allowExplore && drillFamilyAllowed
+            ? "grid-cols-3"
+            : "grid-cols-2"
+        }`}
         data-block-mode-tools
         data-product-intent-style-grid
         data-practice-allow-explore={practiceLimits.allowExplore ? "true" : "false"}
         data-practice-allow-drill={drillFamilyAllowed ? "true" : "false"}
+        data-practice-allow-scout={practiceLimits.allowScout ? "true" : "false"}
       >
         {(
           [
+            {
+              id: "scout" as const,
+              label: PRODUCT_INTENT_LABELS.styleScout,
+              Icon: ScoutIcon,
+            },
             {
               id: "explore" as const,
               label: PRODUCT_INTENT_LABELS.styleExplore,
@@ -353,7 +383,7 @@ export function BlockDetailCard({
       </div>
 
       {/* Duration only for Drill (TAP) launches */}
-      {style === "drill" && drillFamilyAllowed ? (
+      {(style === "drill" && drillFamilyAllowed) || style === "scout" ? (
         <div className="mt-3" data-launch-duration-picker>
           <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             Session length

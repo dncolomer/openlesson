@@ -56,6 +56,7 @@ import {
   type ToolAction,
 } from "@/lib/storage";
 import type { IlePromptMaterials } from "@/components/session-view/types";
+import { collectScoutArtifactsFromPowRows } from "@/lib/scout-session";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import type { ChatMessage } from "@/lib/session-chat-client";
 
@@ -180,6 +181,7 @@ useEffect(() => {
       blockDescription:
         typeof meta.block_description === "string" ? meta.block_description : null,
       blockLocalContext: null,
+      scoutArtifacts: null,
     });
     return;
   }
@@ -245,6 +247,22 @@ useEffect(() => {
       } catch {
         files = [];
       }
+      let scoutArtifacts: IlePromptMaterials["scoutArtifacts"] = null;
+      const powBlockId = focused?.id ?? focusedBlockId;
+      if (powBlockId) {
+        try {
+          const { data: powRows } = await supabase
+            .from("workspace_proof_of_work")
+            .select("metadata")
+            .eq("workspace_id", workspaceId)
+            .eq("block_id", powBlockId)
+            .order("created_at", { ascending: false })
+            .limit(24);
+          scoutArtifacts = collectScoutArtifactsFromPowRows(powRows);
+        } catch {
+          scoutArtifacts = null;
+        }
+      }
       if (cancelled) return;
       setIlePromptMaterials({
         workspaceId,
@@ -266,6 +284,7 @@ useEffect(() => {
           null,
         blockDescription: focused?.description ?? null,
         blockLocalContext: focused?.local_context ?? null,
+        scoutArtifacts,
       });
     } catch {
       /* best-effort — pure framer still works with thinner input */

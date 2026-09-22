@@ -38,7 +38,7 @@ export interface ExerciseSubmittedThought {
 export const EXERCISE_CHAIN_GAP_MS = 2600;
 
 /** Shell path keys returned by the mode resolver (not Next routes). */
-export type TapShellKind = "conversational" | "exercise";
+export type TapShellKind = "conversational" | "exercise" | "scout";
 
 /**
  * Pick conversational vs exercise shell from a session record or explicit kind.

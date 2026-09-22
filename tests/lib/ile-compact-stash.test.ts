@@ -261,7 +261,7 @@ describe("mini-mode TAP chrome helpers (shipped)", () => {
     expect(compactWindow).toContain("resolveIleSurfaceView");
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("bindIleSurfaceEditorEvents");
-    expect(canvas).toContain("viewModeEnabled={false}");
+    expect(canvas).toContain("viewModeEnabled={viewModeEnabled}");
     expect(canvas).toContain("data-ile-excalidraw-host");
     expect(frame).toContain('data-ile-compact-stash={compact ? "true" : undefined}');
 
@@ -426,7 +426,7 @@ describe("PiP Excalidraw pointer bridge (shipped)", () => {
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("bindIleSurfaceEditorEvents");
-    expect(canvas).toContain("viewModeEnabled={false}");
+    expect(canvas).toContain("viewModeEnabled={viewModeEnabled}");
     const theme = read("app/ile-excalidraw-theme.css");
     expect(theme).toContain("height: 100%");
     expect(theme).toContain("width: 100%");

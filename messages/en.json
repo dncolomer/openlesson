@@ -495,6 +495,11 @@
     "allWorkspaces": "All Workspaces",
     "noMatchingWorkspaces": "No matching workspaces.",
     "searchWorkspaces": "Search workspaces...",
+    "emptyWorkspacesKicker": "Get started",
+    "emptyWorkspacesTitle": "Create your first workspace",
+    "emptyWorkspacesBody": "A workspace is the map you practice on. Create one to add topics, then Prepare, Learn, or Drill.",
+    "emptyWorkspacesCta": "Create a workspace",
+    "emptyWorkspacesHint": "You can start from a blank map or generate one from a topic.",
     "yourSubscription": "Your Subscription",
     "currentPlan": "Current Plan",
     "pro": "Pro",
@@ -2842,6 +2847,28 @@
         "start": "Play",
         "starting": "Starting…"
       }
+    },
+    "scout": {
+      "kicker": "Session goal",
+      "title": "Scout the topic",
+      "progressLabel": "Briefing steps",
+      "goToStep": "Go to step {step}",
+      "imagePlaceholder": "Illustration coming soon",
+      "back": "Back",
+      "next": "Next",
+      "step1": {
+        "title": "Build a mind map of pull",
+        "imageAlt": "Scout mind map on the Work canvas",
+        "body": "This session is a scout, not a think-aloud. You map the topic on the Work canvas to see where curiosity and pull are strongest.\n\nThe left side is the same Work canvas used across modes. The topic starts as framed text. Follow-up questions appear on the right — questions only, never answers."
+      },
+      "step3": {
+        "title": "Follow the questions",
+        "body": "Pick a follow-up to add it as a connected node. Five new questions generate from whatever is already on the canvas — including your own edits. A sixth option returns you to the previous node so you can branch differently.\n\nWhen time is up, the map freezes. More Scout runs give the next Work session richer context.",
+        "quoteText": "",
+        "quoteAuthor": "",
+        "start": "Start",
+        "starting": "Starting…"
+      }
     }
   },
   "tap": {
@@ -2890,6 +2917,26 @@
       "play": "Play",
       "starting": "Starting…",
       "skipTyping": "Skip typing"
+    }
+  },
+  "scout": {
+    "briefing": {
+      "kicker": "Scout",
+      "title": "Scout",
+      "intro": "Scout the topic and build a mind map of where pull is strongest. No speaking — pick follow-up questions and draw on the canvas. Choose length, then start."
+    },
+    "live": {
+      "questionsHeading": "Follow-up questions",
+      "goBack": "Go back to previous node",
+      "generating": "Generating follow-up questions…"
+    },
+    "thankYou": {
+      "title": "Thank you",
+      "body": "Your prepare map is saved as context for later Learn sessions. More Prepare runs give a richer picture of where interest pulls.",
+      "restart": "Restart",
+      "workspace": "Back to workspace",
+      "work": "Jump into Learn",
+      "drill": "Jump into Drill"
     }
   },
   "welcome": {

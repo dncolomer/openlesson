@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   DASHBOARD_WORKSPACE_LIST_FILTERS,
+  dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
   workspaceMatchesDashboardListFilter,
 } from "@/lib/dashboard-workspace-filters";
@@ -60,5 +61,27 @@ describe("dashboard AYCL filter surface", () => {
     expect(dashSrc).toContain('value="aycl"');
     expect(dashSrc).toContain("workspaceMatchesDashboardListFilter");
     expect(dashSrc).toContain("isDashboardWorkspaceListFilter");
+  });
+});
+
+describe("dashboard empty workspace CTA", () => {
+  it("treats an empty list as first-run, not a filter miss", () => {
+    expect(dashboardHasNoWorkspaces([])).toBe(true);
+    expect(dashboardHasNoWorkspaces(null)).toBe(true);
+    expect(dashboardHasNoWorkspaces([{ id: "w1" }])).toBe(false);
+  });
+
+  it("renders a first-run create CTA instead of search/filter chrome", () => {
+    const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    expect(dashSrc).toContain("dashboardHasNoWorkspaces");
+    expect(dashSrc).toContain("data-dashboard-empty-workspaces");
+    expect(dashSrc).toContain("data-dashboard-empty-create");
+    expect(dashSrc).toContain('href="/workspace/new"');
+    expect(dashSrc).toContain("dashboard.emptyWorkspacesTitle");
+    expect(dashSrc).toContain("dashboard.emptyWorkspacesCta");
+    const emptyIdx = dashSrc.indexOf("data-dashboard-empty-workspaces");
+    const filterIdx = dashSrc.indexOf("data-workspace-visibility-filter");
+    expect(emptyIdx).toBeGreaterThan(0);
+    expect(filterIdx).toBeGreaterThan(emptyIdx);
   });
 });

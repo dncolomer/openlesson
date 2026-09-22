@@ -293,7 +293,10 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
 
 export function tapScoreBriefToPromptWorkspaceInput(
   brief: TapScoreBrief,
-  extra?: { focusedBlockId?: string | null },
+  extra?: {
+    focusedBlockId?: string | null;
+    scoutArtifacts?: PromptWorkspaceContextInput["scoutArtifacts"];
+  },
 ): PromptWorkspaceContextInput {
   const focusedId = String(extra?.focusedBlockId || "").trim() || null;
   const focusedBlock =
@@ -327,6 +330,7 @@ export function tapScoreBriefToPromptWorkspaceInput(
     blocks: inventoryBlocks,
     blockLocalContext: focusedBlock?.local_context ?? null,
     unusableCells: brief.unusableCells,
+    scoutArtifacts: extra?.scoutArtifacts ?? null,
   };
 }
 

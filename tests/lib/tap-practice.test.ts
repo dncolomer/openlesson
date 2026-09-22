@@ -177,7 +177,7 @@ describe("TAP client practice surface (not ILE)", () => {
     const client = readTapScoreSurface();
     expect(client).toContain("data-tap-practice-pill");
     expect(client).not.toContain("data-tap-practice-banner");
-    expect(client).toContain("SessionIdentityBadge");
+    expect(client).not.toContain("SessionIdentityBadge");
     expect(client).toContain("TapPracticePill");
     expect(client).toContain('data-tap-live-control-strip');
     expect(client).not.toMatch(/isPracticeMode\s*\?\s*[\s\S]*border-cyan-400\/30 bg-cyan-950\/40/);

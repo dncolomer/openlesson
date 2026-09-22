@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { TapScoreClient } from "@/components/TapScoreClient";
 import { ExerciseTapClient } from "@/components/ExerciseTapClient";
+import { ScoutTapClient } from "@/components/scout-tap/ScoutTapClient";
 import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -142,6 +143,10 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
 
   if (shell === "exercise") {
     return <ExerciseTapClient {...clientProps} />;
+  }
+
+  if (shell === "scout") {
+    return <ScoutTapClient {...clientProps} />;
   }
 
   return <TapScoreClient {...clientProps} />;

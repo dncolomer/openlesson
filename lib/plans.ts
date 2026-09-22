@@ -310,9 +310,16 @@ export interface WorkspaceCheckResult {
 }
 
 export function getWorkspaceLimit(profile: UserProfile): number | null {
-  const { plan, is_admin, subscription_status, current_period_end } = profile;
+  const { plan, is_admin, subscription_status, current_period_end, token_tier, token_validity_expires_at } =
+    profile;
 
   if (is_admin) return null;
+
+  const isTokenValid =
+    Boolean(token_tier) &&
+    (token_validity_expires_at === null ||
+      new Date(token_validity_expires_at) > new Date());
+  if (isTokenValid) return null;
 
   const normalized = normalizePlanId(plan);
   const planDef = PLANS[normalized];

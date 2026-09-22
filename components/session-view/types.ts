@@ -46,6 +46,11 @@ export type IlePromptMaterials = {
   blockTitle: string | null;
   blockDescription: string | null;
   blockLocalContext: BlockLocalContextInput | null;
+  scoutArtifacts?: {
+    path?: readonly string[] | null;
+    canvasText?: string | null;
+    seedText?: string | null;
+  } | null;
 };
 
 export type SessionViewProps = {

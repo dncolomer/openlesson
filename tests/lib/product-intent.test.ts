@@ -141,6 +141,13 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).toContain("data-style-option={id}");
     expect(card).toContain('id: "explore"');
     expect(card).toContain('id: "drill"');
+    expect(card).toContain('id: "scout"');
+    expect(card.indexOf('id: "scout" as const')).toBeLessThan(
+      card.indexOf('id: "explore" as const'),
+    );
+    expect(card.indexOf('id: "explore" as const')).toBeLessThan(
+      card.indexOf('id: "drill" as const'),
+    );
     expect(card).not.toContain("data-modality-toggle");
     expect(card).not.toContain("data-modality-option");
     expect(card).not.toContain("data-product-intent-modality-grid");

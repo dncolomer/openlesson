@@ -234,7 +234,6 @@ export function useWorkspaceLearner(input: {
         router.push(`/session?id=${launchData.sessionId}`);
         return;
       }
-      // TAP timed explore / drill
       const params = new URLSearchParams({
         blockId: block.id,
       });
@@ -250,6 +249,10 @@ export function useWorkspaceLearner(input: {
       }
       if (block.session_id) {
         params.set("sessionId", block.session_id);
+      }
+      if (target.interaction_kind === "scout") {
+        router.push(`/workspace/${workspaceId}/scout?${params.toString()}`);
+        return;
       }
       router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
     },

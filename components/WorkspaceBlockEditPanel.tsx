@@ -12,6 +12,7 @@ import {
 function practiceOptionsEqual(a: BlockPracticeOptions, b: BlockPracticeOptions): boolean {
   if (a.allowExplore !== b.allowExplore) return false;
   if (a.allowDrill !== b.allowDrill) return false;
+  if (a.allowScout !== b.allowScout) return false;
   if (a.allowOpenEnded !== b.allowOpenEnded) return false;
   if (a.allowTimed !== b.allowTimed) return false;
   if (a.allowedDurationsMinutes.length !== b.allowedDurationsMinutes.length) {
@@ -92,7 +93,8 @@ export function WorkspaceBlockEditPanel({
         >
           Practice:{" "}
           {[
-            savedPractice.allowExplore ? "Explore" : null,
+            savedPractice.allowScout ? "Prepare" : null,
+            savedPractice.allowExplore ? "Learn" : null,
             savedPractice.allowDrill ? "Drill" : null,
             savedPractice.allowDrill && savedPractice.allowedDurationsMinutes.length
               ? `Durations (${savedPractice.allowedDurationsMinutes.join("/")}m)`
@@ -209,7 +211,17 @@ export function WorkspaceBlockEditPanel({
           <p className="text-[11px] font-medium text-neutral-200">Practice options</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5" data-block-edit-practice-styles>
+        <div className="grid grid-cols-3 gap-1.5" data-block-edit-practice-styles>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
+            <input
+              type="checkbox"
+              data-block-edit-allow-scout
+              checked={editPractice.allowScout}
+              disabled={disabled}
+              onChange={(e) => patchPractice({ allowScout: e.target.checked })}
+            />
+            <span className="text-[11px] text-neutral-200">Prepare</span>
+          </label>
           <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input
               type="checkbox"
@@ -218,7 +230,7 @@ export function WorkspaceBlockEditPanel({
               disabled={disabled}
               onChange={(e) => patchPractice({ allowExplore: e.target.checked })}
             />
-            <span className="text-[11px] text-neutral-200">Explore</span>
+            <span className="text-[11px] text-neutral-200">Learn</span>
           </label>
           <label className="flex cursor-pointer items-center gap-1.5 rounded-none border border-neutral-800/80 bg-neutral-900/40 px-2 py-1.5">
             <input

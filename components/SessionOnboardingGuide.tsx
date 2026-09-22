@@ -9,7 +9,7 @@ import {
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
 } from "@/lib/ile-turn-insights";
 
-type OnboardingVariant = "ile" | "tap";
+type OnboardingVariant = "ile" | "tap" | "scout";
 
 export type SessionOnboardingGuideProps = {
   variant?: OnboardingVariant;
@@ -220,7 +220,9 @@ export function SessionOnboardingGuide({
       ? step1VideoSrc
       : variant === "tap"
         ? STEP1_TAP_SPEAKING_VIDEO
-        : undefined;
+        : variant === "scout"
+          ? STEP1_ILE_GRID_PAN_VIDEO
+          : undefined;
 
   const closingSlide: GuideSlide = {
     kind: "closing",

@@ -798,6 +798,7 @@ export function SessionView({
       focusedBlockId: ilePromptMaterials?.focusedBlockId ?? null,
       blockLocalContext: ilePromptMaterials?.blockLocalContext ?? null,
       unusableCells: ilePromptMaterials?.unusableCells ?? null,
+      scoutArtifacts: ilePromptMaterials?.scoutArtifacts ?? null,
     };
   }, [activeStep?.description, ilePromptMaterials, session?.problem]);
 

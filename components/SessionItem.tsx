@@ -166,7 +166,7 @@ export function SessionItem({
   };
 
   const handleStartTimed = (
-    interactionKind: "conversational" | "exercise",
+    interactionKind: "conversational" | "exercise" | "scout",
     event?: React.MouseEvent,
     minutes?: number,
   ) => {
@@ -181,7 +181,11 @@ export function SessionItem({
     }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+    const path =
+      interactionKind === "scout"
+        ? `/workspace/${workspaceId}/scout`
+        : `/workspace/${workspaceId}/tap`;
+    router.push(`${path}?${params.toString()}`);
   };
 
   const handleLaunchIntent = (
@@ -198,7 +202,11 @@ export function SessionItem({
       return;
     }
     handleStartTimed(
-      "conversational",
+      target.interaction_kind === "scout"
+        ? "scout"
+        : target.interaction_kind === "exercise"
+          ? "exercise"
+          : "conversational",
       undefined,
       options?.minutes,
     );

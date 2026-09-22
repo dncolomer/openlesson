@@ -30,6 +30,10 @@ export function TapBriefingConfig({
    * When set, replaces the default conversational briefing intro paragraph.
    */
   intro,
+  /**
+   * When set, replaces the default "Think Aloud Protocol" heading.
+   */
+  title,
 }: {
   workspaceTitle: string;
   minutes: number;
@@ -40,6 +44,7 @@ export function TapBriefingConfig({
   disabled?: boolean;
   kicker?: string;
   intro?: string;
+  title?: string;
 }) {
   const { t } = useI18n();
 
@@ -58,7 +63,7 @@ export function TapBriefingConfig({
           {workspaceTitle}
         </p>
         <h2 className="mt-2 text-2xl font-medium tracking-tight text-neutral-100 sm:text-3xl">
-          {THINK_ALOUD_PROTOCOL_LABEL}
+          {title || THINK_ALOUD_PROTOCOL_LABEL}
         </h2>
         <p className="mt-3 max-w-md text-sm leading-relaxed text-neutral-400">
           {intro ?? t("tap.briefing.intro")}

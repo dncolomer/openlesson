@@ -44,8 +44,8 @@ describe("ILE hunt-for-answers pill (removed)", () => {
       expect(surface).not.toContain("ILE_HUNT_ANSWERS_PILL_COPY");
       expect(surface).not.toContain("data-ile-hunt-answers-pill");
     }
-    expect(tapPhases).toContain("SessionIdentityBadge");
-    expect(tapSolo).toContain("SessionIdentityBadge");
+    expect(tapPhases).not.toContain("SessionIdentityBadge");
+    expect(tapSolo).not.toContain("SessionIdentityBadge");
 
     expect(existsSync(join(ROOT, "components/IleHuntAnswersPill.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/ile-hunt-answers-pill.ts"))).toBe(false);
@@ -54,7 +54,7 @@ describe("ILE hunt-for-answers pill (removed)", () => {
       "ile-hunt-answers-pill.txt",
       [
         "ILE Helios: no IleHuntAnswersPill",
-        "TAP convo + solo: identity badge only, no hunt pill",
+        "TAP convo + solo: no identity badge, no hunt pill",
         "component + copy helper deleted",
       ].join("\n"),
     );

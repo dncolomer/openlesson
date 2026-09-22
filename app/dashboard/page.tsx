@@ -23,6 +23,7 @@ import {
   togglePinnedWorkspaceId,
 } from "@/lib/dashboard-workspace-pins";
 import {
+  dashboardHasNoWorkspaces,
   isDashboardWorkspaceListFilter,
   workspaceMatchesDashboardListFilter,
   type DashboardWorkspaceListFilter,
@@ -956,6 +957,35 @@ export default function DashboardPage() {
         {/* Plans Tab */}
         {activeTab === "plans" && (
           <div className="space-y-6">
+            {dashboardHasNoWorkspaces(workspaces) ? (
+              <section
+                data-dashboard-empty-workspaces
+                className="border border-neutral-800 bg-neutral-950/80 px-6 py-14 sm:px-10 sm:py-16 backdrop-blur-sm"
+              >
+                <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+                  <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                    {t("dashboard.emptyWorkspacesKicker")}
+                  </p>
+                  <h2 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
+                    {t("dashboard.emptyWorkspacesTitle")}
+                  </h2>
+                  <p className="mt-4 text-sm leading-relaxed text-neutral-400 sm:text-base">
+                    {t("dashboard.emptyWorkspacesBody")}
+                  </p>
+                  <Link
+                    href="/workspace/new"
+                    data-dashboard-empty-create
+                    className="mt-8 inline-flex h-12 min-w-[220px] items-center justify-center rounded-sm bg-white px-8 text-sm font-medium text-black transition hover:bg-neutral-200"
+                  >
+                    {t("dashboard.emptyWorkspacesCta")}
+                  </Link>
+                  <p className="mt-4 text-xs text-neutral-500">
+                    {t("dashboard.emptyWorkspacesHint")}
+                  </p>
+                </div>
+              </section>
+            ) : (
+            <>
             <div className="border border-neutral-800 bg-neutral-950/75 px-6 py-7 sm:px-8 sm:py-8 backdrop-blur-sm">
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
@@ -1031,7 +1061,7 @@ export default function DashboardPage() {
               <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
                 <Link href="/workspace/new" className="text-neutral-300 hover:underline mt-2 inline-block text-sm">
-                  {t('dashboard.createYourFirstPlan')}
+                  {t('dashboard.createNewPlan')}
                 </Link>
               </div>
             ) : (
@@ -1095,6 +1125,8 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </div>
+            )}
+            </>
             )}
           </div>
         )}

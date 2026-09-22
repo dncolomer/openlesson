@@ -110,6 +110,7 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   onPointerUpdate,
   initialData,
   isCollaborating,
+  viewModeEnabled = false,
 }: {
   onApi: (api: ExcalidrawAPIRef) => void;
   onChange: (
@@ -124,6 +125,7 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   }) => void;
   initialData: { elements: any[]; appState: any; files: any; scrollToContent?: boolean };
   isCollaborating?: boolean;
+  viewModeEnabled?: boolean;
 }) {
   return (
     <Excalidraw
@@ -133,7 +135,7 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
       initialData={initialData}
       theme="dark"
       isCollaborating={isCollaborating}
-      viewModeEnabled={false}
+      viewModeEnabled={viewModeEnabled}
       UIOptions={ILE_EXCALIDRAW_UI_OPTIONS}
     />
   );
@@ -200,6 +202,8 @@ export interface ExcalidrawCanvasProps {
   /** When nonce changes, replace the live board (timer expiry reset). */
   replaceScene?: IleWorkCanvasScene | null;
   replaceSceneNonce?: string | number | null;
+  /** Read-only board (Scout thank-you / frozen canvas). */
+  viewModeEnabled?: boolean;
 }
 
 // Excalidraw's appState contains runtime-only fields like collaborators
@@ -245,6 +249,7 @@ export function ExcalidrawCanvas({
   craftInsight = null,
   replaceScene = null,
   replaceSceneNonce = null,
+  viewModeEnabled = false,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
@@ -1463,6 +1468,7 @@ export function ExcalidrawCanvas({
               onPointerUpdate={handlePointerUpdate}
               initialData={initialSceneDataRef.current}
               isCollaborating={collaborating}
+              viewModeEnabled={viewModeEnabled}
             />
           </IleExcalidrawErrorBoundary>
         )}

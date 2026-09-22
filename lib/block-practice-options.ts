@@ -1,6 +1,6 @@
 /**
  * Author limits on which practice launches a block allows:
- * Explore / Drill, plus allowed Drill (TAP) durations.
+ * Work (ILE Explore) / Drill / Scout, plus allowed Drill (TAP) durations.
  * New launches are always With AI (ILE learning / TAP conversational).
  * allowDialog / allowSolo remain in the stored payload for older rows but
  * are not a new-launch axis.
@@ -22,6 +22,8 @@ export const BLOCK_PRACTICE_DURATION_OPTIONS: readonly number[] = DURATIONS;
 export type BlockPracticeOptions = {
   allowExplore: boolean;
   allowDrill: boolean;
+  /** Scout (TAP-shaped rabbit-hole mind map, no speaking). */
+  allowScout: boolean;
   /** Dialog modality (LLM-powered conversation). */
   allowDialog: boolean;
   /** Solo Exercise modality. */
@@ -46,6 +48,7 @@ export type BlockPracticeOptions = {
 export type BlockPracticeOptionsInput = Partial<{
   allowExplore: unknown;
   allowDrill: unknown;
+  allowScout: unknown;
   allowDialog: unknown;
   allowSolo: unknown;
   allowOpenEnded: unknown;
@@ -54,6 +57,7 @@ export type BlockPracticeOptionsInput = Partial<{
   /** snake_case aliases from DB/JSON */
   allow_explore: unknown;
   allow_drill: unknown;
+  allow_scout: unknown;
   allow_dialog: unknown;
   allow_solo: unknown;
   allow_open_ended: unknown;
@@ -66,6 +70,7 @@ export function defaultBlockPracticeOptions(): BlockPracticeOptions {
   return {
     allowExplore: true,
     allowDrill: true,
+    allowScout: true,
     allowDialog: true,
     allowSolo: true,
     allowOpenEnded: true,
@@ -99,7 +104,7 @@ function parseDurationList(raw: unknown): number[] {
 
 /**
  * Normalize author/DB payload into a valid practice options object.
- * Ensures at least one style and one modality; drill always has ≥1 duration when on.
+ * Ensures at least one of Work/Drill/Scout and one modality; drill always has ≥1 duration when on.
  * Legacy allow_open_ended → allowDialog; allow_timed → allowSolo.
  */
 export function normalizeBlockPracticeOptions(
@@ -113,6 +118,7 @@ export function normalizeBlockPracticeOptions(
     def.allowExplore,
   );
   let allowDrill = asBool(raw.allowDrill ?? raw.allow_drill, def.allowDrill);
+  let allowScout = asBool(raw.allowScout ?? raw.allow_scout, def.allowScout);
 
   // Prefer explicit dialog/solo; fall back to open_ended/timed legacy keys.
   const dialogRaw = raw.allowDialog ?? raw.allow_dialog;
@@ -129,10 +135,9 @@ export function normalizeBlockPracticeOptions(
       ? asBool(soloRaw, def.allowSolo)
       : asBool(timedRaw, def.allowSolo);
 
-  // At least one style
-  if (!allowExplore && !allowDrill) {
+  // At least one of Work / Drill / Scout
+  if (!allowExplore && !allowDrill && !allowScout) {
     allowExplore = true;
-    allowDrill = true;
   }
   // Stored modality flags stay, but new launches always use the With AI path.
   if (!allowDialog && !allowSolo) {
@@ -154,6 +159,7 @@ export function normalizeBlockPracticeOptions(
   return {
     allowExplore,
     allowDrill,
+    allowScout,
     allowDialog,
     allowSolo,
     allowOpenEnded: allowDialog,
@@ -213,6 +219,7 @@ export function serializeBlockPracticeOptions(
   return {
     allow_explore: n.allowExplore,
     allow_drill: n.allowDrill,
+    allow_scout: n.allowScout,
     allow_dialog: n.allowDialog,
     allow_solo: n.allowSolo,
     // Legacy mirrors
@@ -228,7 +235,9 @@ export function blockAllowsPracticeStyle(
   style: LearningStyle,
 ): boolean {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  return style === "drill" ? n.allowDrill : n.allowExplore;
+  if (style === "drill") return n.allowDrill;
+  if (style === "scout") return n.allowScout;
+  return n.allowExplore;
 }
 
 /** Whether Dialog or Solo modality is offered. */
@@ -288,7 +297,9 @@ export function resolveDefaultPracticeLaunchUi(
     ? "explore"
     : n.allowDrill
       ? "drill"
-      : "explore";
+      : n.allowScout
+        ? "scout"
+        : "explore";
   const durations = blockAllowedDurations(n);
   const durationMinutes =
     durations.includes(15) ? 15 : durations[0] ?? 15;
@@ -314,14 +325,14 @@ export function clampPracticeDuration(
 }
 
 /**
- * Enabled new-launch combos (Explore and/or Drill — always With AI).
+ * Enabled new-launch combos (Prepare / Learn / Drill — always With AI).
  */
 export function enabledPracticeLaunchCombos(
   opts: BlockPracticeOptions | null | undefined,
 ): ProductLaunchTarget["id"][] {
   const n = normalizeBlockPracticeOptions(opts ?? null);
   const out: ProductLaunchTarget["id"][] = [];
-  for (const style of ["explore", "drill"] as const) {
+  for (const style of ["scout", "explore", "drill"] as const) {
     if (!blockAllowsPracticeStyle(n, style)) continue;
     out.push(resolveLaunchFromStyleAndModality(style, false).id);
   }
@@ -330,13 +341,14 @@ export function enabledPracticeLaunchCombos(
 
 /**
  * Compact icon keys for map badges (stable for tests/data attrs).
- * New launches only badge Explore / Drill — no With AI vs Solo icons.
+ * New launches badge Prepare / Learn / Drill — no With AI vs Solo icons.
  */
 export function practiceOptionsIconKeys(
   opts: BlockPracticeOptions | null | undefined,
-): Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed"> {
+): Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> {
   const n = normalizeBlockPracticeOptions(opts ?? null);
-  const keys: Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed"> = [];
+  const keys: Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed"> = [];
+  if (n.allowScout) keys.push("scout");
   if (n.allowExplore) keys.push("explore");
   if (n.allowDrill) keys.push("drill");
   return keys;
@@ -350,6 +362,7 @@ export function practiceOptionsIsRestricted(
   const d = defaultBlockPracticeOptions();
   if (n.allowExplore !== d.allowExplore) return true;
   if (n.allowDrill !== d.allowDrill) return true;
+  if (n.allowScout !== d.allowScout) return true;
   if (n.allowDrill) {
     if (n.allowedDurationsMinutes.length !== d.allowedDurationsMinutes.length) {
       return true;

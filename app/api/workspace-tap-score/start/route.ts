@@ -14,6 +14,7 @@ import {
 import {
   normalizeTapInteractionKind,
   resolveTapInteractionKindFromBody,
+  tapSessionInsertRetryKind,
   type TapInteractionKind,
 } from "@/lib/pow-api/tap-link-config";
 import { looksLikeConversationalOpening } from "@/lib/exercise-tap";
@@ -80,8 +81,20 @@ export async function POST(req: NextRequest) {
 
     const requestedOpeningQuestion = body.openingQuestion ? String(body.openingQuestion).trim() : "";
     let openingQuestion: string;
+    const focusedForSeed =
+      brief.nodes.length === 1
+        ? brief.nodes[0]
+        : brief.nodes.find((n) => n.id === (blockId || access.blockId)) ||
+          brief.nodes.find((n) => n.is_start) ||
+          brief.nodes[0] ||
+          null;
+    const seedTitle = String(focusedForSeed?.title || brief.plan.title || "Topic").trim();
+    const seedDescription = String(focusedForSeed?.description || "").trim();
 
-    if (interactionKind === "exercise") {
+    if (interactionKind === "scout") {
+      // Scout does not think aloud — no TAP opening question generation.
+      openingQuestion = seedTitle;
+    } else if (interactionKind === "exercise") {
       // Solo exercise: LLM-authored concrete problem (same quality bar as TAPBench).
       // Not conversational "Teach me…" and not a topic-list template wrap.
       const focused = brief.nodes.length === 1 ? brief.nodes[0] : null;
@@ -161,6 +174,8 @@ export async function POST(req: NextRequest) {
         practice,
         minutes,
         interactionKind,
+        seedTitle,
+        seedDescription,
       });
     }
 
@@ -168,21 +183,30 @@ export async function POST(req: NextRequest) {
       return jsonError(500, "TAP session missing for private link");
     }
 
-    const { data: row, error } = await access.supabase
-      .from("workspace_tap_sessions")
-      .insert({
-        workspace_id: access.workspaceId,
-        user_id: access.userId,
-        block_id: blockId,
-        session_id: focusSessionId,
-        requested_duration_seconds: requestedDurationSeconds,
-        status: "in_progress",
-        started_at: new Date().toISOString(),
-        mode: "curious",
-        interaction_kind: interactionKind,
-      })
-      .select("id")
-      .single();
+    const insertRow = (kind: TapInteractionKind) =>
+      access.supabase
+        .from("workspace_tap_sessions")
+        .insert({
+          workspace_id: access.workspaceId,
+          user_id: access.userId,
+          block_id: blockId,
+          session_id: focusSessionId,
+          requested_duration_seconds: requestedDurationSeconds,
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+          mode: "curious",
+          interaction_kind: kind,
+        })
+        .select("id")
+        .single();
+
+    let { data: row, error } = await insertRow(interactionKind);
+    const retryKind = tapSessionInsertRetryKind(interactionKind, error?.message);
+    if ((!row || error) && retryKind) {
+      const retried = await insertRow(retryKind);
+      row = retried.data;
+      error = retried.error;
+    }
 
     if (error || !row) {
       return jsonError(500, error?.message || "Could not start TAP session");
@@ -194,6 +218,8 @@ export async function POST(req: NextRequest) {
       practice,
       minutes,
       interactionKind,
+      seedTitle,
+      seedDescription,
     });
   } catch (error) {
     console.error("[workspace-tap-score/start] Error:", error);

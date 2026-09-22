@@ -15,7 +15,7 @@ export const TAP_PARTICIPANT_TYPES = ["anonymous", "guest", "user"] as const;
 export type TapParticipantType = (typeof TAP_PARTICIPANT_TYPES)[number];
 
 /** Session UX kind — independent of facilitator `mode` ("curious"). */
-export const TAP_INTERACTION_KINDS = ["conversational", "exercise"] as const;
+export const TAP_INTERACTION_KINDS = ["conversational", "exercise", "scout"] as const;
 
 export type TapInteractionKind = (typeof TAP_INTERACTION_KINDS)[number];
 
@@ -189,6 +189,7 @@ export function normalizeTapInteractionKind(
   if (typeof value === "string") {
     const raw = value.trim().toLowerCase();
     if (raw === "exercise" || raw === "solo" || raw === "prompt") return "exercise";
+    if (raw === "scout" || raw === "scouting") return "scout";
     if (raw === "conversational" || raw === "dialogue" || raw === "chat" || raw === "conversation") {
       return "conversational";
     }
@@ -209,4 +210,18 @@ export function resolveTapInteractionKindFromBody(
   if ("is_exercise" in record) return normalizeTapInteractionKind(record.is_exercise);
   if ("isExercise" in record) return normalizeTapInteractionKind(record.isExercise);
   return TAP_INTERACTION_KIND_DEFAULT;
+}
+
+/**
+ * Unmigrated DBs still CHECK interaction_kind in (conversational, exercise).
+ * Scout workspace launches retry the insert as conversational; the /scout
+ * URL is the shell selector. Returns null when no retry should run.
+ */
+export function tapSessionInsertRetryKind(
+  requested: TapInteractionKind,
+  errorMessage?: unknown,
+): TapInteractionKind | null {
+  if (requested !== "scout") return null;
+  void errorMessage;
+  return "conversational";
 }

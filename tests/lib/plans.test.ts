@@ -97,6 +97,21 @@ describe("plans workspace limits", () => {
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(0);
   });
+
+  it("allows complimentary token-tier access with inactive personal plan", () => {
+    const profile = {
+      ...baseProfile,
+      plan: "inactive" as const,
+      subscription_status: "inactive",
+      current_period_end: null,
+      token_tier: "pro",
+      token_validity_expires_at: null,
+    };
+    expect(getWorkspaceLimit(profile)).toBeNull();
+    const result = canCreateWorkspace(profile, 0);
+    expect(result.allowed).toBe(true);
+    expect(result.limit).toBeNull();
+  });
 });
 
 describe("plans proof-of-work limits", () => {

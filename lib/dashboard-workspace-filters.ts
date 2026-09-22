@@ -30,3 +30,10 @@ export function workspaceMatchesDashboardListFilter(
   if (filter === "aycl") return Boolean(workspace.is_all_you_can_learn);
   return true;
 }
+
+/** True when the dashboard has no workspaces at all (not a search/filter miss). */
+export function dashboardHasNoWorkspaces(
+  workspaces: readonly unknown[] | null | undefined,
+): boolean {
+  return !workspaces || workspaces.length === 0;
+}

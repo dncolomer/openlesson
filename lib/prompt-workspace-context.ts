@@ -103,6 +103,15 @@ export interface PromptWorkspaceContextInput {
   unusableCells?: Array<{ row: number; col: number }> | null;
   /** Extra free text already assembled by the caller. */
   extra?: string | null;
+  /**
+   * Prior Scout session mind map (path + canvas text) for this block.
+   * Included in ILE/TAP context so a later Work session can use it.
+   */
+  scoutArtifacts?: {
+    path?: readonly string[] | null;
+    canvasText?: string | null;
+    seedText?: string | null;
+  } | null;
 }
 
 export interface PromptWorkspaceContext {
@@ -449,6 +458,23 @@ export function assemblePromptWorkspaceContext(
 
   const { fileNames, fileExcerpts } = normalizeWorkspaceFileContext(mergedFiles);
   const extra = normalizeOptional(input.extra);
+  const scoutPath = (input.scoutArtifacts?.path || [])
+    .map((p) => normalizeOptional(p))
+    .filter((p): p is string => Boolean(p));
+  const scoutCanvas = normalizeOptional(input.scoutArtifacts?.canvasText);
+  const scoutSeed = normalizeOptional(input.scoutArtifacts?.seedText);
+  const scoutLines: string[] = [];
+  if (scoutSeed || scoutPath.length || scoutCanvas) {
+    scoutLines.push("## Scout mind map (prior Scout session on this block)");
+    if (scoutSeed) scoutLines.push(`Scout seed: ${scoutSeed}`);
+    if (scoutPath.length) {
+      scoutLines.push(
+        `Scout path (interest pull, deepest last):\n${scoutPath.map((p, i) => `${i + 1}. ${p}`).join("\n")}`,
+      );
+    }
+    if (scoutCanvas) scoutLines.push(`Scout Work canvas text:\n${scoutCanvas}`);
+  }
+  const scoutBlock = scoutLines.join("\n") || null;
 
   // --- Inventory + topology ---
   const blocks = (input.blocks || []).slice(0, PROMPT_BLOCK_INVENTORY_MAX);
@@ -545,6 +571,7 @@ export function assemblePromptWorkspaceContext(
     ...fileExcerpts.map((f) => f.excerpt),
     ...externalResourceLines,
     extra,
+    scoutBlock,
     // Topology/inventory with descriptions count as light substance
     ...blockInventoryLines.filter((l) => l.includes(" — ")),
   ].filter((p): p is string => Boolean(p && p.length > 12));
@@ -615,6 +642,7 @@ export function assemblePromptWorkspaceContext(
   }
 
   if (extra) lines.push(`Additional context:\n${extra}`);
+  if (scoutBlock) lines.push(scoutBlock);
   if (!hasDomainSubstance) {
     lines.push(
       "Note: domain substance is thin (mostly titles). Prefer concrete knowledge tasks from the title/topic; do not pad with stage directions.",

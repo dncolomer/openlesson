@@ -4,7 +4,6 @@ import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
@@ -124,7 +123,7 @@ export function ExerciseTapPhases(props: {
     onEditThought,
     onDeleteThought,
     isSending = false,
-    participantIdentity,
+    participantIdentity: _participantIdentity,
     remainingSeconds,
     crystallizableText,
     showEndSession,
@@ -272,12 +271,9 @@ export function ExerciseTapPhases(props: {
                     </div>
                   ) : null}
                 </div>
-                {isPracticeMode || participantIdentity ? (
+                {isPracticeMode ? (
                   <div className="ml-auto flex shrink-0 items-center gap-2">
-                    {isPracticeMode ? (
-                      <TapPracticePill label={t("tap.practice.bannerKicker")} />
-                    ) : null}
-                    <SessionIdentityBadge identity={participantIdentity} />
+                    <TapPracticePill label={t("tap.practice.bannerKicker")} />
                   </div>
                 ) : null}
               </div>

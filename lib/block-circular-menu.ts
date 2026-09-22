@@ -54,7 +54,7 @@ export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] =
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
-  { id: "start_session", label: "Explore" },
+  { id: "start_session", label: "Learn" },
   { id: "continue_session", label: "Continue prev Session" },
   { id: "mark_done", label: "Mark as Done" },
 ] as const;
@@ -227,7 +227,7 @@ export function workspaceCircularMenuDrawerId(
   return null;
 }
 
-/** Explore on the workspace ring launches a new ILE session instead of a drawer. */
+/** Work on the workspace ring launches a new ILE session instead of a drawer. */
 export function workspaceCircularMenuStartsFreshExplore(
   action: WorkspaceCircularMenuActionId | string,
 ): boolean {

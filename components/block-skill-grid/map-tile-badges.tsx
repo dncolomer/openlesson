@@ -258,12 +258,12 @@ export function BlockGeneratorTargetSparkBadge() {
 export function BlockPracticeOptionsBadge({
   keys,
 }: {
-  keys: Array<"explore" | "drill" | "dialog" | "solo" | "open" | "timed">;
+  keys: Array<"explore" | "drill" | "scout" | "dialog" | "solo" | "open" | "timed">;
 }) {
   if (keys.length === 0) return null;
-  const displayKeys = keys.filter((k) => k === "explore" || k === "drill");
+  const displayKeys = keys.filter((k) => k === "scout" || k === "explore" || k === "drill");
   const title = displayKeys
-    .map((k) => (k === "explore" ? "Explore" : "Drill"))
+    .map((k) => (k === "scout" ? "Prepare" : k === "explore" ? "Learn" : "Drill"))
     .join(" · ");
   return (
     <span
@@ -273,6 +273,20 @@ export function BlockPracticeOptionsBadge({
       title={title}
       aria-label={`Practice: ${title}`}
     >
+      {keys.includes("scout") ? (
+        <svg
+          className="h-2.5 w-2.5 text-white"
+          data-practice-icon="scout"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <circle cx="10" cy="10" r="5.5" />
+          <path strokeLinecap="round" d="M14.5 14.5L20 20" />
+        </svg>
+      ) : null}
       {keys.includes("explore") ? (
         <svg
           className="h-2.5 w-2.5 text-white"

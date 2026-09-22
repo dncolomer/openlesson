@@ -48,6 +48,7 @@ export const TAP_SESSION_RUNTIME_PATHS = {
   speech: TAP_POW_API_PATHS.speech,
   idle: TAP_POW_API_PATHS.idle,
   canvas: "/api/workspace-tap-score/canvas",
+  scoutQuestions: "/api/workspace-tap-score/scout-questions",
 } as const;
 
 export function shouldIncludePracticeOnTapTrace(input: {

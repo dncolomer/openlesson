@@ -17,7 +17,6 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
-import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -162,7 +161,7 @@ export function TapScorePhases(props: {
     topicsError,
     error,
     startSession,
-    participantIdentity,
+    participantIdentity: _participantIdentity,
     isPracticeMode,
     lastAssistantTurn,
     messages,
@@ -480,12 +479,9 @@ export function TapScorePhases(props: {
                         </div>
                       ) : null}
                     </div>
-                    {participantIdentity || isPracticeMode ? (
+                    {isPracticeMode ? (
                       <div className="ml-auto flex shrink-0 items-center gap-2">
-                        {isPracticeMode ? (
-                          <TapPracticePill label={t("tap.practice.bannerKicker")} />
-                        ) : null}
-                        <SessionIdentityBadge identity={participantIdentity} />
+                        <TapPracticePill label={t("tap.practice.bannerKicker")} />
                       </div>
                     ) : null}
                   </div>

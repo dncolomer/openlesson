@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { trackWorkspaceCreated } from "@/lib/analytics";
+import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
 import {
   DEFAULT_INITIAL_CHAPTERS,
@@ -125,12 +126,12 @@ const MODE_CARD_COPY: Record<
   template: {
     title: "From Template",
     description:
-      "Start from a topic library. Curated resources become generation context for the first map.",
-    badge: "Topic + size",
+      "Upload your own material, write a goal, or start from a topic library. The first map follows a map type.",
+    badge: "Goal + map",
     details: [
-      "Browse categories, then pick a topic",
-      "Choose which resources to include as context",
-      "Set a starting size before the map is generated",
+      "Upload files and write a Goal — a topic is optional",
+      "Or browse a topic and choose resources as context",
+      "Pick a default map type before the map is generated",
     ],
     cta: "Choose a template",
   },
@@ -198,6 +199,8 @@ export default function NewWorkspacePage() {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   /** Keys of resources included as generation context (default: all). */
   const [selectedResourceKeys, setSelectedResourceKeys] = useState<Set<string>>(new Set());
+  const [templateGoal, setTemplateGoal] = useState("");
+  const [templateFiles, setTemplateFiles] = useState<AttachedFile[]>([]);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -324,6 +327,9 @@ export default function NewWorkspacePage() {
     () => dantesResources.filter((r, i) => selectedResourceKeys.has(resourceKey(r, i))),
     [dantesResources, selectedResourceKeys],
   );
+  const templateGoalText = templateGoal.trim();
+  const templateReady =
+    Boolean(selectedTopic) || templateGoalText.length > 0 || templateFiles.length > 0;
 
   function selectCategory(name: string) {
     setBrowseCategory(name);
@@ -466,34 +472,49 @@ export default function NewWorkspacePage() {
   }
 
   async function handleCreateTemplate() {
-    if (!selectedTopic || busy) return;
+    if (!templateReady || busy) return;
     setBusy(true);
     setError("");
     let succeeded = false;
     try {
       if (!(await ensureAuthed())) return;
+      const topic =
+        selectedTopic?.name?.trim() ||
+        templateGoalText ||
+        templateFiles[0]?.name ||
+        "Workspace";
       const response = await fetch("/api/workspace/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           createMode: "template",
-          topic: selectedTopic.name,
+          topic,
+          goal: templateGoalText,
+          files: templateFiles.map((file) => ({
+            name: file.name,
+            mimeType: file.mimeType,
+            data: file.data,
+          })),
           days: 28,
           initialChapters,
-          dantesTopic: {
-            slug: selectedTopic.slug,
-            name: selectedTopic.name,
-            description: selectedTopic.description,
-          },
-          // Selected cards only — API persists them as workspace notes with links
-          // and injects them into the initial generate prompt.
-          dantesResources: selectedResources.map((r) => ({
-            title: r.title,
-            type: r.type,
-            url: r.url,
-            description: r.description,
-            difficulty: r.difficulty,
-          })),
+          ...(selectedTopic
+            ? {
+                dantesTopic: {
+                  slug: selectedTopic.slug,
+                  name: selectedTopic.name,
+                  description: selectedTopic.description,
+                },
+                // Selected cards only — API persists them as external context sources
+                // and injects them into the initial generate prompt.
+                dantesResources: selectedResources.map((r) => ({
+                  title: r.title,
+                  type: r.type,
+                  url: r.url,
+                  description: r.description,
+                  difficulty: r.difficulty,
+                })),
+              }
+            : {}),
         }),
       });
       if (!response.ok) {
@@ -503,7 +524,7 @@ export default function NewWorkspacePage() {
         );
       }
       const payload = await response.json();
-      trackWorkspaceCreated({ hasFiles: false });
+      trackWorkspaceCreated({ hasFiles: templateFiles.length > 0 });
       router.push(`/workspace/${payload.workspaceId}`);
       succeeded = true;
     } catch (err) {
@@ -927,18 +948,53 @@ export default function NewWorkspacePage() {
                 </div>
               )}
 
-              <StartingSizePicker
-                initialChapters={initialChapters}
-                onChange={setInitialChapters}
-                busy={busy}
-              />
+              <div className="mt-5 border-t border-zinc-800 pt-4" data-template-own-material>
+                <label
+                  htmlFor="template-goal"
+                  className="mb-2 block font-mono text-[10px] uppercase tracking-[2px] text-zinc-500"
+                >
+                  Goal / prompt
+                </label>
+                <textarea
+                  id="template-goal"
+                  data-template-goal
+                  value={templateGoal}
+                  onChange={(event) => setTemplateGoal(event.target.value)}
+                  disabled={busy}
+                  rows={3}
+                  placeholder="What should this workspace help someone do?"
+                  className="mb-4 w-full resize-none rounded-none border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm text-white outline-none focus:border-zinc-500 disabled:opacity-50"
+                />
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                  Your material
+                </p>
+                <div data-template-file-upload>
+                  <FileDropZone
+                    files={templateFiles}
+                    onChange={setTemplateFiles}
+                    compact
+                  />
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">
+                  A topic is optional when you add a goal or at least one file.
+                </p>
+              </div>
+
+              <div data-template-map-type-picker>
+                <StartingSizePicker
+                  initialChapters={initialChapters}
+                  onChange={setInitialChapters}
+                  busy={busy}
+                />
+              </div>
 
               {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
 
               <div className="mt-5 flex justify-end">
                 <button
                   type="button"
-                  disabled={!selectedTopic || busy}
+                  data-template-create
+                  disabled={busy || !templateReady}
                   onClick={() => void handleCreateTemplate()}
                   className="rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >

@@ -8,28 +8,33 @@ import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 import { resolveUserBilling } from "@/lib/organization/resolve-user-billing";
 import {
-  blockedChapterSlotsFromPattern,
   getInitialChaptersBand,
   resolveInitialChaptersFromBody,
 } from "@/lib/initial-chapters";
-import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
 import {
+  applyGeneratedMapTypePlacement,
   composeWorkspacePlanGeneratePrompt,
   normalizeGeneratedPlanNodes,
 } from "@/lib/workspace-spatial-create";
+import {
+  blockedCellsFromMapType,
+  mapTypeUsesShapedTopology,
+  resolveMapTypeRecord,
+} from "@/lib/workspace-map-types";
 import {
   extractGeneratedPlanNodes,
   insertGeneratedWorkspaceBlocks,
 } from "@/lib/insert-workspace-blocks";
 import {
   blankWorkspaceCreateOutcome,
-  composeDantesResourceContext,
   composeFilesGoalCreatePrompt,
   composeTemplateCreatePrompt,
   composeTemplateWorkspaceNotes,
   goalFieldsFromPrompt,
+  templateDantesContextForPrompt,
   knowledgeRegionWorkspaceCreateOutcome,
   parseWorkspaceCreateMode,
+  templateWorkspaceGoalField,
   workspaceKindForCreateMode,
   type WorkspaceCreateMode,
 } from "@/lib/workspace-create-modes";
@@ -123,7 +128,9 @@ export async function POST(req: NextRequest) {
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { topic, days, image, files: rawFiles, goal: goalBody } = body;
+    const { days, image, files: rawFiles, goal: goalBody } = body;
+    const explicitGoal = typeof goalBody === "string" ? goalBody.trim() : "";
+    let topic = typeof body.topic === "string" ? body.topic.trim() : "";
     const createMode: WorkspaceCreateMode =
       parseWorkspaceCreateMode(body.createMode ?? body.create_mode) || "files_goal";
     const initialChapters = resolveInitialChaptersFromBody(body);
@@ -222,7 +229,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!topic || typeof topic !== "string") {
+    if (!topic && createMode === "template") {
+      const named = Array.isArray(rawFiles)
+        ? rawFiles.find(
+            (file) =>
+              file &&
+              typeof file === "object" &&
+              typeof (file as { name?: unknown }).name === "string" &&
+              String((file as { name: string }).name).trim(),
+          )
+        : null;
+      const fileName =
+        named && typeof (named as { name?: string }).name === "string"
+          ? (named as { name: string }).name.trim()
+          : "";
+      topic = explicitGoal.slice(0, 160) || fileName;
+    }
+    if (!topic) {
       return jsonError(400, "Topic is required");
     }
 
@@ -333,7 +356,12 @@ export async function POST(req: NextRequest) {
         }),
       );
       fileContext =
-        composeDantesResourceContext(topicName, resourceItems) + (fileContext || "");
+        templateDantesContextForPrompt({
+          topicName,
+          resources: resourceItems,
+          goal: explicitGoal,
+          fileNames: processedFiles.map((file) => file.name),
+        }) + (fileContext || "");
       // Dual-write: notes keep a readable link appendix; Context list uses external_resources table.
       templateNotes = composeTemplateWorkspaceNotes(topicName, resourceItems, {
         topicDescription:
@@ -357,12 +385,8 @@ export async function POST(req: NextRequest) {
       templateExternalCreates = externalRows;
     }
 
-    const goalPromptText =
-      typeof goalBody === "string" && goalBody.trim()
-        ? goalBody.trim()
-        : typeof topic === "string"
-          ? topic.trim()
-          : "";
+    const goalPromptText = explicitGoal || topic;
+    const mapType = resolveMapTypeRecord(initialChapters);
 
     const promptBody =
       createMode === "files_goal"
@@ -378,6 +402,8 @@ export async function POST(req: NextRequest) {
               dantesContext: `${imageContext}${fileContext}`,
               initialChapters,
               daysHint: daysNum,
+              goal: explicitGoal,
+              fileNames: processedFiles.map((file) => file.name),
             })
           : composeWorkspacePlanGeneratePrompt({
               topic,
@@ -505,10 +531,12 @@ export async function POST(req: NextRequest) {
     }
 
     const rawNodes = extractGeneratedPlanNodes(planData);
-    const blockedSlots = blockedChapterSlotsFromPattern(initialChapters);
-    const nodeRefs = relocatePositionsOffBlockedSlots(
-      normalizeGeneratedPlanNodes(rawNodes),
-      blockedSlots,
+    const blockedSlots = blockedCellsFromMapType(mapType);
+    const nodeRefs = applyGeneratedMapTypePlacement(
+      normalizeGeneratedPlanNodes(rawNodes, {
+        preserveNonOriginStart: mapTypeUsesShapedTopology(mapType),
+      }),
+      mapType,
     );
 
     if (nodeRefs.length === 0) {
@@ -531,7 +559,7 @@ export async function POST(req: NextRequest) {
           ? {
               root_topic: topic.slice(0, 160),
               notes: templateNotes || composeTemplateWorkspaceNotes(topic, []),
-              workspace_goal: null as string | null,
+              workspace_goal: templateWorkspaceGoalField(explicitGoal),
             }
           : {
               root_topic: topic.slice(0, 160),

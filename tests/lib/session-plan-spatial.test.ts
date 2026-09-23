@@ -588,7 +588,8 @@ describe("create surface wiring (structural)", () => {
     expect(genSrc).toContain("normalizeGeneratedPlanNodes");
     expect(genSrc).toContain("insertGeneratedWorkspaceBlocks");
     expect(genSrc).toContain("unusable_cells");
-    expect(genSrc).toContain("blockedChapterSlotsFromPattern");
+    expect(genSrc).toContain("blockedCellsFromMapType");
+    expect(genSrc).toContain("applyGeneratedMapTypePlacement");
     const chapter = readFileSync(
       path.join(process.cwd(), "components/ChapterMapPanel.tsx"),
       "utf8",

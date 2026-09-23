@@ -108,6 +108,30 @@ export function composeDantesResourceContext(
 }
 
 /**
+ * Dantes block for the template generate prompt.
+ * Selected resource titles stay in the prompt.
+ * The "use the topic name alone" fallback is only for a topic-only create.
+ * A goal or uploaded file is the material, so that sentence is omitted.
+ */
+export function templateDantesContextForPrompt(input: {
+  topicName: string;
+  resources: DantesResourceContextItem[];
+  goal?: string | null;
+  fileNames?: string[];
+}): string {
+  const resources = input.resources || [];
+  if (resources.length > 0) {
+    return composeDantesResourceContext(input.topicName, resources);
+  }
+  const hasGoal = typeof input.goal === "string" && input.goal.trim().length > 0;
+  const hasFiles = (input.fileNames || []).some(
+    (name) => typeof name === "string" && name.trim().length > 0,
+  );
+  if (hasGoal || hasFiles) return "";
+  return composeDantesResourceContext(input.topicName, []);
+}
+
+/**
  * Optional light notes for template workspaces (topic blurb).
  * Selected Dantes resources are first-class rows in workspace_external_resources
  * (Context tab) — not the sole markdown list in notes.
@@ -211,13 +235,32 @@ export function composeTemplateCreatePrompt(vars: {
   dantesContext: string;
   initialChapters?: InitialChaptersLevel | string | null;
   daysHint?: number | null;
+  /** Optional Goal / prompt. Included when non-empty; not required. */
+  goal?: string | null;
+  /** Uploaded material names sent as generation context. */
+  fileNames?: string[];
 }): string {
+  const goal = typeof vars.goal === "string" ? vars.goal.trim() : "";
+  const names = (vars.fileNames || []).filter((name) => typeof name === "string" && name.trim());
+  const fileContext = [
+    vars.dantesContext || "",
+    goal ? `\nWorkspace GOAL (success outcome the map must serve):\n${goal}` : "",
+    names.length
+      ? `\nUploaded material used as generation context:\n${names.map((name) => `- ${name.trim()}`).join("\n")}`
+      : "",
+  ].join("");
   return composeWorkspacePlanGeneratePrompt({
     topic: vars.topicName,
     initialChapters: vars.initialChapters,
-    fileContext: vars.dantesContext,
+    fileContext,
     daysHint: vars.daysHint,
   });
+}
+
+/** Persist a non-empty template Goal. Empty input stays null (not the topic label). */
+export function templateWorkspaceGoalField(goal: string | null | undefined): string | null {
+  const text = typeof goal === "string" ? goal.trim() : "";
+  return text ? text.slice(0, 500) : null;
 }
 
 export function composeAgentFilesGoalPrompt(vars: {

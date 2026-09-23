@@ -145,6 +145,9 @@ export function WorkspaceView({
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
   const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const [generateMapPreviewCells, setGenerateMapPreviewCells] = useState<
+    Array<{ row: number; col: number }> | null
+  >(null);
   const [unusableCells, setUnusableCells] = useState<UnusableCell[]>([]);
   const [workspaceDags, setWorkspaceDags] = useState<WorkspaceDagRecord[]>(() =>
     normalizeWorkspaceDags(initialPlan?.workspace_dags),
@@ -361,6 +364,51 @@ export function WorkspaceView({
     setCloneArm,
     refreshNodes,
   });
+
+  const handleGenerateMap = useCallback(
+    async (input: {
+      anchorRow: number;
+      anchorCol: number;
+      modifier: string;
+      mapTypeId: string;
+    }) => {
+      if (!workspaceId || !isOwner) return;
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/generate-map", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            anchorRow: input.anchorRow,
+            anchorCol: input.anchorCol,
+            modifier: input.modifier,
+            mapTypeId: input.mapTypeId,
+            ...(ayclToken ? { ayclToken } : {}),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(errorMessageFromBody(data, "Failed to generate map"));
+        }
+        if (Array.isArray(data.updatedNodes)) {
+          setNodes(
+            mapWorkspaceNodes(data.updatedNodes, {
+              ayclClone: Boolean(ayclToken),
+            }),
+          );
+        }
+        if (data.unusable_cells) {
+          setUnusableCells(normalizeUnusableCells(data.unusable_cells));
+        }
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("Failed to generate map");
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [ayclToken, isOwner, workspaceId],
+  );
 
   const handleNodesUpdate = (newNodes: Block[]) => {
     setNodes(newNodes);
@@ -841,7 +889,13 @@ export function WorkspaceView({
             isOwner && !isLearnerMode ? handleMapGround : undefined
           }
           workspaceNotes={notesContent || plan.notes || ""}
-          previewEmptyCells={isLearnerMode ? null : addExpandPreviewCells}
+          previewEmptyCells={
+            isLearnerMode
+              ? null
+              : generateMapPreviewCells && generateMapPreviewCells.length > 0
+                ? generateMapPreviewCells
+                : addExpandPreviewCells
+          }
           generatorTargetPreviewCells={
             generatorTargetPreviewCells ??
             (detailBlock
@@ -979,6 +1033,8 @@ export function WorkspaceView({
           }
           onSplitBlock={isOwner ? handleSplitBlock : undefined}
           onExpandBlock={isOwner ? handleExpandFromSourceBlock : undefined}
+          onGenerateMap={isOwner ? handleGenerateMap : undefined}
+          onGenerateMapPreviewChange={setGenerateMapPreviewCells}
           onExpandPreviewChange={setAddExpandPreviewCells}
           onGeneratorTargetPreviewChange={setGeneratorTargetPreviewCells}
           onGeneratorPickModeChange={setGeneratorPickActiveSafe}

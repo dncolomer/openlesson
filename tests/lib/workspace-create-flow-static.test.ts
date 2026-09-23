@@ -279,4 +279,83 @@ describe("workspace create + builder static wiring", () => {
     expect(afterBlank).toContain("composeTemplateCreatePrompt(");
     expect(afterBlank).toContain("composeFilesGoalCreatePrompt(");
   });
+
+  it("template create accepts own files, a goal, and a default map type; block detail can Generate Map", () => {
+    const page = read("app/workspace/new/page.tsx");
+    const templateStep = page.slice(page.indexOf('step === 2 && mode === "template"'));
+    expect(templateStep).toContain("data-template-file-upload");
+    expect(templateStep).toContain("FileDropZone");
+    expect(read("components/FileDropZone.tsx")).toContain('type="file"');
+    expect(templateStep).toContain("Goal / prompt");
+    expect(templateStep).toContain("data-template-goal");
+    expect(templateStep).toContain("data-template-map-type-picker");
+    expect(templateStep).toContain("InitialChaptersPicker");
+    expect(templateStep).toContain("disabled={busy || !templateReady}");
+    expect(templateStep).not.toContain("disabled={!selectedTopic || busy}");
+    const submit = page.slice(page.indexOf("async function handleCreateTemplate"));
+    expect(submit).toContain('createMode: "template"');
+    expect(submit).toContain("goal: templateGoalText");
+    expect(submit).toContain("files: templateFiles.map");
+    expect(submit).toContain("initialChapters");
+
+    const route = read("app/api/workspace/generate/route.ts");
+    expect(route).toContain("templateDantesContextForPrompt");
+    expect(route).not.toContain("composeDantesResourceContext(");
+    expect(route).toContain("templateWorkspaceGoalField(explicitGoal)");
+    expect(route).toContain("workspace_goal: goalFields.workspace_goal");
+    expect(route).toContain("workspace_external_resources");
+    expect(route).toContain('from("workspace_files")');
+    expect(route).toContain("blockedCellsFromMapType");
+    expect(route).toContain("unusable_cells: blockedSlots");
+    expect(route).toContain("goal: explicitGoal");
+    expect(route).toContain("fileNames: processedFiles.map");
+
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    expect(detail).not.toContain('title="Generate Map"');
+    expect(detail).not.toContain("WorkspaceGenerateMapPane");
+    const add = read("components/WorkspaceAddBlockPane.tsx");
+    expect(add).toContain('title="Generate Map"');
+    expect(add).toContain('drawerId="generate_map"');
+    expect(add).toContain("data-generate-map-drawer");
+    expect(add).toContain("WorkspaceGenerateMapPane");
+    expect(add).toContain("onGenerateMapPreviewChange");
+    const pane = read("components/WorkspaceGenerateMapPane.tsx");
+    expect(pane).toContain("data-generate-map-modifier");
+    expect(pane).toContain("InitialChaptersPicker");
+    expect(pane).toContain("data-generate-map-type-picker");
+    expect(pane).toContain("generateMapHighlightCells");
+    expect(pane).toContain("onPreviewChange");
+    expect(pane).not.toContain("fetch(");
+    expect(pane).toContain("disabled={pending}");
+    const drawers = read("components/workspace-view/workspace-right-drawers.tsx");
+    const addHost = drawers.slice(drawers.indexOf('rightPane === "add_block"'));
+    expect(addHost).toContain("onGenerateMap={onGenerateMap}");
+    expect(addHost).toContain("onGenerateMapPreviewChange={onGenerateMapPreviewChange}");
+    const detailHost = drawers.slice(
+      drawers.indexOf("WorkspaceBlockDetailPane"),
+      drawers.indexOf('rightPane === "add_block"'),
+    );
+    expect(detailHost).not.toContain("onGenerateMap=");
+    const view = read("components/WorkspaceView.tsx");
+    expect(view).toContain('fetch("/api/workspace/generate-map"');
+    expect(view).toContain("onGenerateMap={isOwner ? handleGenerateMap : undefined}");
+    expect(view).toContain("generateMapPreviewCells");
+    const generateMapHandler = view.slice(
+      view.indexOf("const handleGenerateMap"),
+      view.indexOf("const handleNodesUpdate"),
+    );
+    expect(generateMapHandler).toContain("mapWorkspaceNodes");
+    expect(generateMapHandler).toContain("ayclClone: Boolean(ayclToken)");
+    const mapper = read("components/workspace-view/types.ts");
+    const mapFn = mapper.slice(
+      mapper.indexOf("export function mapWorkspaceNodes"),
+      mapper.indexOf("export function plannerModelFromStorage"),
+    );
+    expect(mapFn).toContain("parseWorkspacePracticeOptions");
+    expect(mapFn).toContain("ayclClone: opts?.ayclClone");
+    expect(mapFn).toContain("parseBlockCreatorEffects");
+    const learner = read("components/WorkspaceLearnerBlockPane.tsx");
+    expect(learner).not.toContain("Generate Map");
+    expect(learner).not.toContain("WorkspaceGenerateMapPane");
+  });
 });

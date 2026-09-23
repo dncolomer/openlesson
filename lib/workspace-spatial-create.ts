@@ -4,16 +4,23 @@
  */
 
 import {
-  formatInitialChaptersForPrompt,
   parseInitialChaptersLevel,
-  SPATIAL_MAP_LAYOUT_RULES,
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
+import { relocatePositionsOffBlockedSlots } from "@/lib/ile-chapter-blocked";
 import {
   BLOCK_MAP_GLYPH_JSON_SHAPE,
   blockMapGlyphDbFields,
   composeBlockMapGlyphJsonInstruction,
 } from "@/lib/block-map-glyph";
+import {
+  blockedCellsFromMapType,
+  clampPositionsToMapTypeFrame,
+  formatMapTypeGeneratorContext,
+  mapTypeUsesShapedTopology,
+  resolveMapTypeRecord,
+  type WorkspaceMapTypeRecord,
+} from "@/lib/workspace-map-types";
 
 /** Reasonable grid extent so a bad LLM value cannot explode layout. */
 const POSITION_CLAMP = 24;
@@ -73,13 +80,31 @@ function parseGridCoord(value: unknown): number | undefined {
 export function composeWorkspaceSpatialGeneratePrompt(
   vars: WorkspaceSpatialPromptVars,
 ): string {
-  const mapInfo = formatInitialChaptersForPrompt(vars.initialChapters);
+  const record = resolveMapTypeRecord(vars.initialChapters);
+  const mapInfo = formatMapTypeGeneratorContext(record);
+  const shaped = mapTypeUsesShapedTopology(record);
   const fileContext = vars.fileContext || "";
   const daysLine =
     typeof vars.daysHint === "number" && Number.isFinite(vars.daysHint)
       ? `\nApproximate learning span context: about ${vars.daysHint} days (count is still driven by initial chapters, not this span alone).`
       : "";
   const extra = vars.extraRules ? `\n${vars.extraRules}` : "";
+  const placementRules = shaped
+    ? `- Create ${mapInfo.band.min} to ${mapInfo.band.max} blocks (prefer about ${mapInfo.band.target}).
+- Blocks are assessable learning/performance units.
+- Use short stable ids only for linking within this response (e.g. "a", "b", "c").
+- Exactly one start block with is_start=true, on the FOUNDATION CELL from the map-type topology above.
+- next: array of child block ids (0–3). Branch only along the painted skeleton.
+- The map-type topology rules above control layout. Do not restamp the pattern onto the origin or scatter across all four quadrants when that conflicts with the skeleton.
+- ${composeBlockMapGlyphJsonInstruction()}`
+    : `- Create ${mapInfo.band.min} to ${mapInfo.band.max} blocks (prefer about ${mapInfo.band.target}).
+- Blocks are assessable learning/performance units.
+- Use short stable ids only for linking within this response (e.g. "a", "b", "c").
+- Exactly one start block with is_start=true at (0, 0).
+- next: array of child block ids (0–3). Prefer branching: at least one block with 2+ next when count allows; explore some arms deeper.
+- Include at least one block with a negative position_x or position_y (multi-quadrant).
+- Sparse paths are preferred over a filled rectangle.
+- ${composeBlockMapGlyphJsonInstruction()}`;
 
   return `Create a performance learning map from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.
 
@@ -88,7 +113,7 @@ ${vars.topicOrPrompt || "Untitled"}${fileContext}${daysLine}
 
 ${mapInfo.countInstruction}
 
-${SPATIAL_MAP_LAYOUT_RULES}
+${mapInfo.spatialInstruction}
 
 Return ONLY JSON:
 {
@@ -109,14 +134,7 @@ Return ONLY JSON:
 }
 
 Rules:
-- Create ${mapInfo.band.min} to ${mapInfo.band.max} blocks (prefer about ${mapInfo.band.target}).
-- Blocks are assessable learning/performance units.
-- Use short stable ids only for linking within this response (e.g. "a", "b", "c").
-- Exactly one start block with is_start=true at (0, 0).
-- next: array of child block ids (0–3). Prefer branching: at least one block with 2+ next when count allows; explore some arms deeper.
-- Include at least one block with a negative position_x or position_y (multi-quadrant).
-- Sparse paths are preferred over a filled rectangle.
-- ${composeBlockMapGlyphJsonInstruction()}${extra}`;
+${placementRules}${extra}`;
 }
 
 /**
@@ -130,17 +148,42 @@ export function composeWorkspacePlanGeneratePrompt(vars: {
   fileContext?: string;
   daysHint?: number | null;
 }): string {
-  const mapInfo = formatInitialChaptersForPrompt(vars.initialChapters);
+  const record = resolveMapTypeRecord(vars.initialChapters);
+  const mapInfo = formatMapTypeGeneratorContext(record);
+  const shaped = mapTypeUsesShapedTopology(record);
   const daysLine =
     typeof vars.daysHint === "number" && Number.isFinite(vars.daysHint)
       ? `\nApproximate span context: about ${vars.daysHint} days (node count is driven by initial chapters).`
       : "";
+  const placementRules = shaped
+    ? `- Include ${mapInfo.band.min} to ${mapInfo.band.max} nodes total (prefer about ${mapInfo.band.target}).
+- Each node must include a keyword (${BLOCK_MAP_GLYPH_JSON_SHAPE} fields). ${composeBlockMapGlyphJsonInstruction()}
+- The top-level "title" must be a catchy, memorable name for the plan (like a course name or book title). NOT just "Learning X". Be creative.
+- Each node is a distinct learning session
+- Use single-letter or short IDs for referencing
+- Exactly one is_start: true node, on the FOUNDATION CELL from the map-type topology above
+- next: array of node IDs that follow this node (can be empty or have 1-3 entries)
+- Branch only along the painted skeleton
+- The map-type topology rules above control layout. Do not restamp the pattern onto the origin or scatter across all four quadrants when that conflicts with the skeleton
+- Keep titles concise (3-8 words)
+- Descriptions: 1 sentence explaining the concept`
+    : `- Include ${mapInfo.band.min} to ${mapInfo.band.max} nodes total (prefer about ${mapInfo.band.target}).
+- Each node must include a keyword (${BLOCK_MAP_GLYPH_JSON_SHAPE} fields). ${composeBlockMapGlyphJsonInstruction()}
+- The top-level "title" must be a catchy, memorable name for the plan (like a course name or book title). NOT just "Learning X". Be creative.
+- Each node is a distinct learning session
+- Use single-letter or short IDs for referencing
+- Exactly one is_start: true node, at (0, 0)
+- next: array of node IDs that follow this node (can be empty or have 1-3 entries)
+- Create branching paths (1-to-many connections); explore some arms deeper
+- Place nodes in multiple quadrants (positive and negative coordinates); sparse layout OK
+- Keep titles concise (3-8 words)
+- Descriptions: 1 sentence explaining the concept`;
 
   return `Generate a learning plan for "${vars.topic}" as a directed graph on a 2D skill grid where each node is a session.${vars.imageContext || ""}${vars.fileContext || ""}${daysLine}
 
 ${mapInfo.countInstruction}
 
-${SPATIAL_MAP_LAYOUT_RULES}
+${mapInfo.spatialInstruction}
 
 Return JSON with this structure:
 {
@@ -160,17 +203,21 @@ Return JSON with this structure:
 }
 
 Rules:
-- Include ${mapInfo.band.min} to ${mapInfo.band.max} nodes total (prefer about ${mapInfo.band.target}).
-- Each node must include a keyword (${BLOCK_MAP_GLYPH_JSON_SHAPE} fields). ${composeBlockMapGlyphJsonInstruction()}
-- The top-level "title" must be a catchy, memorable name for the plan (like a course name or book title). NOT just "Learning X". Be creative.
-- Each node is a distinct learning session
-- Use single-letter or short IDs for referencing
-- Exactly one is_start: true node, at (0, 0)
-- next: array of node IDs that follow this node (can be empty or have 1-3 entries)
-- Create branching paths (1-to-many connections); explore some arms deeper
-- Place nodes in multiple quadrants (positive and negative coordinates); sparse layout OK
-- Keep titles concise (3-8 words)
-- Descriptions: 1 sentence explaining the concept`;
+${placementRules}`;
+}
+
+/**
+ * Same post-process chapter create uses: move tiles off the map type's blocked
+ * cells, clamp them into the schematic frame, then move any clamp collisions
+ * off blocked cells again. Scatter types skip the frame clamp.
+ */
+export function applyGeneratedMapTypePlacement<
+  T extends { position_x?: number | null; position_y?: number | null },
+>(items: readonly T[], record: WorkspaceMapTypeRecord): T[] {
+  const blocked = blockedCellsFromMapType(record);
+  const relocated = relocatePositionsOffBlockedSlots(items, blocked);
+  const clamped = clampPositionsToMapTypeFrame(relocated, record);
+  return relocatePositionsOffBlockedSlots(clamped, blocked);
 }
 
 /**
@@ -179,7 +226,7 @@ Rules:
  */
 export function normalizeGeneratedWorkspaceBlocks(
   rawBlocks: RawWorkspaceBlock[] | undefined | null,
-  options?: { idSeed?: number },
+  options?: { idSeed?: number; preserveNonOriginStart?: boolean },
 ): WorkspaceBlockRef[] {
   const seed = options?.idSeed ?? Date.now();
   const occupied = new Set<string>();
@@ -238,13 +285,20 @@ export function normalizeGeneratedWorkspaceBlocks(
     next: (b.next || []).filter((id) => knownIds.has(id) && id !== b.id),
   }));
 
-  // Ensure exactly one start: prefer is_start at origin, else first with (0,0), else first.
+  // Scatter: prefer a start at the origin. Shaped maps keep the model's foundation cell.
   const origin = withLinks.find((b) => b.position_x === 0 && b.position_y === 0);
   const markedStart = withLinks.find((b) => b.is_start);
-  const startId = (origin ?? markedStart ?? withLinks[0]).id;
+  const startId = (
+    options?.preserveNonOriginStart
+      ? (markedStart ?? origin ?? withLinks[0])
+      : (origin ?? markedStart ?? withLinks[0])
+  ).id;
 
   return withLinks.map((b) => {
     const isStart = b.id === startId;
+    if (isStart && options?.preserveNonOriginStart) {
+      return { ...b, is_start: true };
+    }
     if (isStart) {
       // Force origin on the start block when it had no coords or wrong ones if free.
       if (b.position_x === 0 && b.position_y === 0) {
@@ -276,7 +330,7 @@ export function normalizeGeneratedWorkspaceBlocks(
 /** Alias for plan-generate path that uses `nodes` in the LLM JSON. */
 export function normalizeGeneratedPlanNodes(
   rawNodes: RawWorkspaceBlock[] | undefined | null,
-  options?: { idSeed?: number },
+  options?: { idSeed?: number; preserveNonOriginStart?: boolean },
 ): WorkspaceBlockRef[] {
   return normalizeGeneratedWorkspaceBlocks(rawNodes, options);
 }

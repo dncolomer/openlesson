@@ -82,6 +82,8 @@ export function WorkspaceRightDrawers({
   onSaveCreatorEffects,
   onSplitBlock,
   onExpandBlock,
+  onGenerateMap,
+  onGenerateMapPreviewChange,
   onExpandPreviewChange,
   onGeneratorTargetPreviewChange,
   onGeneratorPickModeChange,
@@ -200,6 +202,13 @@ export function WorkspaceRightDrawers({
     source: ExpandSourceIdentity,
     opts: WorkspaceExpandBlockSubmitOpts,
   ) => Promise<void>;
+  onGenerateMap?: (input: {
+    anchorRow: number;
+    anchorCol: number;
+    modifier: string;
+    mapTypeId: string;
+  }) => Promise<void>;
+  onGenerateMapPreviewChange?: (cells: Array<{ row: number; col: number }> | null) => void;
   onExpandPreviewChange: (cells: Array<{ row: number; col: number }> | null) => void;
   onGeneratorTargetPreviewChange: (cells: GeneratorTargetCell[] | null) => void;
   onGeneratorPickModeChange: (active: boolean) => void;
@@ -392,6 +401,8 @@ export function WorkspaceRightDrawers({
             onSubmit={onSubmitAddBlock}
             onCancel={onCancelEmptyCreate}
             onExpandPreviewChange={onExpandPreviewChange}
+            onGenerateMap={onGenerateMap}
+            onGenerateMapPreviewChange={onGenerateMapPreviewChange}
             labels={{
               addTitle: t("sessionList.gridAddTitle"),
               addPlaceholder: t("sessionList.gridAddPlaceholder"),

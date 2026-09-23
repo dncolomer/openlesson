@@ -30,6 +30,7 @@ import {
   type ShapeContextSourceOption,
 } from "@/lib/shape-context-select";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+import { WorkspaceGenerateMapPane } from "@/components/WorkspaceGenerateMapPane";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -79,6 +80,8 @@ export function WorkspaceAddBlockPane({
   onSubmit,
   onCancel,
   onExpandPreviewChange,
+  onGenerateMap,
+  onGenerateMapPreviewChange,
   labels,
 }: {
   cell: WorkspaceAddTargetCell;
@@ -97,6 +100,15 @@ export function WorkspaceAddBlockPane({
   onCancel: () => void;
   /** Lift active expand selection so the map can highlight candidates. */
   onExpandPreviewChange?: (cells: WorkspaceAddTargetCell[] | null) => void;
+  /** Create the highlighted map. Called only from the Generate button. */
+  onGenerateMap?: (input: {
+    anchorRow: number;
+    anchorCol: number;
+    modifier: string;
+    mapTypeId: string;
+  }) => Promise<void> | void;
+  /** Highlight the chosen template. Does not create blocks. */
+  onGenerateMapPreviewChange?: (cells: WorkspaceAddTargetCell[] | null) => void;
   labels: {
     addTitle: string;
     addPlaceholder: string;
@@ -201,6 +213,23 @@ export function WorkspaceAddBlockPane({
       ),
     [unusableCells],
   );
+  const generateMapOccupied = useMemo(() => {
+    const cells: Array<{ row: number; col: number }> = [];
+    const seen = new Set<string>();
+    const push = (row: number, col: number) => {
+      if (!Number.isInteger(row) || !Number.isInteger(col)) return;
+      const key = `${row}:${col}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      cells.push({ row, col });
+    };
+    for (const key of occupiedKeys) {
+      const [row, col] = key.split(":").map(Number);
+      push(row, col);
+    }
+    for (const cell of unusableCells || []) push(cell.row, cell.col);
+    return cells;
+  }, [occupiedKeys, unusableCells]);
 
   // Live expand for the draft form only — host freezes membership when a job starts.
   const expandSelection = useMemo(
@@ -604,6 +633,27 @@ export function WorkspaceAddBlockPane({
           </button>
         </div>
       </WorkspaceRightPaneDrawer>
+      {onGenerateMap ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="generate_map"
+          title="Generate Map"
+          defaultExpanded={false}
+          bodyClassName="space-y-3"
+          surfaceDataAttr="data-generate-map-drawer"
+        >
+          <div data-generate-map-drawer>
+            <WorkspaceGenerateMapPane
+              anchorRow={cell.row}
+              anchorCol={cell.col}
+              occupied={generateMapOccupied}
+              busy={busy}
+              onPreviewChange={onGenerateMapPreviewChange}
+              onSubmit={onGenerateMap}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
     </WorkspaceRightPaneDrawerGroup>
   );
 }

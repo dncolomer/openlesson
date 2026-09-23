@@ -1,6 +1,7 @@
 "use client";
 
 import { FALLBACK_AESTHETIC_IMAGES } from "@/lib/aesthetics";
+import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import {
   ILE_END_TURN_BLOCKED_NO_ACTIVE,
   type IleEndTurnInsightGate,
@@ -32,12 +33,19 @@ export function IleTurnInsightCraft({
   onSaveAndExit: () => void;
   onBack: () => void;
 }) {
+  const surface = useSurfaceAestheticImages(null);
   if (!open) return null;
 
+  const passed = aestheticImage?.trim() || "";
+  const pool = surface.images;
   const backdrop =
-    (aestheticImage && aestheticImage.trim()) ||
-    FALLBACK_AESTHETIC_IMAGES[0] ||
-    "";
+    surface.source === "pending"
+      ? passed
+      : surface.source === "fallback"
+        ? (passed && FALLBACK_AESTHETIC_IMAGES.includes(passed) ? passed : "") ||
+          FALLBACK_AESTHETIC_IMAGES[0] ||
+          ""
+        : (passed && pool.includes(passed) ? passed : "") || pool[0] || "";
   const blocked = !gate.canComplete;
   const unmet = new Set(gate.unmetChapterIds);
 

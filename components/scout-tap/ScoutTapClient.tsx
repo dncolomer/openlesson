@@ -17,9 +17,10 @@ import {
   postTutoringSessionStart,
 } from "@/lib/tutoring-client";
 import { resolveTapShowEndSession } from "@/components/TapScoreClient";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { ScoutTapPhases } from "@/components/scout-tap/scout-tap-phases";
 import {
-  BACKGROUND_IMAGES,
+  pickTapBackgroundImage,
   type Phase,
   resolveInitialMinutes,
 } from "@/lib/tap-score-client-helpers";
@@ -203,7 +204,17 @@ export function ScoutTapClient({
   }, [workCanvasScene]);
 
   useEffect(() => {
-    setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
+    let cancelled = false;
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
+      })
+      .catch(() => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

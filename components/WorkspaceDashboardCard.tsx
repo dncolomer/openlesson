@@ -20,6 +20,8 @@ interface WorkspaceDashboardCardProps {
   privateLabel: string;
   /** Whether this workspace is pinned to the top of the Dashboard list. */
   isPinned?: boolean;
+  /** Org-aware aesthetic pool used when the workspace has no stored cover. */
+  imagePool?: readonly string[] | null;
   onArchive: (workspaceId: string) => void;
   onRestore: (workspaceId: string) => void;
   onToggleVisibility: (plan: Workspace) => void;
@@ -33,6 +35,7 @@ export function WorkspaceDashboardCard({
   publicLabel,
   privateLabel,
   isPinned = false,
+  imagePool = null,
   onArchive,
   onRestore,
   onToggleVisibility,
@@ -55,6 +58,7 @@ export function WorkspaceDashboardCard({
         <WorkspaceCardHero
           workspaceId={plan.id}
           coverImageUrl={plan.cover_image_url}
+          imagePool={imagePool}
           fallback="aesthetic"
           heightClassName="h-52 sm:h-56"
           badges={

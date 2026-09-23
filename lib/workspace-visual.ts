@@ -12,9 +12,15 @@ export function seededUnit(seed: number, slot: number): number {
   return ((seed * (slot + 1) * 9301 + 49297) % 233280) / 233280;
 }
 
-export function resolveWorkspaceCoverImage(workspaceId: string, coverImageUrl?: string | null): string {
-  if (coverImageUrl?.trim()) return coverImageUrl.trim();
-  return aestheticImageForId(workspaceId);
+export function resolveWorkspaceCoverImage(
+  workspaceId: string,
+  coverImageUrl?: string | null,
+  pool?: readonly string[] | null,
+): string {
+  const stored = coverImageUrl?.trim();
+  if (stored) return stored;
+  const images = pool?.map((url) => String(url || "").trim()).filter(Boolean);
+  return aestheticImageForId(workspaceId, images && images.length > 0 ? images : undefined);
 }
 
 export const WORKSPACE_ABSTRACT_PALETTES: ReadonlyArray<readonly [string, string, string]> = [

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
@@ -44,7 +45,7 @@ import {
   type TapSystem2Action,
   type TapChatMessage as ChatMessage,
   CHAIN_GAP_MS,
-  BACKGROUND_IMAGES,
+  pickTapBackgroundImage,
   getDialogueStorageKey,
   clearDialogueMessages,
   resolveInitialMinutes,
@@ -250,7 +251,17 @@ export function TapScoreClient({
   }, [isPracticeMode]);
 
   useEffect(() => {
-    setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
+    let cancelled = false;
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
+      })
+      .catch(() => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const isTranscriptionActiveRef = useRef(false);

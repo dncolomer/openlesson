@@ -17,7 +17,11 @@ import {
   WorkspaceLoading,
   WorkspaceViewChrome,
 } from "@/components/workspace-view/workspace-chrome";
-import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
+import {
+  aestheticImageForId,
+  fetchAestheticPackages,
+  selectSurfaceAestheticImages,
+} from "@/lib/aesthetics";
 import { WorkspaceSectionHosts } from "@/components/workspace-view/workspace-section-hosts";
 import { useWorkspaceLearner } from "@/components/workspace-view/use-workspace-learner";
 import { useWorkspaceMapSelection } from "@/components/workspace-view/use-workspace-map-selection";
@@ -137,7 +141,7 @@ export function WorkspaceView({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
-  const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForId(workspaceId));
+  const [workspaceImage, setWorkspaceImage] = useState("");
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
   const [isAddingBlock, setIsAddingBlock] = useState(false);
@@ -376,11 +380,21 @@ export function WorkspaceView({
     fetchAestheticPackages()
       .then((packages) => {
         if (cancelled) return;
-        const images = packages.flatMap((pkg) => pkg.images);
-        if (images.length === 0) return;
-        setWorkspaceImage(aestheticImageForId(workspaceId, images));
+        const images = packages.flatMap((pkg) => pkg.images).filter(Boolean);
+        const selection = selectSurfaceAestheticImages({
+          provided: images,
+          fromPackages: images,
+        });
+        setWorkspaceImage(aestheticImageForId(workspaceId, selection.images));
       })
-      .catch(() => {});
+      .catch(() => {
+        if (cancelled) return;
+        const selection = selectSurfaceAestheticImages({
+          provided: [],
+          fromPackages: [],
+        });
+        setWorkspaceImage(aestheticImageForId(workspaceId, selection.images));
+      });
 
     return () => {
       cancelled = true;

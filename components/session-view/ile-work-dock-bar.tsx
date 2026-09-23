@@ -6,6 +6,7 @@ import {
   FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
+import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 
 export type IleWorkDockLabel = {
@@ -108,11 +109,13 @@ export function IleWorkDockChip({
   caption?: string;
 }) {
   const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
-  const dockImages = aestheticImages.length > 0 ? aestheticImages : FALLBACK_AESTHETIC_IMAGES;
+  const surface = useSurfaceAestheticImages(aestheticImages);
+  const dockImages =
+    surface.source === "fallback" ? FALLBACK_AESTHETIC_IMAGES : surface.images;
   const chipImage = resolveIleWorkAestheticImage({
     id: work.id,
     assigned: work.image,
-    images: dockImages,
+    images: surface.source === "pending" ? undefined : dockImages,
   });
   const keyword = work.keyword?.trim();
   const status = work.status ?? "idle";
@@ -229,7 +232,9 @@ export function IleWorkDockBar({
   aestheticImages?: string[];
   compact?: boolean;
 }) {
-  const dockImages = aestheticImages.length > 0 ? aestheticImages : FALLBACK_AESTHETIC_IMAGES;
+  const surface = useSurfaceAestheticImages(aestheticImages);
+  const dockImages =
+    surface.source === "fallback" ? FALLBACK_AESTHETIC_IMAGES : surface.images;
   const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
   const showSubmit = Boolean(onSubmitTurn);
 

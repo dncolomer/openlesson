@@ -6,6 +6,8 @@ import { WorkspaceAbstractArt } from "@/components/WorkspaceAbstractArt";
 type WorkspaceCardHeroProps = {
   workspaceId: string;
   coverImageUrl?: string | null;
+  /** Active aesthetic pool (org custom set, or system listing). Omit for system defaults. */
+  imagePool?: readonly string[] | null;
   /** Use aesthetic fallback when no stored cover (catalog cards). Default: abstract vector art. */
   fallback?: "aesthetic" | "abstract";
   heightClassName?: string;
@@ -17,6 +19,7 @@ type WorkspaceCardHeroProps = {
 export function WorkspaceCardHero({
   workspaceId,
   coverImageUrl,
+  imagePool = null,
   fallback = "abstract",
   heightClassName = "h-40",
   badges,
@@ -26,7 +29,7 @@ export function WorkspaceCardHero({
   const hasStoredCover = Boolean(coverImageUrl?.trim());
   const imageSrc =
     fallback === "aesthetic"
-      ? resolveWorkspaceCoverImage(workspaceId, coverImageUrl)
+      ? resolveWorkspaceCoverImage(workspaceId, coverImageUrl, imagePool)
       : hasStoredCover
         ? coverImageUrl!.trim()
         : null;

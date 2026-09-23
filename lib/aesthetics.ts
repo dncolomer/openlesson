@@ -13,6 +13,97 @@ export interface AestheticPackage {
   previewImage: string;
 }
 
+export const ORG_CUSTOM_AESTHETIC_PACKAGE_ID = "org-custom";
+
+export type ActiveAestheticPool = {
+  source: "custom" | "system";
+  images: string[];
+};
+
+function normalizePoolUrls(value: readonly string[] | null | undefined): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of value ?? []) {
+    const url = String(raw || "").trim();
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    urls.push(url);
+  }
+  return urls;
+}
+
+/**
+ * Custom org stills replace the system pool entirely. An empty custom list
+ * means system defaults (the caller supplies the folder listing).
+ * Never concatenates custom URLs with /aesthetics/ paths.
+ */
+export function decideActiveAestheticPool(input: {
+  customUrls?: readonly string[] | null;
+  systemImages?: readonly string[] | null;
+}): ActiveAestheticPool {
+  const custom = normalizePoolUrls(input.customUrls);
+  if (custom.length > 0) {
+    return { source: "custom", images: custom };
+  }
+  return { source: "system", images: normalizePoolUrls(input.systemImages) };
+}
+
+/**
+ * Images for a dock chip, map tile, or cover when the caller may not have a
+ * pool yet. A provided or fetched list wins. FALLBACK_AESTHETIC_IMAGES is used
+ * only after the org-aware listing has loaded and is empty (system defaults).
+ * `pending` means the listing has not returned, so callers must not force the
+ * folder stills over an already assigned custom URL.
+ */
+export function selectSurfaceAestheticImages(input: {
+  provided?: readonly string[] | null;
+  /** `undefined` = fetchAestheticPackages has not settled. */
+  fromPackages?: readonly string[] | null;
+}): {
+  images: readonly string[];
+  source: "provided" | "packages" | "fallback" | "pending";
+} {
+  const provided = normalizePoolUrls(input.provided);
+  if (provided.length > 0) return { images: provided, source: "provided" };
+  if (input.fromPackages === undefined) return { images: [], source: "pending" };
+  const fetched = normalizePoolUrls(input.fromPackages);
+  if (fetched.length > 0) return { images: fetched, source: "packages" };
+  return { images: [...FALLBACK_AESTHETIC_IMAGES], source: "fallback" };
+}
+
+/** One package so existing clients use the custom set and no named-pack catalog. */
+export function aestheticPackageFromCustomUrls(images: readonly string[]): AestheticPackage {
+  const urls = normalizePoolUrls(images);
+  return {
+    id: ORG_CUSTOM_AESTHETIC_PACKAGE_ID,
+    name: "Custom",
+    images: urls,
+    previewImage: urls[0] || "",
+  };
+}
+
+/**
+ * Pick a newly chosen workspace cover from the active pool.
+ * System pools with no folder images fall through to FALLBACK_AESTHETIC_IMAGES.
+ */
+export function pickWorkspaceCoverFromPool(
+  pool: ActiveAestheticPool,
+  random: () => number = Math.random,
+): string | null {
+  const images =
+    pool.images.length > 0
+      ? pool.images
+      : pool.source === "system"
+        ? [...FALLBACK_AESTHETIC_IMAGES]
+        : [];
+  if (images.length === 0) return null;
+  const index = Math.min(
+    images.length - 1,
+    Math.max(0, Math.floor(random() * images.length)),
+  );
+  return images[index] ?? null;
+}
+
 /** Assign distinct images to a fixed number of UI slots (cycles only if pool is smaller). */
 export function aestheticImagesForSlots(count: number, images = FALLBACK_AESTHETIC_IMAGES) {
   const pool = images.length > 0 ? images : FALLBACK_AESTHETIC_IMAGES;
@@ -88,14 +179,17 @@ export function assignIleWorkAestheticImages(input: {
         .filter(Boolean),
     ),
   ];
-  const pool =
-    input.images && input.images.length > 0
-      ? [...input.images]
-      : FALLBACK_AESTHETIC_IMAGES;
+  const explicitPool =
+    input.images && input.images.length > 0 ? [...input.images] : null;
+  const pool = explicitPool ?? [...FALLBACK_AESTHETIC_IMAGES];
   const next: Record<string, string> = {};
   for (const id of ids) {
     const existing = String(input.current?.[id] || "").trim();
-    if (existing) next[id] = existing;
+    // A stored still outside the active pool (for example a /aesthetics/ pick
+    // while the org set is custom) is not reused.
+    if (existing && (!explicitPool || explicitPool.includes(existing))) {
+      next[id] = existing;
+    }
   }
   const used = new Set(Object.values(next));
   const random = input.random;
@@ -118,7 +212,7 @@ export function assignIleWorkAestheticImages(input: {
 }
 
 /** Stable per-id pick — same image on server and client (no Math.random). */
-export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAGES) {
+export function aestheticImageForId(id: string, images: readonly string[] = FALLBACK_AESTHETIC_IMAGES) {
   if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -133,12 +227,11 @@ export function resolveIleWorkAestheticImage(input: {
   assigned?: string | null;
   images?: readonly string[] | null;
 }): string {
-  const pool =
-    input.images && input.images.length > 0
-      ? [...input.images]
-      : FALLBACK_AESTHETIC_IMAGES;
+  const explicitPool =
+    input.images && input.images.length > 0 ? [...input.images] : null;
+  const pool = explicitPool ?? [...FALLBACK_AESTHETIC_IMAGES];
   const assigned = String(input.assigned || "").trim();
-  if (assigned) return assigned;
+  if (assigned && (!explicitPool || explicitPool.includes(assigned))) return assigned;
   return aestheticImageForId(input.id, pool);
 }
 
@@ -173,9 +266,20 @@ export function aestheticPackageVibe(id: string): string {
   return `${name} stills for this session — map, Work, and chrome share the same mood.`;
 }
 
+let inflightAestheticPackages: Promise<AestheticPackage[]> | null = null;
+
 export async function fetchAestheticPackages(): Promise<AestheticPackage[]> {
-  const response = await fetch("/api/aesthetics", { cache: "no-store" });
-  if (!response.ok) return [];
-  const data = (await response.json()) as { packages?: AestheticPackage[] };
-  return Array.isArray(data.packages) ? data.packages : [];
+  if (!inflightAestheticPackages) {
+    inflightAestheticPackages = fetch("/api/aesthetics", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return [];
+        const data = (await response.json()) as { packages?: AestheticPackage[] };
+        return Array.isArray(data.packages) ? data.packages : [];
+      })
+      .catch(() => [])
+      .finally(() => {
+        inflightAestheticPackages = null;
+      });
+  }
+  return inflightAestheticPackages;
 }

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getIlePostSessionPath } from "@/lib/storage";
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -52,7 +53,7 @@ import {
 } from "@/lib/tutoring-languages";
 import {
   type Phase,
-  BACKGROUND_IMAGES,
+  pickTapBackgroundImage,
   resolveInitialMinutes,
   normalize,
   formatCountdown,
@@ -280,7 +281,17 @@ export function ExerciseTapClient({
   }, [lists, activeSoloProblemId]);
 
   useEffect(() => {
-    setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
+    let cancelled = false;
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage(packages));
+      })
+      .catch(() => {
+        if (!cancelled) setBgImage(pickTapBackgroundImage([]));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

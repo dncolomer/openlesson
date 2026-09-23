@@ -10,6 +10,22 @@ import {
   fileToLogoPayload,
   validateLogoFile,
 } from "@/lib/organization/logo-client";
+import { readCustomAestheticUrls } from "@/lib/organization/custom-aesthetic-set";
+import {
+  fileToAestheticPayload,
+  validateAestheticFile,
+} from "@/lib/organization/custom-aesthetics-client";
+
+function apiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") return fallback;
+  const err = (body as { error?: unknown }).error;
+  if (typeof err === "string" && err.trim()) return err.trim();
+  if (err && typeof err === "object") {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message.trim();
+  }
+  return fallback;
+}
 
 const cardClass =
   "rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm";
@@ -30,6 +46,7 @@ interface Organization {
   name: string;
   slug: string;
   logo_url?: string | null;
+  custom_aesthetic_urls?: string[] | null;
   created_at: string;
 }
 
@@ -70,6 +87,9 @@ export function OrganizationDashboardTab() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [aestheticUrls, setAestheticUrls] = useState<string[]>([]);
+  const [uploadingAesthetics, setUploadingAesthetics] = useState(false);
+  const [removingAestheticUrl, setRemovingAestheticUrl] = useState<string | null>(null);
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -100,6 +120,7 @@ export function OrganizationDashboardTab() {
       }
 
       setOrganization(data.organization);
+      setAestheticUrls(readCustomAestheticUrls(data.organization?.custom_aesthetic_urls));
       setIsOrgAdmin(data.is_org_admin);
       setMembers(data.members || []);
       setInvites(data.invites || []);
@@ -235,6 +256,60 @@ export function OrganizationDashboardTab() {
     }
   };
 
+  const handleAestheticUpload = async (files: FileList | null) => {
+    const list = files ? Array.from(files) : [];
+    if (list.length === 0) return;
+    for (const file of list) {
+      const err = validateAestheticFile(file);
+      if (err) {
+        alert(err);
+        return;
+      }
+    }
+    setUploadingAesthetics(true);
+    try {
+      const images = await Promise.all(list.map((file) => fileToAestheticPayload(file)));
+      const res = await fetch("/api/organization/aesthetics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.aestheticUploadError")));
+        return;
+      }
+      setAestheticUrls(readCustomAestheticUrls(data.images));
+    } catch (uploadErr) {
+      console.error("Custom aesthetic upload error:", uploadErr);
+      alert(t("organization.aestheticUploadError"));
+    } finally {
+      setUploadingAesthetics(false);
+    }
+  };
+
+  const handleRemoveAesthetic = async (url: string) => {
+    setRemovingAestheticUrl(url);
+    try {
+      const res = await fetch("/api/organization/aesthetics", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(apiErrorMessage(data, t("organization.aestheticRemoveError")));
+        return;
+      }
+      setAestheticUrls(readCustomAestheticUrls(data.images));
+    } catch (removeErr) {
+      console.error("Custom aesthetic remove error:", removeErr);
+      alert(t("organization.aestheticRemoveError"));
+    } finally {
+      setRemovingAestheticUrl(null);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -349,6 +424,68 @@ export function OrganizationDashboardTab() {
           </div>
         </div>
       </section>
+
+      {isOrgAdmin && (
+        <section className={cardPaddedClass} data-org-custom-aesthetics>
+          <p className={labelClass}>{t("organization.customAesthetics")}</p>
+          <h3 className="mt-1 text-sm font-medium text-white">
+            {t("organization.customAestheticsTitle")}
+          </h3>
+          <p className="mt-2 max-w-xl text-xs text-neutral-500">
+            {t("organization.customAestheticsHelper")}
+          </p>
+          <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white">
+            <input
+              data-org-aesthetic-upload
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              className="hidden"
+              disabled={uploadingAesthetics}
+              onChange={(e) => {
+                void handleAestheticUpload(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            {uploadingAesthetics
+              ? t("organization.uploadingAesthetics")
+              : t("organization.uploadAesthetics")}
+          </label>
+          {aestheticUrls.length === 0 ? (
+            <p className="mt-4 text-sm text-neutral-400">
+              {t("organization.noCustomAesthetics")}
+            </p>
+          ) : (
+            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {aestheticUrls.map((url) => (
+                <li
+                  key={url}
+                  className="overflow-hidden rounded-md border border-neutral-800 bg-black/40"
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-28 w-full object-cover"
+                  />
+                  <div className="flex justify-end p-2">
+                    <button
+                      type="button"
+                      data-org-aesthetic-remove
+                      className={dangerBtnClass}
+                      disabled={removingAestheticUrl === url}
+                      onClick={() => void handleRemoveAesthetic(url)}
+                    >
+                      {removingAestheticUrl === url
+                        ? t("organization.removingAesthetic")
+                        : t("organization.removeAesthetic")}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {isOrgAdmin && (
         <section className="grid gap-4 sm:grid-cols-3">

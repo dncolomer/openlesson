@@ -98,9 +98,9 @@ import {
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 import {
   aestheticImageForId,
-  FALLBACK_AESTHETIC_IMAGES,
   resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
+import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import {
   BlockCircularMenuRing,
   BlockGatherNotificationDot,
@@ -287,10 +287,8 @@ export function MapWorldLayer({
   annotationLayers: AnnotationLayer[];
 }) {
   const openWorkIdSet = new Set(openWorkIds ?? []);
-  const aestheticPool =
-    aestheticImages && aestheticImages.length > 0
-      ? Array.from(aestheticImages)
-      : FALLBACK_AESTHETIC_IMAGES;
+  const surface = useSurfaceAestheticImages(aestheticImages);
+  const aestheticPool = surface.source === "pending" ? undefined : surface.images;
   return (
     <>
           {/* Empty cells + selection highlights + unusable ground */}

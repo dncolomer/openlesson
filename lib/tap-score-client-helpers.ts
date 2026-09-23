@@ -1,4 +1,8 @@
 // Pure helpers for TAP score client UI
+import {
+  decideActiveAestheticPool,
+  ORG_CUSTOM_AESTHETIC_PACKAGE_ID,
+} from "@/lib/aesthetics";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +45,33 @@ export const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
+
+/**
+ * TAP stills. A non-empty org custom package replaces the Greco-futurism
+ * system list. Folder packages from /api/aesthetics stay on BACKGROUND_IMAGES.
+ */
+export function tapBackgroundPool(
+  packages?: readonly { id?: string; images?: readonly string[] | null }[] | null,
+): readonly string[] {
+  const custom = (packages ?? []).find((pkg) => pkg.id === ORG_CUSTOM_AESTHETIC_PACKAGE_ID);
+  const decision = decideActiveAestheticPool({
+    customUrls: custom?.images,
+    systemImages: BACKGROUND_IMAGES,
+  });
+  return decision.source === "custom" ? decision.images : BACKGROUND_IMAGES;
+}
+
+export function pickTapBackgroundImage(
+  packages?: readonly { id?: string; images?: readonly string[] | null }[] | null,
+  random: () => number = Math.random,
+): string {
+  const pool = tapBackgroundPool(packages);
+  const index = Math.min(
+    pool.length - 1,
+    Math.max(0, Math.floor(random() * pool.length)),
+  );
+  return pool[index] ?? BACKGROUND_IMAGES[0];
+}
 
 export function getDialogueStorageKey({
   workspaceId,

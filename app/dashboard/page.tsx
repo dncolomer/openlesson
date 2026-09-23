@@ -12,6 +12,7 @@ import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/p
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
@@ -171,6 +172,8 @@ export default function DashboardPage() {
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
   const workspacePageSize = 10;
+  /** Images from /api/aesthetics: org custom set, or the system folder listing. */
+  const [workspaceCoverPool, setWorkspaceCoverPool] = useState<string[] | null>(null);
 
   // Agentic tab
   const [apiKeys, setApiKeys] = useState<AgentApiKey[]>([]);
@@ -204,6 +207,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        const images = packages.flatMap((pkg) => pkg.images).filter(Boolean);
+        if (images.length > 0) setWorkspaceCoverPool(images);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Reset page when search or filter changes
@@ -1070,6 +1087,7 @@ export default function DashboardPage() {
                   <WorkspaceDashboardCard
                     key={plan.id}
                     plan={plan}
+                    imagePool={workspaceCoverPool}
                     formatDate={formatDate}
                     archivingWorkspaceId={archivingWorkspaceId}
                     publicLabel={t("dashboard.public")}

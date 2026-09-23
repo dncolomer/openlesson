@@ -1318,7 +1318,17 @@
     "changeLogo": "Change logo",
     "uploadingLogo": "Uploading…",
     "logoHelper": "Shown on invite links. PNG, JPEG, WebP, GIF, or SVG · max 2 MB.",
-    "logoUploadError": "Failed to upload logo"
+    "logoUploadError": "Failed to upload logo",
+    "customAesthetics": "Custom aesthetics",
+    "customAestheticsTitle": "Images used across the product",
+    "customAestheticsHelper": "Upload several images to replace the built-in aesthetic library for this organization. Leave the set empty to keep the system defaults. PNG, JPEG, WebP, or GIF · max 4 MB each.",
+    "uploadAesthetics": "Upload images",
+    "uploadingAesthetics": "Uploading…",
+    "noCustomAesthetics": "No custom images yet. Sessions, maps, and new covers keep using the built-in library.",
+    "removeAesthetic": "Remove",
+    "removingAesthetic": "Removing…",
+    "aestheticUploadError": "Failed to update custom aesthetics",
+    "aestheticRemoveError": "Failed to remove image"
   },
   "demoBanner": {
     "wantToSee": "Want to see Uncertain Systems in action?",

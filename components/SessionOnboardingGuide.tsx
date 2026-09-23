@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
-import { IleInsightEmptySlots } from "@/components/session-view/ile-insight-trophies";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { translateWithLocale } from "@/lib/i18n";
+import { ileWorkspaceStartAllowed } from "@/lib/practice-voice-challenge";
 import {
   clampIleMinInsightsPerChapter,
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
@@ -30,6 +31,8 @@ export type SessionOnboardingGuideProps = {
   renderStep3Action?: () => ReactNode;
   /** TAP-only: hide the quote block on the last slide when showing topic cards. */
   hideStep3Quote?: boolean;
+  /** Prepare and Drill: drop the first of the two welcome screens. */
+  omitIntroSlide?: boolean;
   /** Optional hero image for step 1 (TAP placeholder; overrides ILE video if set). */
   stepImages?: [string | undefined, string | undefined];
   /** Optional override for ILE step 1 grid-pan clip. */
@@ -158,6 +161,7 @@ export function SessionOnboardingGuide({
   projectMode = false,
   renderStep3Action,
   hideStep3Quote = false,
+  omitIntroSlide = false,
   stepImages,
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
   insightGoalCount = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
@@ -167,6 +171,25 @@ export function SessionOnboardingGuide({
   const lang = language ?? "en";
   const prefix = `onboardingGuide.${variant}`;
   const insightCount = clampIleMinInsightsPerChapter(insightGoalCount);
+
+  if (variant === "ile" && showStartAction && !renderStep3Action) {
+    return (
+      <div
+        data-ile-voice-challenge=""
+        className={`flex h-full min-h-0 w-full flex-1 items-center justify-center bg-[#0b0b0b] px-6 ${className}`}
+      >
+        <div className="w-full max-w-xl">
+          <PracticeVoiceChallenge
+            variant="ile"
+            onPass={() => {
+              if (!ileWorkspaceStartAllowed(true)) return;
+              onStart?.();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const tt = (key: string, params?: Record<string, string | number>) =>
     translateWithLocale(lang, `${prefix}.${key}`, params);
@@ -233,7 +256,7 @@ export function SessionOnboardingGuide({
     highlight: ttOptional("step3.highlight"),
   };
   const steps: GuideSlide[] =
-    variant === "ile"
+    variant === "ile" || variant === "scout" || omitIntroSlide
       ? [closingSlide]
       : [
           {
@@ -265,7 +288,7 @@ export function SessionOnboardingGuide({
       className={`flex min-h-0 flex-col ${
         isFloating
           ? `max-h-[min(100%,46rem)] ${variant === "ile" ? "" : "min-h-[34rem] "}w-full max-w-lg overflow-hidden rounded-none border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl`
-          : `flex-1 ${className}`
+          : `h-full w-full flex-1 ${className}`
       }`}
     >
       <div
@@ -319,15 +342,7 @@ export function SessionOnboardingGuide({
                     isActive={step === index}
                   />
                 </div>
-              ) : hideStep3Quote || variant === "ile" || !slide.quoteText.trim() ? (
-                variant === "ile" && slide.kind === "closing" ? (
-                  <IleInsightEmptySlots
-                    count={insightCount}
-                    label={tt("step3.slotsLabel", { count: insightCount })}
-                    emptyLabel={tt("step3.emptySlot")}
-                  />
-                ) : null
-              ) : (
+              ) : hideStep3Quote || variant === "ile" || !slide.quoteText.trim() ? null : (
                 <OnboardingQuote text={slide.quoteText} author={slide.quoteAuthor} />
               )}
 
@@ -351,7 +366,7 @@ export function SessionOnboardingGuide({
 
               {index === lastSlideIndex && renderStep3Action ? renderStep3Action() : null}
 
-              {index === lastSlideIndex && showStartAction && !renderStep3Action ? (
+              {index === lastSlideIndex && showStartAction && !renderStep3Action && variant !== "ile" ? (
                 <div className="mt-4 shrink-0" data-onboarding-start-wrap>
                   <button
                     type="button"

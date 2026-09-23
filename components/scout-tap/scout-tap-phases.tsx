@@ -1,7 +1,13 @@
 "use client";
 
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import {
+  prepareBriefingStep,
+  releaseVoiceChallengeStartLatch,
+  voiceChallengeStartSucceeded,
+} from "@/lib/practice-voice-challenge";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -25,7 +31,7 @@ import {
   type ScoutLiveState,
   type ScoutThankYouActions,
 } from "@/lib/scout-session";
-import type { MutableRefObject } from "react";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -107,6 +113,41 @@ export function ScoutTapPhases(props: {
   } = props;
 
   void scoutThinkAloudEnabled();
+
+  const [startConfirmed, setStartConfirmed] = useState(false);
+  const passGuard = useRef(false);
+  const [challengeAttempt, setChallengeAttempt] = useState(0);
+  useEffect(() => {
+    if (phase !== "briefing") {
+      setStartConfirmed(false);
+      passGuard.current = false;
+    }
+  }, [phase]);
+
+  function confirmPrepareStart() {
+    const step = prepareBriefingStep({ startConfirmed: true, challengePassed: false });
+    if (step === "challenge") setStartConfirmed(true);
+  }
+
+  function passPrepareChallenge() {
+    if (passGuard.current) return;
+    const step = prepareBriefingStep({ startConfirmed: true, challengePassed: true });
+    if (step !== "live") return;
+    passGuard.current = true;
+    void Promise.resolve(startSession()).then((result) => {
+      const release = releaseVoiceChallengeStartLatch({
+        startSucceeded: voiceChallengeStartSucceeded(result),
+      });
+      if (!release.release) return;
+      passGuard.current = false;
+      setChallengeAttempt((attempt) => attempt + 1);
+    });
+  }
+
+  const prepareStep = prepareBriefingStep({
+    startConfirmed,
+    challengePassed: false,
+  });
 
   const current = scoutCurrentNode(scoutState);
   const canGoBack = canGoBackScoutNode(scoutState);
@@ -198,8 +239,24 @@ export function ScoutTapPhases(props: {
       data-scout-think-aloud={String(scoutThinkAloudEnabled())}
     >
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && (
-          <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections">
+        {phase === "briefing" && prepareStep === "challenge" ? (
+          <section
+            className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
+            data-scout-briefing
+            data-scout-voice-challenge=""
+            data-prepare-briefing-step="challenge"
+          >
+            <div className="w-full max-w-xl">
+              <PracticeVoiceChallenge key={challengeAttempt} variant="prepare" onPass={passPrepareChallenge} />
+              {error ? (
+                <p className="mt-4 text-center text-sm text-red-300">{error}</p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {phase === "briefing" && prepareStep === "confirm" && (
+          <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections" data-prepare-briefing-step="confirm">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
                 <SessionOnboardingGuide
@@ -207,7 +264,7 @@ export function ScoutTapPhases(props: {
                   hideStep3Quote
                   showStartAction
                   isStarting={isStartingSession}
-                  onStart={() => void startSession()}
+                  onStart={confirmPrepareStart}
                 />
               </div>
               <TapAestheticSection bgImage={bgImage} kind="shortcuts">

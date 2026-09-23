@@ -24,6 +24,13 @@ import {
   normalize,
 } from "@/lib/tap-score-client-helpers";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
+import {
+  releaseVoiceChallengeStartLatch,
+  scoredTapBriefingStep,
+  voiceChallengeStartSucceeded,
+} from "@/lib/practice-voice-challenge";
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -151,20 +158,89 @@ export function ExerciseTapPhases(props: {
     sessionId,
   } = props;
 
+  const [pendingStart, setPendingStart] = useState<
+    { kind: "topic"; topic: TapStartingTopic } | { kind: "practice" } | null
+  >(null);
+  const passGuard = useRef(false);
+  const [challengeAttempt, setChallengeAttempt] = useState(0);
+
+  useEffect(() => {
+    if (phase !== "briefing") {
+      setPendingStart(null);
+      passGuard.current = false;
+    }
+  }, [phase]);
+
+  function chooseTopic(topic: TapStartingTopic) {
+    const step = scoredTapBriefingStep({ choice: "topic", challengePassed: false });
+    if (step === "challenge") setPendingStart({ kind: "topic", topic });
+  }
+
+  function choosePractice() {
+    const step = scoredTapBriefingStep({ choice: "practice", challengePassed: false });
+    if (step === "challenge") setPendingStart({ kind: "practice" });
+  }
+
+  function passDrillChallenge() {
+    if (!pendingStart || passGuard.current) return;
+    const step = scoredTapBriefingStep({
+      choice: pendingStart.kind,
+      challengePassed: true,
+    });
+    if (step !== "live") return;
+    passGuard.current = true;
+    const run =
+      pendingStart.kind === "practice"
+        ? startSession({ practice: true })
+        : startSession(pendingStart.topic);
+    void Promise.resolve(run).then((result) => {
+      const release = releaseVoiceChallengeStartLatch({
+        startSucceeded: voiceChallengeStartSucceeded(result),
+      });
+      if (!release.release) return;
+      passGuard.current = false;
+      setChallengeAttempt((attempt) => attempt + 1);
+    });
+  }
+
+  const briefingStep = scoredTapBriefingStep({
+    choice: pendingStart?.kind ?? null,
+    challengePassed: false,
+  });
+
   return (
     <div data-exercise-tap-client className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && (
+        {phase === "briefing" && briefingStep === "challenge" && pendingStart ? (
+          <section
+            className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
+            data-exercise-voice-challenge=""
+            data-drill-briefing-step="challenge"
+          >
+            <div className="w-full max-w-xl">
+              <PracticeVoiceChallenge
+                key={challengeAttempt}
+                variant="drill"
+                onPass={passDrillChallenge}
+              />
+              {error ? <p className="mt-4 text-center text-sm text-red-300">{error}</p> : null}
+            </div>
+          </section>
+        ) : null}
+
+        {phase === "briefing" && briefingStep === "pick" && (
           <section
             className="relative flex min-h-0 flex-1"
             data-exercise-briefing
             data-exercise-tap-intro
             data-tap-briefing-layout="sections"
+            data-drill-briefing-step="pick"
           >
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
                 <SessionOnboardingGuide
                   variant="tap"
+                  omitIntroSlide
                   hideStep3Quote
                   renderStep3Action={() => (
                     <>
@@ -172,8 +248,8 @@ export function ExerciseTapPhases(props: {
                         topics={startingTopics}
                         isStarting={isStartingSession}
                         startingTopicId={startingTopicId}
-                        onStartTopic={(selectedTopic) => void startSession(selectedTopic)}
-                        onPracticeFirst={() => void startSession({ practice: true })}
+                        onStartTopic={chooseTopic}
+                        onPracticeFirst={choosePractice}
                         practiceTitle={t("tap.practice.practiceFirst")}
                         practiceSubtitle={t("tap.practice.practiceFirstHint")}
                         practiceStartLabel={t("tap.practice.cardStart")}

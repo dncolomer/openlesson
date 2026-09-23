@@ -215,6 +215,7 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
       allowGatherResources: false,
       minInsightsPerChapter: 2,
       canvasTimerSeconds: 15 * 60,
+      silenceLockMinutes: 3,
     });
     expect(ilePregameMatchingDifficultyPresetId(ironman)).toBe("ironman");
     expect(

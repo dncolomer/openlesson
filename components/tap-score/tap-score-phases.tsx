@@ -13,7 +13,13 @@ import {
   TAP_IM_DONE_CONFIRM_TITLE,
 } from "@/lib/tap-thought-memory";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
+import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import {
+  releaseVoiceChallengeStartLatch,
+  scoredTapBriefingStep,
+  voiceChallengeStartSucceeded,
+} from "@/lib/practice-voice-challenge";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -199,6 +205,13 @@ export function TapScorePhases(props: {
     sendCanvasAsk,
   } = props;
 
+  const [pendingStart, setPendingStart] = useState<
+    | { kind: "topic"; topic: TapStartingTopic }
+    | { kind: "practice" }
+    | null
+  >(null);
+  const passGuard = useRef(false);
+  const [challengeAttempt, setChallengeAttempt] = useState(0);
   const [workCanvasScene, setWorkCanvasScene] = useState<IleWorkCanvasScene>(() =>
     emptyTapWorkCanvasScene(),
   );
@@ -222,6 +235,50 @@ export function TapScorePhases(props: {
     sceneRef.current = workCanvasScene;
     workCanvasSceneRef.current = workCanvasScene;
   }, [workCanvasScene, workCanvasSceneRef]);
+
+  useEffect(() => {
+    if (phase !== "briefing") {
+      setPendingStart(null);
+      passGuard.current = false;
+    }
+  }, [phase]);
+
+  function chooseTopic(topic: TapStartingTopic) {
+    const step = scoredTapBriefingStep({ choice: "topic", challengePassed: false });
+    if (step === "challenge") setPendingStart({ kind: "topic", topic });
+  }
+
+  function choosePractice() {
+    const step = scoredTapBriefingStep({ choice: "practice", challengePassed: false });
+    if (step === "challenge") setPendingStart({ kind: "practice" });
+  }
+
+  function passTapChallenge() {
+    if (!pendingStart || passGuard.current) return;
+    const step = scoredTapBriefingStep({
+      choice: pendingStart.kind,
+      challengePassed: true,
+    });
+    if (step !== "live") return;
+    passGuard.current = true;
+    const run =
+      pendingStart.kind === "practice"
+        ? startSession({ practice: true })
+        : startSession(pendingStart.topic);
+    void Promise.resolve(run).then((result) => {
+      const release = releaseVoiceChallengeStartLatch({
+        startSucceeded: voiceChallengeStartSucceeded(result),
+      });
+      if (!release.release) return;
+      passGuard.current = false;
+      setChallengeAttempt((attempt) => attempt + 1);
+    });
+  }
+
+  const briefingStep = scoredTapBriefingStep({
+    choice: pendingStart?.kind ?? null,
+    challengePassed: false,
+  });
 
   useEffect(() => {
     if (phase !== "live") {
@@ -367,12 +424,28 @@ export function TapScorePhases(props: {
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && (
-          <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections">
+        {phase === "briefing" && briefingStep === "challenge" && pendingStart ? (
+          <section
+            className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
+            data-tap-voice-challenge=""
+            data-tap-briefing-step="challenge"
+          >
+            <div className="w-full max-w-xl">
+              <PracticeVoiceChallenge key={challengeAttempt} onPass={passTapChallenge} />
+              {error ? (
+                <p className="mt-4 text-center text-sm text-red-300">{error}</p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {phase === "briefing" && briefingStep === "pick" && (
+          <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
                 <SessionOnboardingGuide
                   variant="tap"
+                  omitIntroSlide
                   hideStep3Quote
                   renderStep3Action={() => (
                     <>
@@ -380,8 +453,8 @@ export function TapScorePhases(props: {
                         topics={startingTopics}
                         isStarting={isStartingSession}
                         startingTopicId={startingTopicId}
-                        onStartTopic={(selectedTopic) => void startSession(selectedTopic)}
-                        onPracticeFirst={() => void startSession({ practice: true })}
+                        onStartTopic={chooseTopic}
+                        onPracticeFirst={choosePractice}
                         practiceTitle={t("tap.practice.practiceFirst")}
                         practiceSubtitle={t("tap.practice.practiceFirstHint")}
                         practiceStartLabel={t("tap.practice.cardStart")}
@@ -423,7 +496,8 @@ export function TapScorePhases(props: {
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div
               data-tap-convo-live-split
-              className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-1"
+              data-tap-split="70-30"
+              className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] overflow-hidden lg:grid-cols-[7fr_3fr] lg:grid-rows-1"
             >
               <div
                 data-tap-convo-work-canvas-pane

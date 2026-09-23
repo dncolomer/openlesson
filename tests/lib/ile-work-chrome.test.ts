@@ -462,7 +462,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(enHelp.onboardingGuide.ile.step3.quoteText).toBe("");
     const guide = read("components/SessionOnboardingGuide.tsx");
     expect(guide).toContain('variant === "ile"');
-    expect(guide).toContain("IleInsightEmptySlots");
+    expect(guide).toContain("data-ile-voice-challenge");
+    expect(guide).not.toContain("IleInsightEmptySlots");
     expect(guide).toContain("insightGoalCount");
     expect(trophies).toContain("data-ile-welcome-insight-slots");
     expect(trophies).toContain("IleInsightEmptySlots");

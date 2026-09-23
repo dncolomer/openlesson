@@ -65,6 +65,10 @@ const ILE_INSIGHT_SLOT_CARD_CLASS =
 export const ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3;
 export const ILE_INSIGHT_EMPTY_SLOT_LABEL = "Empty";
 
+/** Widths for the silent loading shapes on the start/help cards. */
+const ILE_WELCOME_SKELETON_TITLE = ["w-2/5", "w-3/5", "w-1/2", "w-2/3", "w-[46%]"] as const;
+const ILE_WELCOME_SKELETON_LINE = ["w-4/5", "w-full", "w-3/4", "w-11/12", "w-2/3"] as const;
+
 function IleInsightSlotCard({
   empty = false,
   insight,
@@ -102,11 +106,41 @@ function IleInsightSlotCard({
   );
 }
 
-/** Empty full-width cards for the ILE welcome goal — count from difficulty. */
+function IleWelcomeInsightPlaceholderCard({ variant }: { variant: number }) {
+  const titleWidth = ILE_WELCOME_SKELETON_TITLE[variant % ILE_WELCOME_SKELETON_TITLE.length];
+  const lineWidth = ILE_WELCOME_SKELETON_LINE[variant % ILE_WELCOME_SKELETON_LINE.length];
+  return (
+    <article
+      data-ile-insight-slot-card="empty"
+      data-ile-insight-slot-empty=""
+      data-ile-welcome-insight-placeholder=""
+      data-ile-welcome-insight-skeleton=""
+      className="flex w-full items-start gap-3 border border-dashed border-amber-200/40 bg-neutral-950 px-4 py-4"
+    >
+      <span
+        aria-hidden
+        data-ile-welcome-insight-skeleton-mark=""
+        className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center border border-amber-200/25 bg-amber-200/10 text-amber-200/35"
+      >
+        <IleInsightTrophyIcon className="size-4" />
+      </span>
+      <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-2 py-0.5">
+        <span data-ile-welcome-insight-skeleton-bar="title" className={`h-2.5 ${titleWidth} bg-neutral-600/80`} />
+        <span data-ile-welcome-insight-skeleton-bar="line" className={`h-2 ${lineWidth} bg-neutral-800`} />
+        <span data-ile-welcome-insight-skeleton-bar="line" className="h-2 w-1/2 bg-neutral-800/70" />
+        <span
+          data-ile-welcome-insight-skeleton-chip=""
+          className="mt-1 h-4 w-14 border border-neutral-700 bg-neutral-900"
+        />
+      </span>
+    </article>
+  );
+}
+
+/** Elaborate placeholder cards for the ILE start/help surface — count from difficulty. */
 export function IleInsightEmptySlots({
   count,
   label,
-  emptyLabel = ILE_INSIGHT_EMPTY_SLOT_LABEL,
 }: {
   count: number;
   label?: string;
@@ -118,12 +152,12 @@ export function IleInsightEmptySlots({
     <ul
       data-ile-welcome-insight-slots=""
       data-ile-welcome-insight-slot-count={n}
-      className="mb-5 flex w-full flex-col gap-2"
+      className="mb-5 flex w-full flex-col gap-3"
       aria-label={label ?? `${n} empty insight slots`}
     >
       {Array.from({ length: n }, (_, index) => (
         <li key={index} data-ile-welcome-insight-slot="" className="w-full">
-          <IleInsightSlotCard empty emptyLabel={emptyLabel} />
+          <IleWelcomeInsightPlaceholderCard variant={index} />
         </li>
       ))}
     </ul>
@@ -180,12 +214,16 @@ export function IleInsightTrophyStrip({
 export function IleMapInsightsWidget({
   insights,
   visible,
+  slotCount = ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
 }: {
   insights: readonly InsightSummary[];
   visible: boolean;
+  /** Chapter insight goal. Empty slots match this count, not a fixed 3. */
+  slotCount?: number;
 }) {
   if (!visible) return null;
-  const emptyCount = Math.max(0, ILE_MAP_INSIGHT_PLACEHOLDER_COUNT - insights.length);
+  const quota = clampIleMinInsightsPerChapter(slotCount);
+  const emptyCount = Math.max(0, quota - insights.length);
   return (
     <div
       data-ile-map-insights-widget
@@ -203,6 +241,7 @@ export function IleMapInsightsWidget({
       </p>
       <ul
         data-ile-map-insights-slots=""
+        data-ile-map-insights-slot-count={quota}
         className="flex max-h-[min(22rem,50vh)] w-full flex-col gap-1.5 overflow-y-auto"
       >
         {insights.map((insight) => (

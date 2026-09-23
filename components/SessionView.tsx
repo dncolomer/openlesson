@@ -147,6 +147,16 @@ import {
   type IleWorkCanvasWorkspaceInput,
 } from "@/lib/ile-work-canvas";
 import {
+  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
+  ileImpurityExitPlan,
+  ileMicCountsAsSilence,
+} from "@/lib/practice-voice-challenge";
+import {
+  IleSessionImpurityScreen,
+  IleSilenceRestScreen,
+} from "@/components/session-view/ile-silence-lock-screen";
+import { useIleSilenceLock } from "@/components/session-view/use-ile-silence-lock";
+import {
   IleInsightTrophyStrip,
   IleMapInsightsWidget,
   IleWorkCanvasTimer,
@@ -371,6 +381,9 @@ export function SessionView({
   );
   const [canvasTimerSeconds, setCanvasTimerSeconds] = useState(
     ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+  );
+  const [silenceLockMinutes, setSilenceLockMinutes] = useState(
+    ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   );
   const [openWorkIds, setOpenWorkIds] = useState<string[]>([]);
   const [mapSelectedChapterId, setMapSelectedChapterId] = useState<string | null>(null);
@@ -2065,6 +2078,20 @@ export function SessionView({
     isRecording,
     isPaused,
   });
+  const micSilent = ileMicCountsAsSilence({
+    muted: isMuted,
+    hasStream: Boolean(stream),
+    audioTracks: (stream?.getAudioTracks() ?? []).map((track) => ({
+      muted: track.muted,
+      enabled: track.enabled,
+      readyState: track.readyState,
+    })),
+  });
+  const silenceLock = useIleSilenceLock({
+    armed: Boolean(session && !showWelcomeModal && !showWelcomePanel && !isSaving),
+    speaking: isSpeaking && !micSilent,
+    minutes: silenceLockMinutes,
+  });
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
@@ -2139,6 +2166,8 @@ export function SessionView({
         onCanvasTimerSecondsChange={(value) =>
           setCanvasTimerSeconds(clampIleCanvasTimerSeconds(value))
         }
+        silenceLockMinutes={silenceLockMinutes}
+        onSilenceLockMinutesChange={setSilenceLockMinutes}
         autoAdvance={autoAdvance}
         onToggleAutoAdvance={() => setAutoAdvance(!autoAdvance)}
         localInferenceEnabled={localInferenceEnabled}
@@ -2165,6 +2194,32 @@ export function SessionView({
 
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
+      {silenceLock.outcome === "rest" ? (
+        <IleSilenceRestScreen
+          lockCount={silenceLock.lockCount}
+          onUnlock={() => silenceLock.unlock(true)}
+          onSaveAndLeave={() => {
+            const plan = ileImpurityExitPlan("save");
+            if (!plan.persistSession) return;
+            setShowSaveExitNameDialog(true);
+          }}
+        />
+      ) : null}
+      {silenceLock.outcome === "impurity" ? (
+        <IleSessionImpurityScreen
+          lockCount={silenceLock.lockCount}
+          onSave={() => {
+            const plan = ileImpurityExitPlan("save");
+            if (!plan.persistSession) return;
+            setShowSaveExitNameDialog(true);
+          }}
+          onLogOff={() => {
+            const plan = ileImpurityExitPlan("logoff");
+            if (!plan.leave) return;
+            void pauseAndGoToDashboard(null, { persistSession: plan.persistSession });
+          }}
+        />
+      ) : null}
       <SessionChrome
         t={t}
         activeTool={activeTool}
@@ -2235,7 +2290,11 @@ export function SessionView({
         workCanvasHeaderExtra={workCanvasHeaderExtra}
         workCanvasHeaderLeading={workCanvasInsightSlots}
         mapInsightsWidget={
-          <IleMapInsightsWidget insights={sessionInsights} visible />
+          <IleMapInsightsWidget
+            insights={sessionInsights}
+            slotCount={minInsightsPerChapter}
+            visible
+          />
         }
         introOpen={showWelcomePanel}
         onCloseSessionModal={() => {

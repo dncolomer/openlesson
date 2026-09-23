@@ -2862,8 +2862,8 @@
         "body": "This session is a scout, not a think-aloud. You map the topic on the Work canvas to see where curiosity and pull are strongest.\n\nThe left side is the same Work canvas used across modes. The topic starts as framed text. Follow-up questions appear on the right — questions only, never answers."
       },
       "step3": {
-        "title": "Follow the questions",
-        "body": "Pick a follow-up to add it as a connected node. Five new questions generate from whatever is already on the canvas — including your own edits. A sixth option returns you to the previous node so you can branch differently.\n\nWhen time is up, the map freezes. More Scout runs give the next Work session richer context.",
+        "title": "When Prepare helps",
+        "body": "Use Prepare when you are not ready to work the topic yet. You build a mind map of questions only, to see where curiosity and pull are strongest. That map is useful context for the next work session.\n\nPick a follow-up to add it as a connected node. When time is up, the map freezes.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",

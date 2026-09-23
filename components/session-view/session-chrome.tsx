@@ -297,6 +297,19 @@ export function SessionChrome({
           </div>
         </div>
 
+        {modalTool === "help" ? (
+          <div
+            data-ile-session-modal="help"
+            data-ile-intro-widget="true"
+            data-ile-help-fullscreen=""
+            className="pointer-events-auto absolute inset-0 z-[80] flex h-full w-full flex-col bg-neutral-950"
+          >
+            <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+              {introWidget}
+            </div>
+          </div>
+        ) : null}
+
         <div
           data-ile-session-inner
           className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
@@ -315,20 +328,17 @@ export function SessionChrome({
           </div>
         ) : null}
 
-        {modalTool ? (
+        {modalTool && modalTool !== "help" ? (
           <div
             data-ile-session-modal={modalTool}
-            data-ile-intro-widget={modalTool === "help" ? "true" : undefined}
             className="pointer-events-auto absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           >
-            {introOpen ? null : (
-              <button
-                type="button"
-                aria-label="Close"
-                className="absolute inset-0 cursor-default"
-                onClick={() => onCloseSessionModal?.()}
-              />
-            )}
+            <button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 cursor-default"
+              onClick={() => onCloseSessionModal?.()}
+            />
             <div
               className={`relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)] ${
                 modalTool === "logs" ? "h-[min(88vh,44rem)]" : ""
@@ -350,9 +360,7 @@ export function SessionChrome({
                 )}
               </div>
               <div className="min-h-0 flex-1 overflow-hidden">
-                {modalTool === "help" ? (
-                  <div className="h-full min-h-0 overflow-y-auto">{introWidget}</div>
-                ) : modalTool === "logs" ? (
+                {modalTool === "logs" ? (
                   <div className="flex h-full min-h-0 flex-col overflow-hidden">
                     {toolOverlay}
                   </div>

@@ -273,6 +273,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     s.autoStashInFlightRef.current = false;
     clearDialogueMessages(s.dialogueStorageKey);
 
+    let started = false;
     try {
       const { ok, payload } = await postTutoringSessionStart({
         workspaceId: s.workspaceId,
@@ -297,8 +298,8 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       const openingQuestion = String(payload.openingQuestion || "").trim();
       if (!openingQuestion) throw new Error("Could not generate opening question");
 
-      const started = Date.now();
-      s.apply({ startedAt: started });
+      const startedAtMs = Date.now();
+      s.apply({ startedAt: startedAtMs });
       s.apply({ remainingSeconds: sessionMinutes * 60 });
       s.apply({
         messages: [
@@ -313,6 +314,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       s.resetIdleTracking();
       s.resetSpeechTracking();
       s.apply({ phase: "live" });
+      started = true;
     } catch (err) {
       stopLiveSpeechRecognition(s.speechBindings);
       s.apply({ isPracticeMode: false });
@@ -322,6 +324,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       s.apply({ isStartingSession: false });
       s.apply({ startingTopicId: null });
     }
+    return { ok: started };
   }
 
   function restartBriefingFlow() {

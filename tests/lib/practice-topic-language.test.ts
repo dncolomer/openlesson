@@ -178,8 +178,13 @@ describe("Practice topic language structural wiring", () => {
     );
     const tapPhases = read("components/tap-score/tap-score-phases.tsx");
     const exercisePhases = read("components/exercise-tap/exercise-tap-phases.tsx");
-    expect(tapPhases).toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
-    expect(exercisePhases).toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
+    expect(tapPhases).toContain("choosePractice");
+    expect(tapPhases).toContain("scoredTapBriefingStep");
+    expect(tapPhases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
+    expect(tapPhases).toContain("startSession({ practice: true })");
+    expect(exercisePhases).toContain("choosePractice");
+    expect(exercisePhases).not.toMatch(/onPracticeFirst=\{\(\) => void startSession\(\{ practice: true \}\)/);
+    expect(exercisePhases).toContain("startSession({ practice: true })");
     expect(tapFlow).toMatch(/practice[\s\S]*conversationLanguage/);
     expect(exercise).toMatch(/practice[\s\S]*conversationLanguage/);
   });

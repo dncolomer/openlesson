@@ -24,6 +24,10 @@ import {
   type IlePowExpenseLevel,
 } from "@/lib/ile-pow-spend";
 import { MAP_TYPE_LIBRARY_BY_ID } from "@/lib/map-type-library";
+import {
+  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
+  clampIleSilenceLockMinutes,
+} from "@/lib/practice-voice-challenge";
 
 export const ILE_PREGAME_PRESET_IDS = ["skirmish", "campaign", "blitz"] as const;
 export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
@@ -43,6 +47,8 @@ export type IlePregameDifficulty = {
   allowGatherResources: boolean;
   minInsightsPerChapter: number;
   canvasTimerSeconds: number;
+  /** Positive minutes of silence before an ILE rest lock. Cannot be turned off. */
+  silenceLockMinutes: number;
 };
 
 export function clampIlePregameDifficulty(
@@ -57,6 +63,9 @@ export function clampIlePregameDifficulty(
     ),
     canvasTimerSeconds: clampIleCanvasTimerSeconds(
       input?.canvasTimerSeconds ?? ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+    ),
+    silenceLockMinutes: clampIleSilenceLockMinutes(
+      input?.silenceLockMinutes ?? ILE_SILENCE_LOCK_MINUTES_DEFAULT,
     ),
   };
 }
@@ -88,6 +97,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: true,
         minInsightsPerChapter: 1,
         canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_CEILING,
+        silenceLockMinutes: 8,
       },
     },
     {
@@ -100,6 +110,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: true,
         minInsightsPerChapter: 1,
         canvasTimerSeconds: 30 * 60,
+        silenceLockMinutes: 5,
       },
     },
     {
@@ -112,6 +123,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: false,
         minInsightsPerChapter: 2,
         canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_DEFAULT,
+        silenceLockMinutes: 3,
       },
     },
   ];
@@ -136,7 +148,8 @@ export function ilePregameMatchingDifficultyPresetId(
       want.allowParallelWork === clamped.allowParallelWork &&
       want.allowGatherResources === clamped.allowGatherResources &&
       want.minInsightsPerChapter === clamped.minInsightsPerChapter &&
-      want.canvasTimerSeconds === clamped.canvasTimerSeconds
+      want.canvasTimerSeconds === clamped.canvasTimerSeconds &&
+      want.silenceLockMinutes === clamped.silenceLockMinutes
     ) {
       return preset.id;
     }

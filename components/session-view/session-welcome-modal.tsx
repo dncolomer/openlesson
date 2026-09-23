@@ -37,6 +37,14 @@ import {
   ILE_CANVAS_TIMER_SECONDS_STEP,
 } from "@/lib/ile-work-canvas";
 import {
+  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
+  ILE_SILENCE_LOCK_MINUTES_DESC,
+  ILE_SILENCE_LOCK_MINUTES_LABEL,
+  ILE_SILENCE_LOCK_MINUTES_MAX,
+  ILE_SILENCE_LOCK_MINUTES_MIN,
+  clampIleSilenceLockMinutes,
+} from "@/lib/practice-voice-challenge";
+import {
   ILE_GATHER_MAX_PER_SESSION,
   ILE_GATHER_MAX_PER_SESSION_CEILING,
   ILE_GATHER_MAX_PER_SESSION_MIN,
@@ -81,6 +89,8 @@ export function SessionWelcomeModal({
   onMinInsightsPerChapterChange,
   canvasTimerSeconds = ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   onCanvasTimerSecondsChange,
+  silenceLockMinutes = ILE_SILENCE_LOCK_MINUTES_DEFAULT,
+  onSilenceLockMinutesChange,
   autoAdvance,
   onToggleAutoAdvance,
   localInferenceEnabled,
@@ -164,6 +174,7 @@ export function SessionWelcomeModal({
               allowGatherResources,
               minInsightsPerChapter,
               canvasTimerSeconds,
+              silenceLockMinutes,
             });
             const applyDifficultyPreset = (presetId: string) => {
               const next = applyIlePregameDifficultyPreset(presetId);
@@ -172,6 +183,7 @@ export function SessionWelcomeModal({
               onAllowGatherResourcesChange?.(next.allowGatherResources);
               onMinInsightsPerChapterChange?.(next.minInsightsPerChapter);
               onCanvasTimerSecondsChange?.(next.canvasTimerSeconds);
+              onSilenceLockMinutesChange?.(next.silenceLockMinutes);
             };
             const statusUnknown = chapterPlanStatus === "unknown";
             const statusFailed = chapterPlanStatus === "failed";
@@ -692,6 +704,37 @@ export function SessionWelcomeModal({
                         <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
                           <span>{t("session.canvasTimerCheap")}</span>
                           <span>{t("session.canvasTimerExpensive")}</span>
+                        </div>
+                      </div>
+                      <div data-ile-silence-lock-minutes>
+                        <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                          <label className="text-sm font-medium text-neutral-100">
+                            {ILE_SILENCE_LOCK_MINUTES_LABEL}
+                          </label>
+                          <span className="font-mono text-[11px] text-neutral-300">
+                            {silenceLockMinutes}m
+                          </span>
+                        </div>
+                        <p className="mb-2 text-[12px] leading-snug text-neutral-400">
+                          {ILE_SILENCE_LOCK_MINUTES_DESC}
+                        </p>
+                        <input
+                          type="range"
+                          min={ILE_SILENCE_LOCK_MINUTES_MIN}
+                          max={ILE_SILENCE_LOCK_MINUTES_MAX}
+                          step={1}
+                          value={silenceLockMinutes}
+                          disabled={isButtonDisabled}
+                          onChange={(e) =>
+                            onSilenceLockMinutesChange?.(
+                              clampIleSilenceLockMinutes(Number(e.target.value)),
+                            )
+                          }
+                          className="w-full accent-white"
+                        />
+                        <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                          <span>{ILE_SILENCE_LOCK_MINUTES_MIN} min</span>
+                          <span>{ILE_SILENCE_LOCK_MINUTES_MAX} min</span>
                         </div>
                       </div>
                     </div>

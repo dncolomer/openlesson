@@ -668,6 +668,7 @@ export function ExerciseTapClient({
     const sessionMinutes = resolveTapLiveMinutes({ practice, minutes });
     setLiveMinutes(sessionMinutes);
     setError("");
+    let opened = false;
     setSpeechError(null);
     setLists(emptyExerciseDualLists());
     listsRef.current = emptyExerciseDualLists();
@@ -726,6 +727,7 @@ export function ExerciseTapClient({
       setStartedAt(started);
       setRemainingSeconds(sessionMinutes * 60);
       setPhase("live");
+      opened = true;
     } catch (err) {
       stopLiveSpeechRecognition(speechBindings);
       setIsPracticeMode(false);
@@ -735,6 +737,7 @@ export function ExerciseTapClient({
       setIsStartingSession(false);
       setStartingTopicId(null);
     }
+    return { ok: opened };
   }
 
   async function endSession(options?: { impure?: boolean }) {

@@ -296,6 +296,7 @@ export function ScoutTapClient({
     const sessionMinutes = resolveTapLiveMinutes({ minutes });
     setLiveMinutes(sessionMinutes);
     setError("");
+    let started = false;
     try {
       const { ok, payload } = await postTutoringSessionStart({
         workspaceId,
@@ -325,16 +326,18 @@ export function ScoutTapClient({
       workCanvasSceneRef.current = seeded.scene;
       setCanvasApplyElements([]);
       setCanvasApplyNonce(0);
-      const started = Date.now();
-      setStartedAt(started);
+      const startedAtMs = Date.now();
+      setStartedAt(startedAtMs);
       setRemainingSeconds(sessionMinutes * 60);
       setPhase("live");
+      started = true;
       void loadQuestions(nextState, seeded.scene);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start Scout");
     } finally {
       setIsStartingSession(false);
     }
+    return { ok: started };
   }
 
   async function endSession() {
@@ -509,7 +512,7 @@ export function ScoutTapClient({
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}
       error={error}
-      startSession={() => void startSession()}
+      startSession={startSession}
       participantIdentity={participantIdentity}
       remainingSeconds={remainingSeconds}
       showEndSession={showEndSession}

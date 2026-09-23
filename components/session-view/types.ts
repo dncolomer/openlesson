@@ -97,6 +97,8 @@ export type SessionWelcomeModalProps = {
   onMinInsightsPerChapterChange?: (value: number) => void;
   canvasTimerSeconds?: number;
   onCanvasTimerSecondsChange?: (value: number) => void;
+  silenceLockMinutes?: number;
+  onSilenceLockMinutesChange?: (value: number) => void;
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
   localInferenceEnabled: boolean;

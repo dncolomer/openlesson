@@ -51,10 +51,6 @@ type EnOnboarding = {
   };
 };
 
-function countWelcomeInsightSlots(html: string): number {
-  return html.match(/data-ile-welcome-insight-slot="/g)?.length ?? 0;
-}
-
 function countAriaSteps(html: string): number {
   const matches = html.match(/aria-label="Go to step \d+"/g) ?? [];
   return matches.length;
@@ -137,8 +133,8 @@ describe("session intro visuals", () => {
 
     const tapText = decodeHtml(tapHtml);
     const tapPlayText = decodeHtml(tapPlayHtml);
-    const ileLearningText = decodeHtml(ileLearningHtml);
-    const ileProjectText = decodeHtml(ileProjectHtml);
+    const ileLearningText = decodeHtml(ileLearningHtml).replace(/<[^>]+>/g, "");
+    const ileProjectText = decodeHtml(ileProjectHtml).replace(/<[^>]+>/g, "");
 
     expect(tapText).toContain(en.onboardingGuide.tap.step1.title);
     expect(tapText).toContain(tapBody);
@@ -150,11 +146,19 @@ describe("session intro visuals", () => {
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.start);
     expect(tapPlayText).toContain(en.onboardingGuide.tap.step3.title);
 
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.kicker);
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.titleOne);
+    expect(ileLearningHtml).toContain("data-ile-voice-challenge");
+    expect(ileLearningHtml).toContain("max-w-xl");
+    expect(ileLearningHtml).toContain('data-practice-voice-variant="ile"');
+    expect(ileLearningText).toContain("Read this aloud to start");
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step3.title);
-    expect(ileLearningText).toContain(en.onboardingGuide.ile.step3.start);
-    expect(ileLearningHtml).toContain("data-onboarding-start");
+    expect(ileLearningHtml).toContain("data-practice-voice-challenge");
+    expect(ileLearningText).toMatch(/speak your thinking out loud the whole time/i);
+    expect(ileLearningText).toMatch(/raw thinking signal/i);
+    expect(ileLearningText).toMatch(/baseline attention/i);
+    expect(ileLearningText).toMatch(/In this session I will work to craft insights/i);
+    expect(ileLearningHtml).toContain("data-ile-sample-insight-card");
+    expect(ileLearningHtml).toContain('data-practice-voice-sentence="2"');
+    expect(ileLearningHtml).not.toContain("data-onboarding-start");
     expect(ileLearningHtml).not.toContain("data-onboarding-highlight");
     expect(ileLearningHtml).not.toContain("data-ile-intro-widget-close");
     expect(ileLearningText).not.toMatch(/Start block/i);
@@ -177,23 +181,23 @@ describe("session intro visuals", () => {
     expect(en.onboardingGuide.ile.step3.bodyProject).toBe(en.onboardingGuide.ile.step3.body);
     expect(en.onboardingGuide.ile.step3.highlight).toBe("");
     expect(en.onboardingGuide.ile.step3.quoteText).toBe("");
-    expect(ileLearningHtml).toContain('data-ile-welcome-insight-slot-count="3"');
-    expect(countWelcomeInsightSlots(ileLearningHtml)).toBe(3);
-    expect(ileLearningText).toContain("Empty");
-    expect(ileLearningHtml).toContain('data-ile-insight-slot-card="empty"');
-    expect(ileThreeHtml).toContain('data-ile-welcome-insight-slot-count="3"');
-    expect(countWelcomeInsightSlots(ileThreeHtml)).toBe(3);
-    expect(decodeHtml(ileThreeHtml)).toContain("Craft 3 insights");
-    expect(ileFiveHtml).toContain('data-ile-welcome-insight-slot-count="5"');
-    expect(countWelcomeInsightSlots(ileFiveHtml)).toBe(5);
+    expect(ileLearningHtml).not.toContain("data-ile-welcome-insight-slots");
+    expect(ileLearningHtml).not.toContain("data-ile-welcome-insight-skeleton");
+    expect(ileLearningText).not.toMatch(/After you work a chapter/);
+    expect(ileLearningText).not.toContain("Empty");
+    expect(ileThreeHtml).toContain("data-ile-sample-insight-card");
+    expect(ileThreeHtml).not.toContain("data-ile-welcome-insight-slots");
+    expect(ileFiveHtml).toContain("data-ile-sample-insight-card");
+    expect(ileFiveHtml).not.toContain("data-ile-welcome-insight-slots");
     expect(tapHtml).not.toContain("data-ile-welcome-insight-slots");
+    expect(tapHtml).not.toContain("data-ile-sample-insight-card");
 
-    expect(ileProjectText).toContain(en.onboardingGuide.ile.step3.start);
-    expect(ileProjectText).toContain(en.onboardingGuide.ile.titleOne);
-    expect(ileProjectHtml).toContain("data-onboarding-start");
+    expect(ileProjectHtml).toContain("data-practice-voice-challenge");
+    expect(ileProjectHtml).toContain("data-ile-sample-insight-card");
+    expect(ileProjectHtml).not.toContain("data-onboarding-start");
     expect(ileProjectHtml).not.toContain("data-onboarding-highlight");
     expect(ileProjectText).toMatch(/different areas of the map/i);
-    expect(countWelcomeInsightSlots(ileProjectHtml)).toBe(3);
+    expect(ileProjectHtml).not.toContain("data-ile-welcome-insight-slots");
 
     expect(tapBody).toMatch(/think out loud/i);
     expect(tapBody).toMatch(/I'm done answering/);
@@ -254,7 +258,9 @@ describe("session intro visuals", () => {
     expect(ileView).toContain("showStartAction");
     expect(ileView).toContain("projectMode={isProjectMode}");
     expect(ileView).toContain("insightGoalCount={minInsightsPerChapter}");
-    expect(guide).toContain("IleInsightEmptySlots");
+    expect(guide).toContain("data-ile-voice-challenge");
+    expect(guide).toContain('variant="ile"');
+    expect(guide).not.toContain("IleInsightEmptySlots");
     expect(guide).toContain("insightGoalCount");
 
     for (const rel of ["public/animations/grid_pan.mp4", "public/animations/speaking.mp4"] as const) {

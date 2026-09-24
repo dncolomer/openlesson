@@ -46,6 +46,8 @@ describe("shipped editor drawer-id helpers", () => {
     expect(single.indexOf("edit")).toBeLessThan(
       single.indexOf(WORKSPACE_EDITOR_DANGER_DRAWER_ID),
     );
+    expect(single[single.length - 1]).toBe(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+    expect(multi[multi.length - 1]).toBe(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
 
     expect(multi).toContain("combine");
     expect(multi).toContain("bridge");
@@ -86,6 +88,13 @@ describe("single and multi editor panes", () => {
     expect(detail).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_TITLE");
     expect(detail).toContain("WorkspaceBlockDangerPanel");
     expect(detail).toContain("data-block-danger-drawer");
+    expect(detail).toContain('tone="danger"');
+    const drawer = read("components/WorkspaceRightPaneDrawer.tsx");
+    expect(drawer).toContain("text-red-300");
+    expect(drawer).toContain("border-red-800/70");
+    const dangerAt = detail.lastIndexOf("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
+    expect(dangerAt).toBeGreaterThan(detail.lastIndexOf('drawerId="local"'));
+    expect(dangerAt).toBeGreaterThan(detail.lastIndexOf('drawerId="edit"'));
     expect(detail).toContain("onDelete={onDeleteBlock}");
     expect(detail).toContain('drawerId="edit"');
     expect(detail).toContain("WorkspaceBlockEditPanel");
@@ -103,6 +112,10 @@ describe("single and multi editor panes", () => {
     expect(combine).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_TITLE");
     expect(combine).toContain("data-multi-block-delete");
     expect(combine).toContain("data-block-danger-drawer");
+    expect(combine).toContain('tone="danger"');
+    expect(combine.lastIndexOf("WORKSPACE_EDITOR_DANGER_DRAWER_ID")).toBeGreaterThan(
+      combine.lastIndexOf('drawerId="simulation"'),
+    );
     expect(combine).not.toContain('drawerId="delete"');
     expect(combine).not.toContain('title="Delete"');
 

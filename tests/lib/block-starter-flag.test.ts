@@ -167,7 +167,7 @@ describe("block-starter-flag pure payload mapping", () => {
 });
 
 describe("block-starter-flag UI + host structural wiring", () => {
-  it("Edit, Add, and generate-shape mount starter controls; hosts/APIs pass is_start", () => {
+  it("Edit, Add, and generate-shape do not mount starter controls; hosts/APIs still pass is_start", () => {
     const edit = readSrc("components/WorkspaceBlockEditPanel.tsx");
     const add = readSrc("components/WorkspaceAddBlockPane.tsx");
     const shape = readSrc("components/WorkspaceGenerateShapePane.tsx");
@@ -177,21 +177,12 @@ describe("block-starter-flag UI + host structural wiring", () => {
     const addSlot = readSrc("app/api/workspace/add-block-at-slot/route.ts");
     const helper = readSrc("lib/block-starter-flag.ts");
 
-    // UI controls
-    expect(edit).toContain("data-block-edit-starter");
-    expect(edit).toContain("data-block-edit-starter-input");
-    expect(edit).toContain("Starter block");
-    expect(edit).toContain("isStart: normalizeStarterFlag(editIsStart)");
-
-    expect(add).toContain("data-add-block-starter");
-    expect(add).toContain("data-add-block-starter-input");
-    expect(add).toContain("Starter block");
-    expect(add).toContain("isStart: isStarter");
-
-    expect(shape).toContain("data-generate-shape-starter");
-    expect(shape).toContain("data-generate-shape-starter-input");
-    expect(shape).toContain("Starter block");
-    expect(shape).toContain("isStart: isStarter");
+    expect(edit).not.toContain("data-block-edit-starter");
+    expect(edit).not.toContain("Starter block");
+    expect(add).not.toContain("data-add-block-starter");
+    expect(add).not.toContain("Starter block");
+    expect(shape).not.toContain("data-generate-shape-starter");
+    expect(shape).not.toContain("Starter block");
 
     // Hosts assemble is_start from author flag (not hard-coded false-only)
     expect(view).toContain("is_start: Boolean(opts?.isStart)");
@@ -239,9 +230,9 @@ describe("block-starter-flag UI + host structural wiring", () => {
       "utf8",
     );
     const body = readFileSync(path, "utf8");
-    expect(body).toContain("edit_starter=true");
-    expect(body).toContain("add_starter=true");
-    expect(body).toContain("shape_starter=true");
+    expect(body).toContain("edit_starter=false");
+    expect(body).toContain("add_starter=false");
+    expect(body).toContain("shape_starter=false");
     expect(body).toContain("grid_ops_resolve=true");
     expect(body).toContain("add_slot_resolve=true");
   });

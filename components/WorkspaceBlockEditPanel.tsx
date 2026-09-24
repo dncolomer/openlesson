@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { normalizeStarterFlag } from "@/lib/block-starter-flag";
 import {
   BLOCK_PRACTICE_DURATION_OPTIONS,
   normalizeBlockPracticeOptions,
@@ -48,7 +47,7 @@ export function WorkspaceBlockEditPanel({
     blockId: string;
     title: string;
     description: string;
-    isStart: boolean;
+    isStart?: boolean;
     practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
 }) {
@@ -56,9 +55,9 @@ export function WorkspaceBlockEditPanel({
     () => normalizeBlockPracticeOptions(practiceOptionsProp ?? null),
     [practiceOptionsProp],
   );
+  void isStart;
   const [editTitle, setEditTitle] = useState(title);
   const [editDescription, setEditDescription] = useState(description || "");
-  const [editIsStart, setEditIsStart] = useState(Boolean(isStart));
   const [editPractice, setEditPractice] = useState<BlockPracticeOptions>(savedPractice);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,10 +66,9 @@ export function WorkspaceBlockEditPanel({
   useEffect(() => {
     setEditTitle(title);
     setEditDescription(description || "");
-    setEditIsStart(Boolean(isStart));
     setEditPractice(normalizeBlockPracticeOptions(practiceOptionsProp ?? null));
     setError(null);
-  }, [blockId, title, description, isStart, practiceOptionsProp]);
+  }, [blockId, title, description, practiceOptionsProp]);
 
   if (!canEdit) {
     return (
@@ -81,11 +79,6 @@ export function WorkspaceBlockEditPanel({
         <p className="text-xs font-medium text-neutral-200">{title}</p>
         {description ? (
           <p className="text-[11px] leading-relaxed text-neutral-400">{description}</p>
-        ) : null}
-        {isStart ? (
-          <p className="text-[10px] text-neutral-500" data-block-edit-starter-readonly>
-            Starter block
-          </p>
         ) : null}
         <p
           className="text-[10px] text-neutral-500"
@@ -110,7 +103,6 @@ export function WorkspaceBlockEditPanel({
   const dirty =
     editTitle.trim() !== (title || "").trim() ||
     (editDescription || "").trim() !== (description || "").trim() ||
-    editIsStart !== Boolean(isStart) ||
     !practiceOptionsEqual(editPractice, savedPractice);
 
   const patchPractice = (patch: Partial<BlockPracticeOptions>) => {
@@ -142,7 +134,6 @@ export function WorkspaceBlockEditPanel({
         blockId,
         title: editTitle.trim(),
         description: editDescription.trim(),
-        isStart: normalizeStarterFlag(editIsStart),
         practiceOptions: normalizeBlockPracticeOptions(editPractice),
       });
     } catch (err) {
@@ -181,25 +172,6 @@ export function WorkspaceBlockEditPanel({
           className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
           placeholder="What this block covers…"
         />
-      </label>
-
-      <label
-        className="flex cursor-pointer items-start gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
-        data-block-edit-starter
-      >
-        <input
-          type="checkbox"
-          data-block-edit-starter-input
-          checked={editIsStart}
-          disabled={disabled}
-          onChange={(e) => setEditIsStart(e.target.checked)}
-          className="mt-0.5"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-medium text-neutral-200">
-            Starter block
-          </span>
-        </span>
       </label>
 
       {/* Practice launch limits — Explore / Drill + Drill durations */}

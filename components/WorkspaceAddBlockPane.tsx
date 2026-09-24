@@ -31,6 +31,8 @@ import {
 } from "@/lib/shape-context-select";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { WorkspaceGenerateMapPane } from "@/components/WorkspaceGenerateMapPane";
+import { UnusableGroundDrawer } from "@/components/UnusableGroundDrawer";
+import { canPlaceOnMapGround } from "@/lib/map-ground-rules";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -82,6 +84,7 @@ export function WorkspaceAddBlockPane({
   onExpandPreviewChange,
   onGenerateMap,
   onGenerateMapPreviewChange,
+  onSetUnusableCells,
   labels,
 }: {
   cell: WorkspaceAddTargetCell;
@@ -109,6 +112,8 @@ export function WorkspaceAddBlockPane({
   }) => Promise<void> | void;
   /** Highlight the chosen template. Does not create blocks. */
   onGenerateMapPreviewChange?: (cells: WorkspaceAddTargetCell[] | null) => void;
+  /** Existing unusable-ground action for this pane's empty cell. */
+  onSetUnusableCells?: (cells: Array<{ row: number; col: number }>) => Promise<void> | void;
   labels: {
     addTitle: string;
     addPlaceholder: string;
@@ -129,7 +134,6 @@ export function WorkspaceAddBlockPane({
   const [range, setRange] = useState(0);
   const [density, setDensity] = useState(ADD_DENSITY_MAX);
   const [sampleSeed, setSampleSeed] = useState(1);
-  const [isStarter, setIsStarter] = useState(false);
   const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>(
     [],
   );
@@ -145,7 +149,6 @@ export function WorkspaceAddBlockPane({
     setRange(0);
     setDensity(ADD_DENSITY_MAX);
     setSampleSeed(1);
-    setIsStarter(false);
     setContextSelected([]);
   }, [cell.row, cell.col]);
 
@@ -287,6 +290,13 @@ export function WorkspaceAddBlockPane({
   const canSuggest = Boolean(workspaceId);
   const densityIsMax = density >= ADD_DENSITY_MAX;
   const cellsToCreate = expandSelection.selected;
+  // snapshotAddExpandSlots always posts the anchor, even when range sampling
+  // dropped it. Create stays off until Unusable ground clears that cell.
+  const submitBlockedByUnusable =
+    canPlaceOnMapGround(
+      [{ row: cell.row, col: cell.col }],
+      unusableCells || [],
+    ).reason === "unusable";
 
   const handleSuggest = useCallback(async () => {
     if (!canSuggest || isSuggesting || !workspaceId) return;
@@ -338,7 +348,7 @@ export function WorkspaceAddBlockPane({
   ]);
 
   const handleSubmit = async () => {
-    if (!prompt.trim() || busy || submitting) return;
+    if (!prompt.trim() || busy || submitting || submitBlockedByUnusable) return;
     setSubmitting(true);
     setAddError(null);
     // Snapshot membership at submit — host freezes into a background job.
@@ -355,7 +365,6 @@ export function WorkspaceAddBlockPane({
       await onSubmit(prompt.trim(), cell, {
         expandCells,
         frozenSlots: slots,
-        isStart: isStarter,
         ...(contextSelected.length > 0
           ? { contextSourceKeys: [...contextSelected] }
           : {}),
@@ -365,7 +374,6 @@ export function WorkspaceAddBlockPane({
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
-      setIsStarter(false);
       setContextSelected([]);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to add item");
@@ -590,25 +598,6 @@ export function WorkspaceAddBlockPane({
           </button>
         </div>
 
-        <label
-          className="flex cursor-pointer items-start gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
-          data-add-block-starter
-        >
-          <input
-            type="checkbox"
-            data-add-block-starter-input
-            checked={isStarter}
-            disabled={busy || submitting}
-            onChange={(e) => setIsStarter(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-medium text-neutral-200">
-              Starter block
-            </span>
-          </span>
-        </label>
-
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -621,7 +610,7 @@ export function WorkspaceAddBlockPane({
           <button
             type="button"
             data-add-block-submit
-            disabled={!prompt.trim() || busy || submitting}
+            disabled={!prompt.trim() || busy || submitting || submitBlockedByUnusable}
             onClick={() => void handleSubmit()}
             className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
           >
@@ -654,6 +643,21 @@ export function WorkspaceAddBlockPane({
           </div>
         </WorkspaceRightPaneDrawer>
       ) : null}
+      <WorkspaceRightPaneDrawer
+        variant="section"
+        drawerId="unusable_ground"
+        title="Unusable ground"
+        defaultExpanded={false}
+        bodyClassName="space-y-3"
+        surfaceDataAttr="data-add-unusable-drawer"
+      >
+        <UnusableGroundDrawer
+          cells={[{ row: cell.row, col: cell.col }]}
+          unusableCells={unusableCells || []}
+          busy={busy}
+          onSetUnusableCells={onSetUnusableCells}
+        />
+      </WorkspaceRightPaneDrawer>
     </WorkspaceRightPaneDrawerGroup>
   );
 }

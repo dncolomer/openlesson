@@ -25,6 +25,7 @@ import {
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
   ILE_COMPRESS_WORK_LABEL,
+  ILE_COMPRESS_WORK_LOADING_LABEL,
   ILE_COMPRESS_WORK_PROMPT,
   ILE_LEARN_MORE_BOX_WIDTH,
   ILE_LEARN_MORE_LABEL,
@@ -263,6 +264,7 @@ export function ExcalidrawCanvas({
     ileWorkCanvasCanCompress(initialSceneData as IleWorkCanvasScene),
   );
   const [askInFlight, setAskInFlight] = useState(0);
+  const [compressInFlight, setCompressInFlight] = useState(false);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [learnMoreUi, setLearnMoreUi] = useState<{
@@ -934,7 +936,7 @@ export function ExcalidrawCanvas({
 
   const handleCompressWork = useCallback(() => {
     const api = excalidrawAPIRef.current;
-    if (!api || askInFlightRef.current > 0) return;
+    if (!api || askInFlightRef.current > 0 || compressInFlight) return;
     const scene = serializeIleWorkCanvasScene({
       elements: api.getSceneElements?.() ?? [],
       appState: api.getAppState?.() ?? {},
@@ -947,13 +949,14 @@ export function ExcalidrawCanvas({
       selectedElements: selected,
     });
     if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+    setCompressInFlight(true);
     void runCanvasAsk({
       prompt: ILE_COMPRESS_WORK_PROMPT,
       selectedElements: selected,
       kind: "compress",
       replaceWithSummary: true,
-    });
-  }, [runCanvasAsk]);
+    }).finally(() => setCompressInFlight(false));
+  }, [compressInFlight, runCanvasAsk]);
 
   const handleLearnMorePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -1647,11 +1650,12 @@ export function ExcalidrawCanvas({
                 <button
                   type="button"
                   data-ile-compress-work
-                  disabled={!hasLiveCanvas || askInFlight > 0}
+                  data-ile-compress-work-busy={compressInFlight ? "true" : undefined}
+                  disabled={!hasLiveCanvas || askInFlight > 0 || compressInFlight}
                   onClick={handleCompressWork}
                   className="shrink-0 rounded-none border border-white bg-white px-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
                 >
-                  {ILE_COMPRESS_WORK_LABEL}
+                  {compressInFlight ? ILE_COMPRESS_WORK_LOADING_LABEL : ILE_COMPRESS_WORK_LABEL}
                 </button>
                 {craftInsight ? (
                   <IleCraftInsightButton

@@ -127,7 +127,7 @@ export function WorkspaceMapAuthoringPane({
       </p>
       <p className="max-w-xs text-xs leading-relaxed text-neutral-500">
         {canEdit
-          ? "Left toolbar: select, move, lock-until, unusable ground. Double-click a block to open detail. Use the search control on the map to explore."
+          ? "Click a block or empty cells to open the drawers. Scroll to zoom. Use the search control on the map to explore."
           : "Double-click a block to open detail. Use the search control on the map to explore."}
       </p>
       <p className="text-[11px] text-neutral-600">

@@ -12,19 +12,14 @@ function read(rel: string) {
 }
 
 describe("starter map chrome", () => {
-  it("map mounts flag badge when is_start; hooks stable", () => {
+  it("map does not label a Starter block badge; stored is_start stays on the tile", () => {
     const grid = readMapGridSurface();
     const badges = read("components/block-skill-grid/map-tile-badges.tsx");
-    expect(grid).toContain("BlockStarterFlagBadge");
-    expect(badges).toContain("data-block-starter-flag");
-    expect(badges).toContain("data-block-starter-badge");
-    expect(badges).toContain("data-block-starter-icon");
+    expect(badges).not.toContain("Starter block");
+    expect(grid).not.toContain("BlockStarterFlagBadge");
+    expect(grid).not.toContain("<BlockStarterFlagBadge");
     expect(grid).toContain("data-block-is-start");
-    // Conditional on is_start
-    expect(grid).toMatch(/isStarter|is_start/);
     expect(grid).toContain("const isStarter = Boolean(node.is_start)");
-    expect(grid).toContain("starterBadge = tileBadges.showStarter");
-    expect(grid).toContain("<BlockStarterFlagBadge");
 
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(

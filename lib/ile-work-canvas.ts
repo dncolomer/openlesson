@@ -1549,6 +1549,7 @@ export function buildIleWorkCanvasAskUserMessage(input: {
 }
 
 export const ILE_COMPRESS_WORK_LABEL = "Compress work";
+export const ILE_COMPRESS_WORK_LOADING_LABEL = "Compressing work";
 export const ILE_COMPRESS_WORK_PROMPT =
   "Compress this Work canvas into one concise knowledge summary. Distill every mark, note, and relation into a single dense takeaway. Stay on the workspace/block domain. Do not invent unrelated topics.";
 

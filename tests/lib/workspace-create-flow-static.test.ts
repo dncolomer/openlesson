@@ -208,7 +208,7 @@ describe("workspace create + builder static wiring", () => {
     // Select click-and-drag (Move demoted from strip)
     expect(grid).toContain("allowsBlockDragInMode");
     expect(grid).toContain("isMapPanGesture");
-    expect(grid).toContain("data-lasso-shape-submenu");
+    expect(grid).not.toContain("data-lasso-shape-submenu");
     expect(grid).toContain("isBlockMapManipulationMode");
     expect(grid).toContain("handleBlockPointerDown");
     expect(grid).toContain("data-block-map-draggable");
@@ -231,8 +231,13 @@ describe("workspace create + builder static wiring", () => {
     );
     expect(stripMatch).toBeTruthy();
     const stripBody = stripMatch![1];
-    expect(stripBody).toContain('"select"');
-    expect(stripBody).toContain('"lasso"');
+    expect(stripBody).not.toContain('"select"');
+    expect(stripBody).not.toContain('"lasso"');
+    expect(stripBody).not.toContain('"mark_unusable"');
+    expect(stripBody).not.toContain('"merge"');
+    expect(stripBody).not.toContain('"clone"');
+    expect(stripBody).not.toContain('"split"');
+    expect(stripBody).not.toContain('"zoom_in"');
     expect(stripBody).not.toContain('"move"');
     expect(stripBody).not.toContain('"lasso_circle"');
     expect(stripBody).not.toContain('"lasso_freehand"');

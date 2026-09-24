@@ -117,6 +117,7 @@ export function WorkspaceRightPaneDrawer({
   drawerId,
   /** fill = sole surface (h-full). section = stackable drawer in a column. */
   variant = "fill",
+  tone = "default",
 }: {
   /** Value for data-workspace-right-pane (add_block | generate_shape | block-detail | …). */
   paneKind?: string;
@@ -132,6 +133,8 @@ export function WorkspaceRightPaneDrawer({
   /** Optional stable id for data-block-detail-drawer / section markers. */
   drawerId?: string;
   variant?: "fill" | "section";
+  /** Slight red chrome for destructive drawers such as Danger zone. */
+  tone?: "default" | "danger";
 }) {
   const group = useContext(DrawerAccordionContext);
   const id = drawerId ? String(drawerId).trim() : "";
@@ -160,12 +163,14 @@ export function WorkspaceRightPaneDrawer({
     ? ({ [surfaceDataAttr]: true } as Record<string, boolean>)
     : {};
 
+  const borderClass =
+    tone === "danger" ? "border-red-800/70" : "border-neutral-800/70";
   const shellClass =
     variant === "fill"
-      ? "flex h-full w-full min-h-0 flex-col overflow-hidden border-b border-neutral-800/70 bg-neutral-950/95"
+      ? `flex h-full w-full min-h-0 flex-col overflow-hidden border-b ${borderClass} bg-neutral-950/95`
       : expanded
-        ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden border-b border-neutral-800/70 bg-neutral-950/95"
-        : "flex w-full shrink-0 flex-col overflow-hidden border-b border-neutral-800/70 bg-neutral-950/95";
+        ? `flex min-h-0 w-full flex-1 flex-col overflow-hidden border-b ${borderClass} bg-neutral-950/95`
+        : `flex w-full shrink-0 flex-col overflow-hidden border-b ${borderClass} bg-neutral-950/95`;
 
   return (
     <div
@@ -208,7 +213,11 @@ export function WorkspaceRightPaneDrawer({
           >
             ›
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.12em] text-neutral-400">
+          <span
+            className={`min-w-0 flex-1 truncate text-xs font-medium uppercase tracking-[0.12em] ${
+              tone === "danger" ? "text-red-300" : "text-neutral-400"
+            }`}
+          >
             {title}
           </span>
         </button>

@@ -81,9 +81,13 @@ export function WorkspaceRightDrawers({
   onDeleteBlock,
   onSaveCreatorEffects,
   onSplitBlock,
+  cloneArmed = false,
+  onCloneArm,
+  onCloneCancel,
   onExpandBlock,
   onGenerateMap,
   onGenerateMapPreviewChange,
+  onSetUnusableCells,
   onExpandPreviewChange,
   onGeneratorTargetPreviewChange,
   onGeneratorPickModeChange,
@@ -198,6 +202,9 @@ export function WorkspaceRightDrawers({
     effects: BlockCreatorEffects;
   }) => Promise<void>;
   onSplitBlock?: (input: { blockId: string; prompt?: string }) => Promise<void>;
+  cloneArmed?: boolean;
+  onCloneArm?: (blockId: string) => void;
+  onCloneCancel?: () => void;
   onExpandBlock?: (
     source: ExpandSourceIdentity,
     opts: WorkspaceExpandBlockSubmitOpts,
@@ -209,6 +216,7 @@ export function WorkspaceRightDrawers({
     mapTypeId: string;
   }) => Promise<void>;
   onGenerateMapPreviewChange?: (cells: Array<{ row: number; col: number }> | null) => void;
+  onSetUnusableCells?: (cells: Array<{ row: number; col: number }>) => Promise<void>;
   onExpandPreviewChange: (cells: Array<{ row: number; col: number }> | null) => void;
   onGeneratorTargetPreviewChange: (cells: GeneratorTargetCell[] | null) => void;
   onGeneratorPickModeChange: (active: boolean) => void;
@@ -361,6 +369,9 @@ export function WorkspaceRightDrawers({
             onDeleteBlock={onDeleteBlock}
             onSaveCreatorEffects={onSaveCreatorEffects}
             onSplitBlock={onSplitBlock}
+            cloneArmed={cloneArmed}
+            onCloneArm={onCloneArm}
+            onCloneCancel={onCloneCancel}
             expandNodes={nodes}
             unusableCells={unusableCells}
             onExpandBlock={onExpandBlock}
@@ -403,6 +414,7 @@ export function WorkspaceRightDrawers({
             onExpandPreviewChange={onExpandPreviewChange}
             onGenerateMap={onGenerateMap}
             onGenerateMapPreviewChange={onGenerateMapPreviewChange}
+            onSetUnusableCells={onSetUnusableCells}
             labels={{
               addTitle: t("sessionList.gridAddTitle"),
               addPlaceholder: t("sessionList.gridAddPlaceholder"),
@@ -427,6 +439,8 @@ export function WorkspaceRightDrawers({
             workspaceNotes={notesContent || plan.notes}
             onSubmit={onSubmitGenerateShape}
             onCancel={onCancelEmptyCreate}
+            unusableCells={unusableCells}
+            onSetUnusableCells={onSetUnusableCells}
             labels={{
               generateShape: t("sessionList.gridGenerateShape"),
               addPlaceholder: t("sessionList.gridAddPlaceholder"),

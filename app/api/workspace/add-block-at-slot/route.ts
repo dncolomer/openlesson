@@ -31,6 +31,7 @@ import {
   composeJourneyGraphPromptSnippet,
 } from "@/lib/workspace-authoring-prompt-context";
 import { blockMapGlyphDbFields } from "@/lib/block-map-glyph";
+import { canPlaceOnMapGround, normalizeUnusableCells } from "@/lib/map-ground-rules";
 
 interface AddBlockResponse {
   title: string;
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
-      .select("id, user_id, root_topic, title, description, notes, workspace_goal")
+      .select("id, user_id, root_topic, title, description, notes, workspace_goal, unusable_cells")
       .eq("id", workspaceId)
       .single();
 
@@ -130,6 +131,14 @@ export async function POST(req: NextRequest) {
     );
     if (hasSavedCollision) {
       return jsonError(409, "That grid slot is already occupied");
+    }
+
+    const unusableCells = normalizeUnusableCells(
+      (plan as { unusable_cells?: unknown }).unusable_cells,
+    );
+    const ground = canPlaceOnMapGround([{ row, col }], unusableCells);
+    if (!ground.ok && ground.reason === "unusable") {
+      return jsonError(409, "Target cell is unusable ground", "unusable_ground");
     }
 
     const languageNote =

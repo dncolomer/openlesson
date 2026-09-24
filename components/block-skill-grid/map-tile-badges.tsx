@@ -172,30 +172,6 @@ export function BlockLocalContextDocBadge() {
   );
 }
 
-/** Flag badge for author starter blocks (`is_start`) — map-visible without Edit. */
-export function BlockStarterFlagBadge() {
-  return (
-    <span
-      className="absolute bottom-1 right-1.5 z-[1] inline-flex items-center justify-center rounded-none px-0.5 py-px text-neutral-300/95"
-      data-block-starter-flag
-      data-block-starter-badge
-      title="Starter block"
-      aria-label="Starter block"
-    >
-      <svg
-        className="h-3 w-3"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-        data-block-starter-icon
-        aria-hidden
-      >
-        <path d="M6 3.75v16.5a.75.75 0 01-1.5 0V3.75a.75.75 0 011.5 0z" />
-        <path d="M6.75 4.5h8.1c.9 0 1.4.95.9 1.65L14.4 8.4l1.35 2.25c.5.7 0 1.65-.9 1.65H6.75V4.5z" />
-      </svg>
-    </span>
-  );
-}
-
 export function BlockCreatorEffectsBadge({
   keys,
   learnerMode = false,

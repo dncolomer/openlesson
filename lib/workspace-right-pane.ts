@@ -57,14 +57,14 @@ export function workspaceBlockDetailDrawerIds(input: {
   if (input.showSplit) ids.push("split");
   if (input.showExpand) ids.push("expand_block");
   if (input.canEdit) {
-    ids.push("edit");
-    ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
+    ids.push("clone", "edit");
   }
   if (input.hasGoals) ids.push("goals");
   if (input.showEffects ?? Boolean(input.canEdit)) {
     ids.push("effect_dynamic", "effect_generator");
   }
   ids.push("local");
+  if (input.canEdit) ids.push(WORKSPACE_EDITOR_DANGER_DRAWER_ID);
   return ids;
 }
 
@@ -177,9 +177,26 @@ export function resolveEmptyAddTarget(input: {
   return placeable[0];
 }
 
+function finiteEmptyCells(
+  cells: readonly WorkspaceAddTargetCell[] | null | undefined,
+): WorkspaceAddTargetCell[] {
+  const out: WorkspaceAddTargetCell[] = [];
+  const seen = new Set<string>();
+  for (const cell of cells || []) {
+    if (!isFiniteCell(cell)) continue;
+    const key = `${cell.row}:${cell.col}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ row: cell.row, col: cell.col });
+  }
+  return out;
+}
+
 /**
  * Empty selection → right-pane create surface.
  * 1 placeable → single Add; 2+ placeable → generate-in-shape multi form.
+ * A selection that is only unusable ground (including after Mark) stays on
+ * that same pane so Unusable ground can clear it.
  */
 export function resolveEmptySelectionSurface(input: {
   selectedEmptyCells: readonly WorkspaceAddTargetCell[];
@@ -187,18 +204,23 @@ export function resolveEmptySelectionSurface(input: {
   /** Explore mode: a placeable empty opens explore-block, not Add. */
   exploreActive?: boolean;
 }): EmptySelectionSurface | null {
-  const placeable = filterPlaceableEmptyCells(input);
+  const selected = finiteEmptyCells(input.selectedEmptyCells);
+  const placeable = filterPlaceableEmptyCells({
+    selectedEmptyCells: selected,
+    unusableKeys: input.unusableKeys,
+  });
   if (input.exploreActive) {
     if (placeable.length >= 1) {
       return { kind: "explore_block", cell: placeable[0] };
     }
     return null;
   }
-  if (placeable.length === 1) {
-    return { kind: "add_block", cell: placeable[0] };
+  const cells = placeable.length > 0 ? placeable : selected;
+  if (cells.length === 1) {
+    return { kind: "add_block", cell: cells[0] };
   }
-  if (placeable.length >= 2) {
-    return { kind: "generate_shape", cells: placeable };
+  if (cells.length >= 2) {
+    return { kind: "generate_shape", cells };
   }
   return null;
 }

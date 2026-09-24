@@ -158,6 +158,9 @@ export function useWorkspaceMapSelection(input: {
       });
     }
     if (interactionMode === "learner") return clearWorkspaceAddTarget();
+    // Pass unusable keys so a mixed selection opens Add on the remaining
+    // placeable cell. An all-unusable selection stays on that same pane so
+    // Unusable ground can clear it (placeable.length === 0 keeps `selected`).
     return resolveEmptySelectionSurface({
       selectedEmptyCells: emptyCells,
       unusableKeys: unusableCells.map((c) => `${c.row}:${c.col}`),

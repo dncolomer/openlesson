@@ -52,6 +52,7 @@ import {
   compressIleWorkCanvasScene,
   ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
   ILE_COMPRESS_WORK_LABEL,
+  ILE_COMPRESS_WORK_LOADING_LABEL,
   ILE_COMPRESS_WORK_PROMPT,
   ileWorkCanvasCanCompress,
   createIleXaiLoadingPlaceholder,
@@ -1521,6 +1522,7 @@ describe("ILE Work canvas timer expiry (shipped)", () => {
 describe("ILE Work canvas compress work (shipped)", () => {
   it("replaces the board with one summary element and keeps the Compress work control next to the prompt bar", () => {
     expect(ILE_COMPRESS_WORK_LABEL).toBe("Compress work");
+    expect(ILE_COMPRESS_WORK_LOADING_LABEL).not.toBe(ILE_COMPRESS_WORK_LABEL);
     expect(ileWorkCanvasCanCompress(emptyIleWorkCanvasScene())).toBe(false);
     const seeded = seedIleChapterWorkCanvas(emptyIleWorkCanvasScene(), {
       text: "Force is not the same as field. The metric encodes curvature.",
@@ -1560,6 +1562,11 @@ describe("ILE Work canvas compress work (shipped)", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("data-ile-compress-work");
     expect(canvas).toContain("handleCompressWork");
+    expect(canvas).toContain("compressInFlight");
+    expect(canvas).toContain(
+      "compressInFlight ? ILE_COMPRESS_WORK_LOADING_LABEL : ILE_COMPRESS_WORK_LABEL",
+    );
+    expect(canvas).toContain("disabled={!hasLiveCanvas || askInFlight > 0 || compressInFlight}");
     expect(canvas.indexOf("data-ile-canvas-prompt-bar")).toBeLessThan(
       canvas.indexOf("data-ile-compress-work"),
     );

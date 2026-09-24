@@ -83,10 +83,10 @@ describe("map-first right pane", () => {
 });
 
 describe("map-ground tools enablement", () => {
-  it("exposes lock_until and mark_unusable on left strip; selection-driven enablement", () => {
+  it("does not mount lock_until or mark_unusable on the map bar; enablement stays selection-driven", () => {
     const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
-    expect(tools).toContain("lock_until");
-    expect(tools).toContain("mark_unusable");
+    expect(tools).not.toContain("lock_until");
+    expect(tools).not.toContain("mark_unusable");
     expect(blockMapToolLabel("lock_until")).toMatch(/lock/i);
     expect(blockMapToolLabel("mark_unusable")).toMatch(/unusable/i);
     expect(

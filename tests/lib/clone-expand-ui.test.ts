@@ -48,20 +48,18 @@ function writeEvidence(name: string, body: string) {
 }
 
 describe("Clone left-bar + Expand block UI wiring", () => {
-  it("left strip has Clone; detail mounts Expand only (no Clone drawer)", () => {
+  it("detail mounts Clone and Expand; the map bar does not list Clone", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const expandPane = read("components/WorkspaceExpandBlockPane.tsx");
     const view = readWorkspaceViewSurface();
     const grid = readMapGridSurface();
     const gridOps = readGridOpsSurface();
 
-    // Clone is left-bar, not detail drawer
-    expect(BLOCK_MAP_TOOL_STRIP).toContain("clone");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
     expect(grid).toContain('case "clone"');
     expect(grid).toContain("onCloneArm");
-    expect(detail).not.toContain('drawerId="clone"');
-    expect(detail).not.toContain("WorkspaceCloneBlockPane");
-    expect(detail).not.toContain("showCloneDrawer");
+    expect(detail).toContain('drawerId="clone"');
+    expect(detail).toContain("WorkspaceCloneBlockPane");
 
     // Expand block drawer remains on detail
     expect(detail).toContain("WorkspaceExpandBlockPane");

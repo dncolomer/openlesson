@@ -1,9 +1,10 @@
 /**
- * Pure tool-mode and enablement rules for the block map Photoshop-style tool strip.
+ * Pure tool-mode and enablement rules for the block map.
  * Kept free of React so unit tests can drive the real decision logic.
  *
- * Ground authoring (lock-until / unusable) is selection-driven via left-strip
- * actions — not right-pane coordinate forms.
+ * The floating action bar is not mounted. Merge, split, clone, and unusable
+ * ground are right-pane drawers. Lock edges for a multi-selection are the
+ * Dependencies drawer.
  */
 
 import {
@@ -100,26 +101,12 @@ export const DEFAULT_BLOCK_MAP_MODE: BlockMapModeTool = "select";
 export const DEFAULT_LASSO_SHAPE: LassoShapeKind = "rect";
 
 /**
- * Primary strip order: modes (select + one lasso), then block actions, map-ground,
- * then viewport.
- * Move is demoted (gesture drag in select) — not on the strip.
- * Circle/freehand lasso are shapes under the single lasso control, not strip tools.
- * generate_shape is omitted — multi empty selection opens the form in the right pane.
- * edit is omitted — update/delete live on the block-detail Edit drawer when selected.
+ * The floating map action bar is not mounted. Merge, split, clone, lock-until,
+ * and unusable ground live in right-pane drawers. Zoom is the scroll wheel.
+ * generate_shape is omitted — multi empty selection opens the right pane.
+ * Select stays the click mode so empty cells and blocks still open those panes.
  */
-export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [
-  "select",
-  "lasso",
-  "merge",
-  "split",
-  "clone",
-  "lock_until",
-  "mark_unusable",
-  "clear_selection",
-  "zoom_in",
-  "zoom_out",
-  "recenter",
-] as const;
+export const BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = [] as const;
 
 /** True for any region-select lasso mode (rect, circle, freehand legacy ids). */
 export function isLassoModeTool(
@@ -1336,8 +1323,7 @@ export function isBlockMapToolEnabled(
 }
 
 /**
- * Which tools appear in the side strip for the current capabilities.
- * Viewport tools always show; edit-mode tools only when the map is editable.
+ * Tools for the floating map bar. The bar is empty: those actions are drawers.
  */
 export function visibleBlockMapTools(
   state: Pick<

@@ -225,6 +225,8 @@ describe("structural: Context Dantes + no map prompt-impact", () => {
 
     const notes = read("components/WorkspaceNotesFilesPanel.tsx");
     expect(notes).toContain('data-resource-kind="external"');
+    expect(notes).not.toContain("L6.47 6.47");
+    expect(notes).toContain("m13.35-3.021a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244");
     expect(notes).toContain("data-external-delete");
     expect(notes).toContain("externalResources");
 

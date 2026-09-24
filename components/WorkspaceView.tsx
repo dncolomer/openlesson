@@ -1032,9 +1032,22 @@ export function WorkspaceView({
             isOwner ? handleSaveCreatorEffects : undefined
           }
           onSplitBlock={isOwner ? handleSplitBlock : undefined}
+          cloneArmed={cloneArm.armed}
+          onCloneArm={isOwner && !isLearnerMode ? handleCloneArm : undefined}
+          onCloneCancel={handleCloneCancel}
           onExpandBlock={isOwner ? handleExpandFromSourceBlock : undefined}
           onGenerateMap={isOwner ? handleGenerateMap : undefined}
           onGenerateMapPreviewChange={setGenerateMapPreviewCells}
+          onSetUnusableCells={
+            isOwner
+              ? async (cells) => {
+                  await handleMapGround({
+                    op: "set_unusable_cells",
+                    unusableCells: cells,
+                  });
+                }
+              : undefined
+          }
           onExpandPreviewChange={setAddExpandPreviewCells}
           onGeneratorTargetPreviewChange={setGeneratorTargetPreviewCells}
           onGeneratorPickModeChange={setGeneratorPickActiveSafe}

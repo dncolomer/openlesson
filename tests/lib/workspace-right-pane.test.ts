@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { applyUnusableSelection, canPlaceOnMapGround } from "@/lib/map-ground-rules";
 import {
   blockOffersSplitDrawer,
   clearWorkspaceAddTarget,
@@ -175,8 +176,90 @@ describe("resolveEmptySelectionSurface + resolveEmptyAddTarget", () => {
       }),
     ).toEqual({ kind: "add_block", cell: b });
     expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a],
+        unusableKeys: ["1:2"],
+      }),
+    ).toEqual({ kind: "add_block", cell: a });
+    expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a, b],
+        unusableKeys: ["1:2", "3:4"],
+      }),
+    ).toEqual({ kind: "generate_shape", cells: [a, b] });
+    expect(
       resolveEmptySelectionSurface({ selectedEmptyCells: [] }),
     ).toBeNull();
+  });
+
+  it("keeps add and generate panes when the selected cells are or become unusable", () => {
+    const a = { row: 1, col: 2 };
+    const b = { row: 3, col: 4 };
+    expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a],
+        unusableKeys: ["1:2"],
+      }),
+    ).toEqual({ kind: "add_block", cell: a });
+    expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a, b],
+        unusableKeys: ["1:2", "3:4"],
+      }),
+    ).toEqual({ kind: "generate_shape", cells: [a, b] });
+    const marked = applyUnusableSelection([a, b], []);
+    expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a, b],
+        unusableKeys: marked.map((cell) => `${cell.row}:${cell.col}`),
+      }),
+    ).toEqual({ kind: "generate_shape", cells: [a, b] });
+    expect(applyUnusableSelection([a, b], marked)).toEqual([]);
+    const selectionHook = readFileSync(
+      join(ROOT, "components/workspace-view/use-workspace-map-selection.ts"),
+      "utf8",
+    );
+    const creatorReturn = selectionHook.slice(
+      selectionHook.indexOf('interactionMode === "learner"'),
+    );
+    expect(creatorReturn).toContain("selectedEmptyCells: emptyCells");
+    expect(creatorReturn).toMatch(
+      /return resolveEmptySelectionSurface\(\{[\s\S]*?unusableKeys:\s*unusableCells\.map/,
+    );
+    // Mixed open + blocked stays on Add for the remaining placeable cell,
+    // so generate_shape is not posted with unusable ground.
+    const mixedKeys = [`${a.row}:${a.col}`];
+    expect(
+      resolveEmptySelectionSurface({
+        selectedEmptyCells: [a, b],
+        unusableKeys: mixedKeys,
+      }),
+    ).toEqual({ kind: "add_block", cell: b });
+    const blockedAnchor = canPlaceOnMapGround([a], [a]);
+    expect(blockedAnchor.ok).toBe(false);
+    expect(blockedAnchor.reason).toBe("unusable");
+    expect(canPlaceOnMapGround([b], [a]).ok).toBe(true);
+    const addPane = read("components/WorkspaceAddBlockPane.tsx");
+    const shapePane = read("components/WorkspaceGenerateShapePane.tsx");
+    const addRoute = read("app/api/workspace/add-block-at-slot/route.ts");
+    expect(addPane).toContain("submitBlockedByUnusable");
+    expect(addPane).toContain("canPlaceOnMapGround");
+    expect(addPane).toMatch(
+      /data-add-block-submit[\s\S]*?submitBlockedByUnusable/,
+    );
+    expect(shapePane).toContain("submitBlockedByUnusable");
+    expect(shapePane).toContain("canPlaceOnMapGround");
+    expect(shapePane).toMatch(
+      /data-generate-shape-submit[\s\S]*?submitBlockedByUnusable/,
+    );
+    expect(addRoute).toContain("canPlaceOnMapGround");
+    expect(addRoute).toContain('"unusable_ground"');
+    expect(addRoute.lastIndexOf("canPlaceOnMapGround")).toBeLessThan(
+      addRoute.lastIndexOf("callXaiJSON"),
+    );
+    const clearDrawer = read("components/UnusableGroundDrawer.tsx");
+    expect(clearDrawer).toContain("data-unusable-ground-apply");
+    expect(clearDrawer).not.toContain("submitBlockedByUnusable");
 
     writeEvidence(
       "multi-empty-right-pane-resolve.log",
@@ -470,9 +553,9 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain('title="Local context"');
     expect(pane).toContain('title="Block Simulation"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
-    // Order: simulation → … → edit → danger → … → local
+    // Order: simulation → edit → … → local → Danger zone last
     expect(pane).toMatch(
-      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?WORKSPACE_EDITOR_DANGER_DRAWER_ID[\s\S]*?drawerId="local"/,
+      /drawerId="simulation"[\s\S]*?drawerId="edit"[\s\S]*?drawerId="local"[\s\S]*?WORKSPACE_EDITOR_DANGER_DRAWER_ID/,
     );
     // Simulation collapsed; local opens when materials exist
     expect(pane).toMatch(
@@ -586,6 +669,11 @@ describe("structural: right pane not map modal", () => {
     expect(shape).toContain("data-workspace-generate-shape-pane");
     expect(shape).toContain("data-generate-shape-submit");
     expect(shape).not.toContain("data-generate-shape-close");
+    // Accordion expands only when group.openId matches. Without this default
+    // the prompt/submit body stays unmounted until a header click.
+    expect(shape).toContain('defaultOpenId="generate_shape"');
+    expect(shape).toContain('drawerId="generate_shape"');
+    expect(add).toContain('defaultOpenId="add"');
 
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).toContain("data-workspace-block-detail-pane");

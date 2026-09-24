@@ -98,8 +98,10 @@ describe("block-map-tools", () => {
     expect(blockMapToolKind("lock_until")).toBe("action");
     expect(blockMapToolKind("mark_unusable")).toBe("action");
     expect(blockMapToolKind("zoom_in")).toBe("viewport");
-    expect(BLOCK_MAP_TOOL_STRIP[0]).toBe("select");
-    expect(BLOCK_MAP_TOOL_STRIP).toContain("lasso");
+    expect(BLOCK_MAP_TOOL_STRIP).toEqual([]);
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("select");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("mark_unusable");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("move");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_circle");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_freehand");
@@ -141,7 +143,7 @@ describe("block-map-tools", () => {
   });
 
   it("enables clone only with exactly one filled block selected", () => {
-    expect(BLOCK_MAP_TOOL_STRIP).toContain("clone");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
     expect(blockMapToolKind("clone")).toBe("action");
     expect(isCloneMapToolEnabled(state({ selectedBlockCount: 1 }))).toBe(true);
     expect(isBlockMapToolEnabled("clone", state({ selectedBlockCount: 0 }))).toBe(
@@ -161,7 +163,7 @@ describe("block-map-tools", () => {
     ).toBe(false);
     expect(
       visibleBlockMapTools({ canEdit: true, hasGridOps: true }),
-    ).toContain("clone");
+    ).not.toContain("clone");
   });
 
   it("enables merge only with 2+ contiguous selected blocks", () => {
@@ -266,25 +268,51 @@ describe("block-map-tools", () => {
     expect(isBlockMapToolEnabled("zoom_in", noOps)).toBe(true);
   });
 
-  it("lists strip: Select + one Lasso first; no Move or extra lasso tools", () => {
+  it("lists strip without Select, Lasso, or Unusable ground", () => {
     const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
+    expect(tools).toEqual([...BLOCK_MAP_TOOL_STRIP]);
     expect(tools).not.toContain("pan" as never);
-    expect(tools).toContain("select");
+    expect(tools).not.toContain("select");
     expect(tools).not.toContain("move");
-    expect(tools).toContain("lasso");
+    expect(tools).not.toContain("lasso");
+    expect(tools).not.toContain("mark_unusable");
     expect(tools).not.toContain("lasso_circle");
     expect(tools).not.toContain("lasso_freehand");
-    expect(tools).toContain("merge");
-    expect(tools).toContain("split");
+    expect(tools).not.toContain("merge");
+    expect(tools).not.toContain("split");
+    expect(tools).not.toContain("clone");
+    expect(tools).not.toContain("lock_until");
     expect(tools).not.toContain("edit" as never);
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("edit" as never);
     expect(tools).not.toContain("generate_shape");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("generate_shape");
-    expect(tools).toContain("zoom_in");
-    expect(tools).toContain("zoom_out");
-    expect(tools).toContain("recenter");
-    expect(tools[0]).toBe("select");
-    expect(tools[1]).toBe("lasso");
+    expect(tools).not.toContain("zoom_in");
+    expect(tools).not.toContain("zoom_out");
+    expect(tools).not.toContain("recenter");
+    expect(tools).toEqual([]);
+    const add = readFileSync(
+      join(process.cwd(), "components/WorkspaceAddBlockPane.tsx"),
+      "utf8",
+    );
+    const shape = readFileSync(
+      join(process.cwd(), "components/WorkspaceGenerateShapePane.tsx"),
+      "utf8",
+    );
+    const ground = readFileSync(
+      join(process.cwd(), "components/UnusableGroundDrawer.tsx"),
+      "utf8",
+    );
+    expect(add).toContain('drawerId="unusable_ground"');
+    expect(shape).toContain('drawerId="unusable_ground"');
+    expect(add).toContain("UnusableGroundDrawer");
+    expect(shape).toContain("UnusableGroundDrawer");
+    expect(ground).toContain("applyUnusableSelection");
+    expect(ground).toContain("onSetUnusableCells");
+    const view = readFileSync(
+      join(process.cwd(), "components/WorkspaceView.tsx"),
+      "utf8",
+    );
+    expect(view).toContain('op: "set_unusable_cells"');
     for (let i = 1; i < tools.length; i++) {
       expect(BLOCK_MAP_TOOL_STRIP.indexOf(tools[i])).toBeGreaterThan(
         BLOCK_MAP_TOOL_STRIP.indexOf(tools[i - 1]),
@@ -294,7 +322,7 @@ describe("block-map-tools", () => {
 
   it("hides grid-op tools when map is not editable", () => {
     const tools = visibleBlockMapTools({ canEdit: false, hasGridOps: false });
-    expect(tools).toEqual(["zoom_in", "zoom_out", "recenter"]);
+    expect(tools).toEqual([]);
     expect(tools).not.toContain("select");
     expect(tools).not.toContain("lasso");
     expect(tools).not.toContain("merge");
@@ -567,11 +595,13 @@ describe("block-map-tools", () => {
     expect(allowsMapClickSelection("move")).toBe(true);
     expect(allowsMapClickSelection("lasso")).toBe(false);
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("pan" as never);
-    expect(BLOCK_MAP_TOOL_STRIP).toContain("lasso");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("select");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("mark_unusable");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("move");
     expect(BLOCK_MAP_TOOL_STRIP).not.toContain("lasso_circle");
     expect(isBlockMapToolEnabled("lasso", state())).toBe(true);
-    expect(visibleBlockMapTools({ canEdit: true, hasGridOps: true })[0]).toBe("select");
+    expect(visibleBlockMapTools({ canEdit: true, hasGridOps: true })).toEqual([]);
   });
 
   it("converts client drag points into grid move deltas", () => {
@@ -1180,10 +1210,9 @@ describe("block-map-tools", () => {
     expect(src).toContain("handleEmptyCellClick(cell, e)");
     // Pan only when Space/middle (not ordinary primary block click)
     expect(src).toMatch(/isMapPanGesture\(\{[\s\S]*?spaceHeld: spaceHeldRef/);
-    // One lasso + shape submenu (not three strip tools)
-    expect(src).toContain("data-lasso-shape-submenu");
+    // Lasso geometry stays in the grid. The map bar no longer offers a shape submenu.
+    expect(src).not.toContain("data-lasso-shape-submenu");
     expect(src).toContain("resolveActiveLassoShape");
-    expect(src).toContain("LASSO_SHAPE_ORDER");
     expect(src).toContain("LassoShapeIcon");
     const icons = require("node:fs").readFileSync(
       require("node:path").join(process.cwd(), "components/block-skill-grid/map-tool-icons.tsx"),
@@ -1224,7 +1253,7 @@ describe("block-map-tools", () => {
           "emitEmpty=" + src.includes("commitSelectionRef"),
           "oneLassoStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("lasso_circle")),
           "noMoveStrip=" + String(!BLOCK_MAP_TOOL_STRIP.includes("move")),
-          "submenu=" + src.includes("data-lasso-shape-submenu"),
+          "submenu=" + String(!src.includes("data-lasso-shape-submenu")),
           "spacePan=" + src.includes("isMapPanGesture"),
           "selectDrag=" + src.includes("allowsBlockDragInMode"),
           "blocksWin=" +

@@ -5,17 +5,11 @@ import {
   type AnnotationDrawTool,
   type AnnotationStrokeThickness,
 } from "@/lib/map-annotation-layers";
-import {
-  LASSO_SHAPE_ORDER,
-  isBlockMapToolEnabled,
-  lassoShapeLabel,
-  lassoShapeTooltip,
-  type BlockMapToolEnablementInput,
-  type BlockMapToolId,
-  type LassoShapeKind,
+import type {
+  BlockMapToolEnablementInput,
+  BlockMapToolId,
+  LassoShapeKind,
 } from "@/lib/block-map-tools";
-import { LassoShapeIcon, toolTooltip } from "@/components/block-skill-grid/map-tool-icons";
-import { MapToolStripButton } from "@/components/block-skill-grid/map-tool-strip-button";
 import type { BlockSkillGridProps } from "@/components/block-skill-grid/types";
 
 export function MapToolRail({
@@ -28,19 +22,6 @@ export function MapToolRail({
   annotationStrokeThickness,
   setAnnotationStrokeThickness,
   setActiveAnnotationLayerId,
-  modeTools,
-  actionTools,
-  viewportTools,
-  activeTool,
-  lassoShape,
-  setLassoShape,
-  toolEnablement,
-  labels,
-  cloneArmed,
-  onCloneCancel,
-  prereqEditActive,
-  stagedPrereqCount,
-  onToolClick,
   overlayAnchorClass = "top-2",
   hidden = false,
 }: {
@@ -72,37 +53,9 @@ export function MapToolRail({
   hidden?: boolean;
 }) {
   if (hidden || learnerMode || viewOnly) return null;
-
-  const renderToolButton = (tool: BlockMapToolId) => {
-    const enabled =
-      isBlockMapToolEnabled(tool, toolEnablement) ||
-      (tool === "clone" && cloneArmed && Boolean(onCloneCancel));
-    const isActiveMode =
-      ((tool === "select" || tool === "lasso") && activeTool === tool) ||
-      (tool === "lock_until" && prereqEditActive) ||
-      (tool === "clone" && cloneArmed);
-    const title =
-      tool === "lock_until" && prereqEditActive
-        ? stagedPrereqCount === 0
-          ? "Confirm: clear all prerequisites for this block"
-          : "Confirm: save staged prerequisites (empty set clears all)"
-        : tool === "lasso"
-          ? `${toolTooltip(tool, labels, { cloneArmed })} · ${lassoShapeTooltip(lassoShape)}`
-          : toolTooltip(tool, labels, { cloneArmed });
-    return (
-      <MapToolStripButton
-        key={tool}
-        tool={tool}
-        enabled={enabled}
-        isActiveMode={isActiveMode}
-        title={title}
-        cloneArmed={cloneArmed}
-        lassoShape={lassoShape}
-        prereqEditActive={prereqEditActive}
-        onClick={() => onToolClick(tool)}
-      />
-    );
-  };
+  // Map actions (merge, split, clone, lock, zoom) are right-pane drawers.
+  // This chrome is only the drawing toolbox while a layer is active.
+  if (!annotationDrawingActive) return null;
 
   return (
     <div
@@ -113,8 +66,7 @@ export function MapToolRail({
       className={`pointer-events-auto absolute left-2 z-20 flex max-w-[min(36rem,calc(100%-1rem))] flex-nowrap items-center gap-0.5 overflow-hidden rounded-none border border-neutral-700 bg-neutral-950/95 px-1.5 py-1 ${overlayAnchorClass}`}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {annotationDrawingActive ? (
-        <div
+      <div
           className="flex flex-nowrap items-center gap-0.5"
           data-annotation-toolbox
           role="group"
@@ -251,68 +203,13 @@ export function MapToolRail({
           <button
             type="button"
             data-annotation-exit
-            title="Exit annotation drawing (back to map tools)"
+            title="Exit annotation drawing"
             onClick={() => setActiveAnnotationLayerId(null)}
             className="flex h-6 w-6 items-center justify-center rounded-none border border-transparent text-[10px] text-neutral-400 hover:border-neutral-600 hover:text-white"
           >
             ✕
           </button>
         </div>
-      ) : (
-        <>
-          <div className="flex flex-nowrap items-center gap-0.5">
-            {modeTools.map(renderToolButton)}
-            {activeTool === "lasso" ? (
-              <div
-                className="ml-0.5 flex items-center gap-0.5 border-l border-neutral-800 pl-1"
-                data-lasso-shape-submenu
-                role="group"
-                aria-label="Lasso shape"
-              >
-                {LASSO_SHAPE_ORDER.map((shape) => {
-                  const active = lassoShape === shape;
-                  return (
-                    <button
-                      key={shape}
-                      type="button"
-                      data-lasso-shape-option={shape}
-                      data-active={active ? "true" : "false"}
-                      title={lassoShapeTooltip(shape)}
-                      aria-label={lassoShapeTooltip(shape)}
-                      aria-pressed={active}
-                      onClick={() => setLassoShape(shape)}
-                      className={`flex h-6 w-6 items-center justify-center rounded-none border text-[10px] transition ${
-                        active
-                          ? "border-white/40 bg-white/10 text-white"
-                          : "border-transparent text-neutral-400 hover:border-neutral-700 hover:text-white"
-                      }`}
-                    >
-                      <LassoShapeIcon shape={shape} className="h-3.5 w-3.5" />
-                      <span className="sr-only">{lassoShapeLabel(shape)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-          {actionTools.length > 0 && (
-            <>
-              <div className="mx-1 h-4 w-px shrink-0 bg-neutral-700/80" aria-hidden />
-              <div className="flex flex-nowrap items-center gap-0.5">
-                {actionTools.map(renderToolButton)}
-              </div>
-            </>
-          )}
-          {viewportTools.length > 0 && (
-            <>
-              <div className="mx-1 h-4 w-px shrink-0 bg-neutral-700/80" aria-hidden />
-              <div className="flex flex-nowrap items-center gap-0.5">
-                {viewportTools.map(renderToolButton)}
-              </div>
-            </>
-          )}
-        </>
-      )}
     </div>
   );
 }

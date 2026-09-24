@@ -16,7 +16,12 @@ import {
   toggleShapeContextSelection,
   type ShapeContextSourceOption,
 } from "@/lib/shape-context-select";
-import { WorkspaceRightPaneDrawer } from "@/components/WorkspaceRightPaneDrawer";
+import {
+  WorkspaceRightPaneDrawer,
+  WorkspaceRightPaneDrawerGroup,
+} from "@/components/WorkspaceRightPaneDrawer";
+import { UnusableGroundDrawer } from "@/components/UnusableGroundDrawer";
+import { canPlaceOnMapGround } from "@/lib/map-ground-rules";
 import { WorkspaceSuggestExternalContext } from "@/components/WorkspaceSuggestExternalContext";
 import {
   WorkspacePromptContextAlternatives,
@@ -39,8 +44,10 @@ export function WorkspaceGenerateShapePane({
   locale = "en",
   busy = false,
   workspaceNotes = null,
+  unusableCells = null,
   onSubmit,
   onCancel,
+  onSetUnusableCells,
   labels,
 }: {
   cells: readonly WorkspaceAddTargetCell[];
@@ -50,6 +57,7 @@ export function WorkspaceGenerateShapePane({
   locale?: string;
   busy?: boolean;
   workspaceNotes?: string | null;
+  unusableCells?: Array<{ row: number; col: number }> | null;
   onSubmit: (payload: {
     prompt: string;
     cells: WorkspaceAddTargetCell[];
@@ -57,6 +65,8 @@ export function WorkspaceGenerateShapePane({
     isStart?: boolean;
   }) => Promise<void>;
   onCancel: () => void;
+  /** Existing unusable-ground action for this pane's empty cells. */
+  onSetUnusableCells?: (cells: Array<{ row: number; col: number }>) => Promise<void> | void;
   labels: {
     generateShape?: string;
     addPlaceholder: string;
@@ -77,7 +87,6 @@ export function WorkspaceGenerateShapePane({
   const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>([]);
   const [contextSelected, setContextSelected] = useState<string[]>([]);
   const [contextLoading, setContextLoading] = useState(false);
-  const [isStarter, setIsStarter] = useState(false);
 
   const cellKey = cells.map((c) => `${c.row}:${c.col}`).join(",");
 
@@ -87,7 +96,6 @@ export function WorkspaceGenerateShapePane({
     setSuggestError(null);
     setAddError(null);
     setContextSelected([]);
-    setIsStarter(false);
   }, [cellKey]);
 
   useEffect(() => {
@@ -210,8 +218,11 @@ export function WorkspaceGenerateShapePane({
     workspaceId,
   ]);
 
+  const submitBlockedByUnusable =
+    canPlaceOnMapGround(cells, unusableCells || []).reason === "unusable";
+
   const handleSubmit = async () => {
-    if (!prompt.trim() || busy || submitting) return;
+    if (!prompt.trim() || busy || submitting || submitBlockedByUnusable) return;
     if (!shapeFreeform.ok) {
       setAddError(
         "Select a contiguous region of empty cells (edge-connected). Any shape is allowed.",
@@ -225,12 +236,10 @@ export function WorkspaceGenerateShapePane({
         prompt: prompt.trim(),
         cells: cells.map((c) => ({ row: c.row, col: c.col })),
         contextSourceKeys: contextSelected.length > 0 ? [...contextSelected] : undefined,
-        isStart: isStarter,
       });
       setPrompt("");
       setSuggestions([]);
       setContextSelected([]);
-      setIsStarter(false);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to generate block");
     } finally {
@@ -239,7 +248,14 @@ export function WorkspaceGenerateShapePane({
   };
 
   return (
+    <WorkspaceRightPaneDrawerGroup
+      defaultOpenId="generate_shape"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
+      data-workspace-generate-shape-stack
+    >
     <WorkspaceRightPaneDrawer
+      variant="section"
+      drawerId="generate_shape"
       paneKind="generate_shape"
       surfaceDataAttr="data-workspace-generate-shape-pane"
       title={labels.generateShape || "Generate block in shape"}
@@ -385,25 +401,6 @@ export function WorkspaceGenerateShapePane({
           ) : null}
         </div>
 
-        <label
-          className="flex cursor-pointer items-start gap-2 rounded-none border border-neutral-800 bg-neutral-950/50 px-2.5 py-2"
-          data-generate-shape-starter
-        >
-          <input
-            type="checkbox"
-            data-generate-shape-starter-input
-            checked={isStarter}
-            disabled={busy || submitting}
-            onChange={(e) => setIsStarter(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-medium text-neutral-200">
-              Starter block
-            </span>
-          </span>
-        </label>
-
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -416,7 +413,13 @@ export function WorkspaceGenerateShapePane({
           <button
             type="button"
             data-generate-shape-submit
-            disabled={!prompt.trim() || busy || submitting || !shapeFreeform.ok}
+            disabled={
+              !prompt.trim() ||
+              busy ||
+              submitting ||
+              !shapeFreeform.ok ||
+              submitBlockedByUnusable
+            }
             onClick={() => void handleSubmit()}
             className="rounded-none bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
           >
@@ -425,5 +428,21 @@ export function WorkspaceGenerateShapePane({
         </div>
       </div>
     </WorkspaceRightPaneDrawer>
+    <WorkspaceRightPaneDrawer
+      variant="section"
+      drawerId="unusable_ground"
+      title="Unusable ground"
+      defaultExpanded={false}
+      bodyClassName="space-y-3"
+      surfaceDataAttr="data-shape-unusable-drawer"
+    >
+      <UnusableGroundDrawer
+        cells={cells.map((cell) => ({ row: cell.row, col: cell.col }))}
+        unusableCells={unusableCells || []}
+        busy={busy}
+        onSetUnusableCells={onSetUnusableCells}
+      />
+    </WorkspaceRightPaneDrawer>
+    </WorkspaceRightPaneDrawerGroup>
   );
 }

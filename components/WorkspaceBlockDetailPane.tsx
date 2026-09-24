@@ -10,6 +10,7 @@ import { WorkspaceBlockEditPanel } from "@/components/WorkspaceBlockEditPanel";
 import { WorkspaceBlockDangerPanel } from "@/components/WorkspaceBlockDangerPanel";
 import { WorkspaceBlockSimulationPanel } from "@/components/WorkspaceBlockSimulationPanel";
 import { WorkspaceSplitBlockPane } from "@/components/WorkspaceSplitBlockPane";
+import { WorkspaceCloneBlockPane } from "@/components/WorkspaceCloneBlockPane";
 import {
   WorkspaceExpandBlockPane,
   type WorkspaceExpandBlockSubmitOpts,
@@ -41,7 +42,7 @@ import type { BlockCreatorEffects } from "@/lib/block-creator-effects";
  * Simulation, Split (multi-cell), Expand, Edit, Danger zone, Goals (post-creation),
  * Dynamic / Generator effects, Local context.
  * Title/description live in Edit; delete lives in the Danger zone drawer.
- * Clone is a left map-strip tool (not a drawer).
+ * Clone is a drawer on this stack (arm, then click an empty cell).
  * Accordion: opening any drawer collapses the others.
  * No X close on drawers; dismiss via map selection clear.
  */
@@ -71,6 +72,9 @@ export function WorkspaceBlockDetailPane({
   onDeleteBlock,
   onSaveCreatorEffects,
   onSplitBlock,
+  cloneArmed = false,
+  onCloneArm,
+  onCloneCancel,
   expandNodes,
   unusableCells = null,
   onExpandBlock,
@@ -118,7 +122,7 @@ export function WorkspaceBlockDetailPane({
     blockId: string;
     title: string;
     description: string;
-    isStart: boolean;
+    isStart?: boolean;
     practiceOptions: BlockPracticeOptions;
   }) => Promise<void> | void;
   onDeleteBlock?: (blockId: string) => Promise<void> | void;
@@ -129,6 +133,9 @@ export function WorkspaceBlockDetailPane({
     blockId: string;
     prompt?: string;
   }) => Promise<void> | void;
+  cloneArmed?: boolean;
+  onCloneArm?: (blockId: string) => void;
+  onCloneCancel?: () => void;
   /** Map nodes for Expand block range/density occupancy. */
   expandNodes?: SkillGridNode[];
   unusableCells?: Array<{ row: number; col: number }> | null;
@@ -292,6 +299,26 @@ export function WorkspaceBlockDetailPane({
         </WorkspaceRightPaneDrawer>
       ) : null}
 
+      {canEdit && onCloneArm ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId="clone"
+          title="Clone"
+          defaultExpanded={false}
+          bodyClassName="space-y-3"
+          surfaceDataAttr="data-block-clone-drawer"
+        >
+          <WorkspaceCloneBlockPane
+            blockId={blockId}
+            blockTitle={blockTitle}
+            armed={cloneArmed}
+            busy={editBusy}
+            onArm={onCloneArm}
+            onCancel={onCloneCancel ?? (() => {})}
+          />
+        </WorkspaceRightPaneDrawer>
+      ) : null}
+
       {canEdit ? (
         <WorkspaceRightPaneDrawer
           variant="section"
@@ -310,30 +337,6 @@ export function WorkspaceBlockDetailPane({
               canEdit={canEdit}
               busy={editBusy}
               onUpdate={onUpdateBlock}
-            />
-          </div>
-        </WorkspaceRightPaneDrawer>
-      ) : null}
-
-      {canEdit ? (
-        <WorkspaceRightPaneDrawer
-          variant="section"
-          drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
-          title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
-          defaultExpanded={false}
-          bodyClassName="space-y-2"
-          surfaceDataAttr="data-block-danger-drawer"
-        >
-          <div
-            data-block-detail-tab-content="danger"
-            data-block-danger-drawer
-          >
-            <WorkspaceBlockDangerPanel
-              blockId={blockId}
-              title={blockTitle}
-              canEdit={canEdit}
-              busy={editBusy}
-              onDelete={onDeleteBlock}
             />
           </div>
         </WorkspaceRightPaneDrawer>
@@ -418,6 +421,31 @@ export function WorkspaceBlockDetailPane({
       >
         <div data-block-detail-tab-content="local">{localContextPanel}</div>
       </WorkspaceRightPaneDrawer>
+
+      {canEdit ? (
+        <WorkspaceRightPaneDrawer
+          variant="section"
+          drawerId={WORKSPACE_EDITOR_DANGER_DRAWER_ID}
+          title={WORKSPACE_EDITOR_DANGER_DRAWER_TITLE}
+          defaultExpanded={false}
+          bodyClassName="space-y-2"
+          surfaceDataAttr="data-block-danger-drawer"
+          tone="danger"
+        >
+          <div
+            data-block-detail-tab-content="danger"
+            data-block-danger-drawer
+          >
+            <WorkspaceBlockDangerPanel
+              blockId={blockId}
+              title={blockTitle}
+              canEdit={canEdit}
+              busy={editBusy}
+              onDelete={onDeleteBlock}
+            />
+          </div>
+        </WorkspaceRightPaneDrawer>
+      ) : null}
     </WorkspaceRightPaneDrawerGroup>
   );
 }

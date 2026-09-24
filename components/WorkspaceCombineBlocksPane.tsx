@@ -1080,6 +1080,7 @@ export function WorkspaceCombineBlocksPane({
         defaultExpanded={false}
         bodyClassName="space-y-3"
         surfaceDataAttr="data-multi-block-delete-drawer"
+        tone="danger"
       >
         <div
           data-multi-block-delete-pane

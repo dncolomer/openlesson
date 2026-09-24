@@ -85,7 +85,6 @@ import {
   BlockGeneratorTargetSparkBadge,
   BlockLocalContextDocBadge,
   BlockPracticeOptionsBadge,
-  BlockStarterFlagBadge,
   MapCellStatusGlyph,
 } from "@/components/block-skill-grid/map-tile-badges";
 import { workspaceTileShowsPreviousSessionsPickaxe } from "@/lib/block-previous-sessions";
@@ -753,9 +752,6 @@ export function MapWorldLayer({
             const localContextBadge = tileBadges.showLocalContext ? (
               <BlockLocalContextDocBadge />
             ) : null;
-            const starterBadge = tileBadges.showStarter ? (
-              <BlockStarterFlagBadge />
-            ) : null;
             const practiceKeys = practiceOptionsIconKeys(
               parseBlockPracticeOptions(
                 (node as { practice_options?: unknown }).practice_options,
@@ -1032,7 +1028,6 @@ export function MapWorldLayer({
                               {effectBadge}
                               {generatorSparkBadge}
                               {localContextBadge}
-                              {starterBadge}
                               {lockBadge}
                               </span>
                               <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />
@@ -1214,7 +1209,6 @@ export function MapWorldLayer({
                   {effectBadge}
                   {generatorSparkBadge}
                   {localContextBadge}
-                  {starterBadge}
                   {lockBadge}
                   </span>
                   <BlockInTileProgress fraction={blockProgressById?.[node.id] ?? 0} />

@@ -60,7 +60,7 @@ function state(
 
 describe("clone left-bar enablement", () => {
   it("enabled only for creator canEdit + sole filled block; disabled otherwise", () => {
-    expect(BLOCK_MAP_TOOL_STRIP).toContain("clone");
+    expect(BLOCK_MAP_TOOL_STRIP).not.toContain("clone");
     expect(blockMapToolKind("clone")).toBe("action");
     expect(blockMapToolLabel("clone").toLowerCase()).toMatch(/clone/);
 
@@ -92,7 +92,7 @@ describe("clone left-bar enablement", () => {
 
     // Visible on strip when canEdit + grid ops
     const tools = visibleBlockMapTools({ canEdit: true, hasGridOps: true });
-    expect(tools).toContain("clone");
+    expect(tools).not.toContain("clone");
     expect(
       visibleBlockMapTools({ canEdit: false, hasGridOps: true }),
     ).not.toContain("clone");
@@ -111,7 +111,7 @@ describe("clone left-bar enablement", () => {
     writeEvidence(
       "clone-left-bar-enable.log",
       [
-        "strip_has_clone=" + BLOCK_MAP_TOOL_STRIP.includes("clone"),
+        "strip_has_clone=" + String(BLOCK_MAP_TOOL_STRIP.includes("clone")),
         "sole_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 1 })),
         "zero_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 0 })),
         "multi_enabled=" + isCloneMapToolEnabled(state({ selectedBlockCount: 2 })),
@@ -125,7 +125,7 @@ describe("clone left-bar enablement", () => {
 });
 
 describe("clone left-bar UI wiring", () => {
-  it("strip mounts Clone; detail has no Clone drawer; host keeps paste path", () => {
+  it("map bar does not mount Clone; detail drawer arms paste; host keeps paste path", () => {
     const tools = read("lib/block-map-tools.ts");
     const grid = readMapGridSurface();
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
@@ -150,11 +150,12 @@ describe("clone left-bar UI wiring", () => {
     // Activate arms sole selection
     expect(grid).toMatch(/case "clone"[\s\S]*?onCloneArm/);
 
-    // No drawer on detail
-    expect(detail).not.toContain('drawerId="clone"');
-    expect(detail).not.toContain("WorkspaceCloneBlockPane");
-    expect(detail).not.toContain("showCloneDrawer");
-    expect(detail).not.toContain("onCloneArm");
+    const rail = read("components/block-skill-grid/map-tool-rail.tsx");
+    expect(rail).not.toContain("MapToolStripButton");
+    expect(rail).not.toContain("data-lasso-shape-submenu");
+    expect(detail).toContain('drawerId="clone"');
+    expect(detail).toContain("WorkspaceCloneBlockPane");
+    expect(detail).toContain("onCloneArm");
 
     // Host: strip props + paste
     expect(view).toContain("onCloneArm=");

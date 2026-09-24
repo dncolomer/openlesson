@@ -30,7 +30,9 @@ Nav labels (EN): Workspace · DAGs · Map Types · Goals · Context · Simulatio
 
 ## 2. Workspace map — tool strip (`BLOCK_MAP_TOOL_STRIP`)
 
-Primary strip order from `lib/block-map-tools.ts` (`BLOCK_MAP_TOOL_STRIP`). Labels via `blockMapToolLabel`.
+`BLOCK_MAP_TOOL_STRIP` is empty. The floating map action bar is not mounted. Merge, split, and clone are right-pane drawers. Unusable ground is a drawer on new-block and generate-in-area. Multi-block lock edges are the Dependencies drawer. Zoom is the scroll wheel. Select remains the click mode so blocks and empty cells still open those panes. Labels via `blockMapToolLabel`.
+
+Recognized tool ids (not mounted as a map bar):
 
 | Tool id | Kind | Author purpose |
 |---|---|---|

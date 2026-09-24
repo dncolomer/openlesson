@@ -59,7 +59,7 @@ describe("workspace mode pure resolvers", () => {
     });
     expect(owner).toContain("workspace");
     expect(owner).toContain("context");
-    expect(owner).toContain("simulation");
+    expect(owner).not.toContain("simulation");
     expect(owner).toContain("knowledge");
     expect(owner).toContain("settings");
   });

@@ -200,7 +200,6 @@ describe("Knowledge Region shell", () => {
       "map_types",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);

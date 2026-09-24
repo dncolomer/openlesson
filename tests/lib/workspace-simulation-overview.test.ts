@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,9 +12,10 @@ import {
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 
 const SCRATCH =
+  process.env.GROK_GOAL_SCRATCH ||
   process.env.GROK_SCRATCH ||
   process.env.GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-46f9864a291e/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a7ffc08ac118/implementer";
 
 function read(rel: string) {
   return require("node:fs").readFileSync(
@@ -87,46 +88,19 @@ describe("deriveWorkspaceSimulationOverview", () => {
 describe("workspace Simulation section helpers + UI structure", () => {
   it("section order Context → Simulation; layout flags; shell wiring", () => {
     const owner = availableWorkspaceSections({ isOwner: true });
-    expect(owner.indexOf("simulation")).toBe(owner.indexOf("context") + 1);
-
-    const layout = resolveWorkspaceSectionLayout("simulation");
-    expect(layout.mountsSimulationPanel).toBe(true);
-    expect(layout.showBlockMapChrome).toBe(false);
-    expect(layout.mountsContextPanel).toBe(false);
+    expect(owner).not.toContain("simulation");
+    expect(resolveWorkspaceSectionLayout("simulation").mountsSimulationPanel).toBe(false);
 
     const view = readWorkspaceViewSurface();
     const aycl = read("components/AyclWorkspaceView.tsx");
-    const panel = read("components/WorkspaceSimulationPanel.tsx");
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
     const sections = read("lib/workspace-sections.ts");
-    const en = read("messages/en.json");
 
-    expect(sections).toContain('"simulation"');
-    expect(sections).toContain("mountsSimulationPanel");
-    expect(en).toContain("sectionSimulation");
-    expect(view).toContain('key: "simulation"');
-    expect(view).toContain("sectionSimulation");
-    expect(view).toContain("mountsSimulationPanel");
-    expect(view).toContain("WorkspaceSimulationPanel");
-    expect(view).toContain("data-workspace-simulation-host");
-    expect(view).toMatch(/workspaceId=\{workspaceId\}/);
-    // AYCL mounts Simulation via WorkspaceView clone
+    expect(view).not.toContain("WorkspaceSimulationPanel");
+    expect(view).not.toContain("data-workspace-simulation-host");
     expect(aycl).toContain("WorkspaceView");
-    expect(panel).toContain("data-workspace-simulation-section");
-    expect(panel).toContain("data-workspace-simulation-panel");
-    // Workspace-only tab: generate + Q/E surfaces (block/multi on map drawers)
-    expect(panel).toContain("data-simulation-scope");
-    expect(panel).toContain('data-simulation-scope="workspace"');
-    expect(panel).toContain("data-simulation-scope-workspace");
-    expect(panel).not.toContain("data-simulation-scope-block");
-    expect(panel).not.toContain("data-simulation-block-select");
-    expect(panel).toContain("data-simulation-generate");
-    expect(panel).toContain("data-simulation-questions");
-    expect(panel).toContain("data-simulation-exercises");
-    // Raw xAI generate path only — no pure seed preview on the tab
-    expect(panel).not.toContain("deriveSimulationSamples");
-    expect(panel).toContain("data-simulation-generate");
-    expect(panel).toContain("/api/workspace/simulation-samples");
-    expect(panel).toContain("Block Simulation"); // points authors to per-block drawer
+    expect(detail).toContain('title="Simulate Insights"');
+    expect(detail).toContain("WorkspaceBlockSimulationPanel");
 
     mkdirSync(SCRATCH, { recursive: true });
     const empty = deriveWorkspaceSimulationOverview([]);
@@ -142,10 +116,8 @@ describe("workspace Simulation section helpers + UI structure", () => {
     writeFileSync(
       join(SCRATCH, "workspace-simulation-section.log"),
       [
-        "order_after_context=" +
-          String(owner.indexOf("simulation") === owner.indexOf("context") + 1),
-        "layout_sim_panel=" + layout.mountsSimulationPanel,
-        "layout_no_map=" + !layout.showBlockMapChrome,
+        "workspace_section_absent=" + String(!owner.includes("simulation")),
+        "layout_sim_panel=false",
         "empty_blocks=" + empty.blockCount,
         "multi_starts=" + multi.startCount,
         "multi_locked=" + multi.lockedCount,
@@ -159,39 +131,17 @@ describe("workspace Simulation section helpers + UI structure", () => {
     writeFileSync(
       join(SCRATCH, "workspace-simulation-ui.log"),
       [
-        "view_nav=" + view.includes('key: "simulation"'),
-        "view_mount=" + view.includes("mountsSimulationPanel"),
         "view_panel=" + view.includes("WorkspaceSimulationPanel"),
         "aycl_via_workspace_view=" + aycl.includes("WorkspaceView"),
-        "panel_hook=" + panel.includes("data-workspace-simulation-section"),
-        "scope_control=" + panel.includes("data-simulation-scope"),
-        "generate_control=" + panel.includes("data-simulation-generate"),
-        "questions_surface=" + panel.includes("data-simulation-questions"),
-        "exercises_surface=" + panel.includes("data-simulation-exercises"),
-        "i18n=" + en.includes("sectionSimulation"),
+        "block_drawer=" + detail.includes('title="Simulate Insights"'),
       ].join("\n") + "\n",
       "utf8",
     );
     writeFileSync(
       join(SCRATCH, "simulation-tab-ui.log"),
       [
-        "scope_control=" + panel.includes("data-simulation-scope-control"),
-        "scope_workspace=" + panel.includes("data-simulation-scope-workspace"),
-        "scope_workspace_only=" +
-          String(
-            panel.includes('data-simulation-scope="workspace"') &&
-              !panel.includes("data-simulation-scope-block"),
-          ),
-        "generate=" + panel.includes("data-simulation-generate"),
-        "questions=" + panel.includes("data-simulation-questions"),
-        "exercises=" + panel.includes("data-simulation-exercises"),
-        "api_path=" + panel.includes("/api/workspace/simulation-samples"),
-        "shell_mount=" + view.includes("data-workspace-simulation-host"),
-        "shell_workspace_id=" + /workspaceId=\{workspaceId\}/.test(view),
-        "no_pure_seed_display=" +
-          String(!panel.includes("deriveSimulationSamples")),
-        "generate_api=" +
-          panel.includes("/api/workspace/simulation-samples"),
+        "workspace_host=" + view.includes("data-workspace-simulation-host"),
+        "workspace_panel=" + view.includes("WorkspaceSimulationPanel"),
         "multi_block_drawer=" +
           read("components/WorkspaceCombineBlocksPane.tsx").includes(
             "WorkspaceMultiBlockSimulationPanel",
@@ -201,44 +151,45 @@ describe("workspace Simulation section helpers + UI structure", () => {
     );
   });
 
-  it("samples UI: loading skeletons while generating + compact two-column Q/E layout", () => {
-    const panel = read("components/WorkspaceSimulationPanel.tsx");
+  it("workspace section, block drawer, and multi-block drawer are Simulate Insights", () => {
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    const detail = read("components/WorkspaceBlockDetailPane.tsx");
+    const combine = read("components/WorkspaceCombineBlocksPane.tsx");
+    const route = read("app/api/workspace/simulate-insights/route.ts");
+    const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
 
-    // 2-col layout wrapper (desktop md:grid-cols-2; stacked on narrow)
-    expect(panel).toContain("data-simulation-samples-grid");
-    expect(panel).toContain('data-simulation-samples-layout="two-col"');
-    expect(panel).toMatch(/grid[\s\S]*md:grid-cols-2/);
-    expect(panel).toContain("data-simulation-questions");
-    expect(panel).toContain("data-simulation-exercises");
-
-    // Loading effect on questions + exercises surfaces (not button-only)
-    expect(panel).toContain("data-simulation-questions-loading");
-    expect(panel).toContain("data-simulation-exercises-loading");
-    expect(panel).toContain('data-simulation-loading="questions"');
-    expect(panel).toContain('data-simulation-loading="exercises"');
-    expect(panel).toContain("data-simulation-question-skeleton");
-    expect(panel).toContain("data-simulation-exercise-skeleton");
-    expect(panel).toContain("animate-pulse");
-    // generating state gates the loading UI on both columns
-    expect(panel).toMatch(
-      /generating\s*\?\s*\([\s\S]*data-simulation-questions-loading[\s\S]*data-simulation-exercises-loading|generating\s*\?\s*\([\s\S]*data-simulation-exercises-loading/,
-    );
-    expect(panel).toContain('data-simulation-generating={generating ? "true" : "false"}');
-    expect(panel).toContain("aria-busy={generating || undefined}");
+    expect(hosts).not.toContain("WorkspaceSimulationPanel");
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("simulation");
+    expect(detail).toContain('title="Simulate Insights"');
+    expect(combine).toContain('title="Simulate Insights"');
+    expect(route).toContain("Simulate Insights runs on a block");
+    expect(surface).toContain("data-simulate-insights-keep");
+    expect(surface).toContain("data-simulate-insights-start");
+    expect(surface).toContain("/api/workspace/simulate-insights");
+    expect(surface).not.toContain("data-simulation-questions");
+    expect(surface).not.toContain("data-simulation-exercises");
+    const post = route.slice(route.indexOf("export async function POST"), route.indexOf("export async function GET"));
+    expect(post).toContain("runSimulateInsightsJob");
+    expect(post).toContain("after(");
+    expect(post).not.toContain("callXaiJSON");
+    expect(route).toContain("readableSimulateInsights");
 
     mkdirSync(SCRATCH, { recursive: true });
+    const uiLog = join(SCRATCH, "simulate-insights-ui.log");
+    const uiPrev = existsSync(uiLog) ? readFileSync(uiLog, "utf8") : "";
     writeFileSync(
-      join(SCRATCH, "simulation-samples-layout-loading.log"),
-      [
-        "two_col_grid=" + panel.includes("data-simulation-samples-grid"),
-        "two_col_attr=" + panel.includes('data-simulation-samples-layout="two-col"'),
-        "md_grid_cols_2=" + /md:grid-cols-2/.test(panel),
-        "q_loading=" + panel.includes("data-simulation-questions-loading"),
-        "e_loading=" + panel.includes("data-simulation-exercises-loading"),
-        "pulse=" + panel.includes("animate-pulse"),
-        "generating_attr=" +
-          panel.includes('data-simulation-generating={generating ? "true" : "false"}'),
-      ].join("\n") + "\n",
+      uiLog,
+      uiPrev +
+        [
+          "section=Simulate Insights",
+          "block_drawer=" + detail.includes('title="Simulate Insights"'),
+          "multi_drawer=" + combine.includes('title="Simulate Insights"'),
+          "keep=" + surface.includes("data-simulate-insights-keep"),
+          "job_runner=" + route.includes("runSimulateInsightsJob"),
+          "question_list=" + surface.includes("data-simulation-questions"),
+          "exercise_list=" + surface.includes("data-simulation-exercises"),
+        ].join("\n") +
+        "\n",
       "utf8",
     );
   });

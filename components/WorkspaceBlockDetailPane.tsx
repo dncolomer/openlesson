@@ -222,7 +222,7 @@ export function WorkspaceBlockDetailPane({
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="simulation"
-        title="Block Simulation"
+        title="Simulate Insights"
         defaultExpanded={false}
         bodyClassName="space-y-3"
       >

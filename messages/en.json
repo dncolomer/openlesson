@@ -2118,7 +2118,7 @@
     "performanceScoreTitleOptimization": "LWM Snapshot",
     "sectionWorkspace": "Workspace",
     "sectionContext": "Context",
-    "sectionSimulation": "Simulation",
+    "sectionSimulation": "Simulate Insights",
     "sectionDags": "DAGs",
     "sectionMapTypes": "Map Types",
     "mapTypesIntro": "Define chapter-map types for new learning sessions. Core types start selected from the library; add more or create your own. Types are generator hints — spawn and blocked cells — not 1:1 templates.",

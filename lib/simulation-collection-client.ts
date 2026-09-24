@@ -19,13 +19,16 @@ export type SimulationCollectionWriteResult = {
 export async function writeSimulationCollection(input: {
   workspaceId: string;
   ayclToken?: string | null;
-  action: "create" | "deposit";
+  action: "create" | "deposit" | "keep";
   kind?: SimulationCollectionItemKind;
   text?: string;
+  title?: string;
+  body?: string;
   coachCue?: string | null;
   questions?: string[];
   exercises?: string[];
   probes?: SimulationProbe[];
+  insights?: Array<{ title?: string; body?: string }>;
   origin?: SimulationCollectionOrigin | Record<string, unknown>;
   modifierPrompt?: string | null;
 }): Promise<SimulationCollectionWriteResult> {
@@ -38,10 +41,13 @@ export async function writeSimulationCollection(input: {
         action: input.action,
         kind: input.kind,
         text: input.text,
+        title: input.title,
+        body: input.body,
         coachCue: input.coachCue,
         questions: input.questions,
         exercises: input.exercises,
         probes: input.probes,
+        insights: input.insights,
         origin: input.origin,
         modifierPrompt: input.modifierPrompt,
         ...(input.ayclToken ? { ayclToken: input.ayclToken } : {}),

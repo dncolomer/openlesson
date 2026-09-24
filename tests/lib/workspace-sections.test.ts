@@ -45,16 +45,14 @@ describe("resolveWorkspaceSectionLayout", () => {
     expect(layout.mountsIntegrationPanel).toBe(false);
   });
 
-  it("maps Simulation section after Context: author overview, no map chrome", () => {
+  it("does not offer a workspace Simulation section", () => {
     const layout = resolveWorkspaceSectionLayout("simulation");
 
-    expect(layout.mainSurface).toBe("simulation");
-    expect(layout.mountsSimulationPanel).toBe(true);
-    expect(layout.mountsContextPanel).toBe(false);
-    expect(layout.showBlockMapChrome).toBe(false);
-    expect(layout.showSessionsColumn).toBe(false);
-    expect(layout.mountsPerformancePanel).toBe(false);
-    expect(layout.mountsIntegrationPanel).toBe(false);
+    expect(layout.mountsSimulationPanel).toBe(false);
+    expect(availableWorkspaceSections({ isOwner: true })).not.toContain("simulation");
+    expect(availableWorkspaceSections({ isOwner: false })).not.toContain("simulation");
+    expect(resolveActiveSection("simulation", { isOwner: true })).toBe("workspace");
+    expect(resolveActiveSection("simulation", { isOwner: false })).toBe("workspace");
   });
 
   it("maps Knowledge section to the performance surface without block-map chrome", () => {
@@ -113,7 +111,7 @@ describe("privileged Knowledge + Settings gating", () => {
     expect(resolveActiveSection("workspace", { isOwner: false })).toBe("workspace");
     expect(resolveActiveSection("workspace", { isOwner: true })).toBe("workspace");
     expect(resolveActiveSection("workspace", { isOrgAdmin: true })).toBe("workspace");
-    expect(resolveActiveSection("simulation", { isOwner: false })).toBe("simulation");
+    expect(resolveActiveSection("simulation", { isOwner: false })).toBe("workspace");
     expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
   });
 });
@@ -126,7 +124,6 @@ describe("availableWorkspaceSections", () => {
       "map_types",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);
@@ -135,24 +132,21 @@ describe("availableWorkspaceSections", () => {
       "workspace",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false, isOrgAdmin: false })).toEqual([
       "workspace",
       "context",
-      "simulation",
     ]);
     expect(availableWorkspaceSections({})).toEqual([
       "workspace",
       "context",
-      "simulation",
     ]);
-    // DAGs is second (right after Workspace) for owners; Simulation after Context
+    // DAGs is second (right after Workspace) for owners. Insight simulation is block-level.
     const owner = availableWorkspaceSections({ isOwner: true });
     expect(owner.indexOf("dags")).toBe(owner.indexOf("workspace") + 1);
-    expect(owner.indexOf("simulation")).toBe(owner.indexOf("context") + 1);
+    expect(owner).not.toContain("simulation");
     expect(owner).toContain("dags");
     expect(availableWorkspaceSections({ isOrgAdmin: true })).not.toContain("dags");
   });

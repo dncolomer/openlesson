@@ -72,7 +72,6 @@ describe("course authoring tools report", () => {
       "map_types",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);

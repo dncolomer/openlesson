@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-error-envelope";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import {
-  appendSimulationCollectionItems,
   depositSimulationGeneration,
   hardDeleteSimulationCollectionItem,
+  keepSimulatedInsights,
   listSimulationCollectionItems,
   normalizeSimulationCollection,
   normalizeSimulationCollectionOrigin,
   removeSimulationCollectionItem,
+  simulationCollectionHasLegacyRows,
   serializeSimulationCollection,
   updateSimulationCollectionItem,
-  type SimulationCollectionItemKind,
   type SimulationCollectionOrigin,
 } from "@/lib/workspace-simulation-collection";
 
@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     if (!workspaceId) {
       return jsonError(400, "workspaceId is required");
     }
-    const auth = await guardWorkspaceRoute(workspaceId, {});
+    const auth = await guardWorkspaceRoute(workspaceId, {
+      ayclToken: req.nextUrl.searchParams.get("ayclToken"),
+    });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 
@@ -41,20 +43,20 @@ export async function GET(req: NextRequest) {
       return jsonError(error ? 500 : 404, error?.message || "Workspace not found");
     }
 
-    const collection = normalizeSimulationCollection(
-      (workspace as { simulation_collection?: unknown }).simulation_collection,
-    );
+    const rawCollection = (workspace as { simulation_collection?: unknown })
+      .simulation_collection;
+    const collection = normalizeSimulationCollection(rawCollection);
+    if (simulationCollectionHasLegacyRows(rawCollection)) {
+      await supabase
+        .from("workspaces")
+        .update({ simulation_collection: serializeSimulationCollection(collection) })
+        .eq("id", workspaceId);
+    }
     const includeRemoved =
       req.nextUrl.searchParams.get("includeRemoved") === "1" ||
       req.nextUrl.searchParams.get("includeRemoved") === "true";
-    const kindRaw = req.nextUrl.searchParams.get("kind");
-    const kind =
-      kindRaw === "question" || kindRaw === "exercise"
-        ? (kindRaw as SimulationCollectionItemKind)
-        : null;
     const items = listSimulationCollectionItems(collection, {
       includeRemoved,
-      kind,
     });
     return NextResponse.json({
       ok: true,
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (action === "deposit") {
+    if (action === "deposit" || action === "keep") {
       const origin: SimulationCollectionOrigin = normalizeSimulationCollectionOrigin(
         body.origin ||
           (body.blockIds
@@ -115,38 +117,34 @@ export async function POST(req: NextRequest) {
               ? { kind: "block", blockId: body.blockId, blockTitle: body.blockTitle }
               : { kind: "workspace" }),
       );
+      const insights = Array.isArray(body.insights)
+        ? body.insights
+        : body.title || body.body
+          ? [{ title: body.title, body: body.body }]
+          : [];
       collection = depositSimulationGeneration(collection, {
-        questions: body.questions,
-        exercises: body.exercises,
-        probes: body.probes,
+        insights,
         origin,
-        modifierPrompt: body.modifierPrompt ?? body.userGuidance ?? null,
       });
     } else if (action === "create") {
-      const kind: SimulationCollectionItemKind =
-        body.kind === "exercise" ? "exercise" : "question";
-      const text = String(body.text || body.question || "").trim();
-      if (text.length < 4) {
-        return jsonError(400, "text is required");
+      const title = String(body.title || "").trim();
+      const insightBody = String(body.body || body.text || "").trim();
+      if (title.length < 2 || insightBody.length < 8) {
+        return jsonError(400, "title and body are required");
       }
-      collection = appendSimulationCollectionItems(collection, [
-        {
-          kind,
-          text,
-          coachCue: body.coachCue ?? body.coach_cue ?? null,
-          origin: normalizeSimulationCollectionOrigin(body.origin),
-          modifierPrompt: body.modifierPrompt ?? null,
-        },
-      ]);
+      collection = keepSimulatedInsights(collection, {
+        insights: [{ title, body: insightBody }],
+        origin: normalizeSimulationCollectionOrigin(body.origin),
+      });
     } else if (action === "update") {
       const itemId = String(body.itemId || body.id || "").trim();
       if (!itemId) {
         return jsonError(400, "itemId is required");
       }
       const next = updateSimulationCollectionItem(collection, itemId, {
+        title: body.title,
+        body: body.body,
         text: body.text,
-        kind: body.kind === "exercise" || body.kind === "question" ? body.kind : undefined,
-        coachCue: body.coachCue ?? body.coach_cue,
       });
       if (!next) {
         return jsonError(404, "Item not found or invalid text");

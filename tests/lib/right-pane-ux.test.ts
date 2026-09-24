@@ -130,7 +130,7 @@ describe("desktop layout + block detail chrome", () => {
     // Creator Details/Sessions drawer removed — Edit owns title/description.
     expect(detail).not.toContain('drawerId="detail"');
     expect(detail).toContain('title="Local context"');
-    expect(detail).toContain('title="Block Simulation"');
+    expect(detail).toContain('title="Simulate Insights"');
     // Local drawer expands when materials already attached; simulation stays collapsed.
     expect(detail).toContain("defaultExpanded={hasLocalMaterials}");
     expect(detail).toContain("defaultExpanded={false}");
@@ -152,17 +152,17 @@ describe("desktop layout + block detail chrome", () => {
     expect(dangerPanel).toContain("data-block-danger-pane");
     const tools = read("lib/block-map-tools.ts");
     expect(tools).not.toMatch(/BLOCK_MAP_TOOL_STRIP[\s\S]*"edit"/);
-    expect(tools).toContain("edit is omitted");
+    expect(tools).toContain("BLOCK_MAP_TOOL_STRIP: readonly BlockMapToolId[] = []");
     expect(detail).not.toContain('prompt: "Prompt"');
     expect(detail).not.toContain("WorkspacePromptImpactPanel");
     expect(detail).toContain("WorkspaceBlockSimulationPanel");
     expect(detail).not.toContain("data-block-detail-close");
 
     const simPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(simPanel).toContain("data-simulation-regenerate");
-    expect(simPanel).toContain("/api/workspace/block-content-samples");
-    expect(simPanel).toContain("data-simulation-questions");
-    expect(simPanel).toContain("data-simulation-exercises");
+    expect(simPanel).toContain("SimulateInsightsSurface");
+    expect(simPanel).not.toContain("data-simulation-questions");
+    expect(simPanel).not.toContain("data-simulation-exercises");
+    expect(simPanel).not.toContain("/api/workspace/block-content-samples");
     expect(simPanel).not.toContain("data-simulation-audience");
 
     const local = read("components/WorkspaceBlockLocalContextPanel.tsx");

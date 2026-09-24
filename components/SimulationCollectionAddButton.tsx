@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { writeSimulationCollection } from "@/lib/simulation-collection-client";
-import type { SimulationProbe } from "@/lib/block-simulation";
 import {
   simulationCollectionItemKey,
   type SimulationCollectionItem,
-  type SimulationCollectionItemKind,
   type SimulationCollectionOrigin,
 } from "@/lib/workspace-simulation-collection";
 
@@ -28,7 +26,7 @@ export function useSimulationCollectionAdd(opts: {
       const next = new Set(prev);
       for (const item of seedItems) {
         if (item.removed) continue;
-        next.add(simulationCollectionItemKey(item.kind, item.text));
+        next.add(simulationCollectionItemKey(item.title, item.body));
       }
       return next;
     });
@@ -39,36 +37,35 @@ export function useSimulationCollectionAdd(opts: {
       const next = new Set(prev);
       for (const item of items) {
         if (item.removed) continue;
-        next.add(simulationCollectionItemKey(item.kind, item.text));
+        next.add(simulationCollectionItemKey(item.title, item.body));
       }
       return next;
     });
   }, []);
 
   const isAdded = useCallback(
-    (kind: SimulationCollectionItemKind, text: string) =>
-      addedKeys.has(simulationCollectionItemKey(kind, text)),
+    (title: string, body: string) =>
+      addedKeys.has(simulationCollectionItemKey(title, body)),
     [addedKeys],
   );
 
   const addOne = useCallback(
-    async (kind: SimulationCollectionItemKind, text: string, coachCue?: string | null) => {
+    async (title: string, body: string) => {
       if (!workspaceId) {
         const msg = "Workspace required to add to collection";
         setError(msg);
         return { ok: false, error: msg, items: [] as SimulationCollectionItem[] };
       }
-      const key = simulationCollectionItemKey(kind, text);
+      const key = simulationCollectionItemKey(title, body);
       if (addedKeys.has(key)) return { ok: true, error: null, items: [] };
       setBusyKey(key);
       setError(null);
       const result = await writeSimulationCollection({
         workspaceId,
         ayclToken,
-        action: "create",
-        kind,
-        text,
-        coachCue,
+        action: "keep",
+        title,
+        body,
         origin,
         modifierPrompt,
       });
@@ -86,9 +83,7 @@ export function useSimulationCollectionAdd(opts: {
 
   const addMany = useCallback(
     async (payload: {
-      questions?: string[];
-      exercises?: string[];
-      probes?: SimulationProbe[];
+      insights?: Array<{ title: string; body: string }>;
     }) => {
       if (!workspaceId) {
         const msg = "Workspace required to add to collection";
@@ -100,10 +95,8 @@ export function useSimulationCollectionAdd(opts: {
       const result = await writeSimulationCollection({
         workspaceId,
         ayclToken,
-        action: "deposit",
-        questions: payload.questions,
-        exercises: payload.exercises,
-        probes: payload.probes,
+        action: "keep",
+        insights: payload.insights,
         origin,
         modifierPrompt,
       });
@@ -113,23 +106,6 @@ export function useSimulationCollectionAdd(opts: {
         return result;
       }
       markAdded(result.items);
-      setAddedKeys((prev) => {
-        const next = new Set(prev);
-        for (const q of payload.questions || []) {
-          next.add(simulationCollectionItemKey("question", q));
-        }
-        for (const ex of payload.exercises || []) {
-          next.add(simulationCollectionItemKey("exercise", ex));
-        }
-        for (const p of payload.probes || []) {
-          const kind =
-            p.kind === "exercise" || p.difficulty === "stretch"
-              ? "exercise"
-              : "question";
-          next.add(simulationCollectionItemKey(kind, p.question));
-        }
-        return next;
-      });
       return result;
     },
     [ayclToken, markAdded, modifierPrompt, origin, workspaceId],

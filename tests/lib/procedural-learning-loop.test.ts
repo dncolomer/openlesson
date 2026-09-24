@@ -13,19 +13,26 @@ import {
   canonicalizeProductIntentId,
 } from "@/lib/product-intent";
 import {
-  normalizeSimulationPayload,
-  partitionSimulationProbes,
-  SIMULATION_EXERCISE_COUNT,
-  SIMULATION_QUESTION_COUNT,
-} from "@/lib/block-simulation";
+  readableSimulateInsights,
+  runSimulateInsights,
+  runSimulateInsightsJob,
+  createSimulateInsightsJob,
+  simulateInsightsClickStartsNewJob,
+  simulateInsightsPollBudgetMs,
+  SIMULATE_INSIGHTS_FETCH_TIMEOUT_MS,
+  SIMULATE_INSIGHTS_STEP_COUNT,
+} from "@/lib/simulate-insights";
 import {
   applySimulationModifierToPrompt,
+  commitSimulationJob,
   depositSimulationGeneration,
   emptySimulationCollection,
+  keepSimulatedInsights,
   listSimulationCollectionItems,
+  normalizeSimulationCollection,
   removeSimulationCollectionItem,
   updateSimulationCollectionItem,
-  normalizeSimulationCollection,
+  upsertSimulationJob,
 } from "@/lib/workspace-simulation-collection";
 import {
   assembleSuggestFromKnowledgeXaiMessages,
@@ -201,109 +208,240 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
   });
 });
 
-describe("block simulation generate path", () => {
-  it("normalizeSimulationPayload yields non-empty Q+E from valid model payload", () => {
-    const payload = {
-      intent: "Practice Bayes",
-      outcome: "Update beliefs correctly",
-      questions: [
-        "What is a prior?",
-        "How does likelihood update the posterior?",
-        "When is a flat prior inappropriate?",
-      ],
-      exercises: [
-        "Compute PPV for sens 0.9, spec 0.9, prev 0.01.",
-        "Update a prior of 0.2 after two positive tests.",
-        "Design a medical screening example with Bayes rule.",
-      ],
-      probes: [
-        { question: "Define the prior for this setup.", kind: "question" },
-        { question: "Explain likelihood vs prior.", kind: "question" },
-        { question: "Where do posteriors go wrong?", kind: "question" },
+describe("Simulate Insights runner", () => {
+  it("runs two sequential model steps and returns insight candidates", async () => {
+    const calls: number[] = [];
+    let secondPrompt = "";
+    const insights = await runSimulateInsights({
+      context: {
+        scope: "block",
+        title: "Ownership",
+        description: "Move versus borrow. Partial moves leave the rest valid.",
+      },
+      callStep: async ({ step, userPrompt }) => {
+        calls.push(step);
+        if (step === 1) {
+          return {
+            observations: ["Partial moves leave the rest of the struct valid."],
+          };
+        }
+        secondPrompt = userPrompt;
+        return {
+          insights: [
+            {
+              title: "Partial moves",
+              body: "A learner can craft that a partial move keeps the rest of a struct usable.",
+            },
+          ],
+        };
+      },
+    });
+    expect(calls).toEqual([1, 2]);
+    expect(secondPrompt).toContain("Partial moves leave the rest of the struct valid.");
+    expect(insights).toHaveLength(1);
+    expect(insights[0]!.title).toBe("Partial moves");
+    expect(insights[0]!.body).toMatch(/partial move/i);
+    expect(insights[0]).not.toHaveProperty("kind");
+
+    const job = createSimulateInsightsJob({ scope: "block", blockId: "b1" });
+    expect(readableSimulateInsights(job)).toEqual([]);
+    const persisted: Array<{ completedSteps: number; status: string; insightCount: number }> = [];
+    const finished = await runSimulateInsightsJob({
+      job,
+      context: { scope: "block", title: "Ownership", description: "Moves and borrows." },
+      callStep: async ({ step }) => {
+        if (step === 1) return { observations: ["Borrowing does not take ownership."] };
+        return {
+          insights: [
+            {
+              title: "Borrow versus move",
+              body: "A learner can craft that a borrow uses a value without taking ownership.",
+            },
+          ],
+        };
+      },
+      persist: async (next) => {
+        persisted.push({
+          completedSteps: next.completedSteps,
+          status: next.status,
+          insightCount: readableSimulateInsights(next).length,
+        });
+      },
+    });
+    expect(persisted.some((row) => row.completedSteps === 1 && row.insightCount === 0)).toBe(true);
+    expect(persisted.filter((row) => row.status === "completed")).toHaveLength(1);
+    expect(readableSimulateInsights(finished)).toHaveLength(1);
+    expect(finished.completedSteps).toBeGreaterThanOrEqual(2);
+
+    let stored = keepSimulatedInsights(emptySimulationCollection(), {
+      insights: [
         {
-          question: "Exercise: compute PPV for sens 0.9 / spec 0.9 / prev 0.01.",
-          kind: "exercise",
+          title: "Already kept",
+          body: "A learner can craft the idea that was saved before this step finished.",
         },
+      ],
+      origin: { kind: "block", blockId: "b1" },
+    });
+    stored = upsertSimulationJob(
+      stored,
+      createSimulateInsightsJob({ scope: "block", blockId: "b1", id: "job-race" }),
+    );
+    let raced = false;
+    const completed = {
+      ...createSimulateInsightsJob({ scope: "block", blockId: "b1", id: "job-race" }),
+      status: "completed" as const,
+      completedSteps: 2,
+      insights: [
         {
-          question: "Exercise: update prior 0.2 after two positives.",
-          kind: "exercise",
-        },
-        {
-          question: "Exercise: write a medical screening Bayes example.",
-          kind: "exercise",
+          id: "fresh",
+          title: "Fresh insight",
+          body: "A learner can craft the idea produced by the second simulation step.",
         },
       ],
     };
-    const sim = normalizeSimulationPayload(payload, {
-      title: "Bayes rule",
-      description: "Update beliefs with evidence",
+    const committed = await commitSimulationJob({
+      job: completed,
+      load: async () => stored,
+      saveIfVersion: async (next, expectedVersion) => {
+        if (!raced) {
+          raced = true;
+          stored = keepSimulatedInsights(stored, {
+            insights: [
+              {
+                title: "Kept during the run",
+                body: "A learner can craft the idea the author kept while the job was saving.",
+              },
+            ],
+            origin: { kind: "block", blockId: "b1" },
+          });
+          return false;
+        }
+        if (stored.updatedAt !== expectedVersion) return false;
+        stored = next;
+        return true;
+      },
     });
-    const { questions, exercises } = partitionSimulationProbes(sim.probes);
-    expect(questions.length).toBeGreaterThan(0);
-    expect(exercises.length).toBeGreaterThan(0);
-    expect(questions.length).toBeLessThanOrEqual(SIMULATION_QUESTION_COUNT);
-    expect(exercises.length).toBeLessThanOrEqual(SIMULATION_EXERCISE_COUNT);
+    const keptTitles = listSimulationCollectionItems(committed).map((item) => item.title);
+    expect(keptTitles).toContain("Kept during the run");
+    expect(keptTitles).toContain("Already kept");
+    expect(committed.jobs.find((job) => job.id === "job-race")?.status).toBe("completed");
+
+    expect(simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "waiting" })).toBe(false);
+    expect(simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "failed" })).toBe(true);
+    expect(simulateInsightsClickStartsNewJob({ jobId: null, phase: "idle" })).toBe(true);
+    expect(simulateInsightsPollBudgetMs()).toBeGreaterThanOrEqual(
+      SIMULATE_INSIGHTS_STEP_COUNT * 2 * SIMULATE_INSIGHTS_FETCH_TIMEOUT_MS,
+    );
+
+    const legacy = normalizeSimulationCollection({
+      items: [
+        { id: "q1", kind: "question", text: "What is entropy?" },
+        { id: "e1", kind: "exercise", text: "Compute entropy of a fair coin." },
+      ],
+    });
+    expect(listSimulationCollectionItems(legacy)).toEqual([]);
 
     writeLog(
-      "block-simulation-generate.log",
-      `q=${questions.length} e=${exercises.length} total=${sim.probes.length}\n`,
+      "simulate-insights-runner.log",
+      [
+        `call_count=${calls.length}`,
+        `step_order=${calls.join(",")}`,
+        `insight_title=${insights[0]!.title}`,
+        `insight_body=${insights[0]!.body}`,
+        `second_prompt_has_observation=${secondPrompt.includes("Partial moves leave the rest")}`,
+        `mid_job_insights_hidden=${persisted.some((row) => row.completedSteps === 1 && row.insightCount === 0)}`,
+        `finished_insights=${readableSimulateInsights(finished).length}`,
+        `legacy_kept=${listSimulationCollectionItems(legacy).length}`,
+        `kept_during_job=${keptTitles.includes("Kept during the run")}`,
+        `completed_persists=${persisted.filter((row) => row.status === "completed").length}`,
+        `poll_budget_ms=${simulateInsightsPollBudgetMs()}`,
+        `resume_waiting=${simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "waiting" })}`,
+        `retry_after_failure=${simulateInsightsClickStartsNewJob({ jobId: "job-race", phase: "failed" })}`,
+      ].join("\n") + "\n",
     );
   });
 
-  it("block simulation API route returns exercises + modifier + recovery", () => {
-    const route = read("app/api/workspace/block-content-samples/route.ts");
-    expect(route).toContain("applySimulationModifierToPrompt");
-    expect(route).toContain("parseJsonLoose");
-    expect(route).toContain("exercises");
-    expect(route).toContain("maxTokens: 2800");
-    expect(route).toContain("modifierPrompt");
+  it("job route starts in the background and reads insights later", () => {
+    const route = read("app/api/workspace/simulate-insights/route.ts");
+    const start = route.indexOf("export async function POST");
+    const readJob = route.indexOf("export async function GET");
+    const postBody = route.slice(start, readJob);
+    expect(postBody).toContain("after(");
+    expect(postBody).toContain("runSimulateInsightsJob");
+    expect(postBody).toContain("commitSimulationJob");
+    expect(postBody).toContain('status: "running"');
+    expect(postBody).not.toContain("callXaiJSON");
+    const collectionRoute = read("app/api/workspace/simulation-collection/route.ts");
+    const collectionGet = collectionRoute.slice(
+      collectionRoute.indexOf("export async function GET"),
+      collectionRoute.indexOf("export async function POST"),
+    );
+    expect(collectionGet).toContain('searchParams.get("ayclToken")');
+    const model = read("lib/simulate-insights-model.ts");
+    expect(model).toContain("fetchTimeout: 45_000");
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    expect(surface).toContain("ayclToken");
+    expect(surface).toContain("simulation-collection?");
+    expect(surface).toContain("simulateInsightsPollBudgetMs");
+    expect(surface).toContain("simulateInsightsClickStartsNewJob");
+    expect(surface).toContain('setPhase("failed")');
+    expect(surface).not.toContain('setPhase(activeJobId ? "waiting" : "idle")');
+    expect(surface).not.toContain("attempt < 40");
+    expect(readJob).toBeGreaterThan(start);
+    expect(route).toContain("readableSimulateInsights");
   });
 
   it("block panel does not auto-generate or auto-deposit to collection", () => {
     const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    const addUi = read("components/SimulationCollectionAddButton.tsx");
-    expect(panel).toContain('data-simulation-auto-generate="false"');
-    expect(panel).toContain('data-simulation-auto-deposit="false"');
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    expect(surface).toContain('data-simulation-auto-generate="false"');
+    expect(surface).toContain('data-simulation-auto-deposit={autoDeposit ? "true" : "false"}');
     expect(panel).not.toContain("depositToCollection");
     expect(panel).not.toContain("autoRanForBlock");
-    expect(panel).toContain("simulation-collection");
-    expect(panel).toContain("SimulationCollectionAddButton");
-    expect(panel).toContain("addMany");
-    const generateFn = panel.slice(
-      panel.indexOf("const regenerate = useCallback"),
-      panel.indexOf("Reset chrome when block identity"),
+    expect(surface).toContain("simulation-collection");
+    expect(surface).toContain("data-simulate-insights-keep");
+    expect(surface).not.toContain("addMany");
+    const startFn = surface.slice(
+      surface.indexOf("const start = async"),
+      surface.indexOf("const keep = async"),
     );
-    expect(generateFn).not.toContain("addMany");
-    expect(addUi).toContain("data-simulation-add-to-collection");
-    expect(addUi).toContain('action: "deposit"');
-    expect(addUi).toContain('action: "create"');
-    expect(panel).toContain("modifierPrompt");
+    expect(startFn).not.toContain("action: \"keep\"");
+    expect(surface).toContain("modifierPrompt");
   });
 });
 
 describe("simulation collection CRUD + modifier", () => {
   it("deposit, list, update, delete", () => {
     let col = emptySimulationCollection();
-    col = depositSimulationGeneration(col, {
-      questions: ["What is entropy?", "Define KL divergence."],
-      exercises: ["Compute entropy of a fair coin."],
+    col = keepSimulatedInsights(col, {
+      insights: [
+        {
+          title: "Entropy",
+          body: "A learner can craft that entropy measures surprise in a distribution.",
+        },
+        {
+          title: "KL divergence",
+          body: "A learner can craft that KL divergence measures how one distribution departs from another.",
+        },
+      ],
       origin: { kind: "block", blockId: "b1", blockTitle: "Info theory" },
-      modifierPrompt: "Focus on discrete distributions",
+    });
+    col = depositSimulationGeneration(col, {
+      questions: ["What is entropy?"],
+      exercises: ["Compute entropy of a fair coin."],
+      origin: { kind: "workspace" },
     });
     const listed = listSimulationCollectionItems(col);
-    expect(listed.length).toBe(3);
-    expect(listed.some((i) => i.kind === "question")).toBe(true);
-    expect(listed.some((i) => i.kind === "exercise")).toBe(true);
-    expect(listed[0]?.modifierPrompt).toBe("Focus on discrete distributions");
+    expect(listed.length).toBe(2);
+    expect(listed.every((i) => i.title && i.body)).toBe(true);
+    expect(listed.some((i) => /question|exercise/i.test(i.title))).toBe(false);
 
     const updated = updateSimulationCollectionItem(col, listed[0]!.id, {
-      text: "What is Shannon entropy?",
+      body: "A learner can craft that Shannon entropy measures average surprise.",
     });
     expect(updated).not.toBeNull();
     const afterUpdate = listSimulationCollectionItems(updated!);
-    expect(afterUpdate.find((i) => i.id === listed[0]!.id)?.text).toBe(
-      "What is Shannon entropy?",
-    );
+    expect(afterUpdate.find((i) => i.id === listed[0]!.id)?.body).toMatch(/Shannon entropy/);
 
     const removed = removeSimulationCollectionItem(updated!, listed[0]!.id);
     expect(removed).not.toBeNull();
@@ -312,12 +450,16 @@ describe("simulation collection CRUD + modifier", () => {
     ).toBeUndefined();
     expect(
       listSimulationCollectionItems(removed!, { includeRemoved: true }).length,
-    ).toBe(3);
+    ).toBe(2);
 
     // multi-block origin deposit
-    col = depositSimulationGeneration(emptySimulationCollection(), {
-      questions: ["Bridge Q"],
-      exercises: ["Bridge E"],
+    col = keepSimulatedInsights(emptySimulationCollection(), {
+      insights: [
+        {
+          title: "Bridge",
+          body: "A learner can craft the shared idea that connects the two selected blocks.",
+        },
+      ],
       origin: {
         kind: "multi_block",
         blockIds: ["a", "b"],
@@ -328,14 +470,22 @@ describe("simulation collection CRUD + modifier", () => {
       "multi_block",
     );
 
-    const once = depositSimulationGeneration(emptySimulationCollection(), {
-      questions: ["What is entropy?"],
-      exercises: [],
+    const once = keepSimulatedInsights(emptySimulationCollection(), {
+      insights: [
+        {
+          title: "Entropy",
+          body: "A learner can craft that entropy measures surprise in a distribution.",
+        },
+      ],
       origin: { kind: "workspace" },
     });
-    const twice = depositSimulationGeneration(once, {
-      questions: ["What is entropy?"],
-      exercises: [],
+    const twice = keepSimulatedInsights(once, {
+      insights: [
+        {
+          title: "Entropy",
+          body: "A learner can craft that entropy measures surprise in a distribution.",
+        },
+      ],
       origin: { kind: "workspace" },
     });
     expect(listSimulationCollectionItems(twice)).toHaveLength(1);
@@ -348,7 +498,7 @@ describe("simulation collection CRUD + modifier", () => {
     writeLog(
       "simulation-collection-crud.log",
       [
-        "deposit=3",
+        "kept_insights=2",
         "update=ok",
         "soft_delete=ok",
         "multi_block=ok",
@@ -360,39 +510,36 @@ describe("simulation collection CRUD + modifier", () => {
   });
 
   it("sim tab is workspace-only; multi-block lives on map drawer", () => {
-    const panel = read("components/WorkspaceSimulationPanel.tsx");
-    expect(panel).toContain("data-simulation-collection");
-    expect(panel).toContain("data-simulation-collection-edit");
-    expect(panel).toContain("data-simulation-collection-delete");
-    expect(panel).toContain("data-simulation-modifier");
-    expect(panel).toContain('data-simulation-scope="workspace"');
-    expect(panel).toContain('scope: "workspace"');
-    expect(panel).toContain("SimulationCollectionAddButton");
-    expect(panel).toContain("addMany");
-    expect(panel).toContain('data-simulation-auto-deposit="false"');
-    const workspaceGenerate = panel.slice(
-      panel.indexOf("const generate = async"),
-      panel.indexOf("const saveEdit"),
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
+    expect(hosts).not.toContain("WorkspaceSimulationPanel");
+    expect(surface).toContain("data-simulation-collection");
+    expect(surface).not.toContain('scope="workspace"');
+    expect(surface).not.toContain("data-simulation-questions");
+    expect(surface).not.toContain("data-simulation-exercises");
+
+    expect(surface).toContain("data-simulate-insights-keep");
+    expect(surface).toContain("data-simulation-collection-delete");
+    expect(surface).toContain('action: "keep"');
+    expect(surface).toContain('action: "delete"');
+    expect(surface).toContain("/api/workspace/simulate-insights");
+    expect(surface).toContain("data-simulate-insights-start");
+    expect(surface).not.toContain("data-simulation-questions");
+    expect(surface).not.toContain("data-simulation-exercises");
+    const startFn = surface.slice(
+      surface.indexOf("const readJob = async"),
+      surface.indexOf("const keep = async"),
     );
-    expect(workspaceGenerate).not.toContain("addMany");
-    expect(workspaceGenerate).not.toContain("collectionAdd.addMany");
-    // Block / multi-block pickers removed from the tab
-    expect(panel).not.toContain("data-simulation-scope-block");
-    expect(panel).not.toContain("data-simulation-multi-block");
-    expect(panel).not.toContain("data-simulation-block-select");
+    expect(startFn).toContain('method: "POST"');
+    expect(startFn).toContain('job.status === "completed"');
+    expect(startFn).not.toContain("setInsights(started");
+    expect(startFn).toContain("simulateInsightsClickStartsNewJob");
 
     const multi = read("components/WorkspaceMultiBlockSimulationPanel.tsx");
     expect(multi).toContain("data-multi-block-simulation");
     expect(multi).toContain("data-simulation-multi-block");
-    expect(multi).toContain("SimulationCollectionAddButton");
-    expect(multi).toContain("addMany");
+    expect(multi).toContain("SimulateInsightsSurface");
     expect(multi).toContain("multi_block");
-    expect(multi).toContain('data-simulation-auto-deposit="false"');
-    const multiGenerate = multi.slice(
-      multi.indexOf("const generate = async"),
-      multi.indexOf("return ("),
-    );
-    expect(multiGenerate).not.toContain("addMany");
 
     const combine = read("components/WorkspaceCombineBlocksPane.tsx");
     expect(combine).toContain("WorkspaceMultiBlockSimulationPanel");
@@ -403,6 +550,33 @@ describe("simulation collection CRUD + modifier", () => {
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
     expect(detail).toContain("WorkspaceBlockSimulationPanel");
     expect(detail).toContain('drawerId="simulation"');
+    expect(detail).toContain('title="Simulate Insights"');
+    expect(combine).toContain('title="Simulate Insights"');
+    const jobRoute = read("app/api/workspace/simulate-insights/route.ts");
+    expect(jobRoute).toContain("Simulate Insights runs on a block");
+    expect(jobRoute).toContain("runSimulateInsightsJob");
+    expect(jobRoute).not.toContain("callXaiJSON");
+
+    const uiLog = join(SCRATCH, "simulate-insights-ui.log");
+    mkdirSync(SCRATCH, { recursive: true });
+    const uiPrev = existsSync(uiLog) ? readFileSync(uiLog, "utf8") : "";
+    writeFileSync(
+      uiLog,
+      uiPrev +
+        [
+          "section=Simulate Insights",
+          "block_drawer=Simulate Insights",
+          "multi_drawer=Simulate Insights",
+          "keep=data-simulate-insights-keep",
+          "job_start=POST /api/workspace/simulate-insights",
+          "job_read=GET after status completed",
+          "runner=runSimulateInsightsJob",
+          "one_shot_callXaiJSON_in_job_route=false",
+          "question_exercise_list=absent",
+        ].join("\n") +
+        "\n",
+      "utf8",
+    );
   });
 });
 
@@ -511,6 +685,12 @@ describe("suggest from knowledge + simulation", () => {
   it("builds simulation suggestions from curated collection", () => {
     let col = emptySimulationCollection();
     col = depositSimulationGeneration(col, {
+      insights: [
+        {
+          title: "CAP under partition",
+          body: "A learner can craft what fails in CAP theorem tradeoffs when a partition happens.",
+        },
+      ],
       questions: ["What fails in CAP theorem tradeoffs?"],
       exercises: ["Design a partition-tolerant store."],
       origin: { kind: "workspace" },

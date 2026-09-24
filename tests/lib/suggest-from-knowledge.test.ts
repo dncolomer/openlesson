@@ -353,6 +353,12 @@ describe("shared suggest model + simulation corpus adapter", () => {
 
     let col = emptySimulationCollection();
     col = depositSimulationGeneration(col, {
+      insights: [
+        {
+          title: "CAP under partition",
+          body: "A learner can craft what fails in CAP theorem tradeoffs when a partition happens.",
+        },
+      ],
       questions: ["What fails in CAP theorem tradeoffs?"],
       exercises: ["Design a partition-tolerant store."],
       origin: { kind: "workspace" },
@@ -516,8 +522,12 @@ describe("suggest from context corpus + one prompt", () => {
     );
     let collection = emptySimulationCollection();
     collection = depositSimulationGeneration(collection, {
-      questions: ["What fails in CAP theorem tradeoffs?"],
-      exercises: ["Design a partition-tolerant store."],
+      insights: [
+        {
+          title: "CAP under partition",
+          body: "A learner can craft what fails in CAP theorem tradeoffs when a partition happens.",
+        },
+      ],
       origin: { kind: "workspace" },
     });
     const simulationSnapshots = simulationCollectionToSuggestSnapshots(collection);

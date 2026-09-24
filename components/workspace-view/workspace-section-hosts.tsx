@@ -9,7 +9,6 @@ import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPane
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
-import { WorkspaceSimulationPanel } from "@/components/WorkspaceSimulationPanel";
 import type { Block, Workspace } from "@/components/workspace-view/types";
 import type { WorkspaceDagRecord } from "@/lib/workspace-dags";
 import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
@@ -116,30 +115,6 @@ export function WorkspaceSectionHosts({
               onCancelNotes={onCancelNotes}
               showFiles={!isAycl}
               seedQuery={plan.root_topic || plan.title}
-              ayclToken={ayclToken}
-            />
-          </div>
-        </WorkspaceSectionSurface>
-      )}
-
-      {!isLearnerMode && sectionLayout.mountsSimulationPanel && (
-        <WorkspaceSectionSurface
-          kind="settings"
-          imageSrc={workspaceImage}
-          identity={identity}
-        >
-          <div
-            data-workspace-simulation-host
-            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
-          >
-            <WorkspaceSimulationPanel
-              workspaceId={workspaceId}
-              blocks={nodes}
-              workspaceTitle={plan.title || plan.root_topic}
-              workspaceGoal={plan.workspace_goal}
-              workspaceDescription={plan.description}
-              workspaceNotes={notesContent || plan.notes}
-              rootTopic={plan.root_topic}
               ayclToken={ayclToken}
             />
           </div>

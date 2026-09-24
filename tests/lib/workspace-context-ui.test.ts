@@ -56,14 +56,12 @@ describe("Context section layout resolver", () => {
       "map_types",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);
     expect(availableWorkspaceSections({ isOwner: false })).toEqual([
       "workspace",
       "context",
-      "simulation",
     ]);
     expect(resolveActiveSection("context", { isOwner: false })).toBe("context");
     expect(resolveActiveSection("knowledge", { isOwner: false })).toBe("workspace");

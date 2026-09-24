@@ -178,25 +178,17 @@ describe("validateWorkspaceSimulation (shipped pure path)", () => {
 
 describe("Simulation validation module remains pure (tab UI no longer primary host)", () => {
   it("validateWorkspaceSimulation still exported; panel redo uses scope+generate", () => {
-    const panel = read("components/WorkspaceSimulationPanel.tsx");
     const blockSim = read("components/WorkspaceBlockSimulationPanel.tsx");
     const view = readWorkspaceViewSurface();
     const aycl = read("components/AyclWorkspaceView.tsx");
     const mod = read("lib/workspace-simulation-validation.ts");
 
-    // Pure validation module stays available for non-tab use
     expect(mod).toContain("export function validateWorkspaceSimulation");
 
-    // Tab redo: scope + generate + results (not validation-only narrative)
-    expect(panel).toContain("data-simulation-scope");
-    expect(panel).toContain("data-simulation-generate");
-    expect(panel).toContain("data-simulation-questions");
-    expect(panel).toContain("data-simulation-exercises");
-    expect(panel).toContain("workspaceGoal");
-    expect(panel).toMatch(/notes|workspaceNotes/);
-
-    // Hosts pass snapshot fields
-    expect(view).toContain("WorkspaceSimulationPanel");
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    expect(surface).toContain("data-simulation-generate");
+    expect(surface).toContain("data-simulate-insights-keep");
+    expect(view).not.toContain("WorkspaceSimulationPanel");
     expect(view).toMatch(/workspaceGoal|workspace_goal/);
     expect(aycl).toContain("WorkspaceView");
 

@@ -38,7 +38,6 @@ describe("AYCL section layout mapping (shared helper)", () => {
       "map_types",
       "goals",
       "context",
-      "simulation",
       "knowledge",
       "settings",
     ]);
@@ -47,7 +46,6 @@ describe("AYCL section layout mapping (shared helper)", () => {
     expect(availableWorkspaceSections({ isOwner: false })).toEqual([
       "workspace",
       "context",
-      "simulation",
     ]);
   });
 

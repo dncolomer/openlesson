@@ -102,7 +102,7 @@ export function resolveWorkspaceSectionLayout(
         showBlockMapChrome: false,
         showSessionsColumn: false,
         mountsContextPanel: false,
-        mountsSimulationPanel: true,
+        mountsSimulationPanel: false,
         mountsDagsPanel: false,
         mountsMapTypesPanel: false,
         mountsGoalsPanel: false,
@@ -278,11 +278,11 @@ export function availableWorkspaceSections(options: WorkspaceSectionAuth): Works
     // Nav order: Workspace, DAGs (owner), Map Types (owner), Goals, Context, Simulation, Knowledge, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];
     if (options.isOwner) sections.push("dags", "map_types");
-    sections.push("goals", "context", "simulation", "knowledge", "settings");
+    sections.push("goals", "context", "knowledge", "settings");
     return sections;
   }
-  // Buyers / consumers: Context + Simulation (author/learner insight) + Workspace.
-  return ["workspace", "context", "simulation"];
+  // Buyers / consumers: Context + Workspace. Insight simulation stays on blocks.
+  return ["workspace", "context"];
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

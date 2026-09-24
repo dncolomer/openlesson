@@ -701,19 +701,19 @@ describe("Practice Portal structural wiring", () => {
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);
 
     // Simulation / helper chrome: no implementer-intent leak microcopy in shipped UI strings
-    const simulationPanel = read("components/WorkspaceSimulationPanel.tsx");
+    const simulationPanel = read("components/SimulateInsightsSurface.tsx");
     expect(simulationPanel).not.toMatch(/offline template/i);
     expect(simulationPanel).not.toMatch(/via xAI/i);
     expect(simulationPanel).not.toMatch(/xAI output/i);
     expect(simulationPanel).not.toMatch(/xAI questions and exercises/i);
     expect(simulationPanel).toContain("data-simulation-generate");
     expect(simulationPanel).toContain("data-simulation-collection");
-    expect(simulationPanel).toContain("Generate workspace samples");
+    expect(simulationPanel).not.toContain("Generate workspace samples");
     const blockSimPanel = read("components/WorkspaceBlockSimulationPanel.tsx");
     expect(blockSimPanel).not.toMatch(/for xAI samples/i);
     expect(blockSimPanel).not.toMatch(/via xAI/i);
     expect(blockSimPanel).not.toMatch(/offline template/i);
-    expect(blockSimPanel).toContain('data-simulation-auto-generate="false"');
+    expect(blockSimPanel).toContain("SimulateInsightsSurface");
     const newsWidget = read("components/WorkspaceTopicNewsWidget.tsx");
     expect(newsWidget).not.toMatch(/xAI-powered headlines/i);
 

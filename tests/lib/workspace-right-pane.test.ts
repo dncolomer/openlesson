@@ -551,7 +551,7 @@ describe("structural: right pane not map modal", () => {
     expect(pane).toContain("WORKSPACE_EDITOR_DANGER_DRAWER_ID");
     expect(pane).toContain("WorkspaceBlockDangerPanel");
     expect(pane).toContain('title="Local context"');
-    expect(pane).toContain('title="Block Simulation"');
+    expect(pane).toContain('title="Simulate Insights"');
     expect(pane).toContain("WorkspaceBlockSimulationPanel");
     // Order: simulation → edit → … → local → Danger zone last
     expect(pane).toMatch(

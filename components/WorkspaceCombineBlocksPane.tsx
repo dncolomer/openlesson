@@ -1059,7 +1059,7 @@ export function WorkspaceCombineBlocksPane({
       <WorkspaceRightPaneDrawer
         variant="section"
         drawerId="simulation"
-        title="Simulation"
+        title="Simulate Insights"
         defaultExpanded={false}
         bodyClassName="space-y-3"
         surfaceDataAttr="data-multi-block-simulation-drawer"

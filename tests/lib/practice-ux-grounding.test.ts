@@ -424,14 +424,14 @@ describe("Simulation shares live practice builders", () => {
   });
 
   it("drawer + overview UI wire workspaceGoal into deriveBlockSimulation", () => {
-    const panel = read("components/WorkspaceBlockSimulationPanel.tsx");
-    expect(panel).toMatch(/workspaceGoal:\s*workspaceGoal/);
-    expect(panel).toMatch(/workspaceTitle:\s*workspaceTitle/);
-    expect(panel).toContain("notes: workspaceNotes");
+    const route = read("app/api/workspace/simulate-insights/route.ts");
+    expect(route).toContain("workspace_goal");
+    expect(route).toContain("notes");
+    expect(route).toContain("runSimulateInsightsJob");
 
     const detail = read("components/WorkspaceBlockDetailPane.tsx");
-    expect(detail).toContain("workspaceGoal={workspaceGoal}");
-    expect(detail).toContain("workspaceTitle={workspaceTitle}");
+    expect(detail).toContain('title="Simulate Insights"');
+    expect(detail).toContain("WorkspaceBlockSimulationPanel");
 
     const view = readWorkspaceViewSurface();
     expect(view).toMatch(/workspaceGoal=\{plan\.workspace_goal\}/);
@@ -451,16 +451,16 @@ describe("Simulation shares live practice builders", () => {
         rootTopic: richCtx.rootTopic,
       },
     );
-    // Overview may list blocks; Q/E probes stay empty without xAI seed
     expect(Array.isArray(overview.sampleProbes)).toBe(true);
 
-    const tab = read("components/WorkspaceSimulationPanel.tsx");
-    // Tab: xAI generate + durable collection — no pure seed display
-    expect(tab).not.toContain("deriveSimulationSamples");
-    expect(tab).toContain("data-simulation-generate");
-    expect(tab).toContain("data-simulation-collection");
-    expect(tab).toContain("/api/workspace/simulation-samples");
-    expect(tab).not.toContain("data-simulation-seed-hint");
+    const surface = read("components/SimulateInsightsSurface.tsx");
+    const hosts = read("components/workspace-view/workspace-section-hosts.tsx");
+    expect(hosts).not.toContain("WorkspaceSimulationPanel");
+    expect(surface).toContain("data-simulation-generate");
+    expect(surface).toContain("data-simulation-collection");
+    expect(surface).toContain("/api/workspace/simulate-insights");
+    expect(surface).not.toContain('scope="workspace"');
+    expect(surface).not.toContain("data-simulation-questions");
   });
 
   it("simulation LLM system/user reuse TAP opening + domain exercise builders", () => {

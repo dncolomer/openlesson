@@ -167,7 +167,6 @@ describe("ILE tab unfocus PoW (shipped)", () => {
 describe("ILE Work / PoW chrome (shipped source)", () => {
   it("chapter widget and PiP omit I'm done answering; TAP keeps it; slider and Work bar ship", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
-    const compact = read("components/IleCompactStashWindow.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     expect(welcome).toContain("data-ile-session-settings");
@@ -185,9 +184,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).not.toContain("data-ile-im-done-answering-overlay");
     expect(helios).not.toContain("I'm done answering");
-    expect(compact).not.toContain("ImDoneAnsweringControl");
-    expect(compact).not.toContain("I'm done answering");
-    expect(compact).not.toContain("data-ile-im-done-answering");
+    expect(existsSync(join(ROOT, "components/IleCompactStashWindow.tsx"))).toBe(false);
 
     expect(tapPhases).toContain("ImDoneAnsweringControl");
     expect(tapShell).toContain("ImDoneAnsweringControl");
@@ -245,7 +242,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar.indexOf("data-ile-show-map")).toBeLessThan(dockBar.indexOf("<IleSubmitWorkButton"));
     expect(dockBar).toContain("onShowMap");
     expect(chrome).toContain("onShowMap=");
-    expect(view).toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
+    expect(chrome).toContain("onMinimizeHelios ?? onCloseHelios");
+    expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
     expect(dockBar).toContain("ArrowRight");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
@@ -285,14 +283,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(panes).not.toContain("NotebookSubmitButton");
     expect(panes).not.toContain("doneWriting");
     expect(view).toContain("thought-history");
-    expect(view).toContain("renderCompactWorkspace");
+    expect(view).not.toContain("renderCompactWorkspace");
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     expect(tabs).not.toContain("data-ile-chapter-tool-tabs");
     expect(tabs).not.toContain("Grokipedia");
     expect(tabs).not.toContain("thought-history");
     expect(tabs).not.toContain('"data-input"');
     expect(tabs).not.toContain("logs:");
-    expect(chrome).toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-session-insights-count");
     expect(helios).not.toContain("data-ile-chapter-brief");
     expect(helios).not.toContain("fadeToRight");
     const voiceBar = read("components/session-view/ile-voice-bar.tsx");
@@ -332,13 +330,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-inner"),
     );
-    expect(powBar).toContain("data-ile-session-insights-count");
+    expect(powBar).not.toContain("data-ile-session-insights-count");
+    expect(powBar).not.toContain(">Insights<");
     expect(powBar).toContain("data-ile-global-resources");
     expect(powBar).toContain("data-ile-pow-resource-actions");
     expect(powBar).toContain("ml-auto");
-    expect(powBar.indexOf("data-ile-session-insights-count")).toBeLessThan(
-      powBar.indexOf("data-ile-global-resources"),
-    );
     expect(powBar).not.toContain("IleSubmitWorkButton");
     expect(powBar).not.toContain("data-ile-review-work");
     expect(powBar).not.toContain("data-ile-submit-turn");
@@ -367,7 +363,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(submitTurn).toContain("ileEndTurnChaptersToMarkDone");
     expect(submitTurn).toContain("handleMarkChapterDone({ stepId, closeOverride: true })");
     expect(view).toContain("setCraftingInsightsOpen(true)");
-    expect(view).toContain("data-ile-compact-insight-craft");
+    expect(view).not.toContain("data-ile-compact-insight-craft");
     expect(view).toContain("turnInsightCraft()");
     expect(view).toContain("insightCraftOpen={craftingInsightsOpen}");
     expect(view).toContain("insightCraft={turnInsightCraft()}");
@@ -375,7 +371,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("ileSessionSettingsPath");
     expect(view).toContain("if (showWelcomeModal)");
     expect(view).toContain("IleTurnInsightCraft");
-    expect(view).toContain("IleSessionInsightsPanel");
+    expect(view).not.toContain("IleSessionInsightsPanel");
+    expect(view).toContain("IleMapInsightsWidget");
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
     expect(craft).toContain("data-ile-turn-insight-craft");
     expect(craft).toContain("data-ile-end-turn-screen");
@@ -423,8 +420,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("IleInsightTrophyStrip");
     expect(view).toContain("slotCount={minInsightsPerChapter}");
     expect(view).toContain("workCanvasHeaderLeading={workCanvasInsightSlots}");
-    expect(view).toContain("compactHeaderLeading: workCanvasInsightSlots");
-    expect(view).toContain("compactHeaderExtra: workCanvasHeaderExtra");
+    expect(view).not.toContain("compactHeaderLeading");
+    expect(view).not.toContain('renderWorkCanvas("pip")');
     expect(view).toContain("IleMapInsightsWidget");
     expect(view).toContain("workCanvasHeaderExtra");
     expect(chrome).toContain("workCanvasHeaderExtra");

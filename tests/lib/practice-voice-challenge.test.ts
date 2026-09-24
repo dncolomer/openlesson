@@ -25,6 +25,7 @@ import {
   PRACTICE_VOICE_CHALLENGE_SCRIPT,
   TAP_VOICE_CHALLENGE_SENTENCE_TWO,
   TAP_VOICE_CHALLENGE_SCRIPT,
+  advanceIleSilenceClock,
   clampIleSilenceLockMinutes,
   ileImpurityExitPlan,
   ileMicCountsAsSilence,
@@ -278,6 +279,59 @@ describe("ILE silence lock", () => {
     const casual = applyIlePregameDifficultyPreset("casual");
     expect(casual.silenceLockMinutes).toBeGreaterThan(0);
     expect(applyIlePregameDifficultyPreset("ironman").silenceLockMinutes).toBe(3);
+  });
+
+  it("a quiet live mic locks, and only a new transcript restarts the clock", () => {
+    const quiet = advanceIleSilenceClock({
+      now: 5 * 60_000,
+      lastSoundAt: 0,
+      lockCount: 0,
+      minutes: 5,
+      holding: false,
+      micSilent: false,
+      previousSpeech: "already heard",
+      speechText: "already heard",
+    });
+    expect(quiet.holding).toBe(true);
+    expect(quiet.outcome).toBe("rest");
+    expect(quiet.lockCount).toBe(1);
+
+    const stillTalking = advanceIleSilenceClock({
+      now: 5 * 60_000,
+      lastSoundAt: 0,
+      lockCount: 0,
+      minutes: 5,
+      holding: false,
+      micSilent: false,
+      previousSpeech: "already heard",
+      speechText: "already heard and more",
+    });
+    expect(stillTalking.holding).toBe(false);
+    expect(stillTalking.outcome).toBe("continue");
+    expect(stillTalking.lastSoundAt).toBe(5 * 60_000);
+
+    const muted = advanceIleSilenceClock({
+      now: 60_000,
+      lastSoundAt: 0,
+      lockCount: 0,
+      minutes: 1,
+      holding: false,
+      micSilent: true,
+      previousSpeech: "",
+      speechText: "leftover words while muted",
+    });
+    expect(muted.holding).toBe(true);
+    expect(muted.outcome).toBe("rest");
+    expect(muted.speech).toBe("");
+
+    const hook = read("components/session-view/use-ile-silence-lock.ts");
+    const view = read("components/SessionView.tsx");
+    expect(hook).toContain("advanceIleSilenceClock");
+    expect(hook).not.toContain("speakingRef");
+    expect(view).toContain("speechText: sessionThoughtInterface.crystallizableText");
+    expect(view).toContain("micSilent,");
+    expect(view).not.toContain("isSpeaking && !micSilent");
+    expect(view).toContain("mountIleSilenceScreen");
   });
 
   it("lock 1 and 2 are rest-and-unlock and lock 3 is impurity without another return to work", () => {

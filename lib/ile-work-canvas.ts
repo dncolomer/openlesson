@@ -96,6 +96,7 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `You can CREATE the same marks in your reply via JSON "elements" (types: ${shapes}).`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
     `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","origin":{"x":number,"y":number},"elements":[{"type":"rectangle","x":120,"y":240,"width":160,"height":80,"label":{"text":"optional caption"}}]}.`,
+    `"text" is plain sentences only. Do not put JSON, code fences, or element arrays inside "text".`,
     `"elements" may include ${shapes}. Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
 }
@@ -813,11 +814,18 @@ export function applyIleXaiTurnToWorkCanvas(
   payload: IleXaiCanvasTurnPayload,
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(scene);
-  const text = String(payload.text || "").trim();
-  const extra = normalizeExtraSkeletons(payload.elements);
+  let text = String(payload.text || "").trim();
+  let extra = normalizeExtraSkeletons(payload.elements);
+  let originInput = payload.origin;
+  if (ileXaiReplyIsCanvasJson(text)) {
+    const parsed = parseIleXaiCanvasTurn(text);
+    text = String(parsed.text || "").trim();
+    if (extra.length === 0) extra = normalizeExtraSkeletons(parsed.elements);
+    if (!ileWorkCanvasFiniteOrigin(originInput)) originInput = parsed.origin ?? originInput;
+  }
   if (!text && extra.length === 0) return current;
 
-  const origin = ileWorkCanvasFiniteOrigin(payload.origin) ?? nextXaiTextOrigin(current.elements);
+  const origin = ileWorkCanvasFiniteOrigin(originInput) ?? nextXaiTextOrigin(current.elements);
   const turnId = String(payload.turnId || `turn-${Date.now()}`);
   const customData = {
     [ILE_XAI_CANVAS_CUSTOM_DATA_KEY]: true,
@@ -1617,21 +1625,121 @@ export function compressIleWorkCanvasScene(
   };
 }
 
+const ILE_XAI_REPLY_TEXT_KEYS = [
+  "text",
+  "message",
+  "reply",
+  "content",
+  "coaching",
+  "answer",
+  "response",
+] as const;
+
+/** True when a reply is a canvas JSON payload rather than a sentence for the learner. */
+export function ileXaiReplyIsCanvasJson(raw: string | null | undefined): boolean {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) return true;
+  if (/```(?:json)?/i.test(trimmed) && trimmed.includes("{")) return true;
+  return /"elements"\s*:/.test(trimmed) && /"(?:text|origin|type)"\s*:/.test(trimmed);
+}
+
+function repairLooseJson(source: string): string {
+  return source.replace(/[\u201c\u201d]/g, '"').replace(/,\s*([}\]])/g, "$1");
+}
+
+function tryParseJsonObject(candidate: string): Record<string, unknown> | null {
+  for (const attempt of [candidate, repairLooseJson(candidate)]) {
+    try {
+      const parsed = JSON.parse(attempt) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      return parsed as Record<string, unknown>;
+    } catch {
+      /* try the repaired candidate */
+    }
+  }
+  return null;
+}
+
 function extractJsonObject(raw: string): Record<string, unknown> | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fence?.[1]?.trim() || trimmed;
+  const direct = tryParseJsonObject(candidate);
+  if (direct) return direct;
   const start = candidate.indexOf("{");
   const end = candidate.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
-  try {
-    const parsed = JSON.parse(candidate.slice(start, end + 1)) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
+  return tryParseJsonObject(candidate.slice(start, end + 1));
+}
+
+function looksLikeJsonBlob(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    return true;
   }
+  return /```(?:json)?/i.test(trimmed);
+}
+
+function proseOutsideJson(raw: string): string {
+  let text = raw.replace(/```(?:json)?\s*[\s\S]*?```/gi, " ");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    text = `${text.slice(0, start)} ${text.slice(end + 1)}`;
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function salvageQuotedTextField(raw: string): string {
+  const match = raw.match(
+    /"(?:text|message|reply|content|coaching|answer|response)"\s*:\s*"((?:\\.|[^"\\])*)"/,
+  );
+  if (!match?.[1]) return "";
+  try {
+    return String(JSON.parse(`"${match[1]}"`) || "").trim();
+  } catch {
+    return match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
+  }
+}
+
+function textFromParsedCanvasJson(parsed: Record<string, unknown>, depth = 0): string {
+  if (depth > 2) return "";
+  for (const key of ILE_XAI_REPLY_TEXT_KEYS) {
+    const value = parsed[key];
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed || looksLikeJsonBlob(trimmed)) {
+        if (!trimmed) continue;
+        const inner = extractJsonObject(trimmed);
+        const nested = inner ? textFromParsedCanvasJson(inner, depth + 1) : "";
+        if (nested) return nested;
+        const prose = proseOutsideJson(trimmed);
+        if (prose && !looksLikeJsonBlob(prose)) return prose;
+        continue;
+      }
+      return trimmed;
+    }
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = textFromParsedCanvasJson(value as Record<string, unknown>, depth + 1);
+      if (nested) return nested;
+    }
+  }
+  return "";
+}
+
+function visibleTextFromXaiReply(source: string, parsed: Record<string, unknown> | null): string {
+  const fromJson = parsed ? textFromParsedCanvasJson(parsed) : salvageQuotedTextField(source);
+  if (fromJson && !looksLikeJsonBlob(fromJson)) return fromJson;
+  if (!ileXaiReplyIsCanvasJson(source)) return source;
+  const prose = proseOutsideJson(source);
+  if (prose && !looksLikeJsonBlob(prose)) return prose;
+  return "";
 }
 
 function originFromParsedCanvasJson(parsed: Record<string, unknown>): { x: number; y: number } | null {
@@ -1647,17 +1755,12 @@ export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCan
   const source = String(raw || "").trim();
   if (!source) return { text: "", elements: [] };
   const parsed = extractJsonObject(source);
-  if (!parsed) return { text: source, elements: [] };
-  const text =
-    typeof parsed.text === "string"
-      ? parsed.text
-      : typeof parsed.message === "string"
-        ? parsed.message
-        : source;
+  const text = visibleTextFromXaiReply(source, parsed);
+  if (!parsed) return { text, elements: [] };
   const elements = normalizeExtraSkeletons(parsed.elements ?? parsed.canvas_elements);
   const origin = originFromParsedCanvasJson(parsed);
   return {
-    text: String(text || "").trim() || source,
+    text,
     elements,
     turnId: typeof parsed.turnId === "string" ? parsed.turnId : null,
     origin,

@@ -78,15 +78,6 @@ export function ileWordBoxMenuActions(selection: string | null | undefined): Ile
   return [];
 }
 
-export function resolveIleGrokipediaSearchValue(input: {
-  prefillQuery?: string | null;
-  sessionProblem?: string | null;
-}): string {
-  const prefill = normalizeQuery(input.prefillQuery);
-  if (prefill) return prefill;
-  return String(input.sessionProblem || "");
-}
-
 export function openIleWordBoxTool(input: {
   tool: IleWordBoxTool | string;
   query: string | null | undefined;

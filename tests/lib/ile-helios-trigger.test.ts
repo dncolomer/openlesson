@@ -31,14 +31,15 @@ function writeScratch(name: string, body: string) {
 
 const ILE_SURFACES = [
   "components/SessionHeliosPanel.tsx",
-  "components/IleCompactStashWindow.tsx",
-  "lib/ile-compact-chrome.ts",
   "components/thought-ui/ThoughtUi.tsx",
   "components/session-view/use-session-idle.ts",
   "components/session-view/use-session-speech.ts",
 ] as const;
 
 const DELETED_LIVE = [
+  "components/IleCompactStashWindow.tsx",
+  "lib/ile-compact-chrome.ts",
+  "lib/ile-auto-pip.ts",
   "components/IleHuntAnswersPill.tsx",
   "lib/ile-hunt-answers-pill.ts",
   "lib/ile-concept-marks.ts",

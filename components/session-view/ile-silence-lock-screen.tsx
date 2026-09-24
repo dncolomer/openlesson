@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import {
   ILE_SESSION_IMPURITY_BODY,
@@ -13,6 +15,12 @@ import {
   ileImpurityExitPlan,
   ileRestUnlock,
 } from "@/lib/practice-voice-challenge";
+
+/** Paint above the session. A fixed layer inside the flex stage gets clipped. */
+export function mountIleSilenceScreen(node: ReactNode): ReactNode {
+  if (typeof document === "undefined") return node;
+  return createPortal(node, document.body);
+}
 
 export function IleSilenceRestScreen({
   lockCount,

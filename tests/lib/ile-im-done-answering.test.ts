@@ -291,7 +291,8 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
 
     const chrome = read("components/session-view/session-chrome.tsx");
     expect(chrome).not.toContain("IleSubmitWorkButton");
-    expect(chrome).toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-session-insights-count");
+    expect(chrome).toContain("data-ile-global-resources");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-end-turn");
     const voice = read("components/session-view/ile-voice-bar.tsx");

@@ -50,7 +50,6 @@ export type SessionToolPanesProps = {
   transferHealth: TransferHealth;
   onClearLogs: () => void;
   isMobile: boolean;
-  onLeaveIleTab: (reason: "grok" | "grokipedia") => void;
   gatherBlockId?: string | null;
   gatherChapterId?: string | null;
   gatheredResources?: WorkspaceExternalResource[];

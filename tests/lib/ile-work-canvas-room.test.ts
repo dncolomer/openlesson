@@ -1,16 +1,9 @@
+/**
+ * The Work/PiP canvas-room peer channel is gone. The main board stays one canvas.
+ */
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import {
-  countIleWorkCanvasRoomPeers,
-  ileWorkCanvasOtherPeer,
-  ileWorkCanvasPeerLabel,
-  ileWorkCanvasSceneFingerprint,
-  nextIleWorkCanvasRoomNonce,
-  publishIleWorkCanvasRoom,
-  subscribeIleWorkCanvasRoom,
-  type IleWorkCanvasRoomMessage,
-} from "@/lib/ile-work-canvas-room";
 import { ileCompactPaintKey } from "@/lib/ile-blur-screenshare";
 
 const ROOT = join(__dirname, "../..");
@@ -21,54 +14,37 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
-describe("ILE Work canvas PiP room (shipped)", () => {
-  it("treats Work and PiP as two local collaborators on one board", () => {
-    expect(ileWorkCanvasPeerLabel("pip")).toBe("PiP");
-    expect(ileWorkCanvasOtherPeer("work")).toBe("pip");
-    const board = `board-${Date.now()}`;
-    const seen: IleWorkCanvasRoomMessage[] = [];
-    const unsubWork = subscribeIleWorkCanvasRoom(board, "work", (msg) => {
-      if (msg.from !== "work") seen.push(msg);
-    });
-    const unsubPip = subscribeIleWorkCanvasRoom(board, "pip", () => {});
-    expect(countIleWorkCanvasRoomPeers(board)).toBe(2);
-    const nonce = nextIleWorkCanvasRoomNonce(board);
-    publishIleWorkCanvasRoom(board, {
-      kind: "scene",
-      from: "pip",
-      nonce,
-      elements: [{ id: "a", version: 1, versionNonce: 2, isDeleted: false }],
-      files: {},
-    });
-    expect(seen).toHaveLength(1);
-    expect(seen[0]?.kind).toBe("scene");
-    expect(
-      ileWorkCanvasSceneFingerprint(
-        [{ id: "a", version: 1, versionNonce: 2, isDeleted: false }],
-        {},
-      ),
-    ).toBe(
-      ileWorkCanvasSceneFingerprint(
-        [{ id: "a", version: 1, versionNonce: 2, isDeleted: false }],
-        {},
-      ),
-    );
-    unsubPip();
-    unsubWork();
-    expect(countIleWorkCanvasRoomPeers(board)).toBe(0);
+describe("ILE Work canvas has no PiP peer channel", () => {
+  it("does not subscribe a second collaborator", () => {
+    expect(existsSync(join(ROOT, "lib/ile-work-canvas-room.ts"))).toBe(false);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("isCollaborating");
-    expect(canvas).toContain("subscribeIleWorkCanvasRoom");
+    expect(canvas).not.toContain("subscribeIleWorkCanvasRoom");
+    expect(canvas).not.toContain("publishIleWorkCanvasRoom");
+    expect(canvas).not.toContain("ile-work-canvas-room");
+    expect(canvas).not.toContain("peerId");
+    expect(canvas).not.toContain('from: "pip"');
+    expect(canvas).toContain("export function WorkCanvas");
+    expect(canvas).toContain("boardId");
+    expect(canvas).toContain("bindIleSurfaceEditorEvents");
     expect(canvas).toContain("IleExcalidrawErrorBoundary");
-    expect(canvas).toContain('captureUpdate: "NEVER"');
+
     const view = read("components/SessionView.tsx");
-    expect(view).toContain('renderWorkCanvas("pip")');
+    expect(view).not.toContain('renderWorkCanvas("pip")');
+    expect(view).not.toContain("peerId");
     expect(view).toContain("boardId={boardId}");
-    expect(view).toContain("peerId={peerId}");
+    expect(view).toContain("<WorkCanvas");
+
+    const scout = read("components/scout-tap/scout-tap-phases.tsx");
+    const tap = read("components/tap-score/tap-score-phases.tsx");
+    expect(scout).not.toContain("peerId");
+    expect(tap).not.toContain("peerId");
+    expect(scout).toContain("boardId=");
+    expect(tap).toContain("boardId=");
+
     const hook = read("lib/useIleBlurScreenshare.tsx");
-    expect(hook).toContain("ileCompactPaintKey");
-    expect(hook).not.toContain("[input.compact, input.renderCompact, paintCompact]");
+    expect(hook).not.toContain("ileCompactPaintKey");
+    expect(hook).not.toContain("requestWindow");
     expect(ileCompactPaintKey({ isScreenSharing: false })).toBe(
       ileCompactPaintKey({ isScreenSharing: false, formingText: "" }),
     );

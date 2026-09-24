@@ -15,8 +15,6 @@ export function IleVoiceBar({
   onToolChange,
   onBackToDashboard,
   errorNotification = false,
-  showOpenPicInPic = false,
-  onOpenPicInPic,
   chapterTitle,
   chapterDescription,
   chapterAestheticSrc,
@@ -28,8 +26,6 @@ export function IleVoiceBar({
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
-  showOpenPicInPic?: boolean;
-  onOpenPicInPic?: () => void;
   chapterTitle?: string | null;
   chapterDescription?: string | null;
   chapterAestheticSrc?: string | null;
@@ -135,8 +131,6 @@ export function IleVoiceBar({
           onToolChange={onToolChange}
           onBackToDashboard={onBackToDashboard}
           errorNotification={errorNotification}
-          showOpenPicInPic={showOpenPicInPic}
-          onOpenPicInPic={onOpenPicInPic}
         />
       </div>
     </div>

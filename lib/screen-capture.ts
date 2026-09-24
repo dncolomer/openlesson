@@ -52,40 +52,9 @@ export type ScreenCaptureMediaHost = {
   closed?: boolean;
   document?: { visibilityState?: string };
   navigator?: { mediaDevices?: Partial<ScreenCaptureMediaDevices> | null };
-  documentPictureInPicture?: { window?: ScreenCaptureMediaHost | null };
 };
 
-export type ScreenCaptureMediaSource = "pip" | "opener" | "none";
-
-/**
- * Clone a display-media stream so the opener can own tracks independently of
- * the Document PiP browsing context that may have called getDisplayMedia.
- */
-export function adoptScreenCaptureStreamOnOpener(stream: MediaStream): MediaStream {
-  if (typeof stream.clone === "function") {
-    return stream.clone();
-  }
-  const adopted = new MediaStream();
-  for (const track of stream.getTracks()) {
-    adopted.addTrack(typeof track.clone === "function" ? track.clone() : track);
-  }
-  return adopted;
-}
-
-/**
- * Closing a PiP host must not stop an opener-held stream. PiP-owned streams
- * still end with the host.
- */
-export function screenCaptureShouldStopOnHostClose(input: {
-  streamOwner: ScreenCaptureMediaSource | string | null | undefined;
-  hostClosed: boolean;
-  host?: "pip" | "opener";
-}): boolean {
-  if (!input.hostClosed) return false;
-  const host = input.host ?? "pip";
-  if (input.streamOwner === "opener") return false;
-  return host === "pip" || host === "opener";
-}
+export type ScreenCaptureMediaSource = "opener" | "none";
 
 function hostHasGetDisplayMedia(
   host: ScreenCaptureMediaHost | null | undefined,
@@ -100,16 +69,11 @@ function hostIsUsableForDisplayMedia(host: ScreenCaptureMediaHost | null | undef
 }
 
 /**
- * getDisplayMedia must run on a visible, fully-active document.
- * Mini-mode Document PiP is visible while the ILE tab is hidden — use the PiP window.
+ * getDisplayMedia runs on the main session page.
  */
 export function resolveScreenCaptureMediaDevices(
   opener: ScreenCaptureMediaHost | null | undefined = typeof window === "undefined" ? null : window,
 ): { mediaDevices: ScreenCaptureMediaDevices | null; source: ScreenCaptureMediaSource } {
-  const pip = opener?.documentPictureInPicture?.window ?? null;
-  if (hostIsUsableForDisplayMedia(pip)) {
-    return { mediaDevices: pip!.navigator!.mediaDevices as ScreenCaptureMediaDevices, source: "pip" };
-  }
   if (hostIsUsableForDisplayMedia(opener)) {
     return { mediaDevices: opener!.navigator!.mediaDevices as ScreenCaptureMediaDevices, source: "opener" };
   }
@@ -208,19 +172,14 @@ export function createScreenCapture(options: ScreenCaptureOptions = {}): ScreenC
         return false;
       }
       console.log("[ScreenCapture] Requesting getDisplayMedia...", resolved.source);
-      // Request screen capture permission from a visible document (PiP when the ILE tab is hidden).
-      const pipStream = await resolved.mediaDevices.getDisplayMedia({
+      const mediaStream = await resolved.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: "monitor", // Prefer full screen
           frameRate: 1, // Low framerate since we only need screenshots
         },
         audio: false,
       });
-      // Own tracks on the opener so closing Document PiP does not end capture.
-      stream =
-        resolved.source === "pip"
-          ? adoptScreenCaptureStreamOnOpener(pipStream)
-          : pipStream;
+      stream = mediaStream;
       streamOwner = "opener";
       console.log("[ScreenCapture] Got stream:", stream, "owner:", streamOwner);
 

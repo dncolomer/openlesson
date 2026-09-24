@@ -34,7 +34,7 @@ import {
   type IlePowDisplayCounts,
 } from "@/lib/ile-pow-counters";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
-import { Lightbulb, Boxes } from "lucide-react";
+import { Boxes } from "lucide-react";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -88,8 +88,6 @@ export type SessionChromeProps = {
   onSubmitTurn?: () => void;
   submitTurnLabel?: string;
   submitTurnBusy?: boolean;
-  sessionInsightCount?: number;
-  onOpenSessionInsights?: () => void;
   onCloseToolOverlay: () => void;
   allowEndSession: boolean;
   showEndDialog: boolean;
@@ -159,8 +157,6 @@ export function SessionChrome({
   onSubmitTurn,
   submitTurnLabel = "End turn",
   submitTurnBusy = false,
-  sessionInsightCount = 0,
-  onOpenSessionInsights,
   onCloseToolOverlay,
   allowEndSession,
   showEndDialog,
@@ -262,20 +258,6 @@ export function SessionChrome({
             data-ile-pow-resource-actions
             className="ml-auto flex shrink-0 items-center gap-2"
           >
-            <button
-              type="button"
-              data-ile-session-insights-count
-              title="Session insights"
-              aria-label="Session insights"
-              onClick={() => onOpenSessionInsights?.()}
-              className="flex shrink-0 items-center gap-1 rounded-none border border-white bg-white px-1.5 py-0 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100"
-            >
-              <Lightbulb className="size-3" strokeWidth={2.3} aria-hidden />
-              Insights
-              <span data-ile-session-insights-value className="bg-neutral-950 px-1 py-0 text-white">
-                {sessionInsightCount}
-              </span>
-            </button>
             {onOpenGlobalResources ? (
               <button
                 type="button"

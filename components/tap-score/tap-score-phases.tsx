@@ -506,7 +506,6 @@ export function TapScorePhases(props: {
                 <WorkCanvas
                   key={`tap-work-canvas:${phase}`}
                   boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
-                  peerId="work"
                   initialSceneData={workCanvasScene}
                   applyElements={canvasApplyElements}
                   applyElementsNonce={canvasApplyNonce}

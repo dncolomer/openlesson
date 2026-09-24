@@ -25,7 +25,6 @@ import {
   ileWordBoxShouldClearSelection,
   ILE_WORD_BOX_MENU_OFFSET_PX,
   openIleWordBoxTool,
-  resolveIleGrokipediaSearchValue,
   splitIleTurnWords,
   stripIleConceptMarkDelimiters,
 } from "@/lib/ile-word-boxes";
@@ -106,13 +105,6 @@ describe("ile word-box helpers (shipped)", () => {
     expect(dantes).toBeNull();
     expect(tools).toEqual([]);
     expect(prefills).toEqual([]);
-
-    expect(
-      resolveIleGrokipediaSearchValue({
-        prefillQuery: "binary search",
-        sessionProblem: "the whole session problem",
-      }),
-    ).toBe("binary search");
 
     const html = renderToStaticMarkup(
       createElement(IleWordBoxText, { text: learningTurn }),
@@ -274,7 +266,6 @@ describe("ILE word-box surfaces (shipped source)", () => {
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     const boxes = read("components/thought-ui/IleWordBoxText.tsx");
     const markdown = read("components/thought-ui/HeliosMarkdown.tsx");
-    const grok = read("components/GrokGrokipediaTool.tsx");
     const dantes = read("components/DantesTool.tsx");
     const panes = read("components/session-view/session-tool-panes.tsx");
     const view = readSessionViewSurface();
@@ -349,8 +340,9 @@ describe("ILE word-box surfaces (shipped source)", () => {
     expect(view).not.toContain("onOpenConcept");
     expect(panes).not.toContain("DantesTool");
     expect(panes).not.toContain("GrokGrokipediaTool");
+    expect(panes).not.toContain("onLeaveIleTab");
     expect(panes).not.toContain("prefillQuery={toolPrefillQuery}");
-    expect(grok).toContain("prefillQuery");
+    expect(existsSync(join(ROOT, "components/GrokGrokipediaTool.tsx"))).toBe(false);
     expect(dantes).toContain("prefillQuery");
 
     expect(overlay).not.toContain("IleWordBoxText");

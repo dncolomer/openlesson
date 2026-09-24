@@ -65,9 +65,8 @@ describe("Review work chrome (shipped source)", () => {
     );
     expect(powBar).not.toContain("IleSubmitWorkButton");
     expect(powBar).not.toContain("data-ile-review-work");
-    expect(powBar).toContain("data-ile-session-insights-count");
-    const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
-    expect(insightsIdx).toBeGreaterThan(-1);
+    expect(powBar).not.toContain("data-ile-session-insights-count");
+    expect(powBar).toContain("data-ile-global-resources");
     expect(powBar).not.toContain("data-ile-identity-row");
 
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
@@ -90,16 +89,10 @@ describe("Review work chrome (shipped source)", () => {
 
     const view = read("components/SessionView.tsx");
     expect(view).not.toContain("data-ile-compact-review-work");
-    expect(view).toContain("data-ile-compact-insight-craft");
-    const compact = view.slice(
-      view.indexOf("const renderCompactWorkspace"),
-      view.indexOf("renderCompact: () => renderCompactWorkspace()"),
-    );
-    expect(compact).not.toContain("data-ile-compact-review-work");
-    expect(compact).toContain("IleWorkDockBar");
-    expect(compact).toContain("data-ile-compact-insight-craft");
-    expect(compact).toContain("turnInsightCraft()");
-    expect(compact).not.toContain("onReviewWork");
+    expect(view).not.toContain("renderCompactWorkspace");
+    expect(view).not.toContain("data-ile-compact-insight-craft");
+    expect(view).toContain("turnInsightCraft()");
+    expect(view).not.toContain("onReviewWork");
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).toContain("data-ile-end-turn-cluster");

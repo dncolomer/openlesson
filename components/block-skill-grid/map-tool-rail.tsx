@@ -49,7 +49,7 @@ export function MapToolRail({
   onToolClick: (tool: BlockMapToolId) => void;
   /** Extra overlay anchor classes (e.g. ILE chapter maps sit below the PoW bar). */
   overlayAnchorClass?: string;
-  /** ILE chapter maps: hide the select/lasso utilities strip under PoW resources. */
+  /** Hide the draw toolbox even while a layer is active. */
   hidden?: boolean;
 }) {
   if (hidden || learnerMode || viewOnly) return null;

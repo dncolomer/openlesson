@@ -298,9 +298,9 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(grid).toContain("defaultZoomAtReference");
     expect(grid).toContain("overlayAnchorClass");
     expect(grid).toContain('suggestMode === "chapter" ? "top-12" : "top-2"');
-    expect(grid).toContain('hidden: suggestMode === "chapter"');
-    expect(rail).toContain("hidden = false");
-    expect(rail).toContain("if (hidden || learnerMode || viewOnly) return null");
+    expect(grid).not.toContain('hidden: suggestMode === "chapter"');
+    expect(rail).toContain("if (!annotationDrawingActive) return null");
+    expect(rail).toContain("data-annotation-toolbox");
 
     expect(voice).toContain("data-ile-voice-bar");
     expect(voice).toContain("w-full");
@@ -341,7 +341,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).toContain("data-ile-pow-dual-pill");
     const powCount = chrome.slice(
       chrome.indexOf("data-ile-pow-count={type}"),
-      chrome.indexOf("data-ile-session-insights-count"),
+      chrome.indexOf("data-ile-global-resources"),
     );
     expect(powCount).toContain("data-ile-pow-dual-pill");
     expect(powCount).toContain("bg-white");
@@ -351,13 +351,13 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(powCount).not.toContain("text-red-400");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-identity-row");
-    expect(chrome).toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-session-insights-count");
     const powBar = chrome.slice(
       chrome.indexOf("data-ile-pow-resource-bar"),
       chrome.indexOf("data-ile-session-modal"),
     );
-    const insightsIdx = powBar.indexOf("data-ile-session-insights-count");
-    expect(insightsIdx).toBeGreaterThan(-1);
+    expect(powBar).not.toContain("data-ile-session-insights-count");
+    expect(powBar).not.toContain(">Insights<");
     expect(powBar).not.toContain("data-ile-identity-row");
     expect(powBar).not.toContain("data-ile-review-work");
     expect(powBar).not.toContain("data-ile-submit-turn");

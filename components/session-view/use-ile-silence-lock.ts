@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  advanceIleSilenceClock,
   clampIleSilenceLockMinutes,
   ileRestUnlock,
   ileSilenceLockOutcome,
-  nextIleSilenceLock,
   type IleSilenceLockOutcome,
 } from "@/lib/practice-voice-challenge";
 
 export function useIleSilenceLock(input: {
   armed: boolean;
-  speaking: boolean;
+  /** Live transcript. A change to new text is speech. */
+  speechText: string;
+  /** Muted, missing, or ended mic. Leftover text must not keep the clock alive. */
+  micSilent: boolean;
   minutes: number;
 }) {
   const minutes = clampIleSilenceLockMinutes(input.minutes);
@@ -20,39 +23,44 @@ export function useIleSilenceLock(input: {
   const lastSoundAt = useRef(Date.now());
   const lockCountRef = useRef(0);
   const holdingRef = useRef(false);
-  const speakingRef = useRef(input.speaking);
-  speakingRef.current = input.speaking;
+  const speechTextRef = useRef(input.speechText);
+  const micSilentRef = useRef(input.micSilent);
+  const heardRef = useRef("");
+  speechTextRef.current = input.speechText;
+  micSilentRef.current = input.micSilent;
   const wasArmed = useRef(false);
 
   useEffect(() => {
     if (!input.armed) {
       wasArmed.current = false;
+      heardRef.current = "";
       return;
     }
     if (holdingRef.current) return;
     if (!wasArmed.current) {
       wasArmed.current = true;
       lastSoundAt.current = Date.now();
+      heardRef.current = speechTextRef.current.trim();
     }
-    // Only real speech restarts the quiet clock. A muted mic stays silent.
-    if (input.speaking) lastSoundAt.current = Date.now();
-  }, [input.armed, input.speaking]);
+  }, [input.armed]);
 
   useEffect(() => {
     if (!input.armed || holding) return;
     const id = window.setInterval(() => {
       if (holdingRef.current) return;
-      if (speakingRef.current) {
-        lastSoundAt.current = Date.now();
-        return;
-      }
-      const step = nextIleSilenceLock({
+      const step = advanceIleSilenceClock({
+        now: Date.now(),
+        lastSoundAt: lastSoundAt.current,
         lockCount: lockCountRef.current,
-        silenceMs: Date.now() - lastSoundAt.current,
         minutes,
-        alreadyLatched: false,
+        holding: false,
+        micSilent: micSilentRef.current,
+        previousSpeech: heardRef.current,
+        speechText: speechTextRef.current,
       });
-      if (step.lockCount === lockCountRef.current) return;
+      lastSoundAt.current = step.lastSoundAt;
+      heardRef.current = step.speech;
+      if (!step.holding) return;
       lockCountRef.current = step.lockCount;
       holdingRef.current = true;
       setLockCount(step.lockCount);

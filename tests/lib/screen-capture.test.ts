@@ -1,38 +1,31 @@
 /**
- * getDisplayMedia must run on a visible document. Mini-mode PiP is that document.
+ * getDisplayMedia runs on the main session page.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  adoptScreenCaptureStreamOnOpener,
   isScreenCaptureInvalidState,
   isScreenCaptureStartQuietFailure,
   isScreenCaptureUserDenied,
   resolveScreenCaptureMediaDevices,
-  screenCaptureShouldStopOnHostClose,
 } from "@/lib/screen-capture";
+
+const ROOT = join(__dirname, "../..");
 
 function gdm() {
   return async () => new MediaStream();
 }
 
 describe("resolveScreenCaptureMediaDevices (shipped)", () => {
-  it("uses the visible Document PiP window when the opener tab is hidden", () => {
-    const pipGdm = gdm();
+  it("uses the main page even when the tab is hidden", () => {
     const openerGdm = gdm();
     const resolved = resolveScreenCaptureMediaDevices({
       document: { visibilityState: "hidden" },
       navigator: { mediaDevices: { getDisplayMedia: openerGdm } },
-      documentPictureInPicture: {
-        window: {
-          closed: false,
-          document: { visibilityState: "visible" },
-          navigator: { mediaDevices: { getDisplayMedia: pipGdm } },
-        },
-      },
     });
-    expect(resolved.source).toBe("pip");
-    expect(resolved.mediaDevices?.getDisplayMedia).toBe(pipGdm);
-    expect(resolved.mediaDevices?.getDisplayMedia).not.toBe(openerGdm);
+    expect(resolved.source).toBe("opener");
+    expect(resolved.mediaDevices?.getDisplayMedia).toBe(openerGdm);
   });
 
   it("uses the opener when the ILE tab is visible", () => {
@@ -46,39 +39,22 @@ describe("resolveScreenCaptureMediaDevices (shipped)", () => {
   });
 });
 
-describe("screen capture stream lifetime vs PiP host (shipped)", () => {
-  it("opener-held stream does not stop when the PiP host closes", () => {
-    const original = {
-      clone() {
-        return { id: "opener-clone", getTracks: () => [] } as unknown as MediaStream;
-      },
-      getTracks() {
-        return [];
-      },
-    } as unknown as MediaStream;
-    const adopted = adoptScreenCaptureStreamOnOpener(original);
-    expect(adopted).not.toBe(original);
-
-    expect(
-      screenCaptureShouldStopOnHostClose({
-        streamOwner: "opener",
-        hostClosed: true,
-        host: "pip",
-      }),
-    ).toBe(false);
-    expect(
-      screenCaptureShouldStopOnHostClose({
-        streamOwner: "pip",
-        hostClosed: true,
-        host: "pip",
-      }),
-    ).toBe(true);
-    expect(
-      screenCaptureShouldStopOnHostClose({
-        streamOwner: "opener",
-        hostClosed: false,
-      }),
-    ).toBe(false);
+describe("screen capture has no picture-in-picture host (shipped)", () => {
+  it("does not branch getDisplayMedia onto a floating host", () => {
+    const capture = readFileSync(join(ROOT, "lib/screen-capture.ts"), "utf8");
+    expect(capture).not.toContain('source === "pip"');
+    expect(capture).not.toContain("adoptScreenCaptureStreamOnOpener");
+    expect(capture).not.toContain("screenCaptureShouldStopOnHostClose");
+    expect(capture).not.toContain('host ?? "pip"');
+    expect(capture).not.toContain("documentPictureInPicture");
+    expect(capture).toContain("getDisplayMedia");
+    expect(capture).toContain('source: "opener"');
+    const hidden = resolveScreenCaptureMediaDevices({
+      document: { visibilityState: "hidden" },
+      navigator: { mediaDevices: { getDisplayMedia: gdm() } },
+    });
+    expect(hidden.source).not.toBe("pip");
+    expect(hidden.source).toBe("opener");
   });
 });
 

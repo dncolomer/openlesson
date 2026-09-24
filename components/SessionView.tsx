@@ -20,8 +20,7 @@ import {
 } from "@/lib/session-participant-identity";
 import { type ChatMessage, type PendingChatMessage, postIleSessionChat } from "@/lib/session-chat-client";
 import type { Tool } from "@/components/ToolsPanel";
-import { useIleBlurScreenshare } from "@/lib/useIleBlurScreenshare";
-import { closeIleImDoneAnswering } from "@/lib/ile-im-done-answering";
+
 import {
   closeIleOpenWorkTurn,
   ILE_END_TURN_LABEL,
@@ -63,11 +62,8 @@ import {
 } from "@/lib/welcomeState";
 import { insightsSessionListUrl, type InsightSummary } from "@/lib/insights";
 import { IleTurnInsightCraft } from "@/components/session-view/ile-turn-insight-craft";
-import { IleSessionInsightsPanel } from "@/components/session-view/ile-session-insights-panel";
-import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { LocalInferenceManager, type InitProgress } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
-import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
@@ -154,6 +150,7 @@ import {
 import {
   IleSessionImpurityScreen,
   IleSilenceRestScreen,
+  mountIleSilenceScreen,
 } from "@/components/session-view/ile-silence-lock-screen";
 import { useIleSilenceLock } from "@/components/session-view/use-ile-silence-lock";
 import {
@@ -410,7 +407,6 @@ export function SessionView({
   const [canvasTimerResetChapterIds, setCanvasTimerResetChapterIds] = useState<
     string[]
   >([]);
-  const [sessionInsightsOpen, setSessionInsightsOpen] = useState(false);
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
   const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
@@ -896,8 +892,9 @@ export function SessionView({
       const extraSkeletons = Array.isArray(data?.canvasElements)
         ? (data.canvasElements as IleWorkCanvasSkeleton[])
         : parsedTurn.elements;
+      const visibleReply = (parsedTurn.text || "").trim();
       const nextScene = applyIleXaiTurnToWorkCanvas(currentScene, {
-        text: parsedTurn.text || content,
+        text: visibleReply,
         elements: extraSkeletons,
         turnId: placeholderId,
         origin: parsedTurn.origin,
@@ -906,7 +903,7 @@ export function SessionView({
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
-            ? { ...message, content: parsedTurn.text || content, pending: false }
+            ? { ...message, content: visibleReply, pending: false }
             : message
         ),
         whiteboardSceneData: nextScene,
@@ -1209,19 +1206,6 @@ export function SessionView({
   const loadingChapterLabel = chapterLoadingIndex != null
     ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
     : null;
-
-  const handleCompactDoneAnswering = useCallback(async () => {
-    await closeIleImDoneAnswering({
-      thoughts: sessionThoughtInterface.stashedThoughts,
-      formingText:
-        sessionThoughtInterface.getFormingText?.() ||
-        sessionThoughtInterface.crystallizableText,
-      sendThought: (text, ids) =>
-        sessionThoughtInterface.sendThought(text, ids, { skipTrace: true }),
-      logEndOfChainOfThought: (event) => sessionThoughtInterface.logTrace(event),
-      onClearForming: () => sessionThoughtInterface.clearCurrentTranscription(),
-    });
-  }, [sessionThoughtInterface]);
 
   const seedChapterWorkCanvas = useCallback(
     (chapterId: string, text: string | null | undefined) => {
@@ -1807,7 +1791,7 @@ export function SessionView({
         const extraSkeletons = Array.isArray(data?.canvasElements)
           ? (data.canvasElements as IleWorkCanvasSkeleton[])
           : parsedTurn.elements;
-        const text = parsedTurn.text || content;
+        const text = (parsedTurn.text || "").trim();
         updateChapterWorkspace(chapterKey, (workspace) => ({
           chatMessages: workspace.chatMessages.map((message) =>
             message.id === placeholderId
@@ -1864,14 +1848,13 @@ export function SessionView({
     <IleWorkCanvasTimer remainingSeconds={canvasRemainingSeconds} />
   );
 
-  const renderWorkCanvas = (peerId: "work" | "pip" = "work") => {
+  const renderWorkCanvas = () => {
     if (!session) return null;
     const boardId = ileChapterCanvasRemountKey(session.id, activeChapterKey);
     return (
       <WorkCanvas
-        key={`${boardId}:${peerId}`}
+        key={`${boardId}:work`}
         boardId={boardId}
-        peerId={peerId}
         initialData={whiteboardData || undefined}
         initialSceneData={whiteboardSceneData}
         heliosBusy={isHeliosAssistantPending}
@@ -1918,7 +1901,7 @@ export function SessionView({
     );
   };
 
-  const renderSessionToolPanes = (onLeaveIleTab: (reason: "grok" | "grokipedia") => void) => {
+  const renderSessionToolPanes = () => {
     if (!session) return null;
     return (
       <SessionToolPanes
@@ -1966,7 +1949,6 @@ export function SessionView({
           setLogs([]);
         }}
         isMobile={isMobile}
-        onLeaveIleTab={onLeaveIleTab}
       />
     );
   };
@@ -2005,79 +1987,6 @@ export function SessionView({
       />
     ) : null;
 
-  const renderCompactWorkspace = () => {
-    return (
-    <div
-      data-ile-compact-chapter-workspace
-      className="relative flex h-full min-h-0 flex-col"
-    >
-      {craftingInsightsOpen ? (
-        <div
-          data-ile-compact-insight-craft
-          className="relative min-h-0 flex-1 overflow-hidden"
-        >
-          {turnInsightCraft()}
-        </div>
-      ) : (
-        <>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {renderWorkCanvas("pip")}
-          </div>
-          <IleWorkDockBar
-            t={t}
-            compact
-            heliosOpen
-            openWorkLabels={openWorkDockLabels}
-            onFocusOpenWork={handleFocusOpenWork}
-            onShowMap={() => setHeliosWidgetOpen(false)}
-            onSubmitTurn={() => void handleSubmitTurn()}
-            submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
-            submitTurnBusy={submitTurnBusy}
-            submitTurnDisabled={submitTurnBusy || openWorkIds.length < 1}
-            aestheticImages={chromeSelectedAesthetic?.images}
-          />
-        </>
-      )}
-    </div>
-    );
-  };
-
-  const {
-    notifyLeaveTab,
-    openManualPicInPic,
-    showManualPicInPic,
-  } =
-    useIleBlurScreenshare({
-    enabled: Boolean(isRecording && !isPaused),
-    isScreenSharing: isScreenCapturing,
-    startScreenshare: handleStartScreenCapture,
-    onDoneAnswering: handleCompactDoneAnswering,
-    captureStream: stream,
-    compact: {
-      formingText: sessionThoughtInterface.crystallizableText,
-      speechDisplay: formatSpeechTranscriptDisplay({
-        text: sessionThoughtInterface.crystallizableText,
-        speechError: sessionThoughtInterface.speechError,
-        speechSupported: sessionThoughtInterface.speechSupported,
-        isListening: sessionThoughtInterface.isListening,
-        enabled: sessionThoughtInterface.speechEnabled,
-      }),
-      speechError: sessionThoughtInterface.speechError,
-      speechSupported: sessionThoughtInterface.speechSupported,
-      isListening: sessionThoughtInterface.isListening,
-      speechEnabled: sessionThoughtInterface.speechEnabled,
-      isScreenSharing: isScreenCapturing,
-    },
-    renderCompact: () => renderCompactWorkspace(),
-    compactHeaderLeading: workCanvasInsightSlots,
-    compactHeaderExtra: workCanvasHeaderExtra,
-  });
-
-  const isSpeaking = useVoiceActivity({
-    stream,
-    isRecording,
-    isPaused,
-  });
   const micSilent = ileMicCountsAsSilence({
     muted: isMuted,
     hasStream: Boolean(stream),
@@ -2089,7 +1998,8 @@ export function SessionView({
   });
   const silenceLock = useIleSilenceLock({
     armed: Boolean(session && !showWelcomeModal && !showWelcomePanel && !isSaving),
-    speaking: isSpeaking && !micSilent,
+    speechText: sessionThoughtInterface.crystallizableText,
+    micSilent,
     minutes: silenceLockMinutes,
   });
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
@@ -2194,32 +2104,36 @@ export function SessionView({
 
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
-      {silenceLock.outcome === "rest" ? (
-        <IleSilenceRestScreen
-          lockCount={silenceLock.lockCount}
-          onUnlock={() => silenceLock.unlock(true)}
-          onSaveAndLeave={() => {
-            const plan = ileImpurityExitPlan("save");
-            if (!plan.persistSession) return;
-            setShowSaveExitNameDialog(true);
-          }}
-        />
-      ) : null}
-      {silenceLock.outcome === "impurity" ? (
-        <IleSessionImpurityScreen
-          lockCount={silenceLock.lockCount}
-          onSave={() => {
-            const plan = ileImpurityExitPlan("save");
-            if (!plan.persistSession) return;
-            setShowSaveExitNameDialog(true);
-          }}
-          onLogOff={() => {
-            const plan = ileImpurityExitPlan("logoff");
-            if (!plan.leave) return;
-            void pauseAndGoToDashboard(null, { persistSession: plan.persistSession });
-          }}
-        />
-      ) : null}
+      {silenceLock.outcome === "rest"
+        ? mountIleSilenceScreen(
+            <IleSilenceRestScreen
+              lockCount={silenceLock.lockCount}
+              onUnlock={() => silenceLock.unlock(true)}
+              onSaveAndLeave={() => {
+                const plan = ileImpurityExitPlan("save");
+                if (!plan.persistSession) return;
+                setShowSaveExitNameDialog(true);
+              }}
+            />,
+          )
+        : null}
+      {silenceLock.outcome === "impurity"
+        ? mountIleSilenceScreen(
+            <IleSessionImpurityScreen
+              lockCount={silenceLock.lockCount}
+              onSave={() => {
+                const plan = ileImpurityExitPlan("save");
+                if (!plan.persistSession) return;
+                setShowSaveExitNameDialog(true);
+              }}
+              onLogOff={() => {
+                const plan = ileImpurityExitPlan("logoff");
+                if (!plan.leave) return;
+                void pauseAndGoToDashboard(null, { persistSession: plan.persistSession });
+              }}
+            />,
+          )
+        : null}
       <SessionChrome
         t={t}
         activeTool={activeTool}
@@ -2278,8 +2192,6 @@ export function SessionView({
         onSubmitTurn={() => void handleSubmitTurn()}
         submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
         submitTurnBusy={submitTurnBusy}
-        sessionInsightCount={sessionInsights.length}
-        onOpenSessionInsights={() => setSessionInsightsOpen(true)}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
@@ -2431,7 +2343,7 @@ export function SessionView({
             gatherReadyCountByBlock={gatherReadyCountByBlock}
           />
         }
-        toolOverlay={renderSessionToolPanes(notifyLeaveTab)}
+        toolOverlay={renderSessionToolPanes()}
         workCanvas={renderWorkCanvas()}
         heliosWidget={renderChapterThoughtPane(false)}
         voiceBar={
@@ -2444,8 +2356,6 @@ export function SessionView({
               setShowSaveExitNameDialog(true);
             }}
             errorNotification={Boolean(error)}
-            showOpenPicInPic={showManualPicInPic}
-            onOpenPicInPic={openManualPicInPic}
             chapterTitle={
               mapSelectedBlocked
                 ? t("session.blockedBlockTitle")
@@ -2478,11 +2388,6 @@ export function SessionView({
             onActionPad={(id) => voicePadActionRef.current(id)}
           />
         }
-      />
-      <IleSessionInsightsPanel
-        open={sessionInsightsOpen}
-        onClose={() => setSessionInsightsOpen(false)}
-        insights={sessionInsights}
       />
     </div>
   );

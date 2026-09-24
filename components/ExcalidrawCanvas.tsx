@@ -73,16 +73,6 @@ import {
   ileWorkCanvasGestureBusy,
   type IleWorkCanvasPowEvent,
 } from "@/lib/ile-work-canvas-pow";
-import {
-  countIleWorkCanvasRoomPeers,
-  ileWorkCanvasPeerLabel,
-  ileWorkCanvasSceneFingerprint,
-  nextIleWorkCanvasRoomNonce,
-  publishIleWorkCanvasRoom,
-  subscribeIleWorkCanvasRoom,
-  type IleWorkCanvasPeerId,
-} from "@/lib/ile-work-canvas-room";
-
 // Excalidraw CSS - required for proper rendering
 import "@excalidraw/excalidraw/index.css";
 import "@/app/ile-excalidraw-theme.css";
@@ -110,7 +100,6 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
   onChange,
   onPointerUpdate,
   initialData,
-  isCollaborating,
   viewModeEnabled = false,
 }: {
   onApi: (api: ExcalidrawAPIRef) => void;
@@ -125,7 +114,6 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
     pointersMap: Map<number, unknown>;
   }) => void;
   initialData: { elements: any[]; appState: any; files: any; scrollToContent?: boolean };
-  isCollaborating?: boolean;
   viewModeEnabled?: boolean;
 }) {
   return (
@@ -135,7 +123,6 @@ const IleExcalidrawMount = memo(function IleExcalidrawMount({
       onPointerUpdate={onPointerUpdate}
       initialData={initialData}
       theme="dark"
-      isCollaborating={isCollaborating}
       viewModeEnabled={viewModeEnabled}
       UIOptions={ILE_EXCALIDRAW_UI_OPTIONS}
     />
@@ -157,7 +144,7 @@ class IleExcalidrawErrorBoundary extends Component<{ children: ReactNode }, { cr
           data-ile-excalidraw-crash
           className="flex h-full items-center justify-center bg-[#0a0a0a] px-4 text-center font-mono text-[11px] uppercase tracking-wider text-neutral-400"
         >
-          Canvas failed in this window. Keep drawing in the other view.
+          Canvas failed to load.
         </div>
       );
     }
@@ -193,9 +180,8 @@ export interface ExcalidrawCanvasProps {
     elements?: IleWorkCanvasSkeleton[] | null;
     origin?: { x?: number; y?: number } | null;
   }>;
-  /** Shared board id so session Work and PiP act as two collaborators. */
+  /** Resets the proof-of-work collector when the board changes. */
   boardId?: string | null;
-  peerId?: IleWorkCanvasPeerId;
   /** Helios/XAI in-flight (TAP wait, ILE send) — same overlay chip as ask-about-selection. */
   heliosBusy?: boolean;
   /** ILE: craft an insight linked to this chapter. */
@@ -245,7 +231,6 @@ export function ExcalidrawCanvas({
   onCanvasPowActions,
   onAskSelected,
   boardId = null,
-  peerId = "work",
   heliosBusy = false,
   craftInsight = null,
   replaceScene = null,
@@ -324,9 +309,6 @@ export function ExcalidrawCanvas({
   const lastPersistedSceneJsonRef = useRef("");
   const applyingRemoteRef = useRef(false);
   const userClearedRef = useRef(false);
-  const sceneFingerprintRef = useRef("");
-  const remoteNonceRef = useRef(0);
-  const [collaborating, setCollaborating] = useState(false);
   const centeredOnOpenRef = useRef(false);
   const centerRafRef = useRef(0);
   const centerTriesRef = useRef(0);
@@ -459,72 +441,6 @@ export function ExcalidrawCanvas({
   useEffect(() => {
     onAskSelectedRef.current = onAskSelected;
   }, [onAskSelected]);
-
-  useEffect(() => {
-    const id = String(boardId || "").trim();
-    if (!id) return;
-    const unsub = subscribeIleWorkCanvasRoom(id, peerId, (message) => {
-      if (message.from === peerId) return;
-      const api = excalidrawAPIRef.current;
-      if (!api) return;
-      if (message.kind === "scene") {
-        if (message.nonce <= remoteNonceRef.current) return;
-        remoteNonceRef.current = message.nonce;
-        const fingerprint = ileWorkCanvasSceneFingerprint(message.elements, message.files);
-        if (fingerprint && fingerprint === sceneFingerprintRef.current) return;
-        applyingRemoteRef.current = true;
-        sceneFingerprintRef.current = fingerprint;
-        try {
-          api.updateScene({
-            elements: message.elements,
-            appState: {},
-            captureUpdate: "NEVER",
-          });
-          if (message.files && typeof api.addFiles === "function") {
-            api.addFiles(Object.values(message.files));
-          }
-        } catch (err) {
-          console.error("[ExcalidrawCanvas] room apply failed:", err);
-        } finally {
-          applyingRemoteRef.current = false;
-        }
-        scheduleCenterOnOpen();
-        return;
-      }
-      const others = new Map();
-      if (message.pointer) {
-        others.set(message.from, {
-          id: message.from,
-          username: ileWorkCanvasPeerLabel(message.from),
-          pointer: {
-            x: message.pointer.x,
-            y: message.pointer.y,
-            tool: message.pointer.tool || "pointer",
-          },
-          button: message.button || "up",
-          selectedElementIds: message.selectedElementIds,
-          color: { background: "#e5e5e5", stroke: "#111111" },
-        });
-      }
-      try {
-        api.updateScene({
-          appState: { collaborators: others },
-          captureUpdate: "NEVER",
-        });
-      } catch {
-        /* peer scene not ready */
-      }
-    });
-    setCollaborating(countIleWorkCanvasRoomPeers(id) > 1);
-    const syncPeers = window.setInterval(() => {
-      setCollaborating(countIleWorkCanvasRoomPeers(id) > 1);
-    }, 800);
-    return () => {
-      window.clearInterval(syncPeers);
-      unsub();
-      setCollaborating(false);
-    };
-  }, [boardId, peerId, scheduleCenterOnOpen]);
 
   useEffect(() => {
     askInFlightRef.current = askInFlight;
@@ -1230,20 +1146,8 @@ export function ExcalidrawCanvas({
       debouncedExportPNG();
       syncLearnMorePlacement(elements, appState);
       syncThinkingOverlay(appState);
-      const id = String(boardId || "").trim();
-      if (!id || applyingRemoteRef.current) return;
-      const fingerprint = ileWorkCanvasSceneFingerprint(elements, files);
-      if (fingerprint && fingerprint === sceneFingerprintRef.current) return;
-      sceneFingerprintRef.current = fingerprint;
-      publishIleWorkCanvasRoom(id, {
-        kind: "scene",
-        from: peerId,
-        nonce: nextIleWorkCanvasRoomNonce(id),
-        elements,
-        files: files ?? {},
-      });
     },
-    [boardId, peerId, debouncedExportPNG, syncLearnMorePlacement, syncThinkingOverlay]
+    [debouncedExportPNG, syncLearnMorePlacement, syncThinkingOverlay]
   );
 
   const handlePointerUpdate = useCallback(
@@ -1266,18 +1170,8 @@ export function ExcalidrawCanvas({
         });
         if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
       }
-      const id = String(boardId || "").trim();
-      if (!id) return;
-      const appState = api?.getAppState?.() ?? {};
-      publishIleWorkCanvasRoom(id, {
-        kind: "pointer",
-        from: peerId,
-        pointer: payload.pointer,
-        button: payload.button,
-        selectedElementIds: appState.selectedElementIds,
-      });
     },
-    [boardId, peerId, syncLearnMorePlacement],
+    [syncLearnMorePlacement],
   );
 
   /**
@@ -1387,7 +1281,7 @@ export function ExcalidrawCanvas({
           },
         });
       } catch (err) {
-        console.error("[ExcalidrawCanvas] PiP zoom failed:", err);
+        console.error("[ExcalidrawCanvas] zoom failed:", err);
       }
     });
     refreshSurface();
@@ -1461,7 +1355,6 @@ export function ExcalidrawCanvas({
       </div>
       ) : null}
 
-      {/* Excalidraw container — ownerDocument.defaultView for PiP pointer/resize */}
       <div ref={canvasHostRef} className="flex-1 min-h-0 relative" data-ile-excalidraw-host>
         {isLoaded && (
           <IleExcalidrawErrorBoundary>
@@ -1470,7 +1363,6 @@ export function ExcalidrawCanvas({
               onChange={handleChange}
               onPointerUpdate={handlePointerUpdate}
               initialData={initialSceneDataRef.current}
-              isCollaborating={collaborating}
               viewModeEnabled={viewModeEnabled}
             />
           </IleExcalidrawErrorBoundary>

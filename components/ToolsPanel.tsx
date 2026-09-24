@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
-import { ILE_OPEN_PIC_IN_PIC_LABEL } from "@/lib/ile-compact-window";
 import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
 import {
   museEegPreviewLabel,
@@ -100,15 +99,11 @@ export function VoiceBarUtilityRow({
   onToolChange,
   onBackToDashboard,
   errorNotification = false,
-  showOpenPicInPic = false,
-  onOpenPicInPic,
 }: {
   activeTool: Tool | null;
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
-  showOpenPicInPic?: boolean;
-  onOpenPicInPic?: () => void;
 }) {
   const { t } = useI18n();
   const getToolLabel = (id: Tool): string => {
@@ -128,20 +123,6 @@ export function VoiceBarUtilityRow({
       data-ile-voice-utility
       className="flex h-full w-[8.5rem] shrink-0 flex-col gap-px self-stretch"
     >
-      {showOpenPicInPic && onOpenPicInPic ? (
-        <button
-          type="button"
-          data-ile-open-pic-in-pic
-          onClick={onOpenPicInPic}
-          className={`${fillBtn} border border-neutral-700/50 bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300`}
-          title={ILE_OPEN_PIC_IN_PIC_LABEL}
-        >
-          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25V6.75A2.25 2.25 0 015.25 4.5h1.5M3 15.75v1.5A2.25 2.25 0 005.25 19.5h1.5M15.75 4.5h1.5A2.25 2.25 0 0119.5 6.75v1.5M19.5 15.75v1.5a2.25 2.25 0 01-2.25 2.25h-1.5M8.25 9.75h7.5v4.5h-7.5v-4.5z" />
-          </svg>
-          <span className="truncate">PiP</span>
-        </button>
-      ) : null}
       {utilityTools.map((toolId) => (
         <button
           key={toolId}

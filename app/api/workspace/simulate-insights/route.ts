@@ -196,15 +196,16 @@ export async function POST(req: NextRequest) {
         context,
         callStep: (step) =>
           callSimulateInsightsModelStep({ ...step, model }),
-        persist: (next) =>
-          commitSimulationJob({
+        persist: async (next) => {
+          await commitSimulationJob({
             job: next,
             load: async () =>
               (await loadCollection(admin, workspaceId)) ||
               normalizeSimulationCollection(null),
             saveIfVersion: (collection, expectedVersion) =>
               saveCollectionIfVersion(admin, workspaceId, collection, expectedVersion),
-          }),
+          });
+        },
       });
     });
 

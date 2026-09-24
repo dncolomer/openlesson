@@ -935,6 +935,41 @@ describe("ILE Work canvas XAI suggested origin (shipped parse+apply)", () => {
     expect(extra?.x).toBe(40);
     expect(extra?.y).toBe(200);
 
+    const trailingComma = parseIleXaiCanvasTurn(
+      '{"text":"Label the invariant.","elements":[{"type":"rectangle","x":10,"y":20,"width":40,"height":30},]}',
+    );
+    expect(trailingComma.text).toBe("Label the invariant.");
+    expect(trailingComma.elements?.[0]?.type).toBe("rectangle");
+    const trailingApplied = applyIleXaiTurnToWorkCanvas(existing, trailingComma);
+    expect(
+      trailingApplied.elements.some((el) => (el.originalText || el.text) === "Label the invariant."),
+    ).toBe(true);
+    expect(
+      trailingApplied.elements.some((el) => String(el.originalText || el.text || "").includes('{"text"')),
+    ).toBe(false);
+
+    const elementsOnly = '{"elements":[{"type":"ellipse","x":4,"y":6,"width":20,"height":20}]}';
+    const shapesOnly = parseIleXaiCanvasTurn(elementsOnly);
+    expect(shapesOnly.text).toBe("");
+    expect(shapesOnly.elements?.[0]?.type).toBe("ellipse");
+    const shapesApplied = applyIleXaiTurnToWorkCanvas(existing, { text: elementsOnly });
+    expect(shapesApplied.elements.some((el) => el.type === "ellipse")).toBe(true);
+    expect(
+      shapesApplied.elements.some((el) => String(el.originalText || el.text || "").trim().startsWith("{")),
+    ).toBe(false);
+
+    const nested = parseIleXaiCanvasTurn(
+      JSON.stringify({ text: JSON.stringify({ text: "Say it in words." }), elements: [] }),
+    );
+    expect(nested.text).toBe("Say it in words.");
+
+    const proseAndJson = parseIleXaiCanvasTurn(
+      'Keep the invariant in view.\n{"elements":[{"type":"arrow","x":0,"y":0,"width":30,"height":0},]}',
+    );
+    expect(proseAndJson.text).toBe("Keep the invariant in view.");
+    expect(proseAndJson.elements?.[0]?.type).toBe("arrow");
+    expect(proseAndJson.text).not.toContain("{");
+
     const prose = parseIleXaiCanvasTurn("plain prose reply with no JSON");
     expect(ileWorkCanvasFiniteOrigin(prose.origin)).toBeNull();
     const stacked = applyIleXaiTurnToWorkCanvas(existing, prose);

@@ -1080,7 +1080,6 @@ export function BlockSkillGrid({
         stagedPrereqCount: prereqEdit.stagedPrereqIds.length,
         onToolClick: handleToolClick,
         overlayAnchorClass: suggestMode === "chapter" ? "top-12" : "top-2",
-        hidden: suggestMode === "chapter",
       }}
       world={{
         visibleCells,

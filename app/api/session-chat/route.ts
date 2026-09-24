@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       [...inputMessages].reverse().find((m) => m.role === "user")?.content ?? "";
     const canvasTurn = parseIleXaiCanvasTurn(sanitizeAssistantText(response.data));
     const extracted = ileChapterSuggestionPowFromCoachText({
-      coachText: canvasTurn.text || sanitizeAssistantText(response.data),
+      coachText: (canvasTurn.text || "").trim(),
       learnerText: lastLearner,
       sessionMode,
       currentChapterId: typeof activeStepId === "string" ? activeStepId : null,

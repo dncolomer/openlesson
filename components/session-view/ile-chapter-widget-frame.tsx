@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { ileCompactRootFillStyle } from "@/lib/ile-compact-window";
 import { ILE_SESSION_TOP_BAR_PAD_CLASS } from "@/lib/ile-map-chrome";
 
 export function IleChapterWidgetFrame({
@@ -75,36 +74,5 @@ export function IleChapterWidgetFrame({
         </div>
       ) : null}
     </div>
-  );
-}
-
-/** PiP / popup host: same Chapter chrome, fills the compact window. */
-export function IleChapterPipFrame({
-  children,
-  footer,
-  headerLeading,
-  headerExtra,
-}: {
-  children: ReactNode;
-  footer?: ReactNode;
-  headerLeading?: ReactNode;
-  headerExtra?: ReactNode;
-}) {
-  return (
-    <IleChapterWidgetFrame
-      fill
-      compact
-      footer={footer}
-      headerLeading={headerLeading}
-      headerExtra={headerExtra}
-      className="pointer-events-auto"
-      style={{
-        position: "relative",
-        boxSizing: "border-box",
-        ...ileCompactRootFillStyle(),
-      }}
-    >
-      {children}
-    </IleChapterWidgetFrame>
   );
 }

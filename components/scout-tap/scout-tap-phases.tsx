@@ -162,7 +162,6 @@ export function ScoutTapPhases(props: {
       <WorkCanvas
         key={`scout-work-canvas:${phase}`}
         boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
-        peerId="work"
         initialSceneData={workCanvasScene}
         applyElements={canvasApplyElements}
         applyElementsNonce={canvasApplyNonce}

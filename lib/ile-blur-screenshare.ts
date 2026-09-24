@@ -1,9 +1,6 @@
 /**
- * ILE leave-tab policy: show/hide the Meet-style always-on-top compact
- * stash window. Losing focus does not auto-request screenshare.
- *
- * Pure decisions — SessionView / Grok-Grokipedia call these; I/O
- * (Document PiP / popup) stays at the edge.
+ * ILE leave-tab policy. Losing focus does not open a floating session
+ * window and does not auto-request screenshare.
  */
 
 export type IleLeaveFocusReason =
@@ -79,27 +76,20 @@ export function shouldShowIleMiniShareScreenNote(isScreenSharing: boolean): bool
 export function decideIleCompactWindow(
   input: IleLeaveFocusPolicyInput,
 ): IleCompactWindowDecision {
-  if (!input.isIleSession || !input.sessionActive) return "hide";
-  if (!isIleAwayFromTab(input)) return "hide";
-  return "show";
+  void input;
+  return "hide";
 }
 
-/** Compact window on leave: open Document PiP or stay hidden. */
 export type IleMiniAutoOpenDecision = "open" | "hide";
 
-/**
- * When Document PiP exists, Chrome owns permission via enterpictureinpicture.
- * Without it, leave must not auto-open a popup.
- */
+/** Leave-tab never opens a floating session window. */
 export function decideIleMiniAutoOpen(input: {
   sessionActive: boolean;
   tabFocused: boolean;
   leaveReason?: IleLeaveFocusReason | null;
   documentPipSupported?: boolean;
 }): IleMiniAutoOpenDecision {
-  if (!input.sessionActive) return "hide";
-  if (!isIleAwayFromTab(input)) return "hide";
-  if (input.documentPipSupported) return "open";
+  void input;
   return "hide";
 }
 
@@ -156,7 +146,6 @@ export function readIleTabFocusedFromDocument(
 /**
  * After getDisplayMedia resolves, ignore the original leaveReason.
  * Only live tab focus decides whether the compact window may show.
- * (Grok/Grokipedia click keeps the ILE tab in front during the picker.)
  */
 export function applyIleCompactWindowAfterShareAwait(input: {
   isIleSession: boolean;
@@ -174,20 +163,4 @@ export function applyIleCompactWindowAfterShareAwait(input: {
   });
 }
 
-export type IleExternalLeaveReason = "grok" | "grokipedia";
 
-/**
- * Grok / Grokipedia (and similar) leave-tab: notify policy first so the
- * click gesture can still open the display-media picker, then open the URL.
- */
-export function openIleExternalLeaveTab(input: {
-  url: string;
-  reason: IleExternalLeaveReason;
-  openWindow?: (url: string, target?: string, features?: string) => Window | null;
-  onLeave?: (reason: IleExternalLeaveReason) => void;
-}): { left: true; reason: IleExternalLeaveReason } {
-  input.onLeave?.(input.reason);
-  const open = input.openWindow ?? (typeof window !== "undefined" ? window.open.bind(window) : undefined);
-  open?.(input.url, "_blank", "noopener,noreferrer");
-  return { left: true, reason: input.reason };
-}

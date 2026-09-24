@@ -312,6 +312,73 @@ export function nextIleSilenceLock(input: {
   };
 }
 
+/**
+ * New non-empty heard text is speech and restarts the quiet clock.
+ * The same text, or an empty bar, does not.
+ */
+export function ileSilenceSpeechMark(input: {
+  previous: string;
+  next: string;
+}): { mark: string; restart: boolean } {
+  const next = input.next.trim();
+  const previous = input.previous.trim();
+  if (!next || next === previous) return { mark: previous, restart: false };
+  return { mark: next, restart: true };
+}
+
+/**
+ * One tick of the ILE silence clock.
+ * A muted mic cannot be kept alive by leftover transcript text.
+ * Loudness is not speech: only a changed transcript restarts the clock.
+ */
+export function advanceIleSilenceClock(input: {
+  now: number;
+  lastSoundAt: number;
+  lockCount: number;
+  minutes: unknown;
+  holding: boolean;
+  micSilent: boolean;
+  previousSpeech: string;
+  speechText: string;
+}): {
+  lastSoundAt: number;
+  lockCount: number;
+  holding: boolean;
+  speech: string;
+  outcome: IleSilenceLockOutcome;
+} {
+  let lastSoundAt = input.lastSoundAt;
+  let speech = input.previousSpeech;
+  if (!input.micSilent) {
+    const heard = ileSilenceSpeechMark({ previous: speech, next: input.speechText });
+    speech = heard.mark;
+    if (heard.restart) lastSoundAt = input.now;
+  }
+  if (input.holding) {
+    return {
+      lastSoundAt,
+      lockCount: input.lockCount,
+      holding: true,
+      speech,
+      outcome: ileSilenceLockOutcome(input.lockCount),
+    };
+  }
+  const step = nextIleSilenceLock({
+    lockCount: input.lockCount,
+    silenceMs: input.now - lastSoundAt,
+    minutes: input.minutes,
+    alreadyLatched: false,
+  });
+  const latched = step.lockCount !== input.lockCount;
+  return {
+    lastSoundAt,
+    lockCount: step.lockCount,
+    holding: latched,
+    speech,
+    outcome: latched ? step.outcome : "continue",
+  };
+}
+
 /** A rest unlocks only when the voice challenge passes. Impurity never unlocks. */
 export function ileRestUnlock(input: {
   challengePassed: boolean;

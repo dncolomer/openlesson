@@ -12,7 +12,6 @@ import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceAyclMarketplaceSettings } from "@/components/WorkspaceAyclMarketplaceSettings";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";
 import { CustomVerificationModelsPanel } from "@/components/CustomVerificationModelsPanel";
-import { WorkspaceGuestLinksPanel } from "@/components/WorkspaceGuestLinksPanel";
 import { WorkspaceKnowledgePortalPanel } from "@/components/WorkspaceKnowledgePortalPanel";
 import { WorkspaceDataStudioPanel } from "@/components/WorkspaceDataStudioPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
@@ -215,7 +214,7 @@ export function WorkspaceIntegrationPanel({
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
                 {isKnowledgeRegion
                   ? "High-validation regions in knowledgecfg-v1-d64. Build regions from workspace PoW (generated elsewhere) and overlay them from the Embeddings tab projection."
-                  : "High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or tapbench PoW (mint agent links under Knowledge Links). Overlay them from the Embeddings tab projection."}
+                  : "High-validation regions in knowledgecfg-v1-d64. Build regions from human PoW or tapbench PoW. Overlay them from the Embeddings tab projection."}
               </p>
             </div>
             <CustomVerificationModelsPanel
@@ -233,36 +232,13 @@ export function WorkspaceIntegrationPanel({
           >
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">
-                {t("planView.practicePortalTitle")}
+                {t("planView.knowledgePortalSettingsTab")}
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
                 {t("planView.practicePortalHint")}
               </p>
             </div>
             <WorkspaceKnowledgePortalPanel
-              workspaceId={workspaceId}
-              isOwner={isOwner}
-              currentUserId={currentUserId}
-            />
-          </section>
-        ) : null}
-
-        {showKnowledgeLinks && activeSubview === "guest-links" ? (
-          <section
-            className="space-y-3"
-            data-settings-section="guest-tap-ile"
-            data-settings-tab-panel="guest-links"
-          >
-            <div className="min-w-0 shrink-0">
-              <h2 className="text-sm font-medium text-white">
-                {t("planView.performanceSubTabTap")}
-              </h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Create shareable practice links for this workspace (Explore or Drill).
-                TAPBench keys are issued on /tapbench.
-              </p>
-            </div>
-            <WorkspaceGuestLinksPanel
               workspaceId={workspaceId}
               isOwner={isOwner}
               currentUserId={currentUserId}

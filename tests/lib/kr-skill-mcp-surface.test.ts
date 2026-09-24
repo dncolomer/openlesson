@@ -188,7 +188,8 @@ describe("KR vs standard skill/MCP surface (shipped builders)", () => {
     expect(panel).toContain("data-kr-integration-mcp-note");
     expect(panel).toContain("workspaceKind={workspaceKind}");
     expect(panel).toContain("settingsShowsKnowledgeLinks");
-    expect(panel).toContain('showKnowledgeLinks && activeSubview === "guest-links"');
+    expect(panel).toContain('showKnowledgeLinks && activeSubview === "knowledge-portal"');
+    expect(panel).not.toContain('activeSubview === "guest-links"');
 
     const quick = read("components/IntegrationQuickAccess.tsx");
     expect(quick).toContain("isKnowledgeRegionWorkspace");

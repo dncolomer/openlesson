@@ -1,7 +1,7 @@
 /**
  * Settings subtabs by workspace kind.
  * Knowledge Region: General (name/description), Knowledge Regions, Data Studio, Integration.
- * No AYCL / Knowledge Portal / Knowledge Links mint on KR.
+ * No AYCL / Knowledge Portal on KR. Knowledge Links is not a Settings section.
  */
 
 import {
@@ -14,7 +14,6 @@ export type SettingsSubview =
   | "aycl"
   | "regions"
   | "knowledge-portal"
-  | "guest-links"
   | "data-studio"
   | "integrations";
 
@@ -23,7 +22,6 @@ export const ALL_SETTINGS_SUBVIEWS: readonly SettingsSubview[] = [
   "aycl",
   "regions",
   "knowledge-portal",
-  "guest-links",
   "data-studio",
   "integrations",
 ];
@@ -70,8 +68,6 @@ export function settingsSubviewLabel(
       return "Knowledge Regions";
     case "knowledge-portal":
       return t?.("planView.knowledgePortalSettingsTab") ?? "Knowledge Portal";
-    case "guest-links":
-      return t?.("planView.performanceSubTabTap") ?? "Knowledge Links";
     case "data-studio":
       return "Data Studio";
     case "integrations":
@@ -89,7 +85,7 @@ export function settingsSubTabsForKind(
   }));
 }
 
-/** Guest-links / Knowledge Links mint UI is omitted on Knowledge Region. */
+/** Knowledge Portal is omitted on Knowledge Region. */
 export function settingsShowsKnowledgeLinks(kind: unknown): boolean {
   return workspaceAllowsKnowledgeLinkMint(kind);
 }

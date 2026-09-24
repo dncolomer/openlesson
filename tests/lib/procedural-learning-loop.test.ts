@@ -126,6 +126,10 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     const portal = read("components/WorkspaceKnowledgePortalPanel.tsx");
     expect(portal).toContain("explore_dialog");
     expect(portal).toContain("drill_dialog");
+    expect(portal).toContain("PRODUCT_INTENT_LABELS.exploreDialog");
+    expect(portal).toContain("PRODUCT_INTENT_LABELS.drillDialog");
+    expect(portal).not.toMatch(/With AI or\s*Solo/);
+    expect(portal).not.toMatch(/open-ended or timed/i);
 
     const landing = read("components/PracticePortalLandingClient.tsx");
     expect(landing).toMatch(/Explore sessions require a block/);
@@ -157,11 +161,12 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     expect(badges).not.toContain('? "Open-ended"');
     expect(badges).not.toContain(': "Timed"');
 
-    // Guest-link settings shell
+    // Knowledge Links settings copy is gone. Portal is the remaining Settings share desk.
     const integration = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(integration).toMatch(/Explore or Drill/);
+    expect(integration).not.toMatch(/Explore or Drill/);
     expect(integration).not.toMatch(/With AI or\s*Solo/);
     expect(integration).not.toMatch(/open-ended or timed/i);
+    expect(integration).not.toContain('activeSubview === "guest-links"');
 
     // i18n product-axis keys for guest links / portal
     const en = read("messages/en.json");
@@ -185,7 +190,7 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
         "BlockEdit: Explore + Drill (always With AI)",
         "SessionItem: Start Drill (not Timed)",
         "BlockSkillGrid badges: Explore / Drill",
-        "IntegrationPanel: Explore or Drill",
+        "KnowledgePortal: PRODUCT_INTENT_LABELS exploreDialog+drillDialog",
         "en.json: tapLinksExerciseMode/ileLinksProjectMode remapped",
       ].join("\n") + "\n",
     );

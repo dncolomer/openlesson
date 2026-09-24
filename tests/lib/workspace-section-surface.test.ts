@@ -16,6 +16,11 @@ import {
 } from "@/lib/workspace-section-surface";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
+import {
+  availableSettingsSubviews,
+  resolveSettingsSubview,
+  settingsSubTabsForKind,
+} from "@/lib/workspace-settings-tabs";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
@@ -181,50 +186,49 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(settingsTabs).toContain('"general"');
     expect(settingsTabs).toContain('"regions"');
     expect(settingsTabs).toContain('"knowledge-portal"');
-    expect(settingsTabs).toContain('"guest-links"');
+    expect(settingsTabs).not.toContain('"guest-links"');
     expect(settingsTabs).toContain('"data-studio"');
     expect(settingsTabs).toContain('"integrations"');
-    // Settings tab label for guest-links subview is Knowledge Links (i18n).
-    expect(settingsTabs).toContain('t?.("planView.performanceSubTabTap")');
+    expect(settingsTabs).toContain('t?.("planView.knowledgePortalSettingsTab")');
+    expect(settingsTabs).not.toContain("performanceSubTabTap");
     const en = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, "messages/en.json"), "utf8"),
     ) as { planView?: Record<string, string> };
-    expect(en.planView?.performanceSubTabTap).toBe("Knowledge Links");
-    expect(en.planView?.performanceSubTabTap).not.toMatch(/Guest Links/i);
-    // Knowledge Portal tab is adjacent to Knowledge Regions in declared order.
+    expect(en.planView?.knowledgePortalSettingsTab).toBe("Knowledge Portal");
+    // Knowledge Portal tab follows Knowledge Regions.
     const regionsIdx = settingsTabs.indexOf('"regions"');
     const portalIdx = settingsTabs.indexOf('"knowledge-portal"');
-    const guestIdx = settingsTabs.indexOf('"guest-links"');
     const dataStudioIdx = settingsTabs.indexOf('"data-studio"');
     expect(regionsIdx).toBeGreaterThan(-1);
     expect(portalIdx).toBeGreaterThan(regionsIdx);
-    expect(guestIdx).toBeGreaterThan(portalIdx);
-    expect(dataStudioIdx).toBeGreaterThan(guestIdx);
+    expect(dataStudioIdx).toBeGreaterThan(portalIdx);
     expect(integration).toContain('data-settings-tab-panel="general"');
     expect(integration).toContain('data-settings-tab-panel="aycl"');
     expect(integration).toContain('data-settings-tab-panel="regions"');
     expect(integration).toContain('data-settings-tab-panel="knowledge-portal"');
-    expect(integration).toContain('data-settings-tab-panel="guest-links"');
+    expect(integration).not.toContain('data-settings-tab-panel="guest-links"');
     expect(integration).toContain('data-settings-tab-panel="data-studio"');
     expect(integration).toContain('data-settings-tab-panel="integrations"');
     // Active-tab conditionals (only one body shown at a time).
     expect(integration).toContain('activeSubview === "general"');
     expect(integration).toContain('activeSubview === "regions"');
     expect(integration).toContain('activeSubview === "knowledge-portal"');
-    expect(integration).toContain('activeSubview === "guest-links"');
+    expect(integration).not.toContain('activeSubview === "guest-links"');
     expect(integration).toContain('activeSubview === "data-studio"');
     expect(integration).toContain('activeSubview === "integrations"');
     // Major capabilities still wired under tabs.
     expect(integration).toContain('data-settings-section="custom-knowledge-regions"');
     expect(integration).toContain('data-settings-section="knowledge-portal"');
-    expect(integration).toContain('data-settings-section="guest-tap-ile"');
+    expect(integration).not.toContain('data-settings-section="guest-tap-ile"');
+    expect(integration).not.toContain("Knowledge Links");
+    expect(integration).toContain("knowledgePortalSettingsTab");
     expect(integration).toContain('data-settings-section="data-studio"');
     expect(integration).toContain('data-settings-section="skill"');
     expect(integration).toContain('data-settings-section="mcp"');
     expect(integration).toContain("WorkspaceIdentitySettings");
     expect(integration).toContain("WorkspaceAccessSettings");
     expect(integration).toContain("CustomVerificationModelsPanel");
-    expect(integration).toContain("WorkspaceGuestLinksPanel");
+    expect(integration).not.toContain("WorkspaceGuestLinksPanel");
     expect(integration).toContain("WorkspaceKnowledgePortalPanel");
     expect(integration).toContain("WorkspaceDataStudioPanel");
     expect(integration).not.toContain('data-settings-layout="linear"');
@@ -242,5 +246,29 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     // Workspace-tailored skill.md download still wired
     expect(integration).toContain("/api/workspace/integration-skill");
     expect(integration).not.toContain("/api/workspace/proof-of-work-schema");
+  });
+
+  it("drops Knowledge Links from settings subviews and keeps Knowledge Portal", () => {
+    const normal = availableSettingsSubviews("standard");
+    expect([...normal]).not.toContain("guest-links");
+    expect([...normal]).toContain("knowledge-portal");
+    expect(resolveSettingsSubview("guest-links", "standard")).toBe("general");
+    expect(resolveSettingsSubview("knowledge-portal", "standard")).toBe("knowledge-portal");
+
+    const region = availableSettingsSubviews("knowledge_region");
+    expect([...region]).not.toContain("guest-links");
+    expect([...region]).not.toContain("knowledge-portal");
+    expect(resolveSettingsSubview("guest-links", "knowledge_region")).toBe("general");
+    expect(resolveSettingsSubview("knowledge-portal", "knowledge_region")).toBe("general");
+
+    const tabs = settingsSubTabsForKind("standard", (key) =>
+      key === "planView.knowledgePortalSettingsTab" ? "Knowledge Portal" : key,
+    );
+    expect(tabs.map((tab) => tab.id)).not.toContain("guest-links");
+    expect(tabs.map((tab) => tab.label)).toContain("Knowledge Portal");
+    expect(tabs.map((tab) => tab.label)).not.toContain("Knowledge Links");
+    const regionTabs = settingsSubTabsForKind("knowledge_region", () => "Knowledge Links");
+    expect(regionTabs.map((tab) => tab.id)).not.toContain("knowledge-portal");
+    expect(regionTabs.map((tab) => tab.label)).not.toContain("Knowledge Links");
   });
 });

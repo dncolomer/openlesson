@@ -176,7 +176,11 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
   it("Settings / dashboard / workspace chrome avoid TAP/ILE product brands", () => {
     const integration = read("components/WorkspaceIntegrationPanel.tsx");
     expect(integration).not.toContain("Create shareable TAP and ILE guest links");
-    expect(integration).toMatch(/shareable practice links/i);
+    expect(integration).not.toMatch(/shareable practice links/i);
+    expect(integration).not.toContain("WorkspaceGuestLinksPanel");
+    expect(integration).toContain("WorkspaceKnowledgePortalPanel");
+    const guest = read("components/WorkspaceGuestLinksPanel.tsx");
+    expect(guest).toContain('t("planView.guestLinksBrowseEmpty")');
 
     const dashboard = read("app/dashboard/page.tsx");
     expect(dashboard).not.toContain(">TAP sessions<");
@@ -191,6 +195,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(dashboard).not.toContain("TAP/ILE PoW not billed");
 
     const en = read("messages/en.json");
+    expect(en).toMatch(/shareable practice links/i);
     // Must not reintroduce full technical product names as primary labels
     expect(en).not.toContain('"productIle": "Integrated Learning Environment"');
     expect(en).toMatch(/forkToEditBody.*practice sessions/);

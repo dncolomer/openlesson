@@ -13,13 +13,8 @@ export function MapAuthoringForms({
   useRightPaneEmpty,
   localPendingCell,
   labels,
-  canSuggest,
-  isSuggesting,
   busy,
-  onSuggestLocalAdd,
-  suggestError,
   addError,
-  suggestions,
   prompt,
   setPrompt,
   onCancelLocalAdd,
@@ -28,7 +23,6 @@ export function MapAuthoringForms({
   shapeFootprint,
   selectedEmptyCells,
   shapeFreeformOk,
-  onSuggestShapeTopics,
   shapeContextLoading,
   shapeContextOptions,
   shapeContextSelected,
@@ -43,13 +37,8 @@ export function MapAuthoringForms({
   useRightPaneEmpty: boolean;
   localPendingCell: GridCell | null;
   labels: Labels;
-  canSuggest: boolean;
-  isSuggesting: boolean;
   busy: boolean;
-  onSuggestLocalAdd: () => void;
-  suggestError: string | null;
   addError: string | null;
-  suggestions: string[];
   prompt: string;
   setPrompt: (value: string) => void;
   onCancelLocalAdd: () => void;
@@ -63,7 +52,6 @@ export function MapAuthoringForms({
   } | null;
   selectedEmptyCells: GridCell[];
   shapeFreeformOk: boolean;
-  onSuggestShapeTopics: () => void;
   shapeContextLoading: boolean;
   shapeContextOptions: ShapeContextSourceOption[];
   shapeContextSelected: string[];
@@ -89,32 +77,7 @@ export function MapAuthoringForms({
             <p className="mt-1 text-[11px] text-neutral-500">
               Slot {formatGridCoordinate(localPendingCell.row, localPendingCell.col)}
             </p>
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                disabled={!canSuggest || isSuggesting || busy}
-                onClick={() => void onSuggestLocalAdd()}
-                className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
-              >
-                {isSuggesting ? labels.suggesting : labels.suggestTopics}
-              </button>
-            </div>
-            {suggestError && <p className="mt-2 text-xs text-red-400/90">{suggestError}</p>}
             {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
-            {suggestions.length > 0 && (
-              <div className="mt-2 flex flex-col gap-1.5">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => setPrompt(suggestion)}
-                    className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -163,35 +126,7 @@ export function MapAuthoringForms({
                 Select edge-connected cells only.
               </p>
             ) : null}
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                data-suggest-shape-topics
-                disabled={
-                  !canSuggest || isSuggesting || busy || !shapeFootprint || !shapeFreeformOk
-                }
-                onClick={() => void onSuggestShapeTopics()}
-                className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
-              >
-                {isSuggesting ? labels.suggesting : labels.suggestTopics}
-              </button>
-            </div>
-            {suggestError && <p className="mt-2 text-xs text-red-400/90">{suggestError}</p>}
             {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
-            {suggestions.length > 0 && (
-              <div className="mt-2 flex flex-col gap-1.5" data-shape-suggestions>
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => setPrompt(suggestion)}
-                    className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

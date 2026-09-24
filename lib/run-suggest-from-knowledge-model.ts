@@ -1,5 +1,5 @@
 /**
- * Shared xAI call for Suggest from Knowledge and Suggest from Simulation.
+ * Shared xAI call for Suggest from Knowledge, Simulation, and Context.
  * Routes stay corpus adapters; this is the only model producer.
  */
 

@@ -1303,22 +1303,25 @@ describe("block-map-tools", () => {
     expect(removed.length).toBe(1);
   });
 
-  it("Generate-in-shape dialog wires shape-aware suggest 3 options", () => {
-    const fs = require("node:fs");
-    const path = require("node:path");
+  it("Generate-in-shape dialog does not offer Suggest 3 topics", () => {
     const panel = readMapGridSurface();
-    const route = fs.readFileSync(
-      path.join(process.cwd(), "app/api/workspace/suggest-blocks/route.ts"),
+    const add = readFileSync(
+      join(process.cwd(), "components/WorkspaceAddBlockPane.tsx"),
       "utf8",
     );
-    expect(panel).toContain("data-suggest-shape-topics");
-    expect(panel).toContain("handleSuggestShapeTopics");
+    const shape = readFileSync(
+      join(process.cwd(), "components/WorkspaceGenerateShapePane.tsx"),
+      "utf8",
+    );
+    expect(panel).not.toContain("data-suggest-shape-topics");
+    expect(panel).not.toContain("labels.suggestTopics");
+    expect(add).not.toContain("data-add-block-suggest");
+    expect(add).not.toContain("suggestTopics");
+    expect(shape).not.toContain("data-suggest-shape-topics");
+    expect(shape).not.toContain("suggestTopics");
+    expect(shape).toContain("WorkspacePromptContextAlternatives");
+    expect(add).toContain("WorkspacePromptContextAlternatives");
     expect(panel).toContain("data-generate-shape-dialog");
-    expect(panel).toContain("shape: true");
-    expect(panel).toContain("span_w");
-    expect(panel).toContain("span_h");
-    expect(route).toContain("composeSuggestShapeBlockTitlesUserPrompt");
-    expect(route).toContain("isShapeSuggest");
   });
 });
 

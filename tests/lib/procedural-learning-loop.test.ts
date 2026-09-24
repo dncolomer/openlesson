@@ -530,7 +530,7 @@ describe("suggest from knowledge + simulation", () => {
     );
   });
 
-  it("generative panes expose Suggest from Knowledge + Simulation hooks; knowledge route uses xAI", () => {
+  it("generative panes expose equal from-Knowledge, from-Simulation, and from-Context controls", () => {
     const panes = [
       "components/WorkspaceAddBlockPane.tsx",
       "components/WorkspaceGenerateShapePane.tsx",
@@ -538,19 +538,45 @@ describe("suggest from knowledge + simulation", () => {
       "components/WorkspaceCombineBlocksPane.tsx",
       "components/WorkspaceEmptyMapPane.tsx",
     ];
+    const fieldHooks = [
+      "data-add-block-prompt",
+      "data-generate-shape-prompt",
+      "data-expand-block-modifier-input",
+      "data-bridge-prompt",
+      "data-empty-map-suggest-input",
+    ];
     for (const p of panes) {
       const src = read(p);
-      expect(src).toContain("WorkspacePromptContextAlternatives");
-      expect(src).toMatch(
+      expect(src, p).toContain("WorkspacePromptContextAlternatives");
+      expect(src, p).toMatch(
         /data-generative-context-alternatives|data-expand-map-suggest-context|data-prompt-context-alternatives/,
       );
+      expect(src, p).not.toContain("data-prompt-context-suggestions");
     }
+    for (const hook of fieldHooks) {
+      const owners = panes.filter((p) => read(p).includes(`adhocInputDataAttr="${hook}"`));
+      expect(owners, hook).toHaveLength(1);
+    }
+
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
-    expect(alt).toContain("Suggest from Knowledge");
-    expect(alt).toContain("Suggest from Simulation");
+    expect(alt).toContain("grid-cols-3");
+    expect(alt).toContain("w-full min-w-0");
+    expect(alt).toContain("sample from Knowledge");
+    expect(alt).toContain("sample from Simulation");
+    expect(alt).toContain("sample from Context");
     expect(alt).toContain("data-suggest-from-knowledge");
     expect(alt).toContain("data-suggest-from-simulation");
-    expect(alt).toContain('data-prompt-context-mode="adhoc"');
+    expect(alt).toContain("data-suggest-from-context");
+    expect(alt).toContain("/api/workspace/suggest-from-knowledge");
+    expect(alt).toContain("/api/workspace/suggest-from-simulation");
+    expect(alt).toContain("/api/workspace/suggest-from-context");
+    expect(alt).toContain("pickNextDistinctAuthorPrompt");
+    expect(alt).toContain("onAccept(prompt)");
+    expect(alt).toContain("onAdhocChange(prompt)");
+    expect(alt).toContain("data-prompt-context-adhoc-input");
+    expect(alt).not.toContain('mode === "adhoc"');
+    expect(alt).not.toContain("data-prompt-context-suggestions");
+    expect(alt).not.toContain("suggestions.map");
 
     const route = read("app/api/workspace/suggest-from-knowledge/route.ts");
     expect(route).toContain("runSuggestFromKnowledgeModel");
@@ -558,8 +584,48 @@ describe("suggest from knowledge + simulation", () => {
     expect(route).toContain("normalizeSuggestFromKnowledgeResponse");
     expect(route).toContain("listEvalRunHistory");
     expect(route).toContain("from(\"blocks\")");
-    // Must not ship pure offline template builder as success path
     expect(route).not.toContain("buildSuggestFromKnowledge(");
+
+    const contextRoute = read("app/api/workspace/suggest-from-context/route.ts");
+    const emptyAt = contextRoute.indexOf("assembled.empty");
+    const modelAt = contextRoute.indexOf("await runSuggestFromKnowledgeModel");
+    expect(contextRoute).toContain("assembleSuggestFromContextXaiMessages");
+    expect(contextRoute).toContain("normalizeSuggestFromKnowledgeResponse");
+    expect(contextRoute).toContain('from("workspace_files")');
+    expect(contextRoute).toContain('from("workspace_external_resources")');
+    expect(contextRoute).toContain("notes");
+    expect(contextRoute).not.toContain("listEvalRunHistory");
+    expect(contextRoute).not.toContain("simulationCollection");
+    expect(contextRoute).not.toContain("simulation_collection");
+    expect(contextRoute).not.toContain("callXaiJSON");
+    expect(contextRoute).not.toContain("buildSuggestFromContext(");
+    expect(contextRoute).not.toContain("buildSuggestFromKnowledge(");
+    expect(emptyAt).toBeGreaterThan(-1);
+    expect(modelAt).toBeGreaterThan(emptyAt);
+
+    writeLog(
+      "suggest-context-ui.log",
+      [
+        "equal_grid=grid-cols-3",
+        "button_share=w-full min-w-0",
+        "labels=sample from Knowledge | sample from Simulation | sample from Context",
+        "knowledge_endpoint=/api/workspace/suggest-from-knowledge",
+        "simulation_endpoint=/api/workspace/suggest-from-simulation",
+        "context_endpoint=/api/workspace/suggest-from-context",
+        "picker=pickNextDistinctAuthorPrompt",
+        "apply=onAccept(prompt)+onAdhocChange(prompt)",
+        "field=data-prompt-context-adhoc-input",
+        `field_hooks=${fieldHooks.join(",")}`,
+        "suggestion_choice_list=absent",
+        "adhoc_mode_gate=absent",
+        "context_route_model=runSuggestFromKnowledgeModel",
+        `context_empty_before_model=${emptyAt < modelAt}`,
+        "context_offline_builder=absent",
+        "context_route_skips_eval_history=true",
+        "context_route_skips_simulation_collection=true",
+        `panes=${panes.length}`,
+      ].join("\n") + "\n",
+    );
   });
 
   it("generative drawers keep one adhoc prompt field (no leftover sibling textarea)", () => {
@@ -616,15 +682,17 @@ describe("Expand Map rename + suggest UI", () => {
     expect(pane).toContain("WorkspacePromptContextAlternatives");
 
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
-    expect(alt).toContain("Suggest from Knowledge");
-    expect(alt).toContain("Suggest from Simulation");
+    expect(alt).toContain("sample from Knowledge");
+    expect(alt).toContain("sample from Simulation");
+    expect(alt).toContain("sample from Context");
+    expect(alt).toContain("grid-cols-3");
 
     writeLog(
       "expand-map-ui.log",
       [
         "button=Explore (3-state toggle)",
         "drawer_title=Expand Map",
-        "suggest_context=knowledge+simulation",
+        "suggest_context=knowledge+simulation+context",
       ].join("\n") + "\n",
     );
   });

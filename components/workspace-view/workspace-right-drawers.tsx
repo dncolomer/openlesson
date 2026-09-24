@@ -405,7 +405,6 @@ export function WorkspaceRightDrawers({
             nodes={nodes}
             workspaceId={workspaceId}
             ayclToken={ayclToken}
-            locale={locale}
             busy={false}
             workspaceNotes={notesContent || plan.notes}
             unusableCells={unusableCells}
@@ -420,9 +419,6 @@ export function WorkspaceRightDrawers({
               addPlaceholder: t("sessionList.gridAddPlaceholder"),
               addSubmit: t("sessionList.gridAddSubmit"),
               addCancel: t("sessionList.gridAddCancel"),
-              suggestTopics: t("sessionList.gridSuggestTopics"),
-              suggesting: t("sessionList.gridSuggesting"),
-              suggestError: t("sessionList.gridSuggestError"),
             }}
           />
         ) : showCreatorDrawers &&
@@ -432,9 +428,7 @@ export function WorkspaceRightDrawers({
             ayclToken={ayclToken}
             key={`shape-${generateShapeCells.map((c) => `${c.row}:${c.col}`).join(",")}`}
             cells={generateShapeCells}
-            nodes={nodes}
             workspaceId={workspaceId}
-            locale={locale}
             busy={isAddingBlock}
             workspaceNotes={notesContent || plan.notes}
             onSubmit={onSubmitGenerateShape}
@@ -446,9 +440,6 @@ export function WorkspaceRightDrawers({
               addPlaceholder: t("sessionList.gridAddPlaceholder"),
               addSubmit: t("sessionList.gridAddSubmit"),
               addCancel: t("sessionList.gridAddCancel"),
-              suggestTopics: t("sessionList.gridSuggestTopics"),
-              suggesting: t("sessionList.gridSuggesting"),
-              suggestError: t("sessionList.gridSuggestError"),
             }}
           />
         ) : (

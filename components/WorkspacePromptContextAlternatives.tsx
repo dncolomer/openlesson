@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { pickNextDistinctAuthorPrompt } from "@/lib/suggest-next-prompt";
 
-export type PromptContextMode = "adhoc" | "knowledge" | "simulation";
+export type PromptContextMode = "adhoc" | "knowledge" | "simulation" | "context";
 
 export type PromptSuggestion = {
   id: string;
@@ -12,9 +13,26 @@ export type PromptSuggestion = {
   rationale?: string;
 };
 
+type SuggestKind = "knowledge" | "simulation" | "context";
+
+const SUGGEST_ENDPOINTS: Record<SuggestKind, string> = {
+  knowledge: "/api/workspace/suggest-from-knowledge",
+  simulation: "/api/workspace/suggest-from-simulation",
+  context: "/api/workspace/suggest-from-context",
+};
+
+const EMPTY_SOURCE_ERROR: Record<SuggestKind, string> = {
+  knowledge:
+    "No author prompt from Knowledge. Add map or snapshot context and try again.",
+  simulation:
+    "No simulation prompt yet. Curate the Simulation collection first.",
+  context: "No context prompt yet. Add notes, files, or links in Context.",
+};
+
 /**
- * Shared control: adhoc free-text guidance vs Suggest from Knowledge vs
- * Suggest from Simulation. Accepting a suggestion calls onAccept(prompt).
+ * Shared control for the single guidance field. sample from Knowledge,
+ * sample from Simulation, and sample from Context are equal-width actions. Each click writes
+ * one author prompt into that field; the next click writes a different one.
  */
 export function WorkspacePromptContextAlternatives({
   workspaceId,
@@ -41,38 +59,53 @@ export function WorkspacePromptContextAlternatives({
   onModeChange: (mode: PromptContextMode) => void;
   adhocValue: string;
   onAdhocChange: (value: string) => void;
-  /** Called when a knowledge/simulation suggestion is accepted. */
+  /** Called with the one prompt written into the guidance field. */
   onAccept: (prompt: string) => void;
   disabled?: boolean;
   adhocPlaceholder?: string;
   adhocLabel?: string;
-  /** Extra data-* marker on the adhoc field (e.g. pane-specific test hooks). */
+  /** Extra data-* marker on the guidance field (e.g. pane-specific test hooks). */
   adhocInputDataAttr?: string;
   onAdhocEnter?: () => void;
   adhocAutoFocus?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<PromptSuggestion[]>([]);
+  const cacheRef = useRef<Partial<Record<SuggestKind, unknown>>>({});
+  const fieldRef = useRef(adhocValue);
+  fieldRef.current = adhocValue;
+
+  const applyPrompt = useCallback(
+    (prompt: string) => {
+      fieldRef.current = prompt;
+      onAccept(prompt);
+      onAdhocChange(prompt);
+    },
+    [onAccept, onAdhocChange],
+  );
 
   const runSuggest = useCallback(
-    async (kind: "knowledge" | "simulation") => {
+    async (kind: SuggestKind) => {
       if (!workspaceId || busy || disabled) return;
-      setBusy(true);
-      setError(null);
-      setSuggestions([]);
       onModeChange(kind);
+      setError(null);
+      const current = fieldRef.current;
+      const cached = cacheRef.current[kind];
+      if (cached) {
+        const fromCache = pickNextDistinctAuthorPrompt(cached, current);
+        if (fromCache) {
+          applyPrompt(fromCache);
+          return;
+        }
+      }
+      setBusy(true);
       try {
-        const path =
-          kind === "knowledge"
-            ? "/api/workspace/suggest-from-knowledge"
-            : "/api/workspace/suggest-from-simulation";
-        const res = await fetch(path, {
+        const res = await fetch(SUGGEST_ENDPOINTS[kind], {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             workspaceId,
-            draftPrompt,
+            draftPrompt: current || draftPrompt,
             surface,
             ...(ayclToken ? { ayclToken } : {}),
           }),
@@ -86,23 +119,37 @@ export function WorkspacePromptContextAlternatives({
             errorMessageFromBody(data, `Failed to suggest from ${kind}`),
           );
         }
-        const list = Array.isArray(data.suggestions) ? data.suggestions : [];
-        setSuggestions(list);
-        if (!list.length) {
-          setError(
-            kind === "knowledge"
-              ? "No author prompts returned — try again or add more map/snapshot context."
-              : "No simulation suggestions yet — curate the Simulation collection first.",
-          );
+        cacheRef.current[kind] = data;
+        const next = pickNextDistinctAuthorPrompt(data, fieldRef.current);
+        if (!next) {
+          setError(EMPTY_SOURCE_ERROR[kind]);
+          return;
         }
+        applyPrompt(next);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Suggest failed");
       } finally {
         setBusy(false);
       }
     },
-    [ayclToken, busy, disabled, draftPrompt, onModeChange, surface, workspaceId],
+    [
+      applyPrompt,
+      ayclToken,
+      busy,
+      disabled,
+      draftPrompt,
+      onModeChange,
+      surface,
+      workspaceId,
+    ],
   );
+
+  const sourceClass = (active: boolean) =>
+    `w-full min-w-0 rounded-none border px-1.5 py-1.5 text-center text-[10px] font-medium leading-tight transition disabled:opacity-40 ${
+      active
+        ? "border-white/40 bg-white/10 text-white"
+        : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
+    }`;
 
   return (
     <div
@@ -111,44 +158,21 @@ export function WorkspacePromptContextAlternatives({
       data-prompt-context-mode={mode}
     >
       <div
-        className="flex flex-wrap gap-1.5"
+        className="grid w-full grid-cols-3 gap-1.5"
         data-prompt-context-mode-tabs
+        data-prompt-context-equal-sources
         role="group"
-        aria-label="Prompt context alternatives"
+        aria-label="Sample from knowledge, simulation, or context"
       >
-        <button
-          type="button"
-          data-prompt-context-mode="adhoc"
-          data-suggest-adhoc
-          disabled={disabled}
-          onClick={() => {
-            onModeChange("adhoc");
-            setSuggestions([]);
-            setError(null);
-          }}
-          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
-            mode === "adhoc"
-              ? "border-white/40 bg-white/10 text-white"
-              : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
-          }`}
-        >
-          Adhoc
-        </button>
         <button
           type="button"
           data-prompt-context-mode="knowledge"
           data-suggest-from-knowledge
           disabled={disabled || !workspaceId || busy}
           onClick={() => void runSuggest("knowledge")}
-          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
-            mode === "knowledge"
-              ? "border-white/40 bg-white/10 text-white"
-              : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
-          }`}
+          className={sourceClass(mode === "knowledge")}
         >
-          {busy && mode === "knowledge"
-            ? "Generating prompts…"
-            : "Suggest from Knowledge"}
+          {busy && mode === "knowledge" ? "…" : "sample from Knowledge"}
         </button>
         <button
           type="button"
@@ -156,81 +180,49 @@ export function WorkspacePromptContextAlternatives({
           data-suggest-from-simulation
           disabled={disabled || !workspaceId || busy}
           onClick={() => void runSuggest("simulation")}
-          className={`rounded-none border px-2 py-1 text-[10px] font-medium transition disabled:opacity-40 ${
-            mode === "simulation"
-              ? "border-white/40 bg-white/10 text-white"
-              : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
-          }`}
+          className={sourceClass(mode === "simulation")}
         >
-          {busy && mode === "simulation" ? "Suggesting…" : "Suggest from Simulation"}
+          {busy && mode === "simulation" ? "…" : "sample from Simulation"}
+        </button>
+        <button
+          type="button"
+          data-prompt-context-mode="context"
+          data-suggest-from-context
+          disabled={disabled || !workspaceId || busy}
+          onClick={() => void runSuggest("context")}
+          className={sourceClass(mode === "context")}
+        >
+          {busy && mode === "context" ? "…" : "sample from Context"}
         </button>
       </div>
 
-      {mode === "adhoc" ? (
-        <label className="block space-y-1" data-prompt-context-adhoc>
-          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            {adhocLabel}
-          </span>
-          <textarea
-            value={adhocValue}
-            onChange={(e) => onAdhocChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && onAdhocEnter) {
-                e.preventDefault();
-                onAdhocEnter();
-              }
-            }}
-            disabled={disabled}
-            autoFocus={adhocAutoFocus}
-            rows={3}
-            placeholder={adhocPlaceholder}
-            data-prompt-context-adhoc-input
-            {...(adhocInputDataAttr ? { [adhocInputDataAttr]: true } : {})}
-            className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
-          />
-        </label>
-      ) : null}
+      <label className="block space-y-1" data-prompt-context-adhoc>
+        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+          {adhocLabel}
+        </span>
+        <textarea
+          value={adhocValue}
+          onChange={(e) => onAdhocChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && onAdhocEnter) {
+              e.preventDefault();
+              onAdhocEnter();
+            }
+          }}
+          disabled={disabled}
+          autoFocus={adhocAutoFocus}
+          rows={3}
+          placeholder={adhocPlaceholder}
+          data-prompt-context-adhoc-input
+          {...(adhocInputDataAttr ? { [adhocInputDataAttr]: true } : {})}
+          className="w-full resize-none rounded-none border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
+        />
+      </label>
 
       {error ? (
         <p className="text-[11px] text-neutral-400" data-prompt-context-error>
           {error}
         </p>
-      ) : null}
-
-      {suggestions.length > 0 ? (
-        <ul
-          className="space-y-1.5"
-          data-prompt-context-suggestions
-          data-suggest-source={mode}
-        >
-          {suggestions.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                data-prompt-context-suggestion={s.id}
-                disabled={disabled}
-                onClick={() => {
-                  onAccept(s.prompt);
-                  onAdhocChange(s.prompt);
-                  onModeChange("adhoc");
-                }}
-                className="w-full rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left transition hover:border-neutral-500 hover:bg-neutral-800 disabled:opacity-40"
-              >
-                <span className="block text-[11px] font-medium text-neutral-100">
-                  {s.label}
-                </span>
-                {s.rationale ? (
-                  <span className="mt-0.5 block text-[10px] text-neutral-500">
-                    {s.rationale}
-                  </span>
-                ) : null}
-                <span className="mt-1 block text-[10px] leading-snug text-neutral-400 line-clamp-3">
-                  {s.prompt}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
       ) : null}
     </div>
   );

@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSkillGridLayout,
-  getWeightedNeighborhood,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
 import type { WorkspaceAddTargetCell } from "@/lib/workspace-right-pane";
@@ -29,13 +28,9 @@ import {
   toggleShapeContextSelection,
   type ShapeContextSourceOption,
 } from "@/lib/shape-context-select";
-import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { WorkspaceGenerateMapPane } from "@/components/WorkspaceGenerateMapPane";
 import { UnusableGroundDrawer } from "@/components/UnusableGroundDrawer";
 import { canPlaceOnMapGround } from "@/lib/map-ground-rules";
-
-const MODEL_STORAGE_KEY = "planner-model";
-const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
 
 /**
  * Options for multi-slot expand create.
@@ -75,7 +70,6 @@ export function WorkspaceAddBlockPane({
   nodes,
   workspaceId,
   ayclToken,
-  locale = "en",
   busy = false,
   workspaceNotes = null,
   unusableCells = null,
@@ -91,7 +85,6 @@ export function WorkspaceAddBlockPane({
   nodes: SkillGridNode[];
   workspaceId?: string;
   ayclToken?: string;
-  locale?: string;
   busy?: boolean;
   workspaceNotes?: string | null;
   unusableCells?: Array<{ row: number; col: number }> | null;
@@ -119,16 +112,10 @@ export function WorkspaceAddBlockPane({
     addPlaceholder: string;
     addSubmit: string;
     addCancel: string;
-    suggestTopics: string;
-    suggesting: string;
-    suggestError: string;
   };
 }) {
   const [prompt, setPrompt] = useState("");
   const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestError, setSuggestError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [range, setRange] = useState(0);
@@ -143,8 +130,6 @@ export function WorkspaceAddBlockPane({
   // Reset draft when the target cell changes.
   useEffect(() => {
     setPrompt("");
-    setSuggestions([]);
-    setSuggestError(null);
     setAddError(null);
     setRange(0);
     setDensity(ADD_DENSITY_MAX);
@@ -197,11 +182,7 @@ export function WorkspaceAddBlockPane({
     };
   }, [ayclToken, workspaceId, workspaceNotes]);
 
-  const nodesById = useMemo(
-    () => new Map(nodes.map((n) => [n.id, n])),
-    [nodes],
-  );
-  const { placements, occupancy } = useMemo(
+  const { occupancy } = useMemo(
     () => buildSkillGridLayout(nodes),
     [nodes],
   );
@@ -277,17 +258,6 @@ export function WorkspaceAddBlockPane({
     };
   }, []);
 
-  const weightedNeighbors = useMemo(
-    () =>
-      getWeightedNeighborhood(
-        { row: cell.row, col: cell.col },
-        placements,
-        nodesById,
-      ),
-    [cell.col, cell.row, nodesById, placements],
-  );
-
-  const canSuggest = Boolean(workspaceId);
   const densityIsMax = density >= ADD_DENSITY_MAX;
   const cellsToCreate = expandSelection.selected;
   // snapshotAddExpandSlots always posts the anchor, even when range sampling
@@ -297,55 +267,6 @@ export function WorkspaceAddBlockPane({
       [{ row: cell.row, col: cell.col }],
       unusableCells || [],
     ).reason === "unusable";
-
-  const handleSuggest = useCallback(async () => {
-    if (!canSuggest || isSuggesting || !workspaceId) return;
-    setIsSuggesting(true);
-    setSuggestError(null);
-    try {
-      const savedModel =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(MODEL_STORAGE_KEY)?.replace(/^x-ai\//, "")
-          : null;
-      const model = savedModel || DEFAULT_PLANNER_MODEL;
-      const response = await fetch("/api/workspace/suggest-blocks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          mode: "block",
-          row: cell.row,
-          col: cell.col,
-          weightedNeighbors,
-          model,
-          locale,
-          ...(ayclToken ? { ayclToken } : {}),
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || labels.suggestError);
-      }
-      const data = (await response.json()) as { suggestions?: string[] };
-      setSuggestions((data.suggestions || []).filter(Boolean).slice(0, 3));
-    } catch (error) {
-      console.error("Failed to suggest block topics:", error);
-      setSuggestions([]);
-      setSuggestError(error instanceof Error ? error.message : labels.suggestError);
-    } finally {
-      setIsSuggesting(false);
-    }
-  }, [
-    ayclToken,
-    canSuggest,
-    cell.col,
-    cell.row,
-    isSuggesting,
-    labels.suggestError,
-    locale,
-    weightedNeighbors,
-    workspaceId,
-  ]);
 
   const handleSubmit = async () => {
     if (!prompt.trim() || busy || submitting || submitBlockedByUnusable) return;
@@ -370,7 +291,6 @@ export function WorkspaceAddBlockPane({
           : {}),
       });
       setPrompt("");
-      setSuggestions([]);
       setRange(0);
       setDensity(ADD_DENSITY_MAX);
       setSampleSeed(1);
@@ -399,42 +319,10 @@ export function WorkspaceAddBlockPane({
         defaultExpanded
         bodyClassName="space-y-3"
       >
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            data-add-block-suggest
-            disabled={!canSuggest || isSuggesting || busy || submitting}
-            onClick={() => void handleSuggest()}
-            className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
-          >
-            {isSuggesting ? labels.suggesting : labels.suggestTopics}
-          </button>
-        </div>
-
-        {suggestError && (
-          <p className="text-xs text-red-400/90" data-add-block-suggest-error>
-            {suggestError}
-          </p>
-        )}
         {addError && (
           <p className="text-xs text-red-400/90" data-add-block-error>
             {addError}
           </p>
-        )}
-
-        {suggestions.length > 0 && (
-          <div className="flex flex-col gap-1.5" data-add-block-suggestions>
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => setPrompt(suggestion)}
-                className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
         )}
 
         <div data-add-block-context-alternatives data-generative-context-alternatives>

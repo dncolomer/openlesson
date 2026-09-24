@@ -329,11 +329,9 @@ export function BlockSkillGrid({
     setStretchPreview,
     prompt,
     setPrompt,
-    suggestions,
     setSuggestions,
     isSuggesting,
     setIsSuggesting,
-    suggestError,
     setSuggestError,
     addError,
     setAddError,
@@ -912,14 +910,7 @@ export function BlockSkillGrid({
     handleEmptyCircularMenuAction("add_chapter");
   }, [emptyAddNonce, handleEmptyCircularMenuAction]);
 
-  const {
-    runSuggestTopics,
-    handleSuggestShapeTopics,
-    localPendingNeighbors,
-    handleSuggestLocalAdd,
-    submitLocalAdd,
-    runGridOp,
-  } = useMapGridMutate({
+  const { submitLocalAdd, runGridOp } = useMapGridMutate({
     canSuggest,
     isSuggesting,
     setIsSuggesting,
@@ -1253,13 +1244,8 @@ export function BlockSkillGrid({
         useRightPaneEmpty,
         localPendingCell,
         labels,
-        canSuggest,
-        isSuggesting,
         busy,
-        onSuggestLocalAdd: handleSuggestLocalAdd,
-        suggestError,
         addError,
-        suggestions,
         prompt,
         setPrompt,
         onCancelLocalAdd: () => {
@@ -1273,7 +1259,6 @@ export function BlockSkillGrid({
         shapeFootprint,
         selectedEmptyCells,
         shapeFreeformOk: shapeFreeform.ok,
-        onSuggestShapeTopics: handleSuggestShapeTopics,
         shapeContextLoading,
         shapeContextOptions,
         shapeContextSelected,

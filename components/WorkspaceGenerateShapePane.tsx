@@ -1,11 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  buildSkillGridLayout,
-  getWeightedNeighborhood,
-  type SkillGridNode,
-} from "@/lib/block-skill-grid";
+import { useEffect, useMemo, useState } from "react";
 import {
   footprintFromCells,
   selectionIsFreeformLectureShape,
@@ -27,21 +22,14 @@ import {
   WorkspacePromptContextAlternatives,
   type PromptContextMode,
 } from "@/components/WorkspacePromptContextAlternatives";
-import { DEFAULT_MODEL } from "@/lib/xai-models";
-
-const MODEL_STORAGE_KEY = "planner-model";
-const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
-
 /**
  * Right-column multi-empty create form (generate-in-shape).
  * Opens automatically when 2+ placeable empties are multi-selected — no toolbar button.
  */
 export function WorkspaceGenerateShapePane({
   cells,
-  nodes,
   workspaceId,
   ayclToken,
-  locale = "en",
   busy = false,
   workspaceNotes = null,
   unusableCells = null,
@@ -51,10 +39,8 @@ export function WorkspaceGenerateShapePane({
   labels,
 }: {
   cells: readonly WorkspaceAddTargetCell[];
-  nodes: SkillGridNode[];
   workspaceId?: string;
   ayclToken?: string;
-  locale?: string;
   busy?: boolean;
   workspaceNotes?: string | null;
   unusableCells?: Array<{ row: number; col: number }> | null;
@@ -72,16 +58,10 @@ export function WorkspaceGenerateShapePane({
     addPlaceholder: string;
     addSubmit: string;
     addCancel: string;
-    suggestTopics: string;
-    suggesting: string;
-    suggestError: string;
   };
 }) {
   const [prompt, setPrompt] = useState("");
   const [contextMode, setContextMode] = useState<PromptContextMode>("adhoc");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestError, setSuggestError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [contextOptions, setContextOptions] = useState<ShapeContextSourceOption[]>([]);
@@ -92,8 +72,6 @@ export function WorkspaceGenerateShapePane({
 
   useEffect(() => {
     setPrompt("");
-    setSuggestions([]);
-    setSuggestError(null);
     setAddError(null);
     setContextSelected([]);
   }, [cellKey]);
@@ -149,75 +127,6 @@ export function WorkspaceGenerateShapePane({
     [cells],
   );
 
-  const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
-  const { placements } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
-  const weightedNeighbors = useMemo(() => {
-    if (!shapeFootprint) return [];
-    return getWeightedNeighborhood(
-      { row: shapeFootprint.position_y, col: shapeFootprint.position_x },
-      placements,
-      nodesById,
-    );
-  }, [nodesById, placements, shapeFootprint]);
-
-  const canSuggest = Boolean(workspaceId);
-
-  const handleSuggest = useCallback(async () => {
-    if (!canSuggest || isSuggesting || !workspaceId || !shapeFootprint || !shapeFreeform.ok) {
-      return;
-    }
-    setIsSuggesting(true);
-    setSuggestError(null);
-    try {
-      const savedModel =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(MODEL_STORAGE_KEY)?.replace(/^x-ai\//, "")
-          : null;
-      const model = savedModel || DEFAULT_PLANNER_MODEL;
-      const response = await fetch("/api/workspace/suggest-blocks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          mode: "block",
-          row: shapeFootprint.position_y,
-          col: shapeFootprint.position_x,
-          weightedNeighbors,
-          model,
-          locale,
-          shape: true,
-          span_w: shapeFootprint.span_w,
-          span_h: shapeFootprint.span_h,
-          cells,
-          ...(ayclToken ? { ayclToken } : {}),
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || labels.suggestError);
-      }
-      const data = (await response.json()) as { suggestions?: string[] };
-      setSuggestions((data.suggestions || []).filter(Boolean).slice(0, 3));
-    } catch (error) {
-      console.error("Failed to suggest shape topics:", error);
-      setSuggestions([]);
-      setSuggestError(error instanceof Error ? error.message : labels.suggestError);
-    } finally {
-      setIsSuggesting(false);
-    }
-  }, [
-    ayclToken,
-    canSuggest,
-    cells,
-    isSuggesting,
-    labels.suggestError,
-    locale,
-    shapeFootprint,
-    shapeFreeform.ok,
-    weightedNeighbors,
-    workspaceId,
-  ]);
-
   const submitBlockedByUnusable =
     canPlaceOnMapGround(cells, unusableCells || []).reason === "unusable";
 
@@ -238,7 +147,6 @@ export function WorkspaceGenerateShapePane({
         contextSourceKeys: contextSelected.length > 0 ? [...contextSelected] : undefined,
       });
       setPrompt("");
-      setSuggestions([]);
       setContextSelected([]);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : "Failed to generate block");
@@ -272,44 +180,10 @@ export function WorkspaceGenerateShapePane({
           </p>
         ) : null}
 
-        <div className="mb-1 flex items-center justify-between gap-2 pb-1">
-          <button
-            type="button"
-            data-suggest-shape-topics
-            disabled={
-              !canSuggest || isSuggesting || busy || submitting || !shapeFootprint || !shapeFreeform.ok
-            }
-            onClick={() => void handleSuggest()}
-            className="rounded-none border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
-          >
-            {isSuggesting ? labels.suggesting : labels.suggestTopics}
-          </button>
-        </div>
-
-        {suggestError && (
-          <p className="text-xs text-red-400/90" data-generate-shape-suggest-error>
-            {suggestError}
-          </p>
-        )}
         {addError && (
           <p className="text-xs text-red-400/90" data-generate-shape-error>
             {addError}
           </p>
-        )}
-
-        {suggestions.length > 0 && (
-          <div className="flex flex-col gap-1.5" data-shape-suggestions>
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => setPrompt(suggestion)}
-                className="rounded-none border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
         )}
 
         <div data-generate-shape-context-alternatives data-generative-context-alternatives>

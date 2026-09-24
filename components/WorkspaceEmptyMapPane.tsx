@@ -527,7 +527,7 @@ export function WorkspaceEmptyMapPane({
               onAdhocChange={setSpotTopic}
               onAccept={(prompt) => setSpotTopic(prompt)}
               disabled={disabled || spotBusy}
-              adhocPlaceholder="Best spot for… (or use Suggest from Knowledge / Simulation)"
+              adhocPlaceholder="Best spot for… (or sample from Knowledge, Simulation, or Context)"
               adhocLabel="Topic for empty spot"
               adhocInputDataAttr="data-empty-map-suggest-input"
               onAdhocEnter={() => void handleSuggestSpot()}

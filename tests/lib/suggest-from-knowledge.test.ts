@@ -23,6 +23,8 @@ import {
   depositSimulationGeneration,
 } from "@/lib/workspace-simulation-collection";
 import { simulationCollectionToSuggestSnapshots } from "@/lib/suggest-from-simulation";
+import { assembleSuggestFromContextXaiMessages } from "@/lib/suggest-from-context";
+import { pickNextDistinctAuthorPrompt } from "@/lib/suggest-next-prompt";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -321,7 +323,9 @@ describe("structural: xAI route + UI control", () => {
     const alt = read("components/WorkspacePromptContextAlternatives.tsx");
     expect(alt).toContain("data-suggest-from-knowledge");
     expect(alt).toContain("/api/workspace/suggest-from-knowledge");
-    expect(alt).toContain("onAccept(s.prompt)");
+    expect(alt).toContain("onAccept(prompt)");
+    expect(alt).toContain("onAdhocChange(prompt)");
+    expect(alt).not.toContain("data-prompt-context-suggestions");
     expect(typeof suggestFromKnowledgePost).toBe("function");
 
     writeLog(
@@ -398,6 +402,169 @@ describe("shared suggest model + simulation corpus adapter", () => {
         `failed=${failed.ok}`,
         "both routes call runSuggestFromKnowledgeModel",
       ].join("\n"),
+    );
+  });
+});
+
+describe("suggest from context corpus + one prompt", () => {
+  it("puts notes, file name, and external resource in model messages and cycles one distinct prompt", () => {
+    const notes = "Cohort struggles with partial moves in the ownership chapter.";
+    const fileName = "ownership-notes.md";
+    const excerpt = "Partial moves leave the rest of the struct valid.";
+    const resource = {
+      title: "Rust Book Ownership",
+      url: "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+      description: "Official chapter on ownership and moves.",
+    };
+
+    const assembled = assembleSuggestFromContextXaiMessages(
+      {
+        notes,
+        files: [{ name: fileName, mime_type: "text/markdown", excerpt }],
+        externalResources: [resource],
+      },
+      { surface: "add block", workspaceTitle: "Rust systems", limit: 3 },
+    );
+
+    expect(assembled.empty).toBe(false);
+    expect(assembled.userPrompt).toContain(notes);
+    expect(assembled.userPrompt).toContain(fileName);
+    expect(assembled.userPrompt).toContain("text/markdown");
+    expect(assembled.userPrompt).toContain(excerpt);
+    expect(assembled.userPrompt).toContain(resource.title);
+    expect(assembled.userPrompt).toContain(resource.url);
+    expect(assembled.userPrompt).toContain(resource.description);
+    expect(assembled.userPrompt).toContain("## Workspace Context materials");
+    expect(assembled.systemPrompt).toMatch(/workspace Context materials/i);
+    expect(assembled.systemPrompt).toMatch(
+      /do not use eval snapshots or the simulation collection/i,
+    );
+    expect(assembled.userPrompt).not.toContain("Learner snapshot");
+    expect(assembled.userPrompt).not.toContain("snap-tap-1");
+    expect(assembled.userPrompt).not.toMatch(/simulation collection/i);
+    expect(assembled.sourceSnapshotIds).toEqual([]);
+    expect(assembled.snapshotCount).toBe(0);
+
+    const empty = assembleSuggestFromContextXaiMessages(
+      {
+        notes: "   ",
+        files: [{ name: "  ", excerpt: "" }, { file_name: "" }],
+        externalResources: [{ title: "", url: "", description: "  " }],
+      },
+      {
+        workspaceTitle: "Rust systems",
+        workspaceGoal: "Ship safe systems code",
+        draftPrompt: "keep this draft out of an empty corpus",
+      },
+    );
+    expect(empty.empty).toBe(true);
+    expect(empty.userPrompt).toBe("");
+    expect(empty.systemPrompt).toBe("");
+    expect(pickNextDistinctAuthorPrompt({ suggestions: [] }, "")).toBeNull();
+
+    const payload = {
+      suggestions: [
+        {
+          label: "Partial moves",
+          prompt:
+            "Add a block on partial moves that keeps the rest of a struct valid after a move.",
+        },
+        {
+          label: "Ownership chapter",
+          prompt:
+            "Add a block that walks the Rust Book ownership chapter from moves to borrows.",
+        },
+        {
+          label: "Stored notes",
+          prompt:
+            "Add a block that turns the ownership notes excerpt into a three-step exercise.",
+        },
+      ],
+    };
+    const current = "";
+    const first = pickNextDistinctAuthorPrompt(payload, current);
+    expect(first).toBe(payload.suggestions[0]!.prompt);
+    const second = pickNextDistinctAuthorPrompt(payload, first);
+    expect(second).toBe(payload.suggestions[1]!.prompt);
+    expect(second).not.toBe(first);
+    const third = pickNextDistinctAuthorPrompt(payload, second);
+    expect(third).toBe(payload.suggestions[2]!.prompt);
+    expect(third).not.toBe(second);
+    const exhausted = pickNextDistinctAuthorPrompt(
+      { suggestions: [{ prompt: first }] },
+      first,
+    );
+    expect(exhausted).toBeNull();
+
+    const knowledge = normalizeSuggestFromKnowledgeResponse(
+      {
+        suggestions: [
+          {
+            prompt:
+              "Expand Ownership with a three-slot path: move semantics, partial moves, and fix patterns.",
+          },
+        ],
+      },
+      { sourceSnapshotIds: ["snap-tap-1"], limit: 4 },
+    );
+    expect(knowledge).toHaveLength(1);
+    expect(knowledge[0]!.prompt).toMatch(/Ownership/);
+    expect(knowledge[0]!.sourceSnapshotIds).toContain("snap-tap-1");
+
+    expect(simulationCollectionToSuggestSnapshots(emptySimulationCollection())).toEqual(
+      [],
+    );
+    let collection = emptySimulationCollection();
+    collection = depositSimulationGeneration(collection, {
+      questions: ["What fails in CAP theorem tradeoffs?"],
+      exercises: ["Design a partition-tolerant store."],
+      origin: { kind: "workspace" },
+    });
+    const simulationSnapshots = simulationCollectionToSuggestSnapshots(collection);
+    expect(simulationSnapshots.length).toBeGreaterThan(0);
+    const simulationPrompts = normalizeSuggestFromKnowledgeResponse({
+      prompts: simulationSnapshots.map(
+        (row) => `Author a practice prompt grounded in: ${row.excerpts?.[0] || ""}`,
+      ),
+    });
+    expect(simulationPrompts.length).toBe(simulationSnapshots.length);
+    expect(simulationPrompts.some((row) => /CAP|partition/i.test(row.prompt))).toBe(
+      true,
+    );
+
+    const contextRoute = read("app/api/workspace/suggest-from-context/route.ts");
+    expect(contextRoute).toContain("runSuggestFromKnowledgeModel");
+    expect(contextRoute).not.toContain("buildSuggestFromContext(");
+    expect(contextRoute.indexOf("assembled.empty")).toBeLessThan(
+      contextRoute.indexOf("await runSuggestFromKnowledgeModel"),
+    );
+
+    writeLog(
+      "suggest-context-one-prompt.log",
+      [
+        `notes_in_user=${assembled.userPrompt.includes(notes)}`,
+        `file_in_user=${assembled.userPrompt.includes(fileName)}`,
+        `mime_in_user=${assembled.userPrompt.includes("text/markdown")}`,
+        `excerpt_in_user=${assembled.userPrompt.includes(excerpt)}`,
+        `resource_title_in_user=${assembled.userPrompt.includes(resource.title)}`,
+        `resource_url_in_user=${assembled.userPrompt.includes(resource.url)}`,
+        `resource_desc_in_user=${assembled.userPrompt.includes(resource.description)}`,
+        `user_has_learner_snapshot_section=${assembled.userPrompt.includes("Learner snapshot")}`,
+        `user_has_simulation_collection=${/simulation collection/i.test(assembled.userPrompt)}`,
+        `source_snapshot_ids=${assembled.sourceSnapshotIds.join(",") || "(none)"}`,
+        `empty=${empty.empty}`,
+        `empty_user_len=${empty.userPrompt.length}`,
+        `empty_system_len=${empty.systemPrompt.length}`,
+        `empty_payload_prompt=${String(pickNextDistinctAuthorPrompt({ suggestions: [] }, ""))}`,
+        `first_prompt=${first}`,
+        `second_prompt=${second}`,
+        `third_prompt=${third}`,
+        `second_differs=${second !== first}`,
+        `exhausted=${String(exhausted)}`,
+        `knowledge_prompt=${knowledge[0]!.prompt}`,
+        `simulation_empty=${simulationCollectionToSuggestSnapshots(emptySimulationCollection()).length}`,
+        `simulation_prompt=${simulationPrompts.find((row) => /CAP|partition/i.test(row.prompt))?.prompt}`,
+      ].join("\n") + "\n",
     );
   });
 });

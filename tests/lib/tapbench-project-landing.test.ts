@@ -4,11 +4,52 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PLATFORM_LAYER_LIST, PLATFORM_PRODUCTS } from "@/lib/marketing/platform";
 
 const ROOT = join(__dirname, "../..");
 
 function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
+}
+
+const DROPPED_LEADS = [
+  "instrument for measuring",
+  "measuring knowledge",
+  "configuration space",
+  "without ground truth",
+  "fact check",
+  "hallucination",
+  "recruitment",
+  "team building",
+  "team-building",
+];
+
+const COSTUME = [
+  "final frontier",
+  "boldly go",
+  "mission control",
+  "astronaut",
+  "starship",
+  "cosmos",
+  "odyssey",
+  "uncharted",
+];
+
+function expectExplorationFrame(text: string) {
+  const lower = text.toLowerCase();
+  expect(lower).toMatch(/explor/);
+  expect(lower).toMatch(/physical place/);
+  expect(lower).toMatch(/knowledge/);
+  expect(lower).toMatch(/agent/);
+  expect(lower).toMatch(/pick/);
+  expect(lower).toMatch(/best/);
+}
+
+function expectNoDroppedLeadOrCostume(text: string) {
+  const lower = text.toLowerCase();
+  for (const phrase of DROPPED_LEADS) expect(lower).not.toContain(phrase);
+  for (const phrase of COSTUME) expect(lower).not.toContain(phrase);
+  expect(text).not.toMatch(/\u2014/);
 }
 
 describe("TAPBench project landing", () => {
@@ -67,15 +108,7 @@ describe("TAPBench project landing", () => {
       intro.indexOf("data-tapbench-kv-image"),
     );
     expect(intro).toContain("Think-Aloud Protocol");
-    expect(intro).toContain("verify knowledge and capability without ground truth");
-    expect(intro).toContain("knowledge configuration space");
     expect(intro).toContain("data-tapbench-utility");
-    expect(intro).toContain("list of agentic setups");
-    expect(intro).toContain("human knowledge verification");
-    expect(intro).toContain("Recruitment, team building");
-    expect(intro).toContain("agentic knowledge verification in a broader sense");
-    expect(intro).toContain("is this person, or this agent, good at math?");
-    expect(intro).toContain("uncertainty the question can carry");
     expect(intro).not.toContain("Human pin");
     expect(intro).not.toContain("Agent traces");
     expect(intro).not.toContain("data-tapbench-run-steps");
@@ -98,9 +131,6 @@ describe("TAPBench project landing", () => {
     expect(surface).not.toContain("data-tapbench-experiment-step");
     expect(landing).not.toContain("/tapbench/experiment-mint.jpg");
     expect(landing).not.toContain("/tapbench/experiment-tap.jpg");
-    expect(landing).toContain("Think-Aloud Protocol + Benchmark");
-    expect(landing).toContain("measuring knowledge");
-    expect(landing).toContain("configuration space");
     expect(experiment).not.toContain("/tapbench/experiment-mint.jpg");
     expect(experiment).not.toContain("guest_user_id");
     expect(experiment).not.toContain("X-Tapbench-Guest");
@@ -150,6 +180,43 @@ describe("TAPBench project landing", () => {
       .filter((l) => !l.trim().startsWith("*") && !l.trim().startsWith("//"))
       .join("\n");
     expect(withoutComments).not.toMatch(/\u2014/);
+  });
+
+  it("frames TAPBench as agents exploring knowledge like a physical place", () => {
+    const landing = read("components/TapbenchLanding.tsx");
+    const intro = read("components/TapbenchResultsIntro.tsx");
+    const experiment = read("components/TapbenchExperimentTutorial.tsx");
+    const heroStart = landing.indexOf("data-tapbench-landing-hero");
+    const heroEnd = landing.indexOf("data-tapbench-tabs");
+    expect(heroStart).toBeGreaterThan(-1);
+    expect(heroEnd).toBeGreaterThan(heroStart);
+    const hero = landing.slice(heroStart, heroEnd);
+    const card = PLATFORM_PRODUCTS.tapbench.body;
+
+    expectExplorationFrame(hero);
+    expectExplorationFrame(intro);
+    expectExplorationFrame(card);
+    expectExplorationFrame(`${hero}\n${intro}\n${card}`);
+
+    expectNoDroppedLeadOrCostume(hero);
+    expectNoDroppedLeadOrCostume(intro);
+    expectNoDroppedLeadOrCostume(experiment);
+    expectNoDroppedLeadOrCostume(card);
+
+    expect(experiment).toContain("Pick a task");
+    expect(experiment).toContain("Instruct the agent");
+    expect(experiment).toContain("Think aloud, several times");
+    expect(experiment).toContain("Snapshot the runs");
+    expect(experiment).toContain("Build a region");
+    expect(intro).toContain('src="/knowledgeg2.png"');
+    expect(landing).toContain('label: "ScoreBoard"');
+    expect(landing).toContain('label: "How to run"');
+    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
+    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
+    expect(PLATFORM_LAYER_LIST[2].name).toBe("Custom Knowledge Mapping");
+    expect(PLATFORM_LAYER_LIST[2].body).toMatch(/target audience/);
+    expect(PLATFORM_LAYER_LIST[2].body).not.toMatch(/physical place/);
   });
 
   it("keeps /tapbench/[token] session resolve", () => {

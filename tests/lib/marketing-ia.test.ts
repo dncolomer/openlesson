@@ -7,7 +7,12 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMMUNITY_LINKS, MAIN_NAV_PRODUCT_LINKS, PRICING_NAV_LINKS } from "@/lib/marketing/nav";
-import { PLATFORM_HERO, PLATFORM_PRODUCTS, PLATFORM_PHRASE } from "@/lib/marketing/platform";
+import {
+  PLATFORM_HERO,
+  PLATFORM_LAYER_LIST,
+  PLATFORM_PRODUCTS,
+  PLATFORM_PHRASE,
+} from "@/lib/marketing/platform";
 import { HARNESS_PRODUCT_COPY } from "@/lib/marketing/harness-product";
 import {
   VERIFICATION_APPROACH_COPY,
@@ -34,6 +39,46 @@ const ROOT = join(__dirname, "../..");
 
 function read(rel: string): string {
   return readFileSync(join(ROOT, rel), "utf8");
+}
+
+const DROPPED_LEADS = [
+  "instrument for measuring",
+  "measuring knowledge",
+  "configuration space",
+  "without ground truth",
+  "fact check",
+  "hallucination",
+  "recruitment",
+  "team building",
+  "team-building",
+];
+
+const COSTUME = [
+  "final frontier",
+  "boldly go",
+  "mission control",
+  "astronaut",
+  "starship",
+  "cosmos",
+  "odyssey",
+  "uncharted",
+];
+
+function expectExplorationFrame(text: string) {
+  const lower = text.toLowerCase();
+  expect(lower).toMatch(/explor/);
+  expect(lower).toMatch(/physical place/);
+  expect(lower).toMatch(/knowledge/);
+  expect(lower).toMatch(/agent/);
+  expect(lower).toMatch(/pick/);
+  expect(lower).toMatch(/best/);
+}
+
+function expectNoDroppedLeadOrCostume(text: string) {
+  const lower = text.toLowerCase();
+  for (const phrase of DROPPED_LEADS) expect(lower).not.toContain(phrase);
+  for (const phrase of COSTUME) expect(lower).not.toContain(phrase);
+  expect(text).not.toMatch(/\u2014/);
 }
 
 describe("landing: hard-domain learning experiences with product layers", () => {
@@ -63,11 +108,47 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     expect(PLATFORM_PRODUCTS.verification.image).toBe("/lp-boxes/verification-bottles.jpg");
     expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
     expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
-    expect(PLATFORM_PRODUCTS.tapbench.body).toMatch(/Think-Aloud Protocol \+ Benchmark/);
+    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
+    expectExplorationFrame(PLATFORM_PRODUCTS.tapbench.body);
+    expectNoDroppedLeadOrCostume(PLATFORM_PRODUCTS.tapbench.body);
     expect(existsSync(join(ROOT, "public/lp-boxes/harness-books.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/verification-bottles.jpg"))).toBe(true);
     expect(existsSync(join(ROOT, "public/lp-boxes/tapbench-maps.jpg"))).toBe(true);
     expect(landing).toContain("grayscale");
+  });
+
+  it("frames TAPBench as agents exploring knowledge like a physical place", () => {
+    const landing = read("components/TapbenchLanding.tsx");
+    const intro = read("components/TapbenchResultsIntro.tsx");
+    const experiment = read("components/TapbenchExperimentTutorial.tsx");
+    const heroStart = landing.indexOf("data-tapbench-landing-hero");
+    const heroEnd = landing.indexOf("data-tapbench-tabs");
+    expect(heroStart).toBeGreaterThan(-1);
+    expect(heroEnd).toBeGreaterThan(heroStart);
+    const hero = landing.slice(heroStart, heroEnd);
+    const card = PLATFORM_PRODUCTS.tapbench.body;
+
+    expectExplorationFrame(hero);
+    expectExplorationFrame(intro);
+    expectExplorationFrame(card);
+    expectExplorationFrame(`${hero}\n${intro}\n${card}`);
+    expectNoDroppedLeadOrCostume(hero);
+    expectNoDroppedLeadOrCostume(intro);
+    expectNoDroppedLeadOrCostume(experiment);
+    expectNoDroppedLeadOrCostume(card);
+
+    expect(experiment).toContain("Pick a task");
+    expect(experiment).toContain("Instruct the agent");
+    expect(experiment).toContain("Think aloud, several times");
+    expect(experiment).toContain("Snapshot the runs");
+    expect(experiment).toContain("Build a region");
+    expect(PLATFORM_PRODUCTS.tapbench.name).toBe("TAPBench");
+    expect(PLATFORM_PRODUCTS.tapbench.href).toBe("/tapbench");
+    expect(PLATFORM_PRODUCTS.tapbench.image).toBe("/lp-boxes/tapbench-maps.jpg");
+    expect(PLATFORM_LAYER_LIST[2].name).toBe("Custom Knowledge Mapping");
+    expect(PLATFORM_LAYER_LIST[2].body).toBe(
+      "We use this tech to see where a target audience actually is. Knowledge, mapped.",
+    );
   });
 
   it("keeps landing and Harness stills out of the ILE aesthetics library", () => {

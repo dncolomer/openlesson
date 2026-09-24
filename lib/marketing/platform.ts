@@ -132,7 +132,7 @@ export const PLATFORM_PRODUCTS = {
     eyebrow: "FOR SCIENCE",
     name: "TAPBench",
     title: "Knowledge Mapping",
-    body: "TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge in configuration space.",
+    body: "Agents explore knowledge the way a person explores a physical place. We run the benchmark to pick the setup that is best at that job.",
     href: TAPBENCH_PATH,
     cta: "Explore",
     image: "/lp-boxes/tapbench-maps.jpg",

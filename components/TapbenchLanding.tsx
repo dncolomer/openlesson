@@ -162,8 +162,8 @@ export function TapbenchLanding(props: {
         </div>
         <h1 className="text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">TAPBench</h1>
         <p className="mt-2 text-sm text-zinc-400 sm:text-base">
-          TAP-Bench: Think-Aloud Protocol + Benchmark. An instrument for measuring knowledge
-          in configuration space.
+          Agents explore knowledge the way a person explores a physical place. We use this
+          benchmark to pick which setup is best at that job.
         </p>
       </header>
 

@@ -54,7 +54,8 @@ function productAccent(id: PracticePortalProductId): "slate" | "amber" {
 
 function productEyebrow(id: PracticePortalProductId): string {
   if (id.startsWith("drill")) return "Drill";
-  if (id.startsWith("explore")) return "Explore";
+  if (id.startsWith("scout")) return "Prepare";
+  if (id.startsWith("explore")) return "Learn";
   return "Practice";
 }
 
@@ -272,7 +273,7 @@ export function PracticePortalLandingClient({
               </select>
             </label>
             <p className="text-[11px] leading-relaxed text-zinc-600">
-              Explore sessions require a block. Drill sessions may use a block or the full
+              Learn sessions require a block. Prepare and Drill may use a block or the full
               workspace.
             </p>
           </div>

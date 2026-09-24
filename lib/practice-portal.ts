@@ -30,12 +30,13 @@ import {
   normalizeTapLinkMinutes,
 } from "@/lib/pow-api/tap-link-config";
 
-/** Canonical product intents a portal may enable (Explore/Drill × Dialog/Solo). */
+/** Canonical product intents a portal may enable (Prepare / Learn / Drill). */
 export const PRACTICE_PORTAL_PRODUCT_IDS = [
   "explore_dialog",
   "explore_solo",
   "drill_dialog",
   "drill_solo",
+  "scout_dialog",
 ] as const;
 
 export type PracticePortalProductId = (typeof PRACTICE_PORTAL_PRODUCT_IDS)[number];
@@ -81,6 +82,8 @@ export const PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES =
 export type PracticePortalTimings = {
   drill_dialog: number[];
   drill_solo: number[];
+  /** Prepare (Scout) session lengths. Same palette as Drill · Dialog. */
+  scout_dialog: number[];
   /** Legacy alias of drill_dialog (stored configs). */
   timed_explore: number[];
   /** Legacy alias of drill_solo (stored configs). */
@@ -153,6 +156,10 @@ function isExploreProduct(id: PracticePortalProductId): boolean {
   return id === "explore_dialog" || id === "explore_solo";
 }
 
+function isScoutProduct(id: PracticePortalProductId): boolean {
+  return id === "scout_dialog";
+}
+
 /** Collapse stored solo ids onto the With AI new-launch product. */
 export function canonicalizePracticePortalNewLaunchProductId(
   value: unknown,
@@ -161,28 +168,41 @@ export function canonicalizePracticePortalNewLaunchProductId(
   if (!id) return null;
   if (isExploreProduct(id)) return "explore_dialog";
   if (isDrillProduct(id)) return "drill_dialog";
+  if (isScoutProduct(id)) return "scout_dialog";
   return id;
 }
 
-/** Public-desk / new-mint product ids (Explore and/or Drill, never solo). */
+/** Public-desk / new-mint product ids (Prepare, Learn, Drill — never solo). */
 export function newLaunchPracticePortalProductIds(
   allowed: readonly PracticePortalProductId[],
 ): PracticePortalProductId[] {
   const out: PracticePortalProductId[] = [];
+  if (allowed.some((id) => isScoutProduct(id))) out.push("scout_dialog");
   if (allowed.some((id) => isExploreProduct(id))) out.push("explore_dialog");
   if (allowed.some((id) => isDrillProduct(id))) out.push("drill_dialog");
   return out;
 }
 
-function drillTimingList(config: PracticePortalConfig): number[] {
+function uniqueSortedMinutes(values: readonly number[]): number[] {
   const seen = new Set<number>();
   const out: number[] = [];
-  for (const n of [...config.timings.drill_dialog, ...config.timings.drill_solo]) {
+  for (const n of values) {
     if (!Number.isFinite(n) || seen.has(n)) continue;
     seen.add(n);
     out.push(n);
   }
   return out.sort((a, b) => a - b);
+}
+
+function drillTimingList(config: PracticePortalConfig): number[] {
+  return uniqueSortedMinutes([
+    ...config.timings.drill_dialog,
+    ...config.timings.drill_solo,
+  ]);
+}
+
+function scoutTimingList(config: PracticePortalConfig): number[] {
+  return uniqueSortedMinutes(config.timings.scout_dialog || []);
 }
 
 /** @deprecated Prefer isExploreProduct — Explore = ILE (no duration). */
@@ -251,6 +271,7 @@ function emptyTimings(): PracticePortalTimings {
   return {
     drill_dialog: [],
     drill_solo: [],
+    scout_dialog: [],
     timed_explore: [],
     timed_drill: [],
   };
@@ -298,6 +319,7 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
 
   const drillDialogAllowed = allowed.includes("drill_dialog");
   const drillSoloAllowed = allowed.includes("drill_solo");
+  const scoutAllowed = allowed.includes("scout_dialog");
 
   const drill_dialog = drillDialogAllowed
     ? clampMinutesList(
@@ -316,6 +338,13 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
           timingsRaw.timed_drill ??
           timingsRaw.timedDrill,
         PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES,
+      )
+    : [];
+
+  const scout_dialog = scoutAllowed
+    ? clampMinutesList(
+        timingsRaw.scout_dialog ?? timingsRaw.scoutDialog ?? timingsRaw.drill_dialog,
+        PRACTICE_PORTAL_DEFAULT_DRILL_DIALOG_MINUTES,
       )
     : [];
 
@@ -383,6 +412,7 @@ export function normalizePracticePortalConfig(input: unknown): PracticePortalCon
     timings: {
       drill_dialog,
       drill_solo,
+      scout_dialog,
       // Legacy mirrors so older UI/tests that read timed_* still work.
       timed_explore: drill_dialog,
       timed_drill: drill_solo,
@@ -472,7 +502,12 @@ export function isPracticePortalTimingAllowed(
   if (isExploreProduct(id)) return true;
 
   const launchId = canonicalizePracticePortalNewLaunchProductId(id) ?? id;
-  const list = launchId === "drill_dialog" ? drillTimingList(config) : [];
+  const list =
+    launchId === "scout_dialog"
+      ? scoutTimingList(config)
+      : launchId === "drill_dialog"
+        ? drillTimingList(config)
+        : [];
   if (list.length === 0) return false;
   const n = typeof minutes === "number" ? minutes : Number(minutes);
   if (!Number.isFinite(n)) return false;
@@ -535,8 +570,9 @@ export function validatePracticePortalMintRequest(
     };
   }
 
-  // Drill (TAP) products — workspace scope always yields block_id null (enforced above).
-  const timingList = drillTimingList(config);
+  // Prepare and Drill are timed TAP products. Workspace scope yields block_id null.
+  const timingList =
+    productId === "scout_dialog" ? scoutTimingList(config) : drillTimingList(config);
   const defaultMinutes = timingList[0] ?? TAP_LINK_DEFAULT_MINUTES;
 
   let minutes: number;
@@ -705,7 +741,12 @@ export function buildPracticePortalLandingView(input: {
   const productIds = practicePortalProductsForScope(config);
   const products = productIds.map((id) => {
     const launch = launchTargetForPracticePortalProduct(id);
-    const timings = id === "drill_dialog" || id === "drill_solo" ? drillTimingList(config) : [];
+    const timings =
+      id === "drill_dialog" || id === "drill_solo"
+        ? drillTimingList(config)
+        : id === "scout_dialog"
+          ? scoutTimingList(config)
+          : [];
     return { id, launch, timings };
   });
 

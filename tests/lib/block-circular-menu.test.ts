@@ -76,7 +76,9 @@ describe("block circular menu catalog", () => {
       ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
     expect(blockCircularMenuActions("workspace-learner").map((a) => a.label)).toEqual([
+      "Prepare",
       "Learn",
+      "Drill",
       "Continue prev Session",
       "Mark as Done",
     ]);
@@ -393,11 +395,14 @@ describe("circular menu source wiring", () => {
     expect(learner).toContain("requestedDrawerId");
     expect(drawers).toContain("requestedDrawerId");
     expect(workspaceCircularMenuDrawerId("start_session")).toBeNull();
+    expect(workspaceCircularMenuStartsFreshExplore("start_prepare")).toBe(true);
     expect(workspaceCircularMenuStartsFreshExplore("start_session")).toBe(true);
+    expect(workspaceCircularMenuStartsFreshExplore("start_drill")).toBe(true);
     expect(workspaceCircularMenuStartsFreshExplore("continue_session")).toBe(false);
     expect(nextLearnerDrawerRequest("start_session", 1)).toBeNull();
     expect(wsView).toContain("workspaceCircularMenuStartsFreshExplore");
-    expect(wsView).toContain("exploreLearningLaunchTarget");
+    expect(wsView).toContain("workspaceCircularMenuLaunchStyle");
+    expect(wsView).toContain("resolveProductIntent");
     expect(wsView).toContain("handleLaunchIntent");
     expect(ring).toContain("start_session: <Compass");
     expect(workspaceCircularMenuDrawerId("continue_session")).toBe(

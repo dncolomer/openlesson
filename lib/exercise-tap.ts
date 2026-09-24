@@ -6,6 +6,7 @@
  * never "say this out loud" stage directions.
  */
 import {
+  entryHistoryRequestsScout,
   normalizeTapInteractionKind,
   TAP_INTERACTION_KIND_DEFAULT,
   type TapInteractionKind,
@@ -47,6 +48,7 @@ export type TapShellKind = "conversational" | "exercise" | "scout";
 export function resolveTapShellFromSession(input: {
   interaction_kind?: unknown;
   interactionKind?: unknown;
+  entry_query_params?: unknown;
   initialSession?: {
     interaction_kind?: unknown;
     interactionKind?: unknown;
@@ -57,7 +59,11 @@ export function resolveTapShellFromSession(input: {
     input.initialSession?.interactionKind ??
     input.interaction_kind ??
     input.interactionKind;
-  return normalizeTapInteractionKind(fromSession, TAP_INTERACTION_KIND_DEFAULT);
+  const kind = normalizeTapInteractionKind(fromSession, TAP_INTERACTION_KIND_DEFAULT);
+  if (kind !== "scout" && entryHistoryRequestsScout(input.entry_query_params)) {
+    return "scout";
+  }
+  return kind;
 }
 
 /** True when text is already a solo exercise frame (idempotent re-run safe). */

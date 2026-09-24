@@ -124,8 +124,10 @@ describe("Learn (not Explore/Work) is the ILE block-launch label", () => {
     expect(PRODUCT_INTENT_LABELS.scoutDialog).toBe("Prepare");
     expect(productIntentClusterLabel(resolveProductIntent("explore"))).toBe("Learn");
     expect(productIntentClusterLabel(resolveProductIntent("scout"))).toBe("Prepare");
-    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.label).toBe("Learn");
-    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_session");
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS.map((a) => a.label)).toEqual(
+      expect.arrayContaining(["Prepare", "Learn", "Drill"]),
+    );
+    expect(WORKSPACE_CIRCULAR_MENU_ACTIONS[0]?.id).toBe("start_prepare");
 
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("PRODUCT_INTENT_LABELS.styleExplore");

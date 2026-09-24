@@ -14,7 +14,10 @@ import {
   normalizeTapPostSession,
   normalizeWebhookUrl,
   resolveShowEndSessionFromBody,
+  entryHistoryRequestsScout,
+  normalizeTapInteractionKind,
   resolveTapInteractionKindFromBody,
+  tapSessionInsertRetryKind,
   resolveTapParticipantType,
   type CreateTapLinkInput,
   type TapInteractionKind,
@@ -93,6 +96,7 @@ function withTapLinkUrl(
     public_token?: string | null;
     show_end_session?: boolean | null;
     interaction_kind?: string | null;
+    entry_query_params?: unknown;
   },
   baseUrl: string,
   sessionToken: string,
@@ -102,8 +106,10 @@ function withTapLinkUrl(
   // Always listable: prefer stored public_token, fall back to session bearer.
   const bearer = link.public_token?.trim() || sessionToken;
   const url = buildGuestLinkUrl(baseUrl, "tap", bearer);
-  const interaction_kind: TapInteractionKind =
-    link.interaction_kind === "exercise" ? "exercise" : "conversational";
+  const storedKind = normalizeTapInteractionKind(link.interaction_kind);
+  const interaction_kind = entryHistoryRequestsScout(link.entry_query_params)
+    ? "scout"
+    : storedKind;
   return {
     ...link,
     access_mode,
@@ -344,35 +350,48 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   // Always store public_token so list endpoints can rebuild the share URL after reload.
   const sessionToken = createPrivateToken();
   const publicToken = durableGuestLinkPublicToken(sessionToken);
+  const scoutMarker =
+    interactionKind === "scout"
+      ? [{ at: new Date().toISOString(), params: { shell: "scout" } }]
+      : [];
 
-  const { data: link, error } = await supabase
-    .from("workspace_tap_sessions")
-    .insert({
-      workspace_id: workspaceId,
-      user_id: ownerUserId,
-      guest_user_id: guestUserId,
-      assigned_user_id: assignedUserId,
-      organization_id: auth.organization_id || workspace.organization_id,
-      created_by_api_key_id: createdByApiKeyId(auth),
-      private_token_hash: hashPrivateToken(sessionToken),
-      access_mode: accessMode,
-      public_token: publicToken,
-      entry_query_params: [],
-      show_end_session: showEndSession,
-      interaction_kind: interactionKind,
-      requested_duration_seconds: Math.round(minutes * 60),
-      block_id: blockId,
-      mode: "curious",
-      focus_block_ids: blockId ? [blockId] : [],
-      voice_id: "ara",
-      status: "pending",
-      participant_type: participantType,
-      post_session: postSession,
-      redirect_url: postSession === "redirect_url" ? redirectUrl : null,
-      completion_webhook_url: webhookUrl,
-    })
-    .select(TAP_LINK_SELECT)
-    .single();
+  const insertLink = (interactionKind: TapInteractionKind) =>
+    supabase
+      .from("workspace_tap_sessions")
+      .insert({
+        workspace_id: workspaceId,
+        user_id: ownerUserId,
+        guest_user_id: guestUserId,
+        assigned_user_id: assignedUserId,
+        organization_id: auth.organization_id || workspace.organization_id,
+        created_by_api_key_id: createdByApiKeyId(auth),
+        private_token_hash: hashPrivateToken(sessionToken),
+        access_mode: accessMode,
+        public_token: publicToken,
+        entry_query_params: scoutMarker,
+        show_end_session: showEndSession,
+        interaction_kind: interactionKind,
+        requested_duration_seconds: Math.round(minutes * 60),
+        block_id: blockId,
+        mode: "curious",
+        focus_block_ids: blockId ? [blockId] : [],
+        voice_id: "ara",
+        status: "pending",
+        participant_type: participantType,
+        post_session: postSession,
+        redirect_url: postSession === "redirect_url" ? redirectUrl : null,
+        completion_webhook_url: webhookUrl,
+      })
+      .select(TAP_LINK_SELECT)
+      .single();
+
+  let { data: link, error } = await insertLink(interactionKind);
+  const retryKind = tapSessionInsertRetryKind(interactionKind, error?.message);
+  if ((!link || error) && retryKind) {
+    const retried = await insertLink(retryKind);
+    link = retried.data;
+    error = retried.error;
+  }
 
   if (error || !link) {
     console.error("[create-tap-link] Insert error:", error);

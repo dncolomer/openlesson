@@ -1635,16 +1635,18 @@ export function ExcalidrawCanvas({
                     type="text"
                     value={boardPrompt}
                     onChange={(event) => setBoardPrompt(event.target.value)}
-                    placeholder="Put something on the canvas"
+                    placeholder="Any questions?"
+                    aria-label="Any questions?"
                     className="min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
                   />
                   <button
                     type="submit"
                     data-ile-canvas-prompt-bar-send
                     disabled={!boardPrompt.trim()}
+                    aria-label="Ask"
                     className="rounded-none border border-white bg-white px-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Send
+                    Ask
                   </button>
                 </div>
                 <button

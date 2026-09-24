@@ -76,7 +76,7 @@ interface OrgMember {
 type GuestLinksInnerTab = "create" | "browse";
 
 /** Single create surface product kind. New links are always With AI. */
-type CreateProductKind = "drill_dialog" | "explore_dialog";
+type CreateProductKind = "scout_dialog" | "drill_dialog" | "explore_dialog";
 
 function participantLabel(
   link: {
@@ -144,10 +144,11 @@ export function WorkspaceGuestLinksPanel({
   const [browseKind, setBrowseKind] = useState<GuestLinkBrowseKindFilter>("all");
   const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
-  /** Drill = TAP (needs duration); Explore = ILE (needs block). */
+  /** Drill and Prepare are timed TAP links; Learn is ILE and needs a block. */
   const isDrillProduct = createProduct === "drill_dialog";
+  const isScoutProduct = createProduct === "scout_dialog";
   const isExploreProduct = createProduct === "explore_dialog";
-  const isTimedProduct = isDrillProduct;
+  const isTimedProduct = isDrillProduct || isScoutProduct;
   const isOpenEndedProduct = isExploreProduct;
   const drillModalitySolo = false;
   const exploreModalitySolo = false;
@@ -254,8 +255,10 @@ export function WorkspaceGuestLinksPanel({
       setCreatingLink(true);
       setCreateError(null);
       try {
-        // Drill always → TAP conversational (With AI).
-        const launch = resolveProductIntent("drill", "dialog");
+        const launch = resolveProductIntent(
+          isScoutProduct ? "scout" : "drill",
+          "dialog",
+        );
         const body: Record<string, unknown> = {
           workspaceId,
           minutes,
@@ -297,6 +300,7 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [
+      isScoutProduct,
       loadTapResources,
       minutes,
       selectedBlockId,
@@ -736,6 +740,11 @@ export function WorkspaceGuestLinksPanel({
     hint: string;
   }> = [
     {
+      id: "scout_dialog",
+      label: PRODUCT_INTENT_LABELS.scoutDialog,
+      hint: PRODUCT_INTENT_LABELS.scoutDialogHint,
+    },
+    {
       id: "explore_dialog",
       label: PRODUCT_INTENT_LABELS.exploreDialog,
       hint: PRODUCT_INTENT_LABELS.exploreDialogHint,
@@ -782,7 +791,7 @@ export function WorkspaceGuestLinksPanel({
 
             <fieldset data-guest-links-product-select data-product-intent="create-product">
               <legend className="text-xs text-neutral-400">Product</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 {productOptions.map((opt) => {
                   const selected = createProduct === opt.id;
                   return (

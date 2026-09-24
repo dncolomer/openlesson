@@ -119,6 +119,7 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     const guest = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(guest).toContain("explore_dialog");
     expect(guest).toContain("drill_dialog");
+    expect(guest).toContain("scout_dialog");
     expect(guest).not.toContain("drill_solo");
     expect(guest).not.toContain("Open-ended Exploration");
     expect(guest).not.toContain("Timed Exploration");
@@ -126,13 +127,16 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
     const portal = read("components/WorkspaceKnowledgePortalPanel.tsx");
     expect(portal).toContain("explore_dialog");
     expect(portal).toContain("drill_dialog");
+    expect(portal).toContain("scout_dialog");
+    expect(portal).toContain("PRODUCT_INTENT_LABELS.scoutDialog");
     expect(portal).toContain("PRODUCT_INTENT_LABELS.exploreDialog");
     expect(portal).toContain("PRODUCT_INTENT_LABELS.drillDialog");
     expect(portal).not.toMatch(/With AI or\s*Solo/);
     expect(portal).not.toMatch(/open-ended or timed/i);
 
     const landing = read("components/PracticePortalLandingClient.tsx");
-    expect(landing).toMatch(/Explore sessions require a block/);
+    expect(landing).toMatch(/Learn sessions require a block/);
+    expect(landing).toContain('return "Prepare"');
     expect(landing).not.toMatch(/Open-ended sessions require a block/);
 
     const edit = read("components/WorkspaceBlockEditPanel.tsx");

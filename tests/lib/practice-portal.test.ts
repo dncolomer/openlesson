@@ -469,6 +469,33 @@ describe("practicePortalMintToCreateFields (create → mint shape)", () => {
     expect(launchTargetForPracticePortalProduct("drill_solo").interaction_kind).toBe(
       "conversational",
     );
+    expect(launchTargetForPracticePortalProduct("scout_dialog").interaction_kind).toBe(
+      "scout",
+    );
+  });
+
+  it("lists Prepare next to Learn and Drill and mints a timed scout link", () => {
+    const cfg = normalizePracticePortalConfig({
+      allowed_products: ["scout_dialog", "explore_dialog", "drill_dialog"],
+      timings: { scout_dialog: [10, 30], timed_explore: [5] },
+      block_id: "b1",
+    });
+    expect(practicePortalProductsForScope(cfg).map((id) => id)).toEqual([
+      "scout_dialog",
+      "explore_dialog",
+      "drill_dialog",
+    ]);
+    const minted = validatePracticePortalMintRequest(cfg, {
+      product_id: "scout_dialog",
+      minutes: 10,
+      block_id: "b1",
+    });
+    expect(minted.ok).toBe(true);
+    if (!minted.ok) return;
+    expect(minted.launch.interaction_kind).toBe("scout");
+    expect(practicePortalMintToCreateFields(minted).body.interaction_kind).toBe("scout");
+    expect(isPracticePortalTimingAllowed(cfg, "scout_dialog", 10)).toBe(true);
+    expect(isPracticePortalTimingAllowed(cfg, "scout_dialog", 5)).toBe(false);
   });
 
   it("classifyPracticePortalLookup distinguishes storage errors from not found", () => {

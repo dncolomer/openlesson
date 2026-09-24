@@ -34,9 +34,10 @@ import { WorkspaceMobileTabBar } from "@/components/workspace-view/workspace-mob
 import { WorkspaceMapColumn } from "@/components/workspace-view/workspace-map-column";
 import {
   nextLearnerDrawerRequest,
+  workspaceCircularMenuLaunchStyle,
   workspaceCircularMenuStartsFreshExplore,
 } from "@/lib/block-circular-menu";
-import { exploreLearningLaunchTarget } from "@/lib/product-intent";
+import { resolveProductIntent } from "@/lib/product-intent";
 import { WorkspaceRightDrawers } from "@/components/workspace-view/workspace-right-drawers";
 import {
   availableWorkspaceSections,
@@ -942,11 +943,12 @@ export function WorkspaceView({
             applyMapSelectionResult(
               nextWorkspaceMapSelection({ type: "open_block", blockId }),
             );
-            if (workspaceCircularMenuStartsFreshExplore(action)) {
+            const launchStyle = workspaceCircularMenuLaunchStyle(action);
+            if (workspaceCircularMenuStartsFreshExplore(action) && launchStyle) {
               const block = nodes.find((n) => n.id === blockId);
               if (!block || !currentUserId) return;
               if (isLearnerMapBlockLocked(block, nodes)) return;
-              void handleLaunchIntent(block, exploreLearningLaunchTarget());
+              void handleLaunchIntent(block, resolveProductIntent(launchStyle));
               return;
             }
             const request = nextLearnerDrawerRequest(action);

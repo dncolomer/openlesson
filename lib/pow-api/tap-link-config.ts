@@ -217,6 +217,18 @@ export function resolveTapInteractionKindFromBody(
  * Scout workspace launches retry the insert as conversational; the /scout
  * URL is the shell selector. Returns null when no retry should run.
  */
+/** True when a stored guest-link entry history marks the shell as Prepare. */
+export function entryHistoryRequestsScout(history: unknown): boolean {
+  if (!Array.isArray(history)) return false;
+  return history.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const params = (item as { params?: { shell?: unknown } }).params;
+    const shell = params?.shell;
+    const value = Array.isArray(shell) ? shell[0] : shell;
+    return String(value || "").toLowerCase() === "scout";
+  });
+}
+
 export function tapSessionInsertRetryKind(
   requested: TapInteractionKind,
   errorMessage?: unknown,

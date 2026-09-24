@@ -23,6 +23,29 @@ export type WorkspaceBlockEffectsSaveInput = {
   effects: BlockCreatorEffects;
 };
 
+function EffectExplanation({
+  kind,
+  children,
+}: {
+  kind: "dynamic" | "generator";
+  children: string;
+}) {
+  return (
+    <p
+      className="text-[11px] leading-relaxed text-neutral-400"
+      data-effect-explanation={kind}
+    >
+      {children}
+    </p>
+  );
+}
+
+const DYNAMIC_EXPLANATION =
+  "Stays locked until the blocks you pick on the map are all Done, then opens with content written from the learner's history.";
+
+const GENERATOR_EXPLANATION =
+  "When this block is completed, new blocks appear on the empty cells you pick on the map.";
+
 function EffectToggle({
   checked,
   disabled,
@@ -248,6 +271,7 @@ export function WorkspaceBlockDynamicEffectPanel({
         data-block-dynamic-effect-needs-base
         className="space-y-1.5 rounded-none border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
+        <EffectExplanation kind="dynamic">{DYNAMIC_EXPLANATION}</EffectExplanation>
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
@@ -262,6 +286,7 @@ export function WorkspaceBlockDynamicEffectPanel({
   if (!canEdit) {
     return (
       <div data-block-dynamic-effect-readonly className="space-y-1.5">
+        <EffectExplanation kind="dynamic">{DYNAMIC_EXPLANATION}</EffectExplanation>
         <p className="text-[11px] text-neutral-500">
           {persisted.dynamic.enabled
             ? `Dynamic is on — unlocks after ${persisted.dynamic.unlockAfterBlockIds.length} block(s) are Done.`
@@ -299,6 +324,7 @@ export function WorkspaceBlockDynamicEffectPanel({
 
   return (
     <div data-block-dynamic-effect-panel className="space-y-3">
+      <EffectExplanation kind="dynamic">{DYNAMIC_EXPLANATION}</EffectExplanation>
       <EffectToggle
         dataAttr="dynamic"
         checked={draft.dynamic.enabled}
@@ -547,6 +573,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
         data-block-generator-effect-needs-base
         className="space-y-1.5 rounded-none border border-neutral-600/30 bg-neutral-950/20 px-2.5 py-2"
       >
+        <EffectExplanation kind="generator">{GENERATOR_EXPLANATION}</EffectExplanation>
         <p className="text-[12px] font-medium text-neutral-200/95">
           Create a base block first
         </p>
@@ -561,6 +588,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
   if (!canEdit) {
     return (
       <div data-block-generator-effect-readonly className="space-y-1.5">
+        <EffectExplanation kind="generator">{GENERATOR_EXPLANATION}</EffectExplanation>
         <p className="text-[11px] text-neutral-500">
           {persisted.generator.enabled
             ? `Generator is on — ${persisted.generator.targetCells.length} empty cell(s).`
@@ -597,6 +625,7 @@ export function WorkspaceBlockGeneratorEffectPanel({
 
   return (
     <div data-block-generator-effect-panel className="space-y-3">
+      <EffectExplanation kind="generator">{GENERATOR_EXPLANATION}</EffectExplanation>
       <EffectToggle
         dataAttr="generator"
         checked={draft.generator.enabled}

@@ -23,7 +23,9 @@ export type IleCircularMenuActionId =
   | "reject_chapter";
 
 export type WorkspaceCircularMenuActionId =
+  | "start_prepare"
   | "start_session"
+  | "start_drill"
   | "continue_session"
   | "mark_done";
 
@@ -54,7 +56,9 @@ export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] =
 ] as const;
 
 export const WORKSPACE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
+  { id: "start_prepare", label: "Prepare" },
   { id: "start_session", label: "Learn" },
+  { id: "start_drill", label: "Drill" },
   { id: "continue_session", label: "Continue prev Session" },
   { id: "mark_done", label: "Mark as Done" },
 ] as const;
@@ -227,11 +231,24 @@ export function workspaceCircularMenuDrawerId(
   return null;
 }
 
-/** Work on the workspace ring launches a new ILE session instead of a drawer. */
+/** Prepare, Learn, or Drill on the workspace ring launches that mode instead of a drawer. */
 export function workspaceCircularMenuStartsFreshExplore(
   action: WorkspaceCircularMenuActionId | string,
 ): boolean {
-  return action === "start_session";
+  return (
+    action === "start_prepare" ||
+    action === "start_session" ||
+    action === "start_drill"
+  );
+}
+
+export function workspaceCircularMenuLaunchStyle(
+  action: WorkspaceCircularMenuActionId | string,
+): "scout" | "explore" | "drill" | null {
+  if (action === "start_prepare") return "scout";
+  if (action === "start_session") return "explore";
+  if (action === "start_drill") return "drill";
+  return null;
 }
 
 export type LearnerDrawerRequest = {

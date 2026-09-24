@@ -25,7 +25,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   const tokenHash = hashPrivateToken(token);
 
   const tapSessionSelect =
-    "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, interaction_kind, workspaces(title, user_id)";
+    "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, interaction_kind, entry_query_params, workspaces(title, user_id)";
 
   let session: Record<string, unknown> | null = null;
   const { data: byHash } = await supabase
@@ -126,6 +126,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
 
   const shell = resolveTapShellFromSession({
     interaction_kind: session.interaction_kind,
+    entry_query_params: session.entry_query_params,
     initialSession: {
       interaction_kind: session.interaction_kind,
     },

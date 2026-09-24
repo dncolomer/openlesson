@@ -283,24 +283,15 @@ export default function SciencePage() {
         </article>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12">
-        <div className="space-y-6">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 py-10 sm:py-12" aria-label="Principles">
+        <div className="grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
           {PRINCIPLES.map((principle) => (
-            <article
-              key={principle.number}
-              className="border border-zinc-800 bg-zinc-950/70 p-6 backdrop-blur-sm sm:p-8"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-                <p className="shrink-0 font-mono text-3xl font-medium tracking-tight text-zinc-600 sm:w-16">
-                  {principle.number}
-                </p>
-                <div>
-                  <h2 className="text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl">{principle.title}</h2>
-                  <p className="mt-2 text-base font-medium text-zinc-300">{principle.subtitle}</p>
-                  <p className="mt-4 text-base leading-relaxed text-zinc-400">{principle.body}</p>
-                </div>
-              </div>
-            </article>
+            <div key={principle.number} className="border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm">
+              <p className="font-mono text-[10px] tracking-[2px] text-zinc-500">{principle.number}</p>
+              <h2 className="mt-3 text-xl font-medium tracking-[-0.5px] text-white">{principle.title}</h2>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-300">{principle.subtitle}</p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{principle.body}</p>
+            </div>
           ))}
         </div>
       </section>

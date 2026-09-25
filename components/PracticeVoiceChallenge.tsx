@@ -34,6 +34,7 @@ type SpeechRecognitionEventLike = Event & {
 type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
+  lang: string;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;

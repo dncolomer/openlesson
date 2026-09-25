@@ -664,7 +664,9 @@ export function convertIleWorkCanvasSkeletons(
 export const convertToExcalidrawElements = convertIleWorkCanvasSkeletons;
 
 export function ileWorkCanvasContentBounds(
-  elements: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  elements: readonly (Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> & {
+    isDeleted?: boolean;
+  })[],
 ): { minX: number; minY: number; maxX: number; maxY: number } | null {
   const live = elements.filter((el) => !el.isDeleted);
   if (!live.length) return null;

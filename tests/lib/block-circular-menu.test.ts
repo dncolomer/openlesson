@@ -62,13 +62,13 @@ function resource(partial: Partial<WorkspaceExternalResource> & { id: string }):
 }
 
 describe("block circular menu catalog", () => {
-  it("ILE set is exactly Work / Edit / Gather resources / See resources; Workspace is Learn/Continue/Mark as Done; TAP is empty", () => {
+  it("ILE set is exactly Work / Edit; Workspace is Learn/Continue/Mark as Done; TAP is empty", () => {
     expect(blockCircularMenuActions("ile").map((a) => a.label)).toEqual([
       "Work",
       "Edit",
-      "Gather resources",
-      "See resources",
     ]);
+    expect(blockCircularMenuActions("ile").map((a) => a.id)).not.toContain("gather_resources");
+    expect(blockCircularMenuActions("ile").map((a) => a.id)).not.toContain("see_resources");
     expect(blockCircularMenuActions("ile").some((a) => a.id === "mark_completed")).toBe(
       false,
     );
@@ -344,8 +344,6 @@ describe("circular menu source wiring", () => {
 
     expect([...ileCircularMenuDisabledActionIds({ completed: true })]).toEqual([
       "edit",
-      "gather_resources",
-      "see_resources",
     ]);
     expect(ileCircularMenuDisabledActionIds({ completed: true }).has("work")).toBe(false);
     expect(ileCircularMenuDisabledActionIds({ completed: false }).size).toBe(0);

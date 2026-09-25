@@ -283,6 +283,7 @@ export function ScoutTapClient({
           seedDescription,
           path: scoutPathFromRoot(state),
           canvasText: extractScoutCanvasText(scene),
+          workCanvasScene: serializeTapWorkCanvasScene(scene),
           currentNode: scoutCurrentNode(state).text,
           count: SCOUT_FOLLOWUP_QUESTION_COUNT,
           conversationLanguage,

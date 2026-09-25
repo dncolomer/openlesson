@@ -19,6 +19,7 @@ import {
   ILE_SESSION_IMPURITY_LOG_OFF,
   ILE_SESSION_IMPURITY_SAVE,
   ILE_SESSION_IMPURITY_TITLE,
+  ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   ILE_SILENCE_LOCK_MINUTES_DESC,
   ILE_SILENCE_LOCK_MINUTES_MIN,
   ILE_SILENCE_REST_TITLE,
@@ -59,7 +60,7 @@ function read(rel: string) {
 
 describe("practice voice challenge script and transcript", () => {
   it("script contains speaking thinking out loud the whole time plus raw thinking signal and baseline attention", () => {
-    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/speak your thinking out loud the whole time/i);
+    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/I will now speak my thinking out loud the whole time/i);
     expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/raw thinking signal/i);
     expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/baseline attention/i);
     expect(practiceVoiceChallengeTranscriptPasses(PRACTICE_VOICE_CHALLENGE_SCRIPT)).toBe(true);
@@ -94,7 +95,7 @@ describe("practice voice challenge script and transcript", () => {
     expect(practiceVoiceChallengeTranscriptPasses("   ")).toBe(false);
     expect(practiceVoiceChallengeTranscriptPasses("the weather is nice today")).toBe(false);
     expect(
-      practiceVoiceChallengeTranscriptPasses("speak your thinking out loud the whole time"),
+      practiceVoiceChallengeTranscriptPasses("I will now speak my thinking out loud the whole time"),
     ).toBe(false);
     expect(
       practiceVoiceChallengeTranscriptPasses("raw thinking signal and a baseline attention increase"),
@@ -141,7 +142,7 @@ describe("practice voice challenge script and transcript", () => {
     expect(secondPass.passed).toBe(true);
     const partial = voiceChallengeReadMarks({
       script: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-      transcript: "You will now speak your thinking out loud the whole time",
+      transcript: "I will now speak my thinking out loud the whole time",
     });
     const partialWords = partial.filter((mark) => mark.kind === "word");
     expect(partialWords.find((mark) => mark.text === "speak")?.heard).toBe(true);
@@ -277,8 +278,10 @@ describe("ILE silence lock", () => {
       }),
     ).toBe(false);
     const casual = applyIlePregameDifficultyPreset("casual");
-    expect(casual.silenceLockMinutes).toBeGreaterThan(0);
-    expect(applyIlePregameDifficultyPreset("ironman").silenceLockMinutes).toBe(3);
+    expect(ILE_SILENCE_LOCK_MINUTES_DEFAULT).toBe(2);
+    expect(casual.silenceLockMinutes).toBe(4);
+    expect(applyIlePregameDifficultyPreset("veteran").silenceLockMinutes).toBe(2);
+    expect(applyIlePregameDifficultyPreset("ironman").silenceLockMinutes).toBe(1);
   });
 
   it("a quiet live mic locks, and only a new transcript restarts the clock", () => {
@@ -400,7 +403,15 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(ileSpoken).toContain("data-ile-sample-insight-bar");
     expect(ileSpoken).toContain("Sample insight");
     expect(ileSpoken).not.toContain("A finished idea from one area of the map.");
-    expect(read("components/PracticeVoiceChallenge.tsx")).toContain("data-practice-voice-loading");
+    const challenge = read("components/PracticeVoiceChallenge.tsx");
+    expect(challenge).toContain("data-practice-voice-loading");
+    expect(challenge).toContain("LoadingStatusMessage");
+    expect(challenge).toContain("Starting the session");
+    expect(challenge).toContain('framing === "rest" ? "Continuing"');
+    expect(challenge).not.toContain("animate-spin");
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+      'framing="rest"',
+    );
     expect(read("components/PracticeVoiceChallenge.tsx")).not.toContain("speechSynthesis");
     expect(read("components/SessionOnboardingGuide.tsx")).toContain("data-ile-voice-challenge");
     expect(read("components/SessionOnboardingGuide.tsx")).toContain("max-w-xl");
@@ -506,6 +517,13 @@ describe("shipped voice-challenge UI wiring", () => {
     );
     expect(rest).toContain(ILE_SILENCE_REST_TITLE);
     expect(rest).toContain("data-practice-voice-challenge");
+    expect(rest).toContain('data-practice-voice-framing="rest"');
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain("lang={speechLang}");
+    expect(read("components/SessionView.tsx")).toContain("speechLang={toSpeechBcp47(tutoringLanguage)}");
+    expect(read("components/PracticeVoiceChallenge.tsx")).toContain("startListening");
+    expect(view).toContain("pauseLiveSpeech()");
+    expect(view).toContain("resumeLiveSpeech()");
+    expect(view).toContain("silenceRest");
     expect(rest).toContain("data-ile-silence-save-and-leave");
     expect(rest).toContain("Save and leave");
     expect(read("components/SessionView.tsx")).toContain("ileMicCountsAsSilence");

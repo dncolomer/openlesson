@@ -26,10 +26,12 @@ export function IleSilenceRestScreen({
   lockCount,
   onUnlock,
   onSaveAndLeave,
+  speechLang,
 }: {
   lockCount: number;
   onUnlock: () => void;
   onSaveAndLeave: () => void;
+  speechLang?: string | null;
 }) {
   return (
     <div
@@ -46,6 +48,7 @@ export function IleSilenceRestScreen({
         <PracticeVoiceChallenge
           variant="ile"
           framing="rest"
+          lang={speechLang}
           onPass={() => {
             if (ileRestUnlock({ challengePassed: true, lockCount }).locked) return;
             onUnlock();

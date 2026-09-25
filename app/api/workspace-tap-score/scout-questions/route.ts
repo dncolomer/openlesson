@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
             seedDescription: body.seedDescription ?? "",
             path,
             canvasText: body.canvasText ?? "",
+            scene: body.workCanvasScene ?? body.scene ?? null,
             currentNode: body.currentNode ?? "",
             count,
           }),

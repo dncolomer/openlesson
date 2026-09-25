@@ -5,6 +5,7 @@ import {
   decideIleSettingsEnterMap,
   ileSessionMapPath,
   ileSessionSettingsPath,
+  ileWelcomeRouteSync,
   isIleSessionSettingsPath,
 } from "@/lib/ile-session-routes";
 
@@ -51,6 +52,52 @@ describe("ile session settings vs map routes (shipped)", () => {
         `ileSettings=${isIleSessionSettingsPath("/ile/session/tok/settings")}`,
       ].join("\n"),
     );
+  });
+
+  it("updates the Welcome address without remounting the screen", () => {
+    const settingsHref = ileSessionSettingsPath({ sessionId: "s1" });
+    const mapHref = ileSessionMapPath({ sessionId: "s1" });
+    expect(
+      ileWelcomeRouteSync({
+        showWelcome: true,
+        browserPath: "/session",
+        routerPath: "/session",
+        settingsHref,
+        mapHref,
+      }),
+    ).toEqual({ kind: "replace-state", href: settingsHref });
+    expect(
+      ileWelcomeRouteSync({
+        showWelcome: true,
+        browserPath: "/session/settings",
+        routerPath: "/session/settings",
+        settingsHref,
+        mapHref,
+      }).kind,
+    ).toBe("none");
+    expect(
+      ileWelcomeRouteSync({
+        showWelcome: false,
+        browserPath: "/ile/session/tok/settings",
+        routerPath: "/ile/session/tok",
+        settingsHref: "/ile/session/tok/settings",
+        mapHref: "/ile/session/tok",
+      }),
+    ).toEqual({ kind: "replace-state", href: "/ile/session/tok" });
+    expect(
+      ileWelcomeRouteSync({
+        showWelcome: false,
+        browserPath: "/session/settings",
+        routerPath: "/session/settings",
+        settingsHref,
+        mapHref,
+      }),
+    ).toEqual({ kind: "router-replace", href: mapHref });
+
+    const view = readFileSync(join(__dirname, "../../components/SessionView.tsx"), "utf8");
+    expect(view).toContain("ileWelcomeRouteSync");
+    expect(view).toContain("window.history.replaceState(window.history.state, \"\", sync.href)");
+    expect(view).not.toContain("router.replace(ileSessionSettingsPath");
   });
 
   it("re-arms Help or recording when the map remounts after settings confirm", () => {

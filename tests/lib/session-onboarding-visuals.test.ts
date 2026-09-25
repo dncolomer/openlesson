@@ -152,7 +152,7 @@ describe("session intro visuals", () => {
     expect(ileLearningText).toContain("Read this aloud to start");
     expect(ileLearningText).not.toContain(en.onboardingGuide.ile.step3.title);
     expect(ileLearningHtml).toContain("data-practice-voice-challenge");
-    expect(ileLearningText).toMatch(/speak your thinking out loud the whole time/i);
+    expect(ileLearningText).toMatch(/I will now speak my thinking out loud the whole time/i);
     expect(ileLearningText).toMatch(/raw thinking signal/i);
     expect(ileLearningText).toMatch(/baseline attention/i);
     expect(ileLearningText).toMatch(/In this session I will work to craft insights/i);

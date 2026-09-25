@@ -43,6 +43,7 @@ import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasSelectionIds,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasSceneToViewport,
@@ -52,6 +53,7 @@ import {
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasZoomValue,
   mergeIleXaiTurnOntoLiveWorkCanvas,
+  pasteIleWorkCanvasElements,
   serializeIleWorkCanvasScene,
   splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
@@ -392,13 +394,28 @@ export function ExcalidrawCanvas({
       scheduleCenterOnOpen();
       return;
     }
+    const merged = pasteIleWorkCanvasElements({
+      existing: existing as IleWorkCanvasElement[],
+      incoming: toAdd as IleWorkCanvasElement[],
+    });
+    const addedIds = new Set(
+      (toAdd as IleWorkCanvasElement[]).map((el) => el.id).filter(Boolean),
+    );
+    const added = merged.filter((el) => addedIds.has(el.id) && !el.isDeleted);
     applyingRemoteRef.current = true;
     try {
-      api.updateScene({ elements: [...existing, ...toAdd] });
+      api.updateScene({
+        elements: merged,
+        appState: { selectedElementIds: ileWorkCanvasSelectionIds(added) },
+      });
     } finally {
       applyingRemoteRef.current = false;
     }
-    scheduleCenterOnOpen();
+    if (added.length && typeof api.scrollToContent === "function") {
+      api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+    } else {
+      scheduleCenterOnOpen();
+    }
   }, [scheduleCenterOnOpen]);
 
   const syncPromptBarPlacement = useCallback(() => {
@@ -709,6 +726,7 @@ export function ExcalidrawCanvas({
           appState: api.getAppState?.() ?? {},
           files: api.getFiles?.() ?? {},
         });
+        const beforeIds = new Set(live.elements.map((el) => el.id));
         const next = input.replaceWithSummary
           ? compressIleWorkCanvasScene(live, payload.text)
           : mergeIleXaiTurnOntoLiveWorkCanvas(
@@ -724,14 +742,25 @@ export function ExcalidrawCanvas({
                 reserved: reservedThinkingOrigins(turnId),
               },
             );
+        const added = next.elements.filter((el) => !beforeIds.has(el.id) && !el.isDeleted);
+        const focusIds = ileWorkCanvasSelectionIds(added.length ? added : next.elements);
         applyingRemoteRef.current = true;
         try {
           api.updateScene({
             elements: next.elements,
-            ...(input.replaceWithSummary ? { appState: next.appState } : {}),
+            appState: {
+              ...(input.replaceWithSummary ? next.appState : {}),
+              selectedElementIds: focusIds,
+            },
           });
         } finally {
           applyingRemoteRef.current = false;
+        }
+        const focusTarget = added.length
+          ? added
+          : next.elements.filter((el) => !el.isDeleted);
+        if (focusTarget.length && typeof api.scrollToContent === "function") {
+          api.scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
         canvasPowCollectorRef.current.syncWithoutEmit({
           elements: next.elements,

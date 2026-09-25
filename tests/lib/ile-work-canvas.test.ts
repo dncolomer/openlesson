@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  applyIleXaiReplyToWorkCanvas,
+  applyIleXaiTurnAtCommit,
   applyIleXaiTurnToWorkCanvas,
   convertToExcalidrawElements,
   createIleWorkCanvasChapterStore,
@@ -81,8 +83,10 @@ import {
   ileWorkCanvasCenterScroll,
   ileWorkCanvasZoomAtPoint,
   ileWorkCanvasContentBounds,
+  ileWorkCanvasClusteredOrigin,
   ileWorkCanvasEmptyNearbyOrigin,
   ileWorkCanvasEmptyNearbyOriginWithReserved,
+  ileWorkCanvasSelectionIds,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasQuickActionPrompt,
   ileWorkCanvasRectsOverlap,
@@ -94,6 +98,7 @@ import {
   ileWorkCanvasViewportToHost,
   ileWorkCanvasWithScrollToContent,
   mergeIleXaiTurnOntoLiveWorkCanvas,
+  pasteIleWorkCanvasElements,
   placeIleLearnMorePrompt,
   splitIleWorkCanvasSelectedText,
   splitIleWorkCanvasTextElement,
@@ -129,6 +134,64 @@ function read(rel: string) {
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");
+}
+
+function canvasRect(el: { x: number; y: number; width: number; height: number }) {
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Number(el.width) || 0;
+  const h = Number(el.height) || 0;
+  const minX = Math.min(x, x + w);
+  const maxX = Math.max(x, x + w);
+  const minY = Math.min(y, y + h);
+  const maxY = Math.max(y, y + h);
+  if (!(maxX > minX) || !(maxY > minY)) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+function positiveAreaHit(
+  a: { minX: number; minY: number; maxX: number; maxY: number },
+  b: { minX: number; minY: number; maxX: number; maxY: number },
+) {
+  return (
+    Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
+    Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0
+  );
+}
+
+function newMarksOverlapExisting(
+  incoming: readonly {
+    id: string;
+    type: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+    containerId?: string | null;
+  }[],
+  existing: readonly {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+  }[],
+) {
+  const ids = new Set(incoming.map((el) => el.id));
+  for (const el of incoming) {
+    if (el.isDeleted) continue;
+    if (el.type === "text" && el.containerId && ids.has(el.containerId)) continue;
+    const rect = canvasRect(el);
+    if (!rect) continue;
+    for (const other of existing) {
+      if (other.isDeleted) continue;
+      const obstacle = canvasRect(other);
+      if (!obstacle) continue;
+      if (positiveAreaHit(rect, obstacle)) return true;
+    }
+  }
+  return false;
 }
 
 function sceneWith(id: string, text = id): IleWorkCanvasScene {
@@ -374,8 +437,12 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(replied.elements.some((el) => el.text === ILE_XAI_LOADING_TEXT)).toBe(false);
     const reply = replied.elements.find((el) => el.text === "Add the last-resort clause.");
     expect(reply?.type).toBe("text");
-    expect(reply?.x).toBe(loading.x);
-    expect(reply?.y).toBe(loading.y);
+    const keptSelection = replied.elements.find((el) => el.id === selected[0]!.id);
+    expect(keptSelection?.x).toBe(selected[0]!.x);
+    expect(keptSelection?.y).toBe(selected[0]!.y);
+    expect(newMarksOverlapExisting(replied.elements.filter((el) => el.id !== selected[0]!.id), selected)).toBe(
+      false,
+    );
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("data-ile-excalidraw-ask");
@@ -622,6 +689,34 @@ describe("ILE Work canvas text wrap (shipped)", () => {
     expect(reply?.autoResize).toBe(false);
     expect(reply?.width).toBe(ILE_WORK_CANVAS_TEXT_BOX_WIDTH);
     expect(String(reply?.text || "").split("\n").length).toBeGreaterThan(1);
+
+    const narrow = applyIleXaiReplyToWorkCanvas(
+      null,
+      JSON.stringify({
+        text: "Short note beside the mark.",
+        textWidth: 180,
+        origin: { x: 80, y: 80 },
+      }),
+    );
+    const narrowText = narrow.elements.find((el) => el.originalText === "Short note beside the mark.");
+    expect(narrowText?.width).toBe(180);
+    const wide = applyIleXaiReplyToWorkCanvas(
+      null,
+      JSON.stringify({
+        text: "A longer coaching line that should sit in a wider box.",
+        textWidth: 480,
+      }),
+    );
+    const wideText = wide.elements.find(
+      (el) => el.originalText === "A longer coaching line that should sit in a wider box.",
+    );
+    expect(wideText?.width).toBe(480);
+    expect(wideText?.width).not.toBe(narrowText?.width);
+    const shaped = applyIleXaiTurnToWorkCanvas(null, {
+      elements: [{ type: "text", text: "Caption", x: 10, y: 10, width: 140 }],
+    });
+    expect(shaped.elements.find((el) => el.originalText === "Caption")?.width).toBe(140);
+    expect(ileWorkCanvasXaiToolsInstruction()).toContain("textWidth");
   });
 });
 
@@ -755,7 +850,7 @@ describe("ILE session-chat board context (shipped builder)", () => {
     expect(client).toContain("serializeIleWorkCanvasScene");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("workCanvasScene: currentScene");
-    expect(view).toContain("applyIleXaiTurnToWorkCanvas");
+    expect(view).toContain("applyIleXaiTurnAtCommit");
     expect(view).toContain("pickIleWorkCanvasTurnScene");
     expect(view).toContain("picked.applyLive");
   });
@@ -902,7 +997,7 @@ describe("ILE Work chrome is canvas-only (shipped source)", () => {
     expect(view).toContain("<WorkCanvas");
     expect(view).toContain('import { WorkCanvas } from "@/components/ExcalidrawCanvas"');
     expect(view).toContain("heliosBusy={isHeliosAssistantPending}");
-    expect(view).toContain("applyIleXaiTurnToWorkCanvas");
+    expect(view).toContain("applyIleXaiTurnAtCommit");
     writeScratch(
       "ile-work-canvas-structure.txt",
       [
@@ -1627,5 +1722,290 @@ describe("ILE Work canvas compress work (shipped)", () => {
         "button=data-ile-compress-work next-to=data-ile-canvas-prompt-bar",
       ].join("\n") + "\n",
     );
+  });
+});
+
+describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", () => {
+  it("moves a real reply off a loading slot that only fits the square, keeps a free origin, and lists live geometry", () => {
+    const long = "measure the wrapped reply ".repeat(40).trim();
+    const wrapped = wrapIleWorkCanvasText(long);
+    expect(wrapped.width).toBeGreaterThan(ILE_XAI_LOADING_BOX_WIDTH);
+    expect(wrapped.height).toBeGreaterThan(ILE_XAI_LOADING_BOX_HEIGHT);
+    const origin = { x: 80, y: 40 };
+    const square = canvasRect({
+      x: origin.x,
+      y: origin.y,
+      width: ILE_XAI_LOADING_BOX_WIDTH,
+      height: ILE_XAI_LOADING_BOX_HEIGHT,
+    })!;
+    const naive = canvasRect({
+      x: origin.x,
+      y: origin.y,
+      width: wrapped.width,
+      height: wrapped.height,
+    })!;
+    const obstacle = convertToExcalidrawElements([
+      {
+        type: "rectangle",
+        x: origin.x + ILE_XAI_LOADING_BOX_WIDTH + 8,
+        y: origin.y,
+        width: 36,
+        height: 36,
+      },
+    ])[0]!;
+    const obstacleRect = canvasRect(obstacle)!;
+    expect(positiveAreaHit(square, obstacleRect)).toBe(false);
+    expect(positiveAreaHit(naive, obstacleRect)).toBe(true);
+
+    const loading = createIleXaiLoadingPlaceholder({
+      x: origin.x,
+      y: origin.y,
+      turnId: "load-wide",
+    });
+    const scene: IleWorkCanvasScene = {
+      elements: [obstacle, loading],
+      appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
+      files: {},
+    };
+    const replaced = replaceIleXaiLoadingPlaceholder(scene, "load-wide", { text: long });
+    const reply = replaced.elements.find((el) => el.originalText === long);
+    expect(reply).toBeTruthy();
+    expect(reply!.x !== origin.x || reply!.y !== origin.y).toBe(true);
+    expect(replaced.elements.some((el) => el.id === loading.id)).toBe(false);
+    expect(replaced.elements.some((el) => el.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY])).toBe(false);
+    expect(replaced.elements.some((el) => (el.text || el.originalText) === ILE_XAI_LOADING_TEXT)).toBe(false);
+    const kept = replaced.elements.find((el) => el.id === obstacle.id)!;
+    expect(kept.x).toBe(obstacle.x);
+    expect(kept.y).toBe(obstacle.y);
+    expect(kept.width).toBe(obstacle.width);
+    expect(kept.height).toBe(obstacle.height);
+    const added = replaced.elements.filter((el) => el.id !== obstacle.id);
+    expect(newMarksOverlapExisting(added, [obstacle])).toBe(false);
+
+    const free = applyIleXaiTurnToWorkCanvas(
+      { elements: [obstacle], appState: {}, files: {} },
+      { text: "sits in the open", origin: { x: 4000, y: 4200 }, turnId: "free-origin" },
+    );
+    const freeEl = free.elements.find((el) => el.originalText === "sits in the open")!;
+    expect(freeEl.x).toBe(4000);
+    expect(freeEl.y).toBe(4200);
+    expect(free.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
+
+    const colliding = applyIleXaiTurnToWorkCanvas(
+      { elements: [obstacle], appState: {}, files: {} },
+      {
+        text: "lands on the mark",
+        origin: { x: obstacle.x, y: obstacle.y },
+        elements: [{ type: "rectangle", x: obstacle.x, y: obstacle.y + 140, width: 40, height: 24 }],
+        turnId: "hit-origin",
+      },
+    );
+    const hitText = colliding.elements.find((el) => el.originalText === "lands on the mark")!;
+    const hitRect = colliding.elements.find((el) => el.type === "rectangle" && el.id !== obstacle.id)!;
+    expect(hitText.x - hitRect.x).toBe(obstacle.x - obstacle.x);
+    expect(hitRect.y - hitText.y).toBe(140);
+    expect(colliding.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
+    expect(colliding.elements.find((el) => el.id === obstacle.id)?.y).toBe(obstacle.y);
+    expect(
+      newMarksOverlapExisting(
+        colliding.elements.filter((el) => el.id !== obstacle.id),
+        [obstacle],
+      ),
+    ).toBe(false);
+
+    const reserved = mergeIleXaiTurnOntoLiveWorkCanvas(
+      { elements: [obstacle], appState: {}, files: {} },
+      { text: "second drop", turnId: "reserved-b" },
+      { fallbackOrigin: { x: 80, y: 400 }, reserved: [{ x: 200, y: 400 }] },
+    );
+    const reservedText = reserved.elements.find((el) => el.originalText === "second drop")!;
+    const reservedBox = { x: 200, y: 400, width: ILE_XAI_LOADING_BOX_WIDTH, height: ILE_XAI_LOADING_BOX_HEIGHT };
+    expect(newMarksOverlapExisting([reservedText], [obstacle, reservedBox])).toBe(false);
+    expect(reserved.elements.find((el) => el.id === obstacle.id)?.x).toBe(obstacle.x);
+
+    const labeledObstacle = convertToExcalidrawElements([
+      { type: "rectangle", x: 600, y: 508, width: 40, height: 20 },
+    ])[0]!;
+    const labeled = applyIleXaiTurnToWorkCanvas(
+      { elements: [labeledObstacle], appState: {}, files: {} },
+      {
+        elements: [
+          {
+            type: "rectangle",
+            x: 500,
+            y: 500,
+            width: 80,
+            height: 40,
+            label: { text: "caption" },
+          },
+        ],
+      },
+    );
+    const shape = labeled.elements.find((el) => el.type === "rectangle" && el.id !== labeledObstacle.id)!;
+    const caption = labeled.elements.find((el) => (el.originalText || el.text) === "caption")!;
+    expect(caption.containerId).toBe(shape.id);
+    expect(caption.x - shape.x).toBe(8);
+    expect(caption.y - shape.y).toBe(8);
+    expect(positiveAreaHit(canvasRect(shape)!, canvasRect(caption)!)).toBe(true);
+    const unshiftedCaption = canvasRect({ x: 508, y: 508, width: caption.width, height: caption.height })!;
+    expect(positiveAreaHit(unshiftedCaption, canvasRect(labeledObstacle)!)).toBe(true);
+    expect(positiveAreaHit(canvasRect(caption)!, canvasRect(labeledObstacle)!)).toBe(false);
+    expect(
+      newMarksOverlapExisting(
+        labeled.elements.filter((el) => el.id !== labeledObstacle.id),
+        [labeledObstacle],
+      ),
+    ).toBe(false);
+
+    const deleted = {
+      ...obstacle,
+      id: "deleted-mark",
+      isDeleted: true,
+      type: "text",
+      text: "DELETED_MARK_SHOULD_NOT_APPEAR",
+      originalText: "DELETED_MARK_SHOULD_NOT_APPEAR",
+      x: 7,
+      y: 9,
+      width: 11,
+      height: 13,
+    };
+    const listed = ileWorkCanvasTurnContextMessage({
+      elements: [obstacle, deleted],
+      appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
+      files: {},
+    });
+    expect(listed).toContain(
+      `rectangle x=${obstacle.x} y=${obstacle.y} width=${obstacle.width} height=${obstacle.height}`,
+    );
+    expect(listed).toContain("freedraw");
+    expect(listed).toContain(ileWorkCanvasXaiToolsInstruction());
+    expect(listed).not.toContain("DELETED_MARK_SHOULD_NOT_APPEAR");
+    expect(listed).not.toContain("x=7 y=9 width=11 height=13");
+    expect(listed).not.toContain("cursor-agent-77");
+    expect(listed).not.toContain("1234");
+
+    const chat = read("app/api/session-chat/route.ts");
+    const view = read("components/SessionView.tsx");
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(chat).toContain("ileWorkCanvasTurnContextMessage");
+    expect(view).toContain("applyIleXaiTurnAtCommit");
+    expect(view).toContain("live: whiteboardSceneDataRef.current");
+    expect(canvas).toContain("mergeIleXaiTurnOntoLiveWorkCanvas");
+    expect(canvas).toContain("pasteIleWorkCanvasElements");
+
+    writeScratch(
+      "canvas-nonoverlap-ile.txt",
+      [
+        `replyMoved=${reply!.x !== origin.x || reply!.y !== origin.y}`,
+        `loadingGone=${!replaced.elements.some((el) => el.id === loading.id)}`,
+        `freeStayed=${freeEl.x === 4000 && freeEl.y === 4200}`,
+        `hitCleared=${!newMarksOverlapExisting(colliding.elements.filter((el) => el.id !== obstacle.id), [obstacle])}`,
+        `geometry=${listed.includes(`width=${obstacle.width}`)}`,
+        `tools=${listed.includes("freedraw")}`,
+      ].join("\n") + "\n",
+    );
+  });
+
+  it("settles a snapshot reply against a mark drawn while the request was in flight", () => {
+    const snapshot = sceneWith("seed", "seed mark");
+    const origin = { x: 900, y: 700 };
+    const payload = { text: "reply after the draw", origin, turnId: "inflight" };
+    const naive = applyIleXaiTurnToWorkCanvas(snapshot, payload);
+    const naiveReply = naive.elements.find((el) => el.originalText === "reply after the draw")!;
+    expect(naiveReply.x).toBe(origin.x);
+    expect(naiveReply.y).toBe(origin.y);
+    const blocker = convertToExcalidrawElements([
+      {
+        type: "rectangle",
+        x: naiveReply.x,
+        y: naiveReply.y,
+        width: Math.max(40, naiveReply.width),
+        height: Math.max(40, naiveReply.height),
+      },
+    ])[0]!;
+    expect(positiveAreaHit(canvasRect(naiveReply)!, canvasRect(blocker)!)).toBe(true);
+    const live: IleWorkCanvasScene = {
+      elements: [...snapshot.elements, blocker],
+      appState: snapshot.appState,
+      files: snapshot.files,
+    };
+    const committed = applyIleXaiTurnAtCommit({
+      snapshot,
+      live,
+      applyLive: true,
+      payload,
+    });
+    const kept = committed.scene.elements.find((el) => el.id === blocker.id)!;
+    expect(kept.x).toBe(blocker.x);
+    expect(kept.y).toBe(blocker.y);
+    expect(kept.width).toBe(blocker.width);
+    expect(kept.height).toBe(blocker.height);
+    expect(committed.scene.elements.some((el) => el.id === snapshot.elements[0]!.id)).toBe(true);
+    expect(newMarksOverlapExisting(committed.appended, live.elements)).toBe(false);
+    expect(committed.appended.some((el) => el.originalText === "reply after the draw")).toBe(true);
+
+    const pasted = pasteIleWorkCanvasElements({
+      existing: live.elements,
+      incoming: naive.elements.filter((el) => !snapshot.elements.some((seed) => seed.id === el.id)),
+    });
+    const pastedBlocker = pasted.find((el) => el.id === blocker.id)!;
+    expect(pastedBlocker.x).toBe(blocker.x);
+    expect(pastedBlocker.y).toBe(blocker.y);
+    expect(pastedBlocker.width).toBe(blocker.width);
+    expect(pastedBlocker.height).toBe(blocker.height);
+    const pastedNew = pasted.filter(
+      (el) => el.id !== blocker.id && !snapshot.elements.some((seed) => seed.id === el.id),
+    );
+    expect(newMarksOverlapExisting(pastedNew, [blocker])).toBe(false);
+
+    const cold = applyIleXaiTurnAtCommit({
+      snapshot,
+      live,
+      applyLive: false,
+      payload,
+    });
+    expect(cold.scene.elements.some((el) => el.id === blocker.id)).toBe(false);
+    expect(cold.scene.elements.find((el) => el.originalText === "reply after the draw")?.x).toBe(origin.x);
+  });
+
+  it("tucks a wide reply under the cluster and selects that new group", () => {
+    const mark = { x: 40, y: 20, width: 100, height: 50, isDeleted: false };
+    const slot = ileWorkCanvasClusteredOrigin({
+      elements: [mark],
+      box: { width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH, height: 90 },
+    });
+    const farRight = mark.x + mark.width + ILE_XAI_LOADING_GAP;
+    expect(slot.y).toBeGreaterThanOrEqual(mark.y + mark.height);
+    expect(slot.x).toBeLessThan(farRight);
+    const placedMid = slot.x + ILE_WORK_CANVAS_TEXT_BOX_WIDTH / 2;
+    const clusterMid = mark.x + mark.width / 2;
+    const rightMid = farRight + ILE_WORK_CANVAS_TEXT_BOX_WIDTH / 2;
+    expect(Math.abs(placedMid - clusterMid)).toBeLessThan(Math.abs(rightMid - clusterMid));
+
+    const scene = {
+      elements: convertToExcalidrawElements([
+        { type: "rectangle", x: mark.x, y: mark.y, width: mark.width, height: mark.height },
+      ]),
+      appState: {},
+      files: {},
+    };
+    const obstacle = scene.elements[0]!;
+    const settled = applyIleXaiTurnToWorkCanvas(scene, {
+      text: "Stay with the cluster.",
+      origin: { x: obstacle.x, y: obstacle.y },
+    });
+    const reply = settled.elements.find((el) => el.originalText === "Stay with the cluster.")!;
+    expect(reply.x).toBeLessThan(obstacle.x + obstacle.width + ILE_XAI_LOADING_GAP);
+    expect(newMarksOverlapExisting([reply], [obstacle])).toBe(false);
+    expect(ileWorkCanvasSelectionIds(settled.elements.filter((el) => el.id === reply.id))).toEqual({
+      [reply.id]: true,
+    });
+    expect(ileWorkCanvasSelectionIds([{ id: "gone", isDeleted: true }])).toEqual({});
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    expect(canvas).toContain("ileWorkCanvasSelectionIds");
+    expect(canvas).toContain("scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+    expect(canvas).toContain("scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
+    expect(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION).toMatch(/under nearby marks/i);
   });
 });

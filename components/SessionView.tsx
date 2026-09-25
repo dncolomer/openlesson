@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 import { pauseSession, type Session, type SessionPlan, type Probe, type ToolAction, type ToolName } from "@/lib/storage";
@@ -54,6 +54,7 @@ import {
   decideIleSettingsEnterMap,
   ileSessionMapPath,
   ileSessionSettingsPath,
+  ileWelcomeRouteSync,
   isIleSessionSettingsPath,
 } from "@/lib/ile-session-routes";
 import {
@@ -68,7 +69,7 @@ import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useTh
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
-import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
+import { coerceSpokenLocale, toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
 import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
@@ -124,7 +125,7 @@ import { shouldShowHeliosReplyForChapter } from "@/lib/chapter-load-control";
 import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
 import {
-  applyIleXaiTurnToWorkCanvas,
+  applyIleXaiTurnAtCommit,
   buildIleWorkCanvasAskUserMessage,
   buildIleWorkCanvasCompressUserMessage,
   clampIleCanvasTimerSeconds,
@@ -893,13 +894,19 @@ export function SessionView({
         ? (data.canvasElements as IleWorkCanvasSkeleton[])
         : parsedTurn.elements;
       const visibleReply = (parsedTurn.text || "").trim();
-      const nextScene = applyIleXaiTurnToWorkCanvas(currentScene, {
-        text: visibleReply,
-        elements: extraSkeletons,
-        turnId: placeholderId,
-        origin: parsedTurn.origin,
+      const committed = applyIleXaiTurnAtCommit({
+        snapshot: currentScene,
+        live: whiteboardSceneDataRef.current,
+        applyLive: picked.applyLive,
+        payload: {
+          text: visibleReply,
+          elements: extraSkeletons,
+          turnId: placeholderId,
+          origin: parsedTurn.origin,
+        },
       });
-      const appended = nextScene.elements.slice(currentScene.elements.length);
+      const nextScene = committed.scene;
+      const appended = committed.appended;
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
@@ -1340,20 +1347,27 @@ export function SessionView({
       ayclToken,
       resume: resumeSession,
     };
-    if (showWelcomeModal && !settingsRoute) {
-      router.replace(ileSessionSettingsPath(routeInput));
+    const sync = ileWelcomeRouteSync({
+      showWelcome: showWelcomeModal,
+      browserPath: window.location.pathname,
+      routerPath: pathname ?? "",
+      settingsHref: ileSessionSettingsPath(routeInput),
+      mapHref: ileSessionMapPath(routeInput),
+    });
+    if (sync.kind === "replace-state") {
+      window.history.replaceState(window.history.state, "", sync.href);
       return;
     }
-    if (!showWelcomeModal && settingsRoute) {
-      router.replace(ileSessionMapPath(routeInput));
+    if (sync.kind === "router-replace") {
+      router.replace(sync.href);
     }
   }, [
     ayclToken,
     ileToken,
+    pathname,
     resumeSession,
     router,
     sessionId,
-    settingsRoute,
     showWelcomeModal,
   ]);
 
@@ -2002,6 +2016,23 @@ export function SessionView({
     micSilent,
     minutes: silenceLockMinutes,
   });
+  const silenceRest = silenceLock.outcome === "rest";
+  const wasSilenceRest = useRef(false);
+  const pauseLiveSpeech = sessionThoughtInterface.pauseLiveSpeech;
+  const resumeLiveSpeech = sessionThoughtInterface.resumeLiveSpeech;
+  // The rest challenge needs the only SpeechRecognition instance. Release the
+  // session mic before that challenge's effect starts, and take it back after
+  // the challenge has stopped.
+  useLayoutEffect(() => {
+    if (!silenceRest) return;
+    wasSilenceRest.current = true;
+    pauseLiveSpeech();
+  }, [pauseLiveSpeech, silenceRest]);
+  useEffect(() => {
+    if (silenceRest || !wasSilenceRest.current) return;
+    wasSilenceRest.current = false;
+    resumeLiveSpeech();
+  }, [resumeLiveSpeech, silenceRest]);
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
@@ -2108,6 +2139,7 @@ export function SessionView({
         ? mountIleSilenceScreen(
             <IleSilenceRestScreen
               lockCount={silenceLock.lockCount}
+              speechLang={toSpeechBcp47(tutoringLanguage)}
               onUnlock={() => silenceLock.unlock(true)}
               onSaveAndLeave={() => {
                 const plan = ileImpurityExitPlan("save");

@@ -5,7 +5,7 @@
  */
 
 export const PRACTICE_VOICE_CHALLENGE_SCRIPT =
-  "You will now speak your thinking out loud the whole time. That spoken thinking is a raw thinking signal and a baseline attention increase.";
+  "I will now speak my thinking out loud the whole time. My spoken thinking is a raw thinking signal and a baseline attention increase.";
 
 /** Regular TAP: what the session expects, read after the speak-aloud lines. */
 export const TAP_VOICE_CHALLENGE_SENTENCE_TWO =
@@ -14,7 +14,7 @@ export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${
 
 /** ILE reads two sentences. The second is the session goal, with a sample card under it. */
 export const ILE_VOICE_CHALLENGE_SENTENCE_ONE =
-  "You will now speak your thinking out loud the whole time, which gives a raw thinking signal and a baseline attention increase.";
+  "I will now speak my thinking out loud the whole time, which gives a raw thinking signal and a baseline attention increase.";
 export const ILE_VOICE_CHALLENGE_SENTENCE_TWO =
   "In this session I will work to craft insights by working on the different areas of the map.";
 export const ILE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${ILE_VOICE_CHALLENGE_SENTENCE_TWO}`;
@@ -39,7 +39,7 @@ export const PRACTICE_VOICE_CHALLENGE_READ_NOTE =
 
 export const ILE_SILENCE_LOCK_MINUTES_MIN = 1;
 export const ILE_SILENCE_LOCK_MINUTES_MAX = 30;
-export const ILE_SILENCE_LOCK_MINUTES_DEFAULT = 5;
+export const ILE_SILENCE_LOCK_MINUTES_DEFAULT = 2;
 
 export const ILE_SILENCE_REST_TITLE = "Taking a rest";
 export const ILE_SILENCE_REST_BODY =

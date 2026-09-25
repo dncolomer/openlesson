@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import {
   ILE_SAMPLE_INSIGHT_LABEL,
@@ -91,11 +92,14 @@ export function PracticeVoiceChallenge({
   onPass,
   framing = "start",
   variant = "tap",
+  lang,
 }: {
   onPass: () => void;
   framing?: "start" | "rest";
   /** ILE adds a sample card. Prepare and Drill add a second sentence about that flow. */
   variant?: VoiceChallengeVariant;
+  /** BCP-47 tag. The rest screen must match the session recognizer it just released. */
+  lang?: string | null;
 }) {
   const onPassRef = useRef(onPass);
   onPassRef.current = onPass;
@@ -120,8 +124,11 @@ export function PracticeVoiceChallenge({
     const recognition = new Ctor();
     recognition.continuous = true;
     recognition.interimResults = true;
+    if (lang) recognition.lang = lang;
     let stopped = false;
+    let heardResult = false;
     recognition.onresult = (event) => {
+      heardResult = true;
       const sessionResults: string[] = [];
       for (let i = 0; i < event.results.length; i += 1) {
         sessionResults.push(event.results[i]?.[0]?.transcript ?? "");
@@ -157,20 +164,29 @@ export function PracticeVoiceChallenge({
         /* already running */
       }
     };
-    try {
-      recognition.start();
-    } catch {
-      /* unavailable */
+    const kickoffTimers: number[] = [];
+    const startListening = () => {
+      if (stopped || heardResult) return;
+      try {
+        recognition.start();
+      } catch {
+        /* The session recognizer may still be releasing the mic. */
+      }
+    };
+    startListening();
+    for (const delay of [200, 600, 1200]) {
+      kickoffTimers.push(window.setTimeout(startListening, delay));
     }
     return () => {
       stopped = true;
+      kickoffTimers.forEach((id) => window.clearTimeout(id));
       try {
         recognition.stop();
       } catch {
         /* already stopped */
       }
     };
-  }, [listenAttempt, variant]);
+  }, [lang, listenAttempt, variant]);
 
   function retry() {
     const decision = retryVoiceChallenge({ alreadyPassed: passedRef.current });
@@ -189,13 +205,9 @@ export function PracticeVoiceChallenge({
         data-practice-voice-variant={variant}
         className="flex min-h-52 flex-col items-center justify-center gap-4 border border-white/15 bg-neutral-950 px-6 py-10"
       >
-        <span
-          aria-hidden
-          className="size-5 animate-spin border border-white/30 border-t-white"
+        <LoadingStatusMessage
+          message={framing === "rest" ? "Continuing" : "Starting the session"}
         />
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-400">
-          Starting the session
-        </p>
       </section>
     );
   }

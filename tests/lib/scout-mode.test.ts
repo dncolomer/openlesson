@@ -29,7 +29,9 @@ import {
 } from "@/lib/pow-api/tap-link-config";
 import { resolveTapShellFromSession } from "@/lib/exercise-tap";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
+import { convertToExcalidrawElements, ileWorkCanvasXaiToolsInstruction } from "@/lib/ile-work-canvas";
 import {
+  SCOUT_CHILD_GAP_Y,
   SCOUT_FOLLOWUP_QUESTION_COUNT,
   SCOUT_FRAME_PADDING_X,
   SCOUT_FRAME_WIDTH,
@@ -78,6 +80,64 @@ function read(rel: string) {
 function writeScratch(name: string, body: string) {
   mkdirSync(SCRATCH, { recursive: true });
   writeFileSync(join(SCRATCH, name), body, "utf8");
+}
+
+function canvasRect(el: { x: number; y: number; width: number; height: number }) {
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Number(el.width) || 0;
+  const h = Number(el.height) || 0;
+  const minX = Math.min(x, x + w);
+  const maxX = Math.max(x, x + w);
+  const minY = Math.min(y, y + h);
+  const maxY = Math.max(y, y + h);
+  if (!(maxX > minX) || !(maxY > minY)) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+function positiveAreaHit(
+  a: { minX: number; minY: number; maxX: number; maxY: number },
+  b: { minX: number; minY: number; maxX: number; maxY: number },
+) {
+  return (
+    Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
+    Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0
+  );
+}
+
+function newMarksOverlapExisting(
+  incoming: readonly {
+    id: string;
+    type: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+    containerId?: string | null;
+  }[],
+  existing: readonly {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+  }[],
+) {
+  const ids = new Set(incoming.map((el) => el.id));
+  for (const el of incoming) {
+    if (el.isDeleted) continue;
+    if (el.type === "text" && el.containerId && ids.has(el.containerId)) continue;
+    const rect = canvasRect(el);
+    if (!rect) continue;
+    for (const other of existing) {
+      if (other.isDeleted) continue;
+      const obstacle = canvasRect(other);
+      if (!obstacle) continue;
+      if (positiveAreaHit(rect, obstacle)) return true;
+    }
+  }
+  return false;
 }
 
 describe("author Scout enable/disable + at least one of Work/Drill/Scout", () => {
@@ -529,5 +589,98 @@ describe("evidence logs", () => {
       ].join("\n"),
     );
     expect(system).toMatch(/question/i);
+  });
+});
+
+describe("Prepare canvas drops miss live marks and the question prompt lists them", () => {
+  it("moves a child off a non-sibling occupying the naive slot and names live geometry plus drawing tools", () => {
+    const seed = seedScoutWorkCanvas("Heaps");
+    const parent = seed.scene.elements.find((el) => el.type === "rectangle" && !el.isDeleted)!;
+    const naive = {
+      x: parent.x,
+      y: parent.y + parent.height + SCOUT_CHILD_GAP_Y,
+      width: parent.width,
+      height: parent.height,
+    };
+    const blocker = convertToExcalidrawElements([
+      { type: "rectangle", x: naive.x, y: naive.y, width: naive.width, height: naive.height },
+    ])[0]!;
+    expect(positiveAreaHit(canvasRect(naive)!, canvasRect(blocker)!)).toBe(true);
+    const scene = {
+      ...seed.scene,
+      elements: [...seed.scene.elements, blocker],
+      appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
+    };
+    const connected = connectScoutQuestionToCanvas(scene, {
+      question: "Where does this break?",
+      parentNodeId: SCOUT_SEED_NODE_ID,
+    });
+    const child = connected.added.find((el) => el.type === "rectangle")!;
+    expect(child.x !== naive.x || child.y !== naive.y).toBe(true);
+    const keptParent = connected.scene.elements.find((el) => el.id === parent.id)!;
+    const keptBlocker = connected.scene.elements.find((el) => el.id === blocker.id)!;
+    expect(keptParent.x).toBe(parent.x);
+    expect(keptParent.y).toBe(parent.y);
+    expect(keptParent.width).toBe(parent.width);
+    expect(keptParent.height).toBe(parent.height);
+    expect(keptBlocker.x).toBe(blocker.x);
+    expect(keptBlocker.y).toBe(blocker.y);
+    expect(keptBlocker.width).toBe(blocker.width);
+    expect(keptBlocker.height).toBe(blocker.height);
+    expect(newMarksOverlapExisting(connected.added, [parent, blocker])).toBe(false);
+
+    const deleted = {
+      ...blocker,
+      id: "gone-scout",
+      isDeleted: true,
+      type: "text",
+      text: "PREPARE_DELETED_MARK",
+      originalText: "PREPARE_DELETED_MARK",
+      x: 7,
+      y: 9,
+      width: 11,
+      height: 13,
+    };
+    const prompt = buildScoutQuestionsUserPrompt({
+      seedTitle: "Heaps",
+      path: ["Heaps"],
+      canvasText: "Heaps",
+      scene: {
+        elements: [blocker, deleted],
+        appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
+        files: {},
+      },
+    });
+    expect(prompt).toContain(
+      `rectangle x=${blocker.x} y=${blocker.y} width=${blocker.width} height=${blocker.height}`,
+    );
+    expect(prompt).toContain("freedraw");
+    expect(prompt).toContain(ileWorkCanvasXaiToolsInstruction());
+    expect(prompt).not.toContain("PREPARE_DELETED_MARK");
+    expect(prompt).not.toContain("x=7 y=9 width=11 height=13");
+    expect(prompt).not.toContain("cursor-agent-77");
+    const textOnly = buildScoutQuestionsUserPrompt({
+      seedTitle: "Heaps",
+      canvasText: "Heaps",
+    });
+    expect(textOnly).not.toContain(`x=${blocker.x} y=${blocker.y} width=${blocker.width}`);
+
+    const questionsApi = read("app/api/workspace-tap-score/scout-questions/route.ts");
+    const client = read("components/scout-tap/ScoutTapClient.tsx");
+    expect(questionsApi).toContain("buildScoutQuestionsUserPrompt");
+    expect(questionsApi).toContain("workCanvasScene");
+    expect(client).toContain("workCanvasScene: serializeTapWorkCanvasScene(scene)");
+    expect(client).toContain("connectScoutQuestionToCanvas");
+
+    writeScratch(
+      "canvas-nonoverlap-prepare.txt",
+      [
+        `childMoved=${child.x !== naive.x || child.y !== naive.y}`,
+        `parentKept=${keptParent.x === parent.x && keptParent.y === parent.y}`,
+        `geometry=${prompt.includes(`width=${blocker.width}`)}`,
+        `tools=${prompt.includes("freedraw")}`,
+        `textOnlyMissesGeometry=${!textOnly.includes(`width=${blocker.width}`)}`,
+      ].join("\n") + "\n",
+    );
   });
 });

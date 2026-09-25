@@ -7,7 +7,10 @@
 import {
   convertToExcalidrawElements,
   emptyIleWorkCanvasScene,
+  ileWorkCanvasLiveGeometryListing,
+  ileWorkCanvasXaiToolsInstruction,
   serializeIleWorkCanvasScene,
+  settleIleWorkCanvasIncoming,
   wrapIleWorkCanvasText,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
@@ -263,6 +266,7 @@ export function buildScoutQuestionsUserPrompt(input: {
   seedDescription?: string | null;
   path?: readonly string[] | null;
   canvasText?: string | null;
+  scene?: IleWorkCanvasScene | { elements?: unknown } | null;
   currentNode?: string | null;
   count?: number;
 }): string {
@@ -275,6 +279,7 @@ export function buildScoutQuestionsUserPrompt(input: {
   const path = (input.path || []).map((p) => trimText(p)).filter(Boolean);
   const canvasText = trimText(input.canvasText);
   const current = trimText(input.currentNode) || path[path.length - 1] || title;
+  const geometry = input.scene ? ileWorkCanvasLiveGeometryListing(input.scene) : "";
   const lines = [
     `Seed topic: "${title}"`,
     description ? `Seed description: ${description}` : null,
@@ -282,9 +287,15 @@ export function buildScoutQuestionsUserPrompt(input: {
     path.length > 0
       ? `Path from seed to current (deepest last):\n${path.map((p, i) => `${i + 1}. ${p}`).join("\n")}`
       : "Path: (none yet — generate the initial set of open exploration questions on the seed topic)",
-    canvasText
+    geometry
+      ? `Live Work canvas geometry (every non-deleted element):\n${geometry}`
+      : canvasText
+        ? `Text already on the Work canvas (includes manual learner edits):\n${canvasText}`
+        : "Work canvas: seed only so far.",
+    canvasText && geometry
       ? `Text already on the Work canvas (includes manual learner edits):\n${canvasText}`
-      : "Work canvas: seed only so far.",
+      : null,
+    ileWorkCanvasXaiToolsInstruction(),
     `Generate exactly ${n} ${path.length <= 1 ? "opening" : "follow-up"} question(s). Short (3–8 words). Questions only — no answers.`,
   ].filter(Boolean);
   return lines.join("\n");
@@ -534,7 +545,10 @@ export function connectScoutQuestionToCanvas(
     },
   ]);
 
-  const added = [...nodeEls, ...arrowEls];
+  const added = settleIleWorkCanvasIncoming(
+    [...nodeEls, ...arrowEls],
+    current.elements.filter((el) => !el.isDeleted),
+  );
   return {
     scene: serializeIleWorkCanvasScene({
       elements: [...current.elements, ...added],

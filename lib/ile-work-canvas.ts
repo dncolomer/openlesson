@@ -95,8 +95,9 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
     `EXCALIDRAW DRAWING TOOLS on this board (name these when routing work): ${tools}.`,
     `You can CREATE the same marks in your reply via JSON "elements" (types: ${shapes}).`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
-    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","origin":{"x":number,"y":number},"elements":[{"type":"rectangle","x":120,"y":240,"width":160,"height":80,"label":{"text":"optional caption"}}]}.`,
+    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[{"type":"rectangle","x":120,"y":240,"width":160,"height":80,"label":{"text":"optional caption"}}]}.`,
     `"text" is plain sentences only. Do not put JSON, code fences, or element arrays inside "text".`,
+    `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
     `"elements" may include ${shapes}. Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
 }
@@ -171,12 +172,29 @@ export type IleWorkCanvasSkeleton = {
   [key: string]: unknown;
 };
 
+/** XAI may choose the coaching text box. Outside this range we clamp. */
+export const ILE_XAI_TEXT_BOX_MIN_WIDTH = 96;
+export const ILE_XAI_TEXT_BOX_MAX_WIDTH = 640;
+
 export type IleXaiCanvasTurnPayload = {
   text?: string | null;
+  /** Width of the coaching text box, when XAI sets one. */
+  textWidth?: number | null;
   elements?: IleWorkCanvasSkeleton[] | null;
   turnId?: string | null;
   origin?: { x?: number; y?: number } | null;
 };
+
+/** Finite text-box width from an XAI reply. Missing or invalid → null (default box). */
+export function ileWorkCanvasXaiTextWidth(raw: unknown): number | null {
+  if (raw == null || raw === "") return null;
+  const width = Number(raw);
+  if (!Number.isFinite(width) || width <= 0) return null;
+  return Math.min(
+    ILE_XAI_TEXT_BOX_MAX_WIDTH,
+    Math.max(ILE_XAI_TEXT_BOX_MIN_WIDTH, Math.round(width)),
+  );
+}
 
 /** Finite scene origin from XAI JSON (or apply payload). Invalid → null (fallback). */
 export function ileWorkCanvasFiniteOrigin(
@@ -809,9 +827,17 @@ export function seedIleChapterWorkCanvas(
  * Merge an XAI turn onto the chapter board: response text becomes a real
  * `type: "text"` element (plus optional extra skeletons), via the skeleton converter.
  */
+export type IleWorkCanvasPlacementOptions = {
+  /** Tried when the model origin is missing or its real footprint overlaps. */
+  fallbackOrigin?: { x?: number; y?: number } | null;
+  /** In-flight drops that are not scene elements yet (loading-square slots). */
+  reserved?: readonly { x: number; y: number }[] | null;
+};
+
 export function applyIleXaiTurnToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   payload: IleXaiCanvasTurnPayload,
+  options?: IleWorkCanvasPlacementOptions | null,
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(scene);
   let text = String(payload.text || "").trim();
@@ -825,44 +851,93 @@ export function applyIleXaiTurnToWorkCanvas(
   }
   if (!text && extra.length === 0) return current;
 
-  const origin = ileWorkCanvasFiniteOrigin(originInput) ?? nextXaiTextOrigin(current.elements);
+  const modelOrigin = ileWorkCanvasFiniteOrigin(originInput);
+  const fallbackOrigin = ileWorkCanvasFiniteOrigin(options?.fallbackOrigin);
+  const candidates: { x: number; y: number }[] = [];
+  if (modelOrigin) candidates.push(modelOrigin);
+  if (
+    fallbackOrigin &&
+    (!modelOrigin || fallbackOrigin.x !== modelOrigin.x || fallbackOrigin.y !== modelOrigin.y)
+  ) {
+    candidates.push(fallbackOrigin);
+  }
+  if (!candidates.length) candidates.push(nextXaiTextOrigin(current.elements));
+
   const turnId = String(payload.turnId || `turn-${Date.now()}`);
   const customData = {
     [ILE_XAI_CANVAS_CUSTOM_DATA_KEY]: true,
     turnId,
     author: "xai",
   };
-  const skeletons: IleWorkCanvasSkeleton[] = [];
-  let extraY = origin.y;
-  if (text) {
-    const wrapped = wrapIleWorkCanvasText(text);
-    skeletons.push({
-      type: "text",
-      text,
-      x: origin.x,
-      y: origin.y,
-      width: wrapped.width,
-      autoResize: false,
-      customData,
-    });
-    extraY = origin.y + wrapped.height + 16;
+  const materialize = (origin: { x: number; y: number }): IleWorkCanvasElement[] => {
+    const skeletons: IleWorkCanvasSkeleton[] = [];
+    let extraY = origin.y;
+    if (text) {
+      const chosen = ileWorkCanvasXaiTextWidth(payload.textWidth);
+      const wrapped = wrapIleWorkCanvasText(text, chosen ?? undefined);
+      skeletons.push({
+        type: "text",
+        text,
+        x: origin.x,
+        y: origin.y,
+        width: wrapped.width,
+        autoResize: false,
+        customData,
+      });
+      extraY = origin.y + wrapped.height + 16;
+    }
+    for (const item of extra) {
+      const x = item.x == null ? origin.x : Number(item.x);
+      const y = item.y == null ? extraY : Number(item.y);
+      extraY = y + (Number(item.height) || DEFAULT_DIMENSION) + 16;
+      skeletons.push({
+        ...item,
+        x,
+        y,
+        customData: { ...customData, ...(item.customData ?? {}) },
+      });
+    }
+    return convertToExcalidrawElements(skeletons);
+  };
+
+  const obstacles = ileWorkCanvasPlacementObstacles(current.elements, options?.reserved);
+  let incoming: IleWorkCanvasElement[] | null = null;
+  for (const origin of candidates) {
+    const built = materialize(origin);
+    if (!ileWorkCanvasIncomingOverlapsObstacles(built, obstacles)) {
+      incoming = built;
+      break;
+    }
   }
-  for (const item of extra) {
-    const x = item.x == null ? origin.x : Number(item.x);
-    const y = item.y == null ? extraY : Number(item.y);
-    extraY = y + (Number(item.height) || DEFAULT_DIMENSION) + 16;
-    skeletons.push({
-      ...item,
-      x,
-      y,
-      customData: { ...customData, ...(item.customData ?? {}) },
-    });
+  if (!incoming) {
+    incoming = settleIleWorkCanvasIncoming(materialize(candidates[0]!), obstacles);
   }
-  const converted = convertToExcalidrawElements(skeletons);
   return {
-    elements: [...current.elements, ...converted],
+    elements: [...current.elements, ...incoming],
     appState: current.appState,
     files: current.files,
+  };
+}
+
+/**
+ * Chat commit. The snapshot is what the model saw. When the reply lands on
+ * the focused board, place it on the live scene so marks drawn during the
+ * request are obstacles, not something the reply overwrites.
+ */
+export function applyIleXaiTurnAtCommit(input: {
+  snapshot: IleWorkCanvasScene | null | undefined;
+  live?: IleWorkCanvasScene | null;
+  applyLive: boolean;
+  payload: IleXaiCanvasTurnPayload;
+}): { scene: IleWorkCanvasScene; appended: IleWorkCanvasElement[] } {
+  const base = serializeIleWorkCanvasScene(
+    input.applyLive ? (input.live ?? input.snapshot) : input.snapshot,
+  );
+  const scene = applyIleXaiTurnToWorkCanvas(base, input.payload);
+  const baseIds = new Set(base.elements.map((el) => el.id));
+  return {
+    scene,
+    appended: scene.elements.filter((el) => !baseIds.has(el.id)),
   };
 }
 
@@ -939,6 +1014,224 @@ export function ileWorkCanvasRectsOverlap(
     a.maxY + pad <= b.minY ||
     b.maxY + pad <= a.minY
   );
+}
+
+/** Axis-aligned bounds. Zero-area marks (a line with no thickness) are null. */
+export function ileWorkCanvasNormalizedRect(
+  el: Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> | null | undefined,
+): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  if (!el) return null;
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Number(el.width) || 0;
+  const h = Number(el.height) || 0;
+  const minX = Math.min(x, x + w);
+  const maxX = Math.max(x, x + w);
+  const minY = Math.min(y, y + h);
+  const maxY = Math.max(y, y + h);
+  if (!(maxX > minX) || !(maxY > minY)) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+/** Positive-area intersection. Shared edges do not count. */
+export function ileWorkCanvasPositiveAreaOverlap(
+  a: { minX: number; minY: number; maxX: number; maxY: number },
+  b: { minX: number; minY: number; maxX: number; maxY: number },
+): boolean {
+  return (
+    Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
+    Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0
+  );
+}
+
+function ileWorkCanvasCollisionMembers(
+  incoming: readonly IleWorkCanvasElement[],
+): IleWorkCanvasElement[] {
+  return incoming.filter((el) => !el.isDeleted);
+}
+
+function ileWorkCanvasCollisionFootprint(
+  incoming: readonly IleWorkCanvasElement[],
+): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  let footprint: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
+  for (const el of ileWorkCanvasCollisionMembers(incoming)) {
+    const rect = ileWorkCanvasNormalizedRect(el);
+    if (!rect) continue;
+    if (!footprint) {
+      footprint = { ...rect };
+      continue;
+    }
+    footprint.minX = Math.min(footprint.minX, rect.minX);
+    footprint.minY = Math.min(footprint.minY, rect.minY);
+    footprint.maxX = Math.max(footprint.maxX, rect.maxX);
+    footprint.maxY = Math.max(footprint.maxY, rect.maxY);
+  }
+  return footprint;
+}
+
+export function ileWorkCanvasIncomingOverlapsObstacles(
+  incoming: readonly IleWorkCanvasElement[],
+  obstacles: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+): boolean {
+  const members = ileWorkCanvasCollisionMembers(incoming);
+  for (const el of members) {
+    const rect = ileWorkCanvasNormalizedRect(el);
+    if (!rect) continue;
+    for (const obstacle of obstacles) {
+      if (obstacle.isDeleted) continue;
+      const other = ileWorkCanvasNormalizedRect(obstacle);
+      if (!other) continue;
+      if (ileWorkCanvasPositiveAreaOverlap(rect, other)) return true;
+    }
+  }
+  return false;
+}
+
+function translateIleWorkCanvasElements(
+  elements: readonly IleWorkCanvasElement[],
+  dx: number,
+  dy: number,
+): IleWorkCanvasElement[] {
+  if (dx === 0 && dy === 0) return elements.slice();
+  return elements.map((el) => ({ ...el, x: el.x + dx, y: el.y + dy }));
+}
+
+type IleWorkCanvasBox = { x: number; y: number; width: number; height: number; isDeleted?: boolean };
+
+/**
+ * Free top-left for a new group. Prefers a spot tucked against the cluster
+ * (usually just underneath) over a jump a full box-width to the right.
+ */
+export function ileWorkCanvasClusteredOrigin(input: {
+  elements?: readonly IleWorkCanvasBox[] | null;
+  box: { width: number; height: number };
+  gap?: number;
+}): { x: number; y: number } {
+  const boxW = Math.max(1, Number(input.box.width) || ILE_XAI_LOADING_BOX_WIDTH);
+  const boxH = Math.max(1, Number(input.box.height) || ILE_XAI_LOADING_BOX_HEIGHT);
+  const gap = Number(input.gap) > 0 ? Number(input.gap) : ILE_XAI_LOADING_GAP;
+  const live = (input.elements ?? []).filter((el) => !el.isDeleted);
+  const bounds = ileWorkCanvasContentBounds(live);
+  if (!bounds) return { x: TEXT_ORIGIN_X, y: TEXT_ORIGIN_Y };
+  const obstacles = live
+    .map(ileWorkCanvasNormalizedRect)
+    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
+  const clusterMidX = (bounds.minX + bounds.maxX) / 2;
+  const clusterMidY = (bounds.minY + bounds.maxY) / 2;
+  const step = Math.max(gap, 36);
+  const candidates: { x: number; y: number }[] = [];
+  for (let ring = 0; ring < 8; ring += 1) {
+    const yBelow = bounds.maxY + gap + ring * step;
+    const yAbove = bounds.minY - boxH - gap - ring * step;
+    const xRight = bounds.maxX + gap + ring * step;
+    const xLeft = bounds.minX - boxW - gap - ring * step;
+    const xAligned = bounds.minX;
+    const xCentered = clusterMidX - boxW / 2;
+    candidates.push(
+      { x: xAligned, y: yBelow },
+      { x: xCentered, y: yBelow },
+      { x: xRight, y: bounds.minY },
+      { x: xRight, y: bounds.maxY - boxH },
+      { x: xLeft, y: bounds.minY },
+      { x: xAligned, y: yAbove },
+      { x: xCentered, y: yAbove },
+    );
+  }
+  let best: { x: number; y: number; score: number } | null = null;
+  for (const slot of candidates) {
+    const box = {
+      minX: slot.x,
+      minY: slot.y,
+      maxX: slot.x + boxW,
+      maxY: slot.y + boxH,
+    };
+    if (obstacles.some((rect) => ileWorkCanvasPositiveAreaOverlap(box, rect))) continue;
+    const growX =
+      Math.max(0, box.maxX - bounds.maxX) + Math.max(0, bounds.minX - box.minX);
+    const growY =
+      Math.max(0, box.maxY - bounds.maxY) + Math.max(0, bounds.minY - box.minY);
+    const dist = Math.hypot(slot.x + boxW / 2 - clusterMidX, slot.y + boxH / 2 - clusterMidY);
+    const score = growX * 4 + growY + dist * 0.05;
+    if (!best || score < best.score) best = { x: slot.x, y: slot.y, score };
+  }
+  if (best) return { x: Math.round(best.x), y: Math.round(best.y) };
+  return {
+    x: Math.round(bounds.minX),
+    y: Math.round(bounds.maxY + gap),
+  };
+}
+
+/** Ids to select when a generated group should take the canvas focus. */
+export function ileWorkCanvasSelectionIds(
+  elements: readonly { id?: string | null; isDeleted?: boolean }[] | null | undefined,
+): Record<string, true> {
+  const ids: Record<string, true> = {};
+  for (const el of elements ?? []) {
+    const id = String(el?.id || "").trim();
+    if (!id || el?.isDeleted) continue;
+    ids[id] = true;
+  }
+  return ids;
+}
+
+/**
+ * One placement step for every mode. Keeps a group whose real bounds miss
+ * live obstacles. Otherwise slides the whole group, bound text included,
+ * so internal offsets stay put. The new spot stays against the cluster.
+ */
+export function settleIleWorkCanvasIncoming(
+  incoming: readonly IleWorkCanvasElement[],
+  obstacles: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+): IleWorkCanvasElement[] {
+  const list = [...incoming];
+  if (!list.length) return list;
+  if (!ileWorkCanvasIncomingOverlapsObstacles(list, obstacles)) return list;
+  const footprint = ileWorkCanvasCollisionFootprint(list);
+  if (!footprint) return list;
+  const width = footprint.maxX - footprint.minX;
+  const height = footprint.maxY - footprint.minY;
+  const slot = ileWorkCanvasClusteredOrigin({
+    elements: obstacles,
+    box: { width, height },
+  });
+  return translateIleWorkCanvasElements(
+    list,
+    slot.x - footprint.minX,
+    slot.y - footprint.minY,
+  );
+}
+
+/**
+ * Paste host commit: drop ids, then slide the new group off whatever is
+ * already on the live board. Marks that appeared after a snapshot stay put.
+ */
+export function pasteIleWorkCanvasElements(input: {
+  existing?: readonly IleWorkCanvasElement[] | null;
+  incoming?: readonly IleWorkCanvasElement[] | null;
+  removeIds?: readonly string[] | null;
+}): IleWorkCanvasElement[] {
+  const remove = new Set((input.removeIds ?? []).map((id) => String(id || "")).filter(Boolean));
+  const kept = (input.existing ?? []).filter((el) => el && (!el.id || !remove.has(el.id)));
+  const keptIds = new Set(kept.map((el) => el.id));
+  const toAdd = (input.incoming ?? []).filter(
+    (el) => el && typeof el === "object" && (!el.id || !keptIds.has(el.id)),
+  );
+  if (!toAdd.length) return kept.slice();
+  const settled = settleIleWorkCanvasIncoming(
+    toAdd,
+    kept.filter((el) => !el.isDeleted),
+  );
+  return [...kept, ...settled];
+}
+
+function ileWorkCanvasPlacementObstacles(
+  existing: readonly IleWorkCanvasElement[],
+  reserved?: readonly { x: number; y: number }[] | null,
+): Array<Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">> {
+  return [
+    ...existing.filter((el) => !el.isDeleted),
+    ...ileWorkCanvasOriginOccupants(reserved),
+  ];
 }
 
 function ileWorkCanvasLoadingSlots(
@@ -1039,14 +1332,16 @@ export function mergeIleXaiTurnOntoLiveWorkCanvas(
   },
 ): IleWorkCanvasScene {
   const current = serializeIleWorkCanvasScene(liveScene);
-  const origin =
-    ileWorkCanvasFiniteOrigin(payload.origin) ??
+  const fallbackOrigin =
     ileWorkCanvasFiniteOrigin(input?.fallbackOrigin) ??
     ileWorkCanvasEmptyNearbyOriginWithReserved({
       elements: current.elements,
       reserved: input?.reserved,
     });
-  return applyIleXaiTurnToWorkCanvas(current, { ...payload, origin });
+  return applyIleXaiTurnToWorkCanvas(current, payload, {
+    fallbackOrigin,
+    reserved: input?.reserved,
+  });
 }
 
 export function ileWorkCanvasReplyOriginFromSelection(
@@ -1428,13 +1723,8 @@ export function replaceIleXaiLoadingPlaceholder(
     : current.elements;
   return applyIleXaiTurnToWorkCanvas(
     { ...current, elements: rest },
-    {
-      ...payload,
-      turnId,
-      origin: loading
-        ? { x: loading.x, y: loading.y }
-        : payload.origin,
-    },
+    { ...payload, turnId },
+    { fallbackOrigin: loading ? { x: loading.x, y: loading.y } : null },
   );
 }
 
@@ -1759,9 +2049,11 @@ export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCan
   if (!parsed) return { text, elements: [] };
   const elements = normalizeExtraSkeletons(parsed.elements ?? parsed.canvas_elements);
   const origin = originFromParsedCanvasJson(parsed);
+  const textWidth = ileWorkCanvasXaiTextWidth(parsed.textWidth ?? parsed.text_width);
   return {
     text,
     elements,
+    textWidth,
     turnId: typeof parsed.turnId === "string" ? parsed.turnId : null,
     origin,
   };
@@ -1963,9 +2255,37 @@ export function ileWorkCanvasSceneForTurn(
 
 /** Instruct XAI to suggest a scene origin alongside the restorable board. */
 export const ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION =
-  'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} so it lands in empty space near related marks.';
+  'Suggest a scene origin for that reply as JSON "origin": {"x": number, "y": number} tucked against the existing cluster, usually directly under nearby marks. Do not jump far to the right.';
 
-/** User-message payload: the focused chapter's full restorable board. */
+function formatCanvasMeasure(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0";
+  const rounded = Math.round(n * 1000) / 1000;
+  if (Object.is(rounded, -0)) return "0";
+  return String(rounded);
+}
+
+/**
+ * Every non-deleted mark: type, position, size, and text.
+ * Deleted elements and collaborator cursors are omitted.
+ */
+export function ileWorkCanvasLiveGeometryListing(
+  scene: IleWorkCanvasScene | { elements?: unknown } | null | undefined,
+): string {
+  const live = serializeIleWorkCanvasScene(scene).elements.filter(
+    (el) => !el.isDeleted && el.type !== "cursor",
+  );
+  if (!live.length) return "(no live elements)";
+  return live
+    .map((el) => {
+      const head = `${el.type} x=${formatCanvasMeasure(el.x)} y=${formatCanvasMeasure(el.y)} width=${formatCanvasMeasure(el.width)} height=${formatCanvasMeasure(el.height)}`;
+      const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
+      return text ? `${head} text=${JSON.stringify(text)}` : head;
+    })
+    .join("\n");
+}
+
+/** User-message payload: the focused chapter's live board geometry and drawing tools. */
 export function ileWorkCanvasTurnContextMessage(
   scene: IleWorkCanvasScene | null | undefined,
   input?: {
@@ -1973,9 +2293,8 @@ export function ileWorkCanvasTurnContextMessage(
     workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
   },
 ): string {
-  const restorable = serializeIleWorkCanvasScene(scene);
   const board = String(input?.boardLabel || "CHAPTER").trim() || "CHAPTER";
-  const body = `CURRENT ${board} WORK CANVAS (full restorable Excalidraw scene JSON; collaborators stripped). Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${JSON.stringify(restorable)}`;
+  const body = `CURRENT ${board} WORK CANVAS (every live element: type, x, y, width, height, and text). Deleted marks are omitted. Co-author this board: your reply is placed on it as a text block the learner can move and edit. ${ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION} ${ileWorkCanvasXaiToolsInstruction()}\n${ileWorkCanvasLiveGeometryListing(scene)}`;
   return ileWorkCanvasWithDomainPrefix(body, input?.workspace);
 }
 

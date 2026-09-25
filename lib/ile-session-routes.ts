@@ -49,6 +49,35 @@ export function decideIleSettingsEnterMap(input: {
   return input.welcomeSeen ? "record" : "help";
 }
 
+/**
+ * First load of Welcome must not `router.replace` onto the settings URL.
+ * That navigation remounts SessionView, so the welcome screen paints, drops
+ * to the loading shell, and paints again. `replace-state` updates the address
+ * while the current screen stays mounted. A real router navigation is only
+ * needed when the settings page itself is what is mounted and Welcome closes.
+ */
+export function ileWelcomeRouteSync(input: {
+  showWelcome: boolean;
+  browserPath: string;
+  routerPath: string;
+  settingsHref: string;
+  mapHref: string;
+}):
+  | { kind: "replace-state"; href: string }
+  | { kind: "router-replace"; href: string }
+  | { kind: "none" } {
+  const browserOnSettings = isIleSessionSettingsPath(input.browserPath);
+  const routerOnSettings = isIleSessionSettingsPath(input.routerPath);
+  if (input.showWelcome && !browserOnSettings) {
+    return { kind: "replace-state", href: input.settingsHref };
+  }
+  if (!input.showWelcome && browserOnSettings) {
+    if (routerOnSettings) return { kind: "router-replace", href: input.mapHref };
+    return { kind: "replace-state", href: input.mapHref };
+  }
+  return { kind: "none" };
+}
+
 export function ileSessionSettingsPath(input: {
   sessionId: string;
   ileToken?: string | null;

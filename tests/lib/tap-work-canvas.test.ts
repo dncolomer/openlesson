@@ -30,7 +30,9 @@ import {
   ILE_XAI_LOADING_BOX_WIDTH,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasThinkingOverlayStyle,
+  ileWorkCanvasXaiToolsInstruction,
   mapExcalidrawToolToIlePow,
+  wrapIleWorkCanvasText,
 } from "@/lib/ile-work-canvas";
 import { readTapScoreSurface } from "@/tests/helpers/surface-source";
 
@@ -48,6 +50,64 @@ function read(rel: string) {
   const path = join(ROOT, rel);
   expect(existsSync(path), `missing ${rel}`).toBe(true);
   return readFileSync(path, "utf8");
+}
+
+function canvasRect(el: { x: number; y: number; width: number; height: number }) {
+  const x = Number(el.x) || 0;
+  const y = Number(el.y) || 0;
+  const w = Number(el.width) || 0;
+  const h = Number(el.height) || 0;
+  const minX = Math.min(x, x + w);
+  const maxX = Math.max(x, x + w);
+  const minY = Math.min(y, y + h);
+  const maxY = Math.max(y, y + h);
+  if (!(maxX > minX) || !(maxY > minY)) return null;
+  return { minX, minY, maxX, maxY };
+}
+
+function positiveAreaHit(
+  a: { minX: number; minY: number; maxX: number; maxY: number },
+  b: { minX: number; minY: number; maxX: number; maxY: number },
+) {
+  return (
+    Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 0 &&
+    Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) > 0
+  );
+}
+
+function newMarksOverlapExisting(
+  incoming: readonly {
+    id: string;
+    type: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+    containerId?: string | null;
+  }[],
+  existing: readonly {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isDeleted?: boolean;
+  }[],
+) {
+  const ids = new Set(incoming.map((el) => el.id));
+  for (const el of incoming) {
+    if (el.isDeleted) continue;
+    if (el.type === "text" && el.containerId && ids.has(el.containerId)) continue;
+    const rect = canvasRect(el);
+    if (!rect) continue;
+    for (const other of existing) {
+      if (other.isDeleted) continue;
+      const obstacle = canvasRect(other);
+      if (!obstacle) continue;
+      if (positiveAreaHit(rect, obstacle)) return true;
+    }
+  }
+  return false;
 }
 
 describe("TAP Work canvas apply / pull (shipped)", () => {
@@ -383,5 +443,136 @@ describe("TAP Work canvas workspace+block domain context (shipped)", () => {
     expect(phases).toContain("heliosBusy={heliosBusy}");
     expect(phases).toContain("onSceneChange={handleSceneChange}");
     expect(phases).toContain("onCanvasPowActions={handleCanvasPowActions}");
+  });
+});
+
+describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
+  it("shifts a loading replacement whose real footprint hits a live mark, and lists that mark for Learn and Drill", () => {
+    const existing = convertToExcalidrawElements([
+      { type: "rectangle", x: 30, y: 30, width: 140, height: 90 },
+    ])[0]!;
+    const scene = { elements: [existing], appState: {}, files: {} };
+    const placed = placeThenReplaceTapXaiLoading(scene, "tap-load", {
+      text: "Name the parent index.",
+      elements: [{ type: "rectangle", x: 30, y: 30, width: 140, height: 90 }],
+    });
+    expect(placed.replaced.elements.some((el) => el.id === placed.loading.id)).toBe(false);
+    expect(placed.replaced.elements.some((el) => el.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY])).toBe(
+      false,
+    );
+    const kept = placed.replaced.elements.find((el) => el.id === existing.id)!;
+    expect(kept.x).toBe(existing.x);
+    expect(kept.y).toBe(existing.y);
+    expect(kept.width).toBe(existing.width);
+    expect(kept.height).toBe(existing.height);
+    const added = placed.replaced.elements.filter((el) => el.id !== existing.id);
+    expect(newMarksOverlapExisting(added, [existing])).toBe(false);
+    const addedText = added.find((el) => (el.originalText || el.text) === "Name the parent index.")!;
+    const addedRect = added.find((el) => el.type === "rectangle")!;
+    expect(addedText.x - addedRect.x).toBe(placed.loading.x - 30);
+    expect(addedText.y - addedRect.y).toBe(placed.loading.y - 30);
+
+    const blocker = convertToExcalidrawElements([
+      { type: "rectangle", x: 120, y: 80, width: 80, height: 50 },
+    ])[0]!;
+    const collided = applyTapHeliosReplyToWorkCanvas(
+      { elements: [blocker], appState: {}, files: {} },
+      JSON.stringify({
+        text: "Walk the sift.",
+        origin: { x: blocker.x, y: blocker.y },
+      }),
+      null,
+      "tap-hit",
+    );
+    const moved = collided.elements.find((el) => el.originalText === "Walk the sift.")!;
+    expect(moved.x !== blocker.x || moved.y !== blocker.y).toBe(true);
+    expect(collided.elements.find((el) => el.id === blocker.id)?.x).toBe(blocker.x);
+    expect(newMarksOverlapExisting([moved], [blocker])).toBe(false);
+
+    const open = applyTapHeliosReplyToWorkCanvas(
+      { elements: [blocker], appState: {}, files: {} },
+      JSON.stringify({ text: "Free corner.", origin: { x: 3600, y: 2800 } }),
+      null,
+      "tap-free",
+    );
+    const stayed = open.elements.find((el) => el.originalText === "Free corner.")!;
+    expect(stayed.x).toBe(3600);
+    expect(stayed.y).toBe(2800);
+
+    const tall = "stack the wrapped lines ".repeat(30).trim();
+    const metrics = wrapIleWorkCanvasText(tall);
+    expect(metrics.height).toBeGreaterThan(ILE_XAI_LOADING_BOX_HEIGHT);
+    const below = convertToExcalidrawElements([
+      {
+        type: "rectangle",
+        x: 80,
+        y: 40 + ILE_XAI_LOADING_BOX_HEIGHT + 12,
+        width: 90,
+        height: 28,
+      },
+    ])[0]!;
+    const square = canvasRect({
+      x: 80,
+      y: 40,
+      width: ILE_XAI_LOADING_BOX_WIDTH,
+      height: ILE_XAI_LOADING_BOX_HEIGHT,
+    })!;
+    const naive = canvasRect({ x: 80, y: 40, width: metrics.width, height: metrics.height })!;
+    expect(positiveAreaHit(square, canvasRect(below)!)).toBe(false);
+    expect(positiveAreaHit(naive, canvasRect(below)!)).toBe(true);
+    const tallPlaced = placeThenReplaceTapXaiLoading(
+      { elements: [below], appState: {}, files: {} },
+      "tap-tall",
+      { text: tall, origin: { x: 80, y: 40 } },
+    );
+    const tallReply = tallPlaced.replaced.elements.find((el) => el.originalText === tall)!;
+    expect(tallPlaced.replaced.elements.some((el) => el.customData?.[ILE_XAI_LOADING_CUSTOM_DATA_KEY])).toBe(
+      false,
+    );
+    expect(tallPlaced.replaced.elements.find((el) => el.id === below.id)?.y).toBe(below.y);
+    expect(newMarksOverlapExisting([tallReply], [below])).toBe(false);
+
+    const deleted = {
+      ...blocker,
+      id: "gone",
+      isDeleted: true,
+      type: "text",
+      text: "TAP_DELETED_MARK",
+      originalText: "TAP_DELETED_MARK",
+      x: 7,
+      y: 9,
+      width: 11,
+      height: 13,
+    };
+    const ctx = tapWorkCanvasTurnContextMessage({
+      elements: [blocker, deleted],
+      appState: { collaborators: { "cursor-agent-77": { pointer: { x: 1234, y: 5678 } } } },
+      files: {},
+    });
+    expect(ctx).toContain("SESSION");
+    expect(ctx).toContain(
+      `rectangle x=${blocker.x} y=${blocker.y} width=${blocker.width} height=${blocker.height}`,
+    );
+    expect(ctx).toContain("freedraw");
+    expect(ctx).toContain(ileWorkCanvasXaiToolsInstruction());
+    expect(ctx).not.toContain("TAP_DELETED_MARK");
+    expect(ctx).not.toContain("cursor-agent-77");
+
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    const route = read("app/api/workspace-tap-score/chat/route.ts");
+    expect(phases).toContain("applyTapHeliosReplyToWorkCanvas");
+    expect(route).toContain("tapWorkCanvasTurnContextMessage");
+
+    writeScratch(
+      "canvas-nonoverlap-tap.txt",
+      [
+        `groupShifted=${addedText.x !== placed.loading.x || addedRect.x !== 30}`,
+        `layoutKept=${addedText.x - addedRect.x === placed.loading.x - 30}`,
+        `freeStayed=${stayed.x === 3600 && stayed.y === 2800}`,
+        `tallCleared=${!newMarksOverlapExisting([tallReply], [below])}`,
+        `sessionGeometry=${ctx.includes(`width=${blocker.width}`)}`,
+        `tools=${ctx.includes("freedraw")}`,
+      ].join("\n") + "\n",
+    );
   });
 });

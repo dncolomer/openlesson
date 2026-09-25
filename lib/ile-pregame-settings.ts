@@ -97,7 +97,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: true,
         minInsightsPerChapter: 1,
         canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_CEILING,
-        silenceLockMinutes: 8,
+        silenceLockMinutes: 4,
       },
     },
     {
@@ -110,7 +110,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: true,
         minInsightsPerChapter: 1,
         canvasTimerSeconds: 30 * 60,
-        silenceLockMinutes: 5,
+        silenceLockMinutes: 2,
       },
     },
     {
@@ -123,7 +123,7 @@ export const ILE_PREGAME_DIFFICULTY_PRESETS: readonly IlePregameDifficultyPreset
         allowGatherResources: false,
         minInsightsPerChapter: 2,
         canvasTimerSeconds: ILE_CANVAS_TIMER_SECONDS_DEFAULT,
-        silenceLockMinutes: 3,
+        silenceLockMinutes: 1,
       },
     },
   ];
@@ -312,7 +312,7 @@ export const ILE_START_TIP_LABEL_KEYS: Record<IleStartTipId, string> = {
   "thought-memory": "session.startTipThoughtMemory",
 };
 
-export const ILE_START_TIP_INTERVAL_MS = 5500;
+export const ILE_START_TIP_INTERVAL_MS = 12000;
 
 export function shuffleIleStartTipIds(
   ids: readonly IleStartTipId[] = ILE_START_TIP_IDS,

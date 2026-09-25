@@ -731,11 +731,22 @@ export function useSessionThoughtInterface({
     editingTranscription,
   ]);
 
+  const pauseLiveSpeech = useCallback(() => {
+    stopLiveSpeechRecognition(speechBindings);
+  }, [speechBindings]);
+
+  const resumeLiveSpeech = useCallback(() => {
+    if (!enabled) return;
+    startLiveSpeechRecognition(speechBindings, speechLang);
+  }, [enabled, speechBindings, speechLang]);
+
   return {
     thoughts,
     interimText,
     crystallizableText,
     isListening,
+    pauseLiveSpeech,
+    resumeLiveSpeech,
     /** Mirrors the hook `enabled` flag — false when session is paused / not started. */
     speechEnabled: enabled,
     speechError,

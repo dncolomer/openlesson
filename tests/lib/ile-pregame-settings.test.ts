@@ -215,7 +215,7 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
       allowGatherResources: false,
       minInsightsPerChapter: 2,
       canvasTimerSeconds: 15 * 60,
-      silenceLockMinutes: 3,
+      silenceLockMinutes: 1,
     });
     expect(ilePregameMatchingDifficultyPresetId(ironman)).toBe("ironman");
     expect(
@@ -342,7 +342,10 @@ describe("ILE pre-game settings surface", () => {
     ]);
     expect(nextIleStartTipIndex(7, 8)).toBe(0);
     expect(nextIleStartTipIndex(0, 8)).toBe(1);
-    expect(ILE_START_TIP_INTERVAL_MS).toBeGreaterThanOrEqual(4000);
+    expect(ILE_START_TIP_INTERVAL_MS).toBe(12000);
+    expect(en.session.startTipEndTurn).toMatch(/Work canvas/);
+    expect(en.session.startTipEndTurn).not.toMatch(/crafts insights/i);
+    expect(en.session.startTipSendEnter).not.toMatch(/unsys/i);
     expect(en.session[ILE_START_TIP_LABEL_KEYS["end-turn"].replace("session.", "")]).toBeTruthy();
     const continuePreview = read("components/session-view/ile-continue-map-preview.tsx");
     expect(continuePreview).toContain("animate-spin");

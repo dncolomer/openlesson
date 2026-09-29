@@ -22,6 +22,7 @@ Nav labels (EN): Workspace · DAGs · Map Types · Goals · Context · Simulatio
 | **`goals`** | Owner / org admin only | Multi natural-language **workspace goals** CRUD (`mountsGoalsPanel`); block goals live on block-detail drawer |
 | **`knowledge`** | Owner / org admin only | Performance / knowledge analytics surface (`mountsPerformancePanel`); LWM Snapshot goal selection (default / adhoc / custom) |
 | **`insights`** | Play (learner) mode only — not in Build/creator nav | Workspace-related Insights list (`mountsInsightsPanel`); generated from Work/PoW. Not a Knowledge subview. |
+| **`kpis`** | Signed-in viewers on a standard workspace (Play and Build, including non-owners). Hidden when logged out. Not on Knowledge Region. | That viewer's average time-to-insight for sessions on the workspace (`mountsKpisPanel`). |
 | **`settings`** | Owner / org admin only | Identity (title/description — not goals), access, guest links, data studio, knowledge portal, integrations |
 
 **Note:** Privileged sections (`knowledge`, `settings`, `goals`) fall back to Workspace for non-privileged viewers via `resolveActiveSection`. **DAGs** and **Map Types** are also hidden in Learner mode.

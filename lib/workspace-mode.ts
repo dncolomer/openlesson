@@ -196,7 +196,8 @@ export function availableSectionsForMode(input: {
   if (mode === "learner") {
     // Knowledge only when logged in (user-scoped LWM); guests get map only.
     // DAGs / Map Types tabs are Creator-only — never in Learner.
-    if (input.isLoggedIn) return ["workspace", "knowledge", "insights"];
+    // KPIs is the signed-in viewer's time-to-insight average.
+    if (input.isLoggedIn) return ["workspace", "knowledge", "insights", "kpis"];
     return ["workspace"];
   }
   // Creator: full owner/consumer lists (includes dags for owners).
@@ -204,6 +205,7 @@ export function availableSectionsForMode(input: {
     isOwner: input.isOwner,
     isOrgAdmin: input.isOrgAdmin,
     workspaceKind: input.workspaceKind,
+    isLoggedIn: input.isLoggedIn,
   });
 }
 
@@ -228,6 +230,7 @@ export function resolveActiveSectionForMode(input: {
         isOwner: input.isOwner,
         isOrgAdmin: input.isOrgAdmin,
         workspaceKind: input.workspaceKind,
+        isLoggedIn: input.isLoggedIn,
       });
     }
     return input.requested;

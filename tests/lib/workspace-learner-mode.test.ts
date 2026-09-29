@@ -43,7 +43,7 @@ describe("workspace mode pure resolvers", () => {
   it("Learner sections: workspace + knowledge + insights when logged in", () => {
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: true }),
-    ).toEqual(["workspace", "knowledge", "insights"]);
+    ).toEqual(["workspace", "knowledge", "insights", "kpis"]);
     expect(
       availableSectionsForMode({ mode: "learner", isLoggedIn: false }),
     ).toEqual(["workspace"]);

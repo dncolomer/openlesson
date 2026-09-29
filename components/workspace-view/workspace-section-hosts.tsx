@@ -7,6 +7,7 @@ import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
 import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
+import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
 import type { Block, Workspace } from "@/components/workspace-view/types";
@@ -221,6 +222,21 @@ export function WorkspaceSectionHosts({
                   : undefined
               }
             />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {sectionLayout.mountsKpisPanel && visibleSections.includes("kpis") && (
+        <WorkspaceSectionSurface
+          kind="kpis"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            data-workspace-kpis-host
+            className="flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md"
+          >
+            <WorkspaceKpisPanel workspaceId={workspaceId} />
           </div>
         </WorkspaceSectionSurface>
       )}

@@ -108,6 +108,7 @@ describe("Play-only Insights tab + Generate Insights", () => {
       "workspace",
       "knowledge",
       "insights",
+      "kpis",
     ]);
     expect(
       availableSectionsForMode({ mode: "creator", isOwner: true, isLoggedIn: true }),

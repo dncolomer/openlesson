@@ -16,6 +16,7 @@ export type WorkspaceSectionKey =
   | "goals"
   | "knowledge"
   | "insights"
+  | "kpis"
   | "settings";
 
 /** @deprecated Local tab keys no longer drive the Workspace section UI. */
@@ -30,6 +31,7 @@ export type WorkspaceMainSurface =
   | "goals"
   | "knowledge"
   | "insights"
+  | "kpis"
   | "settings";
 
 export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
@@ -41,6 +43,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "simulation",
   "knowledge",
   "insights",
+  "kpis",
   "settings",
 ] as const;
 
@@ -69,6 +72,8 @@ export type WorkspaceSectionLayout = {
   mountsIntegrationPanel: boolean;
   /** Play-only Insights list (not a Knowledge subview). */
   mountsInsightsPanel: boolean;
+  /** Signed-in viewer's time-to-insight average for this workspace. */
+  mountsKpisPanel: boolean;
 };
 
 /**
@@ -94,6 +99,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "simulation":
       return {
@@ -110,6 +116,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "dags":
       return {
@@ -126,6 +133,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "map_types":
       return {
@@ -142,6 +150,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "goals":
       return {
@@ -158,6 +167,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "knowledge":
       return {
@@ -174,6 +184,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: true,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "insights":
       return {
@@ -190,6 +201,24 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: true,
+        mountsKpisPanel: false,
+      };
+    case "kpis":
+      return {
+        section: "kpis",
+        mainSurface: "kpis",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+        mountsKpisPanel: true,
       };
     case "settings":
       return {
@@ -206,6 +235,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: true,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
     case "workspace":
     default:
@@ -223,6 +253,7 @@ export function resolveWorkspaceSectionLayout(
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
         mountsInsightsPanel: false,
+        mountsKpisPanel: false,
       };
   }
 }
@@ -243,7 +274,22 @@ export type WorkspaceSectionAuth = {
   isOwner?: boolean;
   isOrgAdmin?: boolean;
   workspaceKind?: unknown;
+  /** Signed-in viewers (cookie user or AYCL token) see the KPIs tab. */
+  isLoggedIn?: boolean;
 };
+
+/** KPIs is a signed-in standard-workspace tab. Knowledge Region lists stay as-is. */
+function withLoggedInKpis(
+  sections: WorkspaceSectionKey[],
+  isLoggedIn?: boolean,
+): WorkspaceSectionKey[] {
+  if (!isLoggedIn || sections.includes("kpis")) return sections;
+  const next = sections.slice();
+  const settingsAt = next.indexOf("settings");
+  if (settingsAt >= 0) next.splice(settingsAt, 0, "kpis");
+  else next.push("kpis");
+  return next;
+}
 
 /** Default open tab when none is requested (or a hidden section is requested). */
 export function defaultWorkspaceSection(kind?: unknown): WorkspaceSectionKey {
@@ -275,14 +321,14 @@ export function availableWorkspaceSections(options: WorkspaceSectionAuth): Works
     return [];
   }
   if (canAccessPrivilegedWorkspaceSections(options)) {
-    // Nav order: Workspace, DAGs (owner), Map Types (owner), Goals, Context, Simulation, Knowledge, Settings.
+    // Nav order: Workspace, DAGs (owner), Map Types (owner), Goals, Context, Knowledge, KPIs, Settings.
     const sections: WorkspaceSectionKey[] = ["workspace"];
     if (options.isOwner) sections.push("dags", "map_types");
     sections.push("goals", "context", "knowledge", "settings");
-    return sections;
+    return withLoggedInKpis(sections, options.isLoggedIn);
   }
   // Buyers / consumers: Context + Workspace. Insight simulation stays on blocks.
-  return ["workspace", "context"];
+  return withLoggedInKpis(["workspace", "context"], options.isLoggedIn);
 }
 
 /** Whether a local tab key is valid (always false — local tabs removed). */

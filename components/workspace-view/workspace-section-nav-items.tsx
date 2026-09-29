@@ -125,6 +125,20 @@ export function buildWorkspaceSectionNavItems(input: {
           },
         ]
       : []),
+    ...(visibleSections.includes("kpis")
+      ? [
+          {
+            key: "kpis" as const,
+            label: "KPIs",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l3.5 2" />
+                <circle cx="12" cy="12" r="8.25" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     ...(visibleSections.includes("settings")
       ? [
           {

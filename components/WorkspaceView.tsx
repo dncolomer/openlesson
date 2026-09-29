@@ -734,7 +734,12 @@ export function WorkspaceView({
   const visibleSections =
     interactionMode === "learner"
       ? modeShell.sections
-      : availableWorkspaceSections({ isOwner, isOrgAdmin, workspaceKind });
+      : availableWorkspaceSections({
+          isOwner,
+          isOrgAdmin,
+          workspaceKind,
+          isLoggedIn: Boolean(currentUserId) || Boolean(ayclToken),
+        });
   const isLearnerMode = interactionMode === "learner";
   const showCreatorDrawers = mountsCreatorAuthoringDrawers(interactionMode);
   const showLearnerDrawer = mountsLearnerPracticeDrawer(interactionMode);

@@ -1356,10 +1356,10 @@ export function ileWorkCanvasReplyOriginFromSelection(
   });
 }
 
-export const ILE_LEARN_MORE_LABEL = "Expand More";
-export const ILE_LEARN_MORE_BOX_WIDTH = 288;
-/** Handle + quick-action icons + prompt row, used for viewport collision. */
-export const ILE_LEARN_MORE_BOX_HEIGHT = 116;
+export const ILE_LEARN_MORE_LABEL = "Commands";
+export const ILE_LEARN_MORE_BOX_WIDTH = 320;
+/** Handle + named command rows + prompt row, used for viewport collision. */
+export const ILE_LEARN_MORE_BOX_HEIGHT = 336;
 export const ILE_LEARN_MORE_GAP = 8;
 export const ILE_LEARN_MORE_VIEWPORT_PAD = 8;
 
@@ -1560,7 +1560,7 @@ export function ileLearnMorePromptPlacement(input: {
   selectedElementIds?: Record<string, unknown> | null;
   appState?: IleWorkCanvasViewportAppState | null;
   viewport?: { left?: number; top?: number; width?: number; height?: number } | null;
-  /** Canvas host bounding origin; Expand More is absolutely positioned inside it. */
+  /** Canvas host bounding origin; Commands is absolutely positioned inside it. */
   host?: IleWorkCanvasHostRect | null;
 }): { count: number; left: number; top: number } | null {
   const ids = input.selectedElementIds ?? {};
@@ -1596,7 +1596,7 @@ export function ileLearnMoreSelectionKey(
 }
 
 /**
- * Expand More is visible only while a selection exists. Empty ids hide it
+ * Commands is visible only while a selection exists. Empty ids hide it
  * even when the pointer is down (click-away must not leave it pinned).
  */
 export function ileLearnMoreVisiblePlacement(input: {
@@ -1625,7 +1625,7 @@ export function ileLearnMoreFollowOffset(
   return { dx: left - selLeft, dy: top - selTop };
 }
 
-/** Apply a stored Expand More offset as the selection moves. */
+/** Apply a stored Commands offset as the selection moves. */
 export function ileLearnMoreFollowPosition(
   selection: { left: number; top: number } | null | undefined,
   offset: IleLearnMoreFollowOffset | null | undefined,
@@ -2061,6 +2061,73 @@ export function parseIleXaiCanvasTurn(raw: string | null | undefined): IleXaiCan
   };
 }
 
+/**
+ * Session-chat body for one assistant string.
+ * `message` is the visible sentence. `raw` is that same assistant string, kept
+ * so layout JSON is not discarded when the sentence and typed shapes are empty.
+ */
+export function ileSessionChatCanvasReply(assistantText: string | null | undefined): {
+  message: string;
+  canvasElements: IleWorkCanvasSkeleton[];
+  raw: string;
+} {
+  const raw = String(assistantText || "").trim();
+  const parsed = parseIleXaiCanvasTurn(raw);
+  return {
+    message: String(parsed.text || "").trim(),
+    canvasElements: parsed.elements ?? [],
+    raw,
+  };
+}
+
+/**
+ * Canvas ask result from an ILE session-chat response.
+ * A layout-only assistant string stays in `raw`. An empty visible sentence does
+ * not become the error string when that raw reply is present.
+ */
+export function ileWorkCanvasAskFromSessionChat(input: {
+  ok: boolean;
+  message?: unknown;
+  canvasElements?: unknown;
+  raw?: unknown;
+  errorMessage?: string | null;
+}): {
+  text: string;
+  elements: IleWorkCanvasSkeleton[] | null;
+  origin: { x?: number; y?: number } | null;
+  raw: string;
+} {
+  if (!input.ok) {
+    return {
+      text: String(input.errorMessage || "").trim(),
+      elements: null,
+      origin: null,
+      raw: "",
+    };
+  }
+  const assistantRaw = typeof input.raw === "string" ? input.raw.trim() : "";
+  const visible = typeof input.message === "string" ? input.message.trim() : "";
+  const parsed = parseIleXaiCanvasTurn(assistantRaw || visible);
+  const elements = Array.isArray(input.canvasElements)
+    ? (input.canvasElements as IleWorkCanvasSkeleton[])
+    : (parsed.elements ?? null);
+  const text = visible || String(parsed.text || "").trim();
+  if (!assistantRaw && !text) {
+    return {
+      text: String(input.errorMessage || "").trim(),
+      elements,
+      origin: parsed.origin ?? null,
+      raw: "",
+    };
+  }
+  return {
+    text,
+    elements,
+    origin: parsed.origin ?? null,
+    raw: assistantRaw,
+  };
+}
+
 export function applyIleXaiReplyToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
   rawReply: string | null | undefined,
@@ -2309,7 +2376,7 @@ export type IleWorkCanvasQuickActionId =
   | typeof ILE_WORK_CANVAS_QUICK_ACTION_SPLIT
   | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE;
 
-/** Canned Expand More intents. Rephrase / elaborate go through the ask path. */
+/** Canned Commands intents. Rephrase / elaborate go through the ask path. */
 export function ileWorkCanvasQuickActionPrompt(
   action: typeof ILE_WORK_CANVAS_QUICK_ACTION_REPHRASE | typeof ILE_WORK_CANVAS_QUICK_ACTION_ELABORATE,
 ): string {
@@ -2402,4 +2469,578 @@ export function splitIleWorkCanvasSelectedText(
   if (!target) return { scene: current, split: false, parts: [] };
   const live = current.elements.find((el) => el.id === target.id) ?? target;
   return splitIleWorkCanvasTextElement(current, live);
+}
+
+export const ILE_SELECTIVE_COMPRESSION_LABEL = "Compress";
+export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
+export const ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS = 1800;
+
+export const ILE_WORK_CANVAS_COMMANDS = [
+  {
+    id: "rephrase",
+    label: "Rephrase",
+    tooltip:
+      "Ask XAI to rewrite the selected marks in different words while keeping the same meaning.",
+  },
+  {
+    id: "split",
+    label: "Split",
+    tooltip: "Break the selected text into two or three separate blocks on the canvas.",
+  },
+  {
+    id: "elaborate",
+    label: "Elaborate",
+    tooltip: "Ask XAI to expand the selected marks with more concrete detail on this topic.",
+  },
+  {
+    id: "selective-compression",
+    label: "Compress",
+    tooltip:
+      "Ask XAI for one dense summary of the selected marks and replace only those marks with it.",
+  },
+  {
+    id: "refactor",
+    label: "Refactor",
+    tooltip:
+      "Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout.",
+  },
+  {
+    id: "suggest-insight",
+    label: "Suggest Insight",
+    tooltip:
+      "Ask XAI to add one new mark suggesting an insight from the selection, without saving it.",
+  },
+  {
+    id: "clear-overlaps",
+    label: "Clear overlaps",
+    tooltip: "Move the selected marks so their boxes no longer touch. Layout only.",
+  },
+] as const;
+
+export type IleWorkCanvasCommandId = (typeof ILE_WORK_CANVAS_COMMANDS)[number]["id"];
+
+export type IleWorkCanvasAskKind =
+  | "ask"
+  | "selective-compress"
+  | "refactor"
+  | "suggest-insight"
+  | "clear-overlaps";
+
+export type IleWorkCanvasNewMarkHighlight = {
+  ids: string[];
+  untilMs: number;
+};
+
+export type IleWorkCanvasClearOverlapsResult = {
+  scene: IleWorkCanvasScene;
+  separated: boolean;
+  needsModel: boolean;
+  moved: boolean;
+};
+
+function ileWorkCanvasSelectedLive(
+  scene: IleWorkCanvasScene,
+  selected: readonly { id?: string | null; isDeleted?: boolean }[] | null | undefined,
+): IleWorkCanvasElement[] {
+  const ids = new Set<string>();
+  for (const el of selected ?? []) {
+    if (!el || el.isDeleted) continue;
+    const id = String(el.id || "").trim();
+    if (id) ids.add(id);
+  }
+  if (!ids.size) return [];
+  return scene.elements.filter((el) => ids.has(el.id) && !el.isDeleted);
+}
+
+function ileWorkCanvasCommandSelectionListing(
+  elements: readonly IleWorkCanvasElement[] | null | undefined,
+): string {
+  const live = (elements ?? []).filter((el) => el && !el.isDeleted);
+  if (!live.length) return "(none)";
+  return live
+    .map((el) => {
+      const text = String(el.originalText || el.text || "").replace(/\s+/g, " ").trim();
+      const head = `id=${el.id} type=${el.type} x=${Math.round(Number(el.x) || 0)} y=${Math.round(Number(el.y) || 0)}`;
+      return text ? `${head} text=${JSON.stringify(text)}` : head;
+    })
+    .join("\n");
+}
+
+/** Sentence from a command reply. JSON canvas payloads contribute their text field only. */
+export function ileWorkCanvasCommandProse(raw: string | null | undefined): string {
+  const source = String(raw || "").trim();
+  if (!source) return "";
+  const parsed = parseIleXaiCanvasTurn(source);
+  const prose = String(parsed.text ?? "").trim();
+  if (prose) return prose;
+  if (ileXaiReplyIsCanvasJson(source)) return "";
+  return source;
+}
+
+export function buildIleWorkCanvasSelectiveCompressUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Compress only the selected Work canvas marks into one dense knowledge summary.",
+    "Distill those marks into a single takeaway that preserves their essential claims and relations.",
+    "The summary replaces only the selected marks. Every unselected mark stays in place.",
+    "Do not add new topics.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasRefactorUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Refactor the selected Work canvas marks.",
+    "Rephrase each selected mark in different words that keep the same meaning, and give each mark a new position so the selection reads as a clearer layout.",
+    "Change both the wording and the positions. Leave every unselected mark unchanged.",
+    "Return JSON only, with no markdown:",
+    '{"elements":[{"id":"<id>","text":"<rephrased words>","x":0,"y":0}]}',
+    "Include every selected id. Do not include unselected ids.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasSuggestInsightUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "Suggest one insight from the selected Work canvas marks.",
+    "Write a single sentence the learner could later craft as an insight. It is only a suggestion placed on the canvas.",
+    "Do not evaluate it, do not save it, and do not submit it.",
+    "Leave the selected marks unchanged.",
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasClearOverlapsUserMessage(input: {
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const live = (input.selectedElements ?? []).filter((el) => el && !el.isDeleted);
+  const body = [
+    "The selected marks overlap and a local layout could not separate them.",
+    "Return new positions only so the boxes no longer touch. Keep each mark's text and type.",
+    "Do not rephrase. Do not add or remove marks.",
+    "Return JSON only:",
+    '{"elements":[{"id":"<id>","x":0,"y":0}]}',
+    "",
+    "Selected elements:",
+    ileWorkCanvasCommandSelectionListing(live),
+  ].join("\n");
+  return ileWorkCanvasWithDomainPrefix(body, input.workspace);
+}
+
+export function buildIleWorkCanvasCommandUserMessage(input: {
+  kind?: IleWorkCanvasAskKind | "compress" | null;
+  prompt?: string | null;
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  scene?: IleWorkCanvasScene | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+}): string {
+  const kind = input.kind === "compress" ? "selective-compress" : input.kind;
+  if (kind === "selective-compress") {
+    return buildIleWorkCanvasSelectiveCompressUserMessage(input);
+  }
+  if (kind === "refactor") return buildIleWorkCanvasRefactorUserMessage(input);
+  if (kind === "suggest-insight") return buildIleWorkCanvasSuggestInsightUserMessage(input);
+  if (kind === "clear-overlaps") return buildIleWorkCanvasClearOverlapsUserMessage(input);
+  return buildIleWorkCanvasAskUserMessage({
+    prompt: String(input.prompt || ""),
+    selectedElements: input.selectedElements,
+    workspace: input.workspace,
+  });
+}
+
+/**
+ * Replace the current selection with one summary mark.
+ * A blank summary, or an empty selection, leaves the scene unchanged.
+ */
+export function compressIleWorkCanvasSelection(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+  summary: unknown,
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(scene);
+  const text = ileWorkCanvasCommandProse(String(summary ?? ""));
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (!text || !liveSelected.length) return current;
+  const bounds = ileWorkCanvasContentBounds(liveSelected);
+  const created = convertToExcalidrawElements([
+    {
+      type: "text",
+      text,
+      x: bounds?.minX ?? TEXT_ORIGIN_X,
+      y: bounds?.minY ?? TEXT_ORIGIN_Y,
+      width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+      autoResize: false,
+      customData: {
+        [ILE_COMPRESS_WORK_CUSTOM_DATA_KEY]: true,
+        ileSelectiveCompression: true,
+        author: "xai",
+      },
+    },
+  ]);
+  if (!created.length) return current;
+  const remove = new Set(liveSelected.map((el) => el.id));
+  return {
+    ...current,
+    elements: [...current.elements.filter((el) => !remove.has(el.id)), ...created],
+    appState: {
+      ...current.appState,
+      selectedElementIds: ileWorkCanvasSelectionIds(created),
+    },
+  };
+}
+
+type IleWorkCanvasLayoutEdit = {
+  id: string;
+  text: string | null;
+  x: number | null;
+  y: number | null;
+};
+
+function parseIleWorkCanvasLayoutEdits(raw: unknown): IleWorkCanvasLayoutEdit[] {
+  let record: Record<string, unknown> | null = null;
+  if (typeof raw === "string") {
+    record = extractJsonObject(raw);
+  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    record = raw as Record<string, unknown>;
+  }
+  const list = record && Array.isArray(record.elements)
+    ? record.elements
+    : Array.isArray(raw)
+      ? raw
+      : [];
+  const edits: IleWorkCanvasLayoutEdit[] = [];
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    const id = typeof rec.id === "string" ? rec.id.trim() : "";
+    const text = typeof rec.text === "string" ? rec.text.trim() : "";
+    const x = Number(rec.x);
+    const y = Number(rec.y);
+    edits.push({
+      id,
+      text: text || null,
+      x: Number.isFinite(x) ? x : null,
+      y: Number.isFinite(y) ? y : null,
+    });
+  }
+  return edits;
+}
+
+function ileWorkCanvasEditForElement(
+  edits: readonly IleWorkCanvasLayoutEdit[],
+  el: IleWorkCanvasElement,
+  indexAmongSelected: number,
+  matchById: boolean,
+): IleWorkCanvasLayoutEdit | null {
+  if (matchById) return edits.find((edit) => edit.id === el.id) ?? null;
+  return edits[indexAmongSelected] ?? null;
+}
+
+/**
+ * Reply the refactor and clear-overlaps applies should read.
+ * Prefer layout JSON in the original assistant string. When that string has no
+ * edits, use typed canvas elements (a tools-shaped reply).
+ */
+export function ileWorkCanvasLayoutReply(
+  raw: string | null | undefined,
+  elements?: readonly IleWorkCanvasSkeleton[] | null,
+): unknown {
+  const source = String(raw || "");
+  if (parseIleWorkCanvasLayoutEdits(source).length) return source;
+  const list = (elements ?? []).filter((el) => el && typeof el === "object");
+  if (list.length) return { elements: list };
+  return source;
+}
+
+/** Rephrase and move the selection. Unselected marks keep their text and positions. */
+export function applyIleWorkCanvasRefactor(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+  reply: unknown,
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(scene);
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (!liveSelected.length) return current;
+  const edits = parseIleWorkCanvasLayoutEdits(reply);
+  if (!edits.length) return current;
+  const selectedIds = new Set(liveSelected.map((el) => el.id));
+  const matchById = edits.some((edit) => edit.id && selectedIds.has(edit.id));
+  let ordinal = 0;
+  return {
+    ...current,
+    elements: current.elements.map((el) => {
+      if (!selectedIds.has(el.id) || el.isDeleted) return el;
+      const edit = ileWorkCanvasEditForElement(edits, el, ordinal, matchById);
+      ordinal += 1;
+      if (!edit) return el;
+      const next: IleWorkCanvasElement = { ...el, version: (Number(el.version) || 1) + 1 };
+      if (edit.text) {
+        if (el.type === "text") {
+          const wrapped = wrapIleWorkCanvasText(
+            edit.text,
+            Number(el.width) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+          );
+          next.text = wrapped.text;
+          next.originalText = edit.text;
+          next.height = wrapped.height;
+        } else {
+          next.text = edit.text;
+          next.originalText = edit.text;
+        }
+      }
+      if (edit.x != null) next.x = edit.x;
+      if (edit.y != null) next.y = edit.y;
+      return next;
+    }),
+  };
+}
+
+/** Append one suggested-insight mark. The selection stays put and is not saved. */
+export function applyIleWorkCanvasSuggestInsight(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+  suggestion: unknown,
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(scene);
+  const text = ileWorkCanvasCommandProse(String(suggestion ?? ""));
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (!text || !liveSelected.length) return current;
+  const wrapped = wrapIleWorkCanvasText(text);
+  const origin = ileWorkCanvasEmptyNearbyOrigin({
+    elements: current.elements,
+    near: liveSelected,
+    box: { width: wrapped.width, height: wrapped.height },
+  });
+  const created = convertToExcalidrawElements([
+    {
+      type: "text",
+      text,
+      x: origin.x,
+      y: origin.y,
+      width: wrapped.width,
+      autoResize: false,
+      customData: {
+        author: "xai",
+        ileSuggestedInsight: true,
+      },
+    },
+  ]);
+  if (!created.length) return current;
+  return {
+    ...current,
+    elements: [...current.elements, ...created],
+  };
+}
+
+/** Move selected marks to new positions. Text and type stay. */
+export function applyIleWorkCanvasPositionEdits(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+  reply: unknown,
+): IleWorkCanvasScene {
+  const current = serializeIleWorkCanvasScene(scene);
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (!liveSelected.length) return current;
+  const edits = parseIleWorkCanvasLayoutEdits(reply);
+  if (!edits.length) return current;
+  const selectedIds = new Set(liveSelected.map((el) => el.id));
+  const matchById = edits.some((edit) => edit.id && selectedIds.has(edit.id));
+  let ordinal = 0;
+  return {
+    ...current,
+    elements: current.elements.map((el) => {
+      if (!selectedIds.has(el.id) || el.isDeleted) return el;
+      const edit = ileWorkCanvasEditForElement(edits, el, ordinal, matchById);
+      ordinal += 1;
+      if (!edit || (edit.x == null && edit.y == null)) return el;
+      return {
+        ...el,
+        x: edit.x == null ? el.x : edit.x,
+        y: edit.y == null ? el.y : edit.y,
+        version: (Number(el.version) || 1) + 1,
+      };
+    }),
+  };
+}
+
+function ileWorkCanvasRectSeparation(
+  a: { minX: number; minY: number; maxX: number; maxY: number },
+  b: { minX: number; minY: number; maxX: number; maxY: number },
+): number {
+  const sepX = a.maxX <= b.minX ? b.minX - a.maxX : b.maxX <= a.minX ? a.minX - b.maxX : 0;
+  const sepY = a.maxY <= b.minY ? b.minY - a.maxY : b.maxY <= a.minY ? a.minY - b.maxY : 0;
+  if (sepX > 0 || sepY > 0) return Math.max(sepX, sepY);
+  return 0;
+}
+
+function ileWorkCanvasBoxesTouch(
+  rects: readonly { minX: number; minY: number; maxX: number; maxY: number }[],
+): boolean {
+  for (let i = 0; i < rects.length; i += 1) {
+    for (let j = i + 1; j < rects.length; j += 1) {
+      if (ileWorkCanvasRectSeparation(rects[i]!, rects[j]!) <= 0) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Separate a selection with a local column layout.
+ * Already-gapped selections stay put. XAI is requested only when a box cannot be measured.
+ */
+export function clearIleWorkCanvasSelectionOverlaps(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): IleWorkCanvasClearOverlapsResult {
+  const current = serializeIleWorkCanvasScene(scene);
+  const liveSelected = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (liveSelected.length < 2) {
+    return { scene: current, separated: true, needsModel: false, moved: false };
+  }
+  const measured = liveSelected.map((el) => ({
+    el,
+    rect: ileWorkCanvasNormalizedRect(el),
+  }));
+  if (measured.some((item) => !item.rect)) {
+    return { scene: current, separated: false, needsModel: true, moved: false };
+  }
+  const rects = measured.map((item) => item.rect!);
+  if (!ileWorkCanvasBoxesTouch(rects)) {
+    return { scene: current, separated: true, needsModel: false, moved: false };
+  }
+  const ordered = measured
+    .map((item) => ({ el: item.el, rect: item.rect! }))
+    .sort((a, b) => a.rect.minY - b.rect.minY || a.rect.minX - b.rect.minX);
+  const anchorX = Math.min(...rects.map((rect) => rect.minX));
+  let cursorY = Math.min(...rects.map((rect) => rect.minY));
+  const placed = new Map<string, IleWorkCanvasElement>();
+  for (const item of ordered) {
+    const dx = anchorX - item.rect.minX;
+    const dy = cursorY - item.rect.minY;
+    placed.set(item.el.id, {
+      ...item.el,
+      x: item.el.x + dx,
+      y: item.el.y + dy,
+      version: (Number(item.el.version) || 1) + 1,
+    });
+    cursorY += item.rect.maxY - item.rect.minY + ILE_WORK_CANVAS_OVERLAP_GAP;
+  }
+  const nextElements = current.elements.map((el) => placed.get(el.id) ?? el);
+  const placedRects = [...placed.values()]
+    .map((el) => ileWorkCanvasNormalizedRect(el))
+    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
+  if (placedRects.length !== placed.size || ileWorkCanvasBoxesTouch(placedRects)) {
+    return { scene: current, separated: false, needsModel: true, moved: false };
+  }
+  const moved = liveSelected.some((el) => {
+    const next = placed.get(el.id);
+    return !next || next.x !== el.x || next.y !== el.y;
+  });
+  return {
+    scene: { ...current, elements: nextElements },
+    separated: true,
+    needsModel: false,
+    moved,
+  };
+}
+
+/** Call `ask` only when a local layout cannot separate the selection. */
+export function runIleWorkCanvasClearOverlaps(input: {
+  scene: IleWorkCanvasScene | null | undefined;
+  selectedElements?: readonly IleWorkCanvasElement[] | null;
+  workspace?: PromptWorkspaceContextInput | PromptWorkspaceContext | null;
+  ask?: ((message: string) => void) | null;
+}): IleWorkCanvasClearOverlapsResult {
+  const result = clearIleWorkCanvasSelectionOverlaps(input.scene, input.selectedElements);
+  if (result.needsModel && input.ask) {
+    input.ask(
+      buildIleWorkCanvasClearOverlapsUserMessage({
+        selectedElements: input.selectedElements,
+        workspace: input.workspace,
+      }),
+    );
+  }
+  return result;
+}
+
+export function ileWorkCanvasAddedElementIds(
+  before: { elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null } | null | undefined,
+  after: { elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null } | null | undefined,
+): string[] {
+  const seen = new Set<string>();
+  for (const el of before?.elements ?? []) {
+    const id = String(el?.id || "").trim();
+    if (id) seen.add(id);
+  }
+  const ids: string[] = [];
+  for (const el of after?.elements ?? []) {
+    const id = String(el?.id || "").trim();
+    if (!id || el?.isDeleted || seen.has(id)) continue;
+    ids.push(id);
+  }
+  return ids;
+}
+
+export function ileWorkCanvasNewMarkHighlight(
+  ids: readonly string[] | null | undefined,
+  nowMs: number,
+  durationMs = ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS,
+): IleWorkCanvasNewMarkHighlight {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of ids ?? []) {
+    const id = String(raw || "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const duration = Number(durationMs);
+  const span = Number.isFinite(duration) && duration > 0 ? duration : ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS;
+  return { ids: unique, untilMs: now + span };
+}
+
+export function ileWorkCanvasHighlightActive(
+  highlight: IleWorkCanvasNewMarkHighlight | null | undefined,
+  nowMs: number,
+): string[] {
+  if (!highlight?.ids.length) return [];
+  const now = Number(nowMs);
+  if (!Number.isFinite(now) || now >= highlight.untilMs) return [];
+  return highlight.ids.slice();
+}
+
+/** Record ids the canvas itself inserted. Does not change the scene. */
+export function ileWorkCanvasNoteNewMarks<T extends {
+  elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null;
+}>(
+  before: { elements?: readonly { id?: string | null; isDeleted?: boolean }[] | null } | null | undefined,
+  after: T,
+  nowMs: number,
+): { scene: T; highlight: IleWorkCanvasNewMarkHighlight } {
+  return {
+    scene: after,
+    highlight: ileWorkCanvasNewMarkHighlight(ileWorkCanvasAddedElementIds(before, after), nowMs),
+  };
 }

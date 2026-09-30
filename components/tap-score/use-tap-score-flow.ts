@@ -191,6 +191,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     text: string;
     elements?: IleWorkCanvasSkeleton[] | null;
     origin?: { x?: number; y?: number } | null;
+    raw?: string | null;
   }> {
     const s = current();
     const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
@@ -218,7 +219,12 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     const content = String(payload.message || "").trim() || "No reply";
     const parsed = parseTapXaiCanvasTurn(content);
     s.handlePowInterruption(payload.interruption ?? null);
-    return { text: parsed.text || content, elements: parsed.elements, origin: parsed.origin };
+    return {
+      text: parsed.text || content,
+      elements: parsed.elements,
+      origin: parsed.origin,
+      raw: content,
+    };
   }
 
   async function sendCurrentTranscription() {

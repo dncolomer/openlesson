@@ -474,9 +474,8 @@ describe("canvas craft insight (evaluate + persist)", () => {
     );
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("ileCanvasCraftInsightUsable");
-    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
-      canvas.indexOf("<IleCraftInsightButton"),
-    );
+    expect(canvas).not.toContain("data-ile-compress-work");
+    expect(canvas).toContain("<IleCraftInsightButton");
     expect(form).toContain("ILE_CRAFT_INSIGHT_LABEL");
     expect(form).toContain("data-ile-craft-insight");
     expect(form).toContain("data-ile-canvas-craft-insight-submit");

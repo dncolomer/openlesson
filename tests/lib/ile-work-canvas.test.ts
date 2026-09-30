@@ -49,9 +49,23 @@ import {
   wrapIleWorkCanvasText,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
+  applyIleWorkCanvasPositionEdits,
+  applyIleWorkCanvasRefactor,
+  applyIleWorkCanvasSuggestInsight,
   buildIleWorkCanvasAskUserMessage,
+  buildIleWorkCanvasCommandUserMessage,
   buildIleWorkCanvasCompressUserMessage,
   compressIleWorkCanvasScene,
+  compressIleWorkCanvasSelection,
+  ILE_SELECTIVE_COMPRESSION_LABEL,
+  ILE_WORK_CANVAS_COMMANDS,
+  ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS,
+  ileSessionChatCanvasReply,
+  ileWorkCanvasAskFromSessionChat,
+  ileWorkCanvasHighlightActive,
+  ileWorkCanvasLayoutReply,
+  ileWorkCanvasNoteNewMarks,
+  runIleWorkCanvasClearOverlaps,
   ILE_COMPRESS_WORK_CUSTOM_DATA_KEY,
   ILE_COMPRESS_WORK_LABEL,
   ILE_COMPRESS_WORK_LOADING_LABEL,
@@ -479,16 +493,13 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
     expect(ileCanvasPromptBarWidth(null)).toBe(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
     expect(ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR).toContain(".App-toolbar");
     expect(canvas).toContain("handleBoardAsk");
-    expect(canvas).toContain("handleCompressWork");
-    expect(canvas).toContain("data-ile-compress-work");
-    expect(canvas).toContain("ILE_COMPRESS_WORK_LABEL");
-    expect(canvas).toContain("replaceWithSummary: true");
-    expect(canvas).toContain("compressIleWorkCanvasScene");
+    expect(canvas).not.toContain("data-ile-compress-work");
+    expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("selectedElements: []");
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
     const view = read("components/SessionView.tsx");
     expect(view).toContain("onAskSelected={handleAskCanvasSelection}");
-    expect(view).toContain("buildIleWorkCanvasAskUserMessage");
+    expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
     writeScratch(
       "canvas-prompt-bar.log",
       [
@@ -503,7 +514,7 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
   });
 
   it("floats Learn more under the selection and keeps it inside the canvas viewport", () => {
-    expect(ILE_LEARN_MORE_LABEL).toBe("Expand More");
+    expect(ILE_LEARN_MORE_LABEL).toBe("Commands");
     expect(ILE_LEARN_MORE_GAP).toBe(8);
     const viewport = { left: 64, top: 8, width: 800, height: 600 };
     const below = placeIleLearnMorePrompt({
@@ -1419,9 +1430,7 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
     expect(canvas).toContain('data-ile-learn-more-quick="elaborate"');
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("ileCanvasCraftInsightUsable");
-    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
-      canvas.indexOf("<IleCraftInsightButton"),
-    );
+    expect(canvas).not.toContain("data-ile-compress-work");
     const craftBtn = read("components/session-view/ile-canvas-craft-insight.tsx");
     expect(craftBtn).toContain("data-ile-craft-insight");
     expect(craftBtn).toContain("ILE_CRAFT_INSIGHT_LABEL");
@@ -1429,10 +1438,10 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
     expect(canvas).toContain("splitIleWorkCanvasSelectedText");
     expect(canvas).toContain('handleQuickAction("rephrase")');
     expect(canvas).toContain('handleQuickAction("split")');
-    expect(canvas).toContain('handleQuickAction("elaborate more pls")');
-    expect(canvas).not.toMatch(/>\s*rephrase\s*</i);
-    expect(canvas).not.toMatch(/>\s*split\s*</i);
-    expect(canvas).not.toMatch(/>\s*elaborate more pls\s*</i);
+    expect(canvas).toContain('handleQuickAction("elaborate")');
+    expect(canvas).toMatch(/>\s*Rephrase\s*</);
+    expect(canvas).toMatch(/>\s*Split\s*</);
+    expect(canvas).toMatch(/>\s*Elaborate\s*</);
     const domainAsk = buildIleWorkCanvasAskUserMessage({
       prompt: "What is missing?",
       workspace: {
@@ -1450,7 +1459,7 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
         `askHasWorkspace=${domainAsk.includes("Just War Ethics") && domainAsk.includes("Last resort")}`,
         `splitCount=${liveText.length}`,
         `splitPreserves=${joined === source.replace(/\s+/g, " ")}`,
-        "quickActions=icon-only rephrase/split/elaborate",
+        "quickActions=named Rephrase/Split/Elaborate",
         "packaging=WorkCanvas injected ask, no host imports",
       ].join("\n") + "\n",
     );
@@ -1494,7 +1503,7 @@ describe("ILE Work canvas user delete stays empty (shipped)", () => {
     expect(canvas).toContain("userClearedRef");
     expect(canvas).toContain("getSceneElementsIncludingDeleted");
     expect(canvas).toContain('data-ile-learn-more-quick="rephrase"');
-    expect(canvas).toContain("M4 4v6h6");
+    expect(canvas).toMatch(/>\s*Rephrase\s*</);
   });
 });
 
@@ -1690,24 +1699,15 @@ describe("ILE Work canvas compress work (shipped)", () => {
     ).toBe(false);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("data-ile-compress-work");
-    expect(canvas).toContain("handleCompressWork");
-    expect(canvas).toContain("compressInFlight");
-    expect(canvas).toContain(
-      "compressInFlight ? ILE_COMPRESS_WORK_LOADING_LABEL : ILE_COMPRESS_WORK_LABEL",
-    );
-    expect(canvas).toContain("disabled={!hasLiveCanvas || askInFlight > 0 || compressInFlight}");
-    expect(canvas.indexOf("data-ile-canvas-prompt-bar")).toBeLessThan(
-      canvas.indexOf("data-ile-compress-work"),
-    );
-    expect(canvas.indexOf("data-ile-compress-work")).toBeLessThan(
-      canvas.indexOf("<IleCraftInsightButton"),
-    );
-    expect(canvas).toContain('kind: "compress"');
-    expect(canvas).toContain("replaceWithSummary: true");
+    expect(canvas).not.toContain("data-ile-compress-work");
+    expect(canvas).toContain("compressWork");
+    expect(canvas).toContain('kind: "selective-compress"');
+    expect(canvas).toContain("compressIleWorkCanvasSelection");
+    expect(canvas).toContain("<IleCraftInsightButton");
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("buildIleWorkCanvasCompressUserMessage");
-    expect(view).toContain('input.kind === "compress"');
+    expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
+    expect(view).not.toContain("buildIleWorkCanvasCompressUserMessage");
+    expect(view).not.toContain('input.kind === "compress"');
     expect(ILE_COMPRESS_WORK_PROMPT.toLowerCase()).toContain("compress");
 
     writeScratch(
@@ -1719,7 +1719,7 @@ describe("ILE Work canvas compress work (shipped)", () => {
         `emptyKeep=${emptyKeep.elements.length === seeded.scene.elements.length}`,
         `compressedCount=${compressed.elements.filter((el) => !el.isDeleted).length}`,
         `summary=${only?.text}`,
-        "button=data-ile-compress-work next-to=data-ile-canvas-prompt-bar",
+        "button=selection Compress; prompt bar has no Compress work",
       ].join("\n") + "\n",
     );
   });
@@ -2009,3 +2009,403 @@ describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", ()
     expect(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION).toMatch(/under nearby marks/i);
   });
 });
+
+function elementWords(el: { originalText?: string; text?: string } | null | undefined): string {
+  return String(el?.originalText || el?.text || "").replace(/\s+/g, " ").trim();
+}
+
+function boxSeparation(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): number {
+  const ra = canvasRect(a);
+  const rb = canvasRect(b);
+  if (!ra || !rb) return 0;
+  const sepX = ra.maxX <= rb.minX ? rb.minX - ra.maxX : rb.maxX <= ra.minX ? ra.minX - rb.maxX : 0;
+  const sepY = ra.maxY <= rb.minY ? rb.minY - ra.maxY : rb.maxY <= ra.minY ? ra.minY - rb.maxY : 0;
+  if (sepX > 0 || sepY > 0) return Math.max(sepX, sepY);
+  return 0;
+}
+
+describe("ILE Work canvas selection commands (shipped)", () => {
+  it("compresses only the selection, refactors it, suggests an insight, clears overlaps, and highlights new marks", () => {
+    const selected = convertToExcalidrawElements([
+      { type: "text", text: "alpha claim about last resort", x: 0, y: 0, width: 200, height: 48 },
+      { type: "text", text: "beta claim about proportionality", x: 40, y: 16, width: 200, height: 48 },
+    ]);
+    const keeper = convertToExcalidrawElements([
+      { type: "text", text: "keep this note", x: 900, y: 700, width: 160, height: 40 },
+    ])[0]!;
+    const scene: IleWorkCanvasScene = {
+      elements: [...selected, keeper],
+      appState: {},
+      files: {},
+    };
+    const current = serializeIleWorkCanvasScene(scene);
+    const alpha = current.elements.find((el) => elementWords(el).includes("alpha claim"))!;
+    const beta = current.elements.find((el) => elementWords(el).includes("beta claim"))!;
+    const kept = current.elements.find((el) => elementWords(el).includes("keep this note"))!;
+    expect(boxSeparation(alpha, beta)).toBe(0);
+
+    const selective = buildIleWorkCanvasCommandUserMessage({
+      kind: "selective-compress",
+      prompt: "Compress work",
+      selectedElements: [alpha, beta],
+      workspace: { workspaceTitle: "Just War Ethics", blockTitle: "Last resort" },
+    });
+    expect(selective).toContain("alpha claim about last resort");
+    expect(selective).toContain("beta claim about proportionality");
+    expect(selective).not.toMatch(/whole board/i);
+    expect(selective).not.toMatch(/board will be replaced/i);
+    expect(selective).toContain("Just War Ethics");
+
+    const blank = compressIleWorkCanvasSelection(current, [alpha, beta], "   ");
+    expect(blank.elements.map((el) => [el.id, el.x, el.y, elementWords(el)])).toEqual(
+      current.elements.map((el) => [el.id, el.x, el.y, elementWords(el)]),
+    );
+    const noSelection = compressIleWorkCanvasSelection(
+      current,
+      [],
+      "A summary that must not replace the board.",
+    );
+    expect(noSelection.elements.map((el) => el.id)).toEqual(current.elements.map((el) => el.id));
+    expect(
+      noSelection.elements.some((el) => elementWords(el).includes("must not replace")),
+    ).toBe(false);
+
+    const compressed = compressIleWorkCanvasSelection(
+      current,
+      [alpha, beta],
+      "One dense takeaway: force is the last resort.",
+    );
+    const compressedLive = compressed.elements.filter((el) => !el.isDeleted);
+    expect(compressedLive.some((el) => elementWords(el) === "One dense takeaway: force is the last resort.")).toBe(
+      true,
+    );
+    expect(compressedLive.some((el) => elementWords(el).includes("alpha claim"))).toBe(false);
+    expect(compressedLive.some((el) => elementWords(el).includes("beta claim"))).toBe(false);
+    const keptAfterCompress = compressedLive.find((el) => el.id === kept.id)!;
+    expect(keptAfterCompress.x).toBe(kept.x);
+    expect(keptAfterCompress.y).toBe(kept.y);
+    expect(elementWords(keptAfterCompress)).toBe("keep this note");
+
+    const refactored = applyIleWorkCanvasRefactor(
+      current,
+      [alpha],
+      JSON.stringify({
+        elements: [{ id: alpha.id, text: "Restated last-resort claim", x: alpha.x + 48, y: alpha.y + 36 }],
+      }),
+    );
+    const movedAlpha = refactored.elements.find((el) => el.id === alpha.id)!;
+    expect(elementWords(movedAlpha)).toBe("Restated last-resort claim");
+    expect(movedAlpha.x).toBe(alpha.x + 48);
+    expect(movedAlpha.y).toBe(alpha.y + 36);
+    expect(movedAlpha.type).toBe(alpha.type);
+    const untouchedBeta = refactored.elements.find((el) => el.id === beta.id)!;
+    const untouchedKeep = refactored.elements.find((el) => el.id === kept.id)!;
+    expect(untouchedBeta.x).toBe(beta.x);
+    expect(untouchedBeta.y).toBe(beta.y);
+    expect(elementWords(untouchedBeta)).toBe(elementWords(beta));
+    expect(untouchedKeep.x).toBe(kept.x);
+    expect(untouchedKeep.y).toBe(kept.y);
+    expect(elementWords(untouchedKeep)).toBe("keep this note");
+
+    const layoutAssistant = JSON.stringify({
+      elements: [
+        {
+          id: alpha.id,
+          text: "Restated from the session-chat body",
+          x: alpha.x + 64,
+          y: alpha.y + 28,
+        },
+      ],
+    });
+    const layoutHttp = ileSessionChatCanvasReply(layoutAssistant);
+    expect(layoutHttp.message).toBe("");
+    expect(layoutHttp.canvasElements).toEqual([]);
+    expect(layoutHttp.raw).toBe(layoutAssistant);
+    const layoutAsked = ileWorkCanvasAskFromSessionChat({
+      ok: true,
+      message: layoutHttp.message,
+      canvasElements: layoutHttp.canvasElements,
+      raw: layoutHttp.raw,
+      errorMessage: "Helios could not answer.",
+    });
+    expect(layoutAsked.raw).toBe(layoutAssistant);
+    expect(layoutAsked.text).not.toMatch(/could not answer/i);
+    expect(layoutAsked.raw).not.toMatch(/could not answer/i);
+    const fromSessionChat = applyIleWorkCanvasRefactor(
+      current,
+      [alpha],
+      ileWorkCanvasLayoutReply(layoutAsked.raw, layoutAsked.elements),
+    );
+    const sessionAlpha = fromSessionChat.elements.find((el) => el.id === alpha.id)!;
+    expect(elementWords(sessionAlpha)).toBe("Restated from the session-chat body");
+    expect(sessionAlpha.x).toBe(alpha.x + 64);
+    expect(sessionAlpha.y).toBe(alpha.y + 28);
+    expect(fromSessionChat.elements.find((el) => el.id === kept.id)?.x).toBe(kept.x);
+    expect(elementWords(fromSessionChat.elements.find((el) => el.id === beta.id))).toBe(
+      elementWords(beta),
+    );
+
+    const toolsAssistant = JSON.stringify({
+      elements: [
+        {
+          type: "text",
+          id: alpha.id,
+          text: "Tools rephrase that must not be the only copy",
+          x: alpha.x + 12,
+          y: alpha.y + 18,
+        },
+        {
+          type: "rectangle",
+          id: beta.id,
+          x: beta.x + 30,
+          y: beta.y + 70,
+        },
+      ],
+    });
+    const toolsHttp = ileSessionChatCanvasReply(toolsAssistant);
+    expect(toolsHttp.canvasElements.map((el) => el.id)).toEqual([alpha.id, beta.id]);
+    expect(toolsHttp.message).toBe("");
+    const toolsAsked = ileWorkCanvasAskFromSessionChat({
+      ok: true,
+      message: toolsHttp.message,
+      canvasElements: toolsHttp.canvasElements,
+      raw: "",
+      errorMessage: "Helios could not answer.",
+    });
+    expect(toolsAsked.text).toMatch(/could not answer/i);
+    const fromCanvasElements = applyIleWorkCanvasRefactor(
+      current,
+      [alpha],
+      ileWorkCanvasLayoutReply(toolsAsked.text, toolsAsked.elements),
+    );
+    const toolsAlpha = fromCanvasElements.elements.find((el) => el.id === alpha.id)!;
+    expect(elementWords(toolsAlpha)).toBe("Tools rephrase that must not be the only copy");
+    expect(toolsAlpha.x).toBe(alpha.x + 12);
+    expect(toolsAlpha.y).toBe(alpha.y + 18);
+    const fromPositions = applyIleWorkCanvasPositionEdits(
+      current,
+      [alpha, beta],
+      ileWorkCanvasLayoutReply(toolsAsked.text, toolsAsked.elements),
+    );
+    const shiftedBeta = fromPositions.elements.find((el) => el.id === beta.id)!;
+    expect(shiftedBeta.x).toBe(beta.x + 30);
+    expect(shiftedBeta.y).toBe(beta.y + 70);
+    expect(elementWords(shiftedBeta)).toBe(elementWords(beta));
+    expect(shiftedBeta.type).toBe(beta.type);
+
+    const suggested = applyIleWorkCanvasSuggestInsight(
+      current,
+      [alpha, beta],
+      "Last resort and proportionality can be one insight.",
+    );
+    const suggestion = suggested.elements.find(
+      (el) => !current.elements.some((prev) => prev.id === el.id) && !el.isDeleted,
+    )!;
+    expect(elementWords(suggestion)).toContain("Last resort and proportionality");
+    expect(suggestion.type).toBe("text");
+    for (const id of [alpha.id, beta.id, kept.id]) {
+      const before = current.elements.find((el) => el.id === id)!;
+      const after = suggested.elements.find((el) => el.id === id)!;
+      expect(after.x).toBe(before.x);
+      expect(after.y).toBe(before.y);
+      expect(elementWords(after)).toBe(elementWords(before));
+      expect(after.type).toBe(before.type);
+    }
+
+    const ask = viAsk();
+    const cleared = runIleWorkCanvasClearOverlaps({
+      scene: current,
+      selectedElements: [alpha, beta],
+      ask,
+    });
+    expect(cleared.needsModel).toBe(false);
+    expect(ask.calls).toEqual([]);
+    const clearedAlpha = cleared.scene.elements.find((el) => el.id === alpha.id)!;
+    const clearedBeta = cleared.scene.elements.find((el) => el.id === beta.id)!;
+    const clearedKeep = cleared.scene.elements.find((el) => el.id === kept.id)!;
+    expect(boxSeparation(clearedAlpha, clearedBeta)).toBeGreaterThan(0);
+    expect(elementWords(clearedAlpha)).toBe(elementWords(alpha));
+    expect(elementWords(clearedBeta)).toBe(elementWords(beta));
+    expect(clearedAlpha.type).toBe(alpha.type);
+    expect(clearedBeta.type).toBe(beta.type);
+    expect(clearedKeep.x).toBe(kept.x);
+    expect(clearedKeep.y).toBe(kept.y);
+    expect(elementWords(clearedKeep)).toBe("keep this note");
+
+    const gappedBeta = {
+      ...beta,
+      x: alpha.x,
+      y: alpha.y + alpha.height + 40,
+    };
+    const gappedScene: IleWorkCanvasScene = {
+      ...current,
+      elements: current.elements.map((el) => (el.id === beta.id ? gappedBeta : el)),
+    };
+    expect(boxSeparation(alpha, gappedBeta)).toBeGreaterThan(0);
+    const gappedAsk = viAsk();
+    const gapped = runIleWorkCanvasClearOverlaps({
+      scene: gappedScene,
+      selectedElements: [alpha, gappedBeta],
+      ask: gappedAsk,
+    });
+    expect(gapped.needsModel).toBe(false);
+    expect(gapped.moved).toBe(false);
+    expect(gappedAsk.calls).toEqual([]);
+    expect(gapped.scene.elements.find((el) => el.id === alpha.id)?.x).toBe(alpha.x);
+    expect(gapped.scene.elements.find((el) => el.id === alpha.id)?.y).toBe(alpha.y);
+    expect(gapped.scene.elements.find((el) => el.id === gappedBeta.id)?.x).toBe(gappedBeta.x);
+    expect(gapped.scene.elements.find((el) => el.id === gappedBeta.id)?.y).toBe(gappedBeta.y);
+
+    const degenerateA = { ...alpha, width: 0, height: 0 };
+    const degenerateB = { ...beta, width: 0, height: 0 };
+    const degenerateScene: IleWorkCanvasScene = {
+      ...current,
+      elements: [degenerateA, degenerateB, kept],
+    };
+    const modelAsk = viAsk();
+    const needsModel = runIleWorkCanvasClearOverlaps({
+      scene: degenerateScene,
+      selectedElements: [degenerateA, degenerateB],
+      ask: modelAsk,
+    });
+    expect(needsModel.needsModel).toBe(true);
+    expect(needsModel.moved).toBe(false);
+    expect(modelAsk.calls).toHaveLength(1);
+    expect(modelAsk.calls[0]).toContain("alpha claim about last resort");
+    expect(modelAsk.calls[0]).toMatch(/position/i);
+    expect(modelAsk.calls[0]).not.toMatch(/whole board/i);
+    const repositioned = applyIleWorkCanvasPositionEdits(
+      degenerateScene,
+      [degenerateA, degenerateB],
+      JSON.stringify({
+        elements: [
+          { id: degenerateA.id, text: "should not replace alpha", x: 12, y: 18 },
+          { id: degenerateB.id, text: "should not replace beta", x: 12, y: 80 },
+        ],
+      }),
+    );
+    const positionedA = repositioned.elements.find((el) => el.id === degenerateA.id)!;
+    const positionedB = repositioned.elements.find((el) => el.id === degenerateB.id)!;
+    expect(positionedA.x).toBe(12);
+    expect(positionedA.y).toBe(18);
+    expect(positionedB.y).toBe(80);
+    expect(elementWords(positionedA)).toBe(elementWords(degenerateA));
+    expect(elementWords(positionedB)).toBe(elementWords(degenerateB));
+    expect(positionedA.type).toBe(degenerateA.type);
+    expect(repositioned.elements.find((el) => el.id === kept.id)?.x).toBe(kept.x);
+
+    const added = convertToExcalidrawElements([
+      { type: "text", text: "fresh reply", x: 20, y: 20, width: 120, height: 32 },
+    ])[0]!;
+    const movedOnly = { ...alpha, x: alpha.x + 25 };
+    const after = { elements: [movedOnly, beta, kept, added] };
+    const noted = ileWorkCanvasNoteNewMarks({ elements: [alpha, beta, kept] }, after, 5_000);
+    expect(noted.scene).toBe(after);
+    expect(noted.highlight.ids).toEqual([added.id]);
+    expect(after.elements[0]?.x).toBe(movedOnly.x);
+    expect(elementWords(after.elements[0])).toBe(elementWords(movedOnly));
+    expect(elementWords(added)).toBe(elementWords(noted.scene.elements.find((el) => el.id === added.id)));
+    expect(ileWorkCanvasHighlightActive(noted.highlight, 5_000)).toEqual([added.id]);
+    expect(
+      ileWorkCanvasHighlightActive(noted.highlight, 5_000 + ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS - 1),
+    ).toEqual([added.id]);
+    expect(
+      ileWorkCanvasHighlightActive(noted.highlight, 5_000 + ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS),
+    ).toEqual([]);
+
+    const canvas = read("components/ExcalidrawCanvas.tsx");
+    const view = read("components/SessionView.tsx");
+    const phases = read("components/tap-score/tap-score-phases.tsx");
+    expect(ILE_LEARN_MORE_LABEL).toBe("Commands");
+    expect(canvas).toContain("{ILE_LEARN_MORE_LABEL}");
+    expect(canvas).not.toContain("data-ile-compress-work");
+    expect(canvas).toContain("IleCraftInsightButton");
+    expect(canvas).toContain("Any questions?");
+    expect(canvas).toContain("Prompt a question about this selection");
+    for (const command of ILE_WORK_CANVAS_COMMANDS) {
+      expect(canvas).toContain(`data-ile-learn-more-quick="${command.id}"`);
+      expect(canvas).toMatch(new RegExp(`>\\s*${command.label}\\s*<`));
+      expect(canvas).toContain(`title="${command.tooltip}"`);
+      expect(command.tooltip.toLowerCase()).not.toBe(command.label.toLowerCase());
+      expect(command.tooltip.length).toBeGreaterThan(command.label.length + 8);
+    }
+    expect(ILE_SELECTIVE_COMPRESSION_LABEL).toBe("Compress");
+    expect(canvas).toContain('kind: "selective-compress"');
+    expect(canvas).toContain('kind: "refactor"');
+    expect(canvas).toContain('kind: "suggest-insight"');
+    expect(canvas).toContain('kind: "clear-overlaps"');
+    expect(canvas).toContain("runIleWorkCanvasClearOverlaps");
+    expect(canvas).toContain("if (!cleared.needsModel && cleared.moved)");
+    expect(canvas).toContain("applyIleWorkCanvasSuggestInsight");
+    expect(canvas).not.toContain("buildIleCanvasCraftInsightEvaluateRequest");
+    expect(canvas).not.toContain("ILE_TURN_INSIGHT_CREATE_PATH");
+    expect(canvas).toContain("data-ile-canvas-new-mark");
+    expect(canvas).toContain("ileWorkCanvasNoteNewMarks");
+    const paste = canvas.slice(
+      canvas.indexOf("const flushPendingApply"),
+      canvas.indexOf("const syncPromptBarPlacement"),
+    );
+    expect(paste).toContain("rememberNewCanvasMarks");
+    expect(paste).toContain("scrollToContent");
+    const rememberBody = canvas.slice(
+      canvas.indexOf("const rememberNewCanvasMarks"),
+      canvas.indexOf("const syncThinkingOverlay"),
+    );
+    expect(rememberBody).toContain("ileWorkCanvasNoteNewMarks");
+    const applyBody = canvas.slice(
+      canvas.indexOf("const applyReply"),
+      canvas.indexOf("const reply = await ask"),
+    );
+    expect(applyBody).toContain("ileWorkCanvasNoteNewMarks");
+    expect(applyBody).toContain("scrollToContent");
+    const changeStart = canvas.indexOf("const handleChange = useCallback");
+    const changeBody = canvas.slice(changeStart, canvas.indexOf("debouncedExportPNG();", changeStart));
+    expect(changeBody).not.toContain("ileWorkCanvasNoteNewMarks");
+    expect(view).toContain("buildIleWorkCanvasCommandUserMessage");
+    expect(view).not.toContain("buildIleWorkCanvasCompressUserMessage");
+    expect(view).toContain("ileWorkCanvasAskFromSessionChat");
+    expect(view).toContain("raw: data?.raw");
+    expect(view).toContain("return asked");
+    const route = read("app/api/session-chat/route.ts");
+    expect(route).toContain("ileSessionChatCanvasReply");
+    expect(route).toContain("raw: canvasReply.raw");
+    expect(canvas).toContain("ileWorkCanvasLayoutReply(payload.raw, payload.elements)");
+    expect(phases).toContain("buildIleWorkCanvasCommandUserMessage");
+    expect(phases).not.toContain("buildIleWorkCanvasCompressUserMessage");
+    expect(phases).not.toContain('kind === "compress"');
+    const suggestSource = read("lib/ile-work-canvas.ts");
+    const suggestStart = suggestSource.indexOf("export function applyIleWorkCanvasSuggestInsight");
+    const suggestBody = suggestSource.slice(
+      suggestStart,
+      suggestSource.indexOf("export function applyIleWorkCanvasPositionEdits"),
+    );
+    expect(suggestBody).not.toContain("/api/insights");
+    expect(suggestBody).not.toContain("evaluate");
+
+    writeScratch(
+      "work-canvas-commands.log",
+      [
+        `selectiveKeeps=${elementWords(keptAfterCompress)}`,
+        `refactorMoved=${movedAlpha.x !== alpha.x && elementWords(movedAlpha) !== elementWords(alpha)}`,
+        `suggestAdded=${elementWords(suggestion)}`,
+        `gap=${boxSeparation(clearedAlpha, clearedBeta)}`,
+        `clearAskCalls=${ask.calls.length}`,
+        `gappedAskCalls=${gappedAsk.calls.length}`,
+        `modelAsk=${modelAsk.calls.length}`,
+        `highlightUntil=${noted.highlight.untilMs}`,
+        "commands=Rephrase Split Elaborate Compress Refactor Suggest Insight Clear overlaps",
+      ].join("\n") + "\n",
+    );
+  });
+});
+
+function viAsk(): { calls: string[]; (message: string): void } {
+  const calls: string[] = [];
+  const ask = (message: string) => {
+    calls.push(message);
+  };
+  return Object.assign(ask, { calls });
+}

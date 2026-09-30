@@ -47,7 +47,6 @@ import {
   emptyTapWorkCanvasScene,
   serializeTapWorkCanvasScene,
   tapHeliosCanvasBusy,
-  tapWorkCanvasAskUserMessage,
   tapWorkCanvasBoardId,
   tapWorkCanvasElementContentFingerprint,
   tapWorkCanvasShouldAcceptSceneUpdate,
@@ -56,7 +55,8 @@ import {
 import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import { ILE_POW_DEBOUNCE_MS } from "@/lib/ile-realtime-pow";
 import {
-  buildIleWorkCanvasCompressUserMessage,
+  buildIleWorkCanvasCommandUserMessage,
+  type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
@@ -399,19 +399,15 @@ export function TapScorePhases(props: {
       prompt: string;
       selectedElements: IleWorkCanvasElement[];
       scene: IleWorkCanvasScene;
-      kind?: "ask" | "compress";
+      kind?: IleWorkCanvasAskKind;
     }) => {
-      const userText =
-        input.kind === "compress"
-          ? buildIleWorkCanvasCompressUserMessage({
-              scene: input.scene,
-              workspace: { workspaceTitle },
-            })
-          : tapWorkCanvasAskUserMessage({
-              prompt: input.prompt,
-              selectedElements: input.selectedElements,
-              workspace: { workspaceTitle },
-            });
+      const userText = buildIleWorkCanvasCommandUserMessage({
+        kind: input.kind,
+        prompt: input.prompt,
+        selectedElements: input.selectedElements,
+        scene: input.scene,
+        workspace: { workspaceTitle },
+      });
       return sendCanvasAsk({
         prompt: userText,
         selectedElements: input.selectedElements,

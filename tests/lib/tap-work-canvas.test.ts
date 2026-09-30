@@ -234,7 +234,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(phases).toContain("heliosBusy");
     expect(phases).not.toContain("createTapXaiLoadingPlaceholder");
     expect(phases).not.toContain("replaceTapXaiLoadingPlaceholder");
-    expect(phases).toContain("tapWorkCanvasAskUserMessage");
+    expect(phases).toContain("buildIleWorkCanvasCommandUserMessage");
     expect(phases).not.toContain("TapSessionMap");
     expect(phases).not.toContain("tapConvoBlocksFromAssistantTurns");
     expect(phases).not.toContain("data-tap-convo-map-pane");
@@ -263,8 +263,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(canvas).toContain("width: promptBarWidth");
     expect(canvas).not.toContain("inset-x-0 bottom-3 z-[58]");
     expect(canvas).toContain("handleBoardAsk");
-    expect(canvas).toContain("data-ile-compress-work");
-    expect(canvas).toContain("handleCompressWork");
+    expect(canvas).not.toContain("data-ile-compress-work");
+    expect(canvas).toContain('kind: "selective-compress"');
     expect(canvas).toContain("ileWorkCanvasThinkingOverlayStyle");
 
     const propsType = phases.slice(

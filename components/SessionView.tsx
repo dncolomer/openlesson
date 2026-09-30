@@ -126,8 +126,8 @@ import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
 import { ileChapterCanvasRemountKey } from "@/lib/ile-session-global-context";
 import {
   applyIleXaiTurnAtCommit,
-  buildIleWorkCanvasAskUserMessage,
-  buildIleWorkCanvasCompressUserMessage,
+  buildIleWorkCanvasCommandUserMessage,
+  ileWorkCanvasAskFromSessionChat,
   clampIleCanvasTimerSeconds,
   ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   ileWorkCanvasScenesFromWorkspaces,
@@ -138,6 +138,7 @@ import {
   resetIleWorkCanvasSceneOnTimerExpiry,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
+  type IleWorkCanvasAskKind,
   type IleWorkCanvasElement,
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
@@ -1750,21 +1751,17 @@ export function SessionView({
       prompt: string;
       selectedElements: IleWorkCanvasElement[];
       scene: IleWorkCanvasScene;
-      kind?: "ask" | "compress";
+      kind?: IleWorkCanvasAskKind;
     }) => {
       if (!session) return { text: "" };
       const chapterKey = activeChapterKey;
-      const userText =
-        input.kind === "compress"
-          ? buildIleWorkCanvasCompressUserMessage({
-              scene: input.scene,
-              workspace: canvasWorkspaceContext,
-            })
-          : buildIleWorkCanvasAskUserMessage({
-              prompt: input.prompt,
-              selectedElements: input.selectedElements,
-              workspace: canvasWorkspaceContext,
-            });
+      const userText = buildIleWorkCanvasCommandUserMessage({
+        kind: input.kind,
+        prompt: input.prompt,
+        selectedElements: input.selectedElements,
+        scene: input.scene,
+        workspace: canvasWorkspaceContext,
+      });
       const userMsg: ChatMessage = {
         id: `${Date.now()}-u`,
         role: "user",
@@ -1797,23 +1794,21 @@ export function SessionView({
             imageDataUrl: m.imageDataUrl,
           })),
         });
-        const content =
-          ok && typeof data?.message === "string" && data.message.trim()
-            ? data.message.trim()
-            : errorMessage || t("heliosChat.errorMessage");
-        const parsedTurn = parseIleXaiCanvasTurn(content);
-        const extraSkeletons = Array.isArray(data?.canvasElements)
-          ? (data.canvasElements as IleWorkCanvasSkeleton[])
-          : parsedTurn.elements;
-        const text = (parsedTurn.text || "").trim();
+        const asked = ileWorkCanvasAskFromSessionChat({
+          ok,
+          message: data?.message,
+          canvasElements: data?.canvasElements,
+          raw: data?.raw,
+          errorMessage: errorMessage || t("heliosChat.errorMessage"),
+        });
         updateChapterWorkspace(chapterKey, (workspace) => ({
           chatMessages: workspace.chatMessages.map((message) =>
             message.id === placeholderId
-              ? { ...message, content: text, pending: false }
+              ? { ...message, content: asked.text, pending: false }
               : message,
           ),
         }));
-        return { text, elements: extraSkeletons, origin: parsedTurn.origin };
+        return asked;
       } catch (error) {
         console.error("Canvas ask XAI error:", error);
         const fail = t("heliosChat.errorMessage");

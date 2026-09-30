@@ -18,18 +18,18 @@ import {
   ileHeliosThinkingLine,
 } from "@/lib/ile-dialogue-turn";
 import {
+  applyIleWorkCanvasPositionEdits,
+  applyIleWorkCanvasRefactor,
+  applyIleWorkCanvasSuggestInsight,
   clampIleLearnMorePosition,
-  compressIleWorkCanvasScene,
+  compressIleWorkCanvasSelection,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP,
   ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH,
   ILE_CANVAS_PROMPT_BAR_TOOLBAR_SELECTOR,
   ILE_CANVAS_TIMER_RESET_LOADING_MS,
-  ILE_COMPRESS_WORK_LABEL,
-  ILE_COMPRESS_WORK_LOADING_LABEL,
-  ILE_COMPRESS_WORK_PROMPT,
   ILE_LEARN_MORE_BOX_WIDTH,
   ILE_LEARN_MORE_LABEL,
-  ileWorkCanvasCanCompress,
+  ILE_SELECTIVE_COMPRESSION_LABEL,
   ileCanvasPromptBarTop,
   ileCanvasPromptBarWidth,
   ileLearnMoreFollowOffset,
@@ -43,6 +43,9 @@ import {
   ileWorkCanvasEmptyNearbyOriginWithReserved,
   ileWorkCanvasFiniteOrigin,
   ileWorkCanvasHasLiveElements,
+  ileWorkCanvasHighlightActive,
+  ileWorkCanvasLayoutReply,
+  ileWorkCanvasNoteNewMarks,
   ileWorkCanvasSelectionIds,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasPointerBusy,
@@ -55,8 +58,12 @@ import {
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
   serializeIleWorkCanvasScene,
+  runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
+  type IleWorkCanvasAskKind,
+  type IleWorkCanvasCommandId,
+  type IleWorkCanvasNewMarkHighlight,
   ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS,
   ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_BOX_WIDTH,
@@ -86,6 +93,9 @@ const Excalidraw = dynamic(
 );
 
 type ExcalidrawAPIRef = any;
+
+const ILE_CANVAS_COMMAND_BUTTON_CLASS =
+  "pointer-events-auto w-full whitespace-nowrap rounded-none border border-neutral-600 bg-neutral-900 px-2 py-1 text-left font-mono text-[11px] text-white hover:border-white hover:bg-neutral-800";
 
 const ILE_EXCALIDRAW_UI_OPTIONS = {
   canvasActions: {
@@ -170,17 +180,18 @@ export interface ExcalidrawCanvasProps {
   applyElementsNonce?: string | number | null;
   /** Ids to drop before merging applyElements (loading-placeholder replace). */
   applyRemoveElementIds?: readonly string[] | null;
-  /** Classified Work-canvas PoW (draw/move/rotate/delete/Expand More/board prompt). */
+  /** Classified Work-canvas PoW (draw/move/rotate/delete/Commands/board prompt). */
   onCanvasPowActions?: (events: IleWorkCanvasPowEvent[]) => void;
   onAskSelected?: (input: {
     prompt: string;
     selectedElements: IleWorkCanvasElement[];
     scene: IleWorkCanvasScene;
-    kind?: "ask" | "compress";
+    kind?: IleWorkCanvasAskKind;
   }) => Promise<{
     text: string;
     elements?: IleWorkCanvasSkeleton[] | null;
     origin?: { x?: number; y?: number } | null;
+    raw?: string | null;
   }>;
   /** Resets the proof-of-work collector when the board changes. */
   boardId?: string | null;
@@ -216,7 +227,7 @@ function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any }
 
 /**
  * Shared ILE + TAP Work board. Hosts must not fork this — both surfaces
- * mount `WorkCanvas` so Expand More, the board prompt, thinking overlay,
+ * mount `WorkCanvas` so Commands, the board prompt, thinking overlay,
  * XAI apply, and center-on-open stay one implementation.
  */
 export function ExcalidrawCanvas({
@@ -247,12 +258,11 @@ export function ExcalidrawCanvas({
   const [isLoaded, setIsLoaded] = useState(false);
   const [askPrompt, setAskPrompt] = useState("");
   const [boardPrompt, setBoardPrompt] = useState("");
-  const [hasLiveCanvas, setHasLiveCanvas] = useState(() =>
-    ileWorkCanvasCanCompress(initialSceneData as IleWorkCanvasScene),
-  );
   const [askInFlight, setAskInFlight] = useState(0);
-  const [compressInFlight, setCompressInFlight] = useState(false);
   const [craftInsightOpen, setCraftInsightOpen] = useState(false);
+  const [highlightBoxes, setHighlightBoxes] = useState<
+    Array<{ id: string; left: number; top: number; width: number; height: number }>
+  >([]);
   const lastReplaceNonceRef = useRef<string | number | null>(null);
   const [learnMoreUi, setLearnMoreUi] = useState<{
     count: number;
@@ -289,6 +299,8 @@ export function ExcalidrawCanvas({
     origLeft: number;
     origTop: number;
   } | null>(null);
+  const newMarkHighlightRef = useRef<IleWorkCanvasNewMarkHighlight | null>(null);
+  const newMarkHighlightTimerRef = useRef<number | null>(null);
   
   // Store the latest scene data for PNG export
    
@@ -351,6 +363,81 @@ export function ExcalidrawCanvas({
     });
   }, []);
 
+  const canvasHostOrigin = useCallback(() => {
+    const host = canvasHostRef.current;
+    if (!host) return { left: 0, top: 0, width: 0, height: 0 };
+    const rect = host.getBoundingClientRect();
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: host.clientWidth,
+      height: host.clientHeight,
+    };
+  }, []);
+
+  const projectNewMarkHighlight = useCallback((elements: readonly any[], appState: any) => {
+    const active = ileWorkCanvasHighlightActive(newMarkHighlightRef.current, Date.now());
+    if (!active.length) {
+      setHighlightBoxes((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    const host = canvasHostOrigin();
+    const wanted = new Set(active);
+    const boxes: Array<{ id: string; left: number; top: number; width: number; height: number }> = [];
+    for (const el of elements) {
+      if (!el?.id || el.isDeleted || !wanted.has(el.id)) continue;
+      const rect = ileWorkCanvasSelectionHostRect([el], appState, host);
+      if (!rect) continue;
+      const width = Math.round(rect.right - rect.left);
+      const height = Math.round(rect.bottom - rect.top);
+      if (width <= 0 || height <= 0) continue;
+      boxes.push({
+        id: el.id,
+        left: Math.round(rect.left),
+        top: Math.round(rect.top),
+        width,
+        height,
+      });
+    }
+    setHighlightBoxes((prev) => {
+      if (
+        prev.length === boxes.length &&
+        prev.every(
+          (box, index) =>
+            box.id === boxes[index]?.id &&
+            box.left === boxes[index]?.left &&
+            box.top === boxes[index]?.top &&
+            box.width === boxes[index]?.width &&
+            box.height === boxes[index]?.height,
+        )
+      ) {
+        return prev;
+      }
+      return boxes;
+    });
+  }, [canvasHostOrigin]);
+
+  const rememberNewCanvasMarks = useCallback((
+    before: { elements?: readonly { id?: string; isDeleted?: boolean }[] | null } | null,
+    after: { elements?: readonly { id?: string; isDeleted?: boolean }[] | null },
+    elements: readonly any[],
+    appState: any,
+  ) => {
+    const noted = ileWorkCanvasNoteNewMarks(before, after, Date.now());
+    if (!noted.highlight.ids.length) return;
+    newMarkHighlightRef.current = noted.highlight;
+    if (newMarkHighlightTimerRef.current != null) {
+      window.clearTimeout(newMarkHighlightTimerRef.current);
+    }
+    const delay = Math.max(0, noted.highlight.untilMs - Date.now());
+    newMarkHighlightTimerRef.current = window.setTimeout(() => {
+      if (newMarkHighlightRef.current?.untilMs !== noted.highlight.untilMs) return;
+      newMarkHighlightRef.current = null;
+      setHighlightBoxes([]);
+    }, delay);
+    projectNewMarkHighlight(elements, appState);
+  }, [projectNewMarkHighlight]);
+
   const flushPendingApply = useCallback(() => {
     const api = excalidrawAPIRef.current;
     const pending = pendingApplyRef.current;
@@ -411,12 +498,18 @@ export function ExcalidrawCanvas({
     } finally {
       applyingRemoteRef.current = false;
     }
+    rememberNewCanvasMarks(
+      { elements: existing as IleWorkCanvasElement[] },
+      { elements: merged },
+      merged,
+      api.getAppState?.() ?? {},
+    );
     if (added.length && typeof api.scrollToContent === "function") {
       api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
     } else {
       scheduleCenterOnOpen();
     }
-  }, [scheduleCenterOnOpen]);
+  }, [rememberNewCanvasMarks, scheduleCenterOnOpen]);
 
   const syncPromptBarPlacement = useCallback(() => {
     const host = canvasHostRef.current;
@@ -471,20 +564,16 @@ export function ExcalidrawCanvas({
     learnMoreUiRef.current = learnMoreUi;
   }, [learnMoreUi]);
 
-  const thinkingOverlayBox = ileWorkCanvasThinkingOverlayStyle();
-  const showHeliosThinking = thinkingChips.length > 0;
-
-  const canvasHostOrigin = useCallback(() => {
-    const host = canvasHostRef.current;
-    if (!host) return { left: 0, top: 0, width: 0, height: 0 };
-    const rect = host.getBoundingClientRect();
-    return {
-      left: rect.left,
-      top: rect.top,
-      width: host.clientWidth,
-      height: host.clientHeight,
+  useEffect(() => {
+    return () => {
+      if (newMarkHighlightTimerRef.current != null) {
+        window.clearTimeout(newMarkHighlightTimerRef.current);
+      }
     };
   }, []);
+
+  const thinkingOverlayBox = ileWorkCanvasThinkingOverlayStyle();
+  const showHeliosThinking = thinkingChips.length > 0;
 
   const projectThinkingChip = useCallback(
     (
@@ -696,8 +785,7 @@ export function ExcalidrawCanvas({
     async (input: {
       prompt: string;
       selectedElements: IleWorkCanvasElement[];
-      kind?: "ask" | "compress";
-      replaceWithSummary?: boolean;
+      kind?: IleWorkCanvasAskKind;
     }) => {
       const ask = onAskSelectedRef.current;
       const api = excalidrawAPIRef.current;
@@ -718,6 +806,7 @@ export function ExcalidrawCanvas({
       setAskInFlight(askInFlightRef.current);
       const applyReply = (payload: {
         text: string;
+        raw?: string | null;
         elements?: IleWorkCanvasSkeleton[] | null;
         origin?: { x?: number; y?: number } | null;
       }) => {
@@ -726,39 +815,54 @@ export function ExcalidrawCanvas({
           appState: api.getAppState?.() ?? {},
           files: api.getFiles?.() ?? {},
         });
-        const beforeIds = new Set(live.elements.map((el) => el.id));
-        const next = input.replaceWithSummary
-          ? compressIleWorkCanvasScene(live, payload.text)
-          : mergeIleXaiTurnOntoLiveWorkCanvas(
-              live,
-              {
-                text: payload.text,
-                elements: payload.elements,
-                turnId,
-                origin: payload.origin,
-              },
-              {
-                fallbackOrigin: origin,
-                reserved: reservedThinkingOrigins(turnId),
-              },
-            );
-        const added = next.elements.filter((el) => !beforeIds.has(el.id) && !el.isDeleted);
-        const focusIds = ileWorkCanvasSelectionIds(added.length ? added : next.elements);
+        const source = input.kind && input.kind !== "ask"
+          ? String(payload.raw || "")
+          : String(payload.text || "");
+        const layoutReply = ileWorkCanvasLayoutReply(payload.raw, payload.elements);
+        const next = input.kind === "selective-compress"
+          ? compressIleWorkCanvasSelection(live, input.selectedElements, source)
+          : input.kind === "refactor"
+            ? applyIleWorkCanvasRefactor(live, input.selectedElements, layoutReply)
+            : input.kind === "suggest-insight"
+              ? applyIleWorkCanvasSuggestInsight(live, input.selectedElements, source)
+              : input.kind === "clear-overlaps"
+                ? applyIleWorkCanvasPositionEdits(live, input.selectedElements, layoutReply)
+                : mergeIleXaiTurnOntoLiveWorkCanvas(
+                    live,
+                    {
+                      text: payload.text,
+                      elements: payload.elements,
+                      turnId,
+                      origin: payload.origin,
+                    },
+                    {
+                      fallbackOrigin: origin,
+                      reserved: reservedThinkingOrigins(turnId),
+                    },
+                  );
+        const noted = ileWorkCanvasNoteNewMarks(live, next, Date.now());
+        const added = next.elements.filter((el) => noted.highlight.ids.includes(el.id) && !el.isDeleted);
+        const focusSource = added.length
+          ? added
+          : input.selectedElements.length
+            ? input.selectedElements
+            : next.elements.filter((el) => !el.isDeleted);
+        const focusIds = ileWorkCanvasSelectionIds(focusSource);
         applyingRemoteRef.current = true;
         try {
           api.updateScene({
             elements: next.elements,
             appState: {
-              ...(input.replaceWithSummary ? next.appState : {}),
               selectedElementIds: focusIds,
             },
           });
         } finally {
           applyingRemoteRef.current = false;
         }
+        rememberNewCanvasMarks(live, next, next.elements, api.getAppState?.() ?? {});
         const focusTarget = added.length
           ? added
-          : next.elements.filter((el) => !el.isDeleted);
+          : focusSource.filter((el) => !el.isDeleted);
         if (focusTarget.length && typeof api.scrollToContent === "function") {
           api.scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
@@ -782,7 +886,8 @@ export function ExcalidrawCanvas({
         });
         await enqueueCanvasAskApply(() => {
           applyReply({
-            text: reply?.text || (input.replaceWithSummary ? "" : "No reply"),
+            text: reply?.text || (input.kind && input.kind !== "ask" ? "" : "No reply"),
+            raw: reply?.raw,
             elements: reply?.elements,
             origin: ileWorkCanvasFiniteOrigin(reply?.origin),
           });
@@ -790,7 +895,7 @@ export function ExcalidrawCanvas({
         return true;
       } catch (err) {
         console.error("[ExcalidrawCanvas] Ask XAI failed:", err);
-        if (!input.replaceWithSummary) {
+        if (!input.kind || input.kind === "ask") {
           await enqueueCanvasAskApply(() => {
             applyReply({ text: "Learn more failed. Try again." });
           });
@@ -805,6 +910,7 @@ export function ExcalidrawCanvas({
     [
       enqueueCanvasAskApply,
       projectThinkingChip,
+      rememberNewCanvasMarks,
       removeThinkingChip,
       reservedThinkingOrigins,
       upsertThinkingChip,
@@ -834,40 +940,112 @@ export function ExcalidrawCanvas({
   }, [askPrompt, runCanvasAsk, selectedCanvasElements]);
 
   const handleQuickAction = useCallback(
-    (action: "rephrase" | "split" | "elaborate more pls") => {
+    (action: IleWorkCanvasCommandId) => {
       const api = excalidrawAPIRef.current;
       const selected = selectedCanvasElements();
       if (!api || !selected.length) return;
-      if (action === "split") {
-        const live = serializeIleWorkCanvasScene({
-          elements: api.getSceneElements?.() ?? [],
-          appState: api.getAppState?.() ?? {},
-          files: api.getFiles?.() ?? {},
+      const live = serializeIleWorkCanvasScene({
+        elements: api.getSceneElements?.() ?? [],
+        appState: api.getAppState?.() ?? {},
+        files: api.getFiles?.() ?? {},
+      });
+      const emitExpand = (prompt: string) => {
+        const powEvents = canvasPowCollectorRef.current.expandMore({
+          prompt,
+          selectedElements: selected,
         });
+        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+      };
+      if (action === "split") {
         const result = splitIleWorkCanvasSelectedText(live, selected);
         if (!result.split) return;
         applyingRemoteRef.current = true;
         try {
-          api.updateScene({ elements: result.scene.elements });
+          api.updateScene({
+            elements: result.scene.elements,
+            appState: { selectedElementIds: ileWorkCanvasSelectionIds(result.parts) },
+          });
         } finally {
           applyingRemoteRef.current = false;
         }
-        const powEvents = canvasPowCollectorRef.current.expandMore({
-          prompt: "split",
+        rememberNewCanvasMarks(
+          live,
+          result.scene,
+          result.scene.elements,
+          api.getAppState?.() ?? {},
+        );
+        if (result.parts.length && typeof api.scrollToContent === "function") {
+          api.scrollToContent(result.parts, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+        }
+        emitExpand("split");
+        return;
+      }
+      if (action === "clear-overlaps") {
+        emitExpand("Clear overlaps");
+        const cleared = runIleWorkCanvasClearOverlaps({
+          scene: live,
+          selectedElements: selected,
+          ask: (message) => {
+            void runCanvasAsk({
+              prompt: message,
+              selectedElements: selected,
+              kind: "clear-overlaps",
+            });
+          },
+        });
+        if (!cleared.needsModel && cleared.moved) {
+          applyingRemoteRef.current = true;
+          try {
+            api.updateScene({ elements: cleared.scene.elements });
+          } finally {
+            applyingRemoteRef.current = false;
+          }
+          canvasPowCollectorRef.current.syncWithoutEmit({
+            elements: cleared.scene.elements,
+            appState: api.getAppState?.() ?? {},
+            files: api.getFiles?.() ?? {},
+          });
+        }
+        return;
+      }
+      if (action === "selective-compression") {
+        const powEvents = canvasPowCollectorRef.current.compressWork({
+          prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
           selectedElements: selected,
         });
         if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        void runCanvasAsk({
+          prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
+          selectedElements: selected,
+          kind: "selective-compress",
+        });
         return;
       }
-      const prompt = ileWorkCanvasQuickActionPrompt(action);
-      const powEvents = canvasPowCollectorRef.current.expandMore({
-        prompt,
+      if (action === "rephrase" || action === "elaborate") {
+        const prompt = ileWorkCanvasQuickActionPrompt(
+          action === "rephrase" ? "rephrase" : "elaborate more pls",
+        );
+        emitExpand(prompt);
+        void runCanvasAsk({ prompt, selectedElements: selected });
+        return;
+      }
+      if (action === "refactor") {
+        emitExpand("Refactor");
+        void runCanvasAsk({
+          prompt: "Refactor",
+          selectedElements: selected,
+          kind: "refactor",
+        });
+        return;
+      }
+      emitExpand("Suggest Insight");
+      void runCanvasAsk({
+        prompt: "Suggest Insight",
         selectedElements: selected,
+        kind: "suggest-insight",
       });
-      if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
-      void runCanvasAsk({ prompt, selectedElements: selected });
     },
-    [runCanvasAsk, selectedCanvasElements],
+    [rememberNewCanvasMarks, runCanvasAsk, selectedCanvasElements],
   );
 
   const handleBoardAsk = useCallback(() => {
@@ -878,30 +1056,6 @@ export function ExcalidrawCanvas({
     if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
     void runCanvasAsk({ prompt, selectedElements: [] });
   }, [boardPrompt, runCanvasAsk]);
-
-  const handleCompressWork = useCallback(() => {
-    const api = excalidrawAPIRef.current;
-    if (!api || askInFlightRef.current > 0 || compressInFlight) return;
-    const scene = serializeIleWorkCanvasScene({
-      elements: api.getSceneElements?.() ?? [],
-      appState: api.getAppState?.() ?? {},
-      files: api.getFiles?.() ?? {},
-    });
-    if (!ileWorkCanvasCanCompress(scene)) return;
-    const selected = scene.elements.filter((el) => !el.isDeleted);
-    const powEvents = canvasPowCollectorRef.current.compressWork({
-      prompt: ILE_COMPRESS_WORK_LABEL,
-      selectedElements: selected,
-    });
-    if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
-    setCompressInFlight(true);
-    void runCanvasAsk({
-      prompt: ILE_COMPRESS_WORK_PROMPT,
-      selectedElements: selected,
-      kind: "compress",
-      replaceWithSummary: true,
-    }).finally(() => setCompressInFlight(false));
-  }, [compressInFlight, runCanvasAsk]);
 
   const handleLearnMorePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -1143,7 +1297,6 @@ export function ExcalidrawCanvas({
       const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
       const prevLive = ileWorkCanvasHasLiveElements(previous as IleWorkCanvasScene);
       const nextLive = ileWorkCanvasHasLiveElements(sceneData);
-      setHasLiveCanvas(nextLive);
       const deletedSnapshot = (sceneData.elements ?? []).some(
         (el: { isDeleted?: boolean }) => el.isDeleted,
       );
@@ -1175,8 +1328,9 @@ export function ExcalidrawCanvas({
       debouncedExportPNG();
       syncLearnMorePlacement(elements, appState);
       syncThinkingOverlay(appState);
+      projectNewMarkHighlight(elements, appState);
     },
-    [debouncedExportPNG, syncLearnMorePlacement, syncThinkingOverlay]
+    [debouncedExportPNG, projectNewMarkHighlight, syncLearnMorePlacement, syncThinkingOverlay]
   );
 
   const handlePointerUpdate = useCallback(
@@ -1442,6 +1596,14 @@ export function ExcalidrawCanvas({
             </div>
           </div>
         ))}
+        {highlightBoxes.map((box) => (
+          <div
+            key={box.id}
+            data-ile-canvas-new-mark={box.id}
+            className="pointer-events-none absolute z-[54] animate-pulse rounded-none border-2 border-amber-200 shadow-[0_0_0_4px_rgba(253,230,138,0.28)]"
+            style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
+          />
+        ))}
         {onAskSelected && learnMoreUi ? (
           <form
             ref={learnMoreHostRef}
@@ -1475,46 +1637,77 @@ export function ExcalidrawCanvas({
             </span>
             <div
               data-ile-learn-more-actions
-              className="pointer-events-auto flex items-center gap-1"
+              className="pointer-events-auto flex flex-col gap-1"
             >
               <button
                 type="button"
                 data-ile-learn-more-quick="rephrase"
                 aria-label="Rephrase"
-                title="Rephrase"
+                title="Ask XAI to rewrite the selected marks in different words while keeping the same meaning."
                 onClick={() => handleQuickAction("rephrase")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
               >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 20v-6h-6" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 9A7 7 0 0119 7.4L20 10" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.5 15A7 7 0 015 16.6L4 14" />
-                </svg>
+                Rephrase
               </button>
               <button
                 type="button"
                 data-ile-learn-more-quick="split"
                 aria-label="Split"
-                title="Split"
+                title="Break the selected text into two or three separate blocks on the canvas."
                 onClick={() => handleQuickAction("split")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
               >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16M5 7h5v10H5zM14 7h5v10h-5z" />
-                </svg>
+                Split
               </button>
               <button
                 type="button"
                 data-ile-learn-more-quick="elaborate"
-                aria-label="Elaborate more"
-                title="Elaborate more"
-                onClick={() => handleQuickAction("elaborate more pls")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-none border border-neutral-600 bg-neutral-900 text-white hover:border-white hover:bg-neutral-800"
+                aria-label="Elaborate"
+                title="Ask XAI to expand the selected marks with more concrete detail on this topic."
+                onClick={() => handleQuickAction("elaborate")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
               >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14M7 7l10 10M17 7L7 17" />
-                </svg>
+                Elaborate
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="selective-compression"
+                aria-label="Compress"
+                title="Ask XAI for one dense summary of the selected marks and replace only those marks with it."
+                onClick={() => handleQuickAction("selective-compression")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+              >
+                Compress
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="refactor"
+                aria-label="Refactor"
+                title="Ask XAI to rephrase the selected marks and rearrange those marks into a clearer layout."
+                onClick={() => handleQuickAction("refactor")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+              >
+                Refactor
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="suggest-insight"
+                aria-label="Suggest Insight"
+                title="Ask XAI to add one new mark suggesting an insight from the selection, without saving it."
+                onClick={() => handleQuickAction("suggest-insight")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+              >
+                Suggest Insight
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="clear-overlaps"
+                aria-label="Clear overlaps"
+                title="Move the selected marks so their boxes no longer touch. Layout only."
+                onClick={() => handleQuickAction("clear-overlaps")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+              >
+                Clear overlaps
               </button>
             </div>
             <div className="pointer-events-auto flex items-stretch gap-1">
@@ -1570,16 +1763,6 @@ export function ExcalidrawCanvas({
                     Ask
                   </button>
                 </div>
-                <button
-                  type="button"
-                  data-ile-compress-work
-                  data-ile-compress-work-busy={compressInFlight ? "true" : undefined}
-                  disabled={!hasLiveCanvas || askInFlight > 0 || compressInFlight}
-                  onClick={handleCompressWork}
-                  className="shrink-0 rounded-none border border-white bg-white px-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-950 shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-200 disabled:cursor-not-allowed disabled:border-white/30 disabled:bg-neutral-800 disabled:text-white/40"
-                >
-                  {compressInFlight ? ILE_COMPRESS_WORK_LOADING_LABEL : ILE_COMPRESS_WORK_LABEL}
-                </button>
                 {craftInsight ? (
                   <IleCraftInsightButton
                     usable={ileCanvasCraftInsightUsable()}
@@ -1606,7 +1789,7 @@ export function ExcalidrawCanvas({
 
 /**
  * ILE and TAP Work board — same component, same features. Required props
- * keep Expand More, the board prompt, Helios thinking, and XAI apply on.
+ * keep Commands, the board prompt, Helios thinking, and XAI apply on.
  */
 export type WorkCanvasProps = ExcalidrawCanvasProps & {
   boardId: string;

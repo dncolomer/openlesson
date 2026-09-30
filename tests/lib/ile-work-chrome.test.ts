@@ -511,7 +511,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     writeScratch(
       "ile-turn-insights-chrome.txt",
       [
-        "prompt bar: Compress work + craft insight (not Expand More)",
+        "prompt bar: craft insight; selection Commands (no Compress work)",
         "end-turn: data-ile-end-turn-screen, no draft/evaluate/thoughts-pool form",
         "header: empty insight slots left of Work; timer on the right",
         "map: data-ile-map-insights-widget 3 empty full-width cards",

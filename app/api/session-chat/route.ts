@@ -7,9 +7,9 @@ import { ayclTokenFromBody,
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 import { ileChapterSuggestionPowFromCoachText } from "@/lib/ile-chapter-depth";
 import {
+  ileSessionChatCanvasReply,
   ileWorkCanvasTurnContextMessage,
   ileWorkCanvasWorkspaceFromChatBody,
-  parseIleXaiCanvasTurn,
   serializeIleWorkCanvasScene,
 } from "@/lib/ile-work-canvas";
 import { assemblePromptWorkspaceContext } from "@/lib/prompt-workspace-context";
@@ -131,9 +131,10 @@ export async function POST(request: NextRequest) {
 
     const lastLearner =
       [...inputMessages].reverse().find((m) => m.role === "user")?.content ?? "";
-    const canvasTurn = parseIleXaiCanvasTurn(sanitizeAssistantText(response.data));
+    const assistantRaw = sanitizeAssistantText(response.data);
+    const canvasReply = ileSessionChatCanvasReply(assistantRaw);
     const extracted = ileChapterSuggestionPowFromCoachText({
-      coachText: (canvasTurn.text || "").trim(),
+      coachText: canvasReply.message,
       learnerText: lastLearner,
       sessionMode,
       currentChapterId: typeof activeStepId === "string" ? activeStepId : null,
@@ -207,8 +208,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: extracted.visibleText,
-      canvasElements: canvasTurn.elements ?? [],
+      canvasElements: canvasReply.canvasElements,
       chapterSuggestion: extracted.toolData,
+      raw: canvasReply.raw,
     });
   } catch (error) {
     console.error("Session chat error:", error);

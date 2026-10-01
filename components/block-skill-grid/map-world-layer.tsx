@@ -1130,11 +1130,6 @@ export function MapWorldLayer({
                           data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
                           data-block-has-dependencies={hasDependencies ? "true" : "false"}
-                          data-ile-chapter-unlock-highlight={
-                            suggestMode === "chapter" && isLearnerDepHighlight
-                              ? "true"
-                              : undefined
-                          }
                           data-block-has-local-context={hasLocalContext ? "true" : "false"}
                           data-block-is-start={isStarter ? "true" : "false"}
                           data-block-has-previous-sessions={
@@ -1216,9 +1211,6 @@ export function MapWorldLayer({
                                 : "opacity-0 scale-95"
                               : ""
                           }`}
-                          data-ile-open-work-tile={
-                            suggestMode === "chapter" && tileAesthetic ? "true" : undefined
-                          }
                           data-block-session-aesthetic={
                             hasPreviousSessions && tileAesthetic ? "true" : undefined
                           }
@@ -1247,17 +1239,7 @@ export function MapWorldLayer({
                           }}
                         >
                           {tileAesthetic ? (
-                            <OpenWorkTileAesthetic
-                              src={tileAesthetic}
-                              opacity={
-                                suggestMode === "chapter" ? ILE_CHAPTER_BLOCK_ALPHA : undefined
-                              }
-                            />
-                          ) : null}
-                          {suggestMode === "chapter" ? (
-                            <IleChapterInsightCountBadge
-                              count={insightCountByChapterId?.[node.id] ?? 0}
-                            />
+                            <OpenWorkTileAesthetic src={tileAesthetic} />
                           ) : null}
                           {isLabel ? (
                             <>

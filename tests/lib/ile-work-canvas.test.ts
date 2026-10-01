@@ -45,6 +45,7 @@ import {
   ILE_CHAPTER_SEED_CUSTOM_DATA_KEY,
   ILE_WORK_CANVAS_DEFAULT_GRID_SIZE,
   ILE_WORK_CANVAS_FONT_FAMILY,
+  ILE_WORK_CANVAS_OVERLAP_GAP,
   ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
   wrapIleWorkCanvasText,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
@@ -2007,6 +2008,141 @@ describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", ()
     expect(canvas).toContain("scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
     expect(canvas).toContain("scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
     expect(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION).toMatch(/under nearby marks/i);
+  });
+
+  it("separates boxes, text, and captions in one XAI reply without moving existing marks", () => {
+    const blocker = convertToExcalidrawElements([
+      { type: "rectangle", x: 80, y: 80, width: 50, height: 50 },
+    ])[0]!;
+    const applied = applyIleXaiTurnToWorkCanvas(
+      { elements: [blocker], appState: {}, files: {} },
+      {
+        text: "Three marks.",
+        origin: { x: 80, y: 80 },
+        elements: [
+          {
+            type: "rectangle",
+            x: 80,
+            y: 80,
+            width: 120,
+            height: 70,
+            label: { text: "wide caption" },
+          },
+          { type: "ellipse", x: 80, y: 80, width: 90, height: 60 },
+          { type: "diamond", x: 100, y: 90, width: 80, height: 80 },
+          { type: "text", x: 80, y: 80, text: "loose note" },
+          { type: "image", x: 80, y: 80, width: 60, height: 60, fileId: "file-1" },
+        ],
+      },
+    );
+    const kept = applied.elements.find((el) => el.id === blocker.id)!;
+    expect(kept.x).toBe(blocker.x);
+    expect(kept.y).toBe(blocker.y);
+    expect(kept.width).toBe(blocker.width);
+    expect(kept.height).toBe(blocker.height);
+
+    const added = applied.elements.filter((el) => el.id !== blocker.id && !el.isDeleted);
+    const ids = new Set(added.map((el) => el.id));
+    const connectors = new Set(["arrow", "line", "freedraw"]);
+    const bound = (el: (typeof added)[number]) =>
+      el.type === "text" && Boolean(el.containerId) && ids.has(String(el.containerId));
+    const solids = added.filter((el) => !connectors.has(el.type) && !bound(el) && el.type !== "frame");
+    expect(solids.length).toBeGreaterThanOrEqual(5);
+    for (let i = 0; i < solids.length; i += 1) {
+      for (let j = i + 1; j < solids.length; j += 1) {
+        const a = canvasRect(solids[i]!)!;
+        const b = canvasRect(solids[j]!)!;
+        expect(ileWorkCanvasRectsOverlap(a, b, ILE_WORK_CANVAS_OVERLAP_GAP)).toBe(false);
+      }
+    }
+    const tops = solids.map((el) => el.y);
+    expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThan(0);
+    for (const label of added.filter(bound)) {
+      const host = added.find((el) => el.id === label.containerId)!;
+      expect(label.x - host.x).toBe(8);
+      expect(label.y - host.y).toBe(8);
+      expect(positiveAreaHit(canvasRect(label)!, canvasRect(host)!)).toBe(true);
+      for (const other of solids) {
+        if (other.id === host.id) continue;
+        expect(positiveAreaHit(canvasRect(label)!, canvasRect(other)!)).toBe(false);
+      }
+      expect(positiveAreaHit(canvasRect(label)!, canvasRect(kept)!)).toBe(false);
+    }
+    expect(newMarksOverlapExisting(added, [blocker])).toBe(false);
+
+    const spaced = applyIleXaiTurnToWorkCanvas(emptyIleWorkCanvasScene(), {
+      elements: [
+        { type: "rectangle", x: 0, y: 0, width: 40, height: 40 },
+        { type: "ellipse", x: 80, y: 0, width: 40, height: 40 },
+        { type: "text", x: 0, y: 80, text: "beside" },
+        { type: "frame", x: 400, y: 400, width: 30, height: 20 },
+      ],
+    });
+    expect(spaced.elements.find((el) => el.type === "rectangle")).toMatchObject({ x: 0, y: 0 });
+    expect(spaced.elements.find((el) => el.type === "ellipse")).toMatchObject({ x: 80, y: 0 });
+    expect(spaced.elements.find((el) => (el.originalText || el.text) === "beside")).toMatchObject({
+      x: 0,
+      y: 80,
+    });
+    expect(spaced.elements.find((el) => el.type === "frame")).toMatchObject({
+      x: 400,
+      y: 400,
+      width: 30,
+      height: 20,
+    });
+
+    const framed = applyIleXaiTurnToWorkCanvas(emptyIleWorkCanvasScene(), {
+      elements: [
+        {
+          type: "rectangle",
+          x: 40,
+          y: 40,
+          width: 100,
+          height: 60,
+          label: { text: "A" },
+        },
+        { type: "rectangle", x: 50, y: 50, width: 100, height: 60, label: { text: "B" } },
+        { type: "frame", x: 20, y: 20, width: 220, height: 160 },
+        { type: "arrow", x: 50, y: 50, width: 30, height: 0 },
+      ],
+    });
+    const frame = framed.elements.find((el) => el.type === "frame")!;
+    const boxA = framed.elements.find((el) =>
+      framed.elements.some(
+        (label) => label.containerId === el.id && (label.originalText || label.text) === "A",
+      ),
+    )!;
+    const boxB = framed.elements.find((el) =>
+      framed.elements.some(
+        (label) => label.containerId === el.id && (label.originalText || label.text) === "B",
+      ),
+    )!;
+    const arrow = framed.elements.find((el) => el.type === "arrow")!;
+    expect(ileWorkCanvasRectsOverlap(canvasRect(boxA)!, canvasRect(boxB)!, ILE_WORK_CANVAS_OVERLAP_GAP)).toBe(
+      false,
+    );
+    const labelA = framed.elements.find((el) => (el.originalText || el.text) === "A")!;
+    expect(labelA.x - boxA.x).toBe(8);
+    expect(labelA.y - boxA.y).toBe(8);
+    expect(positiveAreaHit(canvasRect(labelA)!, canvasRect(boxB)!)).toBe(false);
+    expect(arrow.x - boxA.x).toBe(10);
+    expect(arrow.y - boxA.y).toBe(10);
+    for (const box of [boxA, boxB]) {
+      const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      expect(center.x).toBeGreaterThanOrEqual(frame.x);
+      expect(center.y).toBeGreaterThanOrEqual(frame.y);
+      expect(center.x).toBeLessThanOrEqual(frame.x + frame.width);
+      expect(center.y).toBeLessThanOrEqual(frame.y + frame.height);
+    }
+    expect(frame.x).toBeLessThanOrEqual(20);
+    expect(frame.y).toBeLessThanOrEqual(20);
+    expect(frame.x + frame.width).toBeGreaterThanOrEqual(240);
+    expect(frame.y + frame.height).toBeGreaterThanOrEqual(180);
+    const labelRect = canvasRect(labelA)!;
+    expect(labelRect.minX).toBeGreaterThanOrEqual(frame.x);
+    expect(labelRect.minY).toBeGreaterThanOrEqual(frame.y);
+    expect(labelRect.maxX).toBeLessThanOrEqual(frame.x + frame.width);
+    expect(labelRect.maxY).toBeLessThanOrEqual(frame.y + frame.height);
   });
 });
 

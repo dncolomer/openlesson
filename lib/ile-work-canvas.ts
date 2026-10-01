@@ -1139,10 +1139,57 @@ export function ileWorkCanvasIncomingOverlapsObstacles(
   return false;
 }
 
+const ILE_WORK_CANVAS_CONNECTOR_TYPES = new Set(["arrow", "line", "freedraw"]);
+
+type IleWorkCanvasRect = { minX: number; minY: number; maxX: number; maxY: number };
+
+function ileWorkCanvasUnionRects(
+  rects: readonly (IleWorkCanvasRect | null | undefined)[],
+): IleWorkCanvasRect | null {
+  let bounds: IleWorkCanvasRect | null = null;
+  for (const rect of rects) {
+    if (!rect) continue;
+    if (!bounds) {
+      bounds = { ...rect };
+      continue;
+    }
+    bounds.minX = Math.min(bounds.minX, rect.minX);
+    bounds.minY = Math.min(bounds.minY, rect.minY);
+    bounds.maxX = Math.max(bounds.maxX, rect.maxX);
+    bounds.maxY = Math.max(bounds.maxY, rect.maxY);
+  }
+  return bounds;
+}
+
+function ileWorkCanvasPointInsideRect(
+  point: { x: number; y: number },
+  rect: IleWorkCanvasRect,
+): boolean {
+  return point.x >= rect.minX && point.x <= rect.maxX && point.y >= rect.minY && point.y <= rect.maxY;
+}
+
+function ileWorkCanvasShiftMark(
+  el: IleWorkCanvasElement,
+  labels: readonly IleWorkCanvasElement[],
+  dx: number,
+  dy: number,
+): void {
+  if (dx === 0 && dy === 0) return;
+  el.x += dx;
+  el.y += dy;
+  for (const label of labels) {
+    label.x += dx;
+    label.y += dy;
+  }
+}
+
 /**
- * Pull unbound marks in one new group off each other.
- * A label bound to a shape in the same group stays inside that shape.
- * Later marks step downward, which may leave the visible area.
+ * Pull boxes, text, and other solids in one XAI reply off each other.
+ * A caption stays inside its own shape and moves with that shape.
+ * The shape's footprint includes the caption, so the next mark clears both.
+ * A frame keeps the marks that started inside it and grows if they move out.
+ * Arrows, lines, and freedraw may cross marks; an arrow that started on a
+ * moved shape shifts with that shape.
  */
 export function separateIleWorkCanvasGroupOverlaps(
   incoming: readonly IleWorkCanvasElement[],
@@ -1150,9 +1197,19 @@ export function separateIleWorkCanvasGroupOverlaps(
   const list = incoming.map((el) => ({ ...el }));
   const ids = new Set(list.map((el) => el.id));
   const labelsByContainer = new Map<string, IleWorkCanvasElement[]>();
-  const free: IleWorkCanvasElement[] = [];
+  const frames: IleWorkCanvasElement[] = [];
+  const connectors: IleWorkCanvasElement[] = [];
+  const solids: IleWorkCanvasElement[] = [];
   for (const el of list) {
     if (el.isDeleted) continue;
+    if (el.type === "frame") {
+      frames.push(el);
+      continue;
+    }
+    if (ILE_WORK_CANVAS_CONNECTOR_TYPES.has(el.type)) {
+      connectors.push(el);
+      continue;
+    }
     const containerId = String(el.containerId || "");
     if (containerId && ids.has(containerId)) {
       const bucket = labelsByContainer.get(containerId) ?? [];
@@ -1160,25 +1217,114 @@ export function separateIleWorkCanvasGroupOverlaps(
       labelsByContainer.set(containerId, bucket);
       continue;
     }
-    free.push(el);
+    solids.push(el);
   }
-  free.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
-  const placed: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
+
+  const labelsFor = (el: IleWorkCanvasElement): IleWorkCanvasElement[] =>
+    labelsByContainer.get(el.id) ?? [];
+  const unitRect = (el: IleWorkCanvasElement): IleWorkCanvasRect | null =>
+    ileWorkCanvasUnionRects([
+      ileWorkCanvasMarkRect(el),
+      ...labelsFor(el).map((label) => ileWorkCanvasMarkRect(label)),
+    ]);
+
+  const originXY = new Map(list.map((el) => [el.id, { x: el.x, y: el.y }]));
+  const originalUnit = new Map<string, IleWorkCanvasRect>();
+  for (const el of solids) {
+    const rect = unitRect(el);
+    if (rect) originalUnit.set(el.id, rect);
+  }
+  const originalFrame = new Map<string, IleWorkCanvasRect>();
+  for (const frame of frames) {
+    const rect = ileWorkCanvasMarkRect(frame);
+    if (rect) originalFrame.set(frame.id, rect);
+  }
+
+  const childOf = new Map<string, string>();
+  for (const el of solids) {
+    const rect = originalUnit.get(el.id);
+    if (!rect) continue;
+    const center = { x: (rect.minX + rect.maxX) / 2, y: (rect.minY + rect.maxY) / 2 };
+    const host = frames.find((frame) => {
+      const bounds = originalFrame.get(frame.id);
+      return bounds ? ileWorkCanvasPointInsideRect(center, bounds) : false;
+    });
+    if (host) childOf.set(el.id, host.id);
+  }
+  const parentFrameIds = new Set(childOf.values());
+  for (const frame of frames) {
+    if (parentFrameIds.has(frame.id)) continue;
+    solids.push(frame);
+    const rect = unitRect(frame);
+    if (rect) originalUnit.set(frame.id, rect);
+  }
+
   const gap = ILE_WORK_CANVAS_OVERLAP_GAP;
-  for (const el of free) {
-    for (let guard = 0; guard < 48; guard += 1) {
-      const rect = ileWorkCanvasMarkRect(el);
-      if (!rect) break;
-      const hit = placed.find((other) => ileWorkCanvasPositiveAreaOverlap(rect, other));
-      if (!hit) {
-        placed.push(rect);
-        break;
+  const pack = (
+    items: readonly IleWorkCanvasElement[],
+    extra: readonly IleWorkCanvasRect[],
+  ) => {
+    const placed: IleWorkCanvasRect[] = extra.map((rect) => ({ ...rect }));
+    const ordered = [...items].sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+    for (const el of ordered) {
+      const labels = labelsFor(el);
+      for (let guard = 0; guard < 64; guard += 1) {
+        const rect = unitRect(el);
+        if (!rect) break;
+        const hit = placed.find((other) => ileWorkCanvasRectsOverlap(rect, other, gap));
+        if (!hit) {
+          placed.push(rect);
+          break;
+        }
+        const dy = Math.max(gap, hit.maxY + gap - rect.minY);
+        ileWorkCanvasShiftMark(el, labels, 0, dy);
       }
-      const dy = Math.max(gap, hit.maxY + gap - rect.minY);
-      el.y += dy;
-      for (const label of labelsByContainer.get(el.id) ?? []) label.y += dy;
     }
+  };
+
+  pack(solids, []);
+
+  for (const frame of frames) {
+    if (!parentFrameIds.has(frame.id)) continue;
+    const kids = solids.filter((el) => childOf.get(el.id) === frame.id);
+    const union = ileWorkCanvasUnionRects(kids.map((kid) => unitRect(kid)));
+    const current = ileWorkCanvasMarkRect(frame);
+    if (!union || !current) continue;
+    const minX = Math.min(current.minX, union.minX - gap);
+    const minY = Math.min(current.minY, union.minY - gap);
+    const maxX = Math.max(current.maxX, union.maxX + gap);
+    const maxY = Math.max(current.maxY, union.maxY + gap);
+    frame.x = minX;
+    frame.y = minY;
+    frame.width = maxX - minX;
+    frame.height = maxY - minY;
   }
+
+  const childRects = solids
+    .filter((el) => childOf.has(el.id))
+    .map((el) => unitRect(el))
+    .filter((rect): rect is IleWorkCanvasRect => Boolean(rect));
+  const frameRects = frames
+    .filter((frame) => parentFrameIds.has(frame.id))
+    .map((frame) => unitRect(frame))
+    .filter((rect): rect is IleWorkCanvasRect => Boolean(rect));
+  pack(
+    solids.filter((el) => !childOf.has(el.id)),
+    [...childRects, ...frameRects],
+  );
+
+  for (const el of connectors) {
+    const start = originXY.get(el.id);
+    if (!start) continue;
+    const host = solids.find((solid) => {
+      const rect = originalUnit.get(solid.id);
+      return rect ? ileWorkCanvasPointInsideRect(start, rect) : false;
+    });
+    const origin = host ? originXY.get(host.id) : null;
+    if (!host || !origin) continue;
+    ileWorkCanvasShiftMark(el, [], host.x - origin.x, host.y - origin.y);
+  }
+
   return list;
 }
 

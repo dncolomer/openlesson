@@ -28,7 +28,9 @@ import {
   ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION,
   ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_BOX_WIDTH,
+  ILE_WORK_CANVAS_OVERLAP_GAP,
   ileWorkCanvasFiniteOrigin,
+  ileWorkCanvasRectsOverlap,
   ileWorkCanvasThinkingOverlayStyle,
   ileWorkCanvasXaiToolsInstruction,
   mapExcalidrawToolToIlePow,
@@ -495,6 +497,34 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
     expect(moved.x !== blocker.x || moved.y !== blocker.y).toBe(true);
     expect(collided.elements.find((el) => el.id === blocker.id)?.x).toBe(blocker.x);
     expect(newMarksOverlapExisting([moved], [blocker])).toBe(false);
+
+    const stacked = applyTapHeliosReplyToWorkCanvas(
+      emptyTapWorkCanvasScene(),
+      JSON.stringify({
+        text: "Split these.",
+        elements: [
+          { type: "rectangle", x: 40, y: 40, width: 100, height: 60 },
+          { type: "diamond", x: 40, y: 40, width: 90, height: 70 },
+          { type: "text", x: 40, y: 40, text: "note" },
+        ],
+      }),
+      null,
+      "tap-stack",
+    );
+    const stackedSolids = stacked.elements.filter(
+      (el) => !el.isDeleted && !(el.type === "text" && el.containerId),
+    );
+    expect(stackedSolids.some((el) => el.type === "rectangle")).toBe(true);
+    expect(stackedSolids.some((el) => el.type === "diamond")).toBe(true);
+    expect(stackedSolids.some((el) => (el.originalText || el.text) === "note")).toBe(true);
+    for (let i = 0; i < stackedSolids.length; i += 1) {
+      for (let j = i + 1; j < stackedSolids.length; j += 1) {
+        const a = canvasRect(stackedSolids[i]!);
+        const b = canvasRect(stackedSolids[j]!);
+        if (!a || !b) continue;
+        expect(ileWorkCanvasRectsOverlap(a, b, ILE_WORK_CANVAS_OVERLAP_GAP)).toBe(false);
+      }
+    }
 
     const open = applyTapHeliosReplyToWorkCanvas(
       { elements: [blocker], appState: {}, files: {} },

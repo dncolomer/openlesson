@@ -27,8 +27,11 @@ export const DRILL_VOICE_CHALLENGE_SENTENCE_TWO =
 export const PREPARE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${PREPARE_VOICE_CHALLENGE_SENTENCE_TWO}`;
 export const DRILL_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${DRILL_VOICE_CHALLENGE_SENTENCE_TWO}`;
 
-/** Share of each sentence that must be heard. Mic and browser misses stay under this. */
+/** Share of the script words that must be heard. A rough whole-reading match. */
 export const VOICE_CHALLENGE_PASS_RATIO = 0.8;
+export const PRACTICE_VOICE_CHALLENGE_ACCEPTED = "Accepted";
+export const PRACTICE_VOICE_CHALLENGE_REJECTED = "Rejected";
+export const PRACTICE_VOICE_CHALLENGE_UNCHECKED = "Not checked";
 export const VOICE_CHALLENGE_START_DELAY_MS = 1100;
 
 export const PRACTICE_VOICE_CHALLENGE_RETRY = "Try again";
@@ -38,7 +41,7 @@ export const PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP = "Skip";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE = "Read this aloud to start";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE_REST = "Read this aloud to continue";
 export const PRACTICE_VOICE_CHALLENGE_READ_NOTE =
-  "Say the lines below, then press the button. A green light means the reading matches. A red light means it does not, so say them again and press the button.";
+  "Say the lines below, then press the button. Accepted means the reading is close enough. Rejected means say them again and press the button.";
 
 export const ILE_SILENCE_LOCK_MINUTES_MIN = 1;
 export const ILE_SILENCE_LOCK_MINUTES_MAX = 30;
@@ -81,36 +84,17 @@ export function voiceChallengeScriptFor(variant: VoiceChallengeVariant = "tap"):
   return TAP_VOICE_CHALLENGE_SCRIPT;
 }
 
-function sentenceWordRatios(script: string, transcript: string): number[] {
-  const marks = voiceChallengeReadMarks({ script, transcript });
-  const ratios: number[] = [];
-  let words = 0;
-  let heard = 0;
-  const flush = () => {
-    if (words > 0) ratios.push(heard / words);
-    words = 0;
-    heard = 0;
-  };
-  for (const mark of marks) {
-    if (mark.kind === "word") {
-      words += 1;
-      if (mark.heard) heard += 1;
-    }
-    if (mark.kind === "punct" && mark.text.includes(".")) flush();
-  }
-  flush();
-  return ratios;
-}
-
-/** Each sentence must be heard at the threshold. A weak sentence does not pass. */
+/**
+ * Whole reading: about 80% of the script words must show up in the transcript.
+ * One short sentence can miss a few words without failing the check.
+ */
 export function voiceChallengeSentencesPass(
   script: string,
   transcript: string,
   ratio: number = VOICE_CHALLENGE_PASS_RATIO,
 ): boolean {
-  const ratios = sentenceWordRatios(script, transcript);
-  if (ratios.length === 0) return false;
-  return ratios.every((heard) => heard + 1e-9 >= ratio);
+  const heard = voiceChallengeFillRatio(voiceChallengeReadMarks({ script, transcript }));
+  return heard + 1e-9 >= ratio;
 }
 
 /** Both points: speaking thinking out loud the whole time, and the why. */
@@ -143,8 +127,8 @@ export function mergeVoiceChallengeHeard(input: {
 }
 
 /**
- * Rough whole-reading check. Pass only when every sentence meets the overlap
- * ratio. Call this when the learner presses the button, not on each mic result.
+ * Rough whole-reading check. Pass when about 80% of the script words were heard.
+ * Call this when the learner presses the button, not on each mic result.
  */
 export function judgeVoiceChallengeReading(input: {
   transcript: string;

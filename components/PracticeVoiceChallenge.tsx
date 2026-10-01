@@ -5,13 +5,16 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import {
   ILE_SAMPLE_INSIGHT_LABEL,
+  PRACTICE_VOICE_CHALLENGE_ACCEPTED,
   PRACTICE_VOICE_CHALLENGE_CHECK,
   PRACTICE_VOICE_CHALLENGE_CHECK_REST,
   PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
   PRACTICE_VOICE_CHALLENGE_READ_CUE,
   PRACTICE_VOICE_CHALLENGE_READ_CUE_REST,
   PRACTICE_VOICE_CHALLENGE_READ_NOTE,
+  PRACTICE_VOICE_CHALLENGE_REJECTED,
   PRACTICE_VOICE_CHALLENGE_RETRY,
+  PRACTICE_VOICE_CHALLENGE_UNCHECKED,
   VOICE_CHALLENGE_START_DELAY_MS,
   judgeVoiceChallengeReading,
   mergeVoiceChallengeHeard,
@@ -57,7 +60,7 @@ function speechRecognitionConstructor(): SpeechRecognitionConstructor | null {
 
 /**
  * The learner says the lines, then presses the button. That click compares
- * the captured reading with the script and shows a green or red light.
+ * the captured reading with the script and shows Accepted or Rejected.
  * Nothing is read to them, and a mic result does not pass by itself.
  */
 function splitMarksAtSentences(marks: readonly VoiceChallengeMark[]): VoiceChallengeMark[][] {
@@ -329,7 +332,13 @@ export function PracticeVoiceChallenge({
         <div className="mt-4 flex items-center gap-3" data-practice-voice-result="">
           <span
             data-practice-voice-light={light}
-            aria-label={light === "green" ? "Green" : light === "red" ? "Red" : "Not checked"}
+            aria-label={
+              light === "green"
+                ? PRACTICE_VOICE_CHALLENGE_ACCEPTED
+                : light === "red"
+                  ? PRACTICE_VOICE_CHALLENGE_REJECTED
+                  : PRACTICE_VOICE_CHALLENGE_UNCHECKED
+            }
             className={
               light === "green"
                 ? "inline-block size-3 rounded-full bg-green-500"
@@ -338,8 +347,21 @@ export function PracticeVoiceChallenge({
                   : "inline-block size-3 rounded-full bg-neutral-700"
             }
           />
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
-            {light === "green" ? "Green" : light === "red" ? "Red" : "Not checked"}
+          <span
+            data-practice-voice-verdict=""
+            className={
+              light === "green"
+                ? "font-mono text-[10px] uppercase tracking-[0.14em] text-green-400"
+                : light === "red"
+                  ? "font-mono text-[10px] uppercase tracking-[0.14em] text-red-400"
+                  : "font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
+            }
+          >
+            {light === "green"
+              ? PRACTICE_VOICE_CHALLENGE_ACCEPTED
+              : light === "red"
+                ? PRACTICE_VOICE_CHALLENGE_REJECTED
+                : PRACTICE_VOICE_CHALLENGE_UNCHECKED}
           </span>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-2">

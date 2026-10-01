@@ -134,6 +134,28 @@ describe("practice voice challenge script and transcript", () => {
       }),
     ).toBe("pass");
     expect(judgeVoiceChallengeReading({ transcript: "" })).toBe("fail");
+    // 10 of 12 practice words: the first sentence is under 80% on its own.
+    expect(
+      practiceVoiceChallengeTranscriptPasses(
+        "I think whole time. Raw thinking signal and baseline attention.",
+      ),
+    ).toBe(true);
+    expect(
+      practiceVoiceChallengeTranscriptPasses(
+        "I time. Raw thinking signal and baseline attention.",
+      ),
+    ).toBe(false);
+    // 22 of 26 TAP words: the last sentence is under 80% on its own.
+    expect(
+      judgeVoiceChallengeReading({
+        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I'll read each question done answering when a chain ends.`,
+      }),
+    ).toBe("pass");
+    expect(
+      judgeVoiceChallengeReading({
+        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I'll read each question when a chain ends.`,
+      }),
+    ).toBe("fail");
     const aloudEarly = voiceChallengeReadMarks({
       script: "I think aloud the whole time.",
       transcript: "I think the whole time aloud",
@@ -475,6 +497,9 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(spoken).toContain("Read this aloud to start");
     expect(spoken).toContain("data-practice-voice-word");
     expect(spoken).toContain('data-practice-voice-light="idle"');
+    expect(spoken).toContain("Accepted");
+    expect(spoken).toContain("Rejected");
+    expect(spoken).toContain("Not checked");
     expect(spoken).toContain("data-practice-voice-check");
     expect(spoken).toContain("Start");
     expect(spoken).not.toContain("data-heard");

@@ -120,6 +120,48 @@ export function formatCountdown(totalSeconds: number) {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Remaining session seconds after time the clock was frozen.
+ * An open pause (`pauseStartedAtMs`) is excluded up to `nowMs`.
+ */
+export function tapLiveClockRemainingSeconds(input: {
+  nowMs: number;
+  startedAtMs: number;
+  durationSeconds: number;
+  pausedMs?: number;
+  pauseStartedAtMs?: number | null;
+}): number {
+  const pausedMs = Math.max(0, Number(input.pausedMs) || 0);
+  const openPause =
+    input.pauseStartedAtMs == null ? 0 : Math.max(0, input.nowMs - input.pauseStartedAtMs);
+  const elapsedMs = Math.max(0, input.nowMs - input.startedAtMs - pausedMs - openPause);
+  const duration = Math.max(0, Math.floor(Number(input.durationSeconds) || 0));
+  return Math.max(0, duration - Math.floor(elapsedMs / 1000));
+}
+
+/** Open or close a freeze without double-counting a pause that is already open. */
+export function advanceTapLiveClockPause(input: {
+  waiting: boolean;
+  nowMs: number;
+  pauseStartedAtMs: number | null;
+  pausedMs: number;
+}): { pauseStartedAtMs: number | null; pausedMs: number } {
+  const pausedMs = Math.max(0, Number(input.pausedMs) || 0);
+  if (input.waiting) {
+    return {
+      pauseStartedAtMs: input.pauseStartedAtMs ?? input.nowMs,
+      pausedMs,
+    };
+  }
+  if (input.pauseStartedAtMs == null) {
+    return { pauseStartedAtMs: null, pausedMs };
+  }
+  return {
+    pauseStartedAtMs: null,
+    pausedMs: pausedMs + Math.max(0, input.nowMs - input.pauseStartedAtMs),
+  };
+}
+
 export type ThoughtButtonSize = "sm" | "md" | "lg";
 export type ThoughtButtonVariant = "ghost" | "primary" | "toggleOn" | "toggleOff";
 

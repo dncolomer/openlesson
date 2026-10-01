@@ -17,6 +17,10 @@ import {
   transcriptFadeOpacity,
   withImpurePoWData,
 } from "@/lib/tap-session-purity";
+import {
+  advanceTapLiveClockPause,
+  tapLiveClockRemainingSeconds,
+} from "@/lib/tap-score-client-helpers";
 import { buildTapTranscriptPayload } from "@/lib/tap-score-traces";
 
 const ROOT = process.cwd();
@@ -212,5 +216,78 @@ describe("TAP client wires purity UX (not ILE)", () => {
     const ile = readSessionViewSurface();
     expect(ile).not.toContain("tap-session-purity");
     expect(ile).not.toContain("TAP_SILENCE_AUTO_STASH_MS");
+  });
+});
+
+describe("TAP live clock", () => {
+  it("freezes while waiting for an answer and resumes without skipping that wait", () => {
+    const started = 1_000_000;
+    expect(
+      tapLiveClockRemainingSeconds({
+        nowMs: started + 5_000,
+        startedAtMs: started,
+        durationSeconds: 60,
+      }),
+    ).toBe(55);
+
+    const opened = advanceTapLiveClockPause({
+      waiting: true,
+      nowMs: started + 5_000,
+      pauseStartedAtMs: null,
+      pausedMs: 0,
+    });
+    expect(opened).toEqual({ pauseStartedAtMs: started + 5_000, pausedMs: 0 });
+    expect(
+      tapLiveClockRemainingSeconds({
+        nowMs: started + 8_000,
+        startedAtMs: started,
+        durationSeconds: 60,
+        pausedMs: opened.pausedMs,
+        pauseStartedAtMs: opened.pauseStartedAtMs,
+      }),
+    ).toBe(55);
+    const stillOpen = advanceTapLiveClockPause({
+      waiting: true,
+      nowMs: started + 8_000,
+      pauseStartedAtMs: opened.pauseStartedAtMs,
+      pausedMs: opened.pausedMs,
+    });
+    expect(stillOpen.pauseStartedAtMs).toBe(started + 5_000);
+
+    const closed = advanceTapLiveClockPause({
+      waiting: false,
+      nowMs: started + 8_000,
+      pauseStartedAtMs: stillOpen.pauseStartedAtMs,
+      pausedMs: stillOpen.pausedMs,
+    });
+    expect(closed).toEqual({ pauseStartedAtMs: null, pausedMs: 3_000 });
+    expect(
+      tapLiveClockRemainingSeconds({
+        nowMs: started + 10_000,
+        startedAtMs: started,
+        durationSeconds: 60,
+        pausedMs: closed.pausedMs,
+        pauseStartedAtMs: null,
+      }),
+    ).toBe(53);
+  });
+
+  it("shows a pause icon while waiting and a pulsing red dot while the mic is listening", () => {
+    const client = readTapScoreSurface();
+    const exercise = readExerciseTapSurface();
+    expect(client).toContain("advanceTapLiveClockPause");
+    expect(client).toContain("tapLiveClockRemainingSeconds");
+    expect(client).toContain("syncLiveClock(isSending || xaiReplyWaitRef.current)");
+    expect(client).toContain("syncLiveClock(isSendingRef.current || wait.waitingForXaiReply)");
+    expect(client).toContain("clockPaused={clockWaiting || isSending}");
+    expect(client).toContain("data-tap-clock-paused");
+    expect(client).toContain("data-tap-clock-listening-dot");
+    expect(client).toContain("animate-ping");
+    expect(client).toContain("bg-red-500");
+    expect(client).toContain('aria-label="Paused"');
+    expect(client).toContain('aria-label="Listening"');
+    expect(client).toContain("listening && !waiting");
+    expect(exercise).toContain("TapLiveClock");
+    expect(exercise).toContain("listening={isListening}");
   });
 });

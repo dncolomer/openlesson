@@ -9,6 +9,7 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { ExerciseTapShell } from "@/components/exercise-tap/ExerciseTapShell";
+import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
@@ -19,7 +20,6 @@ import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import {
   type Phase,
-  formatCountdown,
   thoughtButtonClasses,
   normalize,
 } from "@/lib/tap-score-client-helpers";
@@ -327,18 +327,12 @@ export function ExerciseTapPhases(props: {
                 data-exercise-live-control-strip
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex shrink-0 items-center gap-2">
-                    <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                      Time
-                    </div>
-                    <div
-                      className={`font-mono text-lg leading-none tabular-nums tracking-tight ${
-                        remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
-                      }`}
-                    >
-                      {formatCountdown(remainingSeconds)}
-                    </div>
-                  </div>
+                  <TapLiveClock
+                    label="Time"
+                    remainingSeconds={remainingSeconds}
+                    waiting={isSending}
+                    listening={isListening}
+                  />
                   {showEndSession ? (
                     <div className="flex shrink-0 items-center" data-tap-end-session>
                       <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>

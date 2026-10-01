@@ -25,6 +25,7 @@ import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
+import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
@@ -36,7 +37,6 @@ import {
   type Phase,
   type Thought,
   type TapChatMessage as ChatMessage,
-  formatCountdown,
   normalize,
 } from "@/lib/tap-score-client-helpers";
 import {
@@ -91,6 +91,8 @@ export function TapScorePhases(props: {
   heliosTurnMode: HeliosTurnMode;
   userInitial: string;
   remainingSeconds: number;
+  /** Helios/XAI is answering. The countdown stays put and shows a pause icon. */
+  clockPaused?: boolean;
   sessionPurity: number;
   crystallizableText: string;
   showEndSession: boolean;
@@ -175,6 +177,7 @@ export function TapScorePhases(props: {
     messages,
     isSending,
     remainingSeconds,
+    clockPaused = false,
     crystallizableText,
     showEndSession,
     endSession,
@@ -533,18 +536,12 @@ export function TapScorePhases(props: {
                     data-tap-live-control-strip
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                          Time left
-                        </div>
-                        <div
-                          className={`font-mono text-lg leading-none tabular-nums tracking-tight ${
-                            remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
-                          }`}
-                        >
-                          {formatCountdown(remainingSeconds)}
-                        </div>
-                      </div>
+                      <TapLiveClock
+                        label="Time left"
+                        remainingSeconds={remainingSeconds}
+                        waiting={clockPaused}
+                        listening={isListening}
+                      />
                       {showEndSession ? (
                         <div className="flex shrink-0 items-center" data-tap-end-session>
                           <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>

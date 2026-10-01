@@ -50,6 +50,8 @@ import {
   clearDialogueMessages,
   resolveInitialMinutes,
   normalize,
+  advanceTapLiveClockPause,
+  tapLiveClockRemainingSeconds,
 } from "@/lib/tap-score-client-helpers";
 import {
   tapTracePayload,
@@ -225,10 +227,20 @@ export function TapScoreClient({
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
   const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
+  const [clockWaiting, setClockWaiting] = useState(false);
   const isPracticeModeRef = useRef(false);
 
   const isEndingRef = useRef(false);
   const isSendingRef = useRef(false);
+  const startedAtRef = useRef<number | null>(null);
+  const liveMinutesRef = useRef(liveMinutes);
+  const clockWaitingRef = useRef(false);
+  const pauseStartedAtRef = useRef<number | null>(null);
+  const pausedMsRef = useRef(0);
+  const clockSessionRef = useRef<number | null>(null);
+  startedAtRef.current = startedAt;
+  liveMinutesRef.current = liveMinutes;
+  isSendingRef.current = isSending;
   /** True until Excalidraw reports its API. Live entry starts paused. */
   const canvasLoadingRef = useRef(true);
   const xaiReplyWaitRef = useRef(false);
@@ -740,6 +752,32 @@ export function TapScoreClient({
     [crystallizableText, restartSpeechRecognitionSession, applyPurityHit],
   );
 
+  const syncLiveClock = useCallback((waiting: boolean, now = Date.now()) => {
+    const next = advanceTapLiveClockPause({
+      waiting,
+      nowMs: now,
+      pauseStartedAtMs: pauseStartedAtRef.current,
+      pausedMs: pausedMsRef.current,
+    });
+    pauseStartedAtRef.current = next.pauseStartedAtMs;
+    pausedMsRef.current = next.pausedMs;
+    if (clockWaitingRef.current !== waiting) {
+      clockWaitingRef.current = waiting;
+      setClockWaiting(waiting);
+    }
+    const started = startedAtRef.current;
+    if (started == null) return;
+    setRemainingSeconds(
+      tapLiveClockRemainingSeconds({
+        nowMs: now,
+        startedAtMs: started,
+        durationSeconds: liveMinutesRef.current * 60,
+        pausedMs: next.pausedMs,
+        pauseStartedAtMs: next.pauseStartedAtMs,
+      }),
+    );
+  }, []);
+
   // Keep purity interval off the stale isSending closure; reset silence when Helios starts.
   useEffect(() => {
     isSendingRef.current = isSending;
@@ -748,7 +786,8 @@ export function TapScoreClient({
       setTranscriptSilenceMs(0);
       autoStashInFlightRef.current = false;
     }
-  }, [isSending]);
+    syncLiveClock(isSending || xaiReplyWaitRef.current);
+  }, [isSending, syncLiveClock]);
 
   // TAP-only: silence clock while live — with text → fade + auto-stash;
   // empty bar after stash/submit → fade Listening… + purity hit if still silent.
@@ -922,13 +961,29 @@ export function TapScoreClient({
   endAndScoreRef.current = endSession;
 
   useEffect(() => {
+    if (clockSessionRef.current !== startedAt) {
+      clockSessionRef.current = startedAt;
+      pauseStartedAtRef.current = null;
+      pausedMsRef.current = 0;
+      clockWaitingRef.current = false;
+      setClockWaiting(false);
+    }
     if (phase !== "live" || !startedAt) return;
 
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, liveMinutes * 60 - elapsed);
-      setRemainingSeconds(remaining);
-      if (remaining <= 0) {
+      const now = Date.now();
+      const waiting = isSendingRef.current || xaiReplyWaitRef.current;
+      syncLiveClock(waiting, now);
+      if (
+        tapLiveClockRemainingSeconds({
+          nowMs: now,
+          startedAtMs: startedAt,
+          durationSeconds: liveMinutes * 60,
+          pausedMs: pausedMsRef.current,
+          pauseStartedAtMs: pauseStartedAtRef.current,
+        }) <= 0 &&
+        pauseStartedAtRef.current == null
+      ) {
         endAndScoreRef.current();
       }
     };
@@ -936,7 +991,7 @@ export function TapScoreClient({
     tick();
     const interval = window.setInterval(tick, 1000);
     return () => window.clearInterval(interval);
-  }, [phase, startedAt, liveMinutes]);
+  }, [phase, startedAt, liveMinutes, syncLiveClock]);
 
   function beginEditTranscription() {
     const text = tapHookFormingText(tapThoughtSpeech);
@@ -959,7 +1014,8 @@ export function TapScoreClient({
     canvasLoadingRef.current = wait.canvasLoading;
     xaiReplyWaitRef.current = wait.waitingForXaiReply;
     holdSilenceForWait(wait.canvasLoading || wait.waitingForXaiReply);
-  }, [holdSilenceForWait]);
+    syncLiveClock(isSendingRef.current || wait.waitingForXaiReply);
+  }, [holdSilenceForWait, syncLiveClock]);
 
   const onImDoneBusyChange = useCallback((busy: boolean) => {
     imDoneBusyRef.current = busy;
@@ -1002,6 +1058,7 @@ export function TapScoreClient({
       heliosTurnMode={heliosTurnMode}
       userInitial={userInitial}
       remainingSeconds={remainingSeconds}
+      clockPaused={clockWaiting || isSending}
       sessionPurity={sessionPurity}
       crystallizableText={crystallizableText}
       showEndSession={showEndSession}

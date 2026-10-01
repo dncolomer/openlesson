@@ -42,6 +42,7 @@ export function MapMinimapChrome({
   onViewportPointerDown,
   onViewportPointerMove,
   onViewportPointerUp,
+  board = false,
 }: {
   clusterCount: number;
   totalBlocks: number;
@@ -53,6 +54,8 @@ export function MapMinimapChrome({
   onViewportPointerDown: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerMove: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerUp: (e: PointerEvent<SVGRectElement>) => void;
+  /** ILE chapter map: a plain black board, without the fog wash. */
+  board?: boolean;
 }) {
   return (
     <div
@@ -106,24 +109,39 @@ export function MapMinimapChrome({
               <circle cx="3.2" cy="1.2" r="0.3" fill="rgba(90,90,100,0.2)" />
             </pattern>
           </defs>
-          <rect
-            data-minimap-fog-base
-            x={0}
-            y={0}
-            width={MINIMAP_FRAME_WIDTH}
-            height={MINIMAP_FRAME_HEIGHT}
-            fill="url(#minimap-fog-gradient)"
-          />
-          <rect
-            data-minimap-fog-texture
-            x={0}
-            y={0}
-            width={MINIMAP_FRAME_WIDTH}
-            height={MINIMAP_FRAME_HEIGHT}
-            fill="url(#minimap-fog-noise)"
-            opacity={0.7}
-            pointerEvents="none"
-          />
+          {board ? (
+            <rect
+              data-ile-minimap-board=""
+              x={1}
+              y={1}
+              width={MINIMAP_FRAME_WIDTH - 2}
+              height={MINIMAP_FRAME_HEIGHT - 2}
+              fill="#000"
+              stroke="rgba(255,255,255,0.8)"
+              strokeWidth={1.5}
+            />
+          ) : (
+            <>
+              <rect
+                data-minimap-fog-base
+                x={0}
+                y={0}
+                width={MINIMAP_FRAME_WIDTH}
+                height={MINIMAP_FRAME_HEIGHT}
+                fill="url(#minimap-fog-gradient)"
+              />
+              <rect
+                data-minimap-fog-texture
+                x={0}
+                y={0}
+                width={MINIMAP_FRAME_WIDTH}
+                height={MINIMAP_FRAME_HEIGHT}
+                fill="url(#minimap-fog-noise)"
+                opacity={0.7}
+                pointerEvents="none"
+              />
+            </>
+          )}
           {tiles.map((tile) => (
             <rect
               key={`tile-${tile.blockId}-${tile.row}:${tile.col}`}

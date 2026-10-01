@@ -40,7 +40,7 @@ export function IleContinueMapPreview({
               <span>{loadingLabel || "Checking for existing chapters"}</span>
             </>
           ) : (
-            "Chapter map will appear when this session’s plan is loaded."
+            "The board will appear when this session’s plan is loaded."
           )}
         </div>
       ) : (

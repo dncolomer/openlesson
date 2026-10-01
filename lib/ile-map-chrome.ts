@@ -1,7 +1,7 @@
 /**
  * ILE map-first overlay chrome tokens. Minimap stays at right-2 top-2.
  */
-import { MINIMAP_FRAME_HEIGHT } from "@/lib/map-minimap-frame";
+import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-frame";
 
 /** top-2 (8px) + minimap height + 8px gap — leftover for overlays that still sit under the minimap. */
 export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
@@ -11,6 +11,20 @@ export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-[8.25rem]";
 
 /** Bar height + 0.5rem gutter (same as left-2). Chapter widget, sensors, work dock. */
 export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
+/** 8.75rem at the default 16px root. Matches ILE_MAP_VOICE_BAR_CLEARANCE_CLASS. */
+export const ILE_MAP_VOICE_BAR_CLEARANCE_PX = 140;
+/** Gap between the fitted board frame and the viewport edge. */
+export const ILE_BOARD_FIT_GUTTER_PX = 12;
+/**
+ * Opening camera insets for the chapter board.
+ * Bottom clears the voice bar. Right clears the path/notes stack (`right-2` + frame width).
+ */
+export const ILE_BOARD_FIT_INSETS = {
+  top: ILE_BOARD_FIT_GUTTER_PX,
+  left: ILE_BOARD_FIT_GUTTER_PX,
+  right: 8 + MINIMAP_FRAME_WIDTH + ILE_BOARD_FIT_GUTTER_PX,
+  bottom: ILE_MAP_VOICE_BAR_CLEARANCE_PX,
+} as const;
 
 /**
  * Shared left-column map widget box (chapter, global resources, future overlays).

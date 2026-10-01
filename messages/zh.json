@@ -2582,13 +2582,13 @@
         "highlight": "",
         "slotsLabel": "{count} empty insight slots",
         "emptySlot": "Empty",
-        "body": "You craft insights by working on the different areas of the map.",
+        "body": "You craft insights by working on the different areas of the board.",
         "quoteText": "",
         "quoteAuthor": "",
         "start": "Start",
         "starting": "Deploying…",
         "titleProject": "Then move on",
-        "bodyProject": "You craft insights by working on the different areas of the map."
+        "bodyProject": "You craft insights by working on the different areas of the board."
       }
     },
     "tap": {

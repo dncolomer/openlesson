@@ -8,12 +8,18 @@ import { join } from "node:path";
 import { sessionStepsToSkillGridNodes } from "@/lib/chapter-skill-grid";
 import type { IleAltitudeChapter } from "@/lib/ile-altitude-map";
 import {
+  ILE_CHAPTER_BLOCK_ALPHA,
+  ILE_PATH_DETOUR_WIDTH,
+  ILE_PATH_SPINE_CASING_WIDTH,
+  ILE_PATH_SPINE_WIDTH,
+  ILE_PATH_YELLOW,
   ilePathCellCenter,
   ilePathMapFrame,
   ilePathOverlay,
   ilePathRouteD,
 } from "@/lib/ile-path-overlay";
-import { SKILL_GRID_CELL_SIZE, SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
+import { ILE_BOARD_CELL_SIZE, ILE_BOARD_PITCH } from "@/lib/block-skill-grid";
+import { resolveEmptyCellMarker } from "@/lib/map-tile-badges";
 import type { SessionPlanStep } from "@/lib/domain/types";
 
 const ROOT = join(__dirname, "../..");
@@ -35,7 +41,7 @@ function step(
 }
 
 describe("ile path overlay", () => {
-  it("draws nothing when the chapters have no stored links", () => {
+  it("no stored links yields no spine", () => {
     expect(
       ilePathOverlay([
         chapter({ id: "a", row: 0, col: 0 }),
@@ -60,7 +66,7 @@ describe("ile path overlay", () => {
     ).toBeNull();
   });
 
-  it("follows the longest chain from a root and keeps the side rung as a detour", () => {
+  it("the longest chain is the spine and a side rung is a detour", () => {
     const overlay = ilePathOverlay([
       chapter({ id: "a", row: 0, col: 0, nextIds: ["b"] }),
       chapter({ id: "b", row: 1, col: 0, lockUntilIds: ["a"], nextIds: ["c", "d"] }),
@@ -75,21 +81,21 @@ describe("ile path overlay", () => {
 
     const origin = ilePathCellCenter(0, 0);
     expect(origin).toEqual({
-      x: SKILL_GRID_CELL_SIZE / 2,
-      y: SKILL_GRID_CELL_SIZE / 2,
+      x: ILE_BOARD_CELL_SIZE / 2,
+      y: ILE_BOARD_CELL_SIZE / 2,
     });
     expect(overlay.spine?.points[0]).toMatchObject({ chapterId: "a", ...origin });
     expect(overlay.spine?.points[1]?.x).toBe(origin.x);
-    expect(overlay.spine?.points[1]?.y).toBe(SKILL_GRID_PITCH + SKILL_GRID_CELL_SIZE / 2);
+    expect(overlay.spine?.points[1]?.y).toBe(ILE_BOARD_PITCH + ILE_BOARD_CELL_SIZE / 2);
     expect(ilePathRouteD(overlay.spine?.points ?? [])).toMatch(/^M\d/);
 
     const frame = ilePathMapFrame(overlay);
     expect(frame).not.toBeNull();
     expect(frame!.minX).toBeLessThan(origin.x);
-    expect(frame!.width).toBeGreaterThan(SKILL_GRID_PITCH);
+    expect(frame!.width).toBeGreaterThan(ILE_BOARD_PITCH);
   });
 
-  it("treats the other branch of a diamond as a variant that rejoins", () => {
+  it("the other branch of a diamond is a detour that rejoins", () => {
     const overlay = ilePathOverlay([
       chapter({ id: "a", row: 0, col: 0, nextIds: ["b", "c"] }),
       chapter({ id: "b", row: 1, col: 0, lockUntilIds: ["a"], nextIds: ["d"] }),
@@ -100,7 +106,7 @@ describe("ile path overlay", () => {
     expect(overlay.detours.map((route) => route.chapterIds)).toEqual([["a", "c", "d"]]);
   });
 
-  it("drops chapters that are not on the grid and stays finite on a cycle", () => {
+  it("a cycle stays finite and chapters that are not on the grid are dropped", () => {
     expect(
       ilePathOverlay([
         chapter({ id: "a", row: 0, col: 0, nextIds: ["missing"] }),
@@ -116,7 +122,34 @@ describe("ile path overlay", () => {
     expect(new Set(cycled.spine?.chapterIds)).toEqual(new Set(["a", "b"]));
   });
 
-  it("mounts the overlay on the ILE chapter map and toggles it under the minimap", () => {
+  it('the spine is a yellow path, wider than the dashed detours, and intermediate spine stops are not marked data-ile-path-role="spine"', () => {
+    const world = read("components/block-skill-grid/map-world-layer.tsx");
+    const detourAt = world.indexOf("data-ile-path-detour");
+    const spineAt = world.indexOf("data-ile-path-spine");
+    const detourBlock = world.slice(detourAt, spineAt);
+    const spineBlock = world.slice(spineAt, world.indexOf("</svg>", spineAt));
+    expect(detourAt).toBeGreaterThan(0);
+    expect(spineAt).toBeGreaterThan(detourAt);
+    expect(ILE_PATH_SPINE_WIDTH).toBe(6);
+    expect(ILE_PATH_SPINE_CASING_WIDTH).toBe(10);
+    expect(ILE_PATH_DETOUR_WIDTH).toBe(3);
+    expect(ILE_PATH_SPINE_CASING_WIDTH).toBeGreaterThan(ILE_PATH_SPINE_WIDTH);
+    expect(ILE_PATH_DETOUR_WIDTH).toBeLessThan(ILE_PATH_SPINE_WIDTH);
+    expect(ILE_PATH_YELLOW.startsWith("#")).toBe(true);
+    expect(world).not.toMatch(/data-ile-path-role=(?:"spine"|\{[^}]*"spine"[^}]*\})/);
+    expect(spineBlock).toContain("index !== 0 && !last");
+    expect(spineBlock).toContain("return null");
+    expect(spineBlock).toContain("ILE_PATH_YELLOW");
+    expect(spineBlock).toContain("ILE_PATH_SPINE_WIDTH");
+    expect(spineBlock).toContain("ILE_PATH_SPINE_CASING_WIDTH");
+    expect(detourBlock).toContain("strokeDasharray=");
+    expect(detourBlock).toContain("ILE_PATH_YELLOW");
+    expect(detourBlock).toContain("ILE_PATH_DETOUR_WIDTH");
+    expect(detourBlock).toContain('strokeLinecap="round"');
+    expect(spineBlock).toContain('strokeLinecap="round"');
+  });
+
+  it('the Path control (data-ile-path-overlay-toggle, label Path) is the first control under the minimap and the overlay starts hidden, the path overlay renders only for the chapter map so the workspace map does not receive it, the chapter tile class stays transparent with no rounded-sm rounded-md rounded-lg or rounded-xl, and ILE empty cells show the add plus', () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
     const grid = read("components/BlockSkillGrid.tsx");
@@ -131,15 +164,44 @@ describe("ile path overlay", () => {
       stack.indexOf("data-workspace-mode-toggle"),
     );
     expect(pathButton).toContain("Path");
+    expect(pathButton).toContain('data-ile-path-eye="open"');
+    expect(pathButton).toContain('data-ile-path-eye="closed"');
     expect(pathButton.indexOf("data-ile-path-overlay-toggle")).toBeLessThan(
       pathButton.indexOf("Path"),
     );
     expect(stack).toContain("rounded-none");
     expect(stack).not.toMatch(/rounded-(sm|md|lg|xl)\b/);
-    expect(grid).toContain("useState(true)");
+    expect(grid).toContain(
+      "const [pathOverlayVisible, setPathOverlayVisible] = useState(false)",
+    );
     expect(grid).toContain('showPathOverlay: suggestMode === "chapter" && pathOverlayVisible');
     expect(grid).toContain('suggestMode === "chapter"');
     const preview = read("components/session-view/ile-continue-map-preview.tsx");
     expect(preview).not.toContain('suggestMode="chapter"');
+    const stackBody = stack.slice(stack.indexOf("data-map-minimap-stack"));
+    expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeGreaterThan(0);
+    expect(stackBody.indexOf("data-ile-path-overlay-toggle")).toBeLessThan(
+      stackBody.indexOf("data-workspace-mode-toggle"),
+    );
+    expect(world).toContain("ILE_PATH_YELLOW");
+    expect(ILE_CHAPTER_BLOCK_ALPHA).toBe(0.94);
+    const pathAt = world.indexOf('data-ile-path-overlay=""');
+    const blocksAt = world.indexOf("Occupied blocks: solid rect");
+    expect(pathAt).toBeGreaterThan(0);
+    expect(blocksAt).toBeGreaterThan(pathAt);
+    const pathTag = world.slice(pathAt, pathAt + 420);
+    expect(pathTag).toContain("zIndex: 0");
+    expect(world).toMatch(/suggestMode === "chapter"\s*\?\s*2/);
+    expect(world).toContain("ILE_CHAPTER_BLOCK_ALPHA");
+    expect(world).not.toContain("zIndex: 3");
+    expect(world).not.toContain("data-ile-altitude-map");
+    expect(world).not.toContain("ILE_ALTITUDE_TILE_CLASS");
+    expect(
+      resolveEmptyCellMarker({
+        surface: "chapter",
+        canEdit: true,
+        learnerMode: false,
+      }),
+    ).toBe("plus");
   });
 });

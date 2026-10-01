@@ -43,8 +43,10 @@ export const ILE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "edit", label: "Edit" },
 ] as const;
 
-/** Empty ILE cells are not a place to add. New chapters come from the interruption model. */
-export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [] as const;
+/** Empty ILE cells: one action that opens the manual add-chapter form. */
+export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
+  { id: "add_chapter", label: "Add chapter" },
+] as const;
 
 /** TIM-proposed chapters: accept keeps the 3×3 logos, reject clears the tile. */
 export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
@@ -108,12 +110,13 @@ export function blockCircularMenuOpensOnSelect(
   return surface === "ile" || surface === "workspace-learner";
 }
 
-/** Empty cells do not open an add ring. ILE growth is the interruption model. */
+/** Empty ILE cells open a one-action Add chapter ring. Blocked ground does not. */
 export function blockCircularMenuOpensOnEmpty(
-  _surface: BlockCircularMenuSurface | null | undefined,
-  _opts?: { unusable?: boolean | null },
+  surface: BlockCircularMenuSurface | null | undefined,
+  opts?: { unusable?: boolean | null },
 ): boolean {
-  return false;
+  if (opts?.unusable) return false;
+  return surface === "ile";
 }
 
 export function emptyCircularMenuCellKey(cell: {
@@ -404,8 +407,11 @@ export function filterPlannedResourcesByScope(
   });
 }
 
-/** Visual ring radius (px). Action-button centers sit on this circumference. */
-export const BLOCK_CIRCULAR_MENU_RING_RADIUS_PX = 52;
+/**
+ * Visual ring radius (px). Action-button centers sit on this circumference.
+ * 72 puts a 40px button just outside a 92px block (inner edge at 52, block edge at 46).
+ */
+export const BLOCK_CIRCULAR_MENU_RING_RADIUS_PX = 72;
 /** Drawn stroke thickness of the menu circle. */
 export const BLOCK_CIRCULAR_MENU_RING_THICKNESS_PX = 4;
 /** Idle icon-button diameter. */

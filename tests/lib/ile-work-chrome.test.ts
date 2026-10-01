@@ -2,9 +2,16 @@
  * ILE Work chrome: no I'm done answering on chapter/PiP; session turn close;
  * expense slider beside aesthetics/map type; Work/PoW visualization.
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
+  IleMapInsightsWidget,
+} from "@/components/session-view/ile-insight-trophies";
+import type { InsightSummary } from "@/lib/insights";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
 import {
@@ -238,7 +245,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(dockBar).toContain("data-ile-end-turn-cluster");
     expect(dockBar).toContain("data-ile-end-turn-double-border");
     expect(dockBar).toContain("data-ile-show-map");
-    expect(dockBar).toContain('ILE_SHOW_MAP_LABEL = "Map"');
+    expect(dockBar).toContain('ILE_SHOW_MAP_LABEL = "Board"');
     expect(dockBar.indexOf("data-ile-show-map")).toBeLessThan(dockBar.indexOf("<IleSubmitWorkButton"));
     expect(dockBar).toContain("onShowMap");
     expect(chrome).toContain("onShowMap=");
@@ -296,7 +303,9 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     const voiceBar = read("components/session-view/ile-voice-bar.tsx");
     expect(voiceBar).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
     expect(voiceBar).toContain("h-8");
-    expect(voiceBar).toContain("data-ile-voice-aesthetic");
+    expect(voiceBar).toContain("bg-black");
+    expect(voiceBar).not.toContain("data-ile-voice-aesthetic");
+    expect(voiceBar).not.toContain("backgroundImage");
     expect(voiceBar).toContain("data-ile-voice-chapter-brief");
     expect(voiceBar).toContain("IleVoiceActionPad");
     expect(voiceBar).toContain("actionPad");
@@ -433,6 +442,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(trophies).toContain("data-ile-insight-slot-empty");
     expect(trophies).toContain("data-ile-map-insights-widget");
     expect(trophies).toContain("ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3");
+    expect(trophies).toContain("data-ile-map-insights-more");
+    expect(trophies).toContain("ILE_MAP_INSIGHTS_MORE_LABEL");
+    expect(trophies).toContain(
+      "Math.max(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT, insights.length)",
+    );
     expect(trophies).toContain('data-ile-insight-slot-card="empty"');
     expect(trophies).toContain("ILE_INSIGHT_EMPTY_SLOT_LABEL");
     expect(trophies).not.toContain("Craft insights on the Work canvas.");
@@ -456,7 +470,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(enHelp.onboardingGuide.ile.title).toMatch(/Craft \{count\} insights/);
     expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Craft 1 insight/);
     expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
-    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/different areas of the map/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/different areas of the board/i);
     expect(enHelp.onboardingGuide.ile.step3.highlight).toBe("");
     expect(enHelp.onboardingGuide.ile.step3.quoteText).toBe("");
     const guide = read("components/SessionOnboardingGuide.tsx");
@@ -516,7 +530,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "prompt bar: craft insight; selection Commands (no Compress work)",
         "end-turn: data-ile-end-turn-screen, no draft/evaluate/thoughts-pool form",
         "header: empty insight slots left of Work; timer on the right",
-        "map: data-ile-map-insights-widget 3 empty full-width cards",
+        "map: data-ile-map-insights-widget 3 slots then a non-interactive more mark",
         "tiles: data-ile-chapter-insight-count",
         "help: Craft X insights + empty slots; map areas; Sun Tzu gone",
       ].join("\n") + "\n",
@@ -538,5 +552,61 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         `submitLabel=${ILE_END_TURN_LABEL}`,
       ].join("\n"),
     );
+  });
+});
+
+function insightFixture(id: string): InsightSummary {
+  return {
+    id,
+    title: id,
+    summary: "",
+    created_at: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+describe("IleMapInsightsWidget slots", () => {
+  it("draws three slots and a continuation mark when the chapter goal is lower", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [],
+        visible: true,
+        slotCount: 1,
+      }),
+    );
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT).toBe(3);
+    expect(empties).toHaveLength(3);
+    expect(html).toContain('data-ile-map-insights-slot-count="3"');
+    expect(html).toContain("data-ile-map-insights-more");
+    expect(html).toContain("More will come");
+    expect(html).not.toContain("<button");
+  });
+
+  it("keeps a higher chapter goal from adding empty slots", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [],
+        visible: true,
+        slotCount: 5,
+      }),
+    );
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(empties).toHaveLength(3);
+    expect(html).toContain('data-ile-map-insights-goal="5"');
+  });
+
+  it("keeps every accepted insight and fills only the remaining rows", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleMapInsightsWidget, {
+        insights: [insightFixture("a"), insightFixture("b")],
+        visible: true,
+        slotCount: 1,
+      }),
+    );
+    const filled = html.match(/data-ile-insight-slot-card="filled"/g) ?? [];
+    const empties = html.match(/data-ile-insight-slot-card="empty"/g) ?? [];
+    expect(filled).toHaveLength(2);
+    expect(empties).toHaveLength(1);
+    expect(html).toContain("data-ile-map-insights-more");
   });
 });

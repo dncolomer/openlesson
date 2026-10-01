@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  clampSkillGridZoom,
+  fitWorldRectCamera,
+  skillGridZoomFloor,
   getDefaultSkillGridZoom,
   getPanToCenterCell,
   getVisibleGridCells,
@@ -12,6 +13,7 @@ import {
   SKILL_GRID_MIN_ZOOM,
   SKILL_GRID_PITCH,
   type GridCell,
+  type SkillGridCameraInsets,
 } from "@/lib/block-skill-grid";
 import {
   buildMinimapClusterGraph,
@@ -37,6 +39,15 @@ export function useMapViewport(input: {
   onAppearingComplete?: (nodeIds: string[]) => void;
   occupiedByBlockId: Map<string, GridCell[]>;
   defaultZoomAtReference?: number;
+  gridPitch?: number;
+  gridCellSize?: number;
+  /** When set, the opening camera fits this world rectangle instead of the reference zoom. */
+  fitBoard?: boolean;
+  fitMinX?: number | null;
+  fitMinY?: number | null;
+  fitWidth?: number | null;
+  fitHeight?: number | null;
+  fitInsets?: SkillGridCameraInsets;
 }) {
   const {
     viewportCenterCell,
@@ -45,13 +56,34 @@ export function useMapViewport(input: {
     onAppearingComplete,
     occupiedByBlockId,
     defaultZoomAtReference = SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
+    gridPitch = SKILL_GRID_PITCH,
+    gridCellSize = SKILL_GRID_CELL_SIZE,
+    fitBoard = false,
+    fitMinX = null,
+    fitMinY = null,
+    fitWidth = null,
+    fitHeight = null,
+    fitInsets,
   } = input;
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const hasInitialCenterRef = useRef(false);
   const panMovedRef = useRef(false);
+  const userAdjustedCameraRef = useRef(false);
+  const fittedZoomRef = useRef<number | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [pan, setPanState] = useState({ x: 0, y: 0 });
+  const setPan = useCallback(
+    (
+      next:
+        | { x: number; y: number }
+        | ((prev: { x: number; y: number }) => { x: number; y: number }),
+    ) => {
+      userAdjustedCameraRef.current = true;
+      setPanState(next);
+    },
+    [],
+  );
   const [zoom, setZoom] = useState(defaultZoomAtReference);
   const spaceHeldRef = useRef(false);
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -65,8 +97,10 @@ export function useMapViewport(input: {
         pan.x,
         pan.y,
         zoom,
+        2,
+        gridPitch,
       ),
-    [viewportSize.width, viewportSize.height, pan.x, pan.y, zoom],
+    [viewportSize.width, viewportSize.height, pan.x, pan.y, zoom, gridPitch],
   );
 
   const minimapPlacements = useMemo(
@@ -103,9 +137,10 @@ export function useMapViewport(input: {
       width: MINIMAP_FRAME_WIDTH,
       height: MINIMAP_FRAME_HEIGHT,
       padding: MINIMAP_FRAME_PADDING,
-      pitch: SKILL_GRID_PITCH,
+      pitch: gridPitch,
     });
   }, [
+    gridPitch,
     minimapTileView.bounds,
     minimapTileView.cellSize,
     minimapTileView.tiles.length,
@@ -160,11 +195,11 @@ export function useMapViewport(input: {
         deltaX,
         deltaY,
         cellSize,
-        pitch: SKILL_GRID_PITCH,
+        pitch: gridPitch,
       });
       setPan(next);
     },
-    [minimapTileView.cellSize, zoom],
+    [gridPitch, minimapTileView.cellSize, zoom],
   );
 
   const onMinimapViewportPointerUp = useCallback(
@@ -192,14 +227,14 @@ export function useMapViewport(input: {
       viewportHeight: height,
       cells: [cell],
       oneToOneZoom: 1,
-      pitch: SKILL_GRID_PITCH,
-      cellSize: SKILL_GRID_CELL_SIZE,
+      pitch: gridPitch,
+      cellSize: gridCellSize,
       minZoom: SKILL_GRID_MIN_ZOOM,
       maxZoom: SKILL_GRID_MAX_ZOOM,
     });
     setZoom(cam.zoom);
     setPan(cam.pan);
-  }, []);
+  }, [gridCellSize, gridPitch]);
 
   const panToCluster = useCallback(
     (cluster: MinimapCluster | MinimapCountLabel) => {
@@ -231,15 +266,15 @@ export function useMapViewport(input: {
         viewportHeight: height,
         cells,
         oneToOneZoom: 1,
-        pitch: SKILL_GRID_PITCH,
-        cellSize: SKILL_GRID_CELL_SIZE,
+        pitch: gridPitch,
+        cellSize: gridCellSize,
         minZoom: SKILL_GRID_MIN_ZOOM,
         maxZoom: SKILL_GRID_MAX_ZOOM,
       });
       setZoom(cam.zoom);
       setPan(cam.pan);
     },
-    [minimapGraph.clusters, minimapPlacements],
+    [gridCellSize, gridPitch, minimapGraph.clusters, minimapPlacements],
   );
 
   const applyCenterOnStart = useCallback(
@@ -248,9 +283,42 @@ export function useMapViewport(input: {
       if (!viewport) return;
       const { width, height } = viewport.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      setPan(getPanToCenterCell(width, height, viewportCenterCell, nextZoom));
+      setPanState(getPanToCenterCell(width, height, viewportCenterCell, nextZoom, gridPitch, gridCellSize));
     },
-    [viewportCenterCell, zoom],
+    [gridCellSize, gridPitch, viewportCenterCell, zoom],
+  );
+
+  const applyBoardFit = useCallback(
+    (width: number, height: number) => {
+      if (
+        !fitBoard ||
+        fitMinX == null ||
+        fitMinY == null ||
+        fitWidth == null ||
+        fitHeight == null
+      ) {
+        return false;
+      }
+      const cam = fitWorldRectCamera({
+        viewportWidth: width,
+        viewportHeight: height,
+        minX: fitMinX,
+        minY: fitMinY,
+        width: fitWidth,
+        height: fitHeight,
+        insets: fitInsets,
+        maxZoom: SKILL_GRID_MAX_ZOOM,
+      });
+      if (!cam) return false;
+      fittedZoomRef.current = cam.zoom;
+      setZoom((current) => (current === cam.zoom ? current : cam.zoom));
+      setPanState((current) =>
+        current.x === cam.pan.x && current.y === cam.pan.y ? current : cam.pan,
+      );
+      hasInitialCenterRef.current = true;
+      return true;
+    },
+    [fitBoard, fitHeight, fitInsets, fitMinX, fitMinY, fitWidth],
   );
 
   useEffect(() => {
@@ -269,34 +337,49 @@ export function useMapViewport(input: {
   }, []);
 
   useEffect(() => {
-    if (viewportSize.width <= 0 || viewportSize.height <= 0 || hasInitialCenterRef.current) {
-      return;
-    }
+    if (viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    if (userAdjustedCameraRef.current) return;
+    if (applyBoardFit(viewportSize.width, viewportSize.height)) return;
+    if (fitBoard) return;
+    if (hasInitialCenterRef.current) return;
     const initialZoom = getDefaultSkillGridZoom(
       viewportSize.width,
       viewportSize.height,
       defaultZoomAtReference,
     );
     setZoom(initialZoom);
-    setPan(
+    setPanState(
       getPanToCenterCell(
         viewportSize.width,
         viewportSize.height,
         viewportCenterCell,
         initialZoom,
+        gridPitch,
+        gridCellSize,
       ),
     );
     hasInitialCenterRef.current = true;
-  }, [viewportSize.width, viewportSize.height, viewportCenterCell, defaultZoomAtReference]);
+  }, [
+    applyBoardFit,
+    defaultZoomAtReference,
+    fitBoard,
+    gridCellSize,
+    gridPitch,
+    viewportCenterCell,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   useEffect(() => {
     if (!followCell || viewportSize.width <= 0 || viewportSize.height <= 0) return;
-    setPan((current) => {
+    setPanState((current) => {
       const next = getPanToCenterCell(
         viewportSize.width,
         viewportSize.height,
         followCell,
         zoom,
+        gridPitch,
+        gridCellSize,
       );
       if (current.x === next.x && current.y === next.y) return current;
       return next;
@@ -331,6 +414,8 @@ export function useMapViewport(input: {
   }, [appearingKey]);
 
   const recenter = useCallback(() => {
+    userAdjustedCameraRef.current = false;
+    if (applyBoardFit(viewportSize.width, viewportSize.height)) return;
     const nextZoom = getDefaultSkillGridZoom(
       viewportSize.width,
       viewportSize.height,
@@ -338,7 +423,13 @@ export function useMapViewport(input: {
     );
     setZoom(nextZoom);
     applyCenterOnStart(nextZoom);
-  }, [applyCenterOnStart, defaultZoomAtReference, viewportSize.width, viewportSize.height]);
+  }, [
+    applyBoardFit,
+    applyCenterOnStart,
+    defaultZoomAtReference,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   const zoomBy = useCallback(
     (factor: number, focalX?: number, focalY?: number) => {
@@ -348,7 +439,10 @@ export function useMapViewport(input: {
       const rect = viewport.getBoundingClientRect();
       const anchorX = focalX ?? rect.width / 2;
       const anchorY = focalY ?? rect.height / 2;
-      const nextZoom = clampSkillGridZoom(zoom * factor);
+      const nextZoom = Math.min(
+        SKILL_GRID_MAX_ZOOM,
+        Math.max(skillGridZoomFloor(fittedZoomRef.current), zoom * factor),
+      );
       const ratio = nextZoom / zoom;
 
       setPan((current) => ({

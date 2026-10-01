@@ -18,7 +18,9 @@ export function MapCellStatusGlyph({
   icon = null,
   labelMode = "title",
   glyphVariant = "solid",
+  glyphScale = "block",
   hideIcon = false,
+  labelPlate = false,
 }: {
   status: string;
   showProgress: boolean;
@@ -28,30 +30,43 @@ export function MapCellStatusGlyph({
   icon?: string | null;
   labelMode?: "title" | "glyph";
   glyphVariant?: "solid" | "outline";
+  /** Chapter tiles are larger than workspace tiles, so the mark fills more of the square. */
+  glyphScale?: "block" | "chapter";
   hideIcon?: boolean;
+  /** Solid black plate behind the keyword when it sits on an aesthetic image. */
+  labelPlate?: boolean;
 }) {
   const resolved = statusIcon ?? resolveMapCellStatusIcon(status, showProgress);
+  const chapterScale = glyphScale === "chapter";
   if (labelMode === "glyph") {
     return (
       <span
-        className="flex max-w-full flex-col items-center gap-1"
+        className={`flex max-w-full flex-col items-center ${chapterScale ? "gap-2" : "gap-1"}`}
         data-map-cell-glyph
         data-map-cell-keyword={keyword || undefined}
+        data-map-cell-glyph-scale={glyphScale}
       >
         {hideIcon ? null : (
           <BlockMapGlyphIcon
             name={icon}
             className={
               isPreviousSessionsMapIcon(icon)
-                ? "h-6 w-6 shrink-0"
-                : "h-8 w-8 shrink-0"
+                ? chapterScale
+                  ? "h-12 w-12 shrink-0"
+                  : "h-6 w-6 shrink-0"
+                : chapterScale
+                  ? "h-16 w-16 shrink-0"
+                  : "h-8 w-8 shrink-0"
             }
             variant={glyphVariant}
           />
         )}
         <span
-          className="max-w-full px-0.5 text-center text-[11px] font-medium leading-tight line-clamp-2"
+          className={`line-clamp-2 max-w-full text-center leading-tight ${
+            chapterScale ? "text-lg font-semibold" : "text-[11px] font-medium"
+          } ${labelPlate ? "bg-black px-1.5 py-0.5 text-white" : "px-0.5"}`}
           data-map-cell-status="keyword"
+          data-map-cell-keyword-plate={labelPlate ? "true" : undefined}
         >
           {keyword || title}
         </span>

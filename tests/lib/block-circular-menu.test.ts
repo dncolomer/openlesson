@@ -88,11 +88,15 @@ describe("block circular menu catalog", () => {
     expect(blockCircularMenuActions("ile", { empty: true }).map((a) => a.id)).toEqual(
       ILE_EMPTY_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
-    expect(blockCircularMenuActions("ile", { empty: true }).map((a) => a.label)).toEqual([]);
+    expect(blockCircularMenuActions("ile", { empty: true }).map((a) => a.label)).toEqual([
+      "Add chapter",
+    ]);
     expect(ileVoicePadSpec({ selection: "chapter" }).actions.map((a) => a.id)).toEqual(
       ILE_CIRCULAR_MENU_ACTIONS.map((a) => a.id),
     );
-    expect(ileVoicePadSpec({ selection: "empty" }).actions).toEqual([]);
+    expect(ileVoicePadSpec({ selection: "empty" }).actions.map((a) => a.id)).toEqual([
+      "add_chapter",
+    ]);
     expect(ileVoicePadSpec({ selection: "blocked" }).actions).toEqual([]);
     expect(
       ileVoicePadSpec({ selection: "blocked" }).actions.some((a) => a.id === "add_chapter"),
@@ -264,7 +268,7 @@ describe("circular menu source wiring", () => {
     expect(world).toContain("empty");
     expect(ring).toContain("data-block-circular-menu-empty");
     expect(authoring).toContain('suggestMode === "chapter"');
-    expect(blockCircularMenuOpensOnEmpty("ile")).toBe(false);
+    expect(blockCircularMenuOpensOnEmpty("ile")).toBe(true);
     expect(blockCircularMenuOpensOnEmpty("ile", { unusable: true })).toBe(false);
     expect(blockCircularMenuOpensOnEmpty("workspace-learner")).toBe(false);
     expect(
@@ -273,7 +277,7 @@ describe("circular menu source wiring", () => {
         clicked: { row: 2, col: 3 },
         current: null,
       }),
-    ).toBeNull();
+    ).toEqual({ row: 2, col: 3 });
     expect(
       nextCircularMenuEmptyCellOnClick({
         surface: "ile",
@@ -287,7 +291,7 @@ describe("circular menu source wiring", () => {
         clicked: { row: 1, col: 1 },
         current: { row: 2, col: 3 },
       }),
-    ).toBeNull();
+    ).toEqual({ row: 1, col: 1 });
     expect(grid).toContain("blockCircularMenuOpensOnSelect(circularMenuSurface, { exploreOpen: mapExploreOpen })");
     expect(blockCircularMenuOpensOnSelect("workspace-learner", { exploreOpen: true })).toBe(false);
     expect(blockCircularMenuOpensOnSelect("ile", { exploreOpen: true })).toBe(false);

@@ -162,7 +162,8 @@ describe("block map glyph (keyword + random 3×3 squares)", () => {
 
     const grid = readMapGridSurface();
     expect(grid).toContain('labelMode="glyph"');
-    expect(grid).toContain('glyphVariant={isChapterSurface ? "outline" : "solid"}');
+    expect(grid).toContain('glyphVariant="solid"');
+    expect(grid).not.toContain('glyphVariant={isChapterSurface ? "outline" : "solid"}');
     expect(grid).toContain("data-map-cell-status=\"keyword\"");
     expect(grid).toContain("line-clamp-2");
     expect(grid).toContain("BlockMapGlyphIcon");

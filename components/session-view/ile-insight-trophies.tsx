@@ -51,7 +51,9 @@ function IleInsightEmptyTile({
 const ILE_INSIGHT_SLOT_CARD_CLASS =
   "flex w-full items-center gap-2.5 rounded-none px-3 py-3 font-mono text-[11px] font-semibold uppercase tracking-wider";
 
+/** Insight rows on the map widget before the continuation mark. */
 export const ILE_MAP_INSIGHT_PLACEHOLDER_COUNT = 3;
+export const ILE_MAP_INSIGHTS_MORE_LABEL = "More will come";
 export const ILE_INSIGHT_EMPTY_SLOT_LABEL = "Empty";
 
 /** Widths for the silent loading shapes on the start/help cards. */
@@ -200,6 +202,20 @@ export function IleInsightTrophyStrip({
   );
 }
 
+function IleMapInsightsMoreMark() {
+  return (
+    <p
+      data-ile-map-insights-more=""
+      className="pointer-events-none m-0 flex w-full items-center justify-center gap-1.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40"
+    >
+      <span aria-hidden className="text-sm leading-none">
+        +
+      </span>
+      {ILE_MAP_INSIGHTS_MORE_LABEL}
+    </p>
+  );
+}
+
 export function IleMapInsightsWidget({
   insights,
   visible,
@@ -207,15 +223,17 @@ export function IleMapInsightsWidget({
 }: {
   insights: readonly InsightSummary[];
   visible: boolean;
-  /** Chapter insight goal. Empty slots match this count, not a fixed 3. */
+  /** Chapter insight goal. Empty rows stop at three; the plus is not another slot. */
   slotCount?: number;
 }) {
   if (!visible) return null;
-  const quota = clampIleMinInsightsPerChapter(slotCount);
-  const emptyCount = Math.max(0, quota - insights.length);
+  const goal = clampIleMinInsightsPerChapter(slotCount);
+  const shown = Math.max(ILE_MAP_INSIGHT_PLACEHOLDER_COUNT, insights.length);
+  const emptyCount = shown - insights.length;
   return (
     <div
       data-ile-map-insights-widget
+      data-ile-map-insights-goal={goal}
       className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-1.5 rounded-none border border-white/70 bg-neutral-950 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
     >
       <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
@@ -230,7 +248,7 @@ export function IleMapInsightsWidget({
       </p>
       <ul
         data-ile-map-insights-slots=""
-        data-ile-map-insights-slot-count={quota}
+        data-ile-map-insights-slot-count={shown}
         className="flex max-h-[min(22rem,50vh)] w-full flex-col gap-1.5 overflow-y-auto"
       >
         {insights.map((insight) => (
@@ -244,6 +262,7 @@ export function IleMapInsightsWidget({
           </li>
         ))}
       </ul>
+      <IleMapInsightsMoreMark />
     </div>
   );
 }

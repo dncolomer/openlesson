@@ -12,7 +12,7 @@ import {
 import {
   getWeightedNeighborhood,
   isCellOccupied,
-  SKILL_GRID_PITCH,
+  skillGridMetrics,
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
@@ -281,7 +281,8 @@ export function useMapAuthoring(input: {
         unusableKeys,
       });
       if (surface?.kind === "add_block") {
-        // ILE empty cells are not an add target. Workspace still opens the add chrome here.
+        // ILE empty cells open an Add-chapter ring first; the ring action
+        // sets localPendingCell. Workspace still opens the add chrome here.
         if (suggestMode === "chapter") {
           setLocalPendingCell(null);
           setShapePromptOpen(false);
@@ -457,10 +458,10 @@ export function useMapAuthoring(input: {
         panX: pan.x,
         panY: pan.y,
         zoom,
-        pitch: SKILL_GRID_PITCH,
+        pitch: skillGridMetrics(suggestMode === "chapter" ? "chapter" : "workspace").pitch,
       });
     },
-    [pan.x, pan.y, zoom],
+    [pan.x, pan.y, suggestMode, zoom],
   );
 
   const handleBlockPointerDown = useCallback(
@@ -691,6 +692,7 @@ export function useMapAuthoring(input: {
       // Fade / black fog empties cannot be used to add, clone, or generator-pick.
       // Pan and explore-click are handled above / in pointer-down, not here.
       if (
+        suggestMode !== "chapter" &&
         !isUnusable &&
         !canBuildOnFogVisibleEmpty(fogLookup(cell.row, cell.col))
       ) {
@@ -751,6 +753,7 @@ export function useMapAuthoring(input: {
       generatorPickActive,
       occupancy,
       fogLookup,
+      suggestMode,
       onClonePaste,
       onGeneratorEmptyToggle,
       selectedNodeId,

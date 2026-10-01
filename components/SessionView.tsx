@@ -112,7 +112,7 @@ import {
   sameIleIdList,
 } from "@/lib/ile-work-dock-status";
 import { resolveBlockMapGlyph } from "@/lib/block-map-glyph";
-import { resolveIleWorkAestheticImage } from "@/lib/aesthetics";
+
 import { ileTimProgressByTileId } from "@/lib/ile-tim-chapter-complete";
 import { ileSessionNameFromMetadata } from "@/lib/ile-session-name";
 import {
@@ -2401,15 +2401,6 @@ export function SessionView({
                 : mapSelectedEmpty
                   ? t("session.emptyBlockDesc")
                   : mapSelectedStep?.description ?? null
-            }
-            chapterAestheticSrc={
-              mapSelectedBlocked || mapSelectedEmpty || !mapSelectedStep
-                ? null
-                : resolveIleWorkAestheticImage({
-                    id: mapSelectedStep.id,
-                    assigned: workAestheticById[mapSelectedStep.id],
-                    images: selectedAesthetic?.images,
-                  })
             }
             actionPad={voicePad}
             onActionPad={(id) => voicePadActionRef.current(id)}

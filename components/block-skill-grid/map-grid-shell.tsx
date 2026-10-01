@@ -36,6 +36,8 @@ export type MapGridShellProps = {
     block: MapBlockPeek | null;
     onClose: () => void;
   };
+  /** Chapter board only. Viewport-fixed still behind the framed board. */
+  backdropSrc?: string | null;
 };
 
 export function MapGridShell({
@@ -49,11 +51,16 @@ export function MapGridShell({
   forms,
   chrome,
   peek,
+  backdropSrc = null,
 }: MapGridShellProps) {
   const activeLassoShape = world.activeLassoShape;
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
+      className={`relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border border-neutral-800/60 ${
+        world.suggestMode === "chapter"
+          ? "bg-black"
+          : "bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
+      }`}
       data-block-map-tool={rail.activeTool}
       data-lasso-shape={activeLassoShape || undefined}
       data-space-pan={chrome.spaceHeld ? "true" : "false"}
@@ -99,6 +106,26 @@ export function MapGridShell({
           onPointerUp={chrome.onPointerUp}
           onPointerCancel={chrome.onPointerUp}
         >
+          {backdropSrc ? (
+            <div
+              data-ile-board-backdrop=""
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+            >
+              <div
+                data-ile-board-backdrop-image=""
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${backdropSrc})`,
+                  filter: "grayscale(1)",
+                }}
+              />
+              <div
+                data-ile-board-backdrop-veil=""
+                className="absolute inset-0 bg-black/65"
+              />
+            </div>
+          ) : null}
           <MapGestureOverlays {...gestures} />
           {minimap.hidden ? null : (
             <MapMinimapChrome
@@ -112,20 +139,23 @@ export function MapGridShell({
               onViewportPointerDown={minimap.onViewportPointerDown}
               onViewportPointerMove={minimap.onViewportPointerMove}
               onViewportPointerUp={minimap.onViewportPointerUp}
+              board={minimap.board}
             />
           )}
           <MapRightStack {...right} />
           <MapJobIndicators {...jobs} />
 
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)",
-              backgroundSize: `${SKILL_GRID_PITCH}px ${SKILL_GRID_PITCH}px`,
-              transform: `translate(${chrome.pan.x % SKILL_GRID_PITCH}px, ${chrome.pan.y % SKILL_GRID_PITCH}px) scale(${chrome.zoom})`,
-              transformOrigin: "0 0",
-            }}
-          />
+          {world.suggestMode === "chapter" ? null : (
+            <div
+              className="absolute inset-0 pointer-events-none opacity-40"
+              style={{
+                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                backgroundSize: `${SKILL_GRID_PITCH}px ${SKILL_GRID_PITCH}px`,
+                transform: `translate(${chrome.pan.x % SKILL_GRID_PITCH}px, ${chrome.pan.y % SKILL_GRID_PITCH}px) scale(${chrome.zoom})`,
+                transformOrigin: "0 0",
+              }}
+            />
+          )}
 
           <div
             className="absolute left-0 top-0"

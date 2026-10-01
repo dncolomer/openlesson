@@ -101,6 +101,7 @@ export function MapRightStack({
       (shouldShowMapNotesPlaneToggle(mapNotesCount) ||
         shouldShowAnnotationLayerToggles(annotationLayers.length)));
   if (!show) return null;
+  const noteSurface = pathOverlay != null ? "board" : "map";
 
   return (
     <div
@@ -129,11 +130,51 @@ export function MapRightStack({
               : "Show the path through the chapter sequence"
           }
           onClick={pathOverlay.onToggle}
-          className={`w-full rounded-none border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
+          className={`flex w-full items-center justify-between gap-2 rounded-none border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
             pathOverlay.visible ? "text-white" : "text-neutral-500 hover:text-neutral-300"
           }`}
         >
-          Path
+          <span>Path</span>
+          {pathOverlay.visible ? (
+            <svg
+              data-ile-path-eye="open"
+              className="h-3.5 w-3.5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"
+              />
+              <circle cx="12" cy="12" r="2.75" />
+            </svg>
+          ) : (
+            <svg
+              data-ile-path-eye="closed"
+              className="h-3.5 w-3.5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 3.5l17 17" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.6 10.7a2.75 2.75 0 003.7 3.7"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9.9 5.1A11 11 0 0112 4.9c5.5 0 9 5.9 9.5 7.1-.3.7-1.2 2.4-3 3.9M6.1 6.2C4.1 7.7 3 9.6 2.5 12c.4 1 3.5 6.5 9.5 6.5 1.1 0 2.1-.2 3-.5"
+              />
+            </svg>
+          )}
         </button>
       ) : null}
       {!viewOnly &&
@@ -211,8 +252,8 @@ export function MapRightStack({
               data-map-note-add
               title={
                 learnerMode
-                  ? "Add a personal note in the middle of the map"
-                  : "Add an author note in the middle of the map (visible to learners)"
+                  ? `Add a personal note in the middle of the ${noteSurface}`
+                  : `Add an author note in the middle of the ${noteSurface} (visible to learners)`
               }
               onClick={() => handleMapNoteAddAtCenter()}
               className="min-w-0 flex-1 px-2.5 py-1.5 text-left text-[11px] font-medium text-neutral-200 transition hover:text-white"
@@ -229,7 +270,11 @@ export function MapRightStack({
             data-map-notes-visibility-toggle
             data-learner-notes-visibility-toggle
             data-map-notes-visibility={mapNotesPlaneVisible ? "visible" : "hidden"}
-            title={mapNotesPlaneVisible ? "Hide all notes on the map" : "Show notes on the map"}
+            title={
+              mapNotesPlaneVisible
+                ? `Hide all notes on the ${noteSurface}`
+                : `Show notes on the ${noteSurface}`
+            }
             aria-label={mapNotesPlaneVisible ? "Hide notes" : "Show notes"}
             aria-pressed={mapNotesPlaneVisible}
             onClick={() =>

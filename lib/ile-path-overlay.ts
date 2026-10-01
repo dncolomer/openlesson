@@ -3,8 +3,19 @@
  * chapter DAG (high ground toward lower ground). Other links are detours.
  * Step order never invents an edge.
  */
-import { SKILL_GRID_CELL_SIZE, SKILL_GRID_PITCH } from "@/lib/block-skill-grid";
+import { ILE_BOARD_CELL_SIZE, ILE_BOARD_PITCH } from "@/lib/block-skill-grid";
 import type { IleAltitudeChapter } from "@/lib/ile-altitude-map";
+
+/** Yellow route drawn under the chapter squares. */
+export const ILE_PATH_YELLOW = "#ffe14a";
+/**
+ * Chapter squares are almost solid. A faint fraction of the route still shows through.
+ * 1 is opaque. The tile fill and open-work still use the same fraction.
+ */
+export const ILE_CHAPTER_BLOCK_ALPHA = 0.94;
+export const ILE_PATH_SPINE_WIDTH = 6;
+export const ILE_PATH_SPINE_CASING_WIDTH = 10;
+export const ILE_PATH_DETOUR_WIDTH = 3;
 
 export type IlePathPoint = {
   chapterId: string;
@@ -49,8 +60,8 @@ function uniq(ids: readonly string[] | null | undefined): string[] {
 /** Center of a chapter square in world pixels. */
 export function ilePathCellCenter(row: number, col: number): { x: number; y: number } {
   return {
-    x: col * SKILL_GRID_PITCH + SKILL_GRID_CELL_SIZE / 2,
-    y: row * SKILL_GRID_PITCH + SKILL_GRID_CELL_SIZE / 2,
+    x: col * ILE_BOARD_PITCH + ILE_BOARD_CELL_SIZE / 2,
+    y: row * ILE_BOARD_PITCH + ILE_BOARD_CELL_SIZE / 2,
   };
 }
 

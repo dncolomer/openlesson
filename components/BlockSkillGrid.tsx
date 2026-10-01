@@ -10,10 +10,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
-  SKILL_GRID_PITCH,
+  skillGridMetrics,
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
+import { ileMapBoardBounds } from "@/lib/ile-altitude-map";
+import { ILE_BOARD_FIT_INSETS } from "@/lib/ile-map-chrome";
 import { createMapFogLookup } from "@/lib/map-fog-of-war";
 import {
   createLearnerMapNote,
@@ -65,7 +67,7 @@ import {
   mapSelfProgressStorageKey,
 } from "@/lib/map-self-progress";
 import { MapMinimapChrome } from "@/components/block-skill-grid/map-minimap-chrome";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { type WorkspaceMapSelection } from "@/lib/workspace-map-selection";
 import { resolveMapBlockPeek } from "@/lib/block-map-peek";
 import {
@@ -162,7 +164,7 @@ export function BlockSkillGrid({
 }: BlockSkillGridProps) {
   /** View-only public maps: no authoring, select, notes, or annotation tools. */
   const canEdit = canEditProp && !viewOnly;
-  const [pathOverlayVisible, setPathOverlayVisible] = useState(true);
+  const [pathOverlayVisible, setPathOverlayVisible] = useState(false);
   const [fetchedAestheticImages, setFetchedAestheticImages] = useState<string[] | null>(
     null,
   );
@@ -187,6 +189,12 @@ export function BlockSkillGrid({
     aestheticImages && aestheticImages.length > 0
       ? aestheticImages
       : fetchedAestheticImages;
+  const chapterBoardBackdrop =
+    suggestMode === "chapter" &&
+    resolvedAestheticImages &&
+    resolvedAestheticImages.length > 0
+      ? aestheticImageForId(sessionId || "ile-chapter-board", resolvedAestheticImages)
+      : null;
   const [peekBlockId, setPeekBlockId] = useState<string | null>(null);
   const [circularMenuBlockId, setCircularMenuBlockId] = useState<string | null>(null);
   const [circularMenuEmptyCell, setCircularMenuEmptyCell] = useState<GridCell | null>(
@@ -515,6 +523,22 @@ export function BlockSkillGrid({
     ],
   );
 
+  const mapGrid = skillGridMetrics(suggestMode === "chapter" ? "chapter" : "workspace");
+  const chapterBoardFit = useMemo(() => {
+    if (suggestMode !== "chapter") return null;
+    const cells: GridCell[] = [];
+    const pushKey = (key: string) => {
+      const split = key.split(":");
+      const row = Number(split[0]);
+      const col = Number(split[1]);
+      if (!Number.isFinite(row) || !Number.isFinite(col)) return;
+      cells.push({ row, col });
+    };
+    for (const key of occupancy.keys()) pushKey(key);
+    for (const key of unusableKeys) pushKey(key);
+    return ileMapBoardBounds(cells);
+  }, [occupancy, suggestMode, unusableKeys]);
+
   const {
     viewportRef,
     hasInitialCenterRef,
@@ -550,6 +574,14 @@ export function BlockSkillGrid({
     onAppearingComplete,
     occupiedByBlockId,
     defaultZoomAtReference,
+    gridPitch: mapGrid.pitch,
+    gridCellSize: mapGrid.cellSize,
+    fitBoard: suggestMode === "chapter",
+    fitMinX: chapterBoardFit?.minX,
+    fitMinY: chapterBoardFit?.minY,
+    fitWidth: chapterBoardFit?.width,
+    fitHeight: chapterBoardFit?.height,
+    fitInsets: suggestMode === "chapter" ? ILE_BOARD_FIT_INSETS : undefined,
   });
 
   const handleMapNoteAddAtCenter = useCallback(() => {
@@ -695,6 +727,7 @@ export function BlockSkillGrid({
     commitSelectionRef,
     onSelectNode,
     generationLockedBlockIdsRef,
+    pitch: mapGrid.pitch,
   });
 
   const {
@@ -1057,6 +1090,7 @@ export function BlockSkillGrid({
 
   return (
     <MapGridShell
+      backdropSrc={chapterBoardBackdrop}
       rail={{
         learnerMode,
         viewOnly,
@@ -1171,12 +1205,13 @@ export function BlockSkillGrid({
         annotationDrawPreview,
         zoom,
         pan,
+        pitch: mapGrid.pitch,
         onPointerDown: handlePointerDown,
         onPointerMove: handlePointerMove,
         onPointerUp: endDrag,
       }}
       minimap={{
-        hidden: showMinimap === false,
+        hidden: showMinimap === false || suggestMode === "chapter",
         clusterCount: minimapGraph.clusters.length,
         totalBlocks: minimapTileView.totalBlocks,
         tiles: minimapTileView.tiles,
@@ -1187,12 +1222,13 @@ export function BlockSkillGrid({
         onViewportPointerDown: onMinimapViewportPointerDown,
         onViewportPointerMove: onMinimapViewportPointerMove,
         onViewportPointerUp: onMinimapViewportPointerUp,
+        board: suggestMode === "chapter",
       }}
       right={{
         viewOnly,
         mountMapNotes,
         overlayPersist,
-        minimapHidden: showMinimap === false,
+        minimapHidden: showMinimap === false || suggestMode === "chapter",
         workspaceId,
         onMapExploreToggle,
         onMapToggle,

@@ -80,18 +80,45 @@ export const SKILL_GRID_CELL_SIZE = 92;
 export const SKILL_GRID_GAP = 10;
 export const SKILL_GRID_PITCH = SKILL_GRID_CELL_SIZE + SKILL_GRID_GAP;
 
+/** ILE chapter board uses larger tiles than the workspace skill grid. */
+export const ILE_BOARD_CELL_SIZE = 128;
+export const ILE_BOARD_GAP = 16;
+export const ILE_BOARD_PITCH = ILE_BOARD_CELL_SIZE + ILE_BOARD_GAP;
+
+export function skillGridMetrics(surface: "chapter" | "workspace"): {
+  cellSize: number;
+  gap: number;
+  pitch: number;
+} {
+  if (surface === "chapter") {
+    return { cellSize: ILE_BOARD_CELL_SIZE, gap: ILE_BOARD_GAP, pitch: ILE_BOARD_PITCH };
+  }
+  return { cellSize: SKILL_GRID_CELL_SIZE, gap: SKILL_GRID_GAP, pitch: SKILL_GRID_PITCH };
+}
+
 export const SKILL_GRID_MIN_ZOOM = 0.25;
 /** 6× the previous max (2.5) so a 6× default still has zoom-in headroom. */
 export const SKILL_GRID_MAX_ZOOM = 15;
 /** sqrt(viewport area) calibrated to a ~500×400 panel. */
 export const SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE = 447.2;
-/** Shared default for workspace and ILE maps. */
+/** Shared default for workspace maps. */
 export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 0.7;
-/** ILE session maps use the same default as workspace. */
+/**
+ * Fallback scale before an ILE board can be measured.
+ * The live chapter board replaces this with a fit of the whole frame.
+ */
 export const SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE = 0.7;
 
 export function clampSkillGridZoom(zoom: number) {
   return Math.min(SKILL_GRID_MAX_ZOOM, Math.max(SKILL_GRID_MIN_ZOOM, zoom));
+}
+
+/** Zoom-out floor. A fitted board below the grid minimum stays reachable. */
+export function skillGridZoomFloor(fittedZoom?: number | null): number {
+  if (fittedZoom != null && Number.isFinite(fittedZoom) && fittedZoom > 0) {
+    return Math.min(SKILL_GRID_MIN_ZOOM, fittedZoom);
+  }
+  return SKILL_GRID_MIN_ZOOM;
 }
 
 /** Default zoom scales with viewport area — larger displays zoom in, smaller zoom out. */
@@ -374,14 +401,15 @@ export function getVisibleGridCells(
   panY: number,
   zoom: number,
   padding = 2,
+  pitch = SKILL_GRID_PITCH,
 ): GridCell[] {
   if (viewportWidth <= 0 || viewportHeight <= 0) return [];
 
-  const pitch = SKILL_GRID_PITCH;
-  const minCol = Math.floor((-panX) / zoom / pitch) - padding;
-  const maxCol = Math.ceil((viewportWidth - panX) / zoom / pitch) + padding;
-  const minRow = Math.floor((-panY) / zoom / pitch) - padding;
-  const maxRow = Math.ceil((viewportHeight - panY) / zoom / pitch) + padding;
+  const cellPitch = pitch > 0 ? pitch : SKILL_GRID_PITCH;
+  const minCol = Math.floor((-panX) / zoom / cellPitch) - padding;
+  const maxCol = Math.ceil((viewportWidth - panX) / zoom / cellPitch) + padding;
+  const minRow = Math.floor((-panY) / zoom / cellPitch) - padding;
+  const maxRow = Math.ceil((viewportHeight - panY) / zoom / cellPitch) + padding;
 
   const cells: GridCell[] = [];
   for (let row = minRow; row <= maxRow; row++) {
@@ -398,12 +426,82 @@ export function getPanToCenterCell(
   viewportHeight: number,
   cell: GridCell,
   zoom: number,
+  pitch = SKILL_GRID_PITCH,
+  cellSize = SKILL_GRID_CELL_SIZE,
 ) {
-  const centerX = cell.col * SKILL_GRID_PITCH + SKILL_GRID_CELL_SIZE / 2;
-  const centerY = cell.row * SKILL_GRID_PITCH + SKILL_GRID_CELL_SIZE / 2;
+  const centerX = cell.col * pitch + cellSize / 2;
+  const centerY = cell.row * pitch + cellSize / 2;
 
   return {
     x: viewportWidth / 2 - centerX * zoom,
     y: viewportHeight / 2 - centerY * zoom,
+  };
+}
+
+export type SkillGridCameraInsets = {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+};
+
+/**
+ * Largest zoom that keeps a world rectangle inside the viewport.
+ * Screen position is `pan + world * zoom` with the origin at the top left.
+ * Insets reserve chrome (voice bar, side stack). They shrink if they would
+ * eat more than half the viewport. Zoom may go below the grid minimum so a
+ * large board still fits, and it never exceeds `maxZoom`.
+ */
+export function fitWorldRectCamera(input: {
+  viewportWidth: number;
+  viewportHeight: number;
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
+  insets?: SkillGridCameraInsets;
+  maxZoom?: number;
+}): { zoom: number; pan: { x: number; y: number } } | null {
+  const vw = input.viewportWidth;
+  const vh = input.viewportHeight;
+  const rectW = input.width;
+  const rectH = input.height;
+  if (!(vw > 0) || !(vh > 0) || !(rectW > 0) || !(rectH > 0)) return null;
+  if (!Number.isFinite(input.minX) || !Number.isFinite(input.minY)) return null;
+
+  let top = Math.max(0, input.insets?.top ?? 0);
+  let right = Math.max(0, input.insets?.right ?? 0);
+  let bottom = Math.max(0, input.insets?.bottom ?? 0);
+  let left = Math.max(0, input.insets?.left ?? 0);
+  const maxInsetX = vw * 0.5;
+  const maxInsetY = vh * 0.5;
+  if (left + right > maxInsetX && left + right > 0) {
+    const scale = maxInsetX / (left + right);
+    left *= scale;
+    right *= scale;
+  }
+  if (top + bottom > maxInsetY && top + bottom > 0) {
+    const scale = maxInsetY / (top + bottom);
+    top *= scale;
+    bottom *= scale;
+  }
+
+  const availW = vw - left - right;
+  const availH = vh - top - bottom;
+  if (!(availW > 1) || !(availH > 1)) return null;
+
+  let zoom = Math.min(availW / rectW, availH / rectH);
+  const maxZoom = input.maxZoom ?? SKILL_GRID_MAX_ZOOM;
+  if (Number.isFinite(maxZoom) && maxZoom > 0) zoom = Math.min(zoom, maxZoom);
+  if (!(zoom > 0) || !Number.isFinite(zoom)) return null;
+
+  const centerX = input.minX + rectW / 2;
+  const centerY = input.minY + rectH / 2;
+  return {
+    zoom,
+    pan: {
+      x: left + availW / 2 - centerX * zoom,
+      y: top + availH / 2 - centerY * zoom,
+    },
   };
 }

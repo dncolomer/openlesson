@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       await deleteSessionPlanBySessionId(sessionId, auth.supabase);
     } catch (planError) {
       console.error("[session-plan/discard] Failed to delete map:", planError);
-      return jsonError(500, "Could not discard chapter map");
+      return jsonError(500, "Could not discard the board");
     }
 
     const { data: sessionRow, error: sessionError } = await auth.supabase

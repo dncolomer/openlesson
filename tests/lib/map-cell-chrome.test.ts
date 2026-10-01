@@ -2,7 +2,10 @@
  * Neutral map cell chrome: white selection; Done = tick; self-progress = gear.
  * Drives shipped helpers used by workspace block maps and ILE chapter maps.
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { MapCellStatusGlyph } from "@/components/block-skill-grid/map-tile-badges";
 import { readMapGridSurface } from "../helpers/surface-source";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -187,6 +190,37 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(badges).not.toMatch(/from "lucide-react"/);
     expect(grid).toContain("from \"lucide-react\"");
     expect(grid).not.toContain("data-map-cell-status=\"in_progress\"");
+    const onImage = renderToStaticMarkup(
+      createElement(MapCellStatusGlyph, {
+        status: "in_progress",
+        showProgress: true,
+        title: "Prove AVL rotate-left",
+        keyword: "AVL Rotate",
+        icon: "g27",
+        labelMode: "glyph",
+        glyphScale: "chapter",
+        hideIcon: true,
+        labelPlate: true,
+      }),
+    );
+    expect(onImage).toContain('data-map-cell-keyword-plate="true"');
+    expect(onImage).toContain("bg-black");
+    expect(onImage).toContain("AVL Rotate");
+    expect(onImage).not.toContain('data-block-map-grid="3x3"');
+    const plain = renderToStaticMarkup(
+      createElement(MapCellStatusGlyph, {
+        status: "pending",
+        showProgress: false,
+        title: "Prove AVL rotate-left",
+        keyword: "AVL Rotate",
+        icon: "g27",
+        labelMode: "glyph",
+        glyphScale: "chapter",
+      }),
+    );
+    expect(plain).not.toContain("data-map-cell-keyword-plate");
+    expect(plain).not.toContain("bg-black");
+    expect(plain).toContain('data-block-map-grid="3x3"');
     expect(grid).not.toContain("data-map-cell-status=\"completed\"");
     expect(grid).not.toMatch(/border-emerald-500|bg-emerald-950|border-amber-400\/55 bg-amber-950/);
     expect(grid).not.toMatch(/border-cyan-400\/80 bg-cyan-500\/20 text-cyan-50 ring-2 ring-cyan-400\/70/);

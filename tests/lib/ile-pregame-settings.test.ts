@@ -295,7 +295,7 @@ describe("ILE pre-game settings surface", () => {
       "difficulty",
       "other",
     ]);
-    expect(en.session.pregameTabEconomy).toBe("Map & Economy");
+    expect(en.session.pregameTabEconomy).toBe("Board & Economy");
     expect(en.session.pregameTabDifficulty).toBe("Difficulty");
     expect(en.session.pregameTabOther).toBe("Other Settings");
     expect(en.session.difficultyPresetCasual).toBe("Casual");

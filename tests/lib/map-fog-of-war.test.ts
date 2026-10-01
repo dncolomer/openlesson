@@ -354,7 +354,9 @@ describe("map fog-of-war wiring (workspace + ILE, overlay only)", () => {
     expect(world).toContain("data-map-fog-fully-visible");
     expect(world).toContain("data-map-fog-veil");
     expect(world).toContain("data-map-fog-opacity");
-    expect(world).toContain("style={{ opacity: fog.opacity }}");
+    expect(world).toContain("opacity: fog.opacity");
+    expect(world).toContain('suggestMode === "chapter"');
+    expect(world).toContain("{ opacity: 1, fullyVisible: true }");
     expect(authoring).toContain("canBuildOnFogVisibleEmpty");
     expect(authoring).toContain("mapExploreOpen");
     expect(grid).toContain("handleEmptyCellPointerDown");

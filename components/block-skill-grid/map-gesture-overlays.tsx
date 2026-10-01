@@ -33,6 +33,7 @@ export function MapGestureOverlays({
   annotationDrawPreview,
   zoom,
   pan,
+  pitch = SKILL_GRID_PITCH,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -45,6 +46,7 @@ export function MapGestureOverlays({
   annotationDrawPreview: AnnotationDrawPreview | null;
   zoom: number;
   pan: { x: number; y: number };
+  pitch?: number;
   onPointerDown: (e: PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: PointerEvent<HTMLDivElement>) => void;
@@ -85,8 +87,8 @@ export function MapGestureOverlays({
               strokeDasharray="4 3"
               points={selectiveExplanationPolygon
                 .map((p) => {
-                  const sx = p.x * SKILL_GRID_PITCH * zoom + pan.x;
-                  const sy = p.y * SKILL_GRID_PITCH * zoom + pan.y;
+                  const sx = p.x * pitch * zoom + pan.x;
+                  const sy = p.y * pitch * zoom + pan.y;
                   return `${sx},${sy}`;
                 })
                 .join(" ")}

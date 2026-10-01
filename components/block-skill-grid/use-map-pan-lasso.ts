@@ -94,6 +94,7 @@ export function useMapPanLasso(input: {
   };
   onSelectNode: (id: string | null) => void;
   generationLockedBlockIdsRef: { current: Set<string> };
+  pitch?: number;
 }) {
   const {
     panMovedRef,
@@ -435,7 +436,7 @@ export function useMapPanLasso(input: {
             panX: pan.x,
             panY: pan.y,
             zoom,
-            pitch: SKILL_GRID_PITCH,
+            pitch: input.pitch ?? SKILL_GRID_PITCH,
           }),
         );
         // Do NOT touch selectedBlockIds / selectedEmptyCells — overlay only.
@@ -541,7 +542,7 @@ export function useMapPanLasso(input: {
             panX: pan.x,
             panY: pan.y,
             zoom,
-            pitch: SKILL_GRID_PITCH,
+            pitch: input.pitch ?? SKILL_GRID_PITCH,
           });
 
         const blockInputs = nodes.map((node) => {
@@ -576,7 +577,7 @@ export function useMapPanLasso(input: {
             panX: pan.x,
             panY: pan.y,
             zoom,
-            pitch: SKILL_GRID_PITCH,
+            pitch: input.pitch ?? SKILL_GRID_PITCH,
           });
           const b = clientPointToGridCell({
             clientX: vrect.left + lasso.curX,
@@ -586,7 +587,7 @@ export function useMapPanLasso(input: {
             panX: pan.x,
             panY: pan.y,
             zoom,
-            pitch: SKILL_GRID_PITCH,
+            pitch: input.pitch ?? SKILL_GRID_PITCH,
           });
           const gridRect = normalizeGridSelectionRect(a, b);
           hitIds = blocksIntersectingGridRect(blockInputs, gridRect);
@@ -677,6 +678,7 @@ export function useMapPanLasso(input: {
       persistAnnotationLayers,
       placements,
       selectedNodeId,
+      input.pitch,
       spans,
       unusableKeys,
       zoom,

@@ -559,7 +559,7 @@ describe("Practice drawer labels and previous-sessions UI", () => {
       session: Record<string, string>;
     };
     expect(en.session.nameSessionBody).toMatch(/Proof of Work/i);
-    expect(en.session.nameSessionBody).toMatch(/map will be lost/i);
+    expect(en.session.nameSessionBody).toMatch(/board will be lost/i);
     expect(en.session.nameSessionDiscard).toMatch(/without saving/i);
 
     writeScratch(

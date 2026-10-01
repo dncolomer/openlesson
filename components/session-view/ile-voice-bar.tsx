@@ -17,7 +17,6 @@ export function IleVoiceBar({
   errorNotification = false,
   chapterTitle,
   chapterDescription,
-  chapterAestheticSrc,
   actionPad = null,
   onActionPad,
 }: {
@@ -28,13 +27,11 @@ export function IleVoiceBar({
   errorNotification?: boolean;
   chapterTitle?: string | null;
   chapterDescription?: string | null;
-  chapterAestheticSrc?: string | null;
   actionPad?: IleVoicePadSpec | null;
   onActionPad?: (id: BlockCircularMenuActionId) => void;
 }) {
   const title = String(chapterTitle || "").trim();
   const description = String(chapterDescription || "").trim();
-  const aesthetic = String(chapterAestheticSrc || "").trim();
   const hasChapter = Boolean(title || description);
 
   return (
@@ -42,27 +39,8 @@ export function IleVoiceBar({
       data-ile-voice-bar
       data-ile-transcription-region
       data-ile-voice-chapter={hasChapter ? "true" : undefined}
-      className={`pointer-events-auto absolute inset-x-0 bottom-0 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} w-full overflow-hidden rounded-none border-t border-neutral-800 bg-neutral-950/95`}
+      className={`pointer-events-auto absolute inset-x-0 bottom-0 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} w-full overflow-hidden rounded-none border-t border-neutral-800 bg-black`}
     >
-      {aesthetic ? (
-        <>
-          <div
-            data-ile-voice-aesthetic
-            aria-hidden
-            className="absolute inset-0 bg-cover bg-left"
-            style={{ backgroundImage: `url(${aesthetic})` }}
-          />
-          <div
-            data-ile-voice-aesthetic-fade
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to right, rgba(10,10,10,0.06) 0%, rgba(10,10,10,0.28) 16%, rgba(10,10,10,0.88) 42%, #000 55%, #000 100%)",
-            }}
-          />
-        </>
-      ) : null}
       <div className={`relative z-10 flex ${ILE_VOICE_BAR_HEIGHT_CLASS} w-full min-w-0 items-stretch`}>
         <div className="flex min-w-0 flex-1 items-stretch gap-2 px-3 py-2">
           {actionPad && actionPad.actions.length > 0 && onActionPad ? (

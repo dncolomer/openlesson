@@ -63,7 +63,7 @@ export function IleSubmitWorkButton({
   );
 }
 
-export const ILE_SHOW_MAP_LABEL = "Map";
+export const ILE_SHOW_MAP_LABEL = "Board";
 
 export function IleShowMapButton({
   onClick,

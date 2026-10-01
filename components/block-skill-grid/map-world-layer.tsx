@@ -3,10 +3,8 @@
 import type { MouseEvent, PointerEvent, ReactNode } from "react";
 import {
   blockHasAttachedLocalContext,
+  skillGridMetrics,
   skillNodeOccupiedCells,
-  SKILL_GRID_CELL_SIZE,
-  SKILL_GRID_GAP,
-  SKILL_GRID_PITCH,
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
@@ -40,12 +38,20 @@ import {
   parseBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
 import {
-  ILE_ALTITUDE_TILE_CLASS,
-  ileAltitudeGroups,
-  ileAltitudeMapFrame,
-  ileAltitudePaint,
+  ILE_MAP_BOARD_CORNER_PX,
+  ILE_MAP_BOARD_FILL,
+  ILE_MAP_BOARD_FRAME,
+  ILE_MAP_BOARD_FRAME_INNER_PX,
+  ILE_MAP_BOARD_FRAME_INSET_PX,
+  ILE_MAP_BOARD_FRAME_OUTER_PX,
+  ileMapBoardBounds,
 } from "@/lib/ile-altitude-map";
 import {
+  ILE_CHAPTER_BLOCK_ALPHA,
+  ILE_PATH_DETOUR_WIDTH,
+  ILE_PATH_SPINE_CASING_WIDTH,
+  ILE_PATH_SPINE_WIDTH,
+  ILE_PATH_YELLOW,
   ilePathMapFrame,
   ilePathOverlay,
   ilePathRouteD,
@@ -122,20 +128,83 @@ import {
   type BlockCircularMenuSurface,
 } from "@/lib/block-circular-menu";
 
-function OpenWorkTileAesthetic({ src }: { src: string }) {
+const ILE_BOARD_CORNERS = [
+  { id: "nw", top: true, left: true },
+  { id: "ne", top: true, left: false },
+  { id: "sw", top: false, left: true },
+  { id: "se", top: false, left: false },
+] as const;
+
+function IleChapterBoardFrame({
+  left,
+  top,
+  width,
+  height,
+}: {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}) {
+  const corner = ILE_MAP_BOARD_CORNER_PX;
   return (
-    <>
-      <span
-        data-ile-open-work-tile-image
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${src})` }}
+    <div
+      data-ile-map-board-frame=""
+      aria-hidden
+      className="pointer-events-none absolute"
+      style={{ left, top, width, height, zIndex: 1 }}
+    >
+      <div
+        data-ile-map-board-frame-outer=""
+        className="absolute inset-0"
+        style={{
+          border: `${ILE_MAP_BOARD_FRAME_OUTER_PX}px solid ${ILE_MAP_BOARD_FRAME}`,
+        }}
       />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-black/50"
+      <div
+        data-ile-map-board-frame-inner=""
+        className="absolute"
+        style={{
+          inset: ILE_MAP_BOARD_FRAME_INSET_PX,
+          border: `${ILE_MAP_BOARD_FRAME_INNER_PX}px solid ${ILE_MAP_BOARD_FRAME}`,
+        }}
       />
-    </>
+      {ILE_BOARD_CORNERS.map((cornerId) => (
+        <div
+          key={cornerId.id}
+          data-ile-map-board-corner={cornerId.id}
+          className="absolute"
+          style={{
+            width: corner,
+            height: corner,
+            backgroundColor: ILE_MAP_BOARD_FRAME,
+            boxShadow: "inset 0 0 0 2px #1a1404",
+            top: cornerId.top ? -corner / 2 : undefined,
+            bottom: cornerId.top ? undefined : -corner / 2,
+            left: cornerId.left ? -corner / 2 : undefined,
+            right: cornerId.left ? undefined : -corner / 2,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function OpenWorkTileAesthetic({
+  src,
+  opacity,
+}: {
+  src: string;
+  /** Below 1, the still lets the route underneath show through. */
+  opacity?: number;
+}) {
+  return (
+    <span
+      data-ile-open-work-tile-image
+      aria-hidden
+      className="pointer-events-none absolute inset-0 bg-cover bg-center"
+      style={{ backgroundImage: `url(${src})`, opacity }}
+    />
   );
 }
 
@@ -302,25 +371,7 @@ export function MapWorldLayer({
   const openWorkIdSet = new Set(openWorkIds ?? []);
   const surface = useSurfaceAestheticImages(aestheticImages);
   const aestheticPool = surface.source === "pending" ? undefined : surface.images;
-  const altitudeGroups =
-    suggestMode === "chapter"
-      ? ileAltitudeGroups(
-          displayNodes.map((node) => ({
-            id: node.id,
-            row: node.position_y,
-            col: node.position_x,
-            lockUntilIds: node.lock_until_block_ids,
-            nextIds: node.next_block_ids,
-          })),
-        )
-      : [];
-  const altitudeByChapter = new Map<string, number>();
-  let altitudePeak = 0;
-  for (const group of altitudeGroups) {
-    altitudePeak = Math.max(altitudePeak, group.altitude);
-    for (const id of group.chapterIds) altitudeByChapter.set(id, group.altitude);
-  }
-  const altitudeFrame = ileAltitudeMapFrame(altitudeGroups);
+  const grid = skillGridMetrics(suggestMode === "chapter" ? "chapter" : "workspace");
   const pathOverlay =
     suggestMode === "chapter" && showPathOverlay
       ? ilePathOverlay(
@@ -334,13 +385,55 @@ export function MapWorldLayer({
         )
       : null;
   const pathFrame = pathOverlay ? ilePathMapFrame(pathOverlay) : null;
-  const spineIds = new Set(pathOverlay?.spine?.chapterIds ?? []);
+  const chapterBoardCells =
+    suggestMode === "chapter"
+      ? [...occupancy.keys(), ...unusableKeys].flatMap((key) => {
+          const split = key.split(":");
+          const row = Number(split[0]);
+          const col = Number(split[1]);
+          if (!Number.isFinite(row) || !Number.isFinite(col)) return [];
+          return [{ row, col }];
+        })
+      : [];
+  const chapterBoard = ileMapBoardBounds(chapterBoardCells);
+  const onChapterBoard = (row: number, col: number) =>
+    chapterBoard != null &&
+    row >= chapterBoard.minRow &&
+    row <= chapterBoard.maxRow &&
+    col >= chapterBoard.minCol &&
+    col <= chapterBoard.maxCol;
   return (
     <>
+      {chapterBoard ? (
+        <>
+          <div
+            data-ile-map-board=""
+            aria-hidden
+            className="pointer-events-none absolute"
+            style={{
+              left: chapterBoard.minX,
+              top: chapterBoard.minY,
+              width: chapterBoard.width,
+              height: chapterBoard.height,
+              zIndex: 0,
+              backgroundColor: ILE_MAP_BOARD_FILL,
+            }}
+          />
+          <IleChapterBoardFrame
+            left={chapterBoard.minX}
+            top={chapterBoard.minY}
+            width={chapterBoard.width}
+            height={chapterBoard.height}
+          />
+        </>
+      ) : null}
           {/* Empty cells + selection highlights + unusable ground */}
           {visibleCells.map((cell) => {
             const blockId = occupancy.get(`${cell.row}:${cell.col}`);
             if (blockId) return null;
+            if (suggestMode === "chapter" && !onChapterBoard(cell.row, cell.col)) {
+              return null;
+            }
             const selectedEmpty = selectedEmptyCells.some(
               (c) => c.row === cell.row && c.col === cell.col,
             );
@@ -365,7 +458,10 @@ export function MapWorldLayer({
               isGeneratorSpark: isGeneratorSparkEmpty,
               surface: suggestMode === "chapter" ? "chapter" : "block",
             });
-            const fog = fogLookup(cell.row, cell.col);
+            const fog =
+              suggestMode === "chapter"
+                ? { opacity: 1, fullyVisible: true }
+                : fogLookup(cell.row, cell.col);
             return (
               <div
                 key={`empty-${cell.row}:${cell.col}`}
@@ -378,10 +474,10 @@ export function MapWorldLayer({
                 }
                 className="absolute"
                 style={{
-                  left: cell.col * SKILL_GRID_PITCH,
-                  top: cell.row * SKILL_GRID_PITCH,
-                  width: SKILL_GRID_CELL_SIZE,
-                  height: SKILL_GRID_CELL_SIZE,
+                  left: cell.col * grid.pitch,
+                  top: cell.row * grid.pitch,
+                  width: grid.cellSize,
+                  height: grid.cellSize,
                 }}
               >
                 {fog.opacity < 1 ? (
@@ -408,7 +504,9 @@ export function MapWorldLayer({
                   data-empty-pan-enabled={
                     !busy && !generationPending ? "true" : "false"
                   }
-                  style={{ opacity: fog.opacity }}
+                  style={{
+                    opacity: fog.opacity,
+                  }}
                   onClick={(e) => {
                     // Primary path for empty select / Add (plain + Shift multi).
                     // Empty pan sets suppressEmptyClickRef so this is skipped.
@@ -453,7 +551,7 @@ export function MapWorldLayer({
                       : mapExploreOpen
                         ? "Click empty to explore this cell"
                       : canEdit && suggestMode === "chapter"
-                        ? "Empty ground. New chapters arrive from the session, not from this cell."
+                        ? "Click to add a chapter"
                       : canEdit && !fog.fullyVisible && !activeLassoShape
                         ? "Hidden by fog — add only on fully visible empty cells · drag a block or use Best spot to reveal"
                       : canEdit
@@ -545,6 +643,76 @@ export function MapWorldLayer({
               })
             : null}
 
+          {pathOverlay && pathFrame ? (
+            <svg
+              data-ile-path-overlay=""
+              aria-hidden
+              className="pointer-events-none absolute overflow-visible"
+              viewBox={`${pathFrame.minX} ${pathFrame.minY} ${pathFrame.width} ${pathFrame.height}`}
+              style={{
+                left: pathFrame.minX,
+                top: pathFrame.minY,
+                zIndex: 0,
+                width: pathFrame.width,
+                height: pathFrame.height,
+              }}
+            >
+              {pathOverlay.detours.map((route) => (
+                <g key={route.id} data-ile-path-detour={route.chapterIds.join(",")}>
+                  <path
+                    d={ilePathRouteD(route.points)}
+                    fill="none"
+                    stroke={ILE_PATH_YELLOW}
+                    strokeWidth={ILE_PATH_DETOUR_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray="10 8"
+                    opacity={0.85}
+                  />
+                </g>
+              ))}
+              {pathOverlay.spine ? (
+                <g data-ile-path-spine={pathOverlay.spine.chapterIds.join(",")}>
+                  <path
+                    d={ilePathRouteD(pathOverlay.spine.points)}
+                    fill="none"
+                    stroke="rgba(0,0,0,0.8)"
+                    strokeWidth={ILE_PATH_SPINE_CASING_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={ilePathRouteD(pathOverlay.spine.points)}
+                    fill="none"
+                    stroke={ILE_PATH_YELLOW}
+                    strokeWidth={ILE_PATH_SPINE_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {pathOverlay.spine.points.map((point, index) => {
+                    const last = index === pathOverlay.spine!.points.length - 1;
+                    if (index !== 0 && !last) return null;
+                    const size = 16;
+                    return (
+                      <rect
+                        key={point.chapterId}
+                        data-ile-path-stop={point.chapterId}
+                        data-ile-path-role={index === 0 ? "start" : "end"}
+                        x={point.x - size / 2}
+                        y={point.y - size / 2}
+                        width={size}
+                        height={size}
+                        fill={ILE_PATH_YELLOW}
+                        stroke="#1a1404"
+                        strokeWidth={2}
+                      />
+                    );
+                  })}
+                </g>
+              ) : null}
+            </svg>
+          ) : null}
+
           {/* Occupied blocks: solid rect or freeform multi-tile lecture */}
           {[...renderedBlockIds].map((blockId) => {
             const node = nodesById.get(blockId);
@@ -575,12 +743,14 @@ export function MapWorldLayer({
                   })),
                 ).flat()
               : skillNodeOccupiedCells(node);
-            const freeform = liveStretch
-              ? false
-              : Array.isArray(node.shape_cells) &&
-                node.shape_cells.length > 0 &&
-                occupiedCells.length > 0 &&
-                occupiedCells.length !== span.span_w * span.span_h;
+            // Chapter squares stay individual tiles. Workspace polyominoes still share one outline.
+            const freeform =
+              suggestMode !== "chapter" &&
+              !liveStretch &&
+              Array.isArray(node.shape_cells) &&
+              node.shape_cells.length > 0 &&
+              occupiedCells.length > 0 &&
+              occupiedCells.length !== span.span_w * span.span_h;
             // Map multi-select membership. Also treat controlled selectedNodeId as
             // sole selection in learner / when list is empty (detail focus).
             const multiSelected = selectedBlockIds.includes(node.id);
@@ -592,11 +762,11 @@ export function MapWorldLayer({
             // move still translates even if selection chrome lags a frame.
             const dragDx =
               isDragParticipant && blockDragOffset
-                ? blockDragOffset.dCol * SKILL_GRID_PITCH
+                ? blockDragOffset.dCol * grid.pitch
                 : 0;
             const dragDy =
               isDragParticipant && blockDragOffset
-                ? blockDragOffset.dRow * SKILL_GRID_PITCH
+                ? blockDragOffset.dRow * grid.pitch
                 : 0;
 
             const isBlockHighlighted =
@@ -717,13 +887,10 @@ export function MapWorldLayer({
                 workedOn: itemWorkedOn,
                 hasPreviousSessions,
               });
-            const chapterAltitude = altitudeByChapter.get(node.id);
             const baseChrome =
-              suggestMode === "chapter"
-                ? ILE_ALTITUDE_TILE_CLASS
-                : isLearnerDepHighlight
-                  ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
-                  : occupiedChrome.className;
+              suggestMode !== "chapter" && isLearnerDepHighlight
+                ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
+                : occupiedChrome.className;
             const chapterStatusIcon = occupiedChrome.statusIcon;
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
@@ -761,6 +928,16 @@ export function MapWorldLayer({
                   : "opacity-0 scale-95"
                 : ""
             } ${timUnopened ? MAP_CELL_TIM_UNOPENED_CLASS : ""}`;
+            const chapterBlockSurface =
+              suggestMode !== "chapter"
+                ? undefined
+                : tileAesthetic
+                  ? "transparent"
+                  : itemDone
+                    ? `rgb(255 255 255 / ${ILE_CHAPTER_BLOCK_ALPHA})`
+                    : itemWorkedOn
+                      ? undefined
+                      : `rgb(0 0 0 / ${ILE_CHAPTER_BLOCK_ALPHA})`;
             const hasOptimisticGeometry = Boolean(optimisticPlacements[node.id]);
             const tileTransition = {
               // No ease when live-dragging or holding optimistic settle — feels instant.
@@ -836,7 +1013,6 @@ export function MapWorldLayer({
               description: node.description,
               contentGenerated: dynamicGeneratedSet.has(node.id),
             });
-            const isChapterSurface = suggestMode === "chapter";
             const mapGlyph = resolveBlockMapGlyph({
               map_keyword: node.map_keyword,
               map_icon: node.map_icon,
@@ -858,8 +1034,10 @@ export function MapWorldLayer({
                 keyword={glyphKeyword}
                 icon={glyphIcon}
                 labelMode="glyph"
-                glyphVariant={isChapterSurface ? "outline" : "solid"}
+                glyphVariant="solid"
+                glyphScale={suggestMode === "chapter" ? "chapter" : "block"}
                 hideIcon={Boolean(tileAesthetic)}
+                labelPlate={suggestMode === "chapter" && Boolean(tileAesthetic)}
               />
             );
             // Freeform polyomino: seamless tiles (fill grid gaps) + outer edges only + one title.
@@ -915,8 +1093,8 @@ export function MapWorldLayer({
                     const { width, height } = freeformTilePixelSize(
                       cell,
                       shapeKeys,
-                      SKILL_GRID_CELL_SIZE,
-                      SKILL_GRID_GAP,
+                      grid.cellSize,
+                      grid.gap,
                     );
                     const isLabel =
                       cell.row === labelCell.row && cell.col === labelCell.col;
@@ -928,8 +1106,8 @@ export function MapWorldLayer({
                         data-freeform-tile={node.id}
                         className="absolute"
                         style={{
-                          left: cell.col * SKILL_GRID_PITCH + dragDx,
-                          top: cell.row * SKILL_GRID_PITCH + dragDy,
+                          left: cell.col * grid.pitch + dragDx,
+                          top: cell.row * grid.pitch + dragDy,
                           width,
                           height,
                           zIndex:
@@ -948,11 +1126,6 @@ export function MapWorldLayer({
                           data-map-cell-done={itemDone ? "true" : undefined}
                           data-map-cell-self-progress={
                             itemWorkedOn && !itemDone ? "true" : undefined
-                          }
-                          data-ile-altitude={
-                            suggestMode === "chapter" && chapterAltitude != null
-                              ? String(chapterAltitude)
-                              : undefined
                           }
                           data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
@@ -1074,7 +1247,12 @@ export function MapWorldLayer({
                           }}
                         >
                           {tileAesthetic ? (
-                            <OpenWorkTileAesthetic src={tileAesthetic} />
+                            <OpenWorkTileAesthetic
+                              src={tileAesthetic}
+                              opacity={
+                                suggestMode === "chapter" ? ILE_CHAPTER_BLOCK_ALPHA : undefined
+                              }
+                            />
                           ) : null}
                           {suggestMode === "chapter" ? (
                             <IleChapterInsightCountBadge
@@ -1124,14 +1302,14 @@ export function MapWorldLayer({
                       className="pointer-events-none absolute"
                       data-stretch-bbox={node.id}
                       style={{
-                        left: freeformBbox.position_x * SKILL_GRID_PITCH + dragDx,
-                        top: freeformBbox.position_y * SKILL_GRID_PITCH + dragDy,
+                        left: freeformBbox.position_x * grid.pitch + dragDx,
+                        top: freeformBbox.position_y * grid.pitch + dragDy,
                         width:
-                          freeformBbox.span_w * SKILL_GRID_CELL_SIZE +
-                          (freeformBbox.span_w - 1) * SKILL_GRID_GAP,
+                          freeformBbox.span_w * grid.cellSize +
+                          (freeformBbox.span_w - 1) * grid.gap,
                         height:
-                          freeformBbox.span_h * SKILL_GRID_CELL_SIZE +
-                          (freeformBbox.span_h - 1) * SKILL_GRID_GAP,
+                          freeformBbox.span_h * grid.cellSize +
+                          (freeformBbox.span_h - 1) * grid.gap,
                         zIndex: 6,
                       }}
                     >
@@ -1143,9 +1321,9 @@ export function MapWorldLayer({
             }
 
             const width =
-              span.span_w * SKILL_GRID_CELL_SIZE + (span.span_w - 1) * SKILL_GRID_GAP;
+              span.span_w * grid.cellSize + (span.span_w - 1) * grid.gap;
             const height =
-              span.span_h * SKILL_GRID_CELL_SIZE + (span.span_h - 1) * SKILL_GRID_GAP;
+              span.span_h * grid.cellSize + (span.span_h - 1) * grid.gap;
 
             return (
               <div
@@ -1153,8 +1331,8 @@ export function MapWorldLayer({
                 data-skill-cell
                 className="absolute"
                 style={{
-                  left: renderCell.col * SKILL_GRID_PITCH + dragDx,
-                  top: renderCell.row * SKILL_GRID_PITCH + dragDy,
+                  left: renderCell.col * grid.pitch + dragDx,
+                  top: renderCell.row * grid.pitch + dragDy,
                   width,
                   height,
                   zIndex:
@@ -1164,7 +1342,9 @@ export function MapWorldLayer({
                         ? 5
                         : liveStretch
                           ? 5
-                          : undefined,
+                          : suggestMode === "chapter"
+                            ? 2
+                            : undefined,
                 }}
               >
                 <button
@@ -1179,11 +1359,6 @@ export function MapWorldLayer({
                   data-ile-chapter-unlock-highlight={
                     suggestMode === "chapter" && isLearnerDepHighlight
                       ? "true"
-                      : undefined
-                  }
-                  data-ile-altitude={
-                    suggestMode === "chapter" && chapterAltitude != null
-                      ? String(chapterAltitude)
                       : undefined
                   }
                   data-block-selected={isBlockHighlighted ? "true" : "false"}
@@ -1234,7 +1409,11 @@ export function MapWorldLayer({
                       : undefined
                   }
                   className={`${tileClass} ${tileAesthetic ? "text-white" : ""}`}
-                  style={tileTransition}
+                  style={
+                    chapterBlockSurface
+                      ? { ...tileTransition, backgroundColor: chapterBlockSurface }
+                      : tileTransition
+                  }
                   data-ile-open-work-tile={
                     suggestMode === "chapter" && tileAesthetic ? "true" : undefined
                   }
@@ -1262,7 +1441,12 @@ export function MapWorldLayer({
                   }
                 >
                   {tileAesthetic ? (
-                    <OpenWorkTileAesthetic src={tileAesthetic} />
+                    <OpenWorkTileAesthetic
+                      src={tileAesthetic}
+                      opacity={
+                        suggestMode === "chapter" ? ILE_CHAPTER_BLOCK_ALPHA : undefined
+                      }
+                    />
                   ) : null}
                   {suggestMode === "chapter" ? (
                     <IleChapterInsightCountBadge
@@ -1302,157 +1486,6 @@ export function MapWorldLayer({
               </div>
             );
           })}
-
-      {altitudeGroups.length > 0 ? (
-        <svg
-          data-ile-altitude-map=""
-          aria-hidden
-          className="pointer-events-none absolute overflow-visible"
-          viewBox={`${altitudeFrame.minX} ${altitudeFrame.minY} ${altitudeFrame.width} ${altitudeFrame.height}`}
-          style={{
-            left: altitudeFrame.minX,
-            top: altitudeFrame.minY,
-            zIndex: 2,
-            width: altitudeFrame.width,
-            height: altitudeFrame.height,
-          }}
-        >
-          <defs>
-            {[...new Set(altitudeGroups.map((group) => group.altitude))].map((altitude) => {
-              const paint = ileAltitudePaint(altitude, altitudePeak);
-              return (
-                <filter
-                  key={altitude}
-                  id={`ile-alt-shadow-${altitude}`}
-                  data-ile-altitude-shadow={altitude}
-                  x="-40%"
-                  y="-40%"
-                  width="180%"
-                  height="200%"
-                  colorInterpolationFilters="sRGB"
-                >
-                  <feDropShadow
-                    dx="0"
-                    dy={paint.shadowDy}
-                    stdDeviation={paint.shadowBlur}
-                    floodColor="#000000"
-                    floodOpacity={paint.shadowOpacity}
-                  />
-                </filter>
-              );
-            })}
-          </defs>
-          {altitudeGroups.map((group) => {
-            const paint = ileAltitudePaint(group.altitude, altitudePeak);
-            return group.loops.map((loop, index) => (
-              <path
-                key={`${group.id}-${index}`}
-                data-ile-altitude-group={group.id}
-                data-ile-altitude={group.altitude}
-                d={loop.d}
-                fill={paint.fill}
-                stroke={paint.stroke}
-                strokeWidth={paint.strokeWidth}
-                strokeLinejoin="miter"
-                fillRule="evenodd"
-                filter={`url(#ile-alt-shadow-${group.altitude})`}
-              />
-            ));
-          })}
-        </svg>
-      ) : null}
-
-      {pathOverlay && pathFrame ? (
-        <svg
-          data-ile-path-overlay=""
-          aria-hidden
-          className="pointer-events-none absolute overflow-visible"
-          viewBox={`${pathFrame.minX} ${pathFrame.minY} ${pathFrame.width} ${pathFrame.height}`}
-          style={{
-            left: pathFrame.minX,
-            top: pathFrame.minY,
-            zIndex: 3,
-            width: pathFrame.width,
-            height: pathFrame.height,
-          }}
-        >
-          {pathOverlay.detours.map((route) => (
-            <g key={route.id} data-ile-path-detour={route.chapterIds.join(",")}>
-              <path
-                d={ilePathRouteD(route.points)}
-                fill="none"
-                stroke="rgba(0,0,0,0.8)"
-                strokeWidth={5}
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-              />
-              <path
-                d={ilePathRouteD(route.points)}
-                fill="none"
-                stroke="rgba(255,255,255,0.72)"
-                strokeWidth={1.75}
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-                strokeDasharray="7 6"
-              />
-              {route.points.map((point) =>
-                spineIds.has(point.chapterId) ? null : (
-                  <rect
-                    key={point.chapterId}
-                    data-ile-path-stop={point.chapterId}
-                    data-ile-path-role="detour"
-                    x={point.x - 3.5}
-                    y={point.y - 3.5}
-                    width={7}
-                    height={7}
-                    fill="none"
-                    stroke="white"
-                    strokeWidth={1.4}
-                  />
-                ),
-              )}
-            </g>
-          ))}
-          {pathOverlay.spine ? (
-            <g data-ile-path-spine={pathOverlay.spine.chapterIds.join(",")}>
-              <path
-                d={ilePathRouteD(pathOverlay.spine.points)}
-                fill="none"
-                stroke="rgba(0,0,0,0.88)"
-                strokeWidth={7}
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-              />
-              <path
-                d={ilePathRouteD(pathOverlay.spine.points)}
-                fill="none"
-                stroke="white"
-                strokeWidth={2.5}
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-              />
-              {pathOverlay.spine.points.map((point, index) => {
-                const last = index === pathOverlay.spine!.points.length - 1;
-                const size = index === 0 || last ? 9 : 6;
-                return (
-                  <rect
-                    key={point.chapterId}
-                    data-ile-path-stop={point.chapterId}
-                    data-ile-path-role={index === 0 ? "start" : last ? "end" : "spine"}
-                    x={point.x - size / 2}
-                    y={point.y - size / 2}
-                    width={size}
-                    height={size}
-                    fill={last ? "none" : "white"}
-                    stroke="white"
-                    strokeWidth={1.5}
-                  />
-                );
-              })}
-            </g>
-          ) : null}
-        </svg>
-      ) : null}
 
       <MapAnnotationStrokes annotationLayers={annotationLayers} />
     </>

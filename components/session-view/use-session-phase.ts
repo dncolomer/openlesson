@@ -894,7 +894,7 @@ if (shouldReuseExisting) {
       setPlanError(
         typeof err?.error === "string"
           ? err.error
-          : "Failed to translate chapter map. Try again or regenerate chapters.",
+          : "Failed to translate the board. Try again or regenerate chapters.",
       );
       return;
     }
@@ -930,7 +930,7 @@ if (!newPlan) {
   }
 }
 if (!newPlan) {
-  setPlanError("Failed to prepare chapter map. Please try again.");
+  setPlanError("Failed to prepare the board. Please try again.");
   return;
 }
 setSessionPlan(newPlan);

@@ -60,10 +60,9 @@ export function resolveEmptyCellMarker(input: {
   learnerMode?: boolean;
   isUnusable?: boolean;
   isGeneratorSpark?: boolean;
-  /** ILE chapter ground is not an add target, so it never shows a plus. */
+  /** Chapter and workspace empty cells share the plus when the grid can add. */
   surface?: "block" | "chapter" | string | null;
 }): EmptyCellMarker {
-  if (input.surface === "chapter") return "none";
   if (input.isUnusable || input.isGeneratorSpark) return "none";
   if (input.exploreActive) return "search";
   if (input.canEdit && !input.learnerMode) return "plus";

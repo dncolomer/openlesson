@@ -38,6 +38,7 @@ import {
   ILE_VOICE_CHALLENGE_SENTENCE_TWO,
   ileVoiceChallengeTranscriptPasses,
   ileWorkspaceStartAllowed,
+  judgeVoiceChallengeReading,
   latchVoiceChallengePass,
   mergeVoiceChallengeHeard,
   voiceChallengeFillRatio,
@@ -116,6 +117,28 @@ describe("practice voice challenge script and transcript", () => {
       .join(" ");
     expect(practiceVoiceChallengeTranscriptPasses(keepMost)).toBe(true);
     expect(practiceVoiceChallengeTranscriptPasses(keepHalf)).toBe(false);
+    expect(
+      practiceVoiceChallengeTranscriptPasses(
+        "think the whole time I aloud. signal thinking raw and attention baseline.",
+      ),
+    ).toBe(true);
+    expect(
+      judgeVoiceChallengeReading({
+        transcript: "think the whole time I aloud. signal thinking raw and attention baseline.",
+      }),
+    ).toBe("fail");
+    expect(
+      judgeVoiceChallengeReading({
+        transcript:
+          "think the whole time I aloud. signal thinking raw and attention baseline. read each question I'll aloud and press I'm done answering when a chain ends.",
+      }),
+    ).toBe("pass");
+    expect(judgeVoiceChallengeReading({ transcript: "" })).toBe("fail");
+    const aloudEarly = voiceChallengeReadMarks({
+      script: "I think aloud the whole time.",
+      transcript: "I think the whole time aloud",
+    });
+    expect(aloudEarly.filter((mark) => mark.kind === "word").every((mark) => mark.heard)).toBe(true);
   });
 
   it("keeps both points when recognition restarts between sentences, and a second pass does not start again", () => {
@@ -178,11 +201,17 @@ describe("practice voice challenge script and transcript", () => {
     const retryBody = challenge.slice(retryAt, challenge.indexOf("function skipLocally"));
     expect(retryBody).not.toContain("onPassRef");
     expect(challenge).toContain("mergeVoiceChallengeHeard");
-    expect(challenge).toContain("latchVoiceChallengePass");
-    const stopAt = challenge.indexOf("recognition.stop()");
-    const passAt = challenge.indexOf("onPassRef.current()");
-    expect(stopAt).toBeGreaterThan(-1);
-    expect(passAt).toBeGreaterThan(stopAt);
+    expect(challenge).toContain("judgeVoiceChallengeReading");
+    const onResultAt = challenge.indexOf("recognition.onresult");
+    const onEndAt = challenge.indexOf("recognition.onend");
+    const checkAt = challenge.indexOf("function checkReading");
+    expect(challenge.slice(onResultAt, onEndAt)).not.toContain("judgeVoiceChallengeReading");
+    expect(challenge.slice(onResultAt, onEndAt)).not.toContain("onPassRef");
+    const checkBody = challenge.slice(checkAt, checkAt + 700);
+    expect(checkBody).toContain("judgeVoiceChallengeReading");
+    expect(checkBody).toContain("setLight(\"green\")");
+    expect(checkBody).toContain("setLight(\"red\")");
+    expect(checkBody.indexOf("onPassRef.current()")).toBeGreaterThan(checkBody.indexOf("?.stop()"));
     const tap = read("components/tap-score/tap-score-phases.tsx");
     const prepare = read("components/scout-tap/scout-tap-phases.tsx");
     expect(tap).toContain("releaseVoiceChallengeStartLatch");
@@ -445,8 +474,11 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(spoken).toContain('data-practice-voice-variant="tap"');
     expect(spoken).toContain("Read this aloud to start");
     expect(spoken).toContain("data-practice-voice-word");
-    expect(spoken).toContain('data-heard="false"');
-    expect(spoken).toContain("data-practice-voice-fill");
+    expect(spoken).toContain('data-practice-voice-light="idle"');
+    expect(spoken).toContain("data-practice-voice-check");
+    expect(spoken).toContain("Start");
+    expect(spoken).not.toContain("data-heard");
+    expect(spoken).not.toContain("data-practice-voice-fill");
     expect(spoken).not.toContain("data-ile-sample-insight-card");
     expect(spoken).toContain("data-practice-voice-retry");
     expect(spoken).toContain("Try again");

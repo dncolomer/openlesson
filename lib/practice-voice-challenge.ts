@@ -32,11 +32,13 @@ export const VOICE_CHALLENGE_PASS_RATIO = 0.8;
 export const VOICE_CHALLENGE_START_DELAY_MS = 1100;
 
 export const PRACTICE_VOICE_CHALLENGE_RETRY = "Try again";
+export const PRACTICE_VOICE_CHALLENGE_CHECK = "Start";
+export const PRACTICE_VOICE_CHALLENGE_CHECK_REST = "Continue";
 export const PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP = "Skip";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE = "Read this aloud to start";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE_REST = "Read this aloud to continue";
 export const PRACTICE_VOICE_CHALLENGE_READ_NOTE =
-  "The session starts only when you read the lines below out loud. You will speak your thinking out loud the whole time. That is a raw thinking signal and a baseline attention increase.";
+  "Say the lines below, then press the button. A green light means the reading matches. A red light means it does not, so say them again and press the button.";
 
 export const ILE_SILENCE_LOCK_MINUTES_MIN = 1;
 export const ILE_SILENCE_LOCK_MINUTES_MAX = 30;
@@ -140,6 +142,21 @@ export function mergeVoiceChallengeHeard(input: {
     .trim();
 }
 
+/**
+ * Rough whole-reading check. Pass only when every sentence meets the overlap
+ * ratio. Call this when the learner presses the button, not on each mic result.
+ */
+export function judgeVoiceChallengeReading(input: {
+  transcript: string;
+  variant?: VoiceChallengeVariant;
+  ile?: boolean;
+}): "pass" | "fail" {
+  const variant = input.variant ?? (input.ile ? "ile" : "tap");
+  return voiceChallengeSentencesPass(voiceChallengeScriptFor(variant), input.transcript)
+    ? "pass"
+    : "fail";
+}
+
 /** One pass starts the workspace. A later matching transcript does not. */
 export function latchVoiceChallengePass(input: {
   alreadyPassed: boolean;
@@ -195,13 +212,16 @@ export type VoiceChallengeMark = {
   kind: "word" | "space" | "punct";
 };
 
-/** Mark script words in order as the learner reads them aloud. */
+/**
+ * Mark each script word when the transcript still has an unused copy of it.
+ * A repeated word later in the reading cannot be spent on an earlier gap, and
+ * an earlier copy cannot jump the cursor past the words in between.
+ */
 export function voiceChallengeReadMarks(input: {
   script: string;
   transcript: string;
 }): VoiceChallengeMark[] {
-  const heardWords = normalizeChallengeTranscript(input.transcript).split(" ").filter(Boolean);
-  let cursor = 0;
+  const pool = normalizeChallengeTranscript(input.transcript).split(" ").filter(Boolean);
   const marks: VoiceChallengeMark[] = [];
   for (const part of input.script.split(/(\s+)/)) {
     if (!part) continue;
@@ -216,9 +236,9 @@ export function voiceChallengeReadMarks(input: {
         marks.push({ text: chunk, heard: false, kind: "punct" });
         continue;
       }
-      const found = heardWords.indexOf(key, cursor);
+      const found = pool.indexOf(key);
       const heard = found !== -1;
-      if (heard) cursor = found + 1;
+      if (heard) pool.splice(found, 1);
       marks.push({ text: chunk, heard, kind: "word" });
     }
   }

@@ -5,18 +5,19 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import {
   ILE_SAMPLE_INSIGHT_LABEL,
+  PRACTICE_VOICE_CHALLENGE_CHECK,
+  PRACTICE_VOICE_CHALLENGE_CHECK_REST,
   PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
   PRACTICE_VOICE_CHALLENGE_READ_CUE,
   PRACTICE_VOICE_CHALLENGE_READ_CUE_REST,
   PRACTICE_VOICE_CHALLENGE_READ_NOTE,
   PRACTICE_VOICE_CHALLENGE_RETRY,
   VOICE_CHALLENGE_START_DELAY_MS,
-  latchVoiceChallengePass,
+  judgeVoiceChallengeReading,
   mergeVoiceChallengeHeard,
+  voiceChallengeReadMarks,
   practiceVoiceChallengeLocalSkipAllowed,
   retryVoiceChallenge,
-  voiceChallengeFillRatio,
-  voiceChallengeReadMarks,
   voiceChallengeScriptFor,
   type VoiceChallengeMark,
   type VoiceChallengeVariant,
@@ -55,8 +56,9 @@ function speechRecognitionConstructor(): SpeechRecognitionConstructor | null {
 }
 
 /**
- * The learner reads the script aloud. Words fill in as they are heard.
- * A click does not pass, and nothing is read to them.
+ * The learner says the lines, then presses the button. That click compares
+ * the captured reading with the script and shows a green or red light.
+ * Nothing is read to them, and a mic result does not pass by itself.
  */
 function splitMarksAtSentences(marks: readonly VoiceChallengeMark[]): VoiceChallengeMark[][] {
   const groups: VoiceChallengeMark[][] = [];
@@ -109,6 +111,7 @@ export function PracticeVoiceChallenge({
   const [transcript, setTranscript] = useState("");
   const [listenAttempt, setListenAttempt] = useState(0);
   const [starting, setStarting] = useState(false);
+  const [light, setLight] = useState<"idle" | "green" | "red">("idle");
   const committedRef = useRef("");
   const latestRef = useRef("");
   const passedRef = useRef(false);
@@ -129,9 +132,8 @@ export function PracticeVoiceChallenge({
     );
   }, [devBuild]);
   const script = voiceChallengeScriptFor(variant);
-  const marks = voiceChallengeReadMarks({ script, transcript });
+  const marks = voiceChallengeReadMarks({ script, transcript: "" });
   const sentences = joinOpeningSentences(splitMarksAtSentences(marks));
-  const fill = voiceChallengeFillRatio(marks);
   const cue =
     framing === "rest"
       ? PRACTICE_VOICE_CHALLENGE_READ_CUE_REST
@@ -159,21 +161,6 @@ export function PracticeVoiceChallenge({
       });
       latestRef.current = heard;
       setTranscript(heard);
-      const decision = latchVoiceChallengePass({
-        alreadyPassed: passedRef.current,
-        transcript: heard,
-        variant,
-      });
-      passedRef.current = decision.passed;
-      if (!decision.shouldStart) return;
-      stopped = true;
-      try {
-        recognition.stop();
-      } catch {
-        /* already stopped */
-      }
-      setStarting(true);
-      window.setTimeout(() => onPassRef.current(), VOICE_CHALLENGE_START_DELAY_MS);
     };
     recognition.onend = () => {
       if (stopped || passedRef.current) return;
@@ -215,6 +202,7 @@ export function PracticeVoiceChallenge({
     committedRef.current = "";
     latestRef.current = "";
     setTranscript("");
+    setLight("idle");
     setListenAttempt((attempt) => attempt + 1);
   }
 
@@ -232,6 +220,29 @@ export function PracticeVoiceChallenge({
     }
     setStarting(true);
     window.setTimeout(() => onPassRef.current(), VOICE_CHALLENGE_START_DELAY_MS);
+  }
+
+  function checkReading() {
+    if (passedRef.current) return;
+    const verdict = judgeVoiceChallengeReading({
+      transcript: latestRef.current,
+      variant,
+    });
+    if (verdict !== "pass") {
+      setLight("red");
+      return;
+    }
+    passedRef.current = true;
+    setLight("green");
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
+    window.setTimeout(() => {
+      setStarting(true);
+      onPassRef.current();
+    }, VOICE_CHALLENGE_START_DELAY_MS);
   }
 
   if (starting) {
@@ -282,12 +293,7 @@ export function PracticeVoiceChallenge({
                   <span
                     key={index}
                     data-practice-voice-word=""
-                    data-heard={mark.heard ? "true" : "false"}
-                    className={
-                      mark.heard
-                        ? "text-white transition-colors duration-300"
-                        : "text-neutral-600 transition-colors duration-300"
-                    }
+                    className="text-white"
                   >
                     {mark.text}
                   </span>
@@ -314,18 +320,37 @@ export function PracticeVoiceChallenge({
             </article>
           ) : null}
         </div>
-        <div
-          data-practice-voice-track=""
-          className="mt-6 h-px w-full bg-neutral-800"
-          aria-hidden
+        <p
+          data-practice-voice-captured=""
+          className="mt-6 min-h-6 text-sm leading-relaxed text-neutral-400"
         >
-          <div
-            data-practice-voice-fill=""
-            className="h-px bg-white transition-[width] duration-300"
-            style={{ width: `${Math.round(fill * 100)}%` }}
+          {transcript || "Nothing captured yet."}
+        </p>
+        <div className="mt-4 flex items-center gap-3" data-practice-voice-result="">
+          <span
+            data-practice-voice-light={light}
+            aria-label={light === "green" ? "Green" : light === "red" ? "Red" : "Not checked"}
+            className={
+              light === "green"
+                ? "inline-block size-3 rounded-full bg-green-500"
+                : light === "red"
+                  ? "inline-block size-3 rounded-full bg-red-500"
+                  : "inline-block size-3 rounded-full bg-neutral-700"
+            }
           />
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400">
+            {light === "green" ? "Green" : light === "red" ? "Red" : "Not checked"}
+          </span>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            data-practice-voice-check=""
+            onClick={checkReading}
+            className="inline-flex bg-white px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-950 transition hover:bg-neutral-200"
+          >
+            {framing === "rest" ? PRACTICE_VOICE_CHALLENGE_CHECK_REST : PRACTICE_VOICE_CHALLENGE_CHECK}
+          </button>
           <button
             type="button"
             data-practice-voice-retry=""

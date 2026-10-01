@@ -53,6 +53,15 @@ describe("tap-session-purity helpers", () => {
   it("disables purity evaluation while waiting for Helios; allows when idle", () => {
     expect(shouldEvaluateSessionPurity({ waitingForHelios: true })).toBe(false);
     expect(shouldEvaluateSessionPurity({ waitingForHelios: false })).toBe(true);
+    expect(shouldEvaluateSessionPurity({ canvasLoading: true })).toBe(false);
+    expect(shouldEvaluateSessionPurity({ waitingForXaiReply: true })).toBe(false);
+    expect(shouldEvaluateSessionPurity({ imDoneAnsweringBusy: true })).toBe(false);
+    expect(shouldEvaluateSessionPurity({
+      waitingForHelios: false,
+      canvasLoading: false,
+      waitingForXaiReply: false,
+      imDoneAnsweringBusy: false,
+    })).toBe(true);
     // Helpers themselves are unchanged for non-waiting inputs.
     expect(shouldAutoStashOnSilence(5_000, true)).toBe(true);
     expect(shouldPenalizeEmptyBarSilence(5_000, false)).toBe(true);
@@ -130,6 +139,21 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(client).toContain("shouldEvaluateSessionPurity");
     expect(client).toContain("isSendingRef");
     expect(client).toContain("waitingForHelios: isSendingRef.current");
+    expect(client).toContain("canvasLoading: canvasLoadingRef.current");
+    expect(client).toContain("waitingForXaiReply: xaiReplyWaitRef.current");
+    expect(client).toContain("imDoneAnsweringBusy: imDoneBusyRef.current");
+    expect(client).toContain("onLearnerWaitChange");
+    expect(client).toContain("onImDoneBusyChange");
+    const canvas = fs.readFileSync(path.join(ROOT, "components/ExcalidrawCanvas.tsx"), "utf8");
+    expect(canvas).toContain("canvasApiReady");
+    expect(canvas).toContain("canvasLoading: !canvasApiReady");
+    expect(canvas).toContain("waitingForXaiReply: askInFlight > 0 || heliosBusy");
+    const imDone = fs.readFileSync(
+      path.join(ROOT, "components/thought-ui/ImDoneAnsweringButton.tsx"),
+      "utf8",
+    );
+    expect(imDone).toContain("onBusyChange");
+    expect(imDone).toContain("onBusyChange?.(true)");
     expect(client).toContain("shouldAutoStashOnSilence");
     expect(client).toContain("shouldPenalizeEmptyBarSilence");
     // Live-entry grace so briefing elapsed time / UI settle does not burn purity.

@@ -13,6 +13,8 @@ import {
   ileWorkCanvasHasLiveElements,
   ileWorkCanvasIncomingClearsLiveScene,
   ileWorkCanvasTurnContextMessage,
+  ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+  ILE_XAI_LOADING_BOX_HEIGHT,
   ILE_XAI_LOADING_CUSTOM_DATA_KEY,
   ILE_XAI_LOADING_TEXT,
   parseIleXaiCanvasTurn,
@@ -143,7 +145,14 @@ export function placeThenReplaceTapXaiLoading(
   payload: IleXaiCanvasTurnPayload,
 ): { withLoading: IleWorkCanvasScene; replaced: IleWorkCanvasScene; loading: IleWorkCanvasElement } {
   const current = serializeIleWorkCanvasScene(scene);
-  const origin = ileWorkCanvasEmptyNearbyOrigin({ elements: current.elements });
+  const probe = createIleXaiLoadingPlaceholder({ x: 0, y: 0, turnId });
+  const origin = ileWorkCanvasEmptyNearbyOrigin({
+    elements: current.elements,
+    box: {
+      width: Number(probe.width) || ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+      height: Number(probe.height) || ILE_XAI_LOADING_BOX_HEIGHT,
+    },
+  });
   const loading = createIleXaiLoadingPlaceholder({
     x: origin.x,
     y: origin.y,

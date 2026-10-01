@@ -46,6 +46,7 @@ export function ImDoneAnsweringControl({
   disabled,
   sessionId,
   confirmClose,
+  onBusyChange,
 }: {
   thoughts: readonly IleImDoneAnsweringThought[];
   formingText?: string | null;
@@ -60,6 +61,8 @@ export function ImDoneAnsweringControl({
     confirmLabel?: string;
     cancelLabel?: string;
   };
+  /** True while the confirm dialog is open or the close send has not finished. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(() => new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -75,6 +78,7 @@ export function ImDoneAnsweringControl({
 
   const runClose = () => {
     setConfirmOpen(false);
+    onBusyChange?.(true);
     void closeIleImDoneAnswering({
       thoughts,
       flaggedIds,
@@ -84,6 +88,8 @@ export function ImDoneAnsweringControl({
       onClearForming,
     }).then((result) => {
       setFlaggedIds(result.flaggedIds);
+    }).finally(() => {
+      onBusyChange?.(false);
     });
   };
 
@@ -94,6 +100,7 @@ export function ImDoneAnsweringControl({
         onClick={() => {
           if (confirmClose) {
             setConfirmOpen(true);
+            onBusyChange?.(true);
             return;
           }
           runClose();
@@ -104,7 +111,10 @@ export function ImDoneAnsweringControl({
           <button
             type="button"
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-            onClick={() => setConfirmOpen(false)}
+            onClick={() => {
+              setConfirmOpen(false);
+              onBusyChange?.(false);
+            }}
             aria-label={confirmClose.cancelLabel || "Cancel"}
           />
           <div
@@ -121,7 +131,10 @@ export function ImDoneAnsweringControl({
               <button
                 type="button"
                 data-tap-im-done-confirm-cancel
-                onClick={() => setConfirmOpen(false)}
+                onClick={() => {
+                  setConfirmOpen(false);
+                  onBusyChange?.(false);
+                }}
                 className="rounded-none border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white"
               >
                 {confirmClose.cancelLabel || "Cancel"}

@@ -14,13 +14,22 @@ export const TAP_SILENCE_AUTO_STASH_MS = 5_000;
 export const TAP_PURITY_GRACE_MS = 3_000;
 
 /**
- * While Helios is answering (send in flight / responding), purity silence
- * checks must not run — waiting is not a learner silence failure.
+ * Purity silence must not run while the learner is blocked:
+ * Helios/XAI is answering, the work canvas is still loading, or the
+ * "I'm done answering" confirm (or its send) is in flight.
+ * Waiting is not a learner silence failure.
  */
 export function shouldEvaluateSessionPurity(options: {
-  waitingForHelios: boolean;
+  waitingForHelios?: boolean;
+  canvasLoading?: boolean;
+  waitingForXaiReply?: boolean;
+  imDoneAnsweringBusy?: boolean;
 }): boolean {
-  return !options.waitingForHelios;
+  if (options.waitingForHelios) return false;
+  if (options.canvasLoading) return false;
+  if (options.waitingForXaiReply) return false;
+  if (options.imDoneAnsweringBusy) return false;
+  return true;
 }
 
 /**

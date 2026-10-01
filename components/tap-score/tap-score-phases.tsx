@@ -149,6 +149,8 @@ export function TapScorePhases(props: {
     elements?: IleWorkCanvasSkeleton[] | null;
     origin?: { x?: number; y?: number } | null;
   }>;
+  onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
+  onImDoneBusyChange?: (busy: boolean) => void;
 }) {
   const {
     phase,
@@ -203,6 +205,8 @@ export function TapScorePhases(props: {
     entryQueryParams,
     workCanvasSceneRef,
     sendCanvasAsk,
+    onLearnerWaitChange,
+    onImDoneBusyChange,
   } = props;
 
   const [pendingStart, setPendingStart] = useState<
@@ -506,6 +510,7 @@ export function TapScorePhases(props: {
                   applyElements={canvasApplyElements}
                   applyElementsNonce={canvasApplyNonce}
                   heliosBusy={heliosBusy}
+                  onLearnerWaitChange={onLearnerWaitChange}
                   onSceneChange={handleSceneChange}
                   onCanvasPowActions={handleCanvasPowActions}
                   onAskSelected={handleAskSelected}
@@ -612,6 +617,7 @@ export function TapScorePhases(props: {
                         restartSpeechRecognitionSession();
                       }}
                       disabled={isSending}
+                      onBusyChange={onImDoneBusyChange}
                       confirmClose={{
                         title: TAP_IM_DONE_CONFIRM_TITLE,
                         body: TAP_IM_DONE_CONFIRM_BODY,

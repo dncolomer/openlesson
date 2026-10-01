@@ -197,6 +197,11 @@ export interface ExcalidrawCanvasProps {
   boardId?: string | null;
   /** Helios/XAI in-flight (TAP wait, ILE send) — same overlay chip as ask-about-selection. */
   heliosBusy?: boolean;
+  /**
+   * TAP purity clock. Canvas chunk load and an in-flight XAI reply are waits,
+   * not learner silence. Omitted on surfaces that do not score silence.
+   */
+  onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
   /** ILE: craft an insight linked to this chapter. */
   craftInsight?: IleCanvasCraftInsightConfig | null;
   /** When nonce changes, replace the live board (timer expiry reset). */
@@ -245,6 +250,7 @@ export function ExcalidrawCanvas({
   onAskSelected,
   boardId = null,
   heliosBusy = false,
+  onLearnerWaitChange,
   craftInsight = null,
   replaceScene = null,
   replaceSceneNonce = null,
@@ -256,6 +262,7 @@ export function ExcalidrawCanvas({
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [canvasApiReady, setCanvasApiReady] = useState(false);
   const [askPrompt, setAskPrompt] = useState("");
   const [boardPrompt, setBoardPrompt] = useState("");
   const [askInFlight, setAskInFlight] = useState(0);
@@ -530,6 +537,7 @@ export function ExcalidrawCanvas({
 
   const setExcalidrawAPI = useCallback((api: ExcalidrawAPIRef) => {
     excalidrawAPIRef.current = api;
+    setCanvasApiReady(true);
     flushPendingApply();
     requestAnimationFrame(() => {
       syncPromptBarPlacement();
@@ -552,6 +560,18 @@ export function ExcalidrawCanvas({
     onAskSelectedRef.current = onAskSelected;
   }, [onAskSelected]);
 
+  const onLearnerWaitChangeRef = useRef(onLearnerWaitChange);
+  useEffect(() => {
+    onLearnerWaitChangeRef.current = onLearnerWaitChange;
+  }, [onLearnerWaitChange]);
+
+  useEffect(() => {
+    onLearnerWaitChangeRef.current?.({
+      canvasLoading: !canvasApiReady,
+      waitingForXaiReply: askInFlight > 0 || heliosBusy,
+    });
+  }, [askInFlight, canvasApiReady, heliosBusy]);
+
   useEffect(() => {
     askInFlightRef.current = askInFlight;
   }, [askInFlight]);
@@ -569,6 +589,10 @@ export function ExcalidrawCanvas({
       if (newMarkHighlightTimerRef.current != null) {
         window.clearTimeout(newMarkHighlightTimerRef.current);
       }
+      onLearnerWaitChangeRef.current?.({
+        canvasLoading: true,
+        waitingForXaiReply: false,
+      });
     };
   }, []);
 

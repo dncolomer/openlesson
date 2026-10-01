@@ -582,4 +582,40 @@ describe("TAP Work canvas non-overlap and session geometry (shipped)", () => {
       ].join("\n") + "\n",
     );
   });
+
+  it("keeps a new TAP reply off existing marks, even when the free spot is outside the visible cluster", () => {
+    const occupied = convertToExcalidrawElements([
+      { type: "rectangle", x: 0, y: 0, width: 420, height: 260 },
+      { type: "text", text: "already on the board", x: 40, y: 40, width: 320, height: 80 },
+    ]);
+    const placed = applyTapHeliosReplyToWorkCanvas(
+      { elements: occupied, appState: {}, files: {} },
+      JSON.stringify({
+        text: "A new reply that must not cover the board.",
+        elements: [
+          { type: "text", text: "Second sentence stacked on the same spot.", x: 40, y: 40 },
+        ],
+        origin: { x: 40, y: 40 },
+      }),
+      null,
+      "tap-clear",
+    );
+    const added = placed.elements.filter((el) => !occupied.some((prev) => prev.id === el.id));
+    expect(added.filter((el) => el.type === "text").length).toBe(2);
+    expect(newMarksOverlapExisting(added, occupied)).toBe(false);
+    const [first, second] = added.filter((el) => el.type === "text");
+    expect(newMarksOverlapExisting([first!], [second!])).toBe(false);
+    const visible = canvasRect({ x: 0, y: 0, width: 420, height: 260 })!;
+    const laysOutside = added.some((el) => {
+      const rect = canvasRect(el);
+      if (!rect) return false;
+      return rect.minY >= visible.maxY || rect.minX >= visible.maxX;
+    });
+    expect(laysOutside).toBe(true);
+    for (const kept of occupied) {
+      const after = placed.elements.find((el) => el.id === kept.id)!;
+      expect(after.x).toBe(kept.x);
+      expect(after.y).toBe(kept.y);
+    }
+  });
 });

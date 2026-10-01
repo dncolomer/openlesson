@@ -229,6 +229,11 @@ export function TapScoreClient({
 
   const isEndingRef = useRef(false);
   const isSendingRef = useRef(false);
+  /** True until Excalidraw reports its API. Live entry starts paused. */
+  const canvasLoadingRef = useRef(true);
+  const xaiReplyWaitRef = useRef(false);
+  /** Confirm dialog open, or the I'm done answering send has not finished. */
+  const imDoneBusyRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
   /** Guard context-capacity auto-stash (no purity). */
@@ -758,6 +763,7 @@ export function TapScoreClient({
 
     const liveEnteredAt = Date.now();
     lastSpeechActivityAtRef.current = liveEnteredAt;
+    canvasLoadingRef.current = true;
     setTranscriptSilenceMs(0);
 
     const tick = window.setInterval(() => {
@@ -768,10 +774,16 @@ export function TapScoreClient({
         setTranscriptSilenceMs(0);
         return;
       }
-      // Helios in flight: freeze silence clock; do not auto-stash or empty-bar penalize.
-      if (!shouldEvaluateSessionPurity({ waitingForHelios: isSendingRef.current })) {
+      // Canvas load, XAI reply, or I'm done answering: waiting is not silence.
+      if (!shouldEvaluateSessionPurity({
+        waitingForHelios: isSendingRef.current,
+        canvasLoading: canvasLoadingRef.current,
+        waitingForXaiReply: xaiReplyWaitRef.current,
+        imDoneAnsweringBusy: imDoneBusyRef.current,
+      })) {
         lastSpeechActivityAtRef.current = Date.now();
         setTranscriptSilenceMs(0);
+        autoStashInFlightRef.current = false;
         return;
       }
       const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
@@ -933,6 +945,27 @@ export function TapScoreClient({
     setEditingTranscription({ draft: text, originalText: text });
   }
 
+  const holdSilenceForWait = useCallback((waiting: boolean) => {
+    if (!waiting) return;
+    lastSpeechActivityAtRef.current = Date.now();
+    setTranscriptSilenceMs(0);
+    autoStashInFlightRef.current = false;
+  }, []);
+
+  const onLearnerWaitChange = useCallback((wait: {
+    canvasLoading: boolean;
+    waitingForXaiReply: boolean;
+  }) => {
+    canvasLoadingRef.current = wait.canvasLoading;
+    xaiReplyWaitRef.current = wait.waitingForXaiReply;
+    holdSilenceForWait(wait.canvasLoading || wait.waitingForXaiReply);
+  }, [holdSilenceForWait]);
+
+  const onImDoneBusyChange = useCallback((busy: boolean) => {
+    imDoneBusyRef.current = busy;
+    holdSilenceForWait(busy);
+  }, [holdSilenceForWait]);
+
   if (isMobile) {
     return (
       <MobileBlockScreen
@@ -1003,6 +1036,8 @@ export function TapScoreClient({
       entryQueryParams={entryQueryParamsRef.current}
       workCanvasSceneRef={workCanvasSceneRef}
       sendCanvasAsk={sendCanvasAsk}
+      onLearnerWaitChange={onLearnerWaitChange}
+      onImDoneBusyChange={onImDoneBusyChange}
     />
   );
 }

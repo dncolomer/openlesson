@@ -905,7 +905,7 @@ export function applyIleXaiTurnToWorkCanvas(
   const obstacles = ileWorkCanvasPlacementObstacles(current.elements, options?.reserved);
   let incoming: IleWorkCanvasElement[] | null = null;
   for (const origin of candidates) {
-    const built = materialize(origin);
+    const built = separateIleWorkCanvasGroupOverlaps(materialize(origin));
     if (!ileWorkCanvasIncomingOverlapsObstacles(built, obstacles)) {
       incoming = built;
       break;
@@ -1052,12 +1052,63 @@ function ileWorkCanvasCollisionMembers(
   return incoming.filter((el) => !el.isDeleted);
 }
 
+type IleWorkCanvasMark = Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height"> & {
+  isDeleted?: boolean;
+  points?: readonly (readonly number[])[] | null;
+};
+
+/** Axis-aligned mark, including stroke points. A zero-area line still reserves a thin strip. */
+function ileWorkCanvasMarkRect(
+  el: IleWorkCanvasMark | null | undefined,
+): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  if (!el || el.isDeleted) return null;
+  const base = ileWorkCanvasNormalizedRect(el);
+  let minX = base?.minX ?? Infinity;
+  let minY = base?.minY ?? Infinity;
+  let maxX = base?.maxX ?? -Infinity;
+  let maxY = base?.maxY ?? -Infinity;
+  const points = Array.isArray(el.points) ? el.points : [];
+  for (const point of points) {
+    if (!Array.isArray(point)) continue;
+    const px = (Number(el.x) || 0) + (Number(point[0]) || 0);
+    const py = (Number(el.y) || 0) + (Number(point[1]) || 0);
+    if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
+    minX = Math.min(minX, px);
+    minY = Math.min(minY, py);
+    maxX = Math.max(maxX, px);
+    maxY = Math.max(maxY, py);
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  const thickness = 8;
+  if (!(maxX > minX)) {
+    minX -= thickness / 2;
+    maxX += thickness / 2;
+  }
+  if (!(maxY > minY)) {
+    minY -= thickness / 2;
+    maxY += thickness / 2;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function ileWorkCanvasObstacleRects(
+  elements: readonly IleWorkCanvasMark[],
+): { minX: number; minY: number; maxX: number; maxY: number }[] {
+  const rects: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
+  for (const el of elements) {
+    if (el?.isDeleted) continue;
+    const rect = ileWorkCanvasMarkRect(el);
+    if (rect) rects.push(rect);
+  }
+  return rects;
+}
+
 function ileWorkCanvasCollisionFootprint(
   incoming: readonly IleWorkCanvasElement[],
 ): { minX: number; minY: number; maxX: number; maxY: number } | null {
   let footprint: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
   for (const el of ileWorkCanvasCollisionMembers(incoming)) {
-    const rect = ileWorkCanvasNormalizedRect(el);
+    const rect = ileWorkCanvasMarkRect(el);
     if (!rect) continue;
     if (!footprint) {
       footprint = { ...rect };
@@ -1073,20 +1124,62 @@ function ileWorkCanvasCollisionFootprint(
 
 export function ileWorkCanvasIncomingOverlapsObstacles(
   incoming: readonly IleWorkCanvasElement[],
-  obstacles: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  obstacles: readonly IleWorkCanvasMark[],
 ): boolean {
+  const obstacleRects = ileWorkCanvasObstacleRects(obstacles);
+  if (!obstacleRects.length) return false;
   const members = ileWorkCanvasCollisionMembers(incoming);
   for (const el of members) {
-    const rect = ileWorkCanvasNormalizedRect(el);
+    const rect = ileWorkCanvasMarkRect(el);
     if (!rect) continue;
-    for (const obstacle of obstacles) {
-      if (obstacle.isDeleted) continue;
-      const other = ileWorkCanvasNormalizedRect(obstacle);
-      if (!other) continue;
+    for (const other of obstacleRects) {
       if (ileWorkCanvasPositiveAreaOverlap(rect, other)) return true;
     }
   }
   return false;
+}
+
+/**
+ * Pull unbound marks in one new group off each other.
+ * A label bound to a shape in the same group stays inside that shape.
+ * Later marks step downward, which may leave the visible area.
+ */
+export function separateIleWorkCanvasGroupOverlaps(
+  incoming: readonly IleWorkCanvasElement[],
+): IleWorkCanvasElement[] {
+  const list = incoming.map((el) => ({ ...el }));
+  const ids = new Set(list.map((el) => el.id));
+  const labelsByContainer = new Map<string, IleWorkCanvasElement[]>();
+  const free: IleWorkCanvasElement[] = [];
+  for (const el of list) {
+    if (el.isDeleted) continue;
+    const containerId = String(el.containerId || "");
+    if (containerId && ids.has(containerId)) {
+      const bucket = labelsByContainer.get(containerId) ?? [];
+      bucket.push(el);
+      labelsByContainer.set(containerId, bucket);
+      continue;
+    }
+    free.push(el);
+  }
+  free.sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id));
+  const placed: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
+  const gap = ILE_WORK_CANVAS_OVERLAP_GAP;
+  for (const el of free) {
+    for (let guard = 0; guard < 48; guard += 1) {
+      const rect = ileWorkCanvasMarkRect(el);
+      if (!rect) break;
+      const hit = placed.find((other) => ileWorkCanvasPositiveAreaOverlap(rect, other));
+      if (!hit) {
+        placed.push(rect);
+        break;
+      }
+      const dy = Math.max(gap, hit.maxY + gap - rect.minY);
+      el.y += dy;
+      for (const label of labelsByContainer.get(el.id) ?? []) label.y += dy;
+    }
+  }
+  return list;
 }
 
 function translateIleWorkCanvasElements(
@@ -1100,9 +1193,80 @@ function translateIleWorkCanvasElements(
 
 type IleWorkCanvasBox = { x: number; y: number; width: number; height: number; isDeleted?: boolean };
 
+/** How far placement will walk before it drops a mark off the current cluster. */
+const ILE_WORK_CANVAS_PLACEMENT_RINGS = 28;
+const ILE_WORK_CANVAS_PLACEMENT_STEPS = 64;
+
+function ileWorkCanvasUnionRect(
+  rects: readonly { minX: number; minY: number; maxX: number; maxY: number }[],
+): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  let bounds: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
+  for (const rect of rects) {
+    if (!bounds) {
+      bounds = { ...rect };
+      continue;
+    }
+    bounds.minX = Math.min(bounds.minX, rect.minX);
+    bounds.minY = Math.min(bounds.minY, rect.minY);
+    bounds.maxX = Math.max(bounds.maxX, rect.maxX);
+    bounds.maxY = Math.max(bounds.maxY, rect.maxY);
+  }
+  return bounds;
+}
+
+function ileWorkCanvasBoxMisses(
+  slot: { x: number; y: number },
+  boxW: number,
+  boxH: number,
+  obstacles: readonly { minX: number; minY: number; maxX: number; maxY: number }[],
+): boolean {
+  const box = {
+    minX: slot.x,
+    minY: slot.y,
+    maxX: slot.x + boxW,
+    maxY: slot.y + boxH,
+  };
+  return !obstacles.some((rect) => ileWorkCanvasPositiveAreaOverlap(box, rect));
+}
+
+/**
+ * A free top-left even when it sits outside the visible board.
+ * Walks below, then to the right, then left, then above the obstacle union.
+ */
+function ileWorkCanvasFirstClearSlot(input: {
+  obstacles: readonly { minX: number; minY: number; maxX: number; maxY: number }[];
+  boxW: number;
+  boxH: number;
+  gap: number;
+}): { x: number; y: number } {
+  const bounds = ileWorkCanvasUnionRect(input.obstacles);
+  const boxW = Math.max(1, input.boxW);
+  const boxH = Math.max(1, input.boxH);
+  const gap = input.gap > 0 ? input.gap : ILE_XAI_LOADING_GAP;
+  if (!bounds) return { x: TEXT_ORIGIN_X, y: TEXT_ORIGIN_Y };
+  for (let step = 0; step < ILE_WORK_CANVAS_PLACEMENT_STEPS; step += 1) {
+    const slots = [
+      { x: bounds.minX, y: bounds.maxY + gap + step * (boxH + gap) },
+      { x: bounds.maxX + gap + step * (boxW + gap), y: bounds.minY },
+      { x: bounds.minX - boxW - gap - step * (boxW + gap), y: bounds.minY },
+      { x: bounds.minX, y: bounds.minY - boxH - gap - step * (boxH + gap) },
+    ];
+    for (const slot of slots) {
+      if (ileWorkCanvasBoxMisses(slot, boxW, boxH, input.obstacles)) {
+        return { x: Math.round(slot.x), y: Math.round(slot.y) };
+      }
+    }
+  }
+  return {
+    x: Math.round(bounds.minX),
+    y: Math.round(bounds.maxY + gap + ILE_WORK_CANVAS_PLACEMENT_STEPS * (boxH + gap)),
+  };
+}
+
 /**
  * Free top-left for a new group. Prefers a spot tucked against the cluster
  * (usually just underneath) over a jump a full box-width to the right.
+ * If the nearby rings are full, the spot may sit off the visible board.
  */
 export function ileWorkCanvasClusteredOrigin(input: {
   elements?: readonly IleWorkCanvasBox[] | null;
@@ -1113,16 +1277,14 @@ export function ileWorkCanvasClusteredOrigin(input: {
   const boxH = Math.max(1, Number(input.box.height) || ILE_XAI_LOADING_BOX_HEIGHT);
   const gap = Number(input.gap) > 0 ? Number(input.gap) : ILE_XAI_LOADING_GAP;
   const live = (input.elements ?? []).filter((el) => !el.isDeleted);
-  const bounds = ileWorkCanvasContentBounds(live);
+  const obstacles = ileWorkCanvasObstacleRects(live);
+  const bounds = ileWorkCanvasUnionRect(obstacles);
   if (!bounds) return { x: TEXT_ORIGIN_X, y: TEXT_ORIGIN_Y };
-  const obstacles = live
-    .map(ileWorkCanvasNormalizedRect)
-    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
   const clusterMidX = (bounds.minX + bounds.maxX) / 2;
   const clusterMidY = (bounds.minY + bounds.maxY) / 2;
   const step = Math.max(gap, 36);
   const candidates: { x: number; y: number }[] = [];
-  for (let ring = 0; ring < 8; ring += 1) {
+  for (let ring = 0; ring < ILE_WORK_CANVAS_PLACEMENT_RINGS; ring += 1) {
     const yBelow = bounds.maxY + gap + ring * step;
     const yAbove = bounds.minY - boxH - gap - ring * step;
     const xRight = bounds.maxX + gap + ring * step;
@@ -1157,10 +1319,12 @@ export function ileWorkCanvasClusteredOrigin(input: {
     if (!best || score < best.score) best = { x: slot.x, y: slot.y, score };
   }
   if (best) return { x: Math.round(best.x), y: Math.round(best.y) };
-  return {
-    x: Math.round(bounds.minX),
-    y: Math.round(bounds.maxY + gap),
-  };
+  return ileWorkCanvasFirstClearSlot({
+    obstacles,
+    boxW,
+    boxH,
+    gap,
+  });
 }
 
 /** Ids to select when a generated group should take the canvas focus. */
@@ -1183,18 +1347,30 @@ export function ileWorkCanvasSelectionIds(
  */
 export function settleIleWorkCanvasIncoming(
   incoming: readonly IleWorkCanvasElement[],
-  obstacles: readonly Pick<IleWorkCanvasElement, "x" | "y" | "width" | "height" | "isDeleted">[],
+  obstacles: readonly IleWorkCanvasMark[],
 ): IleWorkCanvasElement[] {
-  const list = [...incoming];
+  const list = separateIleWorkCanvasGroupOverlaps(incoming);
   if (!list.length) return list;
   if (!ileWorkCanvasIncomingOverlapsObstacles(list, obstacles)) return list;
   const footprint = ileWorkCanvasCollisionFootprint(list);
   if (!footprint) return list;
   const width = footprint.maxX - footprint.minX;
   const height = footprint.maxY - footprint.minY;
-  const slot = ileWorkCanvasClusteredOrigin({
+  const clustered = ileWorkCanvasClusteredOrigin({
     elements: obstacles,
     box: { width, height },
+  });
+  const tucked = translateIleWorkCanvasElements(
+    list,
+    clustered.x - footprint.minX,
+    clustered.y - footprint.minY,
+  );
+  if (!ileWorkCanvasIncomingOverlapsObstacles(tucked, obstacles)) return tucked;
+  const slot = ileWorkCanvasFirstClearSlot({
+    obstacles: ileWorkCanvasObstacleRects(obstacles),
+    boxW: width,
+    boxH: height,
+    gap: ILE_XAI_LOADING_GAP,
   });
   return translateIleWorkCanvasElements(
     list,
@@ -1270,9 +1446,10 @@ export function ileWorkCanvasEmptyNearbyOrigin(input: {
   if (!nearBounds) return { x: TEXT_ORIGIN_X, y: TEXT_ORIGIN_Y };
   const obstacles = (input.elements ?? input.near ?? [])
     .filter((el) => !el.isDeleted)
-    .map(ileWorkCanvasElementRect);
+    .map((el) => ileWorkCanvasMarkRect(el))
+    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
   const clearance = ILE_XAI_LOADING_CLEARANCE;
-  for (let ring = 1; ring <= 6; ring += 1) {
+  for (let ring = 1; ring <= ILE_WORK_CANVAS_PLACEMENT_RINGS; ring += 1) {
     for (const slot of ileWorkCanvasLoadingSlots(nearBounds, boxW, boxH, gap * ring)) {
       const box = {
         minX: slot.x,
@@ -1284,10 +1461,16 @@ export function ileWorkCanvasEmptyNearbyOrigin(input: {
       return { x: Math.round(slot.x), y: Math.round(slot.y) };
     }
   }
-  return {
-    x: Math.round(nearBounds.maxX + gap * 6),
-    y: Math.round(nearBounds.minY),
-  };
+  const obstacleRects = (input.elements ?? input.near ?? [])
+    .filter((el) => !el.isDeleted)
+    .map((el) => ileWorkCanvasMarkRect(el))
+    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
+  return ileWorkCanvasFirstClearSlot({
+    obstacles: obstacleRects,
+    boxW,
+    boxH,
+    gap,
+  });
 }
 
 /** Treat in-flight wait boxes as occupied so parallel asks do not share an origin. */
@@ -2706,9 +2889,14 @@ export function compressIleWorkCanvasSelection(
   ]);
   if (!created.length) return current;
   const remove = new Set(liveSelected.map((el) => el.id));
+  const kept = current.elements.filter((el) => !remove.has(el.id));
+  const settled = settleIleWorkCanvasIncoming(
+    created,
+    kept.filter((el) => !el.isDeleted),
+  );
   return {
     ...current,
-    elements: [...current.elements.filter((el) => !remove.has(el.id)), ...created],
+    elements: [...kept, ...settled],
     appState: {
       ...current.appState,
       selectedElementIds: ileWorkCanvasSelectionIds(created),
@@ -2853,9 +3041,13 @@ export function applyIleWorkCanvasSuggestInsight(
     },
   ]);
   if (!created.length) return current;
+  const settled = settleIleWorkCanvasIncoming(
+    created,
+    current.elements.filter((el) => !el.isDeleted),
+  );
   return {
     ...current,
-    elements: [...current.elements, ...created],
+    elements: [...current.elements, ...settled],
   };
 }
 

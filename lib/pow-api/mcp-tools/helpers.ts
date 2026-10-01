@@ -48,6 +48,10 @@ import {
   uploadWorkspaceProofOfWork,
 } from "../upload-workspace-proof-of-work";
 import {
+  powModelAgentSimulationContract,
+  powModelVersionFieldDescription,
+} from "../pow-model-agent-contract";
+import {
   countWorkspaceProofOfWorkForPlan,
   POW_MODEL_VERSION,
   WORKSPACE_PROOF_OF_WORK_WIRE_TYPES,
@@ -85,6 +89,12 @@ import {
   submitBufferedProofOfWork,
 } from "../stash-api";
 
+
+const POW_MODEL_VERSION_FIELD = {
+  type: "string" as const,
+  enum: [POW_MODEL_VERSION],
+  description: powModelVersionFieldDescription(),
+};
 
 export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems-proof-of-work-api";
@@ -221,7 +231,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "upload_proof_of_work",
     description:
-      "Stream proof-of-work after meaningful product actions — core learning signal. Include block_id and tool_name per generate_proof_of_work_schema contract. Opaque workspaces: metadata allowlist (trace_token, goal_ref, anon, event_count, schema_version, protocol_id, phase_id, allow_plaintext); tool payloads are plaintext-linted unless allow_plaintext=true. REST: POST .../proof-of-work.",
+      `Stream proof-of-work after meaningful product actions — core learning signal. Include block_id and tool_name per generate_proof_of_work_schema contract. Opaque workspaces: metadata allowlist (trace_token, goal_ref, anon, event_count, schema_version, protocol_id, phase_id, allow_plaintext); tool payloads are plaintext-linted unless allow_plaintext=true. REST: POST .../proof-of-work. ${powModelAgentSimulationContract()}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -240,13 +250,9 @@ export const MCP_EVIDENCE_TOOLS = [
         tool_action: { type: "string" },
         metadata: { type: "object" },
         timestamp_ms: { type: "number" },
-        pow_model_version: {
-          type: "string",
-          enum: [POW_MODEL_VERSION],
-          description: "Optional. Must match the current PoW model if sent.",
-        },
+        pow_model_version: POW_MODEL_VERSION_FIELD,
       },
-      required: ["workspace_id", "type", "mime_type", "data"],
+      required: ["workspace_id", "type", "mime_type", "data", "pow_model_version"],
       additionalProperties: false,
     },
   },
@@ -494,7 +500,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "buffer_proof_of_work",
     description:
-      "Buffer a PoW unit in Stash API memory until stash or submit (TAP). REST: POST /api/v3/stash/workspaces/{id}/proof-of-work.",
+      `Buffer a PoW unit in Stash API memory until stash or submit (TAP). REST: POST /api/v3/stash/workspaces/{id}/proof-of-work. ${powModelAgentSimulationContract()}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -512,9 +518,9 @@ export const MCP_EVIDENCE_TOOLS = [
         tool_action: { type: "string" },
         metadata: { type: "object" },
         timestamp_ms: { type: "number" },
-        pow_model_version: { type: "string", enum: [POW_MODEL_VERSION] },
+        pow_model_version: POW_MODEL_VERSION_FIELD,
       },
-      required: ["workspace_id", "type", "mime_type", "data"],
+      required: ["workspace_id", "type", "mime_type", "data", "pow_model_version"],
       additionalProperties: false,
     },
   },

@@ -10,6 +10,8 @@ import {
 import { STASH_API_BASE } from "@/lib/api/agent-api-paths";
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 import { formatSkillMcpToolList } from "./agent-tool-surface";
+import { CANVAS_TAP_SIMULATION_HEADING } from "./pow-model-agent-contract";
+import { POW_MODEL_VERSION } from "./workspace-proof-of-work";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -326,6 +328,7 @@ Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
 
 Required content:
+The downloaded skill.md always ends with "${CANVAS_TAP_SIMULATION_HEADING}". That section is the tool_name and tool_action catalog for simulating a human TAP session as ${POW_MODEL_VERSION}. Do not rename those values or fold them into one generic event.
 ${purposeLine}
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:

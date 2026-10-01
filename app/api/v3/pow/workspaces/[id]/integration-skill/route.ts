@@ -15,6 +15,7 @@ import {
 import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
+import { withCanvasTapSimulationSkill } from "@/lib/pow-api/pow-model-agent-contract";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return NextResponse.json(
       await withProofOfWorkApiResponse(
         {
-          skill_md: skillResult.text,
+          skill_md: withCanvasTapSimulationSkill(skillResult.text),
           skill_name: deriveSkillName(request.integration_name),
           suggested_share_path: deriveSuggestedSharePath(request.integration_name),
           workspace_summary: {

@@ -20,6 +20,7 @@ import {
   deriveSuggestedSharePath,
   parseIntegrationSkillRequest,
 } from "../integration-skill";
+import { withCanvasTapSimulationSkill } from "../pow-model-agent-contract";
 import { buildWorkspacePerformanceContext } from "../performance-context";
 import type { ApiKeyScope, AuthContext } from "../types";
 import { hasScope } from "../auth";
@@ -329,7 +330,7 @@ export async function callMcpProofOfWorkTool(
 
     return await evidenceToolResult(
       {
-        skill_md: skillResult.text,
+        skill_md: withCanvasTapSimulationSkill(skillResult.text),
         skill_name: deriveSkillName(request.integration_name),
         suggested_share_path: deriveSuggestedSharePath(request.integration_name),
         workspace_summary: {

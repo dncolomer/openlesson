@@ -10,6 +10,7 @@ import {
   STASH_API_BASE,
 } from "@/lib/api/agent-api-paths";
 import { workspaceAllowsKnowledgeLinkMint } from "@/lib/workspace-kind";
+import { powModelAgentSimulationContract } from "./pow-model-agent-contract";
 import type { ApiKeyScope } from "./types";
 
 export type AgentToolSurfaceEntry = {
@@ -65,7 +66,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "upload_proof_of_work",
     scope: "workspaces:write",
-    summary: "Upload tool/screen/video/EEG proof of work.",
+    summary: `Upload tool/screen/video/EEG proof of work. ${powModelAgentSimulationContract()}`,
     rest: {
       method: "POST",
       path: `${POW_API_BASE}/workspaces/{workspace_id}/proof-of-work`,
@@ -175,8 +176,7 @@ export const AGENT_TOOL_SURFACE = [
   {
     name: "buffer_proof_of_work",
     scope: "workspaces:write",
-    summary:
-      "Buffer a PoW unit in Stash API temporary memory (TAP) until stash or submit.",
+    summary: `Buffer a PoW unit in Stash API temporary memory (TAP) until stash or submit. ${powModelAgentSimulationContract()}`,
     rest: {
       method: "POST",
       path: `${STASH_API_BASE}/workspaces/{workspace_id}/proof-of-work`,

@@ -47,7 +47,7 @@ import {
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
 import {
-  DEFAULT_WORKSPACE_INTERACTION_MODE,
+  defaultInteractionModeForWorkspace,
   mountsCreatorAuthoringDrawers,
   mountsLearnerPracticeDrawer,
   normalizeWorkspaceInteractionMode,
@@ -136,7 +136,7 @@ export function WorkspaceView({
         return resolveAyclCapabilities(ayclAccessTierProp ?? "full")
           .defaultInteractionMode;
       }
-      return DEFAULT_WORKSPACE_INTERACTION_MODE;
+      return defaultInteractionModeForWorkspace(initialPlan?.workspace_kind);
     });
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -527,6 +527,14 @@ export function WorkspaceView({
       setIsOrgAdmin(orgAdminForWorkspace);
 
       setPlan(planData);
+      if (
+        defaultInteractionModeForWorkspace(
+          (planData as { workspace_kind?: unknown }).workspace_kind,
+        ) === "creator" &&
+        !(isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle)
+      ) {
+        setInteractionMode("creator");
+      }
       setUnusableCells(
         normalizeUnusableCells(
           (planData as { unusable_cells?: unknown }).unusable_cells,
@@ -621,6 +629,15 @@ export function WorkspaceView({
    * never owner-only resolveActiveSection alone (that snaps Knowledge → Workspace).
    */
   const workspaceKind = parseWorkspaceKind(plan?.workspace_kind);
+  // KR has no map, so the Build toggle never mounts. Keep Build so Goals
+  // and Settings stay on the nav. Practice-only AYCL cannot enter Build.
+  useEffect(() => {
+    if (defaultInteractionModeForWorkspace(workspaceKind) !== "creator") return;
+    if (isAycl && ayclCapabilities && !ayclCapabilities.allowCreatorModeToggle) {
+      return;
+    }
+    setInteractionMode("creator");
+  }, [ayclCapabilities, isAycl, workspaceKind]);
   const sectionAuth = useCallback(
     () => ({
       isOwner,

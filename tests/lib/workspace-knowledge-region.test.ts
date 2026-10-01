@@ -19,6 +19,7 @@ import {
 } from "@/lib/workspace-sections";
 import {
   availableSectionsForMode,
+  defaultInteractionModeForWorkspace,
   resolveActiveSectionForMode,
 } from "@/lib/workspace-mode";
 import {
@@ -127,6 +128,29 @@ describe("Knowledge Region shell", () => {
       "knowledge",
       "settings",
     ]);
+    // Play drops Settings, and the Build toggle is on the map KR does not have.
+    expect(defaultInteractionModeForWorkspace("knowledge_region")).toBe("creator");
+    expect(defaultInteractionModeForWorkspace("standard")).toBe("learner");
+    const learnerKr = availableSectionsForMode({
+      mode: "learner",
+      isOwner: true,
+      isLoggedIn: true,
+      workspaceKind: "knowledge_region",
+    });
+    expect(
+      buildWorkspaceSectionNavItems({
+        t,
+        isLearnerMode: true,
+        isOwner: true,
+        visibleSections: learnerKr,
+      }).map((item) => item.key),
+    ).not.toContain("settings");
+    const viewSource = readFileSync(
+      join(ROOT, "components/WorkspaceView.tsx"),
+      "utf8",
+    );
+    expect(viewSource).toContain("defaultInteractionModeForWorkspace");
+    expect(viewSource).toContain('setInteractionMode("creator")');
     expect(krNav.map((item) => item.key)).not.toContain("workspace");
     const standardNav = buildWorkspaceSectionNavItems({
       t,

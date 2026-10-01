@@ -17,9 +17,22 @@ export type WorkspaceInteractionMode = "creator" | "learner";
 /** Under-minimap 3-state control: Play / Build / Explore. */
 export type WorkspaceMapToggleId = WorkspaceInteractionMode | "explore";
 
-/** Workspaces open in Play (practice). */
+/** Map workspaces open in Play (practice). */
 export const DEFAULT_WORKSPACE_INTERACTION_MODE: WorkspaceInteractionMode =
   "learner";
+
+/**
+ * Knowledge Region has no map, and the Build control lives on that map.
+ * Open those shells in Build so Goals / Knowledge / Settings are reachable.
+ * Standard workspaces stay on Play.
+ */
+export function defaultInteractionModeForWorkspace(
+  kind: unknown,
+): WorkspaceInteractionMode {
+  return isKnowledgeRegionWorkspace(kind)
+    ? "creator"
+    : DEFAULT_WORKSPACE_INTERACTION_MODE;
+}
 
 export const WORKSPACE_INTERACTION_MODES: readonly WorkspaceInteractionMode[] = [
   "learner",

@@ -82,6 +82,7 @@ export interface AvailableSubject {
   embedding_model_id: string;
   as_of_ms: number;
   confidence: number;
+  label?: string | null;
 }
 
 export interface KnowledgeConfigResponse {
@@ -190,6 +191,7 @@ export function subjectOptionKey(s: ModelsTabSubjectRef): string {
 }
 
 export function subjectOptionLabel(s: AvailableSubject, currentUserId?: string | null): string {
+  if (s.label) return s.label;
   if (s.user_id && currentUserId && s.user_id === currentUserId) return "You";
   if (s.user_id) return `User ${s.user_id.slice(0, 8)}…`;
   if (s.guest_user_id) return `Guest ${s.guest_user_id.slice(0, 8)}…`;

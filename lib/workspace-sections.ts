@@ -2,7 +2,8 @@
  * Top-level workspace shell sections.
  * Context hosts notes + files; Workspace is map-first with authoring tools.
  * Simulation is an author-facing learner-journey overview (not the map).
- * Knowledge Region workspaces expose Goals / Knowledge / Settings only.
+ * Verification Workspaces (stored as knowledge_region) expose Goals,
+ * Verification Flows, Context, Knowledge, and Settings.
  */
 
 import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
@@ -14,6 +15,7 @@ export type WorkspaceSectionKey =
   | "dags"
   | "map_types"
   | "goals"
+  | "verification_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -29,6 +31,7 @@ export type WorkspaceMainSurface =
   | "dags"
   | "map_types"
   | "goals"
+  | "verification_flows"
   | "knowledge"
   | "insights"
   | "kpis"
@@ -39,6 +42,7 @@ export const WORKSPACE_SECTION_KEYS: readonly WorkspaceSectionKey[] = [
   "dags",
   "map_types",
   "goals",
+  "verification_flows",
   "context",
   "simulation",
   "knowledge",
@@ -66,6 +70,8 @@ export type WorkspaceSectionLayout = {
   mountsMapTypesPanel: boolean;
   /** Goals tab — multi workspace goals CRUD. */
   mountsGoalsPanel: boolean;
+  /** Verification Flows tab — only on a Verification Workspace. */
+  mountsVerificationFlowsPanel?: boolean;
   /** Always empty — local tab bar removed from Workspace section. */
   localTabs: readonly WorkspaceLocalTabKey[];
   mountsPerformancePanel: boolean;
@@ -163,6 +169,24 @@ export function resolveWorkspaceSectionLayout(
         mountsDagsPanel: false,
         mountsMapTypesPanel: false,
         mountsGoalsPanel: true,
+        localTabs: [],
+        mountsPerformancePanel: false,
+        mountsIntegrationPanel: false,
+        mountsInsightsPanel: false,
+        mountsKpisPanel: false,
+      };
+    case "verification_flows":
+      return {
+        section: "verification_flows",
+        mainSurface: "verification_flows",
+        showBlockMapChrome: false,
+        showSessionsColumn: false,
+        mountsContextPanel: false,
+        mountsSimulationPanel: false,
+        mountsDagsPanel: false,
+        mountsMapTypesPanel: false,
+        mountsGoalsPanel: false,
+        mountsVerificationFlowsPanel: true,
         localTabs: [],
         mountsPerformancePanel: false,
         mountsIntegrationPanel: false,
@@ -315,7 +339,7 @@ export function resolveActiveSection(
 export function availableWorkspaceSections(options: WorkspaceSectionAuth): WorkspaceSectionKey[] {
   if (isKnowledgeRegionWorkspace(options.workspaceKind)) {
     if (canAccessPrivilegedWorkspaceSections(options)) {
-      return ["goals", "knowledge", "settings"];
+      return ["goals", "verification_flows", "context", "knowledge", "settings"];
     }
     // KR is owner-facing; consumers have no remaining public tabs.
     return [];

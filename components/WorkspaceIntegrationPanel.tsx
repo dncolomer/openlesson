@@ -220,6 +220,8 @@ export function WorkspaceIntegrationPanel({
             <CustomVerificationModelsPanel
               workspaceId={workspaceId}
               currentUserId={currentUserId}
+              ayclToken={undefined}
+              verificationWorkspace={isKnowledgeRegion}
             />
           </section>
         ) : null}

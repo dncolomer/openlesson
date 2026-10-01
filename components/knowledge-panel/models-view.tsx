@@ -11,6 +11,11 @@ import {
 } from "@/components/knowledge-panel/widgets";
 import { useKnowledgeEmbeddings } from "@/components/knowledge-panel/use-knowledge-embeddings";
 import type { KnowledgeModelsViewProps } from "@/components/knowledge-panel/types";
+import { VerificationFlowSubtabFilter } from "@/components/VerificationFlowSubtabFilter";
+import {
+  knowledgeCoordsForVerificationFlow,
+  knowledgeSubjectsForVerificationFlow,
+} from "@/lib/verification-knowledge-subtab";
 
 export function KnowledgeModelsView({
   workspaceId,
@@ -18,6 +23,7 @@ export function KnowledgeModelsView({
   ayclToken,
   canInspectOthers,
   lockSubjectToSelf,
+  flowFilter,
 }: KnowledgeModelsViewProps) {
   const {
     availableSubjects,
@@ -72,6 +78,13 @@ export function KnowledgeModelsView({
     canInspectOthers,
     lockSubjectToSelf,
   });
+  const flowId = flowFilter?.enabled ? flowFilter.flowId : null;
+  const subjects = knowledgeSubjectsForVerificationFlow(
+    availableSubjects,
+    flowFilter?.rows ?? [],
+    flowId,
+  );
+  const visibleCoords = knowledgeCoordsForVerificationFlow(coords, subjects, flowId);
 
   return (
         <div
@@ -90,6 +103,7 @@ export function KnowledgeModelsView({
           role={embeddingsFullscreen ? "dialog" : undefined}
           aria-modal={embeddingsFullscreen ? true : undefined}
         >
+          <VerificationFlowSubtabFilter subtab="embeddings" filter={flowFilter} />
           <div className="flex min-h-0 flex-1 gap-3">
             {/* Left: algorithm + tall users list (fills remaining height) + summary */}
             <aside
@@ -138,9 +152,9 @@ export function KnowledgeModelsView({
                 <EmbeddingsUserMultiPicker
                   ariaLabel="Embeddings projections users"
                   selectedKeys={embSelectedKeys}
-                  currentUserId={currentUserId}
-                  availableSubjects={availableSubjects}
-                  canInspectOthers={canInspectOthers}
+                  currentUserId={flowId ? null : currentUserId}
+                  availableSubjects={subjects}
+                  canInspectOthers={flowId ? true : canInspectOthers}
                   onChange={setEmbSelectedKeys}
                   fillHeight
                 />
@@ -396,7 +410,7 @@ export function KnowledgeModelsView({
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col">
                   <ProjectionSpaceWidget
-                    coords={coords}
+                    coords={visibleCoords}
                     regionOverlays={regionOverlays}
                     displayMode={projectionDisplayMode}
                     onDisplayModeChange={setProjectionDisplayMode}
@@ -405,13 +419,16 @@ export function KnowledgeModelsView({
               )}
 
               <div className="flex shrink-0 flex-wrap gap-2 text-[10px] text-neutral-500">
-                {embScope.kind === "multi" && embScope.subjects.length > 1 ? (
-                  embScope.subjects.map((s, i) => {
+                {(flowId ? subjects.length > 1 : embScope.kind === "multi" && embScope.subjects.length > 1) ? (
+                  (flowId ? subjects : embScope.subjects).map((s, i) => {
                     const key = subjectOptionKey(s);
                     const color =
                       SUBJECT_TRAJECTORY_COLORS[i % SUBJECT_TRAJECTORY_COLORS.length];
+                    const named = "label" in s && typeof s.label === "string" ? s.label : "";
                     const label =
-                      s.guest_user_id
+                      named
+                        ? named
+                        : s.guest_user_id
                         ? `Guest ${s.guest_user_id.slice(0, 8)}…`
                         : s.user_id && s.user_id === currentUserId
                           ? "You"

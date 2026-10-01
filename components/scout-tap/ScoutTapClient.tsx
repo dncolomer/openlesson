@@ -20,7 +20,9 @@ import { resolveTapShowEndSession } from "@/components/TapScoreClient";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
 import { ScoutTapPhases } from "@/components/scout-tap/scout-tap-phases";
 import {
+  advanceTapLiveClockPause,
   pickTapBackgroundImage,
+  tapLiveClockRemainingSeconds,
   type Phase,
   resolveInitialMinutes,
 } from "@/lib/tap-score-client-helpers";
@@ -164,6 +166,10 @@ export function ScoutTapClient({
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [clockPaused, setClockPaused] = useState(false);
+  const pauseStartedAtRef = useRef<number | null>(null);
+  const pausedMsRef = useRef(0);
+  const questionsLoadingRef = useRef(false);
   const [bgImage, setBgImage] = useState("");
   const [tapSessionId, setTapSessionId] = useState<string | null>(
     (initialSession?.id as string) ?? null,
@@ -365,6 +371,9 @@ export function ScoutTapClient({
       setCanvasApplyElements([]);
       setCanvasApplyNonce(0);
       const startedAtMs = Date.now();
+      pauseStartedAtRef.current = null;
+      pausedMsRef.current = 0;
+      setClockPaused(false);
       setStartedAt(startedAtMs);
       setRemainingSeconds(sessionMinutes * 60);
       setPhase("live");
@@ -411,19 +420,39 @@ export function ScoutTapClient({
   endAndScoreRef.current = endSession;
 
   useEffect(() => {
+    questionsLoadingRef.current = questionsLoading;
+  }, [questionsLoading]);
+
+  useEffect(() => {
     if (phase !== "live" || !startedAt) return;
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, liveMinutes * 60 - elapsed);
+      const now = Date.now();
+      const waiting = questionsLoadingRef.current;
+      const next = advanceTapLiveClockPause({
+        waiting,
+        nowMs: now,
+        pauseStartedAtMs: pauseStartedAtRef.current,
+        pausedMs: pausedMsRef.current,
+      });
+      pauseStartedAtRef.current = next.pauseStartedAtMs;
+      pausedMsRef.current = next.pausedMs;
+      const remaining = tapLiveClockRemainingSeconds({
+        nowMs: now,
+        startedAtMs: startedAt,
+        durationSeconds: liveMinutes * 60,
+        pausedMs: next.pausedMs,
+        pauseStartedAtMs: next.pauseStartedAtMs,
+      });
+      setClockPaused(waiting);
       setRemainingSeconds(remaining);
-      if (remaining <= 0) {
+      if (remaining <= 0 && !waiting) {
         void endAndScoreRef.current();
       }
     };
     tick();
     const id = window.setInterval(tick, 500);
     return () => window.clearInterval(id);
-  }, [phase, startedAt, liveMinutes]);
+  }, [phase, startedAt, liveMinutes, questionsLoading]);
 
   const handleSceneChange = useCallback((scene: IleWorkCanvasScene) => {
     if (!tapWorkCanvasShouldAcceptSceneUpdate(workCanvasSceneRef.current, scene)) return;
@@ -471,6 +500,9 @@ export function ScoutTapClient({
     isEndingRef.current = false;
     setPhase("briefing");
     setStartedAt(null);
+    pauseStartedAtRef.current = null;
+    pausedMsRef.current = 0;
+    setClockPaused(false);
     setRemainingSeconds(0);
     setError("");
     setResultsError("");
@@ -553,6 +585,7 @@ export function ScoutTapClient({
       startSession={startSession}
       participantIdentity={participantIdentity}
       remainingSeconds={remainingSeconds}
+      clockPaused={clockPaused}
       showEndSession={showEndSession}
       endSession={() => void endSession()}
       workspaceId={workspaceId}

@@ -747,7 +747,7 @@ export function WorkspaceView({
   });
   const sectionLayout = resolveWorkspaceSectionLayout(resolvedSection);
   // Mode-aware section list (Learner: workspace+knowledge; Creator: shipped registry).
-  // Knowledge Region never resurrects map / Context / Simulation / DAGs.
+  // Knowledge Region creator includes Context and omits the map, DAGs, and Simulation.
   const visibleSections =
     interactionMode === "learner"
       ? modeShell.sections

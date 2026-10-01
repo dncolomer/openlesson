@@ -3,14 +3,18 @@
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import { formatRankingScore } from "@/lib/pow-api/knowledge-ranking";
 import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
+import { useState } from "react";
 import { useKnowledgeRanking } from "@/components/knowledge-panel/use-knowledge-ranking";
 import type { KnowledgeRankingViewProps } from "@/components/knowledge-panel/types";
+import { VerificationFlowSubtabFilter } from "@/components/VerificationFlowSubtabFilter";
+import { knowledgeRankingCardsForVerificationFlow } from "@/lib/verification-knowledge-subtab";
 
 export function KnowledgeRankingView({
   workspaceId,
   currentUserId = null,
   ayclToken,
   canInspectOthers,
+  flowFilter,
 }: KnowledgeRankingViewProps) {
   const {
     rankingCards,
@@ -26,6 +30,21 @@ export function KnowledgeRankingView({
     ayclToken,
     canInspectOthers,
   });
+  const flowId = flowFilter?.enabled ? flowFilter.flowId : null;
+  const rankingList = knowledgeRankingCardsForVerificationFlow(
+    rankingCards,
+    flowFilter?.rows ?? [],
+    flowId,
+  );
+  const [flowCardKey, setFlowCardKey] = useState<string | null>(null);
+  const activeCard = flowId
+    ? rankingList.find((card) => card.subjectKey === flowCardKey) ?? rankingList[0] ?? null
+    : selectedRankingCard;
+  const detailReport = !flowId && activeCard?.hasSnapshot ? selectedRankingReport : null;
+  const proofText =
+    activeCard && "proofText" in activeCard && typeof activeCard.proofText === "string"
+      ? activeCard.proofText
+      : "";
 
   return (
     <section
@@ -34,6 +53,7 @@ export function KnowledgeRankingView({
       className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden"
       aria-label="Knowledge ranking"
     >
+      <VerificationFlowSubtabFilter subtab="ranking" filter={flowFilter} />
       <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
@@ -64,16 +84,18 @@ export function KnowledgeRankingView({
         </div>
       ) : null}
 
-      {rankingLoading && rankingCards.length === 0 ? (
+      {rankingLoading && !flowId && rankingCards.length === 0 ? (
         <p className="text-xs text-neutral-500" data-ranking-loading>
           Loading ranking…
         </p>
-      ) : rankingCards.length === 0 ? (
+      ) : rankingList.length === 0 ? (
         <div
           className="rounded-none border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
           data-ranking-empty
         >
-          <p className="text-sm font-medium text-neutral-200">No subjects yet</p>
+          <p className="text-sm font-medium text-neutral-200">
+            {flowId ? "No results for this verification flow" : "No subjects yet"}
+          </p>
           <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
             Generate LWM Snapshots from the Learning Profiles tab to populate ranks.
           </p>
@@ -87,17 +109,19 @@ export function KnowledgeRankingView({
             <ol
               className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-0.5"
               data-ranking-list
-              data-ranking-count={rankingCards.length}
+              data-ranking-count={rankingList.length}
             >
-              {rankingCards.map((card) => {
-                const selected =
-                  (selectedRankingCard?.subjectKey ?? rankingCards[0]?.subjectKey) ===
-                  card.subjectKey;
+              {rankingList.map((card) => {
+                const selected = activeCard?.subjectKey === card.subjectKey;
                 return (
                   <li key={card.subjectKey}>
                     <button
                       type="button"
-                      onClick={() => setSelectedRankingKey(card.subjectKey)}
+                      onClick={() =>
+                        flowId
+                          ? setFlowCardKey(card.subjectKey)
+                          : setSelectedRankingKey(card.subjectKey)
+                      }
                       className={`w-full rounded-none border px-3 py-2.5 text-left transition ${
                         selected
                           ? "border-neutral-700/70 bg-neutral-950/30 ring-1 ring-neutral-800/40"
@@ -157,20 +181,20 @@ export function KnowledgeRankingView({
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-none border border-neutral-800/90 bg-neutral-950/50"
             data-ranking-detail
-            data-ranking-detail-subject={selectedRankingCard?.subjectKey ?? ""}
+            data-ranking-detail-subject={activeCard?.subjectKey ?? ""}
           >
-            {selectedRankingCard ? (
+            {activeCard ? (
               <div className="flex flex-col gap-4 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-neutral-500">
-                      #{selectedRankingCard.rank} · detail
+                      #{activeCard.rank} · detail
                     </p>
                     <h3
                       className="mt-0.5 truncate text-lg font-medium text-white"
                       data-ranking-detail-label
                     >
-                      {selectedRankingCard.label}
+                      {activeCard.label}
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -179,7 +203,7 @@ export function KnowledgeRankingView({
                         Snapshot
                       </p>
                       <p className="font-mono text-xl font-semibold tabular-nums text-neutral-200">
-                        {formatRankingScore(selectedRankingCard.snapshotScore)}
+                        {formatRankingScore(activeCard.snapshotScore)}
                       </p>
                     </div>
                     <div className="rounded-none border border-neutral-800/40 bg-neutral-950/20 px-3 py-1.5">
@@ -187,20 +211,22 @@ export function KnowledgeRankingView({
                         GHC
                       </p>
                       <p className="font-mono text-xl font-semibold tabular-nums text-neutral-200">
-                        {formatRankingScore(selectedRankingCard.ghcScore)}
+                        {formatRankingScore(activeCard.ghcScore)}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {!selectedRankingCard.hasSnapshot || !selectedRankingReport ? (
+                {!detailReport ? (
                   <div
                     className="rounded-none border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500"
                     data-ranking-detail-empty
                   >
-                    {selectedRankingCard.hasSnapshot
-                      ? "This snapshot has no report body (spider / strengths / gaps unavailable)."
-                      : "No snapshot for this person yet — generate one from Learning Profiles."}
+                    {proofText
+                      ? proofText
+                      : activeCard.hasSnapshot
+                        ? "This snapshot has no report body (spider / strengths / gaps unavailable)."
+                        : "No snapshot for this person yet — generate one from Learning Profiles."}
                   </div>
                 ) : (
                   <>
@@ -211,10 +237,10 @@ export function KnowledgeRankingView({
                       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
                         Competency profile
                       </div>
-                      {(selectedRankingReport.marker_scores ?? []).length > 0 ? (
+                      {(detailReport.marker_scores ?? []).length > 0 ? (
                         <div className="mt-3 flex justify-center">
                           <MarkerRadarChart
-                            markers={selectedRankingReport.marker_scores ?? []}
+                            markers={detailReport.marker_scores ?? []}
                             variant="large"
                             ariaLabel="Competency marker scores"
                             className="aspect-square h-auto w-full max-w-[min(100%,22rem)]"
@@ -231,9 +257,9 @@ export function KnowledgeRankingView({
                       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
                         Strengths
                       </div>
-                      {(selectedRankingReport.strengths ?? []).length > 0 ? (
+                      {(detailReport.strengths ?? []).length > 0 ? (
                         <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-neutral-300">
-                          {selectedRankingReport.strengths.map((item) => (
+                          {detailReport.strengths.map((item) => (
                             <li key={item} className="flex gap-2">
                               <span className="text-emerald-500/80">+</span>
                               <span>{item}</span>
@@ -251,7 +277,7 @@ export function KnowledgeRankingView({
                       </div>
                       {(() => {
                         const gapAnalysis = normalizePerformanceGapAnalysis(
-                          selectedRankingReport.gap_analysis,
+                          detailReport.gap_analysis,
                         );
                         if (gapAnalysis.gaps.length === 0) {
                           return (

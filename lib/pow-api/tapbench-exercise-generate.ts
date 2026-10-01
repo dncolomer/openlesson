@@ -21,10 +21,12 @@ import {
   type PromptExternalResourceItem,
   type WorkspaceFileContextItem,
 } from "@/lib/prompt-workspace-context";
+import { singleDrillWarmupPrompt } from "@/lib/exercise-tap";
 import {
   buildDomainExerciseAuthorSystemPrompt,
   buildTapbenchExerciseFallback,
   ensureExercisePrefix,
+  isInventYourOwnExerciseMeta,
   isLowQualityTapbenchExercise,
   looksLikeTopicOverview,
   type DomainExerciseSurface,
@@ -153,7 +155,9 @@ export function buildDomainExerciseAuthorUserPrompt(
   lines.push(ctx.contextBlock);
   lines.push("");
   lines.push(
-    `Author one concrete exercise for ${surfaceLabel(surface)}. Return only the exercise text.`,
+    surface === "tap_exercise"
+      ? `Author exactly one simpler warm-up question for ${surfaceLabel(surface)}. One sentence. Return only that question.`
+      : `Author one concrete exercise for ${surfaceLabel(surface)}. Return only the exercise text.`,
   );
   return lines.join("\n");
 }
@@ -232,9 +236,21 @@ export async function generateDomainExercise(
     if (raw) {
       let text = raw.replace(/\s+/g, " ").trim();
       text = text.replace(/^```(?:text|markdown)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      if (surface === "tap_exercise") {
+        const question = singleDrillWarmupPrompt(text);
+        if (
+          question.length >= 12 &&
+          question.includes("?") &&
+          !isInventYourOwnExerciseMeta(question) &&
+          !looksLikeTopicOverview(question)
+        ) {
+          return { exercise: question, source: "llm" };
+        }
+      }
       text = ensureExercisePrefix(text.replace(/^exercise\s*:\s*/i, ""));
       if (text.length >= 8 && !isLowQualityTapbenchExercise(text, input)) {
-        return { exercise: text, source: "llm" };
+        const exercise = surface === "tap_exercise" ? singleDrillWarmupPrompt(text) : text;
+        if (exercise) return { exercise, source: "llm" };
       }
       console.warn(
         `[domain-exercise:${surface}] LLM output empty or low quality; no pure fallback`,

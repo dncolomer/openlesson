@@ -18,7 +18,6 @@ import {
   ILE_MAP_WIDGET_FRAME_CLASS,
   ILE_POW_RESOURCE_BAR_CLASS,
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
-  ileMapInsightCraftFrameClass,
   ileMapWorkFrameClass,
   ileWorkCanvasCoversMap,
   isIleMapOverlayTool,
@@ -62,7 +61,6 @@ export type SessionChromeProps = {
   heliosOpen: boolean;
   onCloseHelios: () => void;
   onMinimizeHelios?: () => void;
-  insightCraft?: ReactNode;
   insightCraftOpen?: boolean;
   onMinimizeInsightCraft?: () => void;
   workCanvasHeaderExtra?: ReactNode;
@@ -137,7 +135,6 @@ export function SessionChrome({
   heliosOpen,
   onCloseHelios,
   onMinimizeHelios,
-  insightCraft = null,
   insightCraftOpen = false,
   onMinimizeInsightCraft,
   workCanvasHeaderExtra = null,
@@ -181,7 +178,6 @@ export function SessionChrome({
 }: SessionChromeProps) {
   const workCoversMap = ileWorkCanvasCoversMap({
     heliosOpen,
-    insightCraftOpen,
   });
   const overlayOpen = isIleMapOverlayTool(activeTool);
   const modalTool = introOpen
@@ -376,7 +372,6 @@ export function SessionChrome({
 
         <div
           data-ile-work-dock
-          data-ile-work-dock-covered={insightCraftOpen ? "true" : undefined}
           className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex flex-col items-end`}
         >
           <IleWorkDockBar
@@ -447,24 +442,6 @@ export function SessionChrome({
 
         {voiceBar}
         </div>
-
-        {insightCraftOpen && insightCraft ? (
-          <div
-            data-ile-insight-craft-widget
-            data-ile-work-canvas-wide="true"
-            className={`pointer-events-auto ${ileMapInsightCraftFrameClass()}`}
-          >
-            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
-              <IleChapterWidgetFrame
-                fill
-                wide
-                title="End turn"
-              >
-                {insightCraft}
-              </IleChapterWidgetFrame>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {allowEndSession ? (

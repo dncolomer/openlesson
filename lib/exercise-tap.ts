@@ -172,6 +172,25 @@ export function resolveExercisePromptAfterIntro(
   return "";
 }
 
+/**
+ * Drill opens on one question. A multi-part writeup keeps its first question,
+ * or its first sentence when it never asks one.
+ */
+export function singleDrillWarmupPrompt(raw: string | null | undefined): string {
+  const text = String(raw || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const body = text.replace(/^exercise\s*:\s*/i, "").trim();
+  if (!body) return "";
+  const questionAt = body.indexOf("?");
+  if (questionAt >= 0) {
+    const upTo = body.slice(0, questionAt + 1).trim();
+    const parts = upTo.split(/(?<=[.!?])\s+/).filter(Boolean);
+    return (parts[parts.length - 1] || upTo).trim();
+  }
+  const sentence = body.split(/(?<=\.)\s+/).filter(Boolean)[0] || body;
+  return sentence.trim();
+}
+
 /** Keep model/stored exercise text; strip stage directions only — no pure reframe. */
 function keepRawExerciseText(text: string): string {
   let t = normalize(text);

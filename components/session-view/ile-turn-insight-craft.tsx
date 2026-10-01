@@ -1,7 +1,5 @@
 "use client";
 
-import { FALLBACK_AESTHETIC_IMAGES } from "@/lib/aesthetics";
-import { useSurfaceAestheticImages } from "@/lib/use-surface-aesthetic-images";
 import {
   ILE_END_TURN_BLOCKED_NO_ACTIVE,
   type IleEndTurnInsightGate,
@@ -13,12 +11,11 @@ import {
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 
 /**
- * End-turn overlay: quota check only. Insights are crafted on the Work
- * canvas — this screen never hosts a craft form.
+ * End-turn screen inside the chapter board. Quota check only. Insights are
+ * crafted on the Work canvas — this screen never hosts a craft form.
  */
 export function IleTurnInsightCraft({
   open,
-  aestheticImage,
   dockedChapters,
   gate,
   onContinue,
@@ -26,26 +23,14 @@ export function IleTurnInsightCraft({
   onBack,
 }: {
   open: boolean;
-  aestheticImage?: string | null;
   dockedChapters: IleWorkDockLabel[];
   gate: IleEndTurnInsightGate;
   onContinue: () => void;
   onSaveAndExit: () => void;
   onBack: () => void;
 }) {
-  const surface = useSurfaceAestheticImages(null);
   if (!open) return null;
 
-  const passed = aestheticImage?.trim() || "";
-  const pool = surface.images;
-  const backdrop =
-    surface.source === "pending"
-      ? passed
-      : surface.source === "fallback"
-        ? (passed && FALLBACK_AESTHETIC_IMAGES.includes(passed) ? passed : "") ||
-          FALLBACK_AESTHETIC_IMAGES[0] ||
-          ""
-        : (passed && pool.includes(passed) ? passed : "") || pool[0] || "";
   const blocked = !gate.canComplete;
   const unmet = new Set(gate.unmetChapterIds);
 
@@ -54,19 +39,9 @@ export function IleTurnInsightCraft({
       data-ile-turn-insight-craft
       data-ile-end-turn-screen
       data-ile-end-turn-blocked={blocked ? "true" : "false"}
-      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-black text-white"
     >
-      <div
-        data-ile-turn-insight-craft-still
-        aria-hidden
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: backdrop ? `url(${backdrop})` : undefined }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/45"
-      />
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <header className="shrink-0 border-b border-white/15 px-5 py-4 sm:px-7">
           <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/55">
             Turn close
@@ -143,7 +118,7 @@ export function IleTurnInsightCraft({
           </section>
         </div>
 
-        <footer className="flex shrink-0 flex-col gap-2 border-t border-white/15 bg-black/70 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+        <footer className="flex shrink-0 flex-col gap-2 border-t border-white/15 bg-black px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           {blocked ? (
             <button
               type="button"

@@ -75,6 +75,8 @@ export function TapScorePhases(props: {
   conversationLanguage: SpokenLocale;
   setConversationLanguage: (locale: SpokenLocale) => void;
   privateToken?: string;
+  /** Verification runs end on the same thank-you screen as a guest TAP link. */
+  localOpening?: boolean;
   durationLocked: boolean;
   isStartingSession: boolean;
   startingTopics: TapStartingTopic[];
@@ -164,6 +166,7 @@ export function TapScorePhases(props: {
     conversationLanguage,
     setConversationLanguage,
     privateToken,
+    localOpening = false,
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -711,7 +714,7 @@ export function TapScorePhases(props: {
               </TapThoughtButton>
             </section>
         ) : phase === "results" ? (
-          privateToken ? (
+          privateToken || localOpening ? (
             <section
               className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
               data-tap-session-thank-you

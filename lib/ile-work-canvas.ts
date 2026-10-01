@@ -93,12 +93,13 @@ export function ileWorkCanvasXaiToolsInstruction(): string {
   const shapes = ILE_XAI_CANVAS_SHAPE_TYPES.filter((type) => type !== "image").join(", ");
   return [
     `EXCALIDRAW DRAWING TOOLS on this board (name these when routing work): ${tools}.`,
-    `You can CREATE the same marks in your reply via JSON "elements" (types: ${shapes}).`,
+    `A schematic is rare. Add JSON "elements" (types: ${shapes}) only when a diagram is truly necessary: the topic is spatial, structural, geometric, or a relationship the learner cannot see from sentences.`,
+    `For an ordinary explanation, definition, question, or worked step, omit "elements" or send an empty array. Do not draw a flowchart, box diagram, or extra shape by default.`,
     "Skip eraser and selection — those are learner tools only. Skip image unless you already have a fileId.",
-    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[{"type":"rectangle","x":120,"y":240,"width":160,"height":80,"label":{"text":"optional caption"}}]}.`,
+    `Reply as JSON: {"text":"<coaching reply, also placed as a text block>","textWidth":number,"origin":{"x":number,"y":number},"elements":[]}.`,
     `"text" is plain sentences only. Do not put JSON, code fences, or element arrays inside "text".`,
     `"textWidth" is the coaching text box width in pixels. Choose it for this reply so the box fits the cluster. Do not reuse one width every time. A text element may set its own "width" the same way.`,
-    `"elements" may include ${shapes}. Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
+    `Include "elements" only for that necessary diagram (${shapes}). Arrows/lines/freedraw may include "points":[[x,y],...]. Labeled shapes use "label":{"text":"..."}. Place marks near related existing elements. Always include "text". Never mention this JSON format to the learner.`,
   ].join(" ");
 }
 
@@ -243,12 +244,13 @@ export const ILE_WORK_CANVAS_FONT_FAMILY = 6;
 /** Excalidraw dark theme inverts the canvas: stored black renders as white. */
 export const ILE_WORK_CANVAS_STROKE_COLOR = "#1e1e1e";
 
-/** Excalidraw grid on + white stroke default for ILE Work canvases. */
+/** Grid off and zen mode on, unless this scene already stored a choice. */
 export function withIleWorkCanvasGridAppState(
   appState: IleWorkCanvasAppState | null | undefined,
 ): IleWorkCanvasAppState {
   const next = asRecord(appState);
-  next.gridModeEnabled = true;
+  if (typeof next.gridModeEnabled !== "boolean") next.gridModeEnabled = false;
+  if (typeof next.zenModeEnabled !== "boolean") next.zenModeEnabled = true;
   if (typeof next.gridSize !== "number" || next.gridSize <= 0) {
     next.gridSize = ILE_WORK_CANVAS_DEFAULT_GRID_SIZE;
   }
@@ -314,6 +316,7 @@ export const ILE_CANVAS_TIMER_RESET_LOADING_MS = 700;
  */
 export const ILE_WORK_CANVAS_DEFAULT_APP_STATE_KEYS = [
   "gridModeEnabled",
+  "zenModeEnabled",
   "gridSize",
   "currentItemStrokeColor",
   "currentItemFontFamily",
@@ -2617,6 +2620,7 @@ const CANVAS_POW_ACTIONS = new Set([
   "refactor",
   "suggest-insight",
   "clear-overlaps",
+  "join",
 ]);
 
 /**
@@ -2806,6 +2810,66 @@ export function splitIleWorkCanvasSelectedText(
   return splitIleWorkCanvasTextElement(current, live);
 }
 
+/**
+ * Join the selection into one mark.
+ * Two or more text-bearing marks become one text block, in reading order.
+ * Other selections share one Excalidraw group so they move together.
+ */
+export function joinIleWorkCanvasSelection(
+  scene: IleWorkCanvasScene | null | undefined,
+  selectedElements: readonly IleWorkCanvasElement[] | null | undefined,
+): { scene: IleWorkCanvasScene; joined: boolean; parts: IleWorkCanvasElement[] } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const live = ileWorkCanvasSelectedLive(current, selectedElements);
+  if (live.length < 2) return { scene: current, joined: false, parts: [] };
+  const textual = live.filter((el) => String(el.originalText || el.text || "").trim());
+  if (textual.length >= 2) {
+    const ordered = [...textual].sort((a, b) => {
+      const dy = (Number(a.y) || 0) - (Number(b.y) || 0);
+      if (Math.abs(dy) > 8) return dy;
+      return (Number(a.x) || 0) - (Number(b.x) || 0);
+    });
+    const text = ordered
+      .map((el) => String(el.originalText || el.text || "").trim())
+      .filter(Boolean)
+      .join("\n\n");
+    const bounds = ileWorkCanvasContentBounds(ordered);
+    const created = convertToExcalidrawElements([
+      {
+        type: "text",
+        text,
+        x: bounds?.minX ?? (Number(ordered[0]?.x) || 0),
+        y: bounds?.minY ?? (Number(ordered[0]?.y) || 0),
+        width: ILE_WORK_CANVAS_TEXT_BOX_WIDTH,
+        autoResize: false,
+        customData: { ileJoin: true },
+      },
+    ]);
+    if (!created.length || !text) return { scene: current, joined: false, parts: [] };
+    const remove = new Set(ordered.map((el) => el.id));
+    return {
+      scene: {
+        ...current,
+        elements: [...current.elements.filter((el) => !remove.has(el.id)), ...created],
+      },
+      joined: true,
+      parts: created,
+    };
+  }
+  const groupId = nextElementId("join");
+  const ids = new Set(live.map((el) => el.id));
+  const parts: IleWorkCanvasElement[] = [];
+  const elements = current.elements.map((el) => {
+    if (!ids.has(el.id) || el.isDeleted) return el;
+    const groupIds = Array.isArray(el.groupIds) ? el.groupIds.filter((id) => id !== groupId) : [];
+    const next = { ...el, groupIds: [...groupIds, groupId] };
+    parts.push(next);
+    return next;
+  });
+  if (parts.length < 2) return { scene: current, joined: false, parts: [] };
+  return { scene: { ...current, elements }, joined: true, parts };
+}
+
 export const ILE_SELECTIVE_COMPRESSION_LABEL = "Compress";
 export const ILE_WORK_CANVAS_OVERLAP_GAP = 16;
 export const ILE_WORK_CANVAS_NEW_MARK_HIGHLIGHT_MS = 1800;
@@ -2821,6 +2885,11 @@ export const ILE_WORK_CANVAS_COMMANDS = [
     id: "split",
     label: "Split",
     tooltip: "Break the selected text into two or three separate blocks on the canvas.",
+  },
+  {
+    id: "join",
+    label: "Join",
+    tooltip: "Join the selected elements into one text block, or one group when they have no text.",
   },
   {
     id: "elaborate",
@@ -3045,7 +3114,7 @@ export function compressIleWorkCanvasSelection(
     elements: [...kept, ...settled],
     appState: {
       ...current.appState,
-      selectedElementIds: ileWorkCanvasSelectionIds(created),
+      selectedElementIds: {},
     },
   };
 }

@@ -90,9 +90,8 @@ export function ileMapInsightCraftFrameClass(): string {
 export function ileWorkCanvasCoversMap(input: {
   heliosOpen?: boolean;
   wide?: boolean;
-  insightCraftOpen?: boolean;
 }): boolean {
-  return Boolean(input.heliosOpen || input.insightCraftOpen);
+  return Boolean(input.heliosOpen);
 }
 
 export const ILE_HELIOS_WIDGET_WIDTH_PX = 720;

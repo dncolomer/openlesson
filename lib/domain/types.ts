@@ -35,6 +35,7 @@ export type ToolAction =
   | "refactor"
   | "suggest-insight"
   | "clear-overlaps"
+  | "join"
   | "notebook_edit"
   | "notebook_save"
   | "prep_material_load"

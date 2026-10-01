@@ -64,13 +64,13 @@ function read(rel: string) {
 describe("practice voice challenge script and transcript", () => {
   it("script contains speaking thinking out loud the whole time plus raw thinking signal and baseline attention", () => {
     expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toBe(
-      "I think aloud the whole time. Raw thinking signal and baseline attention.",
+      "I think aloud the whole time. That gives a raw thinking signal and a baseline for attention.",
     );
     expect(TAP_VOICE_CHALLENGE_SENTENCE_TWO).toBe(
-      "I'll read each question aloud and press I'm done answering when a chain ends.",
+      "I will read each question aloud and press I am done answering when a chain of thought ends.",
     );
     expect(practiceVoiceChallengeTranscriptPasses(PRACTICE_VOICE_CHALLENGE_SCRIPT)).toBe(true);
-    expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("I'm done answering");
+    expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("I am done answering");
     expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("read each question aloud");
     expect(
       latchVoiceChallengePass({
@@ -119,41 +119,42 @@ describe("practice voice challenge script and transcript", () => {
     expect(practiceVoiceChallengeTranscriptPasses(keepHalf)).toBe(false);
     expect(
       practiceVoiceChallengeTranscriptPasses(
-        "think the whole time I aloud. signal thinking raw and attention baseline.",
+        "think the whole time I aloud. That a gives raw thinking signal and baseline for attention a.",
       ),
     ).toBe(true);
     expect(
       judgeVoiceChallengeReading({
-        transcript: "think the whole time I aloud. signal thinking raw and attention baseline.",
+        transcript:
+          "think the whole time I aloud. That a gives raw thinking signal and baseline for attention a.",
       }),
     ).toBe("fail");
     expect(
       judgeVoiceChallengeReading({
         transcript:
-          "think the whole time I aloud. signal thinking raw and attention baseline. read each question I'll aloud and press I'm done answering when a chain ends.",
+          "think the whole time I aloud. That a gives raw thinking signal and baseline for attention a. will I read each question aloud and press I am done answering when a chain of thought ends.",
       }),
     ).toBe("pass");
     expect(judgeVoiceChallengeReading({ transcript: "" })).toBe("fail");
-    // 10 of 12 practice words: the first sentence is under 80% on its own.
+    // 14 of 17 practice words. The opening sentence alone stays under 80%.
     expect(
       practiceVoiceChallengeTranscriptPasses(
-        "I think whole time. Raw thinking signal and baseline attention.",
+        "I aloud the whole time. That a raw thinking signal and a baseline attention.",
       ),
     ).toBe(true);
     expect(
       practiceVoiceChallengeTranscriptPasses(
-        "I time. Raw thinking signal and baseline attention.",
+        "I the whole time. That a raw thinking signal and a baseline attention.",
       ),
     ).toBe(false);
-    // 22 of 26 TAP words: the last sentence is under 80% on its own.
+    // 28 of 35 TAP words passes. One fewer word in the second sentence fails.
     expect(
       judgeVoiceChallengeReading({
-        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I'll read each question done answering when a chain ends.`,
+        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I read question aloud and answering when a chain thought ends.`,
       }),
     ).toBe("pass");
     expect(
       judgeVoiceChallengeReading({
-        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I'll read each question when a chain ends.`,
+        transcript: `${PRACTICE_VOICE_CHALLENGE_SCRIPT} I read question and answering when a chain thought ends.`,
       }),
     ).toBe("fail");
     const aloudEarly = voiceChallengeReadMarks({
@@ -193,7 +194,7 @@ describe("practice voice challenge script and transcript", () => {
     });
     const partialWords = partial.filter((mark) => mark.kind === "word");
     expect(partialWords.find((mark) => mark.text === "think")?.heard).toBe(true);
-    expect(partialWords.find((mark) => mark.text === "Raw")?.heard).toBe(false);
+    expect(partialWords.find((mark) => mark.text === "That")?.heard).toBe(false);
     expect(voiceChallengeFillRatio(partial)).toBeGreaterThan(0);
     expect(voiceChallengeFillRatio(partial)).toBeLessThan(1);
     const full = voiceChallengeReadMarks({

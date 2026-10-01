@@ -375,7 +375,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).not.toContain("data-ile-compact-insight-craft");
     expect(view).toContain("turnInsightCraft()");
     expect(view).toContain("insightCraftOpen={craftingInsightsOpen}");
-    expect(view).toContain("insightCraft={turnInsightCraft()}");
+    expect(view).toContain("boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}");
+    expect(view).not.toContain("insightCraft={turnInsightCraft()}");
     expect(view).not.toContain("turnInsightCraft(true)");
     expect(view).toContain("ileSessionSettingsPath");
     expect(view).toContain("if (showWelcomeModal)");
@@ -403,23 +404,21 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(craft).toContain("Back to work");
     expect(craft).not.toContain("DialogFrame");
     expect(craft).not.toContain("portal={portal}");
-    expect(chrome).toContain("data-ile-insight-craft-widget");
-    expect(chrome).toContain("ileMapInsightCraftFrameClass()");
-    expect(chrome).toContain("data-ile-work-dock-covered");
-    expect(chrome).toContain('title="End turn"');
-    const craftFrame = chrome.slice(
-      chrome.indexOf('title="End turn"'),
-      chrome.indexOf("{insightCraft}"),
-    );
-    expect(craftFrame).not.toContain("onMinimize");
+    expect(chrome).not.toContain("data-ile-insight-craft-widget");
+    expect(chrome).not.toContain("ileMapInsightCraftFrameClass()");
+    expect(chrome).not.toContain("data-ile-work-dock-covered");
+    expect(chrome).not.toContain('title="End turn"');
+    expect(chrome).not.toContain("{insightCraft}");
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
     expect(view).toContain("openWorkIds={openWorkIds}");
     const chapterMap = read("components/ChapterMapPanel.tsx");
+    expect(chapterMap).toContain("boardInterior={boardInterior}");
     expect(chapterMap).toContain("openWorkIds={openWorkIds}");
     expect(chapterMap).toContain("aestheticImages={aestheticImages}");
     expect(chapterMap).toContain("workAestheticById={workAestheticById}");
     const world = read("components/block-skill-grid/map-world-layer.tsx");
+    expect(world).toContain("data-ile-end-turn-board");
     expect(world).toContain("data-ile-open-work-tile-image");
     expect(world).toContain("workAestheticById");
     expect(world).toContain("resolveIleWorkAestheticImage");

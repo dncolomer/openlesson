@@ -1,0 +1,97 @@
+/**
+ * Generate Goals or a verification-flow topic and questions from Context.
+ * The caller appends each response onto its own pool.
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-error-envelope";
+import { requireProductWorkspaceEvalAuth } from "@/lib/product-workspace-auth";
+import { assertWorkspacePolicy } from "@/lib/workspace-access-policy";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
+import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
+import { loadWorkspacePromptContext } from "@/lib/pow-api/load-workspace-prompt-context";
+import {
+  formatContextGenerationSource,
+  generateContextCandidates,
+  type ContextGenerationKind,
+} from "@/lib/context-generation";
+
+export const runtime = "nodejs";
+
+function generationKind(value: unknown): ContextGenerationKind | null {
+  if (value === "goals" || value === "verification_flow") return value;
+  return null;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = (await req.json()) as Record<string, unknown>;
+    const workspaceId = String(body.workspaceId || "");
+    const kind = generationKind(body.kind);
+    if (!workspaceId) return jsonError(400, "workspaceId is required");
+    if (!kind) return jsonError(400, "kind must be goals or verification_flow");
+    const ayclToken = typeof body.ayclToken === "string" ? body.ayclToken : null;
+    const auth = await requireProductWorkspaceEvalAuth(workspaceId, ayclToken);
+    if (!auth.ok) return auth.response;
+    const policy = assertWorkspacePolicy({
+      principal: auth.principal,
+      workspaceOwnerId: auth.workspaceOwnerId,
+      action: "author",
+    });
+    if (!policy.ok) return jsonError(403, "Forbidden");
+
+    const { data: workspace } = await auth.supabase
+      .from("workspaces")
+      .select("workspace_kind")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    const storedKind = workspace?.workspace_kind;
+    if (storedKind && !isKnowledgeRegionWorkspace(storedKind)) {
+      return jsonError(403, "Context generation belongs to Verification Workspaces");
+    }
+
+    const loaded = await loadWorkspacePromptContext(auth.supabase, workspaceId);
+    const contextText = formatContextGenerationSource({
+      title: loaded?.workspaceTitle,
+      topic: loaded?.rootTopic,
+      description: loaded?.workspaceDescription,
+      notes: loaded?.notes,
+      goal: loaded?.workspaceGoal,
+      resources: loaded?.externalResources,
+      files: loaded?.files,
+    });
+    if (!contextText.trim()) {
+      return jsonError(400, "Add notes, files, or links in Context before generating.");
+    }
+
+    const avoid = Array.isArray(body.avoid)
+      ? body.avoid.filter((item): item is string => typeof item === "string")
+      : [];
+    const modifier = typeof body.modifier === "string" ? body.modifier : "";
+    const generated = await generateContextCandidates({
+      kind,
+      contextText,
+      avoid,
+      modifier,
+      complete: async (request) => {
+        const response = await callXaiJSON<unknown>(
+          [systemMessage(request.instructions), userMessage(request.user)],
+          { model: DEFAULT_MODEL, temperature: 0.3, maxTokens: 2000, reasoningEffort: "low" },
+        );
+        if (!response.success) {
+          throw new Error(response.error || "Context generation failed");
+        }
+        return response.data;
+      },
+    });
+    if (kind === "goals" && generated.goals.length === 0) {
+      return jsonError(502, "No goals generated");
+    }
+    if (kind === "verification_flow" && generated.flows.length === 0) {
+      return jsonError(502, "No topic generated");
+    }
+    return NextResponse.json(generated);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Context generation failed";
+    return jsonError(500, message);
+  }
+}

@@ -115,6 +115,7 @@ import {
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
   placeIleLearnMorePrompt,
+  joinIleWorkCanvasSelection,
   splitIleWorkCanvasSelectedText,
   splitIleWorkCanvasTextElement,
   ILE_WORK_CANVAS_STAY_ON_DOMAIN,
@@ -218,9 +219,10 @@ function sceneWith(id: string, text = id): IleWorkCanvasScene {
 }
 
 describe("ILE Work canvas grid default (shipped)", () => {
-  it("enables Excalidraw grid on empty and restored scenes", () => {
+  it("starts with the grid off and zen mode on, and keeps an explicit choice", () => {
     const empty = emptyIleWorkCanvasScene();
-    expect(empty.appState.gridModeEnabled).toBe(true);
+    expect(empty.appState.gridModeEnabled).toBe(false);
+    expect(empty.appState.zenModeEnabled).toBe(true);
     expect(empty.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
     expect(empty.appState.currentItemStrokeColor).toBe("#1e1e1e");
     expect(empty.appState.currentItemFontFamily).toBe(ILE_WORK_CANVAS_FONT_FAMILY);
@@ -231,12 +233,18 @@ describe("ILE Work canvas grid default (shipped)", () => {
       appState: { zoom: { value: 1 } },
       files: {},
     });
-    expect(restored.appState.gridModeEnabled).toBe(true);
+    expect(restored.appState.gridModeEnabled).toBe(false);
+    expect(restored.appState.zenModeEnabled).toBe(true);
     expect(restored.appState.gridSize).toBe(ILE_WORK_CANVAS_DEFAULT_GRID_SIZE);
 
-    const forced = withIleWorkCanvasGridAppState({ gridModeEnabled: false, gridSize: 40 });
-    expect(forced.gridModeEnabled).toBe(true);
-    expect(forced.gridSize).toBe(40);
+    const keptOff = withIleWorkCanvasGridAppState({ gridModeEnabled: false, gridSize: 40 });
+    expect(keptOff.gridModeEnabled).toBe(false);
+    expect(keptOff.zenModeEnabled).toBe(true);
+    expect(keptOff.gridSize).toBe(40);
+
+    const keptOn = withIleWorkCanvasGridAppState({ gridModeEnabled: true, zenModeEnabled: false });
+    expect(keptOn.gridModeEnabled).toBe(true);
+    expect(keptOn.zenModeEnabled).toBe(false);
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("withIleWorkCanvasGridAppState");
@@ -1422,6 +1430,37 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
     expect(noSplit.split).toBe(false);
     expect(noSplit.scene.elements.map((el) => el.id)).toEqual(scene.elements.map((el) => el.id));
 
+    const upper = convertToExcalidrawElements([{ type: "text", text: "Alpha", x: 10, y: 10 }])[0]!;
+    const lower = convertToExcalidrawElements([{ type: "text", text: "Beta", x: 30, y: 80 }])[0]!;
+    const merged = joinIleWorkCanvasSelection(
+      { elements: [lower, upper], appState: {}, files: {} },
+      [lower, upper],
+    );
+    expect(merged.joined).toBe(true);
+    const joinedText = merged.parts.map((el) => String(el.originalText || el.text || "")).join("\n");
+    expect(joinedText.indexOf("Alpha")).toBeGreaterThanOrEqual(0);
+    expect(joinedText.indexOf("Alpha")).toBeLessThan(joinedText.indexOf("Beta"));
+    expect(
+      merged.scene.elements.filter((el) => String(el.originalText || el.text || "").trim()).length,
+    ).toBe(1);
+    const boxA = convertToExcalidrawElements([
+      { type: "rectangle", x: 0, y: 0, width: 40, height: 40 },
+    ])[0]!;
+    const boxB = convertToExcalidrawElements([
+      { type: "rectangle", x: 80, y: 0, width: 40, height: 40 },
+    ])[0]!;
+    const grouped = joinIleWorkCanvasSelection(
+      { elements: [boxA, boxB], appState: {}, files: {} },
+      [boxA, boxB],
+    );
+    expect(grouped.joined).toBe(true);
+    const sharedGroup = grouped.parts.map((el) => el.groupIds?.at(-1));
+    expect(sharedGroup[0]).toBeTruthy();
+    expect(sharedGroup[0]).toBe(sharedGroup[1]);
+    expect(joinIleWorkCanvasSelection({ elements: [upper], appState: {}, files: {} }, [upper]).joined).toBe(
+      false,
+    );
+
     expect(ileWorkCanvasQuickActionPrompt("rephrase")).toMatch(/rephrase/i);
     expect(ileWorkCanvasQuickActionPrompt("elaborate more pls")).toMatch(/elaborate more pls/i);
 
@@ -1969,7 +2008,7 @@ describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", ()
     expect(cold.scene.elements.find((el) => el.originalText === "reply after the draw")?.x).toBe(origin.x);
   });
 
-  it("tucks a wide reply under the cluster and selects that new group", () => {
+  it("tucks a wide reply under the cluster without selecting the new marks", () => {
     const mark = { x: 40, y: 20, width: 100, height: 50, isDeleted: false };
     const slot = ileWorkCanvasClusteredOrigin({
       elements: [mark],
@@ -2002,11 +2041,12 @@ describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", ()
       [reply.id]: true,
     });
     expect(ileWorkCanvasSelectionIds([{ id: "gone", isDeleted: true }])).toEqual({});
+    expect(settled.appState.selectedElementIds ?? {}).toEqual({});
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
-    expect(canvas).toContain("ileWorkCanvasSelectionIds");
+    expect(canvas).not.toContain("ileWorkCanvasSelectionIds");
+    expect(canvas).toContain("selectedElementIds: {}");
     expect(canvas).toContain("scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
-    expect(canvas).toContain("scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS)");
     expect(ILE_WORK_CANVAS_TURN_ORIGIN_INSTRUCTION).toMatch(/under nearby marks/i);
   });
 
@@ -2457,6 +2497,8 @@ describe("ILE Work canvas selection commands (shipped)", () => {
     const phases = read("components/tap-score/tap-score-phases.tsx");
     expect(ILE_LEARN_MORE_LABEL).toBe("Commands");
     expect(canvas).toContain("{ILE_LEARN_MORE_LABEL}");
+    expect(canvas).toContain("const [commandsOpen, setCommandsOpen] = useState(false);");
+    expect(canvas).toContain("data-ile-learn-more-collapsed");
     expect(canvas).not.toContain("data-ile-compress-work");
     expect(canvas).toContain("IleCraftInsightButton");
     expect(canvas).toContain("Any questions?");

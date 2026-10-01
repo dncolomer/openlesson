@@ -157,13 +157,13 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOrgAdmin: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toEqual(["goals", "knowledge", "settings"]);
+    ).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     expect(
       availableWorkspaceSections({
         isOwner: false,
@@ -187,7 +187,7 @@ describe("availableWorkspaceSections", () => {
         isOwner: true,
         workspaceKind: "knowledge_region",
       }),
-    ).toBe("goals");
+    ).toBe("context");
   });
 });
 

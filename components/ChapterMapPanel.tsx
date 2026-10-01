@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -66,6 +66,8 @@ interface ChapterMapPanelProps {
   onVoicePadChange?: (pad: IleVoicePadSpec | null) => void;
   voicePadActionRef?: { current: (id: BlockCircularMenuActionId) => void };
   insightCountByChapterId?: Readonly<Record<string, number>> | null;
+  /** Replaces the chapter-board field while the frame stays. */
+  boardInterior?: ReactNode;
 }
 
 export function ChapterMapPanel({
@@ -102,6 +104,7 @@ export function ChapterMapPanel({
   onVoicePadChange,
   voicePadActionRef,
   insightCountByChapterId = null,
+  boardInterior = null,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -406,6 +409,7 @@ export function ChapterMapPanel({
         aestheticImages={aestheticImages}
         workAestheticById={workAestheticById}
         insightCountByChapterId={insightCountByChapterId}
+        boardInterior={boardInterior}
       />
       {editingStepId ? (
         <BlockCircularEditForm

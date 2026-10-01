@@ -35,6 +35,7 @@ import {
   SCOUT_FOLLOWUP_QUESTION_COUNT,
   SCOUT_FRAME_PADDING_X,
   SCOUT_FRAME_WIDTH,
+  SCOUT_SPREAD_GAP_X,
   SCOUT_NODE_CUSTOM_DATA_KEY,
   SCOUT_QUESTION_MAX_WORDS,
   SCOUT_SEED_NODE_ID,
@@ -264,7 +265,7 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
           el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
       ),
     ).toBe(true);
-    expect(connected.scene.elements.some((el) => el.type === "arrow")).toBe(true);
+    expect(connected.scene.elements.some((el) => el.type === "arrow")).toBe(false);
     expect(extractScoutCanvasText(connected.scene)).toMatch(/decrease-key/);
     const seedIds = new Set(seed.scene.elements.map((el) => el.id));
     expect(connected.added.length).toBeGreaterThan(0);
@@ -276,7 +277,7 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
           el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
       ),
     ).toBe(true);
-    expect(connected.added.some((el) => el.type === "arrow")).toBe(true);
+    expect(connected.added.some((el) => el.type === "arrow")).toBe(false);
 
     const parentRect = seed.scene.elements.find((el) => el.type === "rectangle")!;
     const childRect = connected.scene.elements.find(
@@ -285,7 +286,7 @@ describe("Scout pick → connected canvas node + 5 questions + go-back", () => {
         el.customData?.[SCOUT_NODE_CUSTOM_DATA_KEY] === afterPick.nodes[1]!.id,
     )!;
     expect(childRect.y).toBeGreaterThanOrEqual(parentRect.y + parentRect.height);
-    expect(childRect.x).toBe(parentRect.x);
+    expect(childRect.x).toBe(parentRect.x - (SCOUT_FRAME_WIDTH + SCOUT_SPREAD_GAP_X));
 
     const childText = connected.scene.elements.find(
       (el) =>
@@ -671,6 +672,7 @@ describe("Prepare canvas drops miss live marks and the question prompt lists the
     expect(questionsApi).toContain("workCanvasScene");
     expect(client).toContain("workCanvasScene: serializeTapWorkCanvasScene(scene)");
     expect(client).toContain("connectScoutQuestionToCanvas");
+    expect(client).toContain("advanceTapLiveClockPause");
 
     writeScratch(
       "canvas-nonoverlap-prepare.txt",

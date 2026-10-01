@@ -5,6 +5,7 @@ import { WorkspaceContextPanel } from "@/components/WorkspaceContextPanel";
 import { WorkspaceDagsPanel } from "@/components/WorkspaceDagsPanel";
 import { WorkspaceMapTypesPanel } from "@/components/WorkspaceMapTypesPanel";
 import { WorkspaceGoalsPanel } from "@/components/WorkspaceGoalsPanel";
+import { VerificationFlowsPanel } from "@/components/VerificationFlowsPanel";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { WorkspaceKpisPanel } from "@/components/WorkspaceKpisPanel";
@@ -16,6 +17,7 @@ import type { WorkspaceMapTypesState } from "@/lib/workspace-map-types";
 import type { WorkspaceModeShell } from "@/lib/workspace-mode";
 import type { WorkspaceSectionLayout } from "@/lib/workspace-sections";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export function WorkspaceSectionHosts({
   isLearnerMode,
@@ -94,7 +96,9 @@ export function WorkspaceSectionHosts({
 
   return (
     <>
-      {!isLearnerMode && sectionLayout.mountsContextPanel && (
+      {!isLearnerMode &&
+        sectionLayout.mountsContextPanel &&
+        visibleSections.includes("context") && (
         <WorkspaceSectionSurface
           kind="settings"
           imageSrc={workspaceImage}
@@ -193,7 +197,25 @@ export function WorkspaceSectionHosts({
               workspaceId={workspaceId}
               isOwner={isOwner}
               ayclToken={ayclToken}
+              contextGeneration={isKnowledgeRegionWorkspace(plan.workspace_kind)}
             />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
+
+      {!isLearnerMode &&
+        sectionLayout.mountsVerificationFlowsPanel &&
+        visibleSections.includes("verification_flows") && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={identity}
+        >
+          <div
+            data-workspace-verification-flows-host
+            className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4"
+          >
+            <VerificationFlowsPanel workspaceId={workspaceId} ayclToken={ayclToken} />
           </div>
         </WorkspaceSectionSurface>
       )}
@@ -211,6 +233,8 @@ export function WorkspaceSectionHosts({
               workspaceId={workspaceId}
               isOwner={isOwner}
               currentUserId={currentUserId}
+              workspaceKind={plan.workspace_kind}
+              ayclToken={ayclToken}
               lwmEmbeddingsOnly={modeShell.knowledgeLwmEmbeddingsOnly}
               initialSubview={
                 knowledgeSubviewFromUrl === "insights" ||

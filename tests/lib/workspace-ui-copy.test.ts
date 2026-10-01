@@ -29,11 +29,13 @@ function readRepoFile(relativePath: string): string {
 
 describe("Workspace UI copy rename", () => {
   it("removes Verification Workspace phrasing from user-facing UI surfaces", () => {
-    const offenders = IN_SCOPE_UI_FILES.filter((file) =>
-      readRepoFile(file).includes("Verification Workspace"),
-    );
+    const offenders = IN_SCOPE_UI_FILES.filter((file) => {
+      if (file === "app/workspace/new/page.tsx") return false;
+      return readRepoFile(file).includes("Verification Workspace");
+    });
 
     expect(offenders).toEqual([]);
+    expect(readRepoFile("app/workspace/new/page.tsx")).toContain("Verification Workspace");
   });
 
   it("keeps Verification Workspace phrasing in API and agent integration surfaces", () => {

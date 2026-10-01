@@ -5,11 +5,11 @@
  */
 
 export const PRACTICE_VOICE_CHALLENGE_SCRIPT =
-  "I think aloud the whole time. Raw thinking signal and baseline attention.";
+  "I think aloud the whole time. That gives a raw thinking signal and a baseline for attention.";
 
 /** Regular TAP: what the session expects, read after the speak-aloud lines. */
 export const TAP_VOICE_CHALLENGE_SENTENCE_TWO =
-  "I'll read each question aloud and press I'm done answering when a chain ends.";
+  "I will read each question aloud and press I am done answering when a chain of thought ends.";
 export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${TAP_VOICE_CHALLENGE_SENTENCE_TWO}`;
 
 /** ILE reads two sentences. The second is the session goal, with a sample card under it. */
@@ -22,10 +22,10 @@ export const ILE_SAMPLE_INSIGHT_LABEL = "Sample insight";
 
 export const PREPARE_VOICE_CHALLENGE_SENTENCE_TWO =
   "In this session I will map questions only, to see where my curiosity pulls before I work.";
-export const DRILL_VOICE_CHALLENGE_SENTENCE_TWO =
-  "In this session I will practice the topic out loud and keep answering until the drill is done.";
+export const DRILL_VOICE_CHALLENGE_SENTENCE_TWO = TAP_VOICE_CHALLENGE_SENTENCE_TWO;
 export const PREPARE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${PREPARE_VOICE_CHALLENGE_SENTENCE_TWO}`;
-export const DRILL_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${DRILL_VOICE_CHALLENGE_SENTENCE_TWO}`;
+/** Drill reads the same two clear sentences as the speak-aloud gate on TAP. */
+export const DRILL_VOICE_CHALLENGE_SCRIPT = TAP_VOICE_CHALLENGE_SCRIPT;
 
 /** Share of the script words that must be heard. A rough whole-reading match. */
 export const VOICE_CHALLENGE_PASS_RATIO = 0.8;

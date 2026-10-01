@@ -116,7 +116,8 @@ describe("TAP Work canvas apply / pull (shipped)", () => {
   it("drops a Helios reply onto an empty TAP scene, places then replaces loading, and builds ask-about-selection", () => {
     const empty = emptyTapWorkCanvasScene();
     expect(empty.elements).toHaveLength(0);
-    expect(empty.appState.gridModeEnabled).toBe(true);
+    expect(empty.appState.gridModeEnabled).toBe(false);
+    expect(empty.appState.zenModeEnabled).toBe(true);
 
     const applied = applyTapHeliosReplyToWorkCanvas(
       empty,

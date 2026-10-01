@@ -89,6 +89,8 @@ interface CustomVerificationModelsPanelProps {
   workspaceId: string;
   currentUserId: string | null;
   ayclToken?: string;
+  /** Verification Workspace: create regions from a flow or synthetic agents. */
+  verificationWorkspace?: boolean;
   /** Notify parent when region list changes (for embeddings overlays). */
   onRegionsChange?: (regions: KnowledgeRegionListItem[]) => void;
 }
@@ -97,6 +99,7 @@ export function CustomVerificationModelsPanel({
   workspaceId,
   currentUserId: _currentUserId,
   ayclToken,
+  verificationWorkspace = false,
   onRegionsChange,
 }: CustomVerificationModelsPanelProps) {
   void _currentUserId;
@@ -114,6 +117,10 @@ export function CustomVerificationModelsPanel({
   // Region builder filters: human PoW vs tapbench PoW + link filter
   const [sourceFilter, setSourceFilter] = useState<RegionBuilderSourceFilter>("all");
   const [linkFilter, setLinkFilter] = useState("");
+  const [flowChoices, setFlowChoices] = useState<Array<{ id: string; topic: string }>>([]);
+  const [selectedFlowId, setSelectedFlowId] = useState("");
+  const [promptModifier, setPromptModifier] = useState("");
+  const [syntheticTopic, setSyntheticTopic] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -222,6 +229,65 @@ export function CustomVerificationModelsPanel({
     }
   };
 
+  useEffect(() => {
+    if (!verificationWorkspace) return;
+    const params = new URLSearchParams({ workspaceId });
+    if (ayclToken) params.set("ayclToken", ayclToken);
+    let cancelled = false;
+    void fetch(`/api/workspace/verification-flows?${params.toString()}`)
+      .then((response) => response.json())
+      .then((payload) => {
+        if (cancelled) return;
+        const listed = Array.isArray(payload.flows) ? payload.flows : [];
+        setFlowChoices(
+          listed.map((flow: { id?: string; topic?: string }) => ({
+            id: String(flow.id || ""),
+            topic: String(flow.topic || "Flow"),
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setFlowChoices([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [verificationWorkspace, workspaceId, ayclToken]);
+
+  const createVerificationRegion = async (action: "from_flow" | "synthetic_agents") => {
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/workspace/verification-regions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          ...(ayclToken ? { ayclToken } : {}),
+          action,
+          name,
+          flowId: selectedFlowId,
+          topic: syntheticTopic || name,
+          promptModifier,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const message =
+          typeof data?.error === "string"
+            ? data.error
+            : data?.error?.message || "Failed to create region";
+        throw new Error(message);
+      }
+      setName("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create region");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const removeRegion = async (region: KnowledgeRegionListItem) => {
     const ok = await confirm({
       title: "Remove knowledge region?",
@@ -288,6 +354,87 @@ export function CustomVerificationModelsPanel({
             data-region-create-tab
             role="tabpanel"
           >
+            {verificationWorkspace ? (
+              <div className="space-y-4" data-verification-region-create>
+                <section className="space-y-3" data-region-create-from-flow>
+                  <div>
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Create from verification flow
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Build the region from embeddings of that flow&apos;s proof-of-work items only.
+                    </p>
+                  </div>
+                  <select
+                    value={selectedFlowId}
+                    onChange={(event) => setSelectedFlowId(event.target.value)}
+                    data-region-flow-select
+                    className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  >
+                    <option value="">Select a verification flow</option>
+                    {flowChoices.map((flow) => (
+                      <option key={flow.id} value={flow.id}>
+                        {flow.topic}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Region name"
+                      data-region-name-input
+                      className="min-w-[12rem] flex-1 border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                    />
+                    <button
+                      type="button"
+                      disabled={creating || !name.trim() || !selectedFlowId}
+                      onClick={() => void createVerificationRegion("from_flow")}
+                      data-create-region-from-flow
+                      className={PRIMARY_CTA_CLASS}
+                    >
+                      Create from verification flow
+                    </button>
+                  </div>
+                </section>
+                <section className="space-y-3" data-region-create-from-synthetic>
+                  <div>
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Create from Synthetic Agents
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Instruct xAI to generate proof of work, with an optional prompt modifier, then
+                      build the region from those embeddings.
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={syntheticTopic}
+                    onChange={(event) => setSyntheticTopic(event.target.value)}
+                    placeholder="Topic"
+                    data-synthetic-topic
+                    className="w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  />
+                  <textarea
+                    value={promptModifier}
+                    onChange={(event) => setPromptModifier(event.target.value)}
+                    placeholder="Optional prompt modifier"
+                    data-synthetic-prompt-modifier
+                    className="min-h-16 w-full border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={creating || !name.trim()}
+                    onClick={() => void createVerificationRegion("synthetic_agents")}
+                    data-create-region-from-synthetic
+                    className={PRIMARY_CTA_CLASS}
+                  >
+                    Create from synthetic agents
+                  </button>
+                </section>
+              </div>
+            ) : (
             <section className="space-y-3" data-region-builder data-region-create-cohort>
               <div>
                 <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
@@ -392,6 +539,7 @@ export function CustomVerificationModelsPanel({
                 {linkFilter.trim() ? ` · link “${linkFilter.trim()}”` : ""}
               </p>
             </section>
+            )}
           </div>
         ) : null}
 

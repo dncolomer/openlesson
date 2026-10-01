@@ -1966,12 +1966,6 @@ export function SessionView({
     session ? (
       <IleTurnInsightCraft
         open={craftingInsightsOpen}
-        aestheticImage={
-          chromeSelectedAesthetic?.previewImage ||
-          chromeSelectedAesthetic?.images?.[0] ||
-          openWorkDockLabels[0]?.image ||
-          null
-        }
         dockedChapters={openWorkDockLabels}
         gate={endTurnGate}
         onBack={() => setCraftingInsightsOpen(false)}
@@ -2224,7 +2218,6 @@ export function SessionView({
         onCloseHelios={() => setHeliosWidgetOpen(false)}
         onMinimizeHelios={() => setHeliosWidgetOpen(false)}
         insightCraftOpen={craftingInsightsOpen}
-        insightCraft={turnInsightCraft()}
         onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
         workCanvasHeaderExtra={workCanvasHeaderExtra}
         workCanvasHeaderLeading={workCanvasInsightSlots}
@@ -2334,6 +2327,7 @@ export function SessionView({
             aestheticImages={selectedAesthetic?.images}
             workAestheticById={workAestheticById}
             insightCountByChapterId={insightCountByChapterId}
+            boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}
             blockActionProgress={timBlockActionProgress}
             onMarkChapterCompleted={(stepId) => {
               completeTargetStepIdRef.current = stepId;

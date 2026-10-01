@@ -40,6 +40,7 @@ export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
 export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
   "rephrase",
   "split",
+  "join",
   "elaborate",
   "selective-compression",
   "refactor",

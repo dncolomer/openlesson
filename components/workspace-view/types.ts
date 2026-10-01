@@ -71,6 +71,7 @@ export function parseSectionParam(value: string | null): WorkspaceSectionKey | n
     value === "dags" ||
     value === "map_types" ||
     value === "goals" ||
+    value === "verification_flows" ||
     value === "knowledge" ||
     value === "insights" ||
     value === "kpis" ||

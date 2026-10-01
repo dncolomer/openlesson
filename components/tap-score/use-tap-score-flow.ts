@@ -27,6 +27,7 @@ import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { stopLiveSpeechRecognition, type LiveSpeechRecognitionBindings } from "@/lib/useSessionThoughtInterface";
 import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { parseTapXaiCanvasTurn, serializeTapWorkCanvasScene } from "@/lib/tap-work-canvas";
+import { localVerificationOpening } from "@/lib/verification-flow";
 import type {
   IleWorkCanvasElement,
   IleWorkCanvasScene as TapWorkCanvasScene,
@@ -63,6 +64,15 @@ export type TapScoreSession = {
   speechBindings: LiveSpeechRecognitionBindings;
   tapThoughtSpeech: { retryMicrophone: () => void; getFormingText?: () => string };
   workCanvasSceneRef: MutableRefObject<TapWorkCanvasScene | null>;
+  /** Verification flow: open the TAP canvas locally from the pooled question. */
+  localOpening?: boolean;
+  localPracticePrompt?: string;
+  localQuestionIdRef?: MutableRefObject<string | null>;
+  onLocalProof?: (input: {
+    prompt: string;
+    practice: boolean;
+    questionId: string | null;
+  }) => Promise<void> | void;
   logTapTrace: (input: {
     traceType: TapTraceType;
     action: TapSystem1Action | TapSystem2Action;
@@ -151,6 +161,10 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
         return next;
       },
     });
+    if (s.localOpening) {
+      s.apply({ isSending: false });
+      return;
+    }
     try {
       const workCanvasScene = serializeTapWorkCanvasScene(s.workCanvasSceneRef.current);
       const response = await fetch("/api/workspace-tap-score/chat", {
@@ -194,6 +208,9 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     raw?: string | null;
   }> {
     const s = current();
+    if (s.localOpening) {
+      return { text: input.prompt, elements: null, origin: null, raw: input.prompt };
+    }
     const workCanvasScene = serializeTapWorkCanvasScene(input.scene);
     const response = await fetch("/api/workspace-tap-score/chat", {
       method: "POST",
@@ -281,6 +298,37 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
 
     let started = false;
     try {
+      if (s.localOpening) {
+        const opening = localVerificationOpening({
+          practice,
+          openingQuestion: topic?.openingQuestion,
+          practicePrompt: s.localPracticePrompt,
+        });
+        if (!opening) throw new Error("Could not generate opening question");
+        const localId = `verification-${practice ? "practice" : topic?.id || "question"}`;
+        s.tapSessionIdRef.current = localId;
+        if (s.localQuestionIdRef) {
+          s.localQuestionIdRef.current = practice ? null : topic?.id ?? null;
+        }
+        s.apply({ tapSessionId: localId });
+        const startedAtMs = Date.now();
+        s.apply({ startedAt: startedAtMs });
+        s.apply({ remainingSeconds: sessionMinutes * 60 });
+        s.apply({
+          messages: [
+            {
+              id: OPENING_MESSAGE_ID,
+              role: "assistant",
+              content: opening,
+              at: new Date().toISOString(),
+            },
+          ],
+        });
+        s.resetIdleTracking();
+        s.resetSpeechTracking();
+        s.apply({ phase: "live" });
+        started = true;
+      } else {
       const { ok, payload } = await postTutoringSessionStart({
         workspaceId: s.workspaceId,
         blockId: s.blockId,
@@ -321,6 +369,7 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
       s.resetSpeechTracking();
       s.apply({ phase: "live" });
       started = true;
+      }
     } catch (err) {
       stopLiveSpeechRecognition(s.speechBindings);
       s.apply({ isPracticeMode: false });
@@ -382,6 +431,28 @@ function createTapScoreSessionActions(current: () => TapScoreSession) {
     }
     s.apply({ phase: "saving" });
     stopLiveSpeechRecognition(s.speechBindings);
+    if (s.localOpening) {
+      try {
+        const prompt = s.messages
+          .map((message) => String(message.content || "").trim())
+          .filter(Boolean)
+          .join("\n\n");
+        await s.onLocalProof?.({
+          prompt,
+          practice,
+          questionId: s.localQuestionIdRef?.current ?? null,
+        });
+        s.apply({ performanceReport: null });
+        s.apply({ phase: practice ? "practice_done" : "results" });
+      } catch (err) {
+        s.isEndingRef.current = false;
+        const message = err instanceof Error ? err.message : "Could not store proof of work";
+        s.apply({ error: message });
+        s.apply({ resultsError: message });
+        s.apply({ phase: "error" });
+      }
+      return;
+    }
     try {
       const durationSeconds = s.startedAt ? Math.floor((Date.now() - s.startedAt) / 1000) : 0;
       const transcript = s.messages.map((message) => ({ role: message.role, text: message.content, at: message.at }));

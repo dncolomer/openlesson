@@ -30,6 +30,9 @@ export const SCOUT_FRAME_PADDING_X = 14;
 export const SCOUT_FRAME_PADDING_Y = 12;
 export const SCOUT_FONT_SIZE = 16;
 export const SCOUT_CHILD_GAP_Y = 48;
+/** Horizontal step so picked questions sit in a spread, not one column. */
+export const SCOUT_SPREAD_GAP_X = 80;
+export const SCOUT_SPREAD_GAP_Y = 72;
 export const SCOUT_SEED_X = 72;
 export const SCOUT_SEED_Y = 40;
 /** @deprecated Horizontal layout retired; kept so older imports keep compiling. */
@@ -447,11 +450,17 @@ function nextScoutChildOrigin(
   parentNodeId: string,
 ): { x: number; y: number } {
   const siblings = scoutChildRectangles(scene, parentNodeId);
-  let y = parent.y + parent.height + SCOUT_CHILD_GAP_Y;
-  for (const sib of siblings) {
-    y = Math.max(y, sib.y + sib.height + SCOUT_CHILD_GAP_Y);
-  }
-  return { x: parent.x, y };
+  const index = siblings.length;
+  const columns = 3;
+  const col = index % columns;
+  const row = Math.floor(index / columns);
+  const x = parent.x + (col - 1) * (SCOUT_FRAME_WIDTH + SCOUT_SPREAD_GAP_X);
+  const y =
+    parent.y +
+    parent.height +
+    SCOUT_SPREAD_GAP_Y +
+    row * (SCOUT_FRAME_MIN_HEIGHT + SCOUT_SPREAD_GAP_Y);
+  return { x, y };
 }
 
 /** Seed the shared Work canvas with the topic as framed text. */
@@ -483,7 +492,8 @@ export function seedScoutWorkCanvas(seedText: string): {
 }
 
 /**
- * Add a picked follow-up as a framed node connected (arrow) to the current canvas node.
+ * Add a picked follow-up as its own framed box, spread beside the current node.
+ * Boxes are not joined with arrows.
  */
 export function connectScoutQuestionToCanvas(
   scene: IleWorkCanvasScene | null | undefined,
@@ -523,30 +533,9 @@ export function connectScoutQuestionToCanvas(
       }),
     ),
   );
-  const child = nodeEls.find((el) => el.type === "rectangle") ?? nodeEls[0];
-  const childW = child?.width ?? SCOUT_FRAME_WIDTH;
-  const fromX = parentX + parentW / 2;
-  const fromY = parentY + parentH;
-  const toX = x + childW / 2;
-  const toY = y;
-  const arrowEls = convertToExcalidrawElements([
-    {
-      type: "arrow",
-      x: fromX,
-      y: fromY,
-      width: toX - fromX,
-      height: toY - fromY,
-      strokeColor: "#a3a3a3",
-      customData: {
-        scoutEdge: true,
-        scoutFrom: input.parentNodeId,
-        scoutTo: nodeId,
-      },
-    },
-  ]);
 
   const added = settleIleWorkCanvasIncoming(
-    [...nodeEls, ...arrowEls],
+    nodeEls,
     current.elements.filter((el) => !el.isDeleted),
   );
   return {

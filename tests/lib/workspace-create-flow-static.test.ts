@@ -16,7 +16,7 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("isUiWorkspaceCreateMode");
     expect(page).toContain("Blank");
     expect(page).toContain("From Template");
-    expect(page).toContain("Knowledge Region");
+    expect(page).toContain("Verification Workspace");
     expect(page).not.toContain("From Files + Goal");
     expect(page).not.toContain("files_goal");
     expect(page).not.toContain("handleCreateFilesGoal");

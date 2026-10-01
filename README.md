@@ -15,21 +15,21 @@ Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). T
 Workspaces come in two durable kinds:
 
 - **Standard (map)** — blocks on a knowledge map, TAP / ILE practice links, TAPBench agent sessions, and the full PoW → Snapshot loop.
-- **Knowledge Region** — Goals / Knowledge / Settings shell. Proof of work is produced **outside** the map (partner tools, TAPBench Stash). Agents use the **PoW API + TAPBench Stash API**, not guest-link mint.
+- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint TAP / ILE / TAPBench knowledge links.
 
 ## How It Works
 
-1. **Create a workspace** in the product UI (`/workspace/new`) — blank map, template, or Knowledge Region. Workspace create is UI-only; there is no `POST /workspaces` or MCP `create_workspace`.
+1. **Create a workspace** in the product UI (`/workspace/new`) — blank map, template, or Verification Workspace. Workspace create is UI-only; there is no `POST /workspaces` or MCP `create_workspace`.
 2. **Collect proof of work** — upload tool/screen/video/EEG artifacts (`POST .../proof-of-work`), or buffer via TAPBench Stash then stash/submit (`/api/v3/stash`).
 3. **Snapshot** — call `lwm_snapshot` (REST `POST .../lwm-snapshot`) for a 0–100 LWM Snapshot + GHC, spider markers, gaps, and next actions. Optional world model, knowledge config, distance, and custom regions live under `/api/v3/snapshot`.
 4. **Repeat** — more proof of work improves evaluation. Re-fetch the PoW schema and regenerate the workspace `skill.md` as context grows.
 
-On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge links for human or agent sessions. **Knowledge Region** workspaces do not mint those links; their agent path is PoW capture plus TAPBench Stash.
+On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge links for human or agent sessions. **Verification Workspace** workspaces do not mint those links. Their human path is a verification flow; agents still use PoW capture plus TAPBench Stash, and each flow has its own skill.
 
 ## Key Features
 
 - **Verification workspaces** — assessable blocks, workspace goals, and continuous proof of work
-- **Knowledge Region workspaces** — Goals / Knowledge / Settings; external PoW; custom knowledge regions and Data Studio
+- **Verification Workspace** — Goals / Verification Flows / Context / Knowledge / Settings; flow-scoped proof of work; custom knowledge regions and Data Studio. Does not mint knowledge links.
 - **LWM Snapshot** — sole product score strategy (`lwm_snapshot` / `POST .../lwm-snapshot`); GHC is secondary on the same report
 - **Proof-of-Work API + MCP** — REST under `/api/v3/{pow,snapshot,stash}` with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **TAPBench Stash** — `buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` for agent PoW
@@ -127,7 +127,7 @@ The app will be available at `http://localhost:3000`.
 │   └── docs/             # Interactive Proof-of-Work API reference
 ├── components/           # React components
 │   ├── SessionView.tsx   # ILE session UI
-│   ├── WorkspaceView.tsx # Workspace shell (map vs Knowledge Region)
+│   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
 │   └── thought-ui/       # Shared dialogue / thought components
 ├── lib/                  # Product runtime (PoW, TAP/ILE, xAI, maps, billing)
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP

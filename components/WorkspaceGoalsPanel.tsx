@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { errorMessageFromBody } from "@/lib/api-error-envelope";
+import { ContextGenerationPool } from "@/components/ContextGenerationPool";
 
 export type WorkspaceGoalItem = {
   id: string;
@@ -18,10 +20,13 @@ export function WorkspaceGoalsPanel({
   workspaceId,
   isOwner,
   ayclToken,
+  contextGeneration = false,
 }: {
   workspaceId: string;
   isOwner: boolean;
   ayclToken?: string | null;
+  /** Verification Workspaces can generate goals from the Context tab. */
+  contextGeneration?: boolean;
 }) {
   const [goals, setGoals] = useState<WorkspaceGoalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,8 +69,9 @@ export function WorkspaceGoalsPanel({
     void load();
   }, [load]);
 
-  const addGoal = async () => {
-    if (!draft.trim() || saving || !isOwner) return;
+  const addGoalText = async (text: string) => {
+    const next = text.trim();
+    if (!next || saving || !isOwner) return false;
     setSaving(true);
     setError(null);
     try {
@@ -74,19 +80,25 @@ export function WorkspaceGoalsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
-          text: draft.trim(),
+          text: next,
           ...(ayclToken ? { ayclToken } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to add goal");
-      setDraft("");
+      if (!res.ok) throw new Error(errorMessageFromBody(data, "Failed to add goal"));
       await load();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add goal");
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const addGoal = async () => {
+    const saved = await addGoalText(draft);
+    if (saved) setDraft("");
   };
 
   const saveEdit = async () => {
@@ -230,6 +242,15 @@ export function WorkspaceGoalsPanel({
           ))}
         </ul>
       )}
+
+      {isOwner && contextGeneration ? (
+        <ContextGenerationPool
+          workspaceId={workspaceId}
+          ayclToken={ayclToken}
+          kind="goals"
+          onUseGoal={addGoalText}
+        />
+      ) : null}
 
       {isOwner ? (
         <div className="rounded-none border border-neutral-800 bg-neutral-950/60 p-3" data-goal-add>

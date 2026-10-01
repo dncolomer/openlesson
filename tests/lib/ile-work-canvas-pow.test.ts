@@ -393,6 +393,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     const commandPrompts: Record<(typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number], string> = {
       rephrase: ileWorkCanvasQuickActionPrompt("rephrase"),
       split: "split",
+      join: "Join",
       elaborate: ileWorkCanvasQuickActionPrompt("elaborate more pls"),
       "selective-compression": ILE_SELECTIVE_COMPRESSION_LABEL,
       refactor: "Refactor",

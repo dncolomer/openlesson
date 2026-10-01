@@ -2162,6 +2162,7 @@
     "mapTypesPromptTitle": "Generator prompt",
     "mapTypesPromptHint": "Layout context sent when a new session map is generated from this type.",
     "sectionGoals": "Goals",
+    "sectionVerificationFlows": "Verification Flows",
     "sectionKnowledge": "Knowledge",
     "sectionInsights": "Insights",
     "sectionSetting": "Settings",

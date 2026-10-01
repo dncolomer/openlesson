@@ -14,6 +14,7 @@ import type { AyclCapabilities } from "@/lib/aycl-shared";
 import type { WorkspaceSectionKey } from "@/lib/workspace-sections";
 import type { WorkspaceInteractionMode } from "@/lib/workspace-mode";
 import type { Workspace } from "@/components/workspace-view/types";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 export function WorkspaceLoading({ message }: { message: string }) {
   return (
@@ -100,6 +101,15 @@ export function WorkspaceViewChrome({
             {ayclUpgradeBusy ? "Redirecting…" : ayclUpgradeOfferLabel()}
           </button>
         </div>
+      ) : null}
+
+      {isKnowledgeRegionWorkspace(plan.workspace_kind) ? (
+        <p
+          className="shrink-0 border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-400"
+          data-verification-workspace-shell
+        >
+          Verification Workspace
+        </p>
       ) : null}
 
       <WorkspaceSectionNav

@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { KnowledgeConfigTrajectoryPanel } from "@/components/KnowledgeConfigTrajectoryPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
+import { isKnowledgeRegionWorkspace } from "@/lib/workspace-kind";
 
 type PerformanceSubview =
   | "knowledge"
@@ -22,6 +23,8 @@ interface WorkspacePerformancePanelProps {
   /** @deprecated TAP/ILE guest links live in Settings; kept for call-site compat. */
   hideTap?: boolean;
   ayclToken?: string;
+  /** Verification Workspaces (knowledge_region) can filter Knowledge by flow. */
+  workspaceKind?: unknown;
   /** Optional initial Knowledge subview (e.g. insights deep-link). */
   initialSubview?: PerformanceSubview | "score" | "pow";
   /**
@@ -57,12 +60,14 @@ export function WorkspacePerformancePanel({
   isGroup: _isGroup = false,
   hideTap: _hideTap = false,
   ayclToken,
+  workspaceKind,
   initialSubview,
   lwmEmbeddingsOnly = false,
 }: WorkspacePerformancePanelProps) {
   void _hideTap;
   void _isGroup;
   const { t } = useI18n();
+  const verificationWorkspace = isKnowledgeRegionWorkspace(workspaceKind);
   const allowedSubviews = lwmEmbeddingsOnly
     ? LEARNER_KNOWLEDGE_SUBVIEWS
     : PERFORMANCE_SUBVIEWS;
@@ -114,6 +119,7 @@ export function WorkspacePerformancePanel({
             ayclToken={ayclToken}
             lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="models"
+            verificationWorkspace={verificationWorkspace}
           />
         )}
 
@@ -125,6 +131,7 @@ export function WorkspacePerformancePanel({
             ayclToken={ayclToken}
             lockSubjectToSelf={lwmEmbeddingsOnly}
             panelView="lwm"
+            verificationWorkspace={verificationWorkspace}
           />
         )}
 
@@ -135,6 +142,7 @@ export function WorkspacePerformancePanel({
             isOwner={isOwner}
             ayclToken={ayclToken}
             panelView="ranking"
+            verificationWorkspace={verificationWorkspace}
           />
         )}
 
@@ -145,6 +153,7 @@ export function WorkspacePerformancePanel({
             isOwner={isOwner}
             ayclToken={ayclToken}
             panelView="strengths_gaps"
+            verificationWorkspace={verificationWorkspace}
           />
         )}
       </div>

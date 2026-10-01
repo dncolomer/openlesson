@@ -10,15 +10,13 @@ import {
 } from "@/lib/practice-voice-challenge";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
-import {
-  type Phase,
-  formatCountdown,
-} from "@/lib/tap-score-client-helpers";
+import { type Phase } from "@/lib/tap-score-client-helpers";
 import {
   tapWorkCanvasBoardId,
   tapWorkCanvasShouldAcceptSceneUpdate,
@@ -52,6 +50,7 @@ export function ScoutTapPhases(props: {
   startSession: () => void;
   participantIdentity: PowParticipantIdentity | null;
   remainingSeconds: number;
+  clockPaused?: boolean;
   showEndSession: boolean;
   endSession: () => void;
   workspaceId?: string;
@@ -92,6 +91,7 @@ export function ScoutTapPhases(props: {
     startSession,
     participantIdentity: _participantIdentity,
     remainingSeconds,
+    clockPaused = false,
     showEndSession,
     endSession,
     tapSessionId,
@@ -309,18 +309,12 @@ export function ScoutTapPhases(props: {
                     data-scout-live-control-strip
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
-                          Time left
-                        </div>
-                        <div
-                          className={`font-mono text-lg leading-none tabular-nums tracking-tight ${
-                            remainingSeconds <= 60 ? "text-neutral-300" : "text-white"
-                          }`}
-                        >
-                          {formatCountdown(remainingSeconds)}
-                        </div>
-                      </div>
+                      <TapLiveClock
+                        label="Time left"
+                        remainingSeconds={remainingSeconds}
+                        waiting={clockPaused || questionsLoading}
+                        listening={false}
+                      />
                       {showEndSession ? (
                         <div className="flex shrink-0 items-center" data-scout-end-session>
                           <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>

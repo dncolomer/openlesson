@@ -135,6 +135,10 @@ const ILE_BOARD_CORNERS = [
   { id: "se", top: false, left: false },
 ] as const;
 
+/** Clears the inner rule and the inward half of each corner square. */
+const ILE_END_TURN_BOARD_INSET_PX =
+  ILE_MAP_BOARD_FRAME_INSET_PX + ILE_MAP_BOARD_FRAME_INNER_PX + 4;
+
 function IleChapterBoardFrame({
   left,
   top,
@@ -263,6 +267,7 @@ export function MapWorldLayer({
   aestheticImages = null,
   workAestheticById = null,
   insightCountByChapterId = null,
+  boardInterior = null,
   previousSessionBlockIds = new Set<string>(),
   generationLockedBlockIds,
   dynamicUnlockHighlightIds,
@@ -343,6 +348,8 @@ export function MapWorldLayer({
   aestheticImages?: readonly string[] | null;
   workAestheticById?: Readonly<Record<string, string>> | null;
   insightCountByChapterId?: Readonly<Record<string, number>> | null;
+  /** Replaces the chapter-board field. The frame around it stays visible. */
+  boardInterior?: ReactNode;
   previousSessionBlockIds?: Set<string>;
   generationLockedBlockIds: Set<string>;
   dynamicUnlockHighlightIds: Set<string>;
@@ -425,6 +432,32 @@ export function MapWorldLayer({
             width={chapterBoard.width}
             height={chapterBoard.height}
           />
+          {boardInterior ? (
+            <div
+              data-ile-end-turn-board=""
+              className="absolute overflow-hidden bg-black"
+              style={{
+                left: chapterBoard.minX + ILE_END_TURN_BOARD_INSET_PX,
+                top: chapterBoard.minY + ILE_END_TURN_BOARD_INSET_PX,
+                width: Math.max(0, chapterBoard.width - ILE_END_TURN_BOARD_INSET_PX * 2),
+                height: Math.max(0, chapterBoard.height - ILE_END_TURN_BOARD_INSET_PX * 2),
+                zIndex: 50,
+                pointerEvents: "auto",
+              }}
+            >
+              <div
+                className="origin-top-left"
+                style={{
+                  width: `${Math.max(zoom, 0.05) * 100}%`,
+                  height: `${Math.max(zoom, 0.05) * 100}%`,
+                  transform: `scale(${1 / Math.max(zoom, 0.05)})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                {boardInterior}
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
           {/* Empty cells + selection highlights + unusable ground */}

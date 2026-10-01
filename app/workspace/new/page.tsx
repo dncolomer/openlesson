@@ -136,16 +136,16 @@ const MODE_CARD_COPY: Record<
     cta: "Choose a template",
   },
   knowledge_region: {
-    title: "Knowledge Region",
+    title: "Verification Workspace",
     description:
-      "Goals, Knowledge, and Settings only. Proof of work is generated elsewhere — this workspace does not mint questions, exercises, or knowledge links.",
-    badge: "External PoW",
+      "Goals, Verification Flows, Context, Knowledge, and Settings. Flows collect proof of work from a question pool. This workspace does not mint TAP, ILE, or TAPBench knowledge links.",
+    badge: "Verification flows",
     details: [
-      "Tabs: Goals, Knowledge, Settings",
+      "Tabs: Goals, Verification Flows, Context, Knowledge, Settings",
+      "Public flow links and a per-flow agent skill",
       "No generated map or knowledge links",
-      "Bring your own proof of work",
     ],
-    cta: "Create knowledge region",
+    cta: "Create verification workspace",
   },
 };
 
@@ -451,13 +451,13 @@ export default function NewWorkspacePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           createMode: "knowledge_region",
-          topic: "Knowledge Region",
+          topic: "Verification Workspace",
         }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(
-          errorMessageFromBody(payload, "Failed to create knowledge region workspace"),
+          errorMessageFromBody(payload, "Failed to create verification workspace"),
         );
       }
       const payload = await response.json();

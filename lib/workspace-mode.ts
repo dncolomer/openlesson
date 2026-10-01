@@ -183,7 +183,7 @@ export type WorkspaceModeShell = {
  * Visible top-level sections for the active interaction mode.
  * Learner: Workspace + Knowledge only (logged-in Knowledge scope).
  * Creator: existing owner/consumer section lists.
- * Knowledge Region: never resurrects Workspace / Context / Simulation / DAGs / Map Types.
+ * Knowledge Region creator includes Context. Learner stays Knowledge + Insights.
  */
 export function availableSectionsForMode(input: {
   mode: WorkspaceInteractionMode;

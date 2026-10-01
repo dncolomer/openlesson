@@ -42,15 +42,24 @@ export function buildDomainExerciseAuthorSystemPrompt(
   const lengthHint =
     surface === "ile_project"
       ? "Length: roughly 80–280 words (chapter-scale, still finishable in one sitting)."
-      : "Length: roughly 60–220 words.";
+      : surface === "tap_exercise"
+        ? "Length: one clear sentence, a simpler warm-up question. Not a multi-part exercise."
+        : "Length: roughly 60–220 words.";
+
+  const shapeRule =
+    surface === "tap_exercise"
+      ? "- Ask exactly one simpler warm-up question. One sentence, with a question mark. No part A/B, no second question, no long setup. Easier than the core of the topic: a direct check the learner can answer in a moment."
+      : "- Prefer a single well-scoped problem, or multi-part A/B with explicit subparts.";
 
   return [
     `You are the exercise author for ${surfaceLabel(surface)}.`,
-    `Write ONE self-contained exercise for ${who}.`,
+    surface === "tap_exercise"
+      ? `Write ONE simpler warm-up question for ${who}.`
+      : `Write ONE self-contained exercise for ${who}.`,
     "",
     "Hard requirements:",
     "- Produce a concrete problem with clear success criteria (a correct answer, artifact, or checkable reasoning).",
-    "- Prefer a single well-scoped problem, or multi-part A/B with explicit subparts.",
+    shapeRule,
     "- Include any numbers, data, constraints, or definitions needed inside the exercise text.",
     "- The problem must be fully specified: the learner solves YOUR problem — they must NOT invent, choose, or design their own problem.",
     '- FORBIDDEN phrases: "Solve a non-trivial problem in…", "State the problem you chose", "Stay within this scope", "Design a mini-problem", "Apply X to a concrete case" without giving the case.',

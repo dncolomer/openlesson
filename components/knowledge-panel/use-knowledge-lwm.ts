@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { resolveModelsTabScope } from "@/lib/pow-api/models-tab-scope";
+import {
+  resolveModelsTabScope,
+  type ResolvedModelsTabScope,
+} from "@/lib/pow-api/models-tab-scope";
 import { selectLwmHistoryRun } from "@/lib/pow-api/lwm-snapshot-history-ui";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import { explainLwmSnapshotReport } from "@/lib/pow-api/lwm-snapshot-interpretability";
@@ -35,6 +38,10 @@ export function useKnowledgeLwm(input: {
   canInspectOthers: boolean;
   lockSubjectToSelf: boolean;
   isOwner: boolean;
+  /** Verification-flow filter: do not snap an empty selection back to the signed-in user. */
+  holdEmptySubject?: boolean;
+  initialUserId?: string;
+  initialGuestUserId?: string;
 }) {
   const {
     workspaceId,
@@ -43,10 +50,13 @@ export function useKnowledgeLwm(input: {
     canInspectOthers,
     lockSubjectToSelf,
     isOwner,
+    holdEmptySubject = false,
+    initialUserId = "",
+    initialGuestUserId = "",
   } = input;
 
-  const [lwmUserId, setLwmUserId] = useState("");
-  const [lwmGuestUserId, setLwmGuestUserId] = useState("");
+  const [lwmUserId, setLwmUserId] = useState(initialUserId);
+  const [lwmGuestUserId, setLwmGuestUserId] = useState(initialGuestUserId);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [snapshotEligibility, setSnapshotEligibility] = useState<SnapshotEligibility | null>(null);
@@ -73,34 +83,44 @@ export function useKnowledgeLwm(input: {
   const [publicShareCopied, setPublicShareCopied] = useState(false);
 
   useEffect(() => {
+    if (holdEmptySubject) return;
     if (!currentUserId) return;
     if (!lwmUserId && !lwmGuestUserId) setLwmUserId(currentUserId);
-  }, [currentUserId, lwmGuestUserId, lwmUserId]);
+  }, [currentUserId, holdEmptySubject, lwmGuestUserId, lwmUserId]);
 
   useEffect(() => {
+    if (holdEmptySubject) return;
     if (canInspectOthers || !currentUserId) return;
     setLwmUserId(currentUserId);
     setLwmGuestUserId("");
-  }, [canInspectOthers, currentUserId]);
+  }, [canInspectOthers, currentUserId, holdEmptySubject]);
 
-  const lwmScope = useMemo(
-    () =>
-      resolveModelsTabScope({
+  const lwmScope = useMemo((): ResolvedModelsTabScope => {
+    if (holdEmptySubject && !lwmUserId && !lwmGuestUserId) {
+      return {
         mode: "user",
-        currentUserId,
-        targetUserId: lwmUserId || null,
-        targetGuestUserId: lwmGuestUserId || null,
-        canInspectOthers,
-        lockSubjectToSelf,
-      }),
-    [
-      canInspectOthers,
+        kind: "single",
+        subjects: [],
+        query: { scope: "user" },
+        label: "",
+      };
+    }
+    return resolveModelsTabScope({
+      mode: "user",
       currentUserId,
+      targetUserId: lwmUserId || null,
+      targetGuestUserId: lwmGuestUserId || null,
+      canInspectOthers,
       lockSubjectToSelf,
-      lwmGuestUserId,
-      lwmUserId,
-    ],
-  );
+    });
+  }, [
+    canInspectOthers,
+    currentUserId,
+    holdEmptySubject,
+    lockSubjectToSelf,
+    lwmGuestUserId,
+    lwmUserId,
+  ]);
 
   const loadSnapshotHistory = useCallback(async () => {
     setLwmHistoryLoading(true);
@@ -113,7 +133,7 @@ export function useKnowledgeLwm(input: {
       if (ayclToken) params.set("ayclToken", ayclToken);
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
       else if (lwmUserId) params.set("user_id", lwmUserId);
-      else if (currentUserId) params.set("user_id", currentUserId);
+      else if (!holdEmptySubject && currentUserId) params.set("user_id", currentUserId);
 
       const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
       const data = await response.json().catch(() => ({}));
@@ -147,7 +167,7 @@ export function useKnowledgeLwm(input: {
     } finally {
       setLwmHistoryLoading(false);
     }
-  }, [ayclToken, currentUserId, lwmGuestUserId, lwmUserId, workspaceId]);
+  }, [ayclToken, currentUserId, holdEmptySubject, lwmGuestUserId, lwmUserId, workspaceId]);
 
   const loadLwm = useCallback(async () => {
     setLwmLoading(true);
@@ -165,6 +185,10 @@ export function useKnowledgeLwm(input: {
   }, [ayclToken, loadSnapshotHistory, lwmScope.query, workspaceId]);
 
   const loadSnapshotEligibility = useCallback(async () => {
+    if (holdEmptySubject && !lwmUserId && !lwmGuestUserId) {
+      setSnapshotEligibility(null);
+      return;
+    }
     if (!currentUserId && !lwmUserId && !lwmGuestUserId) {
       setSnapshotEligibility(null);
       return;
@@ -189,7 +213,7 @@ export function useKnowledgeLwm(input: {
         params.set("goal_ids", selectedGoalIds.join(","));
       }
       if (ayclToken) params.set("ayclToken", ayclToken);
-      const subjectUser = lwmUserId || currentUserId;
+      const subjectUser = lwmUserId || (holdEmptySubject ? "" : currentUserId || "");
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
       else if (subjectUser) params.set("user_id", subjectUser);
 
@@ -222,6 +246,7 @@ export function useKnowledgeLwm(input: {
     ayclToken,
     currentUserId,
     goalMode,
+    holdEmptySubject,
     lwmGuestUserId,
     lwmUserId,
     selectedGoalIds,

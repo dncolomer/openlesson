@@ -46,7 +46,6 @@ import {
   ileWorkCanvasHighlightActive,
   ileWorkCanvasLayoutReply,
   ileWorkCanvasNoteNewMarks,
-  ileWorkCanvasSelectionIds,
   ileWorkCanvasShouldRestoreEmptyBoard,
   ileWorkCanvasPointerBusy,
   ileWorkCanvasSceneToViewport,
@@ -58,6 +57,7 @@ import {
   mergeIleXaiTurnOntoLiveWorkCanvas,
   pasteIleWorkCanvasElements,
   serializeIleWorkCanvasScene,
+  joinIleWorkCanvasSelection,
   runIleWorkCanvasClearOverlaps,
   splitIleWorkCanvasSelectedText,
   withIleWorkCanvasGridAppState,
@@ -277,6 +277,8 @@ export function ExcalidrawCanvas({
     top: number;
   } | null>(null);
   const [learnMoreDragging, setLearnMoreDragging] = useState(false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const commandsSelectionRef = useRef("");
   const [promptBarTop, setPromptBarTop] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_TOP);
   const [promptBarWidth, setPromptBarWidth] = useState(ILE_CANVAS_PROMPT_BAR_FALLBACK_WIDTH);
   const [thinkingTick, setThinkingTick] = useState(0);
@@ -500,7 +502,7 @@ export function ExcalidrawCanvas({
     try {
       api.updateScene({
         elements: merged,
-        appState: { selectedElementIds: ileWorkCanvasSelectionIds(added) },
+        appState: { selectedElementIds: {} },
       });
     } finally {
       applyingRemoteRef.current = false;
@@ -730,6 +732,10 @@ export function ExcalidrawCanvas({
     }
     const selectedIds = appState?.selectedElementIds ?? {};
     const selectionKey = ileLearnMoreSelectionKey(selectedIds);
+    if (commandsSelectionRef.current !== selectionKey) {
+      commandsSelectionRef.current = selectionKey;
+      setCommandsOpen(false);
+    }
     if (!selectionKey) {
       learnMorePinnedRef.current = null;
       paintLearnMoreUi(
@@ -866,29 +872,20 @@ export function ExcalidrawCanvas({
                   );
         const noted = ileWorkCanvasNoteNewMarks(live, next, Date.now());
         const added = next.elements.filter((el) => noted.highlight.ids.includes(el.id) && !el.isDeleted);
-        const focusSource = added.length
-          ? added
-          : input.selectedElements.length
-            ? input.selectedElements
-            : next.elements.filter((el) => !el.isDeleted);
-        const focusIds = ileWorkCanvasSelectionIds(focusSource);
         applyingRemoteRef.current = true;
         try {
           api.updateScene({
             elements: next.elements,
             appState: {
-              selectedElementIds: focusIds,
+              selectedElementIds: {},
             },
           });
         } finally {
           applyingRemoteRef.current = false;
         }
         rememberNewCanvasMarks(live, next, next.elements, api.getAppState?.() ?? {});
-        const focusTarget = added.length
-          ? added
-          : focusSource.filter((el) => !el.isDeleted);
-        if (focusTarget.length && typeof api.scrollToContent === "function") {
-          api.scrollToContent(focusTarget, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+        if (added.length && typeof api.scrollToContent === "function") {
+          api.scrollToContent(added, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
         canvasPowCollectorRef.current.syncWithoutEmit({
           elements: next.elements,
@@ -980,28 +977,37 @@ export function ExcalidrawCanvas({
         });
         if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
       };
-      if (action === "split") {
-        const result = splitIleWorkCanvasSelectedText(live, selected);
-        if (!result.split) return;
+      const applyLocalCanvasEdit = (
+        scene: IleWorkCanvasScene,
+        parts: IleWorkCanvasElement[],
+        commandId: IleWorkCanvasCommandId,
+        prompt: string,
+      ) => {
         applyingRemoteRef.current = true;
         try {
           api.updateScene({
-            elements: result.scene.elements,
-            appState: { selectedElementIds: ileWorkCanvasSelectionIds(result.parts) },
+            elements: scene.elements,
+            appState: { selectedElementIds: {} },
           });
         } finally {
           applyingRemoteRef.current = false;
         }
-        rememberNewCanvasMarks(
-          live,
-          result.scene,
-          result.scene.elements,
-          api.getAppState?.() ?? {},
-        );
-        if (result.parts.length && typeof api.scrollToContent === "function") {
-          api.scrollToContent(result.parts, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+        rememberNewCanvasMarks(live, scene, scene.elements, api.getAppState?.() ?? {});
+        if (parts.length && typeof api.scrollToContent === "function") {
+          api.scrollToContent(parts, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
-        emitCommand("split", "split");
+        emitCommand(commandId, prompt);
+      };
+      if (action === "join") {
+        const result = joinIleWorkCanvasSelection(live, selected);
+        if (!result.joined) return;
+        applyLocalCanvasEdit(result.scene, result.parts, "join", "Join");
+        return;
+      }
+      if (action === "split") {
+        const result = splitIleWorkCanvasSelectedText(live, selected);
+        if (!result.split) return;
+        applyLocalCanvasEdit(result.scene, result.parts, "split", "split");
         return;
       }
       if (action === "clear-overlaps") {
@@ -1151,9 +1157,12 @@ export function ExcalidrawCanvas({
 
   const handleLearnMorePointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     event.stopPropagation();
-    if (learnMoreDragRef.current?.pointerId !== event.pointerId) return;
+    const drag = learnMoreDragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
     learnMoreDragRef.current = null;
     setLearnMoreDragging(false);
+    if (moved < 5) setCommandsOpen((open) => !open);
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
     } catch {
@@ -1629,6 +1638,7 @@ export function ExcalidrawCanvas({
             ref={learnMoreHostRef}
             data-ile-excalidraw-ask
             data-ile-learn-more
+            data-ile-learn-more-collapsed={commandsOpen ? "false" : "true"}
             data-ile-learn-more-dragging={learnMoreDragging ? "true" : undefined}
             data-ile-excalidraw-ask-busy={askInFlight > 0 ? "true" : undefined}
             className="pointer-events-none absolute flex flex-col gap-1.5 rounded-none border border-white bg-neutral-950/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
@@ -1655,6 +1665,7 @@ export function ExcalidrawCanvas({
             >
               {ILE_LEARN_MORE_LABEL}
             </span>
+            {commandsOpen ? (
             <div
               data-ile-learn-more-actions
               className="pointer-events-auto flex flex-col gap-1"
@@ -1678,6 +1689,16 @@ export function ExcalidrawCanvas({
                 className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
               >
                 Split
+              </button>
+              <button
+                type="button"
+                data-ile-learn-more-quick="join"
+                aria-label="Join"
+                title="Join the selected elements into one text block, or one group when they have no text."
+                onClick={() => handleQuickAction("join")}
+                className={ILE_CANVAS_COMMAND_BUTTON_CLASS}
+              >
+                Join
               </button>
               <button
                 type="button"
@@ -1730,6 +1751,8 @@ export function ExcalidrawCanvas({
                 Clear overlaps
               </button>
             </div>
+            ) : null}
+            {commandsOpen ? (
             <div className="pointer-events-auto flex items-stretch gap-1">
               <input
                 data-ile-excalidraw-ask-input
@@ -1748,6 +1771,7 @@ export function ExcalidrawCanvas({
                 Send
               </button>
             </div>
+            ) : null}
           </form>
         ) : null}
         {onAskSelected ? (

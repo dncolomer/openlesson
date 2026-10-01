@@ -202,8 +202,8 @@ export async function POST(req: NextRequest) {
         .from("workspaces")
         .insert({
           user_id: user.id,
-          title: "Knowledge Region",
-          root_topic: "Knowledge Region",
+          title: "Verification Workspace",
+          root_topic: "Verification Workspace",
           status: "active",
           source_type: "topic",
           notes: "",
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
         console.error("[workspace/generate] knowledge region insert failed:", planError);
         return jsonError(
           500,
-          planError?.message || "Failed to create knowledge region workspace",
+          planError?.message || "Failed to create verification workspace",
         );
       }
 

@@ -19,6 +19,7 @@ import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
+import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
@@ -108,6 +109,19 @@ interface TapScoreClientProps {
    * When true, hide the briefing duration picker (duration already chosen upstream).
    */
   lockDuration?: boolean;
+  /**
+   * Verification flow: these topics replace the generated three.
+   * An empty list does not fetch topics.
+   */
+  presetStartingTopics?: TapStartingTopic[];
+  /** Skip the tutoring start API and open the canvas from the topic question. */
+  localOpening?: boolean;
+  localPracticePrompt?: string;
+  onLocalProof?: (input: {
+    prompt: string;
+    practice: boolean;
+    questionId: string | null;
+  }) => Promise<void> | void;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -131,6 +145,10 @@ export function TapScoreClient({
   participantIdentity: participantIdentityProp = null,
   initialMinutes,
   lockDuration = false,
+  presetStartingTopics,
+  localOpening = false,
+  localPracticePrompt = VERIFICATION_PRACTICE_OPENING,
+  onLocalProof,
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -229,6 +247,9 @@ export function TapScoreClient({
   const [liveMinutes, setLiveMinutes] = useState(resolvedLaunchMinutes);
   const [clockWaiting, setClockWaiting] = useState(false);
   const isPracticeModeRef = useRef(false);
+  const localQuestionIdRef = useRef<string | null>(null);
+  const onLocalProofRef = useRef(onLocalProof);
+  onLocalProofRef.current = onLocalProof;
 
   const isEndingRef = useRef(false);
   const isSendingRef = useRef(false);
@@ -516,6 +537,11 @@ export function TapScoreClient({
 
   useEffect(() => {
     if (phase !== "briefing") return;
+    if (presetStartingTopics) {
+      setStartingTopics(presetStartingTopics);
+      setTopicsError("");
+      return;
+    }
 
     let cancelled = false;
     setStartingTopics([]);
@@ -550,7 +576,7 @@ export function TapScoreClient({
     return () => {
       cancelled = true;
     };
-  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage]);
+  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes, conversationLanguage, presetStartingTopics]);
 
   const stashedThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
@@ -935,6 +961,10 @@ export function TapScoreClient({
     flushSpeechSegment, flushFinalBuffer, clearTranscriptionDisplay, restartSpeechRecognitionSession,
     workCanvasSceneRef,
     apply: applyTapSession,
+    localOpening,
+    localPracticePrompt,
+    localQuestionIdRef,
+    onLocalProof: (input) => onLocalProofRef.current?.(input),
   });
 
   useEffect(() => {
@@ -1042,6 +1072,7 @@ export function TapScoreClient({
       conversationLanguage={conversationLanguage}
       setConversationLanguage={setConversationLanguage}
       privateToken={privateToken}
+      localOpening={localOpening}
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}
       startingTopics={startingTopics}

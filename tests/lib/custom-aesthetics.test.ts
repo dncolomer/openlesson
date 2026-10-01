@@ -359,12 +359,15 @@ describe("custom aesthetic surfaces", () => {
     expect(workspace).not.toContain("public/aesthetics");
   });
 
-  it("ile-turn-insight-craft uses useSurfaceAestheticImages and the folder fallback only when the listing is empty", () => {
+  it("the end-turn screen is a black board interior with no aesthetic still", () => {
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
-    expect(craft).toContain("useSurfaceAestheticImages");
-    expect(craft).toContain('surface.source === "fallback"');
-    expect(craft).toContain("FALLBACK_AESTHETIC_IMAGES");
+    expect(craft).toContain("bg-black");
+    expect(craft).not.toContain("useSurfaceAestheticImages");
+    expect(craft).not.toContain("data-ile-turn-insight-craft-still");
+    expect(craft).not.toContain("FALLBACK_AESTHETIC_IMAGES");
     expect(craft).not.toContain("public/aesthetics");
+    const view = read("components/SessionView.tsx");
+    expect(view).toContain("boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}");
   });
 
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {
@@ -399,8 +402,8 @@ describe("custom aesthetic surfaces", () => {
     expect(workspace).toContain("selectSurfaceAestheticImages");
     expect(workspace).toContain("aestheticImageForId(workspaceId, selection.images)");
     expect(workspace).not.toMatch(/aestheticImageForId\(workspaceId\)/);
-    expect(craft).toContain("useSurfaceAestheticImages");
-    expect(craft).toContain('surface.source === "fallback"');
+    expect(craft).toContain("bg-black");
+    expect(craft).not.toContain("useSurfaceAestheticImages");
     expect(dock).toContain("useSurfaceAestheticImages");
     expect(dock).toContain('surface.source === "fallback"');
     expect(dock).toContain("FALLBACK_AESTHETIC_IMAGES");

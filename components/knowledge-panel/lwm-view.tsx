@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import { UserPicker } from "@/components/knowledge-panel/widgets";
 import { LwmSnapshotModal } from "@/components/knowledge-panel/lwm-snapshot-modal";
 import { useKnowledgeLwm } from "@/components/knowledge-panel/use-knowledge-lwm";
 import type { KnowledgeLwmViewProps } from "@/components/knowledge-panel/types";
+import { VerificationFlowSubtabFilter } from "@/components/VerificationFlowSubtabFilter";
+import {
+  knowledgeSubjectsForVerificationFlow,
+  lwmLoadedSubjectForVerificationFlow,
+} from "@/lib/verification-knowledge-subtab";
 import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
 import {
   lwmPrimaryBandLabel,
@@ -18,7 +24,19 @@ export function KnowledgeLwmView({
   ayclToken,
   canInspectOthers,
   lockSubjectToSelf,
+  flowFilter,
 }: KnowledgeLwmViewProps) {
+  const verificationProfiles = Boolean(flowFilter?.enabled);
+  const flowId = verificationProfiles ? flowFilter?.flowId ?? null : null;
+  const pinnedSubject = verificationProfiles
+    ? lwmLoadedSubjectForVerificationFlow({
+        subjects: knowledgeSubjectsForVerificationFlow([], flowFilter?.rows ?? [], flowId),
+        roster: [],
+        flowId,
+        current: { userId: "", guestUserId: "" },
+        currentUserId,
+      })
+    : { userId: "", guestUserId: "" };
   const {
     adhocGoal,
     availableSubjects,
@@ -74,14 +92,50 @@ export function KnowledgeLwmView({
     canInspectOthers,
     lockSubjectToSelf,
     isOwner,
+    holdEmptySubject: verificationProfiles,
+    initialUserId: pinnedSubject.userId,
+    initialGuestUserId: pinnedSubject.guestUserId,
   });
+  const subjects = knowledgeSubjectsForVerificationFlow(
+    availableSubjects,
+    flowFilter?.rows ?? [],
+    flowId,
+  );
+  useEffect(() => {
+    if (!verificationProfiles) return;
+    const next = lwmLoadedSubjectForVerificationFlow({
+      subjects,
+      roster: availableSubjects,
+      flowId,
+      current: { userId: lwmUserId, guestUserId: lwmGuestUserId },
+      currentUserId,
+    });
+    if (next.userId === lwmUserId && next.guestUserId === lwmGuestUserId) return;
+    setLwmUserId(next.userId);
+    setLwmGuestUserId(next.guestUserId);
+    setSelectedLwmRunId(null);
+  }, [
+    availableSubjects,
+    currentUserId,
+    flowId,
+    lwmGuestUserId,
+    lwmUserId,
+    setLwmGuestUserId,
+    setLwmUserId,
+    setSelectedLwmRunId,
+    subjects,
+    verificationProfiles,
+  ]);
 
   return (
         <section
           data-section="lwm"
           data-lwm-layout="profile-zones"
+          data-lwm-loaded-user={lwmUserId}
+          data-lwm-loaded-guest={lwmGuestUserId}
           className="flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2"
         >
+          <VerificationFlowSubtabFilter subtab="lwm" filter={flowFilter} />
           {lwmError ? (
             <div className="rounded-none border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-xs text-red-300">
               {lwmError}
@@ -104,9 +158,9 @@ export function KnowledgeLwmView({
                 compact
                 valueUserId={lwmUserId}
                 valueGuestUserId={lwmGuestUserId}
-                currentUserId={currentUserId}
-                availableSubjects={availableSubjects}
-                canInspectOthers={canInspectOthers}
+                currentUserId={flowId ? null : currentUserId}
+                availableSubjects={subjects}
+                canInspectOthers={flowId ? true : canInspectOthers}
                 onChange={({ userId, guestUserId }) => {
                   setLwmUserId(userId);
                   setLwmGuestUserId(guestUserId);

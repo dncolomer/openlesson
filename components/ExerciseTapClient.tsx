@@ -79,6 +79,7 @@ import {
   emptyExerciseDualLists,
   promoteExerciseStashToSubmission,
   resolveExercisePromptAfterIntro,
+  singleDrillWarmupPrompt,
   stashExerciseSpeech,
   type ExerciseDualLists,
   type ExerciseThought,
@@ -716,17 +717,17 @@ export function ExerciseTapClient({
         setTapSessionId(payload.tapSessionId);
       }
 
-      // Topic cards seed the solo exercise prompt; server opening is next priority.
-      const prompt = resolveExercisePromptAfterIntro({
+      // One simpler warm-up on the canvas. Other topic cards stay off the board.
+      const resolved = resolveExercisePromptAfterIntro({
         topicOpeningQuestion: topic?.openingQuestion,
         serverOpeningQuestion: String(payload.openingQuestion || "").trim() || null,
         workspaceTitle,
       });
+      const prompt = singleDrillWarmupPrompt(resolved);
       if (!prompt) throw new Error("Could not generate exercise prompt");
       setExerciseText(prompt);
       const seeded = seedTapSoloProblems({
         exerciseText: prompt,
-        topics: startingTopics,
         startedTopicId: topic?.id ?? null,
       });
       setSoloProblems(seeded.placed);

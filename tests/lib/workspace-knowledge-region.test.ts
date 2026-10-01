@@ -115,7 +115,7 @@ describe("Knowledge Region shell", () => {
       isOwner: true,
       workspaceKind: "knowledge_region",
     });
-    expect(owner).toEqual(["goals", "knowledge", "settings"]);
+    expect(owner).toEqual(["goals", "verification_flows", "context", "knowledge", "settings"]);
     const t = (key: string) => key;
     const krNav = buildWorkspaceSectionNavItems({
       t,
@@ -125,6 +125,8 @@ describe("Knowledge Region shell", () => {
     });
     expect(krNav.map((item) => item.key)).toEqual([
       "goals",
+      "verification_flows",
+      "context",
       "knowledge",
       "settings",
     ]);
@@ -509,7 +511,7 @@ describe("Knowledge Region embeddings import overlay", () => {
 describe("Knowledge Region wiring", () => {
   it("create page, generate path, shell, settings, mint, embeddings import are wired", () => {
     const page = read("app/workspace/new/page.tsx");
-    expect(page).toContain("Knowledge Region");
+    expect(page).toContain("Verification Workspace");
     expect(page).toContain("data-create-mode={card.mode}");
     expect(page).toContain('data-create-mode="knowledge_region"');
     expect(page).toContain('data-create-layout="3-plus-1"');

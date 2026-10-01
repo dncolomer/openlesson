@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { AddExpandJob } from "@/lib/add-block-range-density";
 import type { IleGatherJob } from "@/lib/ile-gather-resources";
 import type { GridCell, SkillGridNode } from "@/lib/block-skill-grid";
@@ -41,6 +42,8 @@ export interface BlockSkillGridProps {
   workAestheticById?: Readonly<Record<string, string>> | null;
   /** Accepted insights already tracked per chapter id. */
   insightCountByChapterId?: Readonly<Record<string, number>> | null;
+  /** Replaces the chapter-board field. The double frame stays visible around it. */
+  boardInterior?: ReactNode;
   circularMenuSurface?: "ile" | "workspace-learner" | "none";
   onEmptyCellSelect?: (selected: boolean) => void;
   onBlockedCellSelect?: (selected: boolean) => void;

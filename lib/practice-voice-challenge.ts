@@ -5,11 +5,11 @@
  */
 
 export const PRACTICE_VOICE_CHALLENGE_SCRIPT =
-  "I will now speak my thinking out loud the whole time. My spoken thinking is a raw thinking signal and a baseline attention increase.";
+  "I think aloud the whole time. Raw thinking signal and baseline attention.";
 
 /** Regular TAP: what the session expects, read after the speak-aloud lines. */
 export const TAP_VOICE_CHALLENGE_SENTENCE_TWO =
-  "In this session I will think out loud the whole time, read each question out loud, and press I'm done answering when I finish a chain of thought.";
+  "I'll read each question aloud and press I'm done answering when a chain ends.";
 export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${TAP_VOICE_CHALLENGE_SENTENCE_TWO}`;
 
 /** ILE reads two sentences. The second is the session goal, with a sample card under it. */

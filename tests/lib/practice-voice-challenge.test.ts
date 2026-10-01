@@ -62,12 +62,15 @@ function read(rel: string) {
 
 describe("practice voice challenge script and transcript", () => {
   it("script contains speaking thinking out loud the whole time plus raw thinking signal and baseline attention", () => {
-    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/I will now speak my thinking out loud the whole time/i);
-    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/raw thinking signal/i);
-    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toMatch(/baseline attention/i);
+    expect(PRACTICE_VOICE_CHALLENGE_SCRIPT).toBe(
+      "I think aloud the whole time. Raw thinking signal and baseline attention.",
+    );
+    expect(TAP_VOICE_CHALLENGE_SENTENCE_TWO).toBe(
+      "I'll read each question aloud and press I'm done answering when a chain ends.",
+    );
     expect(practiceVoiceChallengeTranscriptPasses(PRACTICE_VOICE_CHALLENGE_SCRIPT)).toBe(true);
     expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("I'm done answering");
-    expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("read each question out loud");
+    expect(TAP_VOICE_CHALLENGE_SCRIPT).toContain("read each question aloud");
     expect(
       latchVoiceChallengePass({
         alreadyPassed: false,
@@ -96,12 +99,9 @@ describe("practice voice challenge script and transcript", () => {
     expect(practiceVoiceChallengeTranscriptPasses("")).toBe(false);
     expect(practiceVoiceChallengeTranscriptPasses("   ")).toBe(false);
     expect(practiceVoiceChallengeTranscriptPasses("the weather is nice today")).toBe(false);
-    expect(
-      practiceVoiceChallengeTranscriptPasses("I will now speak my thinking out loud the whole time"),
-    ).toBe(false);
-    expect(
-      practiceVoiceChallengeTranscriptPasses("raw thinking signal and a baseline attention increase"),
-    ).toBe(false);
+    const [opening, why] = PRACTICE_VOICE_CHALLENGE_SCRIPT.split(/(?<=\.)\s+/);
+    expect(practiceVoiceChallengeTranscriptPasses(opening ?? "")).toBe(false);
+    expect(practiceVoiceChallengeTranscriptPasses(why ?? "")).toBe(false);
     const keepMost = PRACTICE_VOICE_CHALLENGE_SCRIPT.split(/(?<=\.)\s+/)
       .map((sentence) => {
         const words = sentence.split(/\s+/);
@@ -144,11 +144,11 @@ describe("practice voice challenge script and transcript", () => {
     expect(secondPass.passed).toBe(true);
     const partial = voiceChallengeReadMarks({
       script: PRACTICE_VOICE_CHALLENGE_SCRIPT,
-      transcript: "I will now speak my thinking out loud the whole time",
+      transcript: firstSentence ?? "",
     });
     const partialWords = partial.filter((mark) => mark.kind === "word");
-    expect(partialWords.find((mark) => mark.text === "speak")?.heard).toBe(true);
-    expect(partialWords.find((mark) => mark.text === "raw")?.heard).toBe(false);
+    expect(partialWords.find((mark) => mark.text === "think")?.heard).toBe(true);
+    expect(partialWords.find((mark) => mark.text === "Raw")?.heard).toBe(false);
     expect(voiceChallengeFillRatio(partial)).toBeGreaterThan(0);
     expect(voiceChallengeFillRatio(partial)).toBeLessThan(1);
     const full = voiceChallengeReadMarks({

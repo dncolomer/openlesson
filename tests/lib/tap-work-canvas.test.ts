@@ -326,6 +326,13 @@ describe("TAP Work canvas PoW (shipped ILE builders)", () => {
     expect(live).toContain("buildTapCanvasSnapshotUploadItem");
     expect(live).toContain("uploadTapWorkCanvasPow");
     expect(live).toContain("onCanvasPowActions");
+    const preparePhases = read("components/scout-tap/scout-tap-phases.tsx");
+    const prepareClient = read("components/scout-tap/ScoutTapClient.tsx");
+    expect(preparePhases).not.toContain("onCanvasPowActions={() => {}}");
+    expect(preparePhases).toContain("onCanvasPowActions={onCanvasPowActions}");
+    expect(prepareClient).toContain("buildTapWorkCanvasActionUploadItem");
+    expect(prepareClient).toContain("uploadTapWorkCanvasPow");
+    expect(prepareClient).toContain("onCanvasPowActions={handleCanvasPowActions}");
     const runtime = read("lib/tap-session-runtime.ts");
     expect(runtime).toContain('canvas: "/api/workspace-tap-score/canvas"');
     expect(existsSync(join(ROOT, "app/api/workspace-tap-score/canvas/route.ts"))).toBe(true);

@@ -16,7 +16,8 @@ import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 
 export const ILE_WORK_CANVAS_POW_TOOL_NAME = "canvas" as const;
 
-export const ILE_WORK_CANVAS_POW_ACTIONS = [
+/** Draw, edit, and free-text prompt actions. Command ids are appended below. */
+export const ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS = [
   "draw_text",
   "draw_freedraw",
   "draw_rectangle",
@@ -33,12 +34,30 @@ export const ILE_WORK_CANVAS_POW_ACTIONS = [
   "multi_select",
   "expand_more",
   "board_prompt",
-  "compress_work",
+] as const;
+
+/** Canvas command buttons. Each id is its own `tool_action`, not `expand_more`. */
+export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
+  "rephrase",
+  "split",
+  "elaborate",
+  "selective-compression",
+  "refactor",
+  "suggest-insight",
+  "clear-overlaps",
+] as const;
+
+export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];
+
+export const ILE_WORK_CANVAS_POW_ACTIONS = [
+  ...ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS,
+  ...ILE_WORK_CANVAS_COMMAND_POW_IDS,
 ] as const;
 
 export type IleWorkCanvasPowAction = (typeof ILE_WORK_CANVAS_POW_ACTIONS)[number];
 
 const POW_ACTION_SET = new Set<string>(ILE_WORK_CANVAS_POW_ACTIONS);
+const COMMAND_POW_ID_SET = new Set<string>(ILE_WORK_CANVAS_COMMAND_POW_IDS);
 
 const ELEMENT_DRAW_ACTION: Record<string, IleWorkCanvasPowAction> = {
   text: "draw_text",
@@ -62,7 +81,12 @@ export type IleWorkCanvasPowEvent = {
   metadata: Record<string, unknown>;
 };
 
-export type IleWorkCanvasAskPowKind = "expand_more" | "board_prompt" | "compress_work";
+export type IleWorkCanvasAskPowKind = "expand_more" | "board_prompt";
+
+/** Full prompt text for a persisted row. Trim edges only — never slice. */
+function canvasPowPromptText(prompt: string | null | undefined): string {
+  return String(prompt ?? "").trim();
+}
 
 function normalizeToolToken(value: string | null | undefined): string {
   return String(value || "")
@@ -394,23 +418,55 @@ export function buildIleWorkCanvasAskPowEvent(
     selectedIds?: readonly string[] | null;
   } = {},
 ): IleWorkCanvasPowEvent | null {
-  if (kind !== "expand_more" && kind !== "board_prompt" && kind !== "compress_work") {
-    return null;
-  }
+  if (kind !== "expand_more" && kind !== "board_prompt") return null;
   const selected = [...(input.selectedElements ?? [])];
   const ids =
     input.selectedIds?.length
       ? [...input.selectedIds]
       : selected.map((el) => el.id).filter(Boolean);
-  const prompt = String(input.prompt || "").trim();
+  const prompt = canvasPowPromptText(input.prompt);
   if (kind === "expand_more" && !ids.length && !prompt) return null;
   if (kind === "board_prompt" && !prompt) return null;
-  if (kind === "compress_work" && !ids.length && !prompt) return null;
   return {
     toolName: ILE_WORK_CANVAS_POW_TOOL_NAME,
     toolAction: kind,
     metadata: {
       via: "excalidraw",
+      prompt,
+      element_ids: ids,
+      element_types: selected.map((el) => el.type).filter(Boolean),
+      count: ids.length,
+      multi: ids.length > 1,
+    },
+  };
+}
+
+/**
+ * One canvas command click. `tool_action` and `metadata.command_id` are the
+ * command id (`selective-compression`, not a free-text `expand_more`).
+ */
+export function buildIleWorkCanvasCommandPowEvent(
+  commandId: string,
+  input: {
+    prompt?: string | null;
+    selectedElements?: readonly IleWorkCanvasElement[] | null;
+    selectedIds?: readonly string[] | null;
+  } = {},
+): IleWorkCanvasPowEvent | null {
+  const id = String(commandId || "").trim();
+  if (!COMMAND_POW_ID_SET.has(id)) return null;
+  const selected = [...(input.selectedElements ?? [])];
+  const ids = input.selectedIds?.length
+    ? [...input.selectedIds]
+    : selected.map((el) => el.id).filter(Boolean);
+  const prompt = canvasPowPromptText(input.prompt);
+  if (!ids.length && !prompt) return null;
+  return {
+    toolName: ILE_WORK_CANVAS_POW_TOOL_NAME,
+    toolAction: id as IleWorkCanvasPowAction,
+    metadata: {
+      via: "excalidraw",
+      command_id: id,
       prompt,
       element_ids: ids,
       element_types: selected.map((el) => el.type).filter(Boolean),
@@ -439,7 +495,13 @@ export function buildIleWorkCanvasActionUploadItem(
     return null;
   }
   if (!toolAction || !POW_ACTION_SET.has(toolAction)) return null;
-  const metadata = { via: "excalidraw", ...(event.metadata ?? {}) };
+  const metadata: Record<string, unknown> = { via: "excalidraw", ...(event.metadata ?? {}) };
+  if (COMMAND_POW_ID_SET.has(toolAction) && typeof metadata.command_id !== "string") {
+    metadata.command_id = toolAction;
+  }
+  const prompt = typeof metadata.prompt === "string" ? metadata.prompt : undefined;
+  const commandId = typeof metadata.command_id === "string" ? metadata.command_id : undefined;
+  const elementIds = Array.isArray(metadata.element_ids) ? metadata.element_ids : undefined;
   return {
     kind: "tool",
     mimeType: "application/json",
@@ -449,6 +511,9 @@ export function buildIleWorkCanvasActionUploadItem(
       tool: ILE_WORK_CANVAS_POW_TOOL_NAME,
       action: toolAction,
       timestamp_ms: timestampMs,
+      ...(prompt !== undefined ? { prompt } : {}),
+      ...(commandId !== undefined ? { command_id: commandId } : {}),
+      ...(elementIds !== undefined ? { element_ids: elementIds } : {}),
       metadata,
     }),
     timestampMs,
@@ -581,14 +646,15 @@ export class IleWorkCanvasPowCollector {
     return event ? [event] : [];
   }
 
-  compressWork(input: {
-    prompt?: string | null;
-    selectedElements?: readonly IleWorkCanvasElement[] | null;
-  } = {}): IleWorkCanvasPowEvent[] {
-    const event = buildIleWorkCanvasAskPowEvent("compress_work", {
-      prompt: input.prompt || "Compress work",
-      selectedElements: input.selectedElements,
-    });
+  command(
+    commandId: string,
+    input: {
+      prompt?: string | null;
+      selectedElements?: readonly IleWorkCanvasElement[] | null;
+      selectedIds?: readonly string[] | null;
+    } = {},
+  ): IleWorkCanvasPowEvent[] {
+    const event = buildIleWorkCanvasCommandPowEvent(commandId, input);
     return event ? [event] : [];
   }
 }

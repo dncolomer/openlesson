@@ -949,8 +949,8 @@ export function ExcalidrawCanvas({
         appState: api.getAppState?.() ?? {},
         files: api.getFiles?.() ?? {},
       });
-      const emitExpand = (prompt: string) => {
-        const powEvents = canvasPowCollectorRef.current.expandMore({
+      const emitCommand = (commandId: IleWorkCanvasCommandId, prompt: string) => {
+        const powEvents = canvasPowCollectorRef.current.command(commandId, {
           prompt,
           selectedElements: selected,
         });
@@ -977,11 +977,11 @@ export function ExcalidrawCanvas({
         if (result.parts.length && typeof api.scrollToContent === "function") {
           api.scrollToContent(result.parts, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
         }
-        emitExpand("split");
+        emitCommand("split", "split");
         return;
       }
       if (action === "clear-overlaps") {
-        emitExpand("Clear overlaps");
+        emitCommand("clear-overlaps", "Clear overlaps");
         const cleared = runIleWorkCanvasClearOverlaps({
           scene: live,
           selectedElements: selected,
@@ -1009,11 +1009,7 @@ export function ExcalidrawCanvas({
         return;
       }
       if (action === "selective-compression") {
-        const powEvents = canvasPowCollectorRef.current.compressWork({
-          prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
-          selectedElements: selected,
-        });
-        if (powEvents.length) onCanvasPowActionsRef.current?.(powEvents);
+        emitCommand("selective-compression", ILE_SELECTIVE_COMPRESSION_LABEL);
         void runCanvasAsk({
           prompt: ILE_SELECTIVE_COMPRESSION_LABEL,
           selectedElements: selected,
@@ -1025,12 +1021,12 @@ export function ExcalidrawCanvas({
         const prompt = ileWorkCanvasQuickActionPrompt(
           action === "rephrase" ? "rephrase" : "elaborate more pls",
         );
-        emitExpand(prompt);
+        emitCommand(action, prompt);
         void runCanvasAsk({ prompt, selectedElements: selected });
         return;
       }
       if (action === "refactor") {
-        emitExpand("Refactor");
+        emitCommand("refactor", "Refactor");
         void runCanvasAsk({
           prompt: "Refactor",
           selectedElements: selected,
@@ -1038,7 +1034,7 @@ export function ExcalidrawCanvas({
         });
         return;
       }
-      emitExpand("Suggest Insight");
+      emitCommand("suggest-insight", "Suggest Insight");
       void runCanvasAsk({
         prompt: "Suggest Insight",
         selectedElements: selected,

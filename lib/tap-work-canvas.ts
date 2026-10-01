@@ -31,6 +31,7 @@ import {
 import {
   buildIleWorkCanvasActionUploadItem,
   buildIleWorkCanvasAskPowEvent,
+  buildIleWorkCanvasCommandPowEvent,
   classifyIleWorkCanvasSceneDiff,
   ileWorkCanvasElementContentFingerprint,
   type IleWorkCanvasPowEvent,
@@ -184,6 +185,7 @@ export function buildTapWorkCanvasActionUploadItem(
 
 export {
   buildIleWorkCanvasAskPowEvent as buildTapWorkCanvasAskPowEvent,
+  buildIleWorkCanvasCommandPowEvent as buildTapWorkCanvasCommandPowEvent,
   classifyIleWorkCanvasSceneDiff as classifyTapWorkCanvasSceneDiff,
   ileWorkCanvasElementContentFingerprint as tapWorkCanvasElementContentFingerprint,
 };
@@ -203,6 +205,34 @@ export function tapWorkCanvasAskUserMessage(
   return buildIleWorkCanvasAskUserMessage(input);
 }
 
+export function buildTapWorkCanvasPowPostBody(input: {
+  workspaceId?: string;
+  blockId?: string;
+  sessionId?: string;
+  privateToken?: string;
+  tapSessionId?: string | null;
+  entryQueryParams?: Record<string, string | string[]>;
+  practice?: boolean;
+  item: IleProofOfWorkUploadItem;
+}) {
+  return {
+    workspaceId: input.workspaceId,
+    blockId: input.blockId,
+    sessionId: input.sessionId,
+    privateToken: input.privateToken,
+    tapSessionId: input.tapSessionId,
+    entryQueryParams: input.entryQueryParams,
+    practice: input.practice === true ? true : undefined,
+    tool_name: input.item.toolName,
+    tool_action: input.item.toolAction,
+    file_name: input.item.fileName,
+    mime_type: input.item.mimeType,
+    timestampMs: input.item.timestampMs,
+    metadata: input.item.metadata,
+    payload: textToBase64(input.item.payload),
+  };
+}
+
 export async function uploadTapWorkCanvasPow(input: {
   workspaceId?: string;
   blockId?: string;
@@ -218,22 +248,7 @@ export async function uploadTapWorkCanvasPow(input: {
   await fetch(TAP_SESSION_RUNTIME_PATHS.canvas, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      workspaceId: input.workspaceId,
-      blockId: input.blockId,
-      sessionId: input.sessionId,
-      privateToken: input.privateToken,
-      tapSessionId: input.tapSessionId,
-      entryQueryParams: input.entryQueryParams,
-      practice: input.practice === true ? true : undefined,
-      tool_name: input.item.toolName,
-      tool_action: input.item.toolAction,
-      file_name: input.item.fileName,
-      mime_type: input.item.mimeType,
-      timestampMs: input.item.timestampMs,
-      metadata: input.item.metadata,
-      payload: textToBase64(input.item.payload),
-    }),
+    body: JSON.stringify(buildTapWorkCanvasPowPostBody(input)),
   }).catch(() => {});
 }
 

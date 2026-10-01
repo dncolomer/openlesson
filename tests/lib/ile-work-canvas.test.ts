@@ -1700,7 +1700,7 @@ describe("ILE Work canvas compress work (shipped)", () => {
 
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).not.toContain("data-ile-compress-work");
-    expect(canvas).toContain("compressWork");
+    expect(canvas).toContain('emitCommand("selective-compression"');
     expect(canvas).toContain('kind: "selective-compress"');
     expect(canvas).toContain("compressIleWorkCanvasSelection");
     expect(canvas).toContain("<IleCraftInsightButton");

@@ -36,11 +36,13 @@ import {
 } from "@/lib/workspace-learner-writes";
 import {
   buildTapCanvasSnapshotUploadItem,
+  buildTapWorkCanvasActionUploadItem,
   emptyTapWorkCanvasScene,
   serializeTapWorkCanvasScene,
   tapWorkCanvasShouldAcceptSceneUpdate,
   uploadTapWorkCanvasPow,
 } from "@/lib/tap-work-canvas";
+import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
 import {
   SCOUT_FOLLOWUP_QUESTION_COUNT,
@@ -234,6 +236,30 @@ export function ScoutTapClient({
       cancelled = true;
     };
   }, [blockId]);
+
+  const handleCanvasPowActions = useCallback(
+    (events: IleWorkCanvasPowEvent[]) => {
+      const sessionKey = String(tapSessionIdRef.current || sessionId || "").trim();
+      if (!sessionKey) return;
+      for (const event of events) {
+        const item = buildTapWorkCanvasActionUploadItem(sessionKey, {
+          ...event,
+          metadata: { ...event.metadata, product: "tap" },
+        });
+        if (!item) continue;
+        void uploadTapWorkCanvasPow({
+          workspaceId,
+          blockId,
+          sessionId,
+          privateToken,
+          tapSessionId: tapSessionIdRef.current,
+          entryQueryParams: entryQueryParamsRef.current,
+          item,
+        });
+      }
+    },
+    [blockId, privateToken, sessionId, workspaceId],
+  );
 
   const persistScoutCanvas = useCallback(async () => {
     const scene = workCanvasSceneRef.current;
@@ -541,6 +567,7 @@ export function ScoutTapClient({
       canvasApplyElements={canvasApplyElements}
       canvasApplyNonce={canvasApplyNonce}
       handleSceneChange={handleSceneChange}
+      onCanvasPowActions={handleCanvasPowActions}
       scoutState={scoutState}
       questionsLoading={questionsLoading}
       onPickQuestion={onPickQuestion}

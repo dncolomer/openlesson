@@ -24,6 +24,7 @@ import {
   tapWorkCanvasShouldAcceptSceneUpdate,
 } from "@/lib/tap-work-canvas";
 import type { IleWorkCanvasElement, IleWorkCanvasScene } from "@/lib/ile-work-canvas";
+import type { IleWorkCanvasPowEvent } from "@/lib/ile-work-canvas-pow";
 import {
   canGoBackScoutNode,
   scoutCurrentNode,
@@ -65,6 +66,7 @@ export function ScoutTapPhases(props: {
   canvasApplyElements: IleWorkCanvasElement[];
   canvasApplyNonce: number;
   handleSceneChange: (scene: IleWorkCanvasScene) => void;
+  onCanvasPowActions: (events: IleWorkCanvasPowEvent[]) => void;
   scoutState: ScoutLiveState;
   questionsLoading: boolean;
   onPickQuestion: (index: number) => void;
@@ -102,6 +104,7 @@ export function ScoutTapPhases(props: {
     canvasApplyElements,
     canvasApplyNonce,
     handleSceneChange,
+    onCanvasPowActions,
     scoutState,
     questionsLoading,
     onPickQuestion,
@@ -174,7 +177,7 @@ export function ScoutTapPhases(props: {
           }
           handleSceneChange(scene);
         }}
-        onCanvasPowActions={() => {}}
+        onCanvasPowActions={onCanvasPowActions}
         onAskSelected={async () => ({ text: "" })}
       />
       {error ? (

@@ -2281,7 +2281,13 @@ const CANVAS_POW_ACTIONS = new Set([
   "multi_select",
   "expand_more",
   "board_prompt",
-  "compress_work",
+  "rephrase",
+  "split",
+  "elaborate",
+  "selective-compression",
+  "refactor",
+  "suggest-insight",
+  "clear-overlaps",
 ]);
 
 /**

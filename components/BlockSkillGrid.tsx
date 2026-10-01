@@ -162,6 +162,7 @@ export function BlockSkillGrid({
 }: BlockSkillGridProps) {
   /** View-only public maps: no authoring, select, notes, or annotation tools. */
   const canEdit = canEditProp && !viewOnly;
+  const [pathOverlayVisible, setPathOverlayVisible] = useState(true);
   const [fetchedAestheticImages, setFetchedAestheticImages] = useState<string[] | null>(
     null,
   );
@@ -1125,6 +1126,7 @@ export function BlockSkillGrid({
         focusedNodeId,
         displayNodes,
         suggestMode,
+        showPathOverlay: suggestMode === "chapter" && pathOverlayVisible,
         previewTargetId,
         previewPrereqIds,
         prereqEdit,
@@ -1214,6 +1216,13 @@ export function BlockSkillGrid({
         handleAnnotationLayerSelect,
         handleAnnotationLayerToggle,
         handleAnnotationLayerDelete,
+        pathOverlay:
+          suggestMode === "chapter"
+            ? {
+                visible: pathOverlayVisible,
+                onToggle: () => setPathOverlayVisible((visible) => !visible),
+              }
+            : null,
       }}
       jobs={{
         mapSaveJobs,

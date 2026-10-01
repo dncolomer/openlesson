@@ -5,6 +5,7 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { IleInsightTrophyIcon } from "@/components/session-view/ile-insight-trophies";
 import {
   ILE_SAMPLE_INSIGHT_LABEL,
+  PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
   PRACTICE_VOICE_CHALLENGE_READ_CUE,
   PRACTICE_VOICE_CHALLENGE_READ_CUE_REST,
   PRACTICE_VOICE_CHALLENGE_READ_NOTE,
@@ -12,6 +13,7 @@ import {
   VOICE_CHALLENGE_START_DELAY_MS,
   latchVoiceChallengePass,
   mergeVoiceChallengeHeard,
+  practiceVoiceChallengeLocalSkipAllowed,
   retryVoiceChallenge,
   voiceChallengeFillRatio,
   voiceChallengeReadMarks,
@@ -110,6 +112,22 @@ export function PracticeVoiceChallenge({
   const committedRef = useRef("");
   const latestRef = useRef("");
   const passedRef = useRef(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const devBuild = process.env.NODE_ENV === "development";
+  const [localSkip, setLocalSkip] = useState(false);
+
+  useEffect(() => {
+    if (!devBuild) {
+      setLocalSkip(false);
+      return;
+    }
+    setLocalSkip(
+      practiceVoiceChallengeLocalSkipAllowed({
+        nodeEnv: process.env.NODE_ENV,
+        hostname: window.location.hostname,
+      }),
+    );
+  }, [devBuild]);
   const script = voiceChallengeScriptFor(variant);
   const marks = voiceChallengeReadMarks({ script, transcript });
   const sentences = joinOpeningSentences(splitMarksAtSentences(marks));
@@ -123,6 +141,7 @@ export function PracticeVoiceChallenge({
     const Ctor = speechRecognitionConstructor();
     if (!Ctor) return;
     const recognition = new Ctor();
+    recognitionRef.current = recognition;
     recognition.continuous = true;
     recognition.interimResults = true;
     if (lang) recognition.lang = lang;
@@ -180,6 +199,7 @@ export function PracticeVoiceChallenge({
     }
     return () => {
       stopped = true;
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       kickoffTimers.forEach((id) => window.clearTimeout(id));
       try {
         recognition.stop();
@@ -196,6 +216,22 @@ export function PracticeVoiceChallenge({
     latestRef.current = "";
     setTranscript("");
     setListenAttempt((attempt) => attempt + 1);
+  }
+
+  function skipLocally() {
+    const allowed = practiceVoiceChallengeLocalSkipAllowed({
+      nodeEnv: process.env.NODE_ENV,
+      hostname: typeof window === "undefined" ? "" : window.location.hostname,
+    });
+    if (!allowed || passedRef.current) return;
+    passedRef.current = true;
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
+    setStarting(true);
+    window.setTimeout(() => onPassRef.current(), VOICE_CHALLENGE_START_DELAY_MS);
   }
 
   if (starting) {
@@ -262,7 +298,7 @@ export function PracticeVoiceChallenge({
           {variant === "ile" ? (
             <article
               data-ile-sample-insight-card=""
-              className="flex items-start gap-3 border border-amber-200/80 bg-amber-300 px-3 py-3 text-neutral-950"
+              className="flex items-start gap-3 border border-white/80 bg-amber-300 px-3 py-3 text-neutral-950"
             >
               <IleInsightTrophyIcon className="mt-0.5 size-4 shrink-0" />
               <div className="min-w-0 w-full flex-1">
@@ -289,14 +325,26 @@ export function PracticeVoiceChallenge({
             style={{ width: `${Math.round(fill * 100)}%` }}
           />
         </div>
-        <button
-          type="button"
-          data-practice-voice-retry=""
-          onClick={retry}
-          className="mt-5 inline-flex border border-white/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300 transition hover:border-white/40 hover:text-white"
-        >
-          {PRACTICE_VOICE_CHALLENGE_RETRY}
-        </button>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            data-practice-voice-retry=""
+            onClick={retry}
+            className="inline-flex border border-white/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300 transition hover:border-white/40 hover:text-white"
+          >
+            {PRACTICE_VOICE_CHALLENGE_RETRY}
+          </button>
+          {devBuild && localSkip ? (
+            <button
+              type="button"
+              data-practice-voice-local-skip=""
+              onClick={skipLocally}
+              className="inline-flex border border-white/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-300 transition hover:border-white/40 hover:text-white"
+            >
+              {PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP}
+            </button>
+          ) : null}
+        </div>
       </div>
     </section>
   );

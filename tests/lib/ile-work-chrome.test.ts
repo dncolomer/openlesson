@@ -438,6 +438,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(trophies).not.toContain("Craft insights on the Work canvas.");
     expect(trophies).toContain("data-ile-work-canvas-timer");
     expect(trophies).toContain("data-ile-insight-trophy-icon");
+    expect(trophies).toContain("data-ile-insight-flag-icon");
+    expect(trophies).not.toMatch(/border-amber-/);
     expect(trophies).toContain("data-ile-chapter-insight-count");
     const expand = read("components/session-view/ile-canvas-craft-insight.tsx");
     expect(expand).toContain("data-ile-craft-insight");

@@ -97,7 +97,7 @@ export function IleTurnInsightCraft({
               data-ile-end-turn-complete
               className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-white"
             >
-              <IleInsightTrophyIcon className="size-3.5 text-amber-300" />
+              <IleInsightTrophyIcon className="size-3.5 text-white" />
               {gate.chaptersToComplete.length} chapter
               {gate.chaptersToComplete.length === 1 ? "" : "s"} marked done
             </p>

@@ -40,6 +40,17 @@ import {
   parseBlockCreatorEffects,
 } from "@/lib/block-creator-effects";
 import {
+  ILE_ALTITUDE_TILE_CLASS,
+  ileAltitudeGroups,
+  ileAltitudeMapFrame,
+  ileAltitudePaint,
+} from "@/lib/ile-altitude-map";
+import {
+  ilePathMapFrame,
+  ilePathOverlay,
+  ilePathRouteD,
+} from "@/lib/ile-path-overlay";
+import {
   MAP_CELL_EMPTY_SELECTED_CLASS,
   MAP_CELL_GENERATION_PENDING_CLASS,
   MAP_CELL_TIM_UNOPENED_CLASS,
@@ -172,6 +183,7 @@ export function MapWorldLayer({
   focusedNodeId,
   displayNodes,
   suggestMode,
+  showPathOverlay = false,
   previewTargetId,
   previewPrereqIds,
   prereqEdit,
@@ -250,6 +262,8 @@ export function MapWorldLayer({
   focusedNodeId?: string | null;
   displayNodes: SkillGridNode[];
   suggestMode: "block" | "chapter";
+  /** ILE chapter map only. Draws the DAG spine and its detours. */
+  showPathOverlay?: boolean;
   previewTargetId: string | null;
   previewPrereqIds: string[];
   prereqEdit: PrereqEditState;
@@ -288,6 +302,39 @@ export function MapWorldLayer({
   const openWorkIdSet = new Set(openWorkIds ?? []);
   const surface = useSurfaceAestheticImages(aestheticImages);
   const aestheticPool = surface.source === "pending" ? undefined : surface.images;
+  const altitudeGroups =
+    suggestMode === "chapter"
+      ? ileAltitudeGroups(
+          displayNodes.map((node) => ({
+            id: node.id,
+            row: node.position_y,
+            col: node.position_x,
+            lockUntilIds: node.lock_until_block_ids,
+            nextIds: node.next_block_ids,
+          })),
+        )
+      : [];
+  const altitudeByChapter = new Map<string, number>();
+  let altitudePeak = 0;
+  for (const group of altitudeGroups) {
+    altitudePeak = Math.max(altitudePeak, group.altitude);
+    for (const id of group.chapterIds) altitudeByChapter.set(id, group.altitude);
+  }
+  const altitudeFrame = ileAltitudeMapFrame(altitudeGroups);
+  const pathOverlay =
+    suggestMode === "chapter" && showPathOverlay
+      ? ilePathOverlay(
+          displayNodes.map((node) => ({
+            id: node.id,
+            row: node.position_y,
+            col: node.position_x,
+            lockUntilIds: node.lock_until_block_ids,
+            nextIds: node.next_block_ids,
+          })),
+        )
+      : null;
+  const pathFrame = pathOverlay ? ilePathMapFrame(pathOverlay) : null;
+  const spineIds = new Set(pathOverlay?.spine?.chapterIds ?? []);
   return (
     <>
           {/* Empty cells + selection highlights + unusable ground */}
@@ -316,6 +363,7 @@ export function MapWorldLayer({
               learnerMode,
               isUnusable,
               isGeneratorSpark: isGeneratorSparkEmpty,
+              surface: suggestMode === "chapter" ? "chapter" : "block",
             });
             const fog = fogLookup(cell.row, cell.col);
             return (
@@ -404,6 +452,8 @@ export function MapWorldLayer({
                         : "Unusable ground — shapes paths"
                       : mapExploreOpen
                         ? "Click empty to explore this cell"
+                      : canEdit && suggestMode === "chapter"
+                        ? "Empty ground. New chapters arrive from the session, not from this cell."
                       : canEdit && !fog.fullyVisible && !activeLassoShape
                         ? "Hidden by fog — add only on fully visible empty cells · drag a block or use Best spot to reveal"
                       : canEdit
@@ -420,8 +470,13 @@ export function MapWorldLayer({
                   }
                 >
                   {isGeneratorSparkEmpty ? <BlockGeneratorTargetSparkBadge /> : null}
-                  {isUnusable ? (
-                    <span className="text-[9px] uppercase tracking-wide text-neutral-600">∅</span>
+                  {isUnusable && suggestMode !== "chapter" ? (
+                    <span
+                      className="text-[9px] uppercase tracking-wide text-neutral-600"
+                      data-map-cell-unusable-mark
+                    >
+                      ∅
+                    </span>
                   ) : emptyMarker === "search" ? (
                     <span
                       className="text-neutral-400"
@@ -588,7 +643,7 @@ export function MapWorldLayer({
               ...lockUntilIds,
               ...inboundNextIncomplete.map((b) => b.id),
             ].filter((id, i, arr) => arr.indexOf(id) === i);
-            // Chapter tiles: DAG lock only. Workspace: lock_until + inbound next + Dynamic.
+            // Chapter tiles keep the DAG for unlock highlighting. The lock icon is not drawn.
             const hasDependencies =
               suggestMode === "chapter"
                 ? chapterHasDagLockChrome(learnerNodeRef, learnerBlocksRef)
@@ -662,10 +717,13 @@ export function MapWorldLayer({
                 workedOn: itemWorkedOn,
                 hasPreviousSessions,
               });
+            const chapterAltitude = altitudeByChapter.get(node.id);
             const baseChrome =
-              suggestMode === "chapter" && isLearnerDepHighlight
-                ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
-                : occupiedChrome.className;
+              suggestMode === "chapter"
+                ? ILE_ALTITUDE_TILE_CLASS
+                : isLearnerDepHighlight
+                  ? LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS
+                  : occupiedChrome.className;
             const chapterStatusIcon = occupiedChrome.statusIcon;
             // Must be declared before tileClass (TDZ) — used by rect + freeform chrome.
             const generationLocked = generationLockedBlockIds.has(node.id);
@@ -890,6 +948,11 @@ export function MapWorldLayer({
                           data-map-cell-done={itemDone ? "true" : undefined}
                           data-map-cell-self-progress={
                             itemWorkedOn && !itemDone ? "true" : undefined
+                          }
+                          data-ile-altitude={
+                            suggestMode === "chapter" && chapterAltitude != null
+                              ? String(chapterAltitude)
+                              : undefined
                           }
                           data-block-selected={isBlockHighlighted ? "true" : "false"}
                           data-block-locked={lockedByPrereq ? "true" : "false"}
@@ -1118,6 +1181,11 @@ export function MapWorldLayer({
                       ? "true"
                       : undefined
                   }
+                  data-ile-altitude={
+                    suggestMode === "chapter" && chapterAltitude != null
+                      ? String(chapterAltitude)
+                      : undefined
+                  }
                   data-block-selected={isBlockHighlighted ? "true" : "false"}
                   data-block-locked={lockedByPrereq ? "true" : "false"}
                   data-block-has-dependencies={hasDependencies ? "true" : "false"}
@@ -1234,6 +1302,157 @@ export function MapWorldLayer({
               </div>
             );
           })}
+
+      {altitudeGroups.length > 0 ? (
+        <svg
+          data-ile-altitude-map=""
+          aria-hidden
+          className="pointer-events-none absolute overflow-visible"
+          viewBox={`${altitudeFrame.minX} ${altitudeFrame.minY} ${altitudeFrame.width} ${altitudeFrame.height}`}
+          style={{
+            left: altitudeFrame.minX,
+            top: altitudeFrame.minY,
+            zIndex: 2,
+            width: altitudeFrame.width,
+            height: altitudeFrame.height,
+          }}
+        >
+          <defs>
+            {[...new Set(altitudeGroups.map((group) => group.altitude))].map((altitude) => {
+              const paint = ileAltitudePaint(altitude, altitudePeak);
+              return (
+                <filter
+                  key={altitude}
+                  id={`ile-alt-shadow-${altitude}`}
+                  data-ile-altitude-shadow={altitude}
+                  x="-40%"
+                  y="-40%"
+                  width="180%"
+                  height="200%"
+                  colorInterpolationFilters="sRGB"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy={paint.shadowDy}
+                    stdDeviation={paint.shadowBlur}
+                    floodColor="#000000"
+                    floodOpacity={paint.shadowOpacity}
+                  />
+                </filter>
+              );
+            })}
+          </defs>
+          {altitudeGroups.map((group) => {
+            const paint = ileAltitudePaint(group.altitude, altitudePeak);
+            return group.loops.map((loop, index) => (
+              <path
+                key={`${group.id}-${index}`}
+                data-ile-altitude-group={group.id}
+                data-ile-altitude={group.altitude}
+                d={loop.d}
+                fill={paint.fill}
+                stroke={paint.stroke}
+                strokeWidth={paint.strokeWidth}
+                strokeLinejoin="miter"
+                fillRule="evenodd"
+                filter={`url(#ile-alt-shadow-${group.altitude})`}
+              />
+            ));
+          })}
+        </svg>
+      ) : null}
+
+      {pathOverlay && pathFrame ? (
+        <svg
+          data-ile-path-overlay=""
+          aria-hidden
+          className="pointer-events-none absolute overflow-visible"
+          viewBox={`${pathFrame.minX} ${pathFrame.minY} ${pathFrame.width} ${pathFrame.height}`}
+          style={{
+            left: pathFrame.minX,
+            top: pathFrame.minY,
+            zIndex: 3,
+            width: pathFrame.width,
+            height: pathFrame.height,
+          }}
+        >
+          {pathOverlay.detours.map((route) => (
+            <g key={route.id} data-ile-path-detour={route.chapterIds.join(",")}>
+              <path
+                d={ilePathRouteD(route.points)}
+                fill="none"
+                stroke="rgba(0,0,0,0.8)"
+                strokeWidth={5}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+              />
+              <path
+                d={ilePathRouteD(route.points)}
+                fill="none"
+                stroke="rgba(255,255,255,0.72)"
+                strokeWidth={1.75}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+                strokeDasharray="7 6"
+              />
+              {route.points.map((point) =>
+                spineIds.has(point.chapterId) ? null : (
+                  <rect
+                    key={point.chapterId}
+                    data-ile-path-stop={point.chapterId}
+                    data-ile-path-role="detour"
+                    x={point.x - 3.5}
+                    y={point.y - 3.5}
+                    width={7}
+                    height={7}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth={1.4}
+                  />
+                ),
+              )}
+            </g>
+          ))}
+          {pathOverlay.spine ? (
+            <g data-ile-path-spine={pathOverlay.spine.chapterIds.join(",")}>
+              <path
+                d={ilePathRouteD(pathOverlay.spine.points)}
+                fill="none"
+                stroke="rgba(0,0,0,0.88)"
+                strokeWidth={7}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+              />
+              <path
+                d={ilePathRouteD(pathOverlay.spine.points)}
+                fill="none"
+                stroke="white"
+                strokeWidth={2.5}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+              />
+              {pathOverlay.spine.points.map((point, index) => {
+                const last = index === pathOverlay.spine!.points.length - 1;
+                const size = index === 0 || last ? 9 : 6;
+                return (
+                  <rect
+                    key={point.chapterId}
+                    data-ile-path-stop={point.chapterId}
+                    data-ile-path-role={index === 0 ? "start" : last ? "end" : "spine"}
+                    x={point.x - size / 2}
+                    y={point.y - size / 2}
+                    width={size}
+                    height={size}
+                    fill={last ? "none" : "white"}
+                    stroke="white"
+                    strokeWidth={1.5}
+                  />
+                );
+              })}
+            </g>
+          ) : null}
+        </svg>
+      ) : null}
 
       <MapAnnotationStrokes annotationLayers={annotationLayers} />
     </>

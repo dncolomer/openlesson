@@ -1600,7 +1600,7 @@ export function ExcalidrawCanvas({
           <div
             key={box.id}
             data-ile-canvas-new-mark={box.id}
-            className="pointer-events-none absolute z-[54] animate-pulse rounded-none border-2 border-amber-200 shadow-[0_0_0_4px_rgba(253,230,138,0.28)]"
+            className="pointer-events-none absolute z-[54] animate-pulse rounded-none border-2 border-white shadow-[0_0_0_4px_rgba(255,255,255,0.28)]"
             style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
           />
         ))}

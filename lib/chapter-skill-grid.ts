@@ -39,8 +39,20 @@ function mapStepStatus(status: SessionPlanStep["status"]): string {
   }
 }
 
+function chapterDagIds(ids: readonly string[] | null | undefined): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of ids || []) {
+    const id = String(raw ?? "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
 /** Map session plan steps to the same node shape used by the workspace block grid.
- * ILE chapters are independent tiles — do not synthesize a linear DAG from `order`.
+ * Stored chapter DAG edges pass through. Do not synthesize a linear DAG from `order`.
  */
 export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGridNode[] {
   const sorted = [...steps].sort((a, b) => a.order - b.order);
@@ -55,8 +67,8 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
       title: step.description,
       status: mapStepStatus(step.status),
       is_start: index === 0,
-      next_block_ids: [],
-      lock_until_block_ids: [],
+      next_block_ids: chapterDagIds(step.next_step_ids),
+      lock_until_block_ids: chapterDagIds(step.lock_until_step_ids),
       position_x: step.position_x,
       position_y: step.position_y,
       map_keyword: glyph.keyword,

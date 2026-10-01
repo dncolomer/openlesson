@@ -57,7 +57,7 @@ const chapters: LearnerLocalDagBlock[] = [
 ];
 
 describe("ILE chapter tile badges", () => {
-  it("chapter tiles drop workspace badges; DAG lock still reports", () => {
+  it("chapter tiles drop workspace badges and the lock icon", () => {
     const loaded = resolveMapOccupiedTileBadges({
       surface: "chapter",
       hasDagLock: false,
@@ -83,7 +83,7 @@ describe("ILE chapter tile badges", () => {
       hasEffects: true,
       generatorBusy: true,
     });
-    expect(locked.showLock).toBe(true);
+    expect(locked.showLock).toBe(false);
     expect(locked.showStarter).toBe(false);
     expect(locked.showPractice).toBe(false);
     expect(locked.showLocalContext).toBe(false);

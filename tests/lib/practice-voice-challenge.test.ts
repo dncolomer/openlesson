@@ -23,6 +23,7 @@ import {
   ILE_SILENCE_LOCK_MINUTES_DESC,
   ILE_SILENCE_LOCK_MINUTES_MIN,
   ILE_SILENCE_REST_TITLE,
+  PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP,
   PRACTICE_VOICE_CHALLENGE_SCRIPT,
   TAP_VOICE_CHALLENGE_SENTENCE_TWO,
   TAP_VOICE_CHALLENGE_SCRIPT,
@@ -42,6 +43,7 @@ import {
   voiceChallengeFillRatio,
   voiceChallengeReadMarks,
   nextIleSilenceLock,
+  practiceVoiceChallengeLocalSkipAllowed,
   practiceVoiceChallengeTranscriptPasses,
   prepareBriefingStep,
   releaseVoiceChallengeStartLatch,
@@ -173,7 +175,7 @@ describe("practice voice challenge script and transcript", () => {
     expect(challenge).toContain("data-practice-voice-retry");
     expect(challenge).toContain("retryVoiceChallenge");
     const retryAt = challenge.indexOf("function retry");
-    const retryBody = challenge.slice(retryAt, retryAt + 400);
+    const retryBody = challenge.slice(retryAt, challenge.indexOf("function skipLocally"));
     expect(retryBody).not.toContain("onPassRef");
     expect(challenge).toContain("mergeVoiceChallengeHeard");
     expect(challenge).toContain("latchVoiceChallengePass");
@@ -361,6 +363,58 @@ describe("ILE silence lock", () => {
 });
 
 describe("shipped voice-challenge UI wiring", () => {
+  it("a development loopback host can skip every voice challenge, and production or a public host cannot", () => {
+    expect(PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP).toBe("Skip");
+    for (const hostname of ["localhost", "127.0.0.1", "::1", "[::1]", "app.localhost"]) {
+      expect(
+        practiceVoiceChallengeLocalSkipAllowed({ nodeEnv: "development", hostname }),
+      ).toBe(true);
+    }
+    expect(
+      practiceVoiceChallengeLocalSkipAllowed({ nodeEnv: "production", hostname: "localhost" }),
+    ).toBe(false);
+    expect(
+      practiceVoiceChallengeLocalSkipAllowed({ nodeEnv: "test", hostname: "localhost" }),
+    ).toBe(false);
+    expect(
+      practiceVoiceChallengeLocalSkipAllowed({ nodeEnv: "development", hostname: "example.com" }),
+    ).toBe(false);
+    expect(
+      practiceVoiceChallengeLocalSkipAllowed({
+        nodeEnv: "development",
+        hostname: "localhost.example.com",
+      }),
+    ).toBe(false);
+    expect(
+      practiceVoiceChallengeLocalSkipAllowed({ nodeEnv: "development", hostname: "" }),
+    ).toBe(false);
+    expect(ileRestUnlock({ challengePassed: true, lockCount: 3 }).locked).toBe(true);
+
+    const challenge = read("components/PracticeVoiceChallenge.tsx");
+    const skipAt = challenge.indexOf("function skipLocally");
+    const skipBody = challenge.slice(skipAt, skipAt + 700);
+    expect(skipAt).toBeGreaterThan(-1);
+    expect(skipBody).toContain("practiceVoiceChallengeLocalSkipAllowed");
+    expect(skipBody.indexOf("practiceVoiceChallengeLocalSkipAllowed")).toBeLessThan(
+      skipBody.indexOf("onPassRef.current()"),
+    );
+    expect(skipBody).toContain("passedRef.current");
+    const buttonAt = challenge.indexOf("data-practice-voice-local-skip");
+    expect(challenge.slice(buttonAt - 180, buttonAt)).toContain("devBuild && localSkip");
+    expect(challenge.slice(buttonAt - 180, buttonAt)).not.toContain("framing");
+    expect(challenge).toContain("PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP");
+    const spoken = renderToStaticMarkup(
+      createElement(PracticeVoiceChallenge, { onPass: () => {}, framing: "rest", variant: "ile" }),
+    );
+    expect(spoken).not.toContain("data-practice-voice-local-skip");
+    expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain(
+      "PracticeVoiceChallenge",
+    );
+    const impurityFn = read("components/session-view/ile-silence-lock-screen.tsx");
+    const impurityAt = impurityFn.indexOf("function IleSessionImpurityScreen");
+    expect(impurityFn.slice(impurityAt)).not.toContain("PracticeVoiceChallenge");
+  });
+
   it("ILE start/help is a full-viewport surface with multi-sentence placeholders and the voice challenge wired to workspace start", () => {
     const chrome = read("components/session-view/session-chrome.tsx");
     const guide = read("components/SessionOnboardingGuide.tsx");
@@ -396,6 +450,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(spoken).not.toContain("data-ile-sample-insight-card");
     expect(spoken).toContain("data-practice-voice-retry");
     expect(spoken).toContain("Try again");
+    expect(spoken).not.toContain("data-practice-voice-local-skip");
+    expect(ileSpoken).not.toContain("data-practice-voice-local-skip");
     expect(ileSpoken).toContain('data-practice-voice-variant="ile"');
     expect(ileSpoken.replace(/<[^>]+>/g, "")).toContain("In this session I will work to craft insights");
     expect(ileSpoken).toContain('data-practice-voice-sentence="2"');
@@ -508,6 +564,8 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(impurity).toContain(ILE_SESSION_IMPURITY_SAVE);
     expect(impurity).toContain(ILE_SESSION_IMPURITY_LOG_OFF);
     expect(impurity).not.toContain("data-practice-voice-challenge");
+    expect(impurity).not.toContain("data-practice-voice-local-skip");
+    expect(screen).not.toContain("data-practice-voice-local-skip");
     const rest = renderToStaticMarkup(
       createElement(IleSilenceRestScreen, {
         lockCount: 1,
@@ -518,6 +576,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(rest).toContain(ILE_SILENCE_REST_TITLE);
     expect(rest).toContain("data-practice-voice-challenge");
     expect(rest).toContain('data-practice-voice-framing="rest"');
+    expect(rest).not.toContain("data-practice-voice-local-skip");
     expect(read("components/session-view/ile-silence-lock-screen.tsx")).toContain("lang={speechLang}");
     expect(read("components/SessionView.tsx")).toContain("speechLang={toSpeechBcp47(tutoringLanguage)}");
     expect(read("components/PracticeVoiceChallenge.tsx")).toContain("startListening");

@@ -43,9 +43,8 @@ export const ILE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "edit", label: "Edit" },
 ] as const;
 
-export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
-  { id: "add_chapter", label: "Add chapter" },
-] as const;
+/** Empty ILE cells are not a place to add. New chapters come from the interruption model. */
+export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [] as const;
 
 /** TIM-proposed chapters: accept keeps the 3×3 logos, reject clears the tile. */
 export const ILE_TIM_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
@@ -109,13 +108,12 @@ export function blockCircularMenuOpensOnSelect(
   return surface === "ile" || surface === "workspace-learner";
 }
 
-/** Empty ILE cells get a one-action Add chapter ring instead of opening the modal. */
+/** Empty cells do not open an add ring. ILE growth is the interruption model. */
 export function blockCircularMenuOpensOnEmpty(
-  surface: BlockCircularMenuSurface | null | undefined,
-  opts?: { unusable?: boolean | null },
+  _surface: BlockCircularMenuSurface | null | undefined,
+  _opts?: { unusable?: boolean | null },
 ): boolean {
-  if (opts?.unusable) return false;
-  return surface === "ile";
+  return false;
 }
 
 export function emptyCircularMenuCellKey(cell: {

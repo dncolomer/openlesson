@@ -1,7 +1,7 @@
 /**
  * Occupied-tile badge visibility for workspace block maps vs ILE chapter maps.
  * Workspace tiles show keyword + Lucide icon only (no occupancy modifiers).
- * Chapter tiles keep only DAG-lock chrome.
+ * Chapter tiles keep no occupancy icons. Lock state stays in the DAG, not on the square.
  */
 
 export type MapTileBadgeSurface = "block" | "chapter";
@@ -46,12 +46,7 @@ export function resolveMapOccupiedTileBadges(input: {
 }): MapOccupiedTileBadges {
   if (input.exploreActive) return { ...HIDDEN_OCCUPIED_BADGES };
   const surface = input.surface === "chapter" ? "chapter" : "block";
-  if (surface === "chapter") {
-    return {
-      ...CHAPTER_BADGES,
-      showLock: Boolean(input.hasDagLock),
-    };
-  }
+  if (surface === "chapter") return { ...CHAPTER_BADGES };
   // Workspace occupied tiles: keyword + catalog icon only.
   return { ...HIDDEN_OCCUPIED_BADGES };
 }
@@ -65,7 +60,10 @@ export function resolveEmptyCellMarker(input: {
   learnerMode?: boolean;
   isUnusable?: boolean;
   isGeneratorSpark?: boolean;
+  /** ILE chapter ground is not an add target, so it never shows a plus. */
+  surface?: "block" | "chapter" | string | null;
 }): EmptyCellMarker {
+  if (input.surface === "chapter") return "none";
   if (input.isUnusable || input.isGeneratorSpark) return "none";
   if (input.exploreActive) return "search";
   if (input.canEdit && !input.learnerMode) return "plus";

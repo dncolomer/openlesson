@@ -32,6 +32,7 @@ export const VOICE_CHALLENGE_PASS_RATIO = 0.8;
 export const VOICE_CHALLENGE_START_DELAY_MS = 1100;
 
 export const PRACTICE_VOICE_CHALLENGE_RETRY = "Try again";
+export const PRACTICE_VOICE_CHALLENGE_LOCAL_SKIP = "Skip";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE = "Read this aloud to start";
 export const PRACTICE_VOICE_CHALLENGE_READ_CUE_REST = "Read this aloud to continue";
 export const PRACTICE_VOICE_CHALLENGE_READ_NOTE =
@@ -164,6 +165,21 @@ export function retryVoiceChallenge(input: { alreadyPassed: boolean }): {
 } {
   if (input.alreadyPassed) return { reset: false, shouldStart: false };
   return { reset: true, shouldStart: false };
+}
+
+/**
+ * Development on a loopback host may skip a read-aloud gate.
+ * Production builds and public hosts cannot. Re-check on the click.
+ */
+export function practiceVoiceChallengeLocalSkipAllowed(input: {
+  nodeEnv?: string | null;
+  hostname?: string | null;
+}): boolean {
+  if (input.nodeEnv !== "development") return false;
+  let host = String(input.hostname ?? "").trim().toLowerCase();
+  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  return host.length > ".localhost".length && host.endsWith(".localhost");
 }
 
 /** Hold the start latch after success. Release it only when start failed. */

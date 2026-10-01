@@ -46,6 +46,7 @@ export function MapRightStack({
   handleAnnotationLayerToggle,
   handleAnnotationLayerDelete,
   minimapHidden = false,
+  pathOverlay = null,
 }: {
   viewOnly: boolean;
   mountMapNotes: boolean;
@@ -77,6 +78,8 @@ export function MapRightStack({
   handleAnnotationLayerDelete: (layerId: string) => void;
   /** Sit at the top-right when the overlay minimap is hidden. */
   minimapHidden?: boolean;
+  /** ILE chapter map: show or hide the route overlay. Default is on. */
+  pathOverlay?: { visible: boolean; onToggle: () => void } | null;
 }) {
   const toggleIds =
     mapToggleIds && mapToggleIds.length > 0
@@ -86,6 +89,7 @@ export function MapRightStack({
     .map((id) => workspaceModeDisplayLabel(id).toLowerCase())
     .join(",");
   const show =
+    pathOverlay != null ||
     (!viewOnly &&
       (mountMapNotes ||
         overlayPersist ||
@@ -112,6 +116,26 @@ export function MapRightStack({
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
+      {pathOverlay ? (
+        <button
+          type="button"
+          data-ile-path-overlay-toggle
+          data-ile-path-overlay={pathOverlay.visible ? "on" : "off"}
+          aria-pressed={pathOverlay.visible}
+          aria-label={pathOverlay.visible ? "Hide path" : "Show path"}
+          title={
+            pathOverlay.visible
+              ? "Hide the path through the chapter sequence"
+              : "Show the path through the chapter sequence"
+          }
+          onClick={pathOverlay.onToggle}
+          className={`w-full rounded-none border border-neutral-700/90 bg-neutral-950/90 px-2.5 py-1.5 text-left text-[11px] font-medium shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm transition ${
+            pathOverlay.visible ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+          }`}
+        >
+          Path
+        </button>
+      ) : null}
       {!viewOnly &&
       (typeof onMapToggle === "function" ||
         typeof onInteractionModeChange === "function") ? (

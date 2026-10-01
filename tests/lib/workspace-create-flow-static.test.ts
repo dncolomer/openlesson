@@ -24,7 +24,11 @@ describe("workspace create + builder static wiring", () => {
     expect(page).toContain("data-aycl-banner");
     expect(page).toContain("/all-you-can-learn");
     expect(page).toContain("md:grid-cols-3");
-    expect(page).toContain('data-create-layout="3-plus-1"');
+    expect(page).toContain('data-create-layout="two-groups"');
+    expect(page).toContain('data-create-group="learning"');
+    expect(page).toContain("Learning & Research");
+    expect(page).toContain('data-create-group="verification"');
+    expect(page).toMatch(/id="create-group-verification"[\s\S]{0,240}\n\s*Verification\n/);
     expect(page).toContain('data-create-mode-span="knowledge_region"');
     expect(page).toContain('data-create-mode="aycl"');
     expect(page).toContain("data-create-mode={card.mode}");

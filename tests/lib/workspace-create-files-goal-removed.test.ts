@@ -72,7 +72,7 @@ describe("workspace create UI modes", () => {
       "workspace-create-excerpts.txt",
       [
         "page uses UI_WORKSPACE_CREATE_MODES for MODE_CARDS",
-        "cards: AYCL, Blank, From Template in 3-col row; Knowledge Region spans below",
+        "cards: Learning & Research holds AYCL, Blank, From Template; Verification holds the verification workspace",
         "no From Files + Goal card",
         "no files_goal form/step",
         "no handleCreateFilesGoal",

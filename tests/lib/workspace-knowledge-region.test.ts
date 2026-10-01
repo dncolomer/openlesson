@@ -514,7 +514,9 @@ describe("Knowledge Region wiring", () => {
     expect(page).toContain("Verification Workspace");
     expect(page).toContain("data-create-mode={card.mode}");
     expect(page).toContain('data-create-mode="knowledge_region"');
-    expect(page).toContain('data-create-layout="3-plus-1"');
+    expect(page).toContain('data-create-layout="two-groups"');
+    expect(page).toContain('data-create-group="learning"');
+    expect(page).toContain('data-create-group="verification"');
     expect(page).toContain('data-create-mode-span="knowledge_region"');
     expect(page).toContain("knowledge_region:");
     expect(page).toContain('createMode: "knowledge_region"');

@@ -585,11 +585,22 @@ export default function NewWorkspacePage() {
 
           {step === 1 && (
             <div
-              className="mx-auto flex flex-col gap-3 md:gap-4"
+              className="mx-auto flex flex-col gap-8 md:gap-10"
               data-create-mode-cards
-              data-create-layout="3-plus-1"
+              data-create-layout="two-groups"
             >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
+              <section
+                className="flex flex-col gap-3"
+                data-create-group="learning"
+                aria-labelledby="create-group-learning"
+              >
+                <h2
+                  id="create-group-learning"
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Learning & Research
+                </h2>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
                 <a
                   href={AYCL_CARD.href}
                   className={START_CARD_CLASS}
@@ -646,7 +657,19 @@ export default function NewWorkspacePage() {
                     </span>
                   </button>
                 ))}
-              </div>
+                </div>
+              </section>
+              <section
+                className="flex flex-col gap-3"
+                data-create-group="verification"
+                aria-labelledby="create-group-verification"
+              >
+                <h2
+                  id="create-group-verification"
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Verification
+                </h2>
               <button
                 type="button"
                 disabled={busy}
@@ -677,6 +700,7 @@ export default function NewWorkspacePage() {
                   {KNOWLEDGE_REGION_CARD.cta} →
                 </span>
               </button>
+              </section>
             </div>
           )}
 

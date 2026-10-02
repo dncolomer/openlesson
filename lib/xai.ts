@@ -497,6 +497,8 @@ export async function createSessionPlanLLM(options: {
   mapTypesState?: WorkspaceMapTypesState | null;
   /** Dialog (learning) vs Project (solo exercise) grain. */
   sessionMode?: IleSessionMode | string | null;
+  /** Exact chapter count (1–5). When set, map-type bands are not used. */
+  chapterCount?: unknown;
 }): Promise<{ success: boolean; plan?: CreateSessionPlanResult; error?: string }> {
   const initialChapters = options.initialChapters ?? options.mapSize;
   const mapType =
@@ -512,6 +514,7 @@ export async function createSessionPlanLLM(options: {
       mapType,
       mapTypesState: options.mapTypesState,
       sessionMode: options.sessionMode,
+      chapterCount: options.chapterCount,
     },
   );
 

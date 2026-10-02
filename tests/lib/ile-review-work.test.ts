@@ -59,15 +59,12 @@ describe("Review work chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).toContain("ILE_REVIEW_WORK_LABEL");
     expect(chrome).not.toContain("onReviewWork");
-    const powBar = chrome.slice(
-      chrome.indexOf("data-ile-pow-resource-bar"),
-      chrome.indexOf("data-ile-session-inner"),
-    );
-    expect(powBar).not.toContain("IleSubmitWorkButton");
-    expect(powBar).not.toContain("data-ile-review-work");
-    expect(powBar).not.toContain("data-ile-session-insights-count");
-    expect(powBar).toContain("data-ile-global-resources");
-    expect(powBar).not.toContain("data-ile-identity-row");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-session-insights-count");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("data-ile-identity-row");
 
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     expect(tabs).not.toContain("thought-history");
@@ -91,11 +88,12 @@ describe("Review work chrome (shipped source)", () => {
     expect(view).not.toContain("data-ile-compact-review-work");
     expect(view).not.toContain("renderCompactWorkspace");
     expect(view).not.toContain("data-ile-compact-insight-craft");
-    expect(view).toContain("turnInsightCraft()");
+    expect(view).not.toContain("turnInsightCraft()");
     expect(view).not.toContain("onReviewWork");
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dockBar).not.toContain("data-ile-review-work");
-    expect(dockBar).toContain("data-ile-end-turn-cluster");
+    expect(dockBar).not.toContain("data-ile-end-turn");
+    expect(dockBar).toContain("data-ile-chapter-dock-chapters");
     expect(chrome).not.toContain("onReviewWork");
 
     const icons = read("components/session-view/ile-pow-icons.tsx");

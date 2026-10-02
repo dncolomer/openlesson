@@ -359,15 +359,14 @@ describe("custom aesthetic surfaces", () => {
     expect(workspace).not.toContain("public/aesthetics");
   });
 
-  it("the end-turn screen is a black board interior with no aesthetic still", () => {
-    const craft = read("components/session-view/ile-turn-insight-craft.tsx");
-    expect(craft).toContain("bg-black");
-    expect(craft).not.toContain("useSurfaceAestheticImages");
-    expect(craft).not.toContain("data-ile-turn-insight-craft-still");
-    expect(craft).not.toContain("FALLBACK_AESTHETIC_IMAGES");
-    expect(craft).not.toContain("public/aesthetics");
+  it("the session stage is the work canvas and does not mount an end-turn board", () => {
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}");
+    const chrome = read("components/session-view/session-chrome.tsx");
+    expect(view).not.toContain("boardInterior=");
+    expect(view).not.toContain("<ChapterMapPanel");
+    expect(chrome).toContain('data-ile-canvas-stage="true"');
+    expect(chrome).toContain("{workCanvas}");
+    expect(chrome).not.toContain("End turn");
   });
 
   it("TAP backgrounds use pickTapBackgroundImage from the org-aware listing", () => {

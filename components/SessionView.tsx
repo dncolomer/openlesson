@@ -70,6 +70,13 @@ import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { coerceSpokenLocale, toSpeechBcp47, type SpokenLocale } from "@/lib/tutoring-languages";
+import {
+  capIleSessionChapters,
+  clampIleSessionChapterCount,
+  ILE_SESSION_CHAPTER_COUNT_DEFAULT,
+  readIleCanvasSessionConfig,
+  writeIleCanvasSessionConfig,
+} from "@/lib/ile-canvas-session";
 import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
 import type { MapTypePickerItem } from "@/lib/workspace-map-types";
 import { SessionWelcomeModal } from "@/components/session-view/session-welcome-modal";
@@ -78,7 +85,6 @@ import { SessionThoughtPane } from "@/components/session-view/session-thought-pa
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
-import { ChapterMapPanel } from "@/components/ChapterMapPanel";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
   isIleMapOverlayTool,
@@ -366,7 +372,7 @@ export function SessionView({
     () => !isIleSessionSettingsConfirmed(sessionId),
   );
   const mapEntryTailDoneRef = useRef(false);
-  const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(false);
+  const [heliosWidgetOpen, setHeliosWidgetOpen] = useState(true);
   const [powExpense, setPowExpense] = useState(ILE_POW_EXPENSE_DEFAULT);
   const [insightSlotMax, setInsightSlotMax] = useState(ILE_TURN_INSIGHT_SLOT_MAX);
   const [gatherMaxPerSession, setGatherMaxPerSession] = useState(
@@ -378,6 +384,8 @@ export function SessionView({
   const [minInsightsPerChapter, setMinInsightsPerChapter] = useState(
     ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   );
+  const [chapterCount, setChapterCount] = useState(ILE_SESSION_CHAPTER_COUNT_DEFAULT);
+  const chapterCountTouchedRef = useRef(false);
   const [canvasTimerSeconds, setCanvasTimerSeconds] = useState(
     ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   );
@@ -1071,25 +1079,61 @@ export function SessionView({
       Object.keys(restored).length === 0 ? current : { ...current, ...restored },
     );
     setOpenWorkIds(
-      restoreIleOpenWorkIds({
-        stored: parseIleOpenWorkIdsFromMetadata(session.metadata),
-        steps: sessionPlanRef.current?.steps,
-      }),
+      capIleSessionChapters(
+        sessionPlanRef.current?.steps ?? [],
+        chapterCount,
+      ).map((step) => step.id),
     );
     // Restore docked Work once per session load, not on later metadata writes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
   useEffect(() => {
-    const steps = sessionPlan?.steps;
-    if (!steps?.length) return;
-    setOpenWorkIds((ids) => {
-      const next = restoreIleOpenWorkIds({ stored: ids, steps });
-      if (next.length === ids.length && next.every((id, index) => id === ids[index])) {
-        return ids;
+    const ids = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount).map(
+      (step) => step.id,
+    );
+    if (!ids.length) return;
+    setOpenWorkIds((current) => {
+      if (current.length === ids.length && current.every((id, index) => id === ids[index])) {
+        return current;
       }
-      return next;
+      return ids;
     });
+  }, [chapterCount, sessionPlan?.steps]);
+  const clampedActiveChapterRef = useRef<string | null>(null);
+  useEffect(() => {
+    const steps = sessionPlan?.steps ?? [];
+    const available = capIleSessionChapters(steps, chapterCount);
+    const first = available[0];
+    if (!first) return;
+    const activeId = steps[activeChapterIndex]?.id;
+    if (activeId && available.some((step) => step.id === activeId)) {
+      clampedActiveChapterRef.current = null;
+      return;
+    }
+    if (clampedActiveChapterRef.current === first.id) return;
+    clampedActiveChapterRef.current = first.id;
+    const nextIndex = steps.findIndex((step) => step.id === first.id);
+    if (nextIndex < 0) return;
+    void handleLoadChapter(nextIndex);
+  }, [activeChapterIndex, chapterCount, handleLoadChapter, sessionPlan?.steps]);
+  useEffect(() => {
+    if (!session?.id) return;
+    const saved = readIleCanvasSessionConfig(session.id);
+    if (!saved) return;
+    chapterCountTouchedRef.current = true;
+    setChapterCount(saved.chapterCount);
+    setMinInsightsPerChapter(saved.insightGoal);
+  }, [session?.id]);
+  useEffect(() => {
+    if (chapterCountTouchedRef.current) return;
+    const savedCount = sessionPlan?.steps?.length ?? 0;
+    if (savedCount <= 0) return;
+    setChapterCount(clampIleSessionChapterCount(savedCount));
   }, [sessionPlan?.steps]);
+  useEffect(() => {
+    if (showWelcomeModal) return;
+    setHeliosWidgetOpen(true);
+  }, [showWelcomeModal]);
   useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
   useEffect(() => {
@@ -1163,6 +1207,7 @@ export function SessionView({
     localInferenceEnabledRef,
     localContextRef,
     initialChapters,
+    chapterCount,
     resolvedSessionMode,
     setShowWelcomeModal,
     setShowWelcomePanel,
@@ -1203,8 +1248,14 @@ export function SessionView({
 
   const handleConfirmSettings = useCallback(async () => {
     mapEntryTailDoneRef.current = true;
+    if (session?.id) {
+      writeIleCanvasSessionConfig(session.id, {
+        chapterCount,
+        insightGoal: minInsightsPerChapter,
+      });
+    }
     await handleConfirmSettingsPhase();
-  }, [handleConfirmSettingsPhase]);
+  }, [chapterCount, handleConfirmSettingsPhase, minInsightsPerChapter, session?.id]);
 
   const handleWelcomeReadyStart = useCallback(async () => {
     mapEntryTailDoneRef.current = true;
@@ -1263,7 +1314,6 @@ export function SessionView({
       if (!decision.allowed) return;
       const step = idx >= 0 ? steps?.[idx] : undefined;
       seedChapterWorkCanvas(stepId, step?.description);
-      setOpenWorkIds(decision.openWorkIds);
       if (idx >= 0 && idx !== activeChapterIndexRef.current) {
         void handleLoadChapter(idx);
       }
@@ -1277,13 +1327,7 @@ export function SessionView({
     (stepId: string) => {
       const steps = sessionPlanRef.current?.steps ?? sessionPlan?.steps;
       const idx = steps?.findIndex((s) => s.id === stepId) ?? -1;
-      const alreadyFocused =
-        idx >= 0 && idx === activeChapterIndexRef.current && heliosWidgetOpen;
       setDockAttentionIds((current) => current.filter((id) => id !== stepId));
-      if (alreadyFocused) {
-        setHeliosWidgetOpen(false);
-        return;
-      }
       if (idx >= 0 && idx !== activeChapterIndexRef.current) {
         void handleLoadChapter(idx);
       }
@@ -1292,7 +1336,7 @@ export function SessionView({
       setActiveTool("chapters");
       setHeliosWidgetOpen(true);
     },
-    [heliosWidgetOpen, seedChapterWorkCanvas, sessionPlan?.steps],
+    [seedChapterWorkCanvas, sessionPlan?.steps],
   );
 
   const handleIleSessionToolChange = useCallback(
@@ -2071,6 +2115,11 @@ export function SessionView({
         onRegenerateChaptersChange={setRegenerateChapters}
         initialChapters={initialChapters}
         onInitialChaptersChange={setInitialChapters}
+        chapterCount={chapterCount}
+        onChapterCountChange={(value) => {
+          chapterCountTouchedRef.current = true;
+          setChapterCount(clampIleSessionChapterCount(value));
+        }}
         mapTypeCatalog={mapTypeCatalog}
         powExpense={powExpense}
         onPowExpenseChange={(value) => setPowExpense(clampIlePowExpense(value))}
@@ -2210,9 +2259,6 @@ export function SessionView({
         openWorkLabels={openWorkDockLabels}
         onFocusOpenWork={handleFocusOpenWork}
         onOpenGlobalResources={() => handleIleSessionToolChange("plan-resources")}
-        onSubmitTurn={() => void handleSubmitTurn()}
-        submitTurnLabel={t("session.submitTurn") || ILE_END_TURN_LABEL}
-        submitTurnBusy={submitTurnBusy}
         onCloseToolOverlay={() => setActiveTool("chapters")}
         heliosOpen={heliosWidgetOpen}
         onCloseHelios={() => setHeliosWidgetOpen(false)}
@@ -2271,99 +2317,7 @@ export function SessionView({
           });
         }}
         onDismissCloseReview={() => setChapterCloseReview(null)}
-        map={
-          <ChapterMapPanel
-            plan={sessionPlan}
-            sessionId={session.id}
-            ayclToken={ayclToken}
-            ileToken={ileToken}
-            locale={locale}
-            loading={planLoading}
-            activeChapterIndex={activeChapterIndex}
-            onWorkChapter={handleWorkChapter}
-            allowGatherResources={allowGatherResources}
-            onAcceptTimChapter={(stepId) => {
-              void handleAcceptTimChapter(stepId);
-            }}
-            onRejectTimChapter={(stepId) => {
-              void handleRejectTimChapter(stepId);
-            }}
-            onUndoChapterDone={(stepId) => handleMarkChapterUndone(stepId)}
-            onAddChapter={handleAddChapter}
-            onEnsurePositions={handleEnsureChapterPositions}
-            learnerScopeId={
-              participantIdentity?.userId ||
-              participantIdentity?.guestUserId ||
-              ayclToken ||
-              ileToken ||
-              "local"
-            }
-            gatherJobs={gatherJobs}
-            onOpenGatherResources={openGatheredResources}
-            openWorkIds={openWorkIds}
-            onSelectChapter={(id) => {
-              setMapSelectedChapterId(id);
-              if (id) {
-                setMapSelectedEmpty(false);
-                setMapSelectedBlocked(false);
-              }
-            }}
-            onSelectEmptyCell={(selected) => {
-              setMapSelectedEmpty(selected);
-              if (selected) {
-                setMapSelectedChapterId(null);
-                setMapSelectedBlocked(false);
-              }
-            }}
-            onSelectBlockedCell={(selected) => {
-              setMapSelectedBlocked(selected);
-              if (selected) {
-                setMapSelectedChapterId(null);
-                setMapSelectedEmpty(false);
-              }
-            }}
-            onVoicePadChange={setVoicePad}
-            voicePadActionRef={voicePadActionRef}
-            aestheticImages={selectedAesthetic?.images}
-            workAestheticById={workAestheticById}
-            insightCountByChapterId={insightCountByChapterId}
-            boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}
-            blockActionProgress={timBlockActionProgress}
-            onMarkChapterCompleted={(stepId) => {
-              completeTargetStepIdRef.current = stepId;
-              setOpenWorkIds((ids) => removeIleOpenWork(ids, stepId));
-              beginMapDelay(stepId);
-              void (async () => {
-                const idx = sessionPlan?.steps?.findIndex((s) => s.id === stepId) ?? -1;
-                if (idx >= 0 && idx !== activeChapterIndex) {
-                  await handleLoadChapter(idx);
-                }
-                try {
-                  await flushRemainingIlePow();
-                } catch {
-                  /* Review still runs on whatever was already recorded. */
-                }
-                const closed = await handleMarkChapterDone({ stepId });
-                if (!closed) clearMapDelay();
-              })();
-            }}
-            onGatherChapterResources={(stepId, description) => {
-              void onGatherResources({
-                blockId: sessionBlockId,
-                chapterId: stepId,
-                chapterDescription: description,
-              });
-            }}
-            onSeeChapterResources={(stepId) => {
-              setResourceScopeChapterId(stepId);
-              setGatherSeenIds((prev) => markGatherResourcesSeen(prev, stepId));
-              openGatheredResources({ tileId: stepId });
-            }}
-            onUpdateChapter={handleUpdateChapter}
-            unseenGatherBlockIds={unseenGatherBlockIds}
-            gatherReadyCountByBlock={gatherReadyCountByBlock}
-          />
-        }
+        map={null}
         toolOverlay={renderSessionToolPanes()}
         workCanvas={renderWorkCanvas()}
         heliosWidget={renderChapterThoughtPane(false)}
@@ -2377,27 +2331,6 @@ export function SessionView({
               setShowSaveExitNameDialog(true);
             }}
             errorNotification={Boolean(error)}
-            chapterTitle={
-              mapSelectedBlocked
-                ? t("session.blockedBlockTitle")
-                : mapSelectedEmpty
-                  ? t("session.emptyBlockTitle")
-                  : mapSelectedStep
-                    ? resolveBlockMapGlyph({
-                        map_keyword: mapSelectedStep.map_keyword,
-                        title: mapSelectedStep.description,
-                      }).keyword
-                    : null
-            }
-            chapterDescription={
-              mapSelectedBlocked
-                ? t("session.blockedBlockDesc")
-                : mapSelectedEmpty
-                  ? t("session.emptyBlockDesc")
-                  : mapSelectedStep?.description ?? null
-            }
-            actionPad={voicePad}
-            onActionPad={(id) => voicePadActionRef.current(id)}
           />
         }
       />

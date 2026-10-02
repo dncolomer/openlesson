@@ -80,6 +80,8 @@ export type SessionWelcomeModalProps = {
   onRegenerateChaptersChange: (next: boolean) => void;
   initialChapters: InitialChaptersLevel | string;
   onInitialChaptersChange: (level: InitialChaptersLevel | string) => void;
+  chapterCount?: number;
+  onChapterCountChange?: (count: number) => void;
   mapTypeCatalog?: MapTypePickerItem[] | null;
   powExpense?: number;
   onPowExpenseChange?: (value: number) => void;

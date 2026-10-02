@@ -49,8 +49,12 @@ describe("ILE dead frontend is gone from the live session", () => {
 
     const dock = read("components/session-view/ile-work-dock-bar.tsx");
     expect(dock).not.toContain("data-ile-global-resources");
-    expect(chrome).toContain("data-ile-global-resources");
-    expect(view).toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(view).not.toContain("IleSubmitWorkButton");
+    expect(read("components/SessionView.tsx")).not.toContain("data-ile-end-turn");
+    expect(chrome).not.toContain("data-ile-end-turn");
+    expect(read("components/session-view/ile-voice-bar.tsx")).not.toContain("data-ile-end-turn");
     expect(read("components/SessionView.tsx")).not.toContain("data-ile-review-work");
     expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain(
       "data-ile-review-work",

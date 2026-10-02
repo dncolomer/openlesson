@@ -419,7 +419,8 @@ describe("ILE gather resources", () => {
     expect(frame).toContain("fixed inset-0 z-[200] flex items-center justify-center");
     expect(frame).toContain("createPortal");
     expect(surface).toContain("blockId: sessionBlockId");
-    expect(surface).toContain("chapterId: stepId");
+    expect(read("components/SessionView.tsx")).not.toContain("onGatherChapterResources");
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
     expect(surface).not.toContain("blockId: stepId");
     expect(hook).toContain("resolveIleGatherPersistIds");
     expect(panel).not.toContain("filterPlannedResourcesForIleBlock");
@@ -437,7 +438,8 @@ describe("ILE gather resources", () => {
     expect(hook).toContain("dismissIleGatherJob");
     expect(hook).toContain("dismissIleGatherReadyJobsForTile");
     expect(jobs).toContain("jobId: job.id");
-    expect(surface).toContain("openGatheredResources({ tileId: stepId })");
+    expect(read("components/SessionView.tsx")).not.toContain("openGatheredResources({ tileId: stepId })");
+    expect(hook).toContain("const openGatheredResources");
     expect(surface).toContain("timBlockActionProgress");
     expect(jobs).toContain("ILE_GATHER_RESOURCES_TOOL");
 

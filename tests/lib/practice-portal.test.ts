@@ -693,7 +693,8 @@ describe("Practice Portal structural wiring", () => {
     // Live ILE welcome: session goal is craft X insights via map areas
     expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/craft insights/i);
-    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/different areas of the board/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/canvas/i);
+    expect(enCopy.onboardingGuide?.ile?.step3?.body).not.toMatch(/\bboard\b|end turn/i);
     expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(120);
     expect(enCopy.onboardingGuide?.ile?.step3?.highlight).toBe("");
     // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)

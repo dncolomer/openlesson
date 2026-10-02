@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Map } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type { IleDockChipStatus } from "@/lib/ile-work-dock-status";
 import {
   FALLBACK_AESTHETIC_IMAGES,
@@ -17,81 +17,6 @@ export type IleWorkDockLabel = {
   status?: IleDockChipStatus;
   image?: string;
 };
-
-export function IleSubmitWorkButton({
-  label,
-  onClick,
-  busy = false,
-  disabled = false,
-  square = false,
-  compact = false,
-  sizeClass,
-}: {
-  label: string;
-  onClick?: () => void;
-  busy?: boolean;
-  disabled?: boolean;
-  square?: boolean;
-  compact?: boolean;
-  /** Match docked chapter chips (`h-24 w-[7rem]` / compact `h-16 w-[5.5rem]`). */
-  sizeClass?: string;
-}) {
-  const box = sizeClass ?? (compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]");
-  return (
-    <button
-      type="button"
-      data-ile-submit-turn
-      data-ile-end-turn=""
-      onClick={onClick}
-      disabled={disabled || busy}
-      className={
-        square
-          ? `relative flex ${box} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-white p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-neutral-950 shadow-[0_14px_40px_rgba(255,255,255,0.32)] hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none`
-          : "flex shrink-0 items-center gap-1.5 rounded-none border border-white bg-white px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
-      }
-    >
-      {square ? (
-        <span
-          data-ile-end-turn-double-border
-          aria-hidden
-          className="pointer-events-none absolute inset-[4px] border-2 border-neutral-950"
-        />
-      ) : null}
-      <ArrowRight className={`relative z-10 ${square ? "size-4" : "size-3.5"}`} strokeWidth={2.3} aria-hidden />
-      <span className="relative z-10">{label}</span>
-    </button>
-  );
-}
-
-export const ILE_SHOW_MAP_LABEL = "Board";
-
-export function IleShowMapButton({
-  onClick,
-  disabled = false,
-  compact = false,
-  sizeClass,
-}: {
-  onClick?: () => void;
-  disabled?: boolean;
-  compact?: boolean;
-  sizeClass?: string;
-}) {
-  const box = sizeClass ?? (compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]");
-  return (
-    <button
-      type="button"
-      data-ile-show-map
-      onClick={onClick}
-      disabled={disabled}
-      title={ILE_SHOW_MAP_LABEL}
-      aria-label={ILE_SHOW_MAP_LABEL}
-      className={`relative flex ${box} shrink-0 flex-col items-center justify-center gap-1 rounded-none border-2 border-white bg-neutral-950 p-[4px] text-center font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-white hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40`}
-    >
-      <Map className={`relative z-10 ${compact ? "size-3.5" : "size-4"}`} strokeWidth={2.3} aria-hidden />
-      <span className="relative z-10">{ILE_SHOW_MAP_LABEL}</span>
-    </button>
-  );
-}
 
 export function IleWorkDockChip({
   work,
@@ -210,12 +135,6 @@ export function IleWorkDockBar({
   heliosOpen,
   openWorkLabels,
   onFocusOpenWork,
-  onShowMap,
-  showMapDisabled = false,
-  onSubmitTurn,
-  submitTurnLabel,
-  submitTurnBusy,
-  submitTurnDisabled = false,
   aestheticImages = [],
   compact = false,
 }: {
@@ -223,20 +142,12 @@ export function IleWorkDockBar({
   heliosOpen: boolean;
   openWorkLabels: IleWorkDockLabel[];
   onFocusOpenWork?: (id: string) => void;
-  onShowMap?: () => void;
-  showMapDisabled?: boolean;
-  onSubmitTurn?: () => void;
-  submitTurnLabel: string;
-  submitTurnBusy?: boolean;
-  submitTurnDisabled?: boolean;
   aestheticImages?: string[];
   compact?: boolean;
 }) {
   const surface = useSurfaceAestheticImages(aestheticImages);
   const dockImages =
     surface.source === "fallback" ? FALLBACK_AESTHETIC_IMAGES : surface.images;
-  const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
-  const showSubmit = Boolean(onSubmitTurn);
 
   return (
     <div
@@ -246,7 +157,7 @@ export function IleWorkDockBar({
       }`}
     >
       <div
-        data-ile-end-turn-cluster
+        data-ile-chapter-dock-chapters
         data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
         className="flex min-w-0 flex-1 items-end justify-end gap-1.5 overflow-x-auto"
       >
@@ -260,25 +171,6 @@ export function IleWorkDockBar({
               onClick={() => onFocusOpenWork?.(work.id)}
             />
           ))}
-      {onShowMap ? (
-        <IleShowMapButton
-          compact={compact}
-          sizeClass={chipSize}
-          onClick={onShowMap}
-          disabled={showMapDisabled}
-        />
-      ) : null}
-      {showSubmit ? (
-        <IleSubmitWorkButton
-          square
-          compact={compact}
-          sizeClass={chipSize}
-          label={submitTurnLabel}
-          onClick={onSubmitTurn}
-          busy={submitTurnBusy}
-          disabled={submitTurnDisabled}
-        />
-      ) : null}
       </div>
     </div>
   );

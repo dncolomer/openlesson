@@ -6,13 +6,13 @@ import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-fra
 /** top-2 (8px) + minimap height + 8px gap — leftover for overlays that still sit under the minimap. */
 export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
 
-/** Voice bar inner height: action pad 7.25rem + py-2. */
-export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-[8.25rem]";
+/** Short transcript bar: one line plus Data, Logs, and Save. */
+export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-10";
 
-/** Bar height + 0.5rem gutter (same as left-2). Chapter widget, sensors, work dock. */
-export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-[8.75rem]";
-/** 8.75rem at the default 16px root. Matches ILE_MAP_VOICE_BAR_CLEARANCE_CLASS. */
-export const ILE_MAP_VOICE_BAR_CLEARANCE_PX = 140;
+/** Bar height + a small gutter. Overlay widgets sit above the transcript. */
+export const ILE_MAP_VOICE_BAR_CLEARANCE_CLASS = "bottom-12";
+/** 3rem at the default 16px root. Matches ILE_MAP_VOICE_BAR_CLEARANCE_CLASS. */
+export const ILE_MAP_VOICE_BAR_CLEARANCE_PX = 48;
 /** Gap between the fitted board frame and the viewport edge. */
 export const ILE_BOARD_FIT_GUTTER_PX = 12;
 /**

@@ -26,7 +26,7 @@ import { ileTabUnfocusPowFromFocusEvent, ILE_TAB_UNFOCUS_TOOL_ACTION } from "@/l
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-b5fb51e17c96/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a4905160ec41/implementer";
 
 function read(rel: string) {
   const path = join(ROOT, rel);
@@ -201,9 +201,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(welcome).toContain("data-ile-gather-max-slider");
     expect(welcome).toContain("data-ile-pregame-preset");
     expect(welcome).toContain("applyIlePregamePreset");
-    expect(welcome).toContain("explainFully");
+    expect(welcome).not.toContain("explainFully");
     expect(welcome).toContain("AestheticPicker");
-    expect(welcome).toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("IleContinueMapPreview");
+    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).toContain("capIleSessionChapters");
+    expect(welcome).not.toMatch(/\bmap type\b|\bboard\b/i);
     expect(welcome).toContain("session.powExpense");
     expect(welcome).toContain("session.confirmSettings");
     expect(welcome).toContain("min-w-[14rem]");
@@ -218,43 +223,42 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("spentUnits");
     expect(speech).toContain("submitHeliosChatMessageNow(text, undefined, chapterId)");
 
-    expect(chrome).toContain("data-ile-pow-resource-bar");
-    expect(chrome).toContain("data-ile-pow-submitted");
-    expect(chrome).toContain("data-ile-pow-unsubmitted");
-    expect(chrome).toContain("data-ile-pow-dual-pill");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("data-ile-pow-submitted");
+    expect(chrome).not.toContain("data-ile-pow-unsubmitted");
+    expect(chrome).not.toContain("data-ile-pow-dual-pill");
+    expect(chrome).toContain('data-ile-canvas-stage="true"');
     expect(chrome).toContain("data-ile-work-dock");
     expect(chrome).toContain("IleWorkDockBar");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("IleChapterToolTabs");
-    expect(chrome).toContain("workCanvas");
+    expect(chrome).toContain("{workCanvas}");
     expect(chrome).not.toContain("data-ile-work-dock-shifted");
-    expect(chrome).toContain("data-ile-chapter-dock-panel");
+    expect(chrome).not.toContain("data-ile-chapter-dock-panel");
     expect(chrome).toContain("ILE_MAP_WIDGET_FRAME_CLASS");
-    expect(chrome).toContain("onMinimize={onMinimizeHelios ?? onCloseHelios}");
-    const workFrame = chrome.slice(
-      chrome.indexOf("<IleChapterWidgetFrame"),
-      chrome.indexOf("</IleChapterWidgetFrame>"),
-    );
-    expect(workFrame).toContain("onMinimize=");
-    expect(workFrame).not.toContain("onClose=");
+    expect(chrome).not.toContain("IleChapterWidgetFrame");
+    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="chapters"');
+    expect(chrome).toContain('id="sensors"');
     const dockBar = read("components/session-view/ile-work-dock-bar.tsx");
+    const dockBarRender = dockBar.slice(dockBar.indexOf("export function IleWorkDockBar"));
     expect(dockBar).toContain("data-ile-work-dock-bar");
     expect(dockBar).not.toContain("data-ile-global-resources");
-    expect(dockBar).toContain("data-ile-submit-turn");
-    expect(dockBar).toContain("data-ile-end-turn");
-    expect(dockBar).toContain("data-ile-end-turn-cluster");
-    expect(dockBar).toContain("data-ile-end-turn-double-border");
-    expect(dockBar).toContain("data-ile-show-map");
-    expect(dockBar).toContain('ILE_SHOW_MAP_LABEL = "Board"');
-    expect(dockBar.indexOf("data-ile-show-map")).toBeLessThan(dockBar.indexOf("<IleSubmitWorkButton"));
-    expect(dockBar).toContain("onShowMap");
-    expect(chrome).toContain("onShowMap=");
-    expect(chrome).toContain("onMinimizeHelios ?? onCloseHelios");
+    expect(dockBar).not.toContain("data-ile-submit-turn");
+    expect(dockBar).not.toContain("data-ile-end-turn");
+    expect(dockBar).not.toContain("data-ile-end-turn-cluster");
+    expect(dockBar).not.toContain("data-ile-show-map");
+    expect(dockBar).not.toContain("ILE_SHOW_MAP_LABEL");
+    expect(dockBar).not.toContain("onShowMap");
+    expect(chrome).not.toContain("onShowMap=");
+    expect(chrome).not.toContain("onSubmitTurn=");
     expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
-    expect(dockBar).toContain("ArrowRight");
+    expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    expect(dockBarRender).toContain("data-ile-chapter-dock-chapters");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
-    expect(dockBar).toContain("sizeClass={chipSize}");
+    expect(dockBar).toContain("const chipSize = compact");
+    expect(dockBar).not.toContain("sizeClass={chipSize}");
     expect(dockBar).toContain("gap-1.5");
     expect(dockBar).toContain("compact");
     expect(dockBar).not.toContain("data-ile-open-work-count");
@@ -302,26 +306,28 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(helios).not.toContain("fadeToRight");
     const voiceBar = read("components/session-view/ile-voice-bar.tsx");
     expect(voiceBar).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
-    expect(voiceBar).toContain("h-8");
     expect(voiceBar).toContain("bg-black");
     expect(voiceBar).not.toContain("data-ile-voice-aesthetic");
     expect(voiceBar).not.toContain("backgroundImage");
-    expect(voiceBar).toContain("data-ile-voice-chapter-brief");
-    expect(voiceBar).toContain("IleVoiceActionPad");
-    expect(voiceBar).toContain("actionPad");
-    expect(read("components/session-view/ile-voice-action-pad.tsx")).toContain(
-      "data-ile-voice-action-pad",
-    );
-    expect(read("components/session-view/ile-voice-action-pad.tsx")).toContain(
-      "data-ile-voice-action=",
-    );
-    expect(view).toContain("onVoicePadChange");
-    expect(view).toContain("voicePadActionRef");
-    expect(view).toContain("onSelectChapter");
-    expect(view).toContain("onSelectEmptyCell");
-    expect(view).toContain("onSelectBlockedCell");
-    expect(view).toContain("session.emptyBlockTitle");
-    expect(view).toContain("session.blockedBlockTitle");
+    expect(voiceBar).not.toContain("data-ile-voice-chapter-brief");
+    expect(voiceBar).not.toContain("IleVoiceActionPad");
+    expect(voiceBar).not.toContain("actionPad");
+    expect(voiceBar).toContain("data-ile-transcription-region");
+    expect(voiceBar).toContain("data-ile-bar-data");
+    expect(voiceBar).toContain("data-ile-bar-logs");
+    expect(voiceBar).toContain("data-ile-bar-save");
+    expect(voiceBar).toMatch(/data-ile-bar-data[\s\S]{0,160}\n\s*Data/);
+    expect(voiceBar).toMatch(/data-ile-bar-logs[\s\S]{0,160}\n\s*Logs/);
+    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,200}\n\s*Save/);
+    const sessionView = read("components/SessionView.tsx");
+    expect(sessionView).not.toContain("onVoicePadChange");
+    expect(sessionView).toContain("voicePadActionRef");
+    expect(sessionView).not.toContain("onSelectEmptyCell");
+    expect(sessionView).not.toContain("onSelectBlockedCell");
+    expect(sessionView).not.toContain("session.emptyBlockTitle");
+    expect(sessionView).not.toContain("session.blockedBlockTitle");
+    expect(sessionView).not.toContain("<ChapterMapPanel");
+    expect(sessionView).not.toContain('circularMenuSurface="ile"');
     const en = JSON.parse(read("messages/en.json")) as {
       session: Record<string, string>;
     };
@@ -333,49 +339,21 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(chrome).toContain("right-2");
     const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dockSlice).not.toContain("onOpenGlobalResources");
-    expect(dockSlice).toContain("onSubmitTurn");
+    expect(dockSlice).not.toContain("onSubmitTurn");
     expect(dockSlice).not.toContain("onReviewWork");
-    const powBar = chrome.slice(
-      chrome.indexOf("data-ile-pow-resource-bar"),
-      chrome.indexOf("data-ile-session-inner"),
-    );
-    expect(powBar).not.toContain("data-ile-session-insights-count");
-    expect(powBar).not.toContain(">Insights<");
-    expect(powBar).toContain("data-ile-global-resources");
-    expect(powBar).toContain("data-ile-pow-resource-actions");
-    expect(powBar).toContain("ml-auto");
-    expect(powBar).not.toContain("IleSubmitWorkButton");
-    expect(powBar).not.toContain("data-ile-review-work");
-    expect(powBar).not.toContain("data-ile-submit-turn");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("data-ile-pow-resource-actions");
+    expect(chrome).not.toContain("IleSubmitWorkButton");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-submit-turn");
+    expect(chrome).not.toContain("End turn");
     expect(view).toContain("compact");
-    expect(view).toContain("onSubmitTurn={() => void handleSubmitTurn()}");
-    const submitTurn = view.slice(
-      view.indexOf("const handleSubmitTurn"),
-      view.indexOf("setSubmitTurnBusy(false)"),
-    );
-    expect(submitTurn).toContain("setHeliosWidgetOpen(false)");
-    expect(submitTurn).toContain("setCraftingInsightsOpen(true)");
-    expect(submitTurn).toContain("evaluateIleEndTurnInsightGate");
-    expect(submitTurn).toContain("if (!gate.canComplete) return");
-    expect(submitTurn.indexOf("setHeliosWidgetOpen(false)")).toBeLessThan(
-      submitTurn.indexOf("setCraftingInsightsOpen(true)"),
-    );
-    expect(submitTurn.indexOf("setCraftingInsightsOpen(true)")).toBeLessThan(
-      submitTurn.indexOf("closeIleOpenWorkTurn"),
-    );
-    expect(submitTurn.indexOf("if (!gate.canComplete) return")).toBeLessThan(
-      submitTurn.indexOf("closeIleOpenWorkTurn"),
-    );
-    expect(submitTurn.indexOf("setDockLoadingIds(awaitingIds)")).toBeLessThan(
-      submitTurn.indexOf("closeIleOpenWorkTurn"),
-    );
-    expect(submitTurn).toContain("ileEndTurnChaptersToMarkDone");
-    expect(submitTurn).toContain("handleMarkChapterDone({ stepId, closeOverride: true })");
-    expect(view).toContain("setCraftingInsightsOpen(true)");
+    expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
     expect(view).not.toContain("data-ile-compact-insight-craft");
-    expect(view).toContain("turnInsightCraft()");
-    expect(view).toContain("insightCraftOpen={craftingInsightsOpen}");
-    expect(view).toContain("boardInterior={craftingInsightsOpen ? turnInsightCraft() : null}");
+    expect(view).not.toContain("turnInsightCraft()");
+    expect(view).not.toContain("boardInterior=");
     expect(view).not.toContain("insightCraft={turnInsightCraft()}");
     expect(view).not.toContain("turnInsightCraft(true)");
     expect(view).toContain("ileSessionSettingsPath");
@@ -407,11 +385,11 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-insight-craft-widget");
     expect(chrome).not.toContain("ileMapInsightCraftFrameClass()");
     expect(chrome).not.toContain("data-ile-work-dock-covered");
-    expect(chrome).not.toContain('title="End turn"');
+    expect(chrome).not.toContain("End turn");
     expect(chrome).not.toContain("{insightCraft}");
     expect(view).toContain("onMinimizeHelios");
     expect(view).toContain("aestheticImages={selectedAesthetic?.images}");
-    expect(view).toContain("openWorkIds={openWorkIds}");
+    expect(read("components/SessionView.tsx")).not.toContain("openWorkIds={openWorkIds}");
     const chapterMap = read("components/ChapterMapPanel.tsx");
     expect(chapterMap).toContain("boardInterior={boardInterior}");
     expect(chapterMap).toContain("openWorkIds={openWorkIds}");
@@ -433,8 +411,6 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).toContain("IleMapInsightsWidget");
     expect(view).toContain("workCanvasHeaderExtra");
     expect(chrome).toContain("workCanvasHeaderExtra");
-    expect(chrome).toContain("workCanvasHeaderLeading");
-    expect(chrome).toContain("headerLeading={workCanvasHeaderLeading}");
     expect(chrome).toContain("mapInsightsWidget");
     const trophies = read("components/session-view/ile-insight-trophies.tsx");
     expect(trophies).toContain("data-ile-insight-trophy");
@@ -469,7 +445,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(enHelp.onboardingGuide.ile.title).toMatch(/Craft \{count\} insights/);
     expect(enHelp.onboardingGuide.ile.titleOne).toMatch(/Craft 1 insight/);
     expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
-    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/different areas of the board/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).toMatch(/canvas/i);
+    expect(enHelp.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
     expect(enHelp.onboardingGuide.ile.step3.highlight).toBe("");
     expect(enHelp.onboardingGuide.ile.step3.quoteText).toBe("");
     const guide = read("components/SessionOnboardingGuide.tsx");
@@ -492,7 +469,7 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(frame).toContain("data-ile-helios-widget-minimize");
     expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
     expect(frame).not.toContain("onToggleWide");
-    expect(chrome).toContain("ileMapWorkFrameClass()");
+    expect(chrome).not.toContain("ileMapWorkFrameClass()");
     expect(chrome).not.toContain("onToggleWide");
     expect(chrome).not.toContain("workCanvasWide");
     expect(ILE_END_TURN_LABEL).toBe("End turn");
@@ -500,55 +477,78 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(ILE_END_TURN_LABEL.toLowerCase()).toMatch(/end|turn/);
 
     expect(docs).toMatch(/Work expense/i);
-    expect(docs).toMatch(/End turn/);
-    expect(docs).toMatch(/Gather resources/);
+    expect(docs).not.toMatch(/End turn/);
+    expect(docs).toMatch(/Gather appetite/);
+    expect(docs).toMatch(/work canvas/i);
+    expect(docs).toMatch(/Data, Logs, and Save/);
+
+    const sessionList = read("components/SessionList.tsx");
+    expect(sessionList).toContain(
+      'circularMenuSurface={learnerMode ? "workspace-learner" : "none"}',
+    );
+    expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
+
+    const locales = ["en", "de", "es", "pl", "vi", "zh"] as const;
+    const settingKeys = [
+      "welcomeMessage",
+      "chapterCount",
+      "chapterCountDesc",
+      "chapterCountFew",
+      "chapterCountMany",
+      "minInsightsPerChapter",
+      "minInsightsPerChapterDesc",
+      "pregamePresetSkirmishDesc",
+      "pregamePresetCampaignDesc",
+      "pregamePresetBlitzDesc",
+      "pregameTabEconomy",
+      "canvasTimerDesc",
+      "startTipCraftInsight",
+      "startTipChapters",
+    ] as const;
+    const localeNotes: string[] = [];
+    for (const locale of locales) {
+      const messages = JSON.parse(read(`messages/${locale}.json`)) as {
+        session: Record<string, string>;
+        onboardingGuide: { ile: { step2: { body: string }; step3: { body: string; bodyProject: string } } };
+      };
+      expect(messages.session.chapterCount).toBeTruthy();
+      expect(messages.session.minInsightsPerChapter).toBeTruthy();
+      for (const key of settingKeys) {
+        const value = messages.session[key] || "";
+        expect(value, `${locale} session.${key}`).not.toMatch(/\bmap\b|\bboard\b/i);
+        localeNotes.push(`${locale}.${key}=${value}`);
+      }
+      expect(messages.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
+      expect(messages.onboardingGuide.ile.step3.bodyProject).not.toMatch(/\bboard\b|end turn/i);
+      expect(messages.onboardingGuide.ile.step2.body).not.toMatch(/\bboard\b|end turn/i);
+    }
 
     writeScratch(
-      "ile-turn-followup-chrome.txt",
+      "ile-canvas-chrome.txt",
       [
-        "PoW bar: Insights then quieter Global resources; no Review work",
-        "dock: End turn double border + ArrowRight; no stem; no Review work; no Global resources square",
-        "PiP: data-ile-compact-insight-craft + portal=false",
-        "settings: data-ile-session-settings full-screen route, not DialogFrame",
-        "help: session goal Craft X insights + empty slots; craft by working map areas",
-      ].join("\n"),
-    );
-    writeScratch(
-      "ile-end-turn-chrome.txt",
-      [
-        "PoW bar: dual pills + Insights + quieter Global resources; no Review work",
-        "bottom-right: End turn double border + ArrowRight; no stem; no Review work",
-        "PiP compact hosts End-turn overlay in-window (portal=false)",
-        "Welcome settings is a dedicated /settings route, not a map DialogFrame",
-        `endTurnLabel=${ILE_END_TURN_LABEL}`,
-      ].join("\n"),
-    );
-    writeScratch(
-      "ile-turn-insights-chrome.txt",
-      [
-        "prompt bar: craft insight; selection Commands (no Compress work)",
-        "end-turn: data-ile-end-turn-screen, no draft/evaluate/thoughts-pool form",
-        "header: empty insight slots left of Work; timer on the right",
-        "map: data-ile-map-insights-widget 3 slots then a non-interactive more mark",
-        "tiles: data-ile-chapter-insight-count",
-        "help: Craft X insights + empty slots; map areas; Sun Tzu gone",
+        "stage=work canvas (data-ile-canvas-stage)",
+        "top-resource-bar=absent",
+        "end-turn-label=absent",
+        "end-turn-control=absent",
+        "settings=chapter count + session insight goal + aesthetics",
+        "settings-map-or-board-wording=absent",
+        "bottom-bar=transcript + Data + Logs + Save",
+        "collapse=insights, chapters, sensors",
+        "ile-circular-menu=not mounted",
+        "workspace-learner-menu=remains",
+        ...localeNotes,
       ].join("\n") + "\n",
     );
     writeScratch(
       "ile-work-chrome.txt",
       [
-        "chapter widget: no ImDoneAnsweringControl",
-        "PiP compact: no I'm done answering",
-        "TAP: ImDoneAnsweringControl kept",
-        "welcome: data-ile-pow-expense-slider beside aesthetics/map type",
-        "chrome: Insights + Global resources on PoW bar; End turn on dock with double border",
-        "minimized chips use aesthetic stills + map two-word keyword; bar has no bg image",
-        "Work widget bg uses the same session-lived still as the chapter dock chip and map tile",
-        "chapters open from the dock; minimize keeps chips on the bar",
-        "save stores ile_open_work_ids; resume restores unclosed Work",
-        "submit routes resolveIleWorkChatTarget + sendThought chapterId",
-        "PoW bar shows submitted + unsubmitted + session insights count; End turn is the dock cluster",
-        `submitLabel=${ILE_END_TURN_LABEL}`,
+        "stage is the work canvas",
+        "no top resource bar",
+        "no End turn control",
+        "bottom bar is transcript + Data + Logs + Save",
+        "insights, chapters, and sensors collapse",
+        "settings set chapter count and the session insight goal",
       ].join("\n"),
     );
   });

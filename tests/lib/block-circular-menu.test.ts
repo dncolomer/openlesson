@@ -370,12 +370,14 @@ describe("circular menu source wiring", () => {
 
     expect(view).not.toContain("onChapterDoubleClick");
     expect(view).not.toContain("onChapterClick");
-    expect(view).toContain("onWorkChapter");
+    expect(read("components/SessionView.tsx")).not.toContain("onWorkChapter");
+    expect(read("components/SessionView.tsx")).not.toContain("<ChapterMapPanel");
+    expect(read("components/SessionView.tsx")).not.toContain('circularMenuSurface="ile"');
     expect(view).toContain("setHeliosWidgetOpen(true)");
     expect(chapter).toContain('action === "work"');
     expect(chapter).toContain("onWorkChapter");
-    expect(view).toContain("await handleLoadChapter(idx)");
-    expect(view).toContain("await handleMarkChapterDone({ stepId })");
+    expect(view).toContain("void handleLoadChapter(idx)");
+    expect(view).toContain("await handleMarkChapterDone(opts)");
 
     expect(actions).toContain("data-ile-chapter-helios-actions");
     expect(actions).toContain("doneAnswering");

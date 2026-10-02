@@ -164,7 +164,8 @@ describe("session intro visuals", () => {
     expect(ileLearningText).not.toMatch(/Start block/i);
     expect(en.onboardingGuide.ile.step3.start).toBe("Start");
     expect(ileLearningText).toMatch(/craft insights/i);
-    expect(ileLearningText).toMatch(/different areas of the board/i);
+    expect(ileLearningText).toMatch(/craft insights on the canvas/i);
+    expect(ileLearningText).not.toMatch(/\bboard\b|end turn/i);
     expect(ileLearningText).not.toMatch(/Generate Work in a turn/i);
     expect(ileLearningText).not.toMatch(/next turn/i);
     expect(ileLearningText).not.toMatch(/speak your thoughts out loud/i);
@@ -175,7 +176,8 @@ describe("session intro visuals", () => {
     expect(ileLearningText).not.toMatch(/Victorious warriors/i);
     expect(ileLearningText).not.toMatch(/Sun Tzu/i);
     expect(en.onboardingGuide.ile.step3.body).not.toMatch(/Commander/);
-    expect(en.onboardingGuide.ile.step3.body).toMatch(/different areas of the board/i);
+    expect(en.onboardingGuide.ile.step3.body).toMatch(/canvas/i);
+    expect(en.onboardingGuide.ile.step3.body).not.toMatch(/\bboard\b|end turn/i);
     expect(en.onboardingGuide.ile.step3.body).toMatch(/craft insights/i);
     expect(en.onboardingGuide.ile.step3.body.length).toBeLessThan(120);
     expect(en.onboardingGuide.ile.step3.bodyProject).toBe(en.onboardingGuide.ile.step3.body);
@@ -196,7 +198,8 @@ describe("session intro visuals", () => {
     expect(ileProjectHtml).toContain("data-ile-sample-insight-card");
     expect(ileProjectHtml).not.toContain("data-onboarding-start");
     expect(ileProjectHtml).not.toContain("data-onboarding-highlight");
-    expect(ileProjectText).toMatch(/different areas of the board/i);
+    expect(ileProjectText).toMatch(/craft insights on the canvas/i);
+    expect(ileProjectText).not.toMatch(/\bboard\b|end turn/i);
     expect(ileProjectHtml).not.toContain("data-ile-welcome-insight-slots");
 
     expect(tapBody).toMatch(/think out loud/i);

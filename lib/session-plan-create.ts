@@ -3,6 +3,7 @@
  * normalization (including spatial grid coordinates).
  */
 
+import { clampIleSessionChapterCount } from "@/lib/ile-canvas-session";
 import {
   parseInitialChaptersLevel,
   type InitialChaptersLevel,
@@ -48,6 +49,11 @@ export interface SessionPlanCreatePromptVars {
   mapTypesState?: WorkspaceMapTypesState | null;
   /** Dialog (learning) vs Project (solo exercise) grain. */
   sessionMode?: IleSessionMode | string | null;
+  /**
+   * When set, the prompt asks for exactly this many chapters (1–5).
+   * Map-type bands are not used.
+   */
+  chapterCount?: unknown;
 }
 
 export interface RawSessionPlanStep {
@@ -92,6 +98,22 @@ export function composeSessionPlanCreatePrompt(
     vars.mapType ??
     resolveMapTypeRecord(vars.initialChapters ?? vars.mapSize, vars.mapTypesState);
   const mapInfo = formatMapTypeGeneratorContext(record);
+  const exactCount =
+    vars.chapterCount == null || vars.chapterCount === ""
+      ? null
+      : clampIleSessionChapterCount(vars.chapterCount);
+  const audience = exactCount
+    ? `exactly ${exactCount} chapters for this session`
+    : mapInfo.band.audience;
+  const countInstruction = exactCount
+    ? `Produce exactly ${exactCount} chapters and no more.`
+    : mapInfo.countInstruction;
+  const spatialInstruction = exactCount
+    ? "These chapters are the whole working set for one session. Do not add extra chapters."
+    : mapInfo.spatialInstruction;
+  const targetSteps = exactCount ?? mapInfo.band.target;
+  const minSteps = exactCount ?? mapInfo.band.min;
+  const maxSteps = exactCount ?? mapInfo.band.max;
 
   const filled = template
     .replace("{problem}", vars.problem || "Untitled topic")
@@ -99,16 +121,16 @@ export function composeSessionPlanCreatePrompt(
     .replace("{calibration}", vars.calibration || "No prior learning data available")
     // Preferred placeholders
     .replaceAll("{initial_chapters_level}", mapInfo.id)
-    .replaceAll("{initial_chapters_audience}", mapInfo.band.audience)
-    .replaceAll("{initial_chapters_instruction}", mapInfo.countInstruction)
+    .replaceAll("{initial_chapters_audience}", audience)
+    .replaceAll("{initial_chapters_instruction}", countInstruction)
     // Legacy map-size placeholders (still filled if present in overrides)
     .replaceAll("{map_size_level}", mapInfo.id)
-    .replaceAll("{map_size_audience}", mapInfo.band.audience)
-    .replaceAll("{map_size_instruction}", mapInfo.countInstruction)
-    .replaceAll("{target_step_count}", String(mapInfo.band.target))
-    .replaceAll("{min_steps}", String(mapInfo.band.min))
-    .replaceAll("{max_steps}", String(mapInfo.band.max))
-    .replaceAll("{spatial_map_layout_rules}", mapInfo.spatialInstruction);
+    .replaceAll("{map_size_audience}", audience)
+    .replaceAll("{map_size_instruction}", countInstruction)
+    .replaceAll("{target_step_count}", String(targetSteps))
+    .replaceAll("{min_steps}", String(minSteps))
+    .replaceAll("{max_steps}", String(maxSteps))
+    .replaceAll("{spatial_map_layout_rules}", spatialInstruction);
 
   return [
     applyIleChapterModeInstructions(filled, vars.sessionMode),

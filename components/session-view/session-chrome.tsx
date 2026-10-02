@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { IleCollapsibleOverlay } from "@/components/session-view/ile-collapsible-overlay";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   AudioMiniPreview,
@@ -12,28 +13,18 @@ import {
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
-  ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS,
-  ILE_MAP_INSIGHTS_WIDGET_CLASS,
   ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
-  ILE_POW_RESOURCE_BAR_CLASS,
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
-  ileMapWorkFrameClass,
-  ileWorkCanvasCoversMap,
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
-import { IleChapterWidgetFrame } from "@/components/session-view/ile-chapter-widget-frame";
 import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
-import { ILE_POW_COUNTER_ICONS } from "@/components/session-view/ile-pow-icons";
 import {
   emptyIlePowDisplayCounts,
-  ILE_POW_COUNTER_LABELS,
-  ILE_POW_DISPLAY_COUNTER_TYPES,
   type IlePowDisplayCounts,
 } from "@/lib/ile-pow-counters";
 import { ILE_REVIEW_WORK_LABEL, ILE_REVIEW_WORK_TOOL } from "@/lib/ile-review-work";
-import { Boxes } from "lucide-react";
 
 export type SessionChromeProps = {
   t: SessionViewTranslate;
@@ -151,9 +142,9 @@ export function SessionChrome({
   aestheticImages = [],
   onFocusOpenWork,
   onOpenGlobalResources,
-  onSubmitTurn,
-  submitTurnLabel = "End turn",
-  submitTurnBusy = false,
+  onSubmitTurn: _onSubmitTurn,
+  submitTurnLabel: _submitTurnLabel,
+  submitTurnBusy: _submitTurnBusy = false,
   onCloseToolOverlay,
   allowEndSession,
   showEndDialog,
@@ -176,9 +167,6 @@ export function SessionChrome({
   onChapterDoneOverride,
   onDismissCloseReview,
 }: SessionChromeProps) {
-  const workCoversMap = ileWorkCanvasCoversMap({
-    heliosOpen,
-  });
   const overlayOpen = isIleMapOverlayTool(activeTool);
   const modalTool = introOpen
     ? "help"
@@ -203,78 +191,10 @@ export function SessionChrome({
     <>
       <div
         data-ile-session-stage
-        data-ile-work-covers-map={workCoversMap ? "true" : "false"}
+        data-ile-canvas-stage="true"
+        data-ile-work-covers-map="true"
         className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
-        <div
-          data-ile-pow-resource-bar
-          className={ILE_POW_RESOURCE_BAR_CLASS}
-        >
-          <span
-            data-ile-pow-resource-label
-            className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-neutral-500"
-          >
-            Proof of Work Resources
-          </span>
-          {ILE_POW_DISPLAY_COUNTER_TYPES.map((type) => {
-            const submitted = powCounts[type];
-            const unsubmitted = unsubmittedPowCounts[type] ?? 0;
-            return (
-            <div
-              key={type}
-              data-ile-pow-count={type}
-              title={`${ILE_POW_COUNTER_LABELS[type]}: ${submitted} submitted, ${unsubmitted} unsubmitted`}
-              className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-neutral-300"
-            >
-              <span className="text-neutral-400" aria-hidden>
-                {ILE_POW_COUNTER_ICONS[type]}
-              </span>
-              <span className="sr-only">{ILE_POW_COUNTER_LABELS[type]}</span>
-              <span
-                data-ile-pow-dual-pill
-                className="inline-flex overflow-hidden rounded-none border border-white font-mono text-[10px] leading-none"
-              >
-                <span
-                  data-ile-pow-submitted
-                  className="bg-white px-1 py-0 text-neutral-950"
-                >
-                  {submitted}
-                </span>
-                <span
-                  data-ile-pow-unsubmitted
-                  className="bg-black px-1 py-0 text-white"
-                >
-                  {unsubmitted}
-                </span>
-              </span>
-            </div>
-            );
-          })}
-          <div
-            data-ile-pow-resource-actions
-            className="ml-auto flex shrink-0 items-center gap-2"
-          >
-            {onOpenGlobalResources ? (
-              <button
-                type="button"
-                data-ile-global-resources
-                title={t("tools.planResources")}
-                aria-label={t("tools.planResources")}
-                aria-pressed={overlayOpen}
-                onClick={() => onOpenGlobalResources()}
-                className={`flex shrink-0 items-center gap-1 rounded-none border px-1.5 py-0 font-mono text-[10px] uppercase tracking-wider ${
-                  overlayOpen && activeTool === "plan-resources"
-                    ? "border-neutral-400 bg-neutral-800 text-neutral-100"
-                    : "border-neutral-500 bg-neutral-900 text-neutral-200 hover:border-neutral-300 hover:bg-neutral-800 hover:text-white"
-                }`}
-              >
-                <Boxes className="size-3" strokeWidth={2} aria-hidden />
-                {t("tools.planResources")}
-              </button>
-            ) : null}
-          </div>
-        </div>
-
         {modalTool === "help" ? (
           <div
             data-ile-session-modal="help"
@@ -292,11 +212,22 @@ export function SessionChrome({
           data-ile-session-inner
           className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
         >
-        <div data-ile-map-stage className="absolute inset-0 z-0">
-          {map}
+        <div data-ile-canvas-stage className="absolute inset-0 z-0 min-h-0">
+          {workCanvas}
         </div>
-        {!workCoversMap && mapInsightsWidget ? (
-          <div className={ILE_MAP_INSIGHTS_WIDGET_CLASS}>{mapInsightsWidget}</div>
+        {workCanvasHeaderExtra ? (
+          <div className="pointer-events-none absolute left-1/2 top-2 z-[36] -translate-x-1/2">
+            {workCanvasHeaderExtra}
+          </div>
+        ) : null}
+        {mapInsightsWidget ? (
+          <IleCollapsibleOverlay
+            id="insights"
+            title="Insights"
+            className="pointer-events-none absolute left-2 top-2 z-[36] w-[min(20rem,calc(100vw-2rem))]"
+          >
+            {mapInsightsWidget}
+          </IleCollapsibleOverlay>
         ) : null}
 
         {error && !showWelcomeModal ? (
@@ -350,46 +281,19 @@ export function SessionChrome({
           </div>
         ) : null}
 
-        {heliosOpen ? (
-          <div
-            data-ile-chapter-dock-panel
-            data-ile-work-canvas-wide="true"
-            className={`pointer-events-auto ${ileMapWorkFrameClass()}`}
-          >
-            <div className={`relative flex h-full min-h-0 ${ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS} flex-col shadow-[0_28px_90px_rgba(0,0,0,0.65)]`}>
-              <IleChapterWidgetFrame
-                fill
-                wide
-                onMinimize={onMinimizeHelios ?? onCloseHelios}
-                headerLeading={workCanvasHeaderLeading}
-                headerExtra={workCanvasHeaderExtra}
-              >
-                {workCanvas}
-              </IleChapterWidgetFrame>
-            </div>
-          </div>
-        ) : null}
-
         <div
           data-ile-work-dock
-          className={`pointer-events-none absolute right-2 ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex flex-col items-end`}
+          className={`pointer-events-none absolute right-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex max-w-[min(100vw-1rem,36rem)] flex-col items-end`}
         >
-          <IleWorkDockBar
-            t={t}
-            heliosOpen={heliosOpen}
-            openWorkLabels={openWorkLabels}
-            onFocusOpenWork={onFocusOpenWork}
-            onShowMap={() => {
-              (onMinimizeHelios ?? onCloseHelios)();
-              onMinimizeInsightCraft?.();
-            }}
-            showMapDisabled={!heliosOpen && !insightCraftOpen}
-            onSubmitTurn={onSubmitTurn}
-            submitTurnLabel={submitTurnLabel}
-            submitTurnBusy={submitTurnBusy}
-            submitTurnDisabled={submitTurnBusy || openWorkCount < 1}
-            aestheticImages={aestheticImages}
-          />
+          <IleCollapsibleOverlay id="chapters" title="Chapters" className="w-full">
+            <IleWorkDockBar
+              t={t}
+              heliosOpen={heliosOpen}
+              openWorkLabels={openWorkLabels}
+              onFocusOpenWork={onFocusOpenWork}
+              aestheticImages={aestheticImages}
+            />
+          </IleCollapsibleOverlay>
         </div>
 
         {overlayOpen ? (
@@ -414,11 +318,12 @@ export function SessionChrome({
 
         <div
           data-ile-tools-widget
-          className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-[35] flex flex-col items-stretch gap-1.5 rounded-none`}
+          className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-[35] flex w-[min(20rem,calc(100vw-1rem))] flex-col items-stretch gap-1.5 rounded-none`}
         >
+          <IleCollapsibleOverlay id="sensors" title="Signals" defaultCollapsed>
           <div
             data-ile-sensor-pair
-            className="grid w-[min(20rem,calc(100vw-1rem))] max-w-[20rem] grid-cols-2 gap-1.5"
+            className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
           >
             <AudioMiniPreview
               stream={audioStream}
@@ -438,6 +343,7 @@ export function SessionChrome({
             ) : null}
             {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
           </div>
+          </IleCollapsibleOverlay>
         </div>
 
         {voiceBar}

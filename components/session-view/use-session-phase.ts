@@ -92,6 +92,7 @@ export type SessionPhaseInput = {
   localInferenceEnabledRef: { current: boolean };
   localContextRef: { current: LocalContextBuffer | null };
   initialChapters: InitialChaptersLevel | string;
+  chapterCount?: number;
   resolvedSessionMode: IleSessionMode;
   setShowWelcomeModal: (v: boolean) => void;
   setShowWelcomePanel: (v: boolean) => void;
@@ -140,7 +141,7 @@ export function useSessionPhase(input: SessionPhaseInput) {
     regenerateChapters, objectives, setObjectives, setObjectiveStatuses, setActiveProbe,
     setViewingProbeIndex, setArchivingProbeId, isPreparing, setIsPreparing, setPrepStage,
     setModelLoadError, setModelLoadProgress, localInferenceEnabled, setLocalInferenceEnabled,
-    localInferenceEnabledRef, localContextRef, initialChapters, resolvedSessionMode,
+    localInferenceEnabledRef, localContextRef, initialChapters, chapterCount, resolvedSessionMode,
     setShowWelcomeModal, setShowWelcomePanel, setIsStartingSession, applyIleChapterGridStartup,
     helpPreviousLayoutRef, setPaneVisibility, timerRef, muteTimerRef,
     micStreamRef, setMicStatus, setIsMuted, setMuteRemaining, setIsSaving, setShowEndDialog,
@@ -913,6 +914,7 @@ if (!newPlan) {
       force: forceDecision.force,
       tutoringLanguage,
       initialChapters,
+      chapterCount,
       sessionMode: resolvedSessionMode,
       session_mode: resolvedSessionMode,
       ...guestAccessBody,
@@ -1000,6 +1002,7 @@ setIsPreparing(false);
   regenerateChapters,
   objectives,
   initialChapters,
+  chapterCount,
   resolvedSessionMode,
   localInferenceEnabled,
 ]);

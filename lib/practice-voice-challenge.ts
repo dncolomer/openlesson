@@ -16,7 +16,7 @@ export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${
 export const ILE_VOICE_CHALLENGE_SENTENCE_ONE =
   "I will now speak my thinking out loud the whole time, which gives a raw thinking signal and a baseline attention increase.";
 export const ILE_VOICE_CHALLENGE_SENTENCE_TWO =
-  "In this session I will work to craft insights by working on the different areas of the board.";
+  "In this session I will work to craft insights on the canvas.";
 export const ILE_VOICE_CHALLENGE_SCRIPT = `${ILE_VOICE_CHALLENGE_SENTENCE_ONE} ${ILE_VOICE_CHALLENGE_SENTENCE_TWO}`;
 export const ILE_SAMPLE_INSIGHT_LABEL = "Sample insight";
 

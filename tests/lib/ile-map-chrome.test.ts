@@ -53,21 +53,32 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     const voice = read("components/session-view/ile-voice-bar.tsx");
     const mini = read("components/block-skill-grid/map-minimap-chrome.tsx");
 
-    expect(view).toContain("data-ile-map-stage");
-    expect(view).toContain("<ChapterMapPanel");
-    expect(chrome).toContain("data-ile-map-stage");
+    expect(view).toContain('data-ile-canvas-stage="true"');
+    expect(view).not.toContain("<ChapterMapPanel");
+    expect(view).not.toContain('circularMenuSurface="ile"');
+    expect(chrome).toContain('data-ile-canvas-stage="true"');
+    expect(chrome).not.toContain("data-ile-map-stage");
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("End turn");
     expect(chrome).toContain("data-ile-tools-widget");
-    expect(chrome).toContain("data-ile-pow-resource-bar");
     expect(chrome).not.toContain("SessionIdentityBadge");
     expect(chrome).not.toContain("data-ile-identity-row");
     expect(chrome).not.toContain("<SensorStrip");
     expect(chrome).not.toContain("data-ile-signal-strip");
     expect(tools).toContain("data-ile-signal-strip");
-    expect(chrome).toContain("data-ile-pow-resource-label");
-    expect(chrome).toContain("Proof of Work Resources");
-    expect(chrome).toContain("data-ile-pow-count");
+    expect(chrome).not.toContain("data-ile-pow-resource-label");
+    expect(chrome).not.toContain("Proof of Work Resources");
+    expect(chrome).not.toContain("data-ile-pow-count");
     expect(chrome).toContain("data-ile-tool-overlay");
-    expect(chrome).toContain("IleChapterWidgetFrame");
+    expect(chrome).not.toContain("IleChapterWidgetFrame");
+    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="chapters"');
+    expect(chrome).toContain('id="sensors"');
+    const collapsible = read("components/session-view/ile-collapsible-overlay.tsx");
+    expect(collapsible).toContain("data-ile-overlay-widget");
+    expect(collapsible).toContain("data-ile-widget-collapse");
+    expect(collapsible).toContain("data-ile-overlay-collapsed");
     expect(chrome).toContain("heliosOpen");
     expect(view).toContain("heliosOpen={heliosWidgetOpen}");
     expect(view).toContain("introOpen={showWelcomePanel}");
@@ -81,9 +92,10 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain(">Help</span>");
     expect(chrome).toContain("session.beforeYouStart");
     const introWidgetIdx = chrome.indexOf("data-ile-intro-widget");
-    const heliosOpenIdx = chrome.indexOf("{heliosOpen ? (");
+    const canvasIdx = chrome.indexOf("{workCanvas}");
     expect(introWidgetIdx).toBeGreaterThan(-1);
-    expect(heliosOpenIdx).toBeGreaterThan(introWidgetIdx);
+    expect(canvasIdx).toBeGreaterThan(introWidgetIdx);
+    expect(chrome).not.toContain("{heliosOpen ? (");
     expect(chrome).not.toContain("onCloseIntro");
     expect(view).not.toContain("onCloseIntro");
     expect(view).toContain("onCloseSessionModal");
@@ -97,10 +109,10 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(helpChrome).toContain('if (tool === "help")');
     expect(helpChrome).toContain("setShowWelcomePanel(true)");
     expect(view).not.toContain("onChapterClick");
-    expect(view).toContain("onWorkChapter");
+    expect(view).not.toContain("onWorkChapter");
+    expect(view).toContain("onFocusOpenWork={handleFocusOpenWork}");
     expect(view).not.toContain("onChapterDoubleClick");
     expect(view).toContain("<IleVoiceBar");
-    expect(chrome).toContain("ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS");
     expect(chrome).toContain("data-ile-work-dock");
     expect(chrome).not.toContain("data-ile-work-dock-shifted");
     expect(chrome).not.toContain("ileWorkDockBarRightPx");
@@ -108,19 +120,18 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain("ileChapterOverlayWidthClass");
     expect(ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS).toContain("flex-1");
     expect(ILE_CHAPTER_DOCK_PANEL_HEIGHT_CLASS).not.toContain("52vh");
-    const chapterPanel = chrome.slice(
-      chrome.indexOf("data-ile-chapter-dock-panel"),
+    expect(chrome).toContain("<IleWorkDockBar");
+    expect(chrome).not.toContain("onSubmitTurn=");
+    expect(chrome).not.toContain("onShowMap=");
+    expect(ileMapWorkFrameClass()).toContain("z-40");
+    const canvasStage = chrome.slice(
+      chrome.indexOf('<div data-ile-canvas-stage className="absolute inset-0'),
       chrome.indexOf("data-ile-work-dock"),
     );
-    expect(chapterPanel).toContain("ileMapWorkFrameClass()");
-    expect(ileMapWorkFrameClass()).toContain("z-40");
-    expect(chapterPanel).toContain('data-ile-work-canvas-wide="true"');
-    expect(chapterPanel).not.toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
-    expect(chapterPanel).not.toContain("inset-0");
-    expect(chapterPanel).not.toContain("bg-black/60");
-    expect(chapterPanel).not.toContain("ILE_CHAPTER_MODAL_SIZE_CLASS");
-    expect(chapterPanel).not.toContain("h-full w-full");
-    expect(chapterPanel).not.toContain("w-[59%]");
+    expect(canvasStage).toContain("{workCanvas}");
+    expect(canvasStage).not.toContain("ChapterMapPanel");
+    expect(canvasStage).not.toContain("ILE_CHAPTER_MODAL_SIZE_CLASS");
+    expect(canvasStage).not.toContain("w-[59%]");
     const overlay = chrome.slice(
       chrome.indexOf("data-ile-tool-overlay"),
       chrome.indexOf("data-ile-tools-widget"),
@@ -130,7 +141,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(overlay).not.toContain("top-14");
     expect(ILE_MAP_WIDGET_TOP_CLASS).toBe("top-2");
     expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS);
-    expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe("bottom-[8.75rem]");
+    expect(ILE_MAP_WIDGET_BOTTOM_CLASS).toBe("bottom-12");
     expect(ILE_MAP_WIDGET_WIDTH_CLASS).toBe("w-[min(720px,calc(100%-28rem))]");
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_TOP_CLASS);
     expect(ILE_MAP_WIDGET_FRAME_CLASS).toContain(ILE_MAP_WIDGET_BOTTOM_CLASS);
@@ -158,13 +169,10 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(ileMapWorkFrameClass(true)).not.toContain(ILE_MAP_WIDGET_TOP_CLASS);
     const dock = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dock).toContain("ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS");
-    expect(dock).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
-    expect(chrome).toContain("data-ile-pow-resource-bar");
+    expect(dock).toContain('id="chapters"');
+    expect(chrome).not.toContain("data-ile-pow-resource-bar");
     expect(chrome).toContain("data-ile-session-inner");
-    expect(chrome).toContain("ILE_POW_RESOURCE_BAR_CLASS");
-    expect(chrome.slice(chrome.indexOf("data-ile-pow-resource-bar"), chrome.indexOf("data-ile-pow-resource-label"))).toContain(
-      "ILE_POW_RESOURCE_BAR_CLASS",
-    );
+    expect(chrome).not.toContain("ILE_POW_RESOURCE_BAR_CLASS");
     expect(voice).toContain("ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS");
     const globals = read("app/globals.css");
     expect(globals).toContain('[data-ile-work-covers-map="true"] [data-block-minimap]');
@@ -198,8 +206,8 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chrome).not.toContain('title="End turn"');
     expect(chrome).toContain("mapInsightsWidget");
     expect(chrome).toContain("workCanvasHeaderExtra");
-    expect(chrome).toContain("workCanvasHeaderLeading");
-    expect(chrome).toContain("ILE_MAP_INSIGHTS_WIDGET_CLASS");
+    expect(chrome).toContain("mapInsightsWidget");
+    expect(chrome).not.toContain("ILE_MAP_INSIGHTS_WIDGET_CLASS");
     expect(frame).not.toContain(">Chapter</span>");
     expect(frame).not.toContain("data-ile-work-canvas-wide-toggle");
     expect(frame).not.toContain("Exit full screen");
@@ -265,7 +273,15 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(tools).not.toContain("overflow-y-auto");
     expect(tools).not.toContain("w-[168px]");
     expect(tools).not.toContain("data-ile-tools-grid");
-    expect(voice).toContain("VoiceBarUtilityRow");
+    expect(voice).not.toContain("VoiceBarUtilityRow");
+    expect(voice).toContain("data-ile-bar-data");
+    expect(voice).toContain("data-ile-bar-logs");
+    expect(voice).toContain("data-ile-bar-save");
+    expect(voice).toMatch(/data-ile-bar-data[\s\S]{0,160}\n\s*Data/);
+    expect(voice).toMatch(/data-ile-bar-logs[\s\S]{0,160}\n\s*Logs/);
+    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,200}\n\s*Save/);
+    expect(voice).not.toContain("IleVoiceActionPad");
+    expect(voice).not.toContain("data-ile-voice-chapter-brief");
     expect(tools).toContain("data-ile-voice-utility");
     expect(tools).toContain('const utilityTools: Tool[] = ["data-input", "logs"]');
     expect(tools).not.toContain('["help", "data-input", "logs"]');
@@ -309,7 +325,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(voice).toContain("inset-x-0 bottom-0");
     expect(voice).toContain("ILE_VOICE_BAR_HEIGHT_CLASS");
     expect(voice).not.toContain("min-h-[7.25rem]");
-    expect(ILE_VOICE_BAR_HEIGHT_CLASS).toBe("h-[8.25rem]");
+    expect(ILE_VOICE_BAR_HEIGHT_CLASS).toBe("h-10");
     expect(voice).toContain("<SlidingTranscript");
     expect(helios).not.toContain("<SlidingTranscript");
     expect(helios).not.toContain("data-ile-voice-bar");
@@ -318,7 +334,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     expect(chapter).not.toContain("data-ile-chapter-inspector");
     expect(chapter).not.toContain('t("chapterMap.markDone")');
     expect(chrome).toContain("ILE_MAP_VOICE_BAR_CLEARANCE_CLASS");
-    expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-[8.75rem]");
+    expect(ILE_MAP_VOICE_BAR_CLEARANCE_CLASS).toBe("bottom-12");
     const heliosActions = read("components/session-view/ile-chapter-helios-actions.tsx");
     expect(heliosActions).toContain("data-ile-chapter-helios-actions");
     expect(heliosActions).toContain("data-ile-chapter-actions");
@@ -336,37 +352,21 @@ describe("ILE map-first session chrome (shipped surface)", () => {
       expect(src).toContain("rounded-none");
       expect(src).not.toMatch(BOX_ROUNDED_RE);
     }
-    expect(chrome).toContain("ILE_POW_DISPLAY_COUNTER_TYPES");
-    expect(chrome).toContain("data-ile-pow-count={type}");
-    expect(chrome).toContain("data-ile-pow-submitted");
-    expect(chrome).toContain("data-ile-pow-unsubmitted");
-    expect(chrome).toContain("data-ile-pow-dual-pill");
-    const powCount = chrome.slice(
-      chrome.indexOf("data-ile-pow-count={type}"),
-      chrome.indexOf("data-ile-global-resources"),
-    );
-    expect(powCount).toContain("data-ile-pow-dual-pill");
-    expect(powCount).toContain("bg-white");
-    expect(powCount).toContain("text-neutral-950");
-    expect(powCount).toContain("bg-black");
-    expect(powCount).toContain("text-white");
-    expect(powCount).not.toContain("text-red-400");
+    expect(chrome).not.toContain("ILE_POW_DISPLAY_COUNTER_TYPES");
+    expect(chrome).not.toContain("data-ile-pow-count={type}");
+    expect(chrome).not.toContain("data-ile-pow-submitted");
+    expect(chrome).not.toContain("data-ile-pow-unsubmitted");
+    expect(chrome).not.toContain("data-ile-pow-dual-pill");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-identity-row");
     expect(chrome).not.toContain("data-ile-session-insights-count");
-    const powBar = chrome.slice(
-      chrome.indexOf("data-ile-pow-resource-bar"),
-      chrome.indexOf("data-ile-session-modal"),
-    );
-    expect(powBar).not.toContain("data-ile-session-insights-count");
-    expect(powBar).not.toContain(">Insights<");
-    expect(powBar).not.toContain("data-ile-identity-row");
-    expect(powBar).not.toContain("data-ile-review-work");
-    expect(powBar).not.toContain("data-ile-submit-turn");
-    expect(chrome).toContain("ILE_POW_COUNTER_LABELS[type]");
-    expect(chrome).toContain("ILE_POW_COUNTER_ICONS[type]");
+    expect(chrome).not.toContain("data-ile-review-work");
+    expect(chrome).not.toContain("data-ile-submit-turn");
+    expect(chrome).not.toContain("ILE_POW_COUNTER_LABELS[type]");
+    expect(chrome).not.toContain("ILE_POW_COUNTER_ICONS[type]");
     expect(chrome).not.toContain("onReviewWork");
-    expect(chrome).toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("data-ile-end-turn");
     expect(chrome).not.toContain(">Traces<");
     const powIcons = read("components/session-view/ile-pow-icons.tsx");
     expect(powIcons).toContain("thoughts:");
@@ -390,7 +390,7 @@ describe("ILE map-first session chrome (shipped surface)", () => {
     writeScratch(
       "ile-map-chrome-excerpts.txt",
       [
-        "map-stage=data-ile-map-stage",
+        "stage=data-ile-canvas-stage",
         "minimap=data-block-minimap right-2 top-2",
         "no ResizablePane in session-chrome",
         `overlayTools=${ILE_MAP_OVERLAY_TOOLS.join(",")}`,

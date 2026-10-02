@@ -39,7 +39,13 @@ import {
   ILE_WORK_PARALLEL_DISABLED_WARNING,
 } from "@/lib/ile-pow-spend";
 import { ileCircularMenuDisabledActionIds } from "@/lib/block-circular-menu";
-import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
+import {
+  capIleSessionChapters,
+  clampIleSessionChapterCount,
+  clampIleSessionInsightGoal,
+  ileInsightGoalBlocksWork,
+  ileChaptersMarkedDoneForInsightGoal,
+} from "@/lib/ile-canvas-session";
 import { aestheticPackageVibe } from "@/lib/aesthetics";
 
 const SCRATCH =
@@ -71,7 +77,8 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(skirmish.powExpense).toBe(ILE_POW_EXPENSE_DEFAULT);
     expect(skirmish.insightSlotMax).toBe(ILE_TURN_INSIGHT_SLOT_MAX);
     expect(skirmish.gatherMaxPerSession).toBe(ILE_GATHER_MAX_PER_SESSION);
-    expect(skirmish.mapType).toBe(DEFAULT_INITIAL_CHAPTERS);
+    expect(skirmish.chapterCount).toBe(1);
+    expect(skirmish).not.toHaveProperty("mapType");
     expect(ilePregameMatchingPresetId(skirmish)).toBe("skirmish");
     const liveExpense: number = ILE_POW_EXPENSE_DEFAULT;
     expect(
@@ -79,7 +86,7 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
         powExpense: liveExpense,
         insightSlotMax: ILE_TURN_INSIGHT_SLOT_MAX,
         gatherMaxPerSession: ILE_GATHER_MAX_PER_SESSION,
-        mapType: DEFAULT_INITIAL_CHAPTERS,
+        chapterCount: 1,
       }),
     ).toBe("skirmish");
     expect(ileTurnInsightSlotCount(8, skirmish.insightSlotMax)).toBe(3);
@@ -89,7 +96,8 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(campaign.powExpense).toBe(5);
     expect(campaign.insightSlotMax).toBe(5);
     expect(campaign.gatherMaxPerSession).toBe(2);
-    expect(campaign.mapType).toBe("ladder");
+    expect(campaign.chapterCount).toBe(3);
+    expect(campaign).not.toHaveProperty("mapType");
     expect(ileTurnInsightSlotCount(8, campaign.insightSlotMax)).toBe(5);
     expect(ilePowWorkStartCost(campaign.powExpense)).toBe(8);
     expect(
@@ -122,7 +130,8 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
     expect(blitz.powExpense).toBe(1);
     expect(blitz.insightSlotMax).toBe(1);
     expect(blitz.gatherMaxPerSession).toBe(8);
-    expect(blitz.mapType).toBe("random_dense");
+    expect(blitz.chapterCount).toBe(5);
+    expect(blitz).not.toHaveProperty("mapType");
     expect(ileTurnInsightSlotCount(8, blitz.insightSlotMax)).toBe(1);
     expect(ilePowWorkStartCost(blitz.powExpense)).toBe(1);
     expect(
@@ -143,12 +152,30 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
       }).allowed,
     ).toBe(true);
 
-    const resume = applyIlePregamePreset("blitz", {
-      mapChoosable: false,
-      currentMap: "hub",
-    });
-    expect(resume.mapType).toBe("hub");
+    const resume = applyIlePregamePreset("blitz");
+    expect(resume.chapterCount).toBe(5);
     expect(resume.powExpense).toBe(1);
+    expect(clampIleSessionChapterCount(9)).toBe(5);
+    expect(clampIleSessionChapterCount(0)).toBe(1);
+    expect(clampIleSessionChapterCount(3)).toBe(3);
+    expect(clampIleSessionChapterCount("22")).toBe(5);
+    for (const preset of ILE_PREGAME_PRESETS) {
+      const knobs = applyIlePregamePreset(preset.id);
+      expect(knobs.chapterCount).toBeGreaterThanOrEqual(1);
+      expect(knobs.chapterCount).toBeLessThanOrEqual(5);
+      expect(JSON.stringify(knobs)).not.toMatch(/islands|ladder|random_|hub|spiral|ring|tracks/);
+    }
+    const capped = capIleSessionChapters(
+      Array.from({ length: 12 }, (_, index) => ({ id: `c${index}` })),
+      3,
+    );
+    expect(capped.map((row) => row.id)).toEqual(["c0", "c1", "c2"]);
+    expect(capIleSessionChapters(capped, 22)).toHaveLength(3);
+    const goal = clampIleSessionInsightGoal(9);
+    expect(goal).toBe(5);
+    expect(clampIleSessionInsightGoal(2)).toBe(2);
+    expect(ileInsightGoalBlocksWork(0, goal)).toBe(false);
+    expect(ileChaptersMarkedDoneForInsightGoal()).toEqual([]);
 
     const tweaked = clampIlePregameKnobs({
       ...skirmish,
@@ -261,15 +288,18 @@ describe("ILE pre-game settings surface", () => {
     expect(en.session.pregamePresets).toBe("Presets");
     expect(welcome).toContain("data-ile-insight-slot-slider");
     expect(welcome).toContain("data-ile-gather-max-slider");
-    expect(welcome).toContain("data-ile-map-type-explain");
-    expect(welcome).toContain("explainFully");
+    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).toContain("data-ile-session-insight-goal");
+    expect(welcome).not.toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("IleContinueMapPreview");
+    expect(welcome).not.toContain("data-ile-pregame-map");
     expect(welcome).toContain("data-ile-pregame-difficulty-preset");
     expect(welcome).toContain("applyIlePregameDifficultyPreset");
     expect(welcome).toContain("applyIlePregamePreset");
     expect(welcome).toContain("data-ile-pregame-tabs");
     expect(welcome).toContain("data-ile-pregame-tab={tab.id}");
     expect(welcome).toContain("ile-pregame-panel-economy");
-    expect(welcome).toContain("ile-pregame-panel-map");
+    expect(welcome).not.toContain("ile-pregame-panel-map");
     expect(welcome).toContain("ile-pregame-panel-difficulty");
     expect(welcome).toContain("ile-pregame-panel-other");
     expect(welcome).toContain("aria-orientation=\"vertical\"");
@@ -295,7 +325,10 @@ describe("ILE pre-game settings surface", () => {
       "difficulty",
       "other",
     ]);
-    expect(en.session.pregameTabEconomy).toBe("Board & Economy");
+    expect(en.session.pregameTabEconomy).toBe("Chapters");
+    expect(en.session.chapterCount).toBe("Chapters");
+    expect(en.session.minInsightsPerChapter).toBe("Insight goal");
+    expect(`${en.session.welcomeMessage} ${en.session.chapterCountDesc} ${en.session.minInsightsPerChapterDesc} ${en.session.pregamePresetSkirmishDesc}`).not.toMatch(/\bmap\b|\bboard\b/i);
     expect(en.session.pregameTabDifficulty).toBe("Difficulty");
     expect(en.session.pregameTabOther).toBe("Other Settings");
     expect(en.session.difficultyPresetCasual).toBe("Casual");
@@ -335,18 +368,20 @@ describe("ILE pre-game settings surface", () => {
     expect(startLoad).toContain("ILE_START_TIP_INTERVAL_MS");
     expect(en.session.startLoading).toBe("Starting session");
     expect(en.session.startTipsTitle).toBe("Tips & Tricks");
-    expect(ILE_START_TIP_IDS).toHaveLength(8);
-    expect(shuffleIleStartTipIds(["send-enter", "end-turn"], () => 0)).toEqual([
-      "end-turn",
+    expect(ILE_START_TIP_IDS).toHaveLength(5);
+    expect(ILE_START_TIP_IDS).not.toContain("end-turn");
+    expect(ILE_START_TIP_IDS).not.toContain("map-pan");
+    expect(shuffleIleStartTipIds(["send-enter", "craft-insight"], () => 0)).toEqual([
+      "craft-insight",
       "send-enter",
     ]);
-    expect(nextIleStartTipIndex(7, 8)).toBe(0);
-    expect(nextIleStartTipIndex(0, 8)).toBe(1);
+    expect(nextIleStartTipIndex(4, 5)).toBe(0);
+    expect(nextIleStartTipIndex(0, 5)).toBe(1);
     expect(ILE_START_TIP_INTERVAL_MS).toBe(12000);
-    expect(en.session.startTipEndTurn).toMatch(/Work canvas/);
-    expect(en.session.startTipEndTurn).not.toMatch(/crafts insights/i);
+    expect(en.session.startTipCraftInsight).toMatch(/canvas/i);
+    expect(en.session.startTipCraftInsight).not.toMatch(/\bboard\b|\bend turn\b/i);
     expect(en.session.startTipSendEnter).not.toMatch(/unsys/i);
-    expect(en.session[ILE_START_TIP_LABEL_KEYS["end-turn"].replace("session.", "")]).toBeTruthy();
+    expect(en.session[ILE_START_TIP_LABEL_KEYS["craft-insight"].replace("session.", "")]).toBeTruthy();
     const continuePreview = read("components/session-view/ile-continue-map-preview.tsx");
     expect(continuePreview).toContain("animate-spin");
     expect(continuePreview).toContain("Checking for existing chapters");
@@ -357,17 +392,9 @@ describe("ILE pre-game settings surface", () => {
     const backAt = welcome.indexOf("data-ile-back-to-workspace");
     expect(backAt).toBeGreaterThan(footerAt);
     expect(backAt).toBeLessThan(confirmAt);
-    expect(picker).toContain("explainFully");
     expect(picker).toContain("data-ile-map-type-use-when");
-    expect(picker).toContain("data-ile-map-type-play-rule");
-    expect(picker).toContain("data-ile-map-type-shape");
-    expect(picker).toContain("data-ile-map-type-strip");
-    expect(picker).toContain("data-ile-map-type-copy");
-    expect(picker).toContain("overflow-y-auto");
-    expect(picker).toContain("h-0 flex-1");
-    expect(picker).toContain("overflow-hidden");
-    expect(welcome).toContain("catalogStrip");
-    expect(welcome).toContain("fillHeight");
+    expect(welcome).not.toContain("catalogStrip");
+    expect(welcome).toContain("data-ile-session-chapter-count");
     expect(welcome).toContain("data-ile-pregame-economy-map");
     expect(welcome).toContain("lg:items-start");
     expect(welcome).toContain("justify-start gap-3");

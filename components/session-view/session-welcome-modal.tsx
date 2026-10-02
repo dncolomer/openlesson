@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { AestheticPicker } from "@/components/AestheticPicker";
-import { InitialChaptersPicker } from "@/components/InitialChaptersPicker";
-import { IleContinueMapPreview } from "@/components/session-view/ile-continue-map-preview";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import {
-  ileWelcomeShowsContinuePreview,
-  ileWelcomeShowsRegenerate,
-  ileWelcomeShowsSizePicker,
-} from "@/lib/ile-welcome-chapters";
+  ILE_SESSION_CHAPTER_COUNT_DEFAULT,
+  ILE_SESSION_CHAPTER_COUNT_MAX,
+  ILE_SESSION_CHAPTER_COUNT_MIN,
+  capIleSessionChapters,
+} from "@/lib/ile-canvas-session";
+import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
 import {
   ILE_PREGAME_DIFFICULTY_PRESETS,
   ILE_PREGAME_PRESETS,
@@ -58,7 +58,7 @@ import {
 export function SessionWelcomeModal({
   t,
   languageConfirmed,
-  planLoading,
+  planLoading: _planLoading,
   isPreparing,
   tutoringLanguage,
   onTutoringLanguageChange,
@@ -68,11 +68,13 @@ export function SessionWelcomeModal({
   onSelectAesthetic,
   aestheticsLoading,
   chapterPlanStatus,
-  regenerateChapters,
-  onRegenerateChaptersChange,
+  regenerateChapters: _regenerateChapters,
+  onRegenerateChaptersChange: _onRegenerateChaptersChange,
   initialChapters,
-  onInitialChaptersChange,
-  mapTypeCatalog,
+  onInitialChaptersChange: _onInitialChaptersChange,
+  chapterCount = ILE_SESSION_CHAPTER_COUNT_DEFAULT,
+  onChapterCountChange,
+  mapTypeCatalog: _mapTypeCatalog,
   powExpense = 3,
   onPowExpenseChange,
   insightSlotMax = ILE_TURN_INSIGHT_SLOT_MAX,
@@ -150,15 +152,7 @@ export function SessionWelcomeModal({
               resume: resumeSession,
               stepCount: sessionPlan?.steps?.length ?? 0,
             };
-            const showSizePicker = ileWelcomeShowsSizePicker(
-              chapterPlanStatus,
-              welcomeExtras,
-            );
             const showContinuePreview = ileWelcomeShowsContinuePreview(
-              chapterPlanStatus,
-              welcomeExtras,
-            );
-            const showRegenerate = ileWelcomeShowsRegenerate(
               chapterPlanStatus,
               welcomeExtras,
             );
@@ -166,8 +160,9 @@ export function SessionWelcomeModal({
               powExpense,
               insightSlotMax,
               gatherMaxPerSession,
-              mapType: String(initialChapters || ""),
+              chapterCount,
             });
+            void initialChapters;
             const matchingDifficulty = ilePregameMatchingDifficultyPresetId({
               allowThoughtsPoolInsights,
               allowParallelWork,
@@ -192,15 +187,16 @@ export function SessionWelcomeModal({
             ).length;
 
             const applyPreset = (presetId: string) => {
-              const knobs = applyIlePregamePreset(presetId, {
-                mapChoosable: showSizePicker,
-                currentMap: String(initialChapters || ""),
-              });
+              const knobs = applyIlePregamePreset(presetId);
               onPowExpenseChange?.(knobs.powExpense);
               onInsightSlotMaxChange?.(knobs.insightSlotMax);
               onGatherMaxPerSessionChange?.(knobs.gatherMaxPerSession);
-              if (showSizePicker) onInitialChaptersChange(knobs.mapType);
+              onChapterCountChange?.(knobs.chapterCount);
             };
+            const visibleChapters = capIleSessionChapters(
+              sessionPlan?.steps ?? [],
+              chapterCount,
+            );
 
             const panelClass = (id: IlePregameTabId) =>
               pregameTab === id
@@ -433,166 +429,79 @@ export function SessionWelcomeModal({
                       </div>
                     </div>
                     <div
-                    data-ile-pregame-map
-                    id="ile-pregame-panel-map"
-                    className="flex h-full min-h-0 min-w-0 flex-col self-stretch overflow-hidden"
+                    data-ile-session-chapters
+                    className="flex h-full min-h-0 min-w-0 flex-col gap-3 self-stretch overflow-hidden"
                   >
+                    <div data-ile-session-chapter-count>
+                      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                        <label className="text-sm font-medium text-neutral-100">
+                          {t("session.chapterCount")}
+                        </label>
+                        <span className="font-mono text-[11px] text-neutral-300">
+                          {chapterCount}
+                        </span>
+                      </div>
+                      <p className="mb-2 text-[12px] leading-snug text-neutral-400">
+                        {t("session.chapterCountDesc")}
+                      </p>
+                      <input
+                        type="range"
+                        min={ILE_SESSION_CHAPTER_COUNT_MIN}
+                        max={ILE_SESSION_CHAPTER_COUNT_MAX}
+                        step={1}
+                        value={chapterCount}
+                        disabled={isButtonDisabled}
+                        onChange={(e) => onChapterCountChange?.(Number(e.target.value))}
+                        className="w-full accent-white"
+                        aria-valuemin={ILE_SESSION_CHAPTER_COUNT_MIN}
+                        aria-valuemax={ILE_SESSION_CHAPTER_COUNT_MAX}
+                        aria-valuenow={chapterCount}
+                      />
+                      <div className="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                        <span>{t("session.chapterCountFew")}</span>
+                        <span>{t("session.chapterCountMany")}</span>
+                      </div>
+                    </div>
                     {showContinuePreview ? (
                       <div
                         data-ile-continue-welcome
-                        className="flex min-h-0 flex-1 flex-col"
+                        className="rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
                       >
-                        <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
                           {t("session.continueSession")}
-                        </label>
-                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4 pb-0">
-                          <p className="text-[11px] leading-relaxed text-neutral-400">
-                            {t("session.continueSessionDesc")}
-                          </p>
-                          <dl className="mt-3 shrink-0 space-y-1.5 text-[11px]">
-                            <div className="flex justify-between gap-2">
-                              <dt className="text-neutral-500">
-                                {t("session.continueSessionId")}
-                              </dt>
-                              <dd
-                                data-continue-session-id
-                                className="truncate font-mono text-neutral-300"
-                              >
-                                {sessionId || sessionPlan?.sessionId || ""}
-                              </dd>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <dt className="text-neutral-500">
-                                {t("session.continueSessionStarted")}
-                              </dt>
-                              <dd data-continue-session-started className="text-neutral-300">
-                                {sessionStartedAt || ""}
-                              </dd>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <dt className="text-neutral-500">
-                                {t("session.continueSessionChapters")}
-                              </dt>
-                              <dd className="text-neutral-300">
-                                {sessionPlan?.steps?.length ?? 0}
-                                {completedCount > 0 ? ` · ${completedCount} done` : ""}
-                              </dd>
-                            </div>
-                          </dl>
-                          <div
-                            data-ile-continue-map-align="aesthetics"
-                            className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col max-lg:min-h-[min(14rem,28vh)]"
-                          >
-                            <IleContinueMapPreview
-                              steps={sessionPlan?.steps}
-                              loading={
-                                planLoading ||
-                                chapterPlanStatus === "unknown" ||
-                                ((resumeSession || chapterPlanStatus === "exists") &&
-                                  !(sessionPlan?.steps?.length))
-                              }
-                              loadingLabel={t("session.initialChaptersLoading")}
-                            />
+                        </p>
+                        <p className="mt-2 text-[12px] leading-snug text-neutral-400">
+                          {t("session.continueSessionDesc")}
+                        </p>
+                        <dl className="mt-3 space-y-1.5 text-[11px]">
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-neutral-500">{t("session.continueSessionId")}</dt>
+                            <dd data-continue-session-id className="truncate font-mono text-neutral-300">
+                              {sessionId || sessionPlan?.sessionId || ""}
+                            </dd>
                           </div>
-                        </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-neutral-500">{t("session.continueSessionStarted")}</dt>
+                            <dd data-continue-session-started className="text-neutral-300">
+                              {sessionStartedAt || ""}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-neutral-500">{t("session.continueSessionChapters")}</dt>
+                            <dd data-ile-continue-chapter-count className="text-neutral-300">
+                              {visibleChapters.length}
+                              {completedCount > 0 ? ` · ${completedCount} done` : ""}
+                            </dd>
+                          </div>
+                        </dl>
                       </div>
-                    ) : (
-                      <div
-                        className={`min-h-0 flex-1 ${
-                          !showSizePicker
-                            ? "rounded-none border border-neutral-800/80 bg-neutral-950/40 p-4"
-                            : "flex h-full min-h-0 flex-col overflow-hidden"
-                        }`}
-                      >
-                        <div className="mb-2.5 flex shrink-0 items-center justify-between gap-2">
-                          <label className="block text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-                            {t("session.pregameGroupMap")}
-                          </label>
-                          {statusUnknown ? (
-                            <span className="text-[10px] text-neutral-600">
-                              {t("session.initialChaptersChecking")}
-                            </span>
-                          ) : statusFailed ? (
-                            <span className="text-[10px] text-neutral-600">
-                              {t("session.initialChaptersFailed")}
-                            </span>
-                          ) : null}
-                        </div>
-                        {showSizePicker ? (
-                          <div
-                            data-ile-map-type-align="aesthetics"
-                            data-ile-map-type-explain
-                            className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-                          >
-                            <InitialChaptersPicker
-                              value={initialChapters}
-                              onChange={onInitialChaptersChange}
-                              disabled={isButtonDisabled}
-                              t={t}
-                              i18nPrefix="session"
-                              fillHeight
-                              explainFully
-                              catalogStrip
-                              catalog={mapTypeCatalog}
-                            />
-                          </div>
-                        ) : null}
-                        {statusUnknown && (
-                          <div
-                            className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                            role="status"
-                            aria-live="polite"
-                          >
-                            <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
-                            <span className="min-w-0">
-                              <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                                {t("session.initialChaptersLoading")}
-                              </span>
-                              <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                {t("session.initialChaptersLoadingDesc")}
-                              </span>
-                            </span>
-                          </div>
-                        )}
-                        {statusFailed && (
-                          <div
-                            className="mt-3 flex items-center gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
-                            role="status"
-                          >
-                            <span className="min-w-0">
-                              <span className="block text-xs font-medium text-neutral-300 leading-tight">
-                                {t("session.initialChaptersFailed")}
-                              </span>
-                              <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
-                                {t("session.initialChaptersFailedDesc")}
-                              </span>
-                            </span>
-                          </div>
-                        )}
-                        {showRegenerate ? (
-                          <label
-                            className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-none border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 ${
-                              isButtonDisabled ? "pointer-events-none opacity-50" : ""
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={regenerateChapters}
-                              disabled={isButtonDisabled}
-                              onChange={(e) =>
-                                onRegenerateChaptersChange(e.target.checked)
-                              }
-                              className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
-                            />
-                            <span className="min-w-0">
-                              <span className="block text-xs font-medium text-neutral-200 leading-tight">
-                                {t("session.regenerateChapters")}
-                              </span>
-                            </span>
-                          </label>
-                        ) : null}
-                      </div>
-                    )}
+                    ) : null}
+                    {statusUnknown ? (
+                      <p className="text-[11px] text-neutral-500">{t("session.initialChaptersChecking")}</p>
+                    ) : null}
+                    {statusFailed ? (
+                      <p className="text-[11px] text-neutral-500">{t("session.initialChaptersFailed")}</p>
+                    ) : null}
                     </div>
                     </div>
                   </section>
@@ -648,7 +557,7 @@ export function SessionWelcomeModal({
                       </div>
                     </div>
                     <div className="mt-5 flex w-full min-w-0 flex-col gap-4 border-t border-neutral-800 pt-5">
-                      <div data-ile-min-insights-slider>
+                      <div data-ile-min-insights-slider data-ile-session-insight-goal>
                         <div className="mb-1.5 flex items-baseline justify-between gap-3">
                           <label className="text-sm font-medium text-neutral-100">
                             {t("session.minInsightsPerChapter")}

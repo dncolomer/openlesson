@@ -2,7 +2,10 @@
  * ILE pre-game settings: named presets and slider knobs applied before
  * Start Session. Pure — tests apply a preset and read the resulting knobs.
  */
-import { DEFAULT_INITIAL_CHAPTERS } from "@/lib/initial-chapters";
+import {
+  clampIleSessionChapterCount,
+  clampIleSessionInsightGoal,
+} from "@/lib/ile-canvas-session";
 import {
   ILE_GATHER_MAX_PER_SESSION,
   clampIleGatherMaxPerSession,
@@ -10,7 +13,6 @@ import {
 import {
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_TURN_INSIGHT_SLOT_MAX,
-  clampIleMinInsightsPerChapter,
   clampIleTurnInsightSlotMax,
 } from "@/lib/ile-turn-insights";
 import {
@@ -58,7 +60,7 @@ export function clampIlePregameDifficulty(
     allowThoughtsPoolInsights: input?.allowThoughtsPoolInsights !== false,
     allowParallelWork: input?.allowParallelWork !== false,
     allowGatherResources: input?.allowGatherResources !== false,
-    minInsightsPerChapter: clampIleMinInsightsPerChapter(
+    minInsightsPerChapter: clampIleSessionInsightGoal(
       input?.minInsightsPerChapter ?? ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
     ),
     canvasTimerSeconds: clampIleCanvasTimerSeconds(
@@ -168,7 +170,8 @@ export type IlePregameKnobs = {
   powExpense: IlePowExpenseLevel;
   insightSlotMax: number;
   gatherMaxPerSession: number;
-  mapType: string;
+  /** Chapters this session makes available. Never a map type. */
+  chapterCount: number;
 };
 
 export type IlePregamePreset = {
@@ -187,7 +190,7 @@ export const ILE_PREGAME_PRESETS: readonly IlePregamePreset[] = [
       powExpense: ILE_POW_EXPENSE_DEFAULT,
       insightSlotMax: ILE_TURN_INSIGHT_SLOT_MAX,
       gatherMaxPerSession: ILE_GATHER_MAX_PER_SESSION,
-      mapType: DEFAULT_INITIAL_CHAPTERS,
+      chapterCount: 1,
     },
   },
   {
@@ -198,7 +201,7 @@ export const ILE_PREGAME_PRESETS: readonly IlePregamePreset[] = [
       powExpense: 5,
       insightSlotMax: 5,
       gatherMaxPerSession: 2,
-      mapType: "ladder",
+      chapterCount: 3,
     },
   },
   {
@@ -209,7 +212,7 @@ export const ILE_PREGAME_PRESETS: readonly IlePregamePreset[] = [
       powExpense: 1,
       insightSlotMax: 1,
       gatherMaxPerSession: 8,
-      mapType: "random_dense",
+      chapterCount: 5,
     },
   },
 ];
@@ -225,30 +228,21 @@ export function clampIlePregameKnobs(input: {
   powExpense?: unknown;
   insightSlotMax?: unknown;
   gatherMaxPerSession?: unknown;
-  mapType?: unknown;
+  chapterCount?: unknown;
 }): IlePregameKnobs {
-  const mapType = String(input.mapType ?? "").trim() || DEFAULT_INITIAL_CHAPTERS;
   return {
     powExpense: clampIlePowExpense(input.powExpense),
     insightSlotMax: clampIleTurnInsightSlotMax(input.insightSlotMax),
     gatherMaxPerSession: clampIleGatherMaxPerSession(input.gatherMaxPerSession),
-    mapType,
+    chapterCount: clampIleSessionChapterCount(input.chapterCount),
   };
 }
 
-/** Apply a named setup. When the map is not choosable, keep the current map. */
-export function applyIlePregamePreset(
-  presetId: unknown,
-  input?: { mapChoosable?: boolean; currentMap?: string | null },
-): IlePregameKnobs {
+/** Apply a named setup. Presets set a chapter count and never a map type. */
+export function applyIlePregamePreset(presetId: unknown): IlePregameKnobs {
   const preset =
     ILE_PREGAME_PRESETS.find((row) => row.id === presetId) ?? ILE_PREGAME_PRESETS[0];
-  const knobs = clampIlePregameKnobs(preset.knobs);
-  if (input?.mapChoosable === false) {
-    const current = String(input.currentMap ?? "").trim();
-    return { ...knobs, mapType: current || knobs.mapType };
-  }
-  return knobs;
+  return clampIlePregameKnobs(preset.knobs);
 }
 
 export function ilePregameMatchingPresetId(
@@ -256,7 +250,7 @@ export function ilePregameMatchingPresetId(
     powExpense?: unknown;
     insightSlotMax?: unknown;
     gatherMaxPerSession?: unknown;
-    mapType?: unknown;
+    chapterCount?: unknown;
   },
 ): IlePregamePresetId | null {
   const clamped = clampIlePregameKnobs(knobs);
@@ -266,7 +260,7 @@ export function ilePregameMatchingPresetId(
       want.powExpense === clamped.powExpense &&
       want.insightSlotMax === clamped.insightSlotMax &&
       want.gatherMaxPerSession === clamped.gatherMaxPerSession &&
-      want.mapType === clamped.mapType
+      want.chapterCount === clamped.chapterCount
     ) {
       return preset.id;
     }
@@ -291,11 +285,8 @@ export function ileMapTypeSessionExplanation(input: {
 export const ILE_START_TIP_IDS = [
   "send-enter",
   "stash-del",
-  "end-turn",
-  "gather",
-  "work-expense",
-  "mark-done",
-  "map-pan",
+  "craft-insight",
+  "chapters",
   "thought-memory",
 ] as const;
 
@@ -304,11 +295,8 @@ export type IleStartTipId = (typeof ILE_START_TIP_IDS)[number];
 export const ILE_START_TIP_LABEL_KEYS: Record<IleStartTipId, string> = {
   "send-enter": "session.startTipSendEnter",
   "stash-del": "session.startTipStashDel",
-  "end-turn": "session.startTipEndTurn",
-  gather: "session.startTipGather",
-  "work-expense": "session.startTipWorkExpense",
-  "mark-done": "session.startTipMarkDone",
-  "map-pan": "session.startTipMapPan",
+  "craft-insight": "session.startTipCraftInsight",
+  chapters: "session.startTipChapters",
   "thought-memory": "session.startTipThoughtMemory",
 };
 

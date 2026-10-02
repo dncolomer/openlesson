@@ -292,9 +292,11 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     const chrome = read("components/session-view/session-chrome.tsx");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-session-insights-count");
-    expect(chrome).toContain("data-ile-global-resources");
-    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
-    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-end-turn");
+    expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).not.toContain("End turn");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain("data-ile-submit-turn");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain("data-ile-end-turn");
+    expect(read("components/session-view/ile-voice-bar.tsx")).toContain("data-ile-bar-data");
     const voice = read("components/session-view/ile-voice-bar.tsx");
     expect(voice).toContain("data-ile-transcription-box");
     expect(voice).toContain("<SlidingTranscript");
@@ -339,7 +341,7 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     writeScratch(
       "ile-im-done-answering-chrome.txt",
       [
-        "ILE: End turn lives on the bottom-right dock; PiP dock keeps End turn; chapter widget has no I'm done answering",
+        "ILE: no End turn control; transcript bar has Data, Logs, and Save; chapter widget has no I'm done answering",
         "no SVG bump",
         "no Submit last Thought on ILE or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",
@@ -366,7 +368,8 @@ describe("I'm done answering vs chapter Complete (shipped split)", () => {
     expect(helios).not.toContain("ImDoneAnsweringControl");
     expect(helios).toContain("IleChapterHeliosActions");
     const chrome = read("components/session-view/session-chrome.tsx");
-    expect(read("components/session-view/ile-work-dock-bar.tsx")).toContain("data-ile-submit-turn");
+    expect(read("components/session-view/ile-work-dock-bar.tsx")).not.toContain("data-ile-submit-turn");
+    expect(read("components/session-view/ile-voice-bar.tsx")).toContain("data-ile-bar-save");
     const actionsIdx = helios.indexOf("<IleChapterHeliosActions");
     expect(actionsIdx).toBeGreaterThan(-1);
 

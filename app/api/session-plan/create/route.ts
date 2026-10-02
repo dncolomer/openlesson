@@ -12,6 +12,7 @@ import {
   resolveMapTypeIdFromBody,
   resolveMapTypeRecord,
 } from "@/lib/workspace-map-types";
+import { capIleSessionChapters } from "@/lib/ile-canvas-session";
 import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
 import {
   resolveIleSessionModeFromBody,
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
       mapType,
       mapTypesState,
       sessionMode,
+      chapterCount: body.chapterCount,
     });
 
     if (!result.success || !result.plan) {
@@ -141,7 +143,10 @@ export async function POST(request: NextRequest) {
       console.error("[Plan Create] LLM returned no valid steps:", result.plan.steps);
       return jsonError(500, "Plan generation produced no valid steps");
     }
-    result.plan.steps = validSteps;
+    result.plan.steps =
+      body.chapterCount == null || body.chapterCount === ""
+        ? validSteps
+        : capIleSessionChapters(validSteps, body.chapterCount);
 
     // Re-check after LLM: another request may have inserted while we generated.
     const planAfterGenerate = await getSessionPlan(sessionId, supabase);

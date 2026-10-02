@@ -275,14 +275,16 @@ describe("welcome branch continue vs new", () => {
     expect(page).toContain("resumeSession");
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
-    expect(welcome).toContain("ileWelcomeShowsSizePicker");
+    expect(welcome).not.toContain("ileWelcomeShowsSizePicker");
     expect(welcome).toContain("resumeSession");
     expect(welcome).toContain("welcomeExtras");
     expect(welcome).toContain("ileWelcomeShowsContinuePreview");
-    expect(welcome).toContain("ileWelcomeShowsRegenerate");
+    expect(welcome).not.toContain("ileWelcomeShowsRegenerate");
     expect(welcome).toContain("data-ile-continue-welcome");
-    expect(welcome).toContain("IleContinueMapPreview");
-    expect(welcome).toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("IleContinueMapPreview");
+    expect(welcome).not.toContain("InitialChaptersPicker");
+    expect(welcome).toContain("data-ile-session-chapter-count");
+    expect(welcome).toContain("capIleSessionChapters");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("data-density-level");
     expect(picker).toContain("INITIAL_CHAPTERS_CATALOG");
@@ -291,12 +293,12 @@ describe("welcome branch continue vs new", () => {
     expect(picker).toContain("data-initial-chapters-random-pick");
     expect(picker).not.toContain('type="checkbox"');
     expect(picker).toContain("pickRandomMapType");
-    expect(welcome).toContain("catalogStrip");
-    expect(welcome).toContain('data-ile-map-type-align="aesthetics"');
+    expect(welcome).not.toContain("catalogStrip");
+    expect(welcome).not.toContain('data-ile-map-type-align="aesthetics"');
     const continueAt = welcome.indexOf("data-ile-continue-welcome");
-    const sizeAt = welcome.indexOf("showSizePicker");
+    const countAt = welcome.indexOf("data-ile-session-chapter-count");
     expect(continueAt).toBeGreaterThan(-1);
-    expect(sizeAt).toBeGreaterThan(-1);
+    expect(countAt).toBeGreaterThan(-1);
   });
 });
 
@@ -313,7 +315,8 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(miniLib).toContain("DUMMY_DENSITY_CELLS");
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
-    expect(welcome).toContain("InitialChaptersPicker");
+    expect(welcome).not.toContain("InitialChaptersPicker");
+    expect(welcome).toContain("data-ile-continue-chapter-count");
     const picker = read("components/InitialChaptersPicker.tsx");
     expect(picker).toContain("dummyDensityCells");
     expect(picker).toContain("dummy");
@@ -356,11 +359,10 @@ describe("dummy density occupancy + continue mini read-only", () => {
     expect(mini).not.toMatch(/onLoadChapter|handleLoadChapter/);
 
     const welcome = read("components/session-view/session-welcome-modal.tsx");
-    expect(welcome).toContain("IleContinueMapPreview");
+    expect(welcome).not.toContain("IleContinueMapPreview");
+    expect(welcome).toContain("data-ile-continue-welcome");
+    expect(welcome).toContain("capIleSessionChapters");
     expect(welcome).toContain("sessionPlan?.steps");
-    expect(welcome).toContain("loading={");
-    expect(welcome).toContain("planLoading");
-    expect(welcome).toContain("initialChaptersLoading");
     const preview = read("components/session-view/ile-continue-map-preview.tsx");
     expect(preview).toContain("BlockSkillGrid");
     expect(preview).toContain("viewOnly");
@@ -377,10 +379,11 @@ describe("dummy density occupancy + continue mini read-only", () => {
       "max-lg:min-h-[min(14rem,28vh)]",
     );
     expect(ILE_CONTINUE_MAP_PREVIEW_FRAME_CLASS).not.toContain("28rem");
-    expect(welcome).toContain("ile-pregame-panel-map");
-    expect(welcome).toContain('data-ile-continue-map-align="aesthetics"');
+    expect(welcome).not.toContain("ile-pregame-panel-map");
+    expect(welcome).not.toContain('data-ile-continue-map-align="aesthetics"');
+    expect(welcome).toContain("data-ile-session-chapters");
+    expect(welcome).toContain("data-ile-session-chapter-count");
     expect(welcome).toContain("flex-1");
-    expect(welcome).toContain("pb-0");
     const aycl = read("components/AyclLandingClient.tsx");
     expect(aycl).toContain("h-[min(28rem,55vh)]");
     expect(aycl).toContain("viewOnly");
@@ -537,8 +540,14 @@ describe("Practice drawer labels and previous-sessions UI", () => {
     expect(mapRoute).toContain("guardWorkspaceRoute");
 
     const view = readSessionViewSurface();
-    expect(view).toContain("ileWelcomeShowsSizePicker");
-    expect(view).toContain("ileWelcomeShowsRegenerate");
+    expect(view).not.toContain("ileWelcomeShowsSizePicker");
+    expect(read("components/session-view/session-welcome-modal.tsx")).not.toContain(
+      "ileWelcomeShowsRegenerate",
+    );
+    expect(read("components/session-view/use-session-phase.ts")).toContain(
+      "ileWelcomeShowsRegenerate",
+    );
+    expect(view).toContain("data-ile-session-chapter-count");
     const chrome = read("components/session-view/session-chrome.tsx");
     const phase = read("components/session-view/use-session-phase.ts");
     expect(chrome).toContain('testId="ile-save-exit-name"');
@@ -559,7 +568,8 @@ describe("Practice drawer labels and previous-sessions UI", () => {
       session: Record<string, string>;
     };
     expect(en.session.nameSessionBody).toMatch(/Proof of Work/i);
-    expect(en.session.nameSessionBody).toMatch(/board will be lost/i);
+    expect(en.session.nameSessionBody).toMatch(/canvas state will be lost/i);
+    expect(en.session.nameSessionBody).not.toMatch(/\bboard\b/i);
     expect(en.session.nameSessionDiscard).toMatch(/without saving/i);
 
     writeScratch(

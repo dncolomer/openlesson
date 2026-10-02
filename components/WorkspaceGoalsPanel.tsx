@@ -248,7 +248,9 @@ export function WorkspaceGoalsPanel({
           workspaceId={workspaceId}
           ayclToken={ayclToken}
           kind="goals"
-          onUseGoal={addGoalText}
+          onUseGoal={async (text) => {
+            await addGoalText(text);
+          }}
         />
       ) : null}
 

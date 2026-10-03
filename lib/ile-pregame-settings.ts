@@ -36,22 +36,111 @@ export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
 
 /**
  * Knobs that still change a live Learn session and stay on the TAP settings card.
- * Duration is rendered by TapBriefingConfig for the shared card. Learn has no
- * session-length clock, so those minutes are not applied to a countdown.
- * Canvas-timer board clear stays its own knob.
+ * Learn has no session-length clock, so the TAP duration grid is hidden.
+ * The work-canvas timer, gather appetite, and the parallel-work, gather, and
+ * browser-inference toggles are not learner settings.
  */
 export const ILE_LIVE_SETTINGS_KNOBS = [
   { id: "chapterCount", attribute: "data-ile-session-chapter-count" },
   { id: "insightGoal", attribute: "data-ile-session-insight-goal" },
-  { id: "canvasTimer", attribute: "data-ile-canvas-timer-slider" },
   { id: "silenceLock", attribute: "data-ile-silence-lock-minutes" },
   { id: "spokenLanguage", attribute: "data-tap-briefing-config" },
   { id: "powExpense", attribute: "data-ile-pow-expense-slider" },
-  { id: "gatherMax", attribute: "data-ile-gather-max-slider" },
-  { id: "allowParallelWork", attribute: 'data-ile-pregame-difficulty-toggle="parallel-work"' },
-  { id: "allowGatherResources", attribute: 'data-ile-pregame-difficulty-toggle="gather"' },
-  { id: "browserInference", attribute: "data-ile-browser-inference" },
 ] as const;
+
+/**
+ * Research presets for the Learn settings card. They set only the knobs
+ * that still change the session. Spoken language and look stay as chosen.
+ */
+export const ILE_LEARN_PRESET_IDS = ["survey", "study", "thesis"] as const;
+export type IleLearnPresetId = (typeof ILE_LEARN_PRESET_IDS)[number];
+
+export type IleLearnPresetKnobs = {
+  chapterCount: number;
+  minInsightsPerChapter: number;
+  silenceLockMinutes: number;
+  powExpense: IlePowExpenseLevel;
+};
+
+export type IleLearnPreset = {
+  id: IleLearnPresetId;
+  labelKey: string;
+  descKey: string;
+  knobs: IleLearnPresetKnobs;
+};
+
+export const ILE_LEARN_PRESETS: readonly IleLearnPreset[] = [
+  {
+    id: "survey",
+    labelKey: "session.learnPresetSurvey",
+    descKey: "session.learnPresetSurveyDesc",
+    knobs: {
+      chapterCount: 1,
+      minInsightsPerChapter: 1,
+      silenceLockMinutes: 4,
+      powExpense: 1,
+    },
+  },
+  {
+    id: "study",
+    labelKey: "session.learnPresetStudy",
+    descKey: "session.learnPresetStudyDesc",
+    knobs: {
+      chapterCount: 3,
+      minInsightsPerChapter: 3,
+      silenceLockMinutes: ILE_SILENCE_LOCK_MINUTES_DEFAULT,
+      powExpense: ILE_POW_EXPENSE_DEFAULT,
+    },
+  },
+  {
+    id: "thesis",
+    labelKey: "session.learnPresetThesis",
+    descKey: "session.learnPresetThesisDesc",
+    knobs: {
+      chapterCount: 5,
+      minInsightsPerChapter: 5,
+      silenceLockMinutes: 1,
+      powExpense: 5,
+    },
+  },
+];
+
+export function applyIleLearnPreset(presetId: unknown): IleLearnPresetKnobs {
+  const preset =
+    ILE_LEARN_PRESETS.find((row) => row.id === presetId) ?? ILE_LEARN_PRESETS[0];
+  return {
+    chapterCount: clampIleSessionChapterCount(preset.knobs.chapterCount),
+    minInsightsPerChapter: clampIleSessionInsightGoal(preset.knobs.minInsightsPerChapter),
+    silenceLockMinutes: clampIleSilenceLockMinutes(preset.knobs.silenceLockMinutes),
+    powExpense: clampIlePowExpense(preset.knobs.powExpense),
+  };
+}
+
+export function ileLearnMatchingPresetId(knobs?: {
+  chapterCount?: unknown;
+  minInsightsPerChapter?: unknown;
+  silenceLockMinutes?: unknown;
+  powExpense?: unknown;
+} | null): IleLearnPresetId | null {
+  const clamped: IleLearnPresetKnobs = {
+    chapterCount: clampIleSessionChapterCount(knobs?.chapterCount),
+    minInsightsPerChapter: clampIleSessionInsightGoal(knobs?.minInsightsPerChapter),
+    silenceLockMinutes: clampIleSilenceLockMinutes(knobs?.silenceLockMinutes),
+    powExpense: clampIlePowExpense(knobs?.powExpense),
+  };
+  for (const preset of ILE_LEARN_PRESETS) {
+    const want = applyIleLearnPreset(preset.id);
+    if (
+      want.chapterCount === clamped.chapterCount &&
+      want.minInsightsPerChapter === clamped.minInsightsPerChapter &&
+      want.silenceLockMinutes === clamped.silenceLockMinutes &&
+      want.powExpense === clamped.powExpense
+    ) {
+      return preset.id;
+    }
+  }
+  return null;
+}
 
 export const ILE_PREGAME_TAB_IDS = ["economy", "difficulty", "other"] as const;
 export type IlePregameTabId = (typeof ILE_PREGAME_TAB_IDS)[number];

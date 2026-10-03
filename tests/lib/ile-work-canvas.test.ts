@@ -1676,8 +1676,8 @@ describe("ILE Work canvas timer expiry (shipped)", () => {
     expect(canvas).toContain("upsertThinkingChip");
     expect(ILE_CANVAS_TIMER_RESET_LOADING_MS).toBeGreaterThan(0);
     const view = read("components/SessionView.tsx");
-    expect(view).toContain("resetIleWorkCanvasSceneOnTimerExpiry");
-    expect(view).toContain("seedText");
+    expect(view).not.toContain("resetIleWorkCanvasSceneOnTimerExpiry");
+    expect(view).not.toContain("ileWorkCanvasTimerExpired");
     expect(view).not.toContain("IleWorkCanvasTimer");
 
     writeScratch(

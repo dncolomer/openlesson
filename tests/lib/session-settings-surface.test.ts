@@ -29,7 +29,7 @@ describe("shared TAP settings surface", () => {
 
   it("Learn settings render that card and the knobs that still change the session", () => {
     expect(learn).toContain("<TapBriefingConfig");
-    expect(learn).toContain("showDurationPicker");
+    expect(learn).toContain("showDurationPicker={false}");
     expect(learn).toContain("<TapAestheticSection");
     expect(learn).toContain('kind="shortcuts"');
     expect(learn).toContain("conversationLanguage={tutoringLanguage}");
@@ -41,14 +41,9 @@ describe("shared TAP settings surface", () => {
     expect(ILE_LIVE_SETTINGS_KNOBS.map((knob) => knob.id)).toEqual([
       "chapterCount",
       "insightGoal",
-      "canvasTimer",
       "silenceLock",
       "spokenLanguage",
       "powExpense",
-      "gatherMax",
-      "allowParallelWork",
-      "allowGatherResources",
-      "browserInference",
     ]);
     for (const knob of ILE_LIVE_SETTINGS_KNOBS) {
       if (knob.id === "spokenLanguage") {
@@ -57,17 +52,18 @@ describe("shared TAP settings surface", () => {
       }
       expect(learn, knob.id).toContain(knob.attribute);
     }
-    const inferenceAt = learn.indexOf("data-ile-browser-inference");
-    expect(inferenceAt).toBeGreaterThan(-1);
-    const inference = learn.slice(inferenceAt, inferenceAt + 700);
-    expect(inference).toContain("onToggleLocalInference");
-    expect(inference).toContain("aria-pressed={localInferenceEnabled}");
-    expect(inference).not.toContain('className="hidden"');
-    expect(inference).not.toContain("aria-hidden");
-    expect(inference).not.toContain("tabIndex={-1}");
     expect(learn).toContain("data-ile-confirm-settings");
     expect(learn).not.toContain("data-ile-pregame-tabs");
     expect(learn).not.toContain("data-ile-insight-slot-slider");
+    expect(learn).not.toContain("data-ile-canvas-timer-slider");
+    expect(learn).not.toContain("data-ile-gather-max-slider");
+    expect(learn).not.toContain("data-ile-pregame-difficulty-toggle");
+    expect(learn).not.toContain("data-ile-browser-inference");
+    expect(learn).toContain("data-ile-learn-presets");
+    expect(learn).toContain("applyIleLearnPreset");
+    expect(learn).toContain("ILE_LEARN_PRESETS.map");
+    expect(learn).not.toContain("data-ile-pregame-preset");
+    expect(read("components/SessionView.tsx")).not.toContain("resetIleWorkCanvasSceneOnTimerExpiry");
   });
 
   it("Prepare, Drill, and Verify settings still use the same briefing card and aesthetic column", () => {

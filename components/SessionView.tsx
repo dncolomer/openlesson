@@ -135,13 +135,9 @@ import {
   applyIleXaiTurnAtCommit,
   buildIleWorkCanvasCommandUserMessage,
   ileWorkCanvasAskFromSessionChat,
-  clampIleCanvasTimerSeconds,
-  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   ileWorkCanvasScenesFromWorkspaces,
-  ileWorkCanvasTimerExpired,
   parseIleXaiCanvasTurn,
   pickIleWorkCanvasTurnScene,
-  resetIleWorkCanvasSceneOnTimerExpiry,
   seedIleChapterWorkCanvas,
   serializeIleWorkCanvasScene,
   type IleWorkCanvasAskKind,
@@ -385,9 +381,6 @@ export function SessionView({
   );
   const [chapterCount, setChapterCount] = useState(ILE_SESSION_CHAPTER_COUNT_DEFAULT);
   const chapterCountTouchedRef = useRef(false);
-  const [canvasTimerSeconds, setCanvasTimerSeconds] = useState(
-    ILE_CANVAS_TIMER_SECONDS_DEFAULT,
-  );
   const [silenceLockMinutes, setSilenceLockMinutes] = useState(
     ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   );
@@ -406,16 +399,6 @@ export function SessionView({
   const [endTurnGate, setEndTurnGate] = useState<IleEndTurnInsightGate>(() =>
     evaluateIleEndTurnInsightGate({ activeChapterIds: [], insights: [] }),
   );
-  const [canvasTimerStartedAt, setCanvasTimerStartedAt] = useState<
-    Record<string, number>
-  >({});
-  const [canvasTimerNow, setCanvasTimerNow] = useState(() => Date.now());
-  const [canvasReplaceScene, setCanvasReplaceScene] =
-    useState<IleWorkCanvasScene | null>(null);
-  const [canvasReplaceNonce, setCanvasReplaceNonce] = useState(0);
-  const [canvasTimerResetChapterIds, setCanvasTimerResetChapterIds] = useState<
-    string[]
-  >([]);
   const [sessionInsights, setSessionInsights] = useState<InsightSummary[]>([]);
   const [dockLoadingIds, setDockLoadingIds] = useState<string[]>([]);
   const [dockAttentionIds, setDockAttentionIds] = useState<string[]>([]);
@@ -1535,93 +1518,6 @@ export function SessionView({
   ]);
 
   useEffect(() => {
-    setCanvasTimerStartedAt((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const id of openWorkIds) {
-        if (next[id] == null) {
-          next[id] = Date.now();
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [openWorkIds]);
-
-  useEffect(() => {
-    if (openWorkIds.length === 0) return;
-    const tick = () => setCanvasTimerNow(Date.now());
-    tick();
-    const id = window.setInterval(tick, 250);
-    return () => window.clearInterval(id);
-  }, [openWorkIds.length]);
-
-  useEffect(() => {
-    if (openWorkIds.length === 0) return;
-    let resetIds = canvasTimerResetChapterIds;
-    let recorded = false;
-    for (const chapterId of openWorkIds) {
-      const startedAt = canvasTimerStartedAt[chapterId];
-      if (startedAt == null) continue;
-      if (
-        !ileWorkCanvasTimerExpired({
-          durationSeconds: canvasTimerSeconds,
-          startedAtMs: startedAt,
-          nowMs: canvasTimerNow,
-        })
-      ) {
-        continue;
-      }
-      const workspace = chapterWorkspaces[chapterId];
-      const liveScene =
-        chapterId === activeChapterKey
-          ? whiteboardSceneDataRef.current
-          : workspace?.whiteboardSceneData;
-      const step = sessionPlan?.steps?.find((row) => row.id === chapterId);
-      const seedText =
-        isProjectMode && chapterId === (activeStep?.id ?? "")
-          ? displayProjectChapterExercise
-          : step?.description;
-      const reset = resetIleWorkCanvasSceneOnTimerExpiry({
-        scene: liveScene,
-        insights: sessionInsights,
-        chapterId,
-        seedText,
-        resetChapterIds: resetIds,
-      });
-      resetIds = reset.resetChapterIds;
-      recorded = true;
-      updateChapterWorkspace(chapterId, {
-        whiteboardSceneData: reset.scene,
-      });
-      if (chapterId === activeChapterKey) {
-        whiteboardSceneDataRef.current = reset.scene;
-        setCanvasReplaceScene(reset.scene);
-        setCanvasReplaceNonce((n) => n + 1);
-      }
-      setCanvasTimerStartedAt((current) => ({
-        ...current,
-        [chapterId]: Date.now(),
-      }));
-    }
-    if (recorded) setCanvasTimerResetChapterIds(resetIds);
-  }, [
-    activeChapterKey,
-    activeStep?.id,
-    canvasTimerNow,
-    canvasTimerResetChapterIds,
-    canvasTimerSeconds,
-    canvasTimerStartedAt,
-    chapterWorkspaces,
-    displayProjectChapterExercise,
-    isProjectMode,
-    openWorkIds,
-    sessionInsights,
-    sessionPlan?.steps,
-    updateChapterWorkspace,
-  ]);
-
-  useEffect(() => {
     if (dockLoadingIds.length === 0) return;
     const stillLoading: string[] = [];
     const newlyReady: string[] = [];
@@ -1919,8 +1815,6 @@ export function SessionView({
         }}
         applyElements={canvasApplyElements}
         applyElementsNonce={canvasApplyNonce}
-        replaceScene={canvasReplaceScene}
-        replaceSceneNonce={canvasReplaceNonce}
         onCanvasPowActions={handleCanvasPowActions}
         onAskSelected={handleAskCanvasSelection}
         dictateTranscript={sessionThoughtInterface.crystallizableText}
@@ -2132,10 +2026,6 @@ export function SessionView({
         minInsightsPerChapter={minInsightsPerChapter}
         onMinInsightsPerChapterChange={(value) =>
           setMinInsightsPerChapter(clampIleMinInsightsPerChapter(value))
-        }
-        canvasTimerSeconds={canvasTimerSeconds}
-        onCanvasTimerSecondsChange={(value) =>
-          setCanvasTimerSeconds(clampIleCanvasTimerSeconds(value))
         }
         silenceLockMinutes={silenceLockMinutes}
         onSilenceLockMinutesChange={setSilenceLockMinutes}

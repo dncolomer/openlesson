@@ -7,14 +7,17 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import {
+  ILE_LEARN_PRESETS,
   ILE_PREGAME_DIFFICULTY_PRESETS,
   ILE_PREGAME_PRESETS,
   ILE_PREGAME_TABS,
+  applyIleLearnPreset,
   applyIlePregameDifficultyPreset,
   applyIlePregamePreset,
   clampIlePregameDifficulty,
   clampIlePregameKnobs,
   ileMapTypeSessionExplanation,
+  ileLearnMatchingPresetId,
   ilePregameMatchingDifficultyPresetId,
   ilePregameMatchingPresetId,
   ILE_START_TIP_IDS,
@@ -260,6 +263,58 @@ describe("applyIlePregamePreset (shipped knobs)", () => {
   });
 });
 
+describe("Learn research presets", () => {
+  it("sets chapters, insight goal, silence, and work expense", () => {
+    expect(ILE_LEARN_PRESETS.map((row) => row.id)).toEqual(["survey", "study", "thesis"]);
+
+    const survey = applyIleLearnPreset("survey");
+    expect(survey).toEqual({
+      chapterCount: 1,
+      minInsightsPerChapter: 1,
+      silenceLockMinutes: 4,
+      powExpense: 1,
+    });
+    expect(ileLearnMatchingPresetId(survey)).toBe("survey");
+
+    const study = applyIleLearnPreset("study");
+    expect(study).toEqual({
+      chapterCount: 3,
+      minInsightsPerChapter: 3,
+      silenceLockMinutes: 2,
+      powExpense: 3,
+    });
+    expect(ileLearnMatchingPresetId(study)).toBe("study");
+
+    const thesis = applyIleLearnPreset("thesis");
+    expect(thesis).toEqual({
+      chapterCount: 5,
+      minInsightsPerChapter: 5,
+      silenceLockMinutes: 1,
+      powExpense: 5,
+    });
+    expect(ileLearnMatchingPresetId(thesis)).toBe("thesis");
+    expect(ileLearnMatchingPresetId({ ...thesis, silenceLockMinutes: 2 })).toBeNull();
+    expect(applyIleLearnPreset("unknown").chapterCount).toBe(1);
+
+    const welcome = read("components/session-view/session-welcome-modal.tsx");
+    const en = JSON.parse(read("messages/en.json")) as { session: Record<string, string> };
+    expect(welcome).toContain("data-ile-learn-presets");
+    expect(welcome).toContain("data-ile-learn-preset={preset.id}");
+    expect(welcome).toContain("applyIleLearnPreset");
+    expect(welcome).toContain("onChapterCountChange?.(knobs.chapterCount)");
+    expect(welcome).toContain("onMinInsightsPerChapterChange?.(knobs.minInsightsPerChapter)");
+    expect(welcome).toContain("onSilenceLockMinutesChange?.(knobs.silenceLockMinutes)");
+    expect(welcome).toContain("onPowExpenseChange?.(knobs.powExpense)");
+    expect(welcome).not.toContain("data-ile-pregame-preset");
+    expect(en.session.learnPresetSurvey).toBe("Survey");
+    expect(en.session.learnPresetStudy).toBe("Study");
+    expect(en.session.learnPresetThesis).toBe("Thesis");
+    expect(
+      `${en.session.learnPresetSurveyDesc} ${en.session.learnPresetStudyDesc} ${en.session.learnPresetThesisDesc}`,
+    ).not.toMatch(/\bmap\b|\bboard\b/i);
+  });
+});
+
 describe("ILE pre-game settings surface", () => {
   it("uses Welcome to your learning session, Start Session, presets, extra sliders, and full map copy", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
@@ -284,13 +339,13 @@ describe("ILE pre-game settings surface", () => {
     expect(welcome).toContain("session.welcomeTitle");
     expect(welcome).toContain("session.confirmSettings");
     expect(welcome).toContain("TapBriefingConfig");
-    expect(welcome).toContain("showDurationPicker");
+    expect(welcome).toContain("showDurationPicker={false}");
     expect(welcome).toContain("TapAestheticSection");
     expect(en.session.pregamePresets).toBe("Presets");
     expect(welcome).not.toContain("data-ile-pregame-preset");
     expect(welcome).not.toContain("data-ile-pregame-presets-band");
     expect(welcome).not.toContain("data-ile-insight-slot-slider");
-    expect(welcome).toContain("data-ile-gather-max-slider");
+    expect(welcome).not.toContain("data-ile-gather-max-slider");
     expect(welcome).toContain("data-ile-session-chapter-count");
     expect(welcome).toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("InitialChaptersPicker");
@@ -305,17 +360,17 @@ describe("ILE pre-game settings surface", () => {
     expect(welcome).not.toContain("ile-pregame-panel-map");
     expect(welcome).not.toContain("ile-pregame-panel-difficulty");
     expect(welcome).not.toContain("ile-pregame-panel-other");
-    expect(welcome).toContain('data-ile-pregame-difficulty-toggle="parallel-work"');
-    expect(welcome).toContain('data-ile-pregame-difficulty-toggle="gather"');
+    expect(welcome).not.toContain("data-ile-pregame-difficulty-toggle");
+    expect(welcome).not.toContain("data-ile-browser-inference");
     expect(welcome).toContain("data-ile-min-insights-slider");
-    expect(welcome).toContain("data-ile-canvas-timer-slider");
+    expect(welcome).not.toContain("data-ile-canvas-timer-slider");
     expect(en.session.minInsightsPerChapter).toBeTruthy();
     expect(en.session.canvasTimer).toBeTruthy();
     expect(en.session.canvasTimerCheap).toBe("10 min");
     expect(en.session.canvasTimerExpensive).toBe("60 min");
-    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_STEP");
-    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_MIN");
-    expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_CEILING");
+    expect(welcome).not.toContain("ILE_CANVAS_TIMER_SECONDS_STEP");
+    expect(welcome).not.toContain("ILE_CANVAS_TIMER_SECONDS_MIN");
+    expect(welcome).not.toContain("ILE_CANVAS_TIMER_SECONDS_CEILING");
     expect(welcome).not.toContain("ILE_PREGAME_TABS");
     expect(ILE_PREGAME_TABS.map((tab) => tab.id)).toEqual([
       "economy",

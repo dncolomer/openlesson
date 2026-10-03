@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { AestheticPicker } from "@/components/AestheticPicker";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
@@ -15,11 +14,10 @@ import {
 } from "@/lib/ile-canvas-session";
 import { ileWelcomeShowsContinuePreview } from "@/lib/ile-welcome-chapters";
 import {
-  ILE_GATHER_MAX_PER_SESSION,
-  ILE_GATHER_MAX_PER_SESSION_CEILING,
-  ILE_GATHER_MAX_PER_SESSION_MIN,
-  clampIleGatherMaxPerSession,
-} from "@/lib/ile-gather-resources";
+  ILE_LEARN_PRESETS,
+  applyIleLearnPreset,
+  ileLearnMatchingPresetId,
+} from "@/lib/ile-pregame-settings";
 import {
   ILE_POW_EXPENSE_DEFAULT,
   ILE_POW_EXPENSE_MAX,
@@ -31,12 +29,6 @@ import {
   ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   ILE_MIN_INSIGHTS_PER_CHAPTER_MIN,
 } from "@/lib/ile-turn-insights";
-import {
-  ILE_CANVAS_TIMER_SECONDS_CEILING,
-  ILE_CANVAS_TIMER_SECONDS_DEFAULT,
-  ILE_CANVAS_TIMER_SECONDS_MIN,
-  ILE_CANVAS_TIMER_SECONDS_STEP,
-} from "@/lib/ile-work-canvas";
 import {
   ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   ILE_SILENCE_LOCK_MINUTES_DESC,
@@ -72,25 +64,25 @@ export function SessionWelcomeModal({
   onPowExpenseChange,
   insightSlotMax: _insightSlotMax,
   onInsightSlotMaxChange: _onInsightSlotMaxChange,
-  gatherMaxPerSession = ILE_GATHER_MAX_PER_SESSION,
-  onGatherMaxPerSessionChange,
+  gatherMaxPerSession: _gatherMaxPerSession,
+  onGatherMaxPerSessionChange: _onGatherMaxPerSessionChange,
   allowThoughtsPoolInsights: _allowThoughtsPoolInsights,
   onAllowThoughtsPoolInsightsChange: _onAllowThoughtsPoolInsightsChange,
-  allowParallelWork = true,
-  onAllowParallelWorkChange,
-  allowGatherResources = true,
-  onAllowGatherResourcesChange,
+  allowParallelWork: _allowParallelWork,
+  onAllowParallelWorkChange: _onAllowParallelWorkChange,
+  allowGatherResources: _allowGatherResources,
+  onAllowGatherResourcesChange: _onAllowGatherResourcesChange,
   minInsightsPerChapter = ILE_MIN_INSIGHTS_PER_CHAPTER_DEFAULT,
   onMinInsightsPerChapterChange,
-  canvasTimerSeconds = ILE_CANVAS_TIMER_SECONDS_DEFAULT,
-  onCanvasTimerSecondsChange,
+  canvasTimerSeconds: _canvasTimerSeconds,
+  onCanvasTimerSecondsChange: _onCanvasTimerSecondsChange,
   silenceLockMinutes = ILE_SILENCE_LOCK_MINUTES_DEFAULT,
   onSilenceLockMinutesChange,
   autoAdvance,
   onToggleAutoAdvance,
-  localInferenceEnabled,
-  onToggleLocalInference,
-  webGPUAvailable,
+  localInferenceEnabled: _localInferenceEnabled,
+  onToggleLocalInference: _onToggleLocalInference,
+  webGPUAvailable: _webGPUAvailable,
   planError,
   modelLoadError,
   modelLoadProgress: _modelLoadProgress,
@@ -105,8 +97,6 @@ export function SessionWelcomeModal({
   sessionPlan,
   resumeSession = false,
 }: SessionWelcomeModalProps) {
-  // Shared TAP duration choices. Learn has no session-length clock, so these minutes stay on the card.
-  const [sessionMinutes, setSessionMinutes] = useState(DEFAULT_DURATION_MINUTES);
   if (isPreparing) {
     return (
       <div
@@ -131,6 +121,12 @@ export function SessionWelcomeModal({
   const statusFailed = chapterPlanStatus === "failed";
   const completedCount = (sessionPlan?.steps || []).filter((step) => step.status === "completed").length;
   const visibleChapters = capIleSessionChapters(sessionPlan?.steps ?? [], chapterCount);
+  const selectedLearnPreset = ileLearnMatchingPresetId({
+    chapterCount,
+    minInsightsPerChapter,
+    silenceLockMinutes,
+    powExpense,
+  });
 
   return (
     <div
@@ -156,19 +152,59 @@ export function SessionWelcomeModal({
                   workspaceTitle="Learn"
                   kicker="Learn"
                   title={t("session.welcomeTitle")}
-                  minutes={sessionMinutes}
-                  onMinutesChange={setSessionMinutes}
+                  minutes={DEFAULT_DURATION_MINUTES}
+                  onMinutesChange={() => {}}
                   conversationLanguage={tutoringLanguage}
                   onConversationLanguageChange={(locale) =>
                     onTutoringLanguageChange(coerceSpokenLocale(locale))
                   }
-                  showDurationPicker
+                  showDurationPicker={false}
                   disabled={isButtonDisabled}
                 />
                 <div
                   data-ile-session-chapters
                   className="flex h-full min-h-0 min-w-0 flex-col gap-4 px-5 pb-6 sm:px-8 lg:px-10"
                 >
+                  <div data-ile-learn-presets>
+                    <p className="mb-2 text-sm font-medium text-neutral-100">
+                      {t("session.learnPresets")}
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {ILE_LEARN_PRESETS.map((preset) => {
+                        const selected = selectedLearnPreset === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            data-ile-learn-preset={preset.id}
+                            aria-pressed={selected}
+                            disabled={isButtonDisabled}
+                            onClick={() => {
+                              const knobs = applyIleLearnPreset(preset.id);
+                              onChapterCountChange?.(knobs.chapterCount);
+                              onMinInsightsPerChapterChange?.(knobs.minInsightsPerChapter);
+                              onSilenceLockMinutesChange?.(knobs.silenceLockMinutes);
+                              onPowExpenseChange?.(knobs.powExpense);
+                            }}
+                            className={`rounded-none border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              selected
+                                ? "border-white bg-white text-neutral-950"
+                                : "border-neutral-800 bg-neutral-950 text-neutral-100 hover:border-neutral-600"
+                            }`}
+                          >
+                            <span className="block text-sm font-medium">{t(preset.labelKey)}</span>
+                            <span
+                              className={`mt-1 block text-[12px] leading-snug ${
+                                selected ? "text-neutral-700" : "text-neutral-400"
+                              }`}
+                            >
+                              {t(preset.descKey)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div data-ile-session-chapter-count>
                     <div className="mb-1.5 flex items-baseline justify-between gap-3">
                       <label className="text-sm font-medium text-neutral-100">
@@ -217,29 +253,6 @@ export function SessionWelcomeModal({
                       value={minInsightsPerChapter}
                       disabled={isButtonDisabled}
                       onChange={(e) => onMinInsightsPerChapterChange?.(Number(e.target.value))}
-                      className="w-full accent-white"
-                    />
-                  </div>
-                  <div data-ile-canvas-timer-slider>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {t("session.canvasTimer")}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">
-                        {Math.round(canvasTimerSeconds / 60)}m
-                      </span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
-                      {t("session.canvasTimerDesc")}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_CANVAS_TIMER_SECONDS_MIN}
-                      max={ILE_CANVAS_TIMER_SECONDS_CEILING}
-                      step={ILE_CANVAS_TIMER_SECONDS_STEP}
-                      value={canvasTimerSeconds}
-                      disabled={isButtonDisabled}
-                      onChange={(e) => onCanvasTimerSecondsChange?.(Number(e.target.value))}
                       className="w-full accent-white"
                     />
                   </div>
@@ -298,133 +311,6 @@ export function SessionWelcomeModal({
                       <span>{t("session.powExpenseExpensive")}</span>
                     </div>
                   </div>
-                  <div data-ile-gather-max-slider>
-                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                      <label className="text-sm font-medium text-neutral-100">
-                        {t("session.gatherMax")}
-                      </label>
-                      <span className="font-mono text-[11px] text-neutral-300">
-                        {gatherMaxPerSession}
-                      </span>
-                    </div>
-                    <p className="mb-2 text-[12px] leading-snug text-neutral-400">
-                      {t("session.gatherMaxDesc")}
-                    </p>
-                    <input
-                      type="range"
-                      min={ILE_GATHER_MAX_PER_SESSION_MIN}
-                      max={ILE_GATHER_MAX_PER_SESSION_CEILING}
-                      step={1}
-                      value={gatherMaxPerSession}
-                      disabled={isButtonDisabled}
-                      onChange={(e) =>
-                        onGatherMaxPerSessionChange?.(
-                          clampIleGatherMaxPerSession(Number(e.target.value)),
-                        )
-                      }
-                      className="w-full accent-white"
-                      aria-valuemin={ILE_GATHER_MAX_PER_SESSION_MIN}
-                      aria-valuemax={ILE_GATHER_MAX_PER_SESSION_CEILING}
-                      aria-valuenow={gatherMaxPerSession}
-                    />
-                    <div className="mt-1 flex justify-between gap-2 text-[10px] leading-snug text-neutral-500">
-                      <span>{t("session.gatherMaxCheap")}</span>
-                      <span>{t("session.gatherMaxExpensive")}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    data-ile-pregame-difficulty-toggle="parallel-work"
-                    aria-pressed={allowParallelWork}
-                    disabled={isButtonDisabled}
-                    onClick={() => onAllowParallelWorkChange?.(!allowParallelWork)}
-                    className="flex w-full items-start gap-3 rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-left transition hover:border-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span
-                      aria-hidden
-                      className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full ${
-                        allowParallelWork ? "bg-white" : "bg-neutral-700"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-neutral-950 shadow transition-transform ${
-                          allowParallelWork ? "translate-x-[18px]" : "translate-x-0.5"
-                        }`}
-                      />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-neutral-100">
-                        {t("session.difficultyParallelWork")}
-                      </span>
-                      <span className="mt-1 block text-[12px] leading-snug text-neutral-400">
-                        {t("session.difficultyParallelWorkDesc")}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    data-ile-pregame-difficulty-toggle="gather"
-                    aria-pressed={allowGatherResources}
-                    disabled={isButtonDisabled}
-                    onClick={() => onAllowGatherResourcesChange?.(!allowGatherResources)}
-                    className="flex w-full items-start gap-3 rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-left transition hover:border-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span
-                      aria-hidden
-                      className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full ${
-                        allowGatherResources ? "bg-white" : "bg-neutral-700"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-neutral-950 shadow transition-transform ${
-                          allowGatherResources ? "translate-x-[18px]" : "translate-x-0.5"
-                        }`}
-                      />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-neutral-100">
-                        {t("session.difficultyGather")}
-                      </span>
-                      <span className="mt-1 block text-[12px] leading-snug text-neutral-400">
-                        {t("session.difficultyGatherDesc")}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    data-ile-browser-inference
-                    aria-pressed={localInferenceEnabled}
-                    disabled={!webGPUAvailable || isButtonDisabled}
-                    onClick={() => {
-                      if (!webGPUAvailable || isButtonDisabled) return;
-                      onToggleLocalInference();
-                    }}
-                    className="flex w-full items-start gap-3 rounded-none border border-neutral-800 bg-neutral-950 px-3 py-3 text-left transition hover:border-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span
-                      className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full ${
-                        localInferenceEnabled ? "bg-white" : "bg-neutral-700"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-neutral-950 shadow transition-transform ${
-                          localInferenceEnabled ? "translate-x-[18px]" : "translate-x-0.5"
-                        }`}
-                      />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-neutral-100">
-                        {localInferenceEnabled
-                          ? t("session.browserInferenceOn")
-                          : t("session.browserInference")}
-                      </span>
-                      <span className="mt-1 block text-[12px] leading-snug text-neutral-400">
-                        {webGPUAvailable
-                          ? t("session.browserInferenceDesc")
-                          : t("session.webGPUNotAvailable")}
-                      </span>
-                    </span>
-                  </button>
                   {showContinuePreview ? (
                     <div
                       data-ile-continue-welcome

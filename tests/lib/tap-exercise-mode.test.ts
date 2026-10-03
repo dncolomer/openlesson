@@ -385,7 +385,10 @@ describe("structural: Settings, block tools, separate Exercise UI", () => {
     expect(client).toContain("resolveExercisePromptAfterIntro");
     expect(client).toContain("interaction_kind: \"exercise\"");
 
-    expect(shell).toContain("data-exercise-tap-shell");
+    expect(shell).toContain("<SessionWorkSurface");
+    expect(shell).toContain("data-exercise-tap-stash-submit");
+    expect(shell).not.toContain("data-exercise-tap-shell");
+    expect(shell).not.toContain("data-exercise-tap-live-split");
     expect(shell).toContain("data-exercise-tap-stash-submit");
     expect(shell).toContain("ThoughtMemoryPanel");
     expect(shell).not.toContain("Submit last Thought");

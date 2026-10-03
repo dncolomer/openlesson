@@ -28,6 +28,8 @@ import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
+import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import { coerceSpokenLocale, type SpokenLocale } from "@/lib/tutoring-languages";
 import type { TapStartingTopic } from "@/lib/tap-score";
@@ -77,6 +79,8 @@ export function TapScorePhases(props: {
   privateToken?: string;
   /** Verification runs end on the same thank-you screen as a guest TAP link. */
   localOpening?: boolean;
+  /** Verification uses the verification-tap sidebar. Scored TAP uses tap. */
+  sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
   durationLocked: boolean;
   isStartingSession: boolean;
   startingTopics: TapStartingTopic[];
@@ -167,6 +171,7 @@ export function TapScorePhases(props: {
     setConversationLanguage,
     privateToken,
     localOpening = false,
+    sidebarMode = "tap",
     durationLocked,
     isStartingSession,
     startingTopics,
@@ -499,100 +504,98 @@ export function TapScorePhases(props: {
         )}
 
         {phase === "live" && (
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div
-              data-tap-convo-live-split
-              data-tap-split="70-30"
-              className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] overflow-hidden lg:grid-cols-[7fr_3fr] lg:grid-rows-1"
-            >
-              <div
-                data-tap-convo-work-canvas-pane
-                className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
-              >
-                <WorkCanvas
-                  key={`tap-work-canvas:${phase}`}
-                  boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
-                  initialSceneData={workCanvasScene}
-                  applyElements={canvasApplyElements}
-                  applyElementsNonce={canvasApplyNonce}
-                  heliosBusy={heliosBusy}
-                  onLearnerWaitChange={onLearnerWaitChange}
-                  onSceneChange={handleSceneChange}
-                  onCanvasPowActions={handleCanvasPowActions}
-                  onAskSelected={handleAskSelected}
-                />
-                {error ? (
-                  <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
-                    {error}
-                  </p>
-                ) : null}
-              </div>
-
-              <TapAestheticSection
-                bgImage={bgImage}
-                kind="convo-stash"
-                className="min-h-0 min-w-0"
-              >
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                  <div
-                    className="flex w-full shrink-0 items-center gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
-                    data-tap-live-control-strip
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <TapLiveClock
-                        label="Time left"
-                        remainingSeconds={remainingSeconds}
-                        waiting={clockPaused}
-                        listening={isListening}
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-tap-convo-live>
+            <SessionWorkSurface
+              mode={sidebarMode}
+              counts={{ chapters: thoughtHistory.length }}
+              sectionLabels={{ chapters: "Thoughts" }}
+              stage={
+                <div
+                  data-tap-convo-work-canvas-pane
+                  className="relative h-full min-h-0 min-w-0 overflow-hidden"
+                >
+                  <WorkCanvas
+                    key={`tap-work-canvas:${phase}`}
+                    boardId={tapWorkCanvasBoardId(tapSessionId || sessionId)}
+                    initialSceneData={workCanvasScene}
+                    applyElements={canvasApplyElements}
+                    applyElementsNonce={canvasApplyNonce}
+                    heliosBusy={heliosBusy}
+                    onLearnerWaitChange={onLearnerWaitChange}
+                    onSceneChange={handleSceneChange}
+                    onCanvasPowActions={handleCanvasPowActions}
+                    onAskSelected={handleAskSelected}
+                  />
+                  {error ? (
+                    <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              }
+              clock={
+                <div
+                  className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
+                  data-tap-live-control-strip
+                >
+                  <TapLiveClock
+                    label="Time left"
+                    remainingSeconds={remainingSeconds}
+                    waiting={clockPaused}
+                    listening={isListening}
+                  />
+                  {showEndSession ? (
+                    <div className="flex shrink-0 items-center" data-tap-end-session>
+                      <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
+                        End session
+                      </TapThoughtButton>
+                    </div>
+                  ) : null}
+                  {isPracticeMode ? (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <TapPracticePill label={t("tap.practice.bannerKicker")} />
+                    </div>
+                  ) : null}
+                </div>
+              }
+              transcript={
+                <div
+                  data-tap-transcript-container
+                  className="shrink-0 border-t border-neutral-800/60 bg-black/35 p-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                    <div
+                      className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300"
+                    >
+                      <SlidingTranscript
+                        text={formatSpeechTranscriptDisplay({
+                          text: crystallizableText,
+                          speechError,
+                          speechSupported,
+                          isListening,
+                          enabled: phase === "live",
+                        })}
+                        className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
                       />
-                      {showEndSession ? (
-                        <div className="flex shrink-0 items-center" data-tap-end-session>
-                          <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                            End session
-                          </TapThoughtButton>
-                        </div>
-                      ) : null}
                     </div>
-                    {isPracticeMode ? (
-                      <div className="ml-auto flex shrink-0 items-center gap-2">
-                        <TapPracticePill label={t("tap.practice.bannerKicker")} />
-                      </div>
+                    {speechError && speechSupported !== false && !isListening ? (
+                      <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
+                        Retry
+                      </TapThoughtButton>
                     ) : null}
-                  </div>
-                  <div
-                    data-tap-transcript-container
-                    className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5"
-                  >
-                    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                      <div
-                        className="flex h-8 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300"
-                      >
-                        <SlidingTranscript
-                          text={formatSpeechTranscriptDisplay({
-                            text: crystallizableText,
-                            speechError,
-                            speechSupported,
-                            isListening,
-                            enabled: phase === "live",
-                          })}
-                          className={`w-full ${speechError ? "text-neutral-300/90" : "text-neutral-300"}`}
-                        />
-                      </div>
-                      {speechError && speechSupported !== false && !isListening ? (
-                        <TapThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                          Retry
-                        </TapThoughtButton>
-                      ) : null}
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <ThoughtCompactAction
-                          shortcut="Del"
-                          label="Stash"
-                          disabled={!crystallizableText}
-                          onClick={() => stashCurrentTranscription()}
-                        />
-                      </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <ThoughtCompactAction
+                        shortcut="Del"
+                        label="Stash"
+                        disabled={!crystallizableText}
+                        onClick={() => stashCurrentTranscription()}
+                      />
                     </div>
                   </div>
+                </div>
+              }
+              chapters={
+                <>
                   <div
                     data-tap-im-done-slot
                     className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
@@ -627,7 +630,7 @@ export function TapScorePhases(props: {
                     />
                   </div>
                   <div
-                    className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
+                    className="min-h-0 overflow-hidden bg-black/35 px-2 py-2"
                     data-tap-older-thoughts
                     data-tap-thought-memory-always
                   >
@@ -645,9 +648,9 @@ export function TapScorePhases(props: {
                       emptyMessage="Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
                     />
                   </div>
-                </div>
-              </TapAestheticSection>
-            </div>
+                </>
+              }
+            />
           </section>
         )}
 

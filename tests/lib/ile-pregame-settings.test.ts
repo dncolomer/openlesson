@@ -283,27 +283,30 @@ describe("ILE pre-game settings surface", () => {
 
     expect(welcome).toContain("session.welcomeTitle");
     expect(welcome).toContain("session.confirmSettings");
-    expect(welcome).toContain("data-ile-pregame-preset");
-    expect(welcome).toContain("data-ile-pregame-presets-band");
+    expect(welcome).toContain("TapBriefingConfig");
+    expect(welcome).toContain("showDurationPicker");
+    expect(welcome).toContain("TapAestheticSection");
     expect(en.session.pregamePresets).toBe("Presets");
-    expect(welcome).toContain("data-ile-insight-slot-slider");
+    expect(welcome).not.toContain("data-ile-pregame-preset");
+    expect(welcome).not.toContain("data-ile-pregame-presets-band");
+    expect(welcome).not.toContain("data-ile-insight-slot-slider");
     expect(welcome).toContain("data-ile-gather-max-slider");
     expect(welcome).toContain("data-ile-session-chapter-count");
     expect(welcome).toContain("data-ile-session-insight-goal");
     expect(welcome).not.toContain("InitialChaptersPicker");
     expect(welcome).not.toContain("IleContinueMapPreview");
     expect(welcome).not.toContain("data-ile-pregame-map");
-    expect(welcome).toContain("data-ile-pregame-difficulty-preset");
-    expect(welcome).toContain("applyIlePregameDifficultyPreset");
-    expect(welcome).toContain("applyIlePregamePreset");
-    expect(welcome).toContain("data-ile-pregame-tabs");
-    expect(welcome).toContain("data-ile-pregame-tab={tab.id}");
-    expect(welcome).toContain("ile-pregame-panel-economy");
+    expect(welcome).not.toContain("data-ile-pregame-difficulty-preset");
+    expect(welcome).not.toContain("applyIlePregameDifficultyPreset");
+    expect(welcome).not.toContain("applyIlePregamePreset");
+    expect(welcome).not.toContain("data-ile-pregame-tabs");
+    expect(welcome).not.toContain("data-ile-pregame-tab=");
+    expect(welcome).not.toContain("ile-pregame-panel-economy");
     expect(welcome).not.toContain("ile-pregame-panel-map");
-    expect(welcome).toContain("ile-pregame-panel-difficulty");
-    expect(welcome).toContain("ile-pregame-panel-other");
-    expect(welcome).toContain("aria-orientation=\"vertical\"");
-    expect(welcome).toContain("data-ile-pregame-difficulty-toggle");
+    expect(welcome).not.toContain("ile-pregame-panel-difficulty");
+    expect(welcome).not.toContain("ile-pregame-panel-other");
+    expect(welcome).toContain('data-ile-pregame-difficulty-toggle="parallel-work"');
+    expect(welcome).toContain('data-ile-pregame-difficulty-toggle="gather"');
     expect(welcome).toContain("data-ile-min-insights-slider");
     expect(welcome).toContain("data-ile-canvas-timer-slider");
     expect(en.session.minInsightsPerChapter).toBeTruthy();
@@ -313,13 +316,7 @@ describe("ILE pre-game settings surface", () => {
     expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_STEP");
     expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_MIN");
     expect(welcome).toContain("ILE_CANVAS_TIMER_SECONDS_CEILING");
-    const toggleAt = welcome.indexOf("data-ile-pregame-difficulty-toggle");
-    expect(toggleAt).toBeGreaterThan(-1);
-    expect(welcome.slice(welcome.lastIndexOf("<div", toggleAt), toggleAt)).toContain(
-      "w-full min-w-0",
-    );
-    expect(welcome.slice(toggleAt, toggleAt + 500)).toContain("flex w-full items-start");
-    expect(welcome).toContain("ILE_PREGAME_TABS");
+    expect(welcome).not.toContain("ILE_PREGAME_TABS");
     expect(ILE_PREGAME_TABS.map((tab) => tab.id)).toEqual([
       "economy",
       "difficulty",
@@ -340,16 +337,7 @@ describe("ILE pre-game settings surface", () => {
     const craft = read("components/session-view/ile-turn-insight-craft.tsx");
     expect(craft).toContain("data-ile-end-turn-screen");
     expect(craft).not.toContain("allowThoughtsPoolInsights");
-    const tabsAt = welcome.indexOf("data-ile-pregame-tabs");
-    const footerForTabs = welcome.indexOf("data-ile-confirm-settings-footer");
-    expect(tabsAt).toBeGreaterThan(-1);
-    expect(footerForTabs).toBeGreaterThan(tabsAt);
-    expect(welcome).toContain('data-ile-pregame-fit="viewport"');
     expect(welcome).toContain("overflow-hidden");
-    const fitAt = welcome.indexOf('data-ile-pregame-fit="viewport"');
-    expect(fitAt).toBeGreaterThan(-1);
-    expect(welcome.slice(fitAt, fitAt + 220)).toContain("overflow-hidden");
-    expect(welcome.slice(fitAt, fitAt + 220)).not.toContain("overflow-y-auto");
     const footerAt = welcome.indexOf("data-ile-confirm-settings-footer");
     const confirmAt = welcome.indexOf("data-ile-confirm-settings", footerAt + 10);
     const confirmBtn = welcome.slice(confirmAt, confirmAt + 1200);
@@ -395,19 +383,14 @@ describe("ILE pre-game settings surface", () => {
     expect(picker).toContain("data-ile-map-type-use-when");
     expect(welcome).not.toContain("catalogStrip");
     expect(welcome).toContain("data-ile-session-chapter-count");
-    expect(welcome).toContain("data-ile-pregame-economy-map");
-    expect(welcome).toContain("lg:items-start");
-    expect(welcome).toContain("justify-start gap-3");
-    expect(welcome).not.toContain("justify-evenly");
-    expect(welcome).not.toContain("justify-center gap-6");
-    expect(welcome).toContain("max-lg:grid-rows-[auto_minmax(0,1fr)]");
-    expect(welcome).toContain("lg:grid-rows-1");
+    expect(welcome).not.toContain("data-ile-pregame-economy-map");
+    expect(welcome).toContain("lg:grid-cols-2");
     expect(picker).toContain("line-clamp-3");
     const aestheticUi = read("components/AestheticPicker.tsx");
     const aesAt = welcome.indexOf("<AestheticPicker");
     expect(aesAt).toBeGreaterThan(-1);
     expect(welcome.slice(aesAt, aesAt + 500)).toContain("fillHeight");
-    expect(welcome).toContain("ile-pregame-panel-other");
+    expect(welcome).not.toContain("ile-pregame-panel-other");
     expect(aestheticUi).toContain("data-ile-aesthetic-picker");
     expect(aestheticUi).toContain("data-ile-aesthetic-vibe");
     expect(aestheticUi).toContain("aestheticPackageVibe");

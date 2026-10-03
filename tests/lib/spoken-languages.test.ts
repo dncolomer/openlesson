@@ -153,9 +153,14 @@ describe("TAP speech language wiring", () => {
 describe("ILE Spoken Language wiring", () => {
   it("selector options come from full spoken allowlist", () => {
     const viewSrc = readSessionViewSurface();
-    expect(viewSrc).toContain("spokenLocales");
+    const briefing = readFileSync(
+      path.join(process.cwd(), "components/TapBriefingConfig.tsx"),
+      "utf8",
+    );
+    expect(briefing).toContain("spokenLocales.map");
+    expect(viewSrc).toContain("<TapBriefingConfig");
+    expect(viewSrc).toContain("conversationLanguage={tutoringLanguage}");
     expect(viewSrc).toContain("toSpeechBcp47");
-    expect(viewSrc).toMatch(/session\.tutorLanguage|session\.spokenLanguage/);
 
     const enMessages = JSON.parse(
       readFileSync(path.join(process.cwd(), "messages/en.json"), "utf8"),

@@ -183,7 +183,7 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(client).not.toMatch(/isPracticeMode\s*\?\s*[\s\S]*border-cyan-400\/30 bg-cyan-950\/40/);
     expect(client).toContain('data-tap-aesthetic-section={kind}');
     expect(client).toContain('kind="shortcuts"');
-    expect(client).toContain('kind="convo-stash"');
+    expect(client).not.toContain('kind="convo-stash"');
     expect(client).not.toContain('kind="thought-memory"');
     expect(client).not.toMatch(/fixed inset-0 z-0 bg-cover/);
   });

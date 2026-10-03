@@ -244,7 +244,9 @@ describe("TAP Work canvas live surface (shipped)", () => {
     expect(live).toContain("ThoughtMemoryPanel");
     expect(live).toContain("ImDoneAnsweringControl");
     expect(live).toContain("stashCurrentTranscription");
-    expect(live).toContain("data-tap-convo-live-split");
+    expect(live).toContain("<SessionWorkSurface");
+    expect(live).not.toContain("data-tap-convo-live-split");
+    expect(live).not.toContain('data-tap-split="70-30"');
     expect(live).toContain("data-tap-transcript-container");
     expect(live).toContain("logTapTrace");
 

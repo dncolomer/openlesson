@@ -87,6 +87,7 @@ export function VerificationFlowRunner({ token }: { token: string }) {
         <TapScoreClient
           presetStartingTopics={presetTopics}
           localOpening
+          sidebarMode="verification-tap"
           localPracticePrompt={VERIFICATION_PRACTICE_OPENING}
           onLocalProof={storeProof}
           initialSession={{ workspaceTitle: topic || "Verification flow", post_session: "show_results" }}

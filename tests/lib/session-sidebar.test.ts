@@ -315,20 +315,24 @@ describe("session sidebar mode configuration", () => {
     expect(above).not.toContain('data-ile-work-canvas-timer-urgent="true"');
   });
 
-  it("leaves exercise TAP, scout TAP, and verification TAP on their own shells", () => {
-    const surfaces = [
-      "components/exercise-tap/ExerciseTapShell.tsx",
-      "components/scout-tap/ScoutTapClient.tsx",
-      "components/scout-tap/scout-tap-phases.tsx",
-      "components/VerificationFlowRunner.tsx",
-      "components/TapScoreClient.tsx",
-    ];
-    for (const rel of surfaces) {
-      const src = readFileSync(join(ROOT, rel), "utf8");
-      expect(src, rel).not.toContain("SessionSidebar");
-      expect(src, rel).not.toContain("session-sidebar");
-      expect(src, rel).not.toContain("data-session-sidebar");
+  it("mounts the shared sidebar for Prepare, Drill, conversational TAP, and verification TAP", () => {
+    const prepare = readFileSync(join(ROOT, "components/scout-tap/scout-tap-phases.tsx"), "utf8");
+    const drill = readFileSync(join(ROOT, "components/exercise-tap/ExerciseTapShell.tsx"), "utf8");
+    const tap = readFileSync(join(ROOT, "components/tap-score/tap-score-phases.tsx"), "utf8");
+    const client = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    const verify = readFileSync(join(ROOT, "components/VerificationFlowRunner.tsx"), "utf8");
+    const host = readFileSync(join(ROOT, "components/session-view/session-work-surface.tsx"), "utf8");
+    for (const src of [prepare, drill, tap]) {
+      expect(src).toContain("<SessionWorkSurface");
+      expect(src).not.toContain("data-scout-live-split");
+      expect(src).not.toContain("data-tap-convo-live-split");
+      expect(src).not.toContain("data-exercise-tap-live-split");
     }
+    expect(host).toContain("<SessionSidebar");
+    expect(host).toContain("data-session-work-surface");
+    expect(host).toContain("data-ile-canvas-stage");
+    expect(client).toContain("sidebarMode={sidebarMode}");
+    expect(verify).toContain('sidebarMode="verification-tap"');
     const chrome = readFileSync(
       join(ROOT, "components/session-view/session-chrome.tsx"),
       "utf8",

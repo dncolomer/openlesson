@@ -20,6 +20,7 @@ import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import { VERIFICATION_PRACTICE_OPENING } from "@/lib/verification-flow";
+import type { SessionSidebarMode } from "@/lib/session-sidebar";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
@@ -122,6 +123,8 @@ interface TapScoreClientProps {
     practice: boolean;
     questionId: string | null;
   }) => Promise<void> | void;
+  /** Verification entry uses verification-tap. Other callers stay on tap. */
+  sidebarMode?: Extract<SessionSidebarMode, "tap" | "verification-tap">;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -149,6 +152,7 @@ export function TapScoreClient({
   localOpening = false,
   localPracticePrompt = VERIFICATION_PRACTICE_OPENING,
   onLocalProof,
+  sidebarMode = "tap",
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -1073,6 +1077,7 @@ export function TapScoreClient({
       setConversationLanguage={setConversationLanguage}
       privateToken={privateToken}
       localOpening={localOpening}
+      sidebarMode={sidebarMode}
       durationLocked={durationLocked}
       isStartingSession={isStartingSession}
       startingTopics={startingTopics}

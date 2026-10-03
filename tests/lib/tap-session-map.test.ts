@@ -223,9 +223,10 @@ describe("TAP live map wiring", () => {
     expect(tap).not.toContain("<DialogueSplit");
     expect(tap).not.toContain("Load other problems");
     expect(tap).not.toContain("data-tap-load-other-problems");
-    expect(tap).toContain("data-tap-convo-live-split");
+    expect(tap).toContain("<SessionWorkSurface");
     expect(tap).toContain("lg:grid-cols-2");
-    expect(tap).toContain('kind="convo-stash"');
+    expect(tap).not.toContain("data-tap-convo-live-split");
+    expect(tap).not.toContain('kind="convo-stash"');
     expect(tap).not.toContain("ExerciseStashHistory");
     expect(tap).toContain("stashedThoughts");
     expect(tap).not.toContain("<ActiveThoughtSlots");
@@ -250,10 +251,11 @@ describe("TAP live map wiring", () => {
     expect(client).not.toContain("onLoadOtherProblems");
     expect(client).not.toContain("Load other problems");
     expect(client).toContain("data-exercise-tap-stash-submit");
-    expect(client).toContain("data-exercise-tap-live-split");
+    expect(client).toContain("<SessionWorkSurface");
+    expect(client).not.toContain("data-exercise-tap-live-split");
     expect(client).toContain("data-exercise-tap-map-pane");
     expect(client).toContain("lg:grid-cols-2");
-    expect(client).toContain('kind="solo-stacks"');
+    expect(client).not.toContain('kind="solo-stacks"');
     expect(client).not.toContain("max-h-[11rem]");
     expect(client).toContain("overflow-hidden");
     expect(client).toContain("overflow-y-auto");
@@ -261,8 +263,9 @@ describe("TAP live map wiring", () => {
     const shell = read("components/exercise-tap/ExerciseTapShell.tsx");
     expect(shell).toContain("TapSessionMap");
     expect(shell).toContain('kind="solo"');
-    expect(shell).toContain("TapAestheticSection");
-    expect(shell).toContain('kind="solo-stacks"');
+    expect(shell).toContain("<SessionWorkSurface");
+    expect(shell).not.toContain("TapAestheticSection");
+    expect(shell).not.toContain('kind="solo-stacks"');
     expect(shell).not.toContain("h-80");
     expect(shell).not.toContain("compact");
 

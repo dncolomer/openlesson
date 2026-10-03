@@ -108,8 +108,9 @@ describe("structural dual history + wider shell", () => {
     expect(shell).toContain("ImDoneAnsweringControl");
     expect(shell).toContain("data-tap-thought-memory-always");
     expect(shell).not.toContain("TAP_SEE_EDIT_PREVIOUS_THOUGHTS_LABEL");
-    expect(shell).toContain("lg:grid-cols-2");
-    expect(shell).toContain("data-exercise-tap-live-split");
+    expect(shell).toContain("<SessionWorkSurface");
+    expect(shell).not.toContain("lg:grid-cols-2");
+    expect(shell).not.toContain("data-exercise-tap-live-split");
     expect(shell).not.toContain("ExerciseStashHistory");
     expect(shell).not.toContain("ExerciseSubmissionStack");
   });

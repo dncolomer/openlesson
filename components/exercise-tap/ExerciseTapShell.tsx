@@ -7,7 +7,7 @@ import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import { TapSessionMap } from "@/components/tap-score/tap-session-map";
 import { TapTurnOverlay } from "@/components/tap-score/tap-turn-overlay";
-import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
+import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import {
   TAP_IM_DONE_CONFIRM_BODY,
@@ -18,7 +18,8 @@ import {
 } from "@/lib/tap-thought-memory";
 
 /**
- * Exercise TAP live shell — 50/50 map | universal Stash Submit UI.
+ * Exercise TAP live surface. The problem map is the stage. Stash, I'm done
+ * answering, and thought memory sit in the shared right sidebar.
  */
 export function ExerciseTapShell({
   exerciseText,
@@ -69,97 +70,98 @@ export function ExerciseTapShell({
 
   return (
     <section
-      data-exercise-tap-shell
       data-exercise-tap-stash-submit
       className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0b0b0b]"
     >
-      <div
-        data-exercise-tap-live-split
-        className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden lg:grid-cols-2 lg:grid-rows-1"
-      >
-        <div
-          data-exercise-tap-map-pane
-          className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
-        >
-          <TapSessionMap
-            blocks={problems}
-            selectedId={active?.id ?? null}
-            onSelect={onSelectProblem}
-            overlay={
-              <TapTurnOverlay
-                kind="solo"
-                kicker={active?.title || "Exercise"}
-                body={prompt}
-              />
-            }
-          />
-        </div>
-
-        <TapAestheticSection
-          bgImage={bgImage}
-          kind="solo-stacks"
-          className="min-h-0 min-w-0"
-        >
-          {identityBadge ? (
-            <div className="flex shrink-0 items-center justify-end gap-2 border-b border-neutral-800/60 bg-black/35 px-3 py-1.5">
-              {identityBadge}
-            </div>
-          ) : null}
-          {controlStrip}
+      <SessionWorkSurface
+        mode="tap"
+        counts={{ chapters: thoughtHistory.length }}
+        sectionLabels={{ chapters: "Thoughts" }}
+        stage={
           <div
-            data-exercise-speech-panel
-            data-tap-transcript-container
-            className="shrink-0 border-b border-neutral-800/60 bg-black/35 p-2.5"
+            data-exercise-tap-map-pane
+            className="relative h-full min-h-0 min-w-0 overflow-hidden"
+            style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
           >
-            {speechBar}
-          </div>
-          <div
-            data-tap-im-done-slot
-            className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
-          >
-            <ImDoneAnsweringControl
-              sessionId={sessionId}
-              thoughts={stash}
-              formingText={formingText}
-              sendThought={sendThought}
-              logEndOfChainOfThought={logEndOfChainOfThought ?? (() => {})}
-              onClearForming={onClearForming}
-              disabled={isSending}
-              confirmClose={{
-                title: TAP_IM_DONE_CONFIRM_TITLE,
-                body: TAP_IM_DONE_CONFIRM_BODY,
-                confirmLabel: TAP_IM_DONE_CONFIRM_CONFIRM,
-                cancelLabel: TAP_IM_DONE_CONFIRM_CANCEL,
-              }}
-            />
-          </div>
-          <div
-            className="min-h-0 flex-1 overflow-hidden bg-black/35 px-2 py-2"
-            data-tap-older-thoughts
-            data-exercise-older-thoughts
-            data-tap-thought-memory-always
-            data-tap-thoughts-locked={thoughtsLocked ? "true" : "false"}
-          >
-            <ThoughtMemoryPanel
-              className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
-              listClassName="pr-1"
-              thoughts={thoughtHistory}
-              workspaceId={workspaceId}
-              blockId={blockId}
-              sessionId={sessionId}
-              insightSurface="tap"
-              allowInsightGeneration={false}
-              onEditThought={thoughtsLocked ? undefined : onEditThought}
-              onDeleteThought={thoughtsLocked ? undefined : onDeleteThought}
-              emptyMessage={
-                thoughtsLocked
-                  ? "This problem is done. Thoughts are read-only."
-                  : "Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
+            <TapSessionMap
+              blocks={problems}
+              selectedId={active?.id ?? null}
+              onSelect={onSelectProblem}
+              overlay={
+                <TapTurnOverlay
+                  kind="solo"
+                  kicker={active?.title || "Exercise"}
+                  body={prompt}
+                />
               }
             />
           </div>
-        </TapAestheticSection>
-      </div>
+        }
+        clock={controlStrip}
+        transcript={
+          <div
+            data-exercise-speech-panel
+            data-tap-transcript-container
+            className="shrink-0 border-t border-neutral-800/60 bg-black/35 p-2.5"
+          >
+            {speechBar}
+          </div>
+        }
+        chapters={
+          <>
+            {identityBadge ? (
+              <div className="flex shrink-0 items-center justify-end gap-2 border-b border-neutral-800/60 bg-black/35 px-3 py-1.5">
+                {identityBadge}
+              </div>
+            ) : null}
+            <div
+              data-tap-im-done-slot
+              className="shrink-0 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
+            >
+              <ImDoneAnsweringControl
+                sessionId={sessionId}
+                thoughts={stash}
+                formingText={formingText}
+                sendThought={sendThought}
+                logEndOfChainOfThought={logEndOfChainOfThought ?? (() => {})}
+                onClearForming={onClearForming}
+                disabled={isSending}
+                confirmClose={{
+                  title: TAP_IM_DONE_CONFIRM_TITLE,
+                  body: TAP_IM_DONE_CONFIRM_BODY,
+                  confirmLabel: TAP_IM_DONE_CONFIRM_CONFIRM,
+                  cancelLabel: TAP_IM_DONE_CONFIRM_CANCEL,
+                }}
+              />
+            </div>
+            <div
+              className="min-h-0 overflow-hidden bg-black/35 px-2 py-2"
+              data-tap-older-thoughts
+              data-exercise-older-thoughts
+              data-tap-thought-memory-always
+              data-tap-thoughts-locked={thoughtsLocked ? "true" : "false"}
+            >
+              <ThoughtMemoryPanel
+                className="flex h-full min-h-0 max-h-full flex-col overflow-hidden"
+                listClassName="pr-1"
+                thoughts={thoughtHistory}
+                workspaceId={workspaceId}
+                blockId={blockId}
+                sessionId={sessionId}
+                insightSurface="tap"
+                allowInsightGeneration={false}
+                onEditThought={thoughtsLocked ? undefined : onEditThought}
+                onDeleteThought={thoughtsLocked ? undefined : onDeleteThought}
+                emptyMessage={
+                  thoughtsLocked
+                    ? "This problem is done. Thoughts are read-only."
+                    : "Speak, press Del to stash thoughts, then edit or delete individual thoughts. I'm done answering closes your turn."
+                }
+              />
+            </div>
+          </>
+        }
+      />
     </section>
   );
 }

@@ -9,6 +9,7 @@ import {
   voiceChallengeStartSucceeded,
 } from "@/lib/practice-voice-challenge";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
+import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
@@ -160,7 +161,7 @@ export function ScoutTapPhases(props: {
     <div
       data-scout-work-canvas-pane
       data-scout-canvas-readonly={readOnly ? "true" : "false"}
-      className="relative min-h-0 min-w-0 overflow-hidden border-b border-neutral-800/60 lg:border-b-0 lg:border-r"
+      className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
       <WorkCanvas
         key={`scout-work-canvas:${phase}`}
@@ -296,35 +297,33 @@ export function ScoutTapPhases(props: {
 
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden" data-scout-live>
-            <div
-              data-scout-live-split
-              data-scout-split="70-30"
-              className="grid min-h-0 flex-1 grid-rows-[minmax(0,7fr)_minmax(0,3fr)] overflow-hidden lg:grid-cols-[7fr_3fr] lg:grid-rows-1"
-            >
-              {canvasPane}
-              <TapAestheticSection bgImage={bgImage} kind="convo-stash" className="min-h-0 min-w-0">
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-scout-questions-pane>
-                  <div
-                    className="flex w-full shrink-0 items-center gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
-                    data-scout-live-control-strip
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <TapLiveClock
-                        label="Time left"
-                        remainingSeconds={remainingSeconds}
-                        waiting={clockPaused || questionsLoading}
-                        listening={false}
-                      />
-                      {showEndSession ? (
-                        <div className="flex shrink-0 items-center" data-scout-end-session>
-                          <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                            End session
-                          </TapThoughtButton>
-                        </div>
-                      ) : null}
+            <SessionWorkSurface
+              mode="tap"
+              stage={canvasPane}
+              counts={{ chapters: scoutState.questions.length }}
+              sectionLabels={{ chapters: "Questions" }}
+              clock={
+                <div
+                  className="flex w-full min-w-0 flex-col gap-2 px-1 py-1"
+                  data-scout-live-control-strip
+                >
+                  <TapLiveClock
+                    label="Time left"
+                    remainingSeconds={remainingSeconds}
+                    waiting={clockPaused || questionsLoading}
+                    listening={false}
+                  />
+                  {showEndSession ? (
+                    <div className="flex shrink-0 items-center" data-scout-end-session>
+                      <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
+                        End session
+                      </TapThoughtButton>
                     </div>
-
-                  </div>
+                  ) : null}
+                </div>
+              }
+              chapters={
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-scout-questions-pane>
                   <div className="border-b border-neutral-800/60 bg-black/35 px-3 py-2" data-scout-seed-topic>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-neutral-500">
                       {t("scout.live.questionsHeading")}
@@ -333,8 +332,8 @@ export function ScoutTapPhases(props: {
                   </div>
                   {questionButtons}
                 </div>
-              </TapAestheticSection>
-            </div>
+              }
+            />
           </section>
         )}
 

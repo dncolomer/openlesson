@@ -34,6 +34,25 @@ import {
 export const ILE_PREGAME_PRESET_IDS = ["skirmish", "campaign", "blitz"] as const;
 export type IlePregamePresetId = (typeof ILE_PREGAME_PRESET_IDS)[number];
 
+/**
+ * Knobs that still change a live Learn session and stay on the TAP settings card.
+ * Duration is rendered by TapBriefingConfig for the shared card. Learn has no
+ * session-length clock, so those minutes are not applied to a countdown.
+ * Canvas-timer board clear stays its own knob.
+ */
+export const ILE_LIVE_SETTINGS_KNOBS = [
+  { id: "chapterCount", attribute: "data-ile-session-chapter-count" },
+  { id: "insightGoal", attribute: "data-ile-session-insight-goal" },
+  { id: "canvasTimer", attribute: "data-ile-canvas-timer-slider" },
+  { id: "silenceLock", attribute: "data-ile-silence-lock-minutes" },
+  { id: "spokenLanguage", attribute: "data-tap-briefing-config" },
+  { id: "powExpense", attribute: "data-ile-pow-expense-slider" },
+  { id: "gatherMax", attribute: "data-ile-gather-max-slider" },
+  { id: "allowParallelWork", attribute: 'data-ile-pregame-difficulty-toggle="parallel-work"' },
+  { id: "allowGatherResources", attribute: 'data-ile-pregame-difficulty-toggle="gather"' },
+  { id: "browserInference", attribute: "data-ile-browser-inference" },
+] as const;
+
 export const ILE_PREGAME_TAB_IDS = ["economy", "difficulty", "other"] as const;
 export type IlePregameTabId = (typeof ILE_PREGAME_TAB_IDS)[number];
 

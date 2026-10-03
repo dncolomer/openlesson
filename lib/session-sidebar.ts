@@ -1,7 +1,7 @@
 /**
  * Right-rail session chrome shared by ILE, TAP, and verification TAP.
- * Only the ILE mode is mounted today. The other modes stay config so a later
- * switch reuses this host instead of forking layout.
+ * Learn mounts it from session chrome. Prepare, Drill, conversational TAP,
+ * and verification TAP mount it from SessionWorkSurface.
  */
 
 export const SESSION_SIDEBAR_MODES = ["ile", "tap", "verification-tap"] as const;

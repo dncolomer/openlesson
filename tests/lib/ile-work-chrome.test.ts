@@ -201,11 +201,14 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(tapPhases).toContain("ImDoneAnsweringControl");
     expect(tapShell).toContain("ImDoneAnsweringControl");
 
+    expect(welcome).toContain("TapBriefingConfig");
+    expect(welcome).toContain("showDurationPicker");
     expect(welcome).toContain("data-ile-pow-expense-slider");
-    expect(welcome).toContain("data-ile-insight-slot-slider");
+    expect(welcome).not.toContain("data-ile-insight-slot-slider");
     expect(welcome).toContain("data-ile-gather-max-slider");
-    expect(welcome).toContain("data-ile-pregame-preset");
-    expect(welcome).toContain("applyIlePregamePreset");
+    expect(welcome).not.toContain("data-ile-pregame-preset");
+    expect(welcome).not.toContain("data-ile-pregame-tabs");
+    expect(welcome).not.toContain("applyIlePregamePreset");
     expect(welcome).not.toContain("explainFully");
     expect(welcome).toContain("AestheticPicker");
     expect(welcome).not.toContain("InitialChaptersPicker");

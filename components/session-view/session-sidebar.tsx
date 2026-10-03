@@ -25,6 +25,7 @@ export function SessionSidebar({
   signals = null,
   transcript = null,
   counts = {},
+  sectionLabels,
   onOpenGlobalResources,
   globalResourcesOpen = false,
   defaultCollapsed = false,
@@ -37,6 +38,8 @@ export function SessionSidebar({
   transcript?: ReactNode;
   /** Shown on the collapsed rail in place of the section body. */
   counts?: Partial<Record<SessionSidebarSection, number>>;
+  /** Replaces the collapsed-rail label for a scroll section. */
+  sectionLabels?: Partial<Record<(typeof SCROLL_SECTIONS)[number], string>>;
   onOpenGlobalResources?: () => void;
   globalResourcesOpen?: boolean;
   defaultCollapsed?: boolean;
@@ -81,7 +84,7 @@ export function SessionSidebar({
           </button>
         ) : null}
         {showClock ? (
-          <div data-session-sidebar-clock className="flex justify-center overflow-hidden">
+          <div data-session-sidebar-clock className="min-w-0 w-full overflow-hidden">
             {clock}
           </div>
         ) : null}
@@ -103,7 +106,7 @@ export function SessionSidebar({
                 className="flex flex-col items-center gap-0.5 border border-neutral-800 bg-neutral-900 px-1 py-1.5"
               >
                 <span className="max-w-full truncate font-mono text-[9px] font-semibold uppercase tracking-wider text-neutral-400">
-                  {SECTION_LABELS[section]}
+                  {sectionLabels?.[section] ?? SECTION_LABELS[section]}
                 </span>
                 <span
                   data-session-sidebar-count-value={shown}

@@ -492,9 +492,11 @@ describe("structural: Scout TAP shell, no think-aloud, Build toggle", () => {
     const mutate = read("components/session-view/use-session-mutate.ts");
     const onboarding = read("components/SessionOnboardingGuide.tsx");
 
-    expect(phases).toContain("data-scout-live-split");
-    expect(phases).toContain('data-scout-split="70-30"');
-    expect(phases).toContain("lg:grid-cols-[7fr_3fr]");
+    expect(phases).toContain("<SessionWorkSurface");
+    expect(phases).toContain('mode="tap"');
+    expect(phases).not.toContain("data-scout-live-split");
+    expect(phases).not.toContain('data-scout-split="70-30"');
+    expect(phases).not.toContain("lg:grid-cols-[7fr_3fr]");
     expect(phases).toContain("LoadingStatusMessage");
     expect(phases).toContain("data-scout-questions-loading");
     expect(phases).toMatch(/data-scout-go-back[\s\S]{0,180}disabled=\{readOnly\}/);

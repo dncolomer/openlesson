@@ -11,6 +11,7 @@ import {
   ILE_MAP_INSIGHT_PLACEHOLDER_COUNT,
   IleMapInsightsWidget,
 } from "@/components/session-view/ile-insight-trophies";
+import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import type { InsightSummary } from "@/lib/insights";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
 import { ILE_END_TURN_LABEL, ILE_SUBMIT_TURN_LABEL } from "@/lib/ile-session-turn-close";
@@ -22,6 +23,10 @@ import {
   resolveIleWorkAestheticImage,
 } from "@/lib/aesthetics";
 import { ileTabUnfocusPowFromFocusEvent, ILE_TAB_UNFOCUS_TOOL_ACTION } from "@/lib/ile-thought-traces";
+import {
+  SESSION_SIDEBAR_COLLAPSED_REM,
+  SESSION_SIDEBAR_EXPANDED_REM,
+} from "@/lib/session-sidebar";
 
 const ROOT = join(__dirname, "../..");
 const SCRATCH =
@@ -255,6 +260,9 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).not.toContain("onShowMap={() => setHeliosWidgetOpen(false)}");
     expect(view).not.toContain("onSubmitTurn={() => void handleSubmitTurn()}");
     expect(dockBarRender).toContain("data-ile-chapter-dock-chapters");
+    expect(dockBarRender).toContain("grid-cols-2");
+    expect(dockBarRender).not.toContain("overflow-x-auto");
+    expect(dockBarRender).not.toContain("justify-end");
     expect(dockBar).not.toContain("data-ile-end-turn-stem");
     expect(dockBar).not.toContain("data-ile-review-work");
     expect(dockBar).toContain("const chipSize = compact");
@@ -316,9 +324,12 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(voiceBar).toContain("data-ile-bar-data");
     expect(voiceBar).toContain("data-ile-bar-logs");
     expect(voiceBar).toContain("data-ile-bar-save");
-    expect(voiceBar).toMatch(/data-ile-bar-data[\s\S]{0,160}\n\s*Data/);
-    expect(voiceBar).toMatch(/data-ile-bar-logs[\s\S]{0,160}\n\s*Logs/);
-    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,200}\n\s*Save/);
+    expect(voiceBar).toMatch(/data-ile-bar-data[\s\S]{0,400}\n\s*Data/);
+    expect(voiceBar).toMatch(/data-ile-bar-logs[\s\S]{0,400}\n\s*Logs/);
+    expect(voiceBar).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Save/);
+    expect(voiceBar.indexOf("data-ile-transcription-box")).toBeLessThan(
+      voiceBar.indexOf("data-ile-voice-bar-actions"),
+    );
     const sessionView = read("components/SessionView.tsx");
     expect(sessionView).not.toContain("onVoicePadChange");
     expect(sessionView).toContain("voicePadActionRef");
@@ -336,13 +347,26 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(en.session.blockedBlockTitle).toBe("This area is blocked");
     expect(en.session.blockedBlockDesc).toMatch(/cannot build/i);
     expect(chrome).not.toContain("data-ile-review-work");
-    expect(chrome).toContain("right-2");
+    expect(chrome).not.toContain("absolute right-2");
+    expect(chrome).toContain('mode="ile"');
+    expect(chrome).toContain("data-ile-canvas-sidebar-split");
+    expect(chrome).toContain("flex-row");
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeGreaterThanOrEqual(5.5);
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThanOrEqual(7.5);
+    expect(SESSION_SIDEBAR_EXPANDED_REM).toBeLessThanOrEqual(24);
+    expect(SESSION_SIDEBAR_COLLAPSED_REM).toBeLessThan(SESSION_SIDEBAR_EXPANDED_REM);
+    expect(read("components/session-view/session-sidebar.tsx")).toContain("data-session-sidebar");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-ile-global-resources",
+    );
     const dockSlice = chrome.slice(chrome.indexOf("data-ile-work-dock"));
     expect(dockSlice).not.toContain("onOpenGlobalResources");
     expect(dockSlice).not.toContain("onSubmitTurn");
     expect(dockSlice).not.toContain("onReviewWork");
     expect(chrome).not.toContain("data-ile-pow-resource-bar");
     expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
+    expect(chrome).toContain('globalResourcesOpen={activeTool === "plan-resources"}');
     expect(chrome).not.toContain("data-ile-pow-resource-actions");
     expect(chrome).not.toContain("IleSubmitWorkButton");
     expect(chrome).not.toContain("data-ile-review-work");
@@ -409,8 +433,21 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
     expect(view).not.toContain("compactHeaderLeading");
     expect(view).not.toContain('renderWorkCanvas("pip")');
     expect(view).toContain("IleMapInsightsWidget");
-    expect(view).toContain("workCanvasHeaderExtra");
-    expect(chrome).toContain("workCanvasHeaderExtra");
+    expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
+    expect(read("components/SessionView.tsx")).not.toContain("workCanvasHeaderExtra");
+    expect(chrome).not.toContain("workCanvasHeaderExtra");
+    expect(chrome).not.toContain("clock=");
+    expect(chrome).not.toContain("IleWorkCanvasTimer");
+    expect(chrome).not.toContain("left-1/2 top-2");
+    expect(chrome).not.toContain("-translate-x-1/2");
+    expect(chrome).toContain('id="insights"');
+    expect(chrome).toContain('id="chapters"');
+    expect(chrome).toContain('id="sensors"');
+    expect(chrome).toContain("transcript={voiceBar}");
+    expect(read("components/session-view/ile-voice-bar.tsx")).not.toContain("inset-x-0 bottom-0");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-session-sidebar-toggle",
+    );
     expect(chrome).toContain("mapInsightsWidget");
     const trophies = read("components/session-view/ile-insight-trophies.tsx");
     expect(trophies).toContain("data-ile-insight-trophy");
@@ -533,8 +570,8 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "end-turn-control=absent",
         "settings=chapter count + session insight goal + aesthetics",
         "settings-map-or-board-wording=absent",
-        "bottom-bar=transcript + Data + Logs + Save",
-        "collapse=insights, chapters, sensors",
+        "right-sidebar=insights + chapters + signals + transcript + clock",
+        "collapse=sidebar rail plus per-section insights, chapters, sensors",
         "ile-circular-menu=not mounted",
         "workspace-learner-menu=remains",
         ...localeNotes,
@@ -546,11 +583,37 @@ describe("ILE Work / PoW chrome (shipped source)", () => {
         "stage is the work canvas",
         "no top resource bar",
         "no End turn control",
-        "bottom bar is transcript + Data + Logs + Save",
-        "insights, chapters, and sensors collapse",
+        "right sidebar stacks transcript, Data, Logs, Save, and the clock",
+        "insights, chapters, and sensors collapse inside the sidebar",
         "settings set chapter count and the session insight goal",
       ].join("\n"),
     );
+  });
+});
+
+describe("IleWorkDockBar chapter grid", () => {
+  it("places chapter chips in a two-column grid", () => {
+    const html = renderToStaticMarkup(
+      createElement(IleWorkDockBar, {
+        heliosOpen: true,
+        aestheticImages: ["https://example.com/still.jpg"],
+        onFocusOpenWork: () => {},
+        openWorkLabels: [
+          { id: "ch-a", label: "Chapter A", keyword: "alpha", focused: true },
+          { id: "ch-b", label: "Chapter B", keyword: "beta" },
+          { id: "ch-c", label: "Chapter C", keyword: "gamma" },
+        ],
+      }),
+    );
+    const gridAt = html.indexOf("data-ile-chapter-dock-chapters");
+    expect(gridAt).toBeGreaterThan(-1);
+    const grid = html.slice(gridAt, gridAt + 220);
+    expect(grid).toContain("grid");
+    expect(grid).toContain("grid-cols-2");
+    expect(html).not.toContain("overflow-x-auto");
+    expect(html).not.toContain("w-[7rem]");
+    expect(html.match(/data-ile-open-work-chip=/g)).toHaveLength(3);
+    expect(html).toContain("w-full min-w-0");
   });
 });
 

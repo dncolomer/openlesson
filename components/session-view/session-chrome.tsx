@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { IleCollapsibleOverlay } from "@/components/session-view/ile-collapsible-overlay";
+import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   AudioMiniPreview,
@@ -13,12 +14,12 @@ import {
 import type { DeviceStatus } from "@/lib/muse-athena";
 import type { SessionViewTranslate } from "@/components/session-view/types";
 import {
-  ILE_MAP_VOICE_BAR_CLEARANCE_CLASS,
   ILE_MAP_WIDGET_FRAME_CLASS,
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
   isIleMapOverlayTool,
   isIleSessionModalTool,
 } from "@/lib/ile-map-chrome";
+import { ileSidebarSignalCount } from "@/lib/session-sidebar";
 import { IleWorkDockBar } from "@/components/session-view/ile-work-dock-bar";
 import {
   emptyIlePowDisplayCounts,
@@ -54,9 +55,9 @@ export type SessionChromeProps = {
   onMinimizeHelios?: () => void;
   insightCraftOpen?: boolean;
   onMinimizeInsightCraft?: () => void;
-  workCanvasHeaderExtra?: ReactNode;
   workCanvasHeaderLeading?: ReactNode;
   mapInsightsWidget?: ReactNode;
+  insightCount?: number;
   introOpen: boolean;
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
@@ -128,9 +129,9 @@ export function SessionChrome({
   onMinimizeHelios,
   insightCraftOpen = false,
   onMinimizeInsightCraft,
-  workCanvasHeaderExtra = null,
   workCanvasHeaderLeading = null,
   mapInsightsWidget = null,
+  insightCount = 0,
   introOpen,
   introWidget,
   onCloseSessionModal,
@@ -184,7 +185,7 @@ export function SessionChrome({
     activeTool === ILE_REVIEW_WORK_TOOL
       ? t("session.reviewWork") || ILE_REVIEW_WORK_LABEL
       : activeTool === "plan-resources"
-        ? "Global resources"
+        ? "session resources"
         : activeTool;
 
   return (
@@ -210,25 +211,79 @@ export function SessionChrome({
 
         <div
           data-ile-session-inner
-          className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+          data-ile-canvas-sidebar-split
+          className="relative flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden"
         >
-        <div data-ile-canvas-stage className="absolute inset-0 z-0 min-h-0">
-          {workCanvas}
+        <div data-ile-canvas-stage className="relative z-0 min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="absolute inset-0 min-h-0">{workCanvas}</div>
         </div>
-        {workCanvasHeaderExtra ? (
-          <div className="pointer-events-none absolute left-1/2 top-2 z-[36] -translate-x-1/2">
-            {workCanvasHeaderExtra}
-          </div>
-        ) : null}
-        {mapInsightsWidget ? (
-          <IleCollapsibleOverlay
-            id="insights"
-            title="Insights"
-            className="pointer-events-none absolute left-2 top-2 z-[36] w-[min(20rem,calc(100vw-2rem))]"
-          >
-            {mapInsightsWidget}
-          </IleCollapsibleOverlay>
-        ) : null}
+        <SessionSidebar
+          mode="ile"
+          counts={{
+            insights: insightCount,
+            chapters: openWorkLabels.length,
+            signals: ileSidebarSignalCount({
+              eegStreaming: museStatus === "streaming",
+              screenCapturing: isScreenCapturing,
+              webcamEnabled: isWebcamEnabled,
+            }),
+          }}
+          onOpenGlobalResources={onOpenGlobalResources}
+          globalResourcesOpen={activeTool === "plan-resources"}
+          insights={
+            mapInsightsWidget ? (
+              <IleCollapsibleOverlay
+                id="insights"
+                title="Insights"
+                className="pointer-events-none w-full"
+              >
+                {mapInsightsWidget}
+              </IleCollapsibleOverlay>
+            ) : null
+          }
+          chapters={
+            <div data-ile-work-dock className="w-full min-w-0">
+              <IleCollapsibleOverlay id="chapters" title="Chapters" className="w-full">
+                <IleWorkDockBar
+                  t={t}
+                  heliosOpen={heliosOpen}
+                  openWorkLabels={openWorkLabels}
+                  onFocusOpenWork={onFocusOpenWork}
+                  aestheticImages={aestheticImages}
+                />
+              </IleCollapsibleOverlay>
+            </div>
+          }
+          signals={
+            <div data-ile-tools-widget className="w-full min-w-0">
+              <IleCollapsibleOverlay id="sensors" title="Signals">
+                <div
+                  data-ile-sensor-pair
+                  className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
+                >
+                  <AudioMiniPreview
+                    stream={audioStream}
+                    muted={audioMuted}
+                    onToggleMute={onToggleAudioMute}
+                  />
+                  {museStatus === "streaming" ? (
+                    <EegMiniPreview
+                      museChannelData={museChannelData}
+                      museStatus={museStatus}
+                      museDeviceStatus={museDeviceStatus}
+                      bandPowers={bandPowers}
+                    />
+                  ) : null}
+                  {isScreenCapturing ? (
+                    <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
+                  ) : null}
+                  {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
+                </div>
+              </IleCollapsibleOverlay>
+            </div>
+          }
+          transcript={voiceBar}
+        />
 
         {error && !showWelcomeModal ? (
           <div className={`pointer-events-auto absolute left-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex items-center gap-2 rounded-none border border-red-500/30 bg-red-500/10 px-3 py-1.5`}>
@@ -281,21 +336,6 @@ export function SessionChrome({
           </div>
         ) : null}
 
-        <div
-          data-ile-work-dock
-          className={`pointer-events-none absolute right-2 top-2 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} flex max-w-[min(100vw-1rem,36rem)] flex-col items-end`}
-        >
-          <IleCollapsibleOverlay id="chapters" title="Chapters" className="w-full">
-            <IleWorkDockBar
-              t={t}
-              heliosOpen={heliosOpen}
-              openWorkLabels={openWorkLabels}
-              onFocusOpenWork={onFocusOpenWork}
-              aestheticImages={aestheticImages}
-            />
-          </IleCollapsibleOverlay>
-        </div>
-
         {overlayOpen ? (
           <div
             data-ile-tool-overlay
@@ -315,38 +355,6 @@ export function SessionChrome({
             <div className="min-h-0 flex-1 overflow-hidden">{toolOverlay}</div>
           </div>
         ) : null}
-
-        <div
-          data-ile-tools-widget
-          className={`pointer-events-none absolute ${ILE_MAP_VOICE_BAR_CLEARANCE_CLASS} left-2 z-[35] flex w-[min(20rem,calc(100vw-1rem))] flex-col items-stretch gap-1.5 rounded-none`}
-        >
-          <IleCollapsibleOverlay id="sensors" title="Signals" defaultCollapsed>
-          <div
-            data-ile-sensor-pair
-            className="grid w-full max-w-[20rem] grid-cols-2 gap-1.5"
-          >
-            <AudioMiniPreview
-              stream={audioStream}
-              muted={audioMuted}
-              onToggleMute={onToggleAudioMute}
-            />
-            {museStatus === "streaming" ? (
-              <EegMiniPreview
-                museChannelData={museChannelData}
-                museStatus={museStatus}
-                museDeviceStatus={museDeviceStatus}
-                bandPowers={bandPowers}
-              />
-            ) : null}
-            {isScreenCapturing ? (
-              <ScreenShareMiniPreview stream={screenShareStream} onTurnOff={onStopScreenCapture} />
-            ) : null}
-            {isWebcamEnabled ? <WebcamMiniPreview onTurnOff={onTurnOffWebcam} /> : null}
-          </div>
-          </IleCollapsibleOverlay>
-        </div>
-
-        {voiceBar}
         </div>
       </div>
 

@@ -22,6 +22,7 @@ export function IleWorkDockChip({
   work,
   expanded = false,
   compact = false,
+  fill = false,
   aestheticImages = [],
   onClick,
   caption,
@@ -29,11 +30,14 @@ export function IleWorkDockChip({
   work: IleWorkDockLabel;
   expanded?: boolean;
   compact?: boolean;
+  /** Stretch to the grid cell. The sidebar dock uses this so chips do not form a scrolling row. */
+  fill?: boolean;
   aestheticImages?: readonly string[];
   onClick?: () => void;
   caption?: string;
 }) {
   const chipSize = compact ? "h-16 w-[5.5rem]" : "h-24 w-[7rem]";
+  const sizeClass = fill ? "h-24 w-full min-w-0" : chipSize;
   const surface = useSurfaceAestheticImages(aestheticImages);
   const dockImages =
     surface.source === "fallback" ? FALLBACK_AESTHETIC_IMAGES : surface.images;
@@ -45,7 +49,7 @@ export function IleWorkDockChip({
   const keyword = work.keyword?.trim();
   const status = work.status ?? "idle";
   const interactive = typeof onClick === "function";
-  const className = `relative flex ${chipSize} shrink-0 flex-col items-stretch justify-end overflow-hidden rounded-none border ${
+  const className = `relative flex ${sizeClass} ${fill ? "max-w-full" : "shrink-0"} flex-col items-stretch justify-end overflow-hidden rounded-none border ${
     expanded
       ? "border-white shadow-[0_0_0_1px_#fff,0_12px_28px_rgba(0,0,0,0.55)]"
       : "border-white/25 hover:border-white/70"
@@ -152,14 +156,12 @@ export function IleWorkDockBar({
   return (
     <div
       data-ile-work-dock-bar
-      className={`pointer-events-auto flex max-w-[min(100vw-1rem,56rem)] items-end gap-2 border border-white/20 bg-neutral-950/95 p-2 shadow-[0_18px_48px_rgba(0,0,0,0.62)] ${
-        compact ? "w-full max-w-none" : ""
-      }`}
+      className="pointer-events-auto w-full min-w-0 max-w-full border border-white/20 bg-neutral-950/95 p-2"
     >
       <div
         data-ile-chapter-dock-chapters
         data-ile-open-work-tabs={openWorkLabels.length > 0 ? "" : undefined}
-        className="flex min-w-0 flex-1 items-end justify-end gap-1.5 overflow-x-auto"
+        className="grid w-full min-w-0 grid-cols-2 gap-1.5"
       >
           {openWorkLabels.map((work) => (
             <IleWorkDockChip
@@ -167,6 +169,7 @@ export function IleWorkDockBar({
               work={work}
               expanded={Boolean(work.focused && heliosOpen)}
               compact={compact}
+              fill
               aestheticImages={dockImages}
               onClick={() => onFocusOpenWork?.(work.id)}
             />

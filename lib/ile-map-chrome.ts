@@ -6,7 +6,7 @@ import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-fra
 /** top-2 (8px) + minimap height + 8px gap — leftover for overlays that still sit under the minimap. */
 export const ILE_HELIOS_WIDGET_TOP_PX = 8 + MINIMAP_FRAME_HEIGHT + 8;
 
-/** Short transcript bar: one line plus Data, Logs, and Save. */
+/** One-line transcript row. Data, Logs, and Save sit on the row below. */
 export const ILE_VOICE_BAR_HEIGHT_CLASS = "h-10";
 
 /** Bar height + a small gutter. Overlay widgets sit above the transcript. */

@@ -15,23 +15,31 @@ export function IleVoiceBar({
   onToolChange,
   onBackToDashboard,
   errorNotification = false,
+  showData = true,
+  showLogs = true,
+  showSave = true,
 }: {
   thought: SessionThoughtInterface;
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
+  /** Section flags from `sessionSidebarHasSection`. ILE turns all three on. */
+  showData?: boolean;
+  showLogs?: boolean;
+  showSave?: boolean;
 }) {
   const buttonClass =
-    "pointer-events-auto h-7 shrink-0 rounded-none border border-neutral-600 bg-neutral-900 px-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-100 hover:border-white hover:text-white";
+    "pointer-events-auto h-7 min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-100 hover:border-white hover:text-white";
+  const showActions = showData || showLogs || (showSave && onBackToDashboard != null);
 
   return (
     <div
       data-ile-voice-bar
       data-ile-transcription-region
-      className={`pointer-events-auto absolute inset-x-0 bottom-0 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS} w-full overflow-hidden rounded-none border-t border-neutral-800 bg-black`}
+      className={`pointer-events-auto relative flex w-full shrink-0 flex-col gap-1 overflow-hidden rounded-none border-t border-neutral-800 bg-black px-1.5 py-1.5 ${ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS}`}
     >
-      <div className={`flex ${ILE_VOICE_BAR_HEIGHT_CLASS} w-full min-w-0 items-center gap-2 px-2`}>
+      <div className={`flex ${ILE_VOICE_BAR_HEIGHT_CLASS} w-full min-w-0 items-center gap-1`}>
         <div
           data-ile-transcription-box
           className="flex h-7 min-w-0 flex-1 items-center rounded-none border border-neutral-900 bg-black/70 px-2 text-xs text-neutral-300"
@@ -58,39 +66,47 @@ export function IleVoiceBar({
             {thought.speechError ? "Retry" : "Start"}
           </button>
         ) : null}
-        <button
-          type="button"
-          data-ile-bar-data
-          aria-pressed={activeTool === "data-input"}
-          onClick={() => onToolChange("data-input")}
-          className={buttonClass}
-        >
-          Data
-        </button>
-        <button
-          type="button"
-          data-ile-bar-logs
-          aria-pressed={activeTool === "logs"}
-          onClick={() => onToolChange("logs")}
-          className={buttonClass}
-        >
-          Logs
-          {errorNotification ? (
-            <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-          ) : null}
-        </button>
-        {onBackToDashboard ? (
-          <button
-            type="button"
-            data-ile-bar-save
-            data-save-and-exit
-            onClick={onBackToDashboard}
-            className={`${buttonClass} border-white bg-white text-neutral-950 hover:bg-neutral-200`}
-          >
-            Save
-          </button>
-        ) : null}
       </div>
+      {showActions ? (
+        <div data-ile-voice-bar-actions className="flex w-full min-w-0 items-center gap-1">
+          {showData ? (
+            <button
+              type="button"
+              data-ile-bar-data
+              aria-pressed={activeTool === "data-input"}
+              onClick={() => onToolChange("data-input")}
+              className={buttonClass}
+            >
+              Data
+            </button>
+          ) : null}
+          {showLogs ? (
+            <button
+              type="button"
+              data-ile-bar-logs
+              aria-pressed={activeTool === "logs"}
+              onClick={() => onToolChange("logs")}
+              className={buttonClass}
+            >
+              Logs
+              {errorNotification ? (
+                <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+              ) : null}
+            </button>
+          ) : null}
+          {showSave && onBackToDashboard ? (
+            <button
+              type="button"
+              data-ile-bar-save
+              data-save-and-exit
+              onClick={onBackToDashboard}
+              className={`${buttonClass} border-white bg-white text-neutral-950 hover:bg-neutral-200`}
+            >
+              Save
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

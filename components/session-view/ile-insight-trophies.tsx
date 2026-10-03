@@ -234,7 +234,7 @@ export function IleMapInsightsWidget({
     <div
       data-ile-map-insights-widget
       data-ile-map-insights-goal={goal}
-      className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-1.5 rounded-none border border-white/70 bg-neutral-950 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+      className="box-border flex w-full min-w-0 max-w-full flex-col gap-1.5 rounded-none border border-white/70 bg-neutral-950 px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
     >
       <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
         <IleInsightTrophyIcon className="size-3.5 text-white" />

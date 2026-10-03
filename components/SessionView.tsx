@@ -85,6 +85,7 @@ import { SessionThoughtPane } from "@/components/session-view/session-thought-pa
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
 import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
+import { sessionSidebarHasSection } from "@/lib/session-sidebar";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
   isIleMapOverlayTool,
@@ -138,7 +139,6 @@ import {
   ILE_CANVAS_TIMER_SECONDS_DEFAULT,
   ileWorkCanvasScenesFromWorkspaces,
   ileWorkCanvasTimerExpired,
-  ileWorkCanvasTimerRemainingSeconds,
   parseIleXaiCanvasTurn,
   pickIleWorkCanvasTurnScene,
   resetIleWorkCanvasSceneOnTimerExpiry,
@@ -164,7 +164,6 @@ import { useIleSilenceLock } from "@/components/session-view/use-ile-silence-loc
 import {
   IleInsightTrophyStrip,
   IleMapInsightsWidget,
-  IleWorkCanvasTimer,
 } from "@/components/session-view/ile-insight-trophies";
 import {
   shouldLogIleSidebarToolSwitch,
@@ -1886,19 +1885,11 @@ export function SessionView({
     activeStep?.id,
   );
   const insightCountByChapterId = ileChapterInsightCounts(sessionInsights);
-  const canvasRemainingSeconds = ileWorkCanvasTimerRemainingSeconds({
-    durationSeconds: canvasTimerSeconds,
-    startedAtMs: activeStep?.id ? canvasTimerStartedAt[activeStep.id] : null,
-    nowMs: canvasTimerNow,
-  });
   const workCanvasInsightSlots = (
     <IleInsightTrophyStrip
       insights={focusedChapterInsights}
       slotCount={minInsightsPerChapter}
     />
-  );
-  const workCanvasHeaderExtra = (
-    <IleWorkCanvasTimer remainingSeconds={canvasRemainingSeconds} />
   );
 
   const renderWorkCanvas = () => {
@@ -1932,6 +1923,7 @@ export function SessionView({
         replaceSceneNonce={canvasReplaceNonce}
         onCanvasPowActions={handleCanvasPowActions}
         onAskSelected={handleAskCanvasSelection}
+        dictateTranscript={sessionThoughtInterface.crystallizableText}
         craftInsight={
           activeStep?.id
             ? {
@@ -2265,8 +2257,8 @@ export function SessionView({
         onMinimizeHelios={() => setHeliosWidgetOpen(false)}
         insightCraftOpen={craftingInsightsOpen}
         onMinimizeInsightCraft={() => setCraftingInsightsOpen(false)}
-        workCanvasHeaderExtra={workCanvasHeaderExtra}
         workCanvasHeaderLeading={workCanvasInsightSlots}
+        insightCount={sessionInsights.length}
         mapInsightsWidget={
           <IleMapInsightsWidget
             insights={sessionInsights}
@@ -2331,6 +2323,9 @@ export function SessionView({
               setShowSaveExitNameDialog(true);
             }}
             errorNotification={Boolean(error)}
+            showData={sessionSidebarHasSection("ile", "data")}
+            showLogs={sessionSidebarHasSection("ile", "logs")}
+            showSave={sessionSidebarHasSection("ile", "save")}
           />
         }
       />

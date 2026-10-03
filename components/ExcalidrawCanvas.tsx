@@ -71,7 +71,9 @@ import {
   type IleWorkCanvasScene,
   type IleWorkCanvasSkeleton,
 } from "@/lib/ile-work-canvas";
+import { appendIleDictatedTextToWorkCanvas } from "@/lib/ile-canvas-dictate";
 import { ileCanvasCraftInsightUsable } from "@/lib/ile-turn-insights";
+import { IleCanvasDictateButton } from "@/components/session-view/ile-canvas-dictate-button";
 import {
   IleCanvasCraftInsightForm,
   IleCraftInsightButton,
@@ -204,6 +206,8 @@ export interface ExcalidrawCanvasProps {
   onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
   /** ILE: craft an insight linked to this chapter. */
   craftInsight?: IleCanvasCraftInsightConfig | null;
+  /** Live speech-bar text. Dictate records what arrives after the click. */
+  dictateTranscript?: string;
   /** When nonce changes, replace the live board (timer expiry reset). */
   replaceScene?: IleWorkCanvasScene | null;
   replaceSceneNonce?: string | number | null;
@@ -252,6 +256,7 @@ export function ExcalidrawCanvas({
   heliosBusy = false,
   onLearnerWaitChange,
   craftInsight = null,
+  dictateTranscript = "",
   replaceScene = null,
   replaceSceneNonce = null,
   viewModeEnabled = false,
@@ -1074,6 +1079,45 @@ export function ExcalidrawCanvas({
     [rememberNewCanvasMarks, runCanvasAsk, selectedCanvasElements],
   );
 
+  const commitDictatedText = useCallback(
+    (text: string) => {
+      const api = excalidrawAPIRef.current;
+      const clean = text.trim();
+      if (!api || !clean) return;
+      const rawElements = (
+        typeof api.getSceneElementsIncludingDeleted === "function"
+          ? api.getSceneElementsIncludingDeleted()
+          : (api.getSceneElements?.() ?? [])
+      ) as IleWorkCanvasElement[];
+      const live = serializeIleWorkCanvasScene({
+        elements: rawElements,
+        appState: api.getAppState?.() ?? {},
+        files: api.getFiles?.() ?? {},
+      });
+      const { scene, appended } = appendIleDictatedTextToWorkCanvas(live, clean);
+      if (!appended.length) return;
+      applyingRemoteRef.current = true;
+      try {
+        api.updateScene({
+          elements: scene.elements,
+          appState: { selectedElementIds: {} },
+        });
+      } finally {
+        applyingRemoteRef.current = false;
+      }
+      rememberNewCanvasMarks(live, scene, scene.elements, api.getAppState?.() ?? {});
+      if (typeof api.scrollToContent === "function") {
+        api.scrollToContent(appended, ILE_WORK_CANVAS_SCROLL_TO_CONTENT_OPTS);
+      }
+      canvasPowCollectorRef.current.syncWithoutEmit({
+        elements: scene.elements,
+        appState: api.getAppState?.() ?? {},
+        files: api.getFiles?.() ?? {},
+      });
+    },
+    [rememberNewCanvasMarks],
+  );
+
   const handleBoardAsk = useCallback(() => {
     const prompt = boardPrompt.trim();
     if (!prompt) return;
@@ -1811,6 +1855,12 @@ export function ExcalidrawCanvas({
                   <IleCraftInsightButton
                     usable={ileCanvasCraftInsightUsable()}
                     onClick={() => setCraftInsightOpen(true)}
+                  />
+                ) : null}
+                {craftInsight ? (
+                  <IleCanvasDictateButton
+                    transcript={dictateTranscript}
+                    onCommit={commitDictatedText}
                   />
                 ) : null}
               </div>

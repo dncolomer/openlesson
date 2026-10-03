@@ -1678,7 +1678,7 @@ describe("ILE Work canvas timer expiry (shipped)", () => {
     const view = read("components/SessionView.tsx");
     expect(view).toContain("resetIleWorkCanvasSceneOnTimerExpiry");
     expect(view).toContain("seedText");
-    expect(view).toContain("IleWorkCanvasTimer");
+    expect(view).not.toContain("IleWorkCanvasTimer");
 
     writeScratch(
       "ile-canvas-timer-reset.txt",

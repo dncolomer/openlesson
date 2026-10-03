@@ -1207,7 +1207,7 @@
     "theoryDesc": "Key concepts to review before or during your block. Auto-generates on first click.",
     "ragMatches": "RAG Matches",
     "ragMatchesDesc": "Search and select relevant knowledge chunks for observation prompts.",
-    "planResources": "Global resources",
+    "planResources": "session resources",
     "planResourcesDesc": "Reference files attached to this workspace.",
     "utilityTools": "Utility Tools",
     "help": "Help",

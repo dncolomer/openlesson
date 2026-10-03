@@ -64,6 +64,10 @@ describe("Review work chrome (shipped source)", () => {
     expect(chrome).not.toContain("data-ile-review-work");
     expect(chrome).not.toContain("data-ile-session-insights-count");
     expect(chrome).not.toContain("data-ile-global-resources");
+    expect(chrome).toContain("onOpenGlobalResources={onOpenGlobalResources}");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-ile-global-resources",
+    );
     expect(chrome).not.toContain("data-ile-identity-row");
 
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");

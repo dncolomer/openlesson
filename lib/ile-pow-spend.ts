@@ -1,5 +1,5 @@
 /**
- * Unified ILE Proof-of-Work spend: Work start + Gather share one pool
+ * Unified TAP Learning Proof-of-Work spend: Work start + Gather share one pool
  * and one expense slider. Pure — no React.
  *
  * Cheaper expense → more parallel Work. More expensive → more linear.

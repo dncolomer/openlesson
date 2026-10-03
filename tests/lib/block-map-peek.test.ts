@@ -42,7 +42,7 @@ describe("resolveMapBlockPeek", () => {
 });
 
 describe("map double-click peek overlay", () => {
-  it("creator and ILE occupied-block double-click peek; Workspace learner stays a no-op", () => {
+  it("creator and TAP Learning occupied-block double-click peek; Workspace learner stays a no-op", () => {
     const grid = readMapGridSurface();
     const authoring = read("components/block-skill-grid/use-map-authoring.ts");
     const host = read("components/BlockSkillGrid.tsx");

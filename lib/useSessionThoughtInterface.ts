@@ -73,7 +73,7 @@ export function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor 
 }
 
 /**
- * ILE thought-interface speech is armed only while the learner is in an
+ * TAP Learning thought-interface speech is armed only while the learner is in an
  * active monitoring session (recording, not paused, onboarding not covering Helios).
  */
 export function isIleSpeechCaptureEnabled(input: {
@@ -360,7 +360,7 @@ interface UseSessionThoughtInterfaceOptions {
   ) => Promise<void>;
   onSpeechTranscript?: (text: string) => void;
   onUserActivity?: () => void;
-  /** ILE default: capture Enter/Del. TAP shells keep their own keys. */
+  /** TAP Learning default: capture Enter/Del. TAP shells keep their own keys. */
   captureKeys?: boolean;
   getActiveChapterId?: () => string | null;
 }

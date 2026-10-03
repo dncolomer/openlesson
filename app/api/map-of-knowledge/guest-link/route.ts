@@ -45,7 +45,7 @@ function parseMapPlacementMinutes(
 
 /**
  * POST /api/map-of-knowledge/guest-link
- * Anonymous self-placement: mint a timed guest session (or legacy ILE) on a public workspace block.
+ * Anonymous self-placement: mint a timed guest session (or legacy TAP Learning) on a public workspace block.
  *
  * Body:
  * - workspace_id, block_id (required)

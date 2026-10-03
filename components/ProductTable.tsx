@@ -47,14 +47,14 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
   {
     name: "Think Aloud Protocol",
     icon: Mic,
-    pitch: "Live verification links with Socratic probe.",
+    pitch: "One interface for Preparing, Learning, Drilling, and Validating.",
     description:
-      "Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including TAP-cha human checks bots cannot fake.",
+      "TAP is the session. Prepare, Learn, Drill, or Validate in the same interface. Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including TAP-cha human checks bots cannot fake.",
   },
   {
-    name: "Integrated Learning Environment",
+    name: "TAP Learning",
     icon: Sparkles,
-    pitch: "Hosted practice when depth beats checkbox tests.",
+    pitch: "The Learning use case of TAP, when depth beats checkbox tests.",
     description:
       "Coached scenarios wired to verified gaps — a take-home and quiz replacement for complex cognition, with interruptions timed to what the model already knows.",
   },

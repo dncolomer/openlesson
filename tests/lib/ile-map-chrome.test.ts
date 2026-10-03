@@ -48,7 +48,7 @@ function writeScratch(name: string, body: string) {
 
 const BOX_ROUNDED_RE = /rounded-(sm|md|lg|xl)\b/;
 
-describe("ILE map-first session chrome (shipped surface)", () => {
+describe("TAP Learning map-first session chrome (shipped surface)", () => {
   it("is full-viewport map with overlay widgets, not a tools/Helios split", () => {
     const view = readSessionViewSurface();
     const chrome = read("components/session-view/session-chrome.tsx");

@@ -1,5 +1,5 @@
 /**
- * TAP conversation stash/thought management matches ILE Thought Memory.
+ * TAP conversation stash/thought management matches TAP Learning Thought Memory.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -114,8 +114,8 @@ describe("TAP older-thoughts Thought Memory surface", () => {
       [
         "Thought Memory always on TAP convo (no See / Edit toggle)",
         "ThoughtMemoryPanel insightSurface=tap onEditThought/onDeleteThought",
-        `Submit Selection still ILE-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
-        `Edit Selection still ILE-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
+        `Submit Selection still TAP Learning-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
+        `Edit Selection still TAP Learning-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
         "TAP item edit=ThoughtEditPanel Save, no Helios submit",
       ].join("\n"),
     );

@@ -273,7 +273,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(shortUserIdPreview({ id: "snap-xyz" })).toBe("snapxy");
   });
 
-  it("maps TAP vs ILE to standard vs golden dots", () => {
+  it("maps TAP vs TAP Learning to standard vs golden dots", () => {
     expect(mapDotKindFromParticipant("ile")).toBe("ile");
     expect(mapDotKindFromParticipant("anonymous_ile_link")).toBe("ile");
     expect(mapDotKindFromParticipant("tap")).toBe("tap");
@@ -590,7 +590,7 @@ describe("anonymous guest self-placement", () => {
     ).toBe(false);
   });
 
-  it("builds TAP and ILE placement results with correct dot kinds", () => {
+  it("builds TAP and TAP Learning placement results with correct dot kinds", () => {
     const tap = buildGuestPlacementResult({
       link_kind: "tap",
       private_url: "https://example.com/tap/abc",
@@ -652,7 +652,7 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).not.toContain("AGGREGATED PROOF OF WORK");
     expect(clientSrc).toContain("data-map-surface");
     expect(clientSrc).toContain("Fullscreen");
-    // Product language on placement cards (not TAP/ILE jargon)
+    // Product language on placement cards (not TAP/TAP Learning jargon)
     expect(clientSrc).toContain("data-mint-timed-explore");
     expect(clientSrc).not.toContain("data-mint-timed-drill-card");
     expect(clientSrc).not.toContain("Drill Solo Exercises");
@@ -674,7 +674,7 @@ describe("map-of-knowledge product surfaces", () => {
     expect(guestApiSrc).toContain("parseMapPlacementMinutes");
     expect(guestApiSrc).toMatch(/minutes:\s*minutes|minutes,/);
     expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
-    expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
+    expect(clientSrc).not.toMatch(/Mint TAP link|Mint TAP Learning link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
     expect(clientSrc).toContain('label: "Drill"');
     const timedExploreCard = clientSrc.slice(
@@ -684,7 +684,7 @@ describe("map-of-knowledge product surfaces", () => {
     expect(timedExploreCard).not.toMatch(/Dialog/);
     expect(timedExploreCard).not.toMatch(/Solo Exercises/);
     expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
-    expect(pageSrc).not.toMatch(/TAP or ILE/);
+    expect(pageSrc).not.toMatch(/TAP or TAP Learning/);
     // Map canvas appears before placement section
     expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(
       clientSrc.indexOf('id="map-place-yourself"'),

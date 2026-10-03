@@ -22,7 +22,7 @@ export const TIM_FOUNDATION = {
   summary:
     "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
   bullets: [
-    "Same model across Proof-of-Work API, Stash API, TAP, ILE, and ALE",
+    "Same model across Proof-of-Work API, Stash API, TAP (Preparing, Learning, Drilling, and Validating), and ALE",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -79,9 +79,9 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Think Aloud Protocol",
     forHuman: {
       summary:
-        "Hard skill and human verification via live think-aloud sessions. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
+        "One interface for Preparing, Learning, Drilling, and Validating. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
       bullets: [
-        "Captures live cognition under Socratic probe",
+        "Preparing, Drilling, and Validating on the same session surface",
         "Shareable links per workspace or practice block",
       ],
     },
@@ -89,10 +89,10 @@ export const PRODUCTS: ProductDefinition[] = [
   {
     id: "ile",
     eyebrow: "Practice",
-    title: "Integrated Learning Environment",
+    title: "TAP Learning",
     forHuman: {
       summary:
-        "Drop-in replacement for tests and take-homes when you need complex cognitive analysis — guided practice wired to verified gaps.",
+        "The Learning use case of TAP. A drop-in replacement for tests and take-homes when you need complex cognitive analysis — guided practice wired to verified gaps.",
       bullets: [
         "Depth over checkbox completion",
         "Progress tracked in the same workspace",

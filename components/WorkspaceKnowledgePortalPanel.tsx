@@ -56,7 +56,7 @@ interface WorkspaceKnowledgePortalPanelProps {
 
 /**
  * Owner Settings: Knowledge Portal create + browse (Create / Browse subtabs).
- * Shareable mint desk for a single workspace — separate from TAP/ILE guest links.
+ * Shareable mint desk for a single workspace — separate from TAP/TAP Learning guest links.
  */
 export function WorkspaceKnowledgePortalPanel({
   workspaceId,
@@ -199,7 +199,7 @@ export function WorkspaceKnowledgePortalPanel({
     setPortalScopeMode(mode);
     if (mode === "workspace") {
       setPortalBlockId("");
-      // Drop Explore products — ILE requires a block.
+      // Drop Explore products — TAP Learning requires a block.
       setPortalProducts((current) => {
         const next = current.filter(
           (p) => p !== "explore_dialog" && p !== "explore_solo",

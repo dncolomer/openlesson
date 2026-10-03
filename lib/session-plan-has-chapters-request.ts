@@ -18,7 +18,7 @@ export type SessionPlanHasChaptersLookup =
 
 /**
  * Same auth as session-plan create/translate: `guardSessionRoute` then
- * existence lookup on that client (service-role for ILE/AYCL).
+ * existence lookup on that client (service-role for TAP Learning/AYCL).
  */
 export async function lookupSessionPlanChaptersForRequest(
   body: Record<string, unknown>,

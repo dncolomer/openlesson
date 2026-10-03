@@ -33,7 +33,7 @@ function user(
 }
 
 describe("parsePlacementLinkToken — shipped pure parser", () => {
-  it("extracts token from full TAP / ILE session URLs", () => {
+  it("extracts token from full TAP / TAP Learning session URLs", () => {
     expect(
       parsePlacementLinkToken("https://app.example.com/tap/session/tok_abc-DEF123"),
     ).toBe("tok_abc-DEF123");

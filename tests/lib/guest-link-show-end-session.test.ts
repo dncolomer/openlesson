@@ -1,5 +1,5 @@
 /**
- * Guest TAP/ILE links: configurable End Session button (default yes).
+ * Guest TAP/TAP Learning links: configurable End Session button (default yes).
  * Drives shipped normalize helpers + UI gate wiring.
  */
 import { describe, expect, it } from "vitest";
@@ -42,7 +42,7 @@ describe("normalizeShowEndSession / resolveShowEndSessionFromBody", () => {
   });
 });
 
-describe("create TAP/ILE link wiring", () => {
+describe("create TAP/TAP Learning link wiring", () => {
   it("create modules persist show_end_session from body and select the field", () => {
     const tap = read("lib/pow-api/create-tap-link.ts");
     const ile = read("lib/pow-api/create-ile-link.ts");
@@ -104,7 +104,7 @@ describe("TAP UI gate", () => {
   });
 });
 
-describe("ILE UI gate", () => {
+describe("TAP Learning UI gate", () => {
   it("resolveIleLinkAccess exposes showEndSession; session page passes it", () => {
     const auth = read("lib/ile-link-auth.ts");
     expect(auth).toContain("showEndSession");

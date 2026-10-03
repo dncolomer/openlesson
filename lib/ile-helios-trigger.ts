@@ -1,8 +1,8 @@
 /**
- * ILE Helios dialogue: classify a Helios appearance as a learner send vs an
+ * TAP Learning Helios dialogue: classify a Helios appearance as a learner send vs an
  * auto-fire (idle heartbeat, speech-segment TIM, or other PoW interruption).
  *
- * Auto-fires stay off the ILE dialogue so Helios does not appear without a
+ * Auto-fires stay off the TAP Learning dialogue so Helios does not appear without a
  * send. whyHelios is the explanation token if a surface ever shows them.
  * TAP idle/interruption UX does not use this helper.
  */
@@ -23,7 +23,7 @@ export const ILE_HELIOS_WHY_COPY = {
 
 export type IleHeliosTriggerDecision = {
   kind: IleHeliosTriggerKind;
-  /** Learner send → Helios reply on the ILE dialogue. Auto-fires do not. */
+  /** Learner send → Helios reply on the TAP Learning dialogue. Auto-fires do not. */
   showOnDialogue: boolean;
   whyHelios: string | null;
 };
@@ -49,7 +49,7 @@ export function classifyIleHeliosTrigger(
   };
 }
 
-/** Same classifier the ILE idle/speech apply path uses at fire time. */
+/** Same classifier the TAP Learning idle/speech apply path uses at fire time. */
 export function applyIleHeliosAutoFire(input: {
   kind: IleHeliosTriggerKind;
 }): IleHeliosTriggerDecision & { applied: boolean } {

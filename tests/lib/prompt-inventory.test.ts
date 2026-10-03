@@ -73,8 +73,8 @@ describe("prompt inventory", () => {
     }
   });
 
-  it("session_plan_update includes ILE tool guidance", () => {
-    expect(DEFAULT_PROMPTS.session_plan_update).toContain("INTEGRATED LEARNING ENVIRONMENT");
+  it("session_plan_update includes TAP Learning tool guidance", () => {
+    expect(DEFAULT_PROMPTS.session_plan_update).toContain("TAP Learning");
     expect(ILE_CONTEXT.length).toBeGreaterThan(100);
   });
 

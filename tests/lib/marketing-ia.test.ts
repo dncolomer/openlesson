@@ -151,7 +151,7 @@ describe("landing: hard-domain learning experiences with product layers", () => 
     );
   });
 
-  it("keeps landing and Harness stills out of the ILE aesthetics library", () => {
+  it("keeps landing and Harness stills out of the TAP Learning aesthetics library", () => {
     const aestheticDirs = readdirSync(join(ROOT, "public/aesthetics"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
@@ -197,7 +197,8 @@ describe("product pages: verification owns platform/approach/scale; harness owns
     expect(page).toContain("learning world model");
     expect(page).toContain("TIM — Trace Interruption Model");
     expect(page).toContain("Think Aloud Protocol (TAP)");
-    expect(page).toContain("Integrated Learning Environment (ILE)");
+    expect(page).toContain("TAP Learning");
+    expect(page).toContain("Preparing, Learning, Drilling, and Validating");
     expect(page).toContain("data-landing-tapbench");
     expect(page).toContain("data-landing-tapbench-copy");
     expect(page).toContain("tapbenchHref");

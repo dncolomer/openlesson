@@ -49,7 +49,7 @@ describe("resolveInsightSurfaceCapabilities", () => {
     });
   });
 
-  it("enables generation and list on ILE", () => {
+  it("enables generation and list on TAP Learning", () => {
     expect(resolveInsightSurfaceCapabilities("ile")).toEqual({
       allowInsightGeneration: true,
       allowInsightList: true,
@@ -196,7 +196,7 @@ describe("shipped insight surface wiring", () => {
     expect(insightsTab).toContain("/api/insights/traces");
   });
 
-  it("gates ThoughtMemoryPanel generation off for TAP and on for ILE", () => {
+  it("gates ThoughtMemoryPanel generation off for TAP and on for TAP Learning", () => {
     expect(thoughtMemory).toContain("allowInsightGeneration");
     expect(thoughtMemory).toContain("resolveInsightSurfaceCapabilities");
     expect(thoughtMemory).toContain("generationEnabled");
@@ -215,7 +215,7 @@ describe("shipped insight surface wiring", () => {
     expect(thoughtMemory).toContain("workspaceKnowledgeInsightsPath");
   });
 
-  it("plugs ILE turn crafts into existing insight list, share, and dedicated page", () => {
+  it("plugs TAP Learning turn crafts into existing insight list, share, and dedicated page", () => {
     expect(insightsSessionListUrl("sess-1")).toBe("/api/insights?sessionId=sess-1");
     expect(insightPublicPath({ id: "ins-1", share_token: "tok-1" })).toBe("/insights/tok-1");
     expect(workspacePlayInsightsPath("ws-1")).toBe("/workspace/ws-1?section=insights");

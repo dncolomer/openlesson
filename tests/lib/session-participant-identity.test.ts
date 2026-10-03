@@ -57,7 +57,7 @@ describe("session-participant-identity", () => {
 });
 
 describe("guest-link + map attribution wiring", () => {
-  it("ILE guest PoW access uses guest auth not owner user_id", () => {
+  it("TAP Learning guest PoW access uses guest auth not owner user_id", () => {
     const access = fs.readFileSync(
       path.join(ROOT, "lib/pow-api/workspace-session-access.ts"),
       "utf8",
@@ -70,7 +70,7 @@ describe("guest-link + map attribution wiring", () => {
     expect(access).not.toMatch(/key_id: "ile-link"[\s\S]{0,200}user_id: ile\.ownerUserId/);
   });
 
-  it("TAP/ILE speech inserts force null user_id when guest present", () => {
+  it("TAP/TAP Learning speech inserts force null user_id when guest present", () => {
     for (const rel of [
       "app/api/workspace-tap-score/trace/route.ts",
       "app/api/workspace-tap-score/speech/route.ts",

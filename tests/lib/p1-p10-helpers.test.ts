@@ -65,7 +65,7 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("P1–P10 shipped helpers", () => {
-  it("grid-ops client, learner writes, attribution, PoW/TAP/ILE/auth", async () => {
+  it("grid-ops client, learner writes, attribution, PoW/TAP/TAP Learning/auth", async () => {
     const body = buildWorkspaceGridOpsBody({
       workspaceId: "ws-1",
       op: "merge",
@@ -317,11 +317,11 @@ describe("P1–P10 shipped helpers", () => {
         "domain types: shell re-exports lib/domain/types",
         "learner launch/prompt via token-aware APIs",
         "happy-path mutate: no router.refresh",
-        "ILE guest acting participant, TAP cookie org from workspace",
-        "TAP/ILE speech/idle/chat: uploadWorkspaceProofOfWork",
+        "TAP Learning guest acting participant, TAP cookie org from workspace",
+        "TAP/TAP Learning speech/idle/chat: uploadWorkspaceProofOfWork",
         "TAP shells: TAP_SESSION_RUNTIME_PATHS start/complete + tapTracePayload",
         "TAP LLM miss uses resolveTap*FromLlm fallbacks",
-        "ILE: postIleSessionChat + ThoughtMemoryPanel onSendThought",
+        "TAP Learning: postIleSessionChat + ThoughtMemoryPanel onSendThought",
         "product-auth allowProductWorkspaceLinkAccess/EvalAccess; stash authenticateStashRequest",
       ].join("\n"),
     );

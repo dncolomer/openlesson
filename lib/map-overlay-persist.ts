@@ -1,6 +1,6 @@
 /**
  * Persist scope for map notes and drawing layers.
- * Workspace maps stay workspace-keyed. ILE chapter maps use a session key
+ * Workspace maps stay workspace-keyed. TAP Learning chapter maps use a session key
  * so they do not no-op or collide with a workspace store.
  */
 

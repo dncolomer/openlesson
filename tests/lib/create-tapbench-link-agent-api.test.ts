@@ -1,7 +1,7 @@
 import { readMcpSurface } from "@/tests/helpers/surface-source";
 /**
  * TAPBench timed-session helper (not a public mint API).
- * Keys/tasks mint on /tapbench; TAP/ILE mint stay on workspace APIs.
+ * Keys/tasks mint on /tapbench; TAP/TAP Learning mint stay on workspace APIs.
  */
 import { describe, expect, it, beforeEach } from "vitest";
 import { existsSync, readFileSync } from "node:fs";

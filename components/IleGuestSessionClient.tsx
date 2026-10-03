@@ -24,7 +24,7 @@ export function IleGuestSessionClient({
   /** Share URL query params → param-scoped guest identity for PoW. */
   entryQueryParams?: Record<string, string | string[]>;
   participantIdentity?: PowParticipantIdentity | null;
-  /** learning (default) | project — from durable ILE link. */
+  /** learning (default) | project — from durable TAP Learning link. */
   sessionMode?: IleSessionMode | string;
 }) {
   const mode = normalizeIleSessionMode(sessionMode, ILE_SESSION_MODE_DEFAULT);

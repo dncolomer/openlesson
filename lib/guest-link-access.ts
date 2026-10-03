@@ -1,5 +1,5 @@
 /**
- * Shared helpers for guest TAP/ILE links: entry query capture, param fingerprint
+ * Shared helpers for guest TAP/TAP Learning links: entry query capture, param fingerprint
  * (guest identity), and Proof of Work source-link attribution.
  *
  * Share URLs stay listable via durable public_token (not one-shot client memory).
@@ -223,7 +223,7 @@ export function buildGuestLinkUrl(
 
 /**
  * Rebuild a listable share URL from a stored public_token (or null when missing).
- * Used by TAP/ILE list endpoints so owners always see copyable URLs.
+ * Used by TAP/TAP Learning list endpoints so owners always see copyable URLs.
  */
 export function guestLinkUrlFromPublicToken(
   baseUrl: string,

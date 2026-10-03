@@ -21,7 +21,7 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 | :--- | :--- | :--- | :--- |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot score (0–100; LWM Snapshot strategy) + spider, analysis, next actions. Manual / Snapshot API (not auto on TAP/ILE end). |
+| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot score (0–100; LWM Snapshot strategy) + spider, analysis, next actions. Manual / Snapshot API (not auto on TAP/TAP Learning end). |
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private TAP link for the full workspace (optional body `block_id`). Links open `/tap/session/{token}`. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
@@ -83,11 +83,11 @@ Programmatic create is **not available**. `POST /api/v3/pow/workspaces` and MCP 
 
 Returns a `private_url` for `/tap/session/{token}`. Workspace-scoped links evaluate the whole workspace; block-scoped links focus on that block. Poll `GET .../tap-links` for link `status`, then call `POST .../lwm-snapshot` to score TAP proof of work (verification only).
 
-Identified gaps can be routed into Integrated Learning Environment (ILE) practice blocks for remediation.
+Identified gaps can be routed into TAP Learning practice blocks for remediation.
 
 ## TAPBench
 
-TAPBench keys and tasks live on `/tapbench`. TAP and ILE mint APIs do not create TAPBench links. Existing timed session tokens still resolve at `GET /api/tapbench/{token}`.
+TAPBench keys and tasks live on `/tapbench`. TAP and TAP Learning mint APIs do not create TAPBench links. Existing timed session tokens still resolve at `GET /api/tapbench/{token}`.
 
 ## Guests
 

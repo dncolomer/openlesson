@@ -54,7 +54,7 @@ export function MapMinimapChrome({
   onViewportPointerDown: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerMove: (e: PointerEvent<SVGRectElement>) => void;
   onViewportPointerUp: (e: PointerEvent<SVGRectElement>) => void;
-  /** ILE chapter map: a plain black board, without the fog wash. */
+  /** TAP Learning chapter map: a plain black board, without the fog wash. */
   board?: boolean;
 }) {
   return (

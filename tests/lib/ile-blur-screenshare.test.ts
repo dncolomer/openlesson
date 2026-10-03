@@ -1,5 +1,5 @@
 /**
- * Leave-tab and screenshare decisions do not open a floating ILE window.
+ * Leave-tab and screenshare decisions do not open a floating TAP Learning window.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -25,7 +25,7 @@ const away = {
   leaveReason: "tab_hidden" as const,
 };
 
-describe("ILE leave-tab does not open a window", () => {
+describe("TAP Learning leave-tab does not open a window", () => {
   it("screenshare stays a skip and the compact window stays hidden", () => {
     expect(decideIleLeaveFocusScreenshare(away)).toBe("skip");
     expect(decideIleCompactWindow(away)).toBe("hide");

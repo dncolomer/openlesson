@@ -1,5 +1,5 @@
 /**
- * Operator CLI: think-aloud video/audio → ILE Explore Solo PoW.
+ * Operator CLI: think-aloud video/audio → TAP Learning Explore Solo PoW.
  * Not a product surface. Persist is default; --dry-run dumps the event list.
  *
  *   npm run import:think-aloud-pow -- --media recording.mp4 --workspace <id>

@@ -1,5 +1,5 @@
 /**
- * ILE route overlay. The main path is the longest chain in the stored
+ * TAP Learning route overlay. The main path is the longest chain in the stored
  * chapter DAG (high ground toward lower ground). Other links are detours.
  * Step order never invents an edge.
  */

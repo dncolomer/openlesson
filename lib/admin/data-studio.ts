@@ -120,7 +120,7 @@ export function matchesStudioPowFilter(
   return hay.includes(q);
 }
 
-// ---------- Session / guest-link paste lookup (TAP & ILE) ----------
+// ---------- Session / guest-link paste lookup (TAP & TAP Learning) ----------
 
 export type StudioSessionLinkKind = "tap" | "ile" | "tapbench";
 
@@ -131,7 +131,7 @@ export type StudioSessionLinkParse = {
 };
 
 /**
- * Parse a TAP/ILE/TAPBench share URL, path, or bare private token for Data Studio PoW lookup.
+ * Parse a TAP/TAP Learning/TAPBench share URL, path, or bare private token for Data Studio PoW lookup.
  * Accepts `/tap/session/{token}`, `/ile/session/{token}`, `/tapbench/{token}`, full URLs, or bare tokens.
  */
 export function parseStudioSessionLinkInput(
@@ -191,13 +191,13 @@ export type StudioResolvedSessionLink = {
   kind: StudioSessionLinkKind;
   /** workspace_tap_sessions.id, workspace_ile_links.id, or workspace_tapbench_links.id */
   linkId: string;
-  /** sessions.id when the link has started a session (ILE often; TAP link id is often also the session). */
+  /** sessions.id when the link has started a session (TAP Learning often; TAP link id is often also the session). */
   sessionId: string | null;
   workspaceId: string | null;
 };
 
 /**
- * Whether a PoW row belongs to a resolved TAP/ILE link/session.
+ * Whether a PoW row belongs to a resolved TAP/TAP Learning link/session.
  * Matches session_id, source_link_* metadata, and legacy tap_session_id / ile_link_id.
  */
 export function matchesStudioPowToSessionLink(

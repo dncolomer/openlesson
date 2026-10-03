@@ -11,7 +11,7 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("ILE compact stash window is removed", () => {
+describe("TAP Learning compact stash window is removed", () => {
   it("does not paint a second document, and the main canvas still binds surface events", () => {
     expect(existsSync(join(ROOT, "components/IleCompactStashWindow.tsx"))).toBe(false);
     expect(existsSync(join(ROOT, "lib/ile-compact-chrome.ts"))).toBe(false);

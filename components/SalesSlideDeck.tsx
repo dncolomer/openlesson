@@ -433,8 +433,8 @@ function CardGrid({
   /** Force a 2×2 layout (products stack) instead of a 1×4 row. */
   twoByTwo = false,
   /**
-   * Layer stack: top TAP|ILE 50/50, then Stash full-width, PoW foundation at bottom.
-   * Expects cards ordered [TAP, ILE, Stash API, PoW API].
+   * Layer stack: top TAP|TAP Learning 50/50, then Stash full-width, PoW foundation at bottom.
+   * Expects cards ordered [TAP, TAP Learning, Stash API, PoW API].
    */
   productStack = false,
   deckSlides = [],
@@ -810,7 +810,7 @@ function SlideContent({
     // Single-product idea slides (one card with nested ideas) must fit without scroll.
     const isSingleProductIdeas =
       slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
-    // Layer stack (TAP|ILE → Stash → PoW) or legacy 2×2 idea cards — fill the stage.
+    // Layer stack (TAP|TAP Learning → Stash → PoW) or legacy 2×2 idea cards — fill the stage.
     const isProductLayerStack = slide.cardLayout === "product-stack";
     const isProductsStack =
       isProductLayerStack ||

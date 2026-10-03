@@ -1,6 +1,6 @@
 /**
  * Speak-aloud gate: shipped decision logic plus the UI that calls it.
- * Does not open a live ILE or TAP session.
+ * Does not open a live TAP Learning or TAP session.
  */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -244,8 +244,8 @@ describe("practice voice challenge script and transcript", () => {
   });
 });
 
-describe("a pass is required before ILE, TAP, Prepare, and rest unlock", () => {
-  it("ILE workspace start, TAP topic and practice, Prepare live, and ILE rest unlock require a pass", () => {
+describe("a pass is required before TAP Learning, TAP, Prepare, and rest unlock", () => {
+  it("TAP Learning workspace start, TAP topic and practice, Prepare live, and TAP Learning rest unlock require a pass", () => {
     expect(ileWorkspaceStartAllowed(false)).toBe(false);
     expect(ileWorkspaceStartAllowed(true)).toBe(true);
 
@@ -273,7 +273,7 @@ describe("a pass is required before ILE, TAP, Prepare, and rest unlock", () => {
   });
 });
 
-describe("ILE silence lock", () => {
+describe("TAP Learning silence lock", () => {
   it("silence at the configured positive minutes locks and a shorter span does not", () => {
     expect(ileSilenceShouldLock({ silenceMs: 5 * 60_000 - 1, minutes: 5 })).toBe(false);
     expect(ileSilenceShouldLock({ silenceMs: 5 * 60_000, minutes: 5 })).toBe(true);
@@ -467,7 +467,7 @@ describe("shipped voice-challenge UI wiring", () => {
     expect(impurityFn.slice(impurityAt)).not.toContain("PracticeVoiceChallenge");
   });
 
-  it("ILE start/help is a full-viewport surface with multi-sentence placeholders and the voice challenge wired to workspace start", () => {
+  it("TAP Learning start/help is a full-viewport surface with multi-sentence placeholders and the voice challenge wired to workspace start", () => {
     const chrome = read("components/session-view/session-chrome.tsx");
     const guide = read("components/SessionOnboardingGuide.tsx");
     const view = read("components/SessionView.tsx");

@@ -1,5 +1,5 @@
 /**
- * Main-canvas surface events for the ILE work board.
+ * Main-canvas surface events for the TAP Learning work board.
  * Resize and wheel stay on the page that hosts the canvas.
  * There is no detached picture-in-picture or popup window.
  */

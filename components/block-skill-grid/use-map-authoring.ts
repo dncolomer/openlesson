@@ -281,7 +281,7 @@ export function useMapAuthoring(input: {
         unusableKeys,
       });
       if (surface?.kind === "add_block") {
-        // ILE empty cells open an Add-chapter ring first; the ring action
+        // TAP Learning empty cells open an Add-chapter ring first; the ring action
         // sets localPendingCell. Workspace still opens the add chrome here.
         if (suggestMode === "chapter") {
           setLocalPendingCell(null);

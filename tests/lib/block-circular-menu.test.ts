@@ -62,7 +62,7 @@ function resource(partial: Partial<WorkspaceExternalResource> & { id: string }):
 }
 
 describe("block circular menu catalog", () => {
-  it("ILE set is exactly Work / Edit; Workspace is Learn/Continue/Mark as Done; TAP is empty", () => {
+  it("TAP Learning set is exactly Work / Edit; Workspace is Learn/Continue/Mark as Done; TAP is empty", () => {
     expect(blockCircularMenuActions("ile").map((a) => a.label)).toEqual([
       "Work",
       "Edit",
@@ -135,7 +135,7 @@ describe("block circular menu catalog", () => {
 });
 
 describe("in-block progress, unseen gather dot, resource scope", () => {
-  it("running ILE action yields (0,1]; ready-unseen is true, seen or empty is false; chapter/block/missing ids are safe", () => {
+  it("running TAP Learning action yields (0,1]; ready-unseen is true, seen or empty is false; chapter/block/missing ids are safe", () => {
     expect(blockCircularMenuProgressFraction(null)).toBe(0);
     expect(blockCircularMenuProgressFraction({ running: false, completed: 2, total: 4 })).toBe(0);
     const started = blockCircularMenuProgressFraction({
@@ -195,7 +195,7 @@ describe("in-block progress, unseen gather dot, resource scope", () => {
 });
 
 describe("circular menu source wiring", () => {
-  it("ILE and Workspace render a circular menu; ILE double-click peeks; widget keeps I'm done answering; workspace drawers open", () => {
+  it("TAP Learning and Workspace render a circular menu; TAP Learning double-click peeks; widget keeps I'm done answering; workspace drawers open", () => {
     const chapter = read("components/ChapterMapPanel.tsx");
     const grid = read("components/BlockSkillGrid.tsx");
     const world = read("components/block-skill-grid/map-world-layer.tsx");

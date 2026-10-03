@@ -1,5 +1,5 @@
 /**
- * ILE path overlay follows the stored chapter DAG.
+ * TAP Learning path overlay follows the stored chapter DAG.
  * The spine is the longest chain. Other links are detours. Order is not a path.
  */
 import { describe, expect, it } from "vitest";
@@ -149,7 +149,7 @@ describe("ile path overlay", () => {
     expect(spineBlock).toContain('strokeLinecap="round"');
   });
 
-  it('the Path control (data-ile-path-overlay-toggle, label Path) is the first control under the minimap and the overlay starts hidden, the path overlay renders only for the chapter map so the workspace map does not receive it, the chapter tile class stays transparent with no rounded-sm rounded-md rounded-lg or rounded-xl, and ILE empty cells show the add plus', () => {
+  it('the Path control (data-ile-path-overlay-toggle, label Path) is the first control under the minimap and the overlay starts hidden, the path overlay renders only for the chapter map so the workspace map does not receive it, the chapter tile class stays transparent with no rounded-sm rounded-md rounded-lg or rounded-xl, and TAP Learning empty cells show the add plus', () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const stack = read("components/block-skill-grid/map-right-stack.tsx");
     const grid = read("components/BlockSkillGrid.tsx");

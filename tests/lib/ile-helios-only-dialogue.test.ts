@@ -1,5 +1,5 @@
 /**
- * ILE dialogue is Helios-only: question fills the panel; no Helios avatar.
+ * TAP Learning dialogue is Helios-only: question fills the panel; no Helios avatar.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -29,7 +29,7 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ILE Helios-only surface helper", () => {
+describe("TAP Learning Helios-only surface helper", () => {
   it("idle/first-chapter and post-reply are Helios; sending is waiting (no learner)", () => {
     const idle = resolveIleDialogueTurn({ isSending: false, heliosTurnMode: "idle" });
     const reply = resolveIleDialogueTurn({ isSending: false, heliosTurnMode: "responding" });
@@ -61,7 +61,7 @@ describe("ILE Helios-only surface helper", () => {
   });
 });
 
-describe("ILE waiting copy", () => {
+describe("TAP Learning waiting copy", () => {
   it("rotates 3 waiting lines with no Helios character", () => {
     expect(ILE_HELIOS_THINKING_LINES).toHaveLength(3);
     const unique = new Set(ILE_HELIOS_THINKING_LINES);
@@ -82,7 +82,7 @@ describe("ILE waiting copy", () => {
   });
 });
 
-describe("ILE dialogue UI wiring", () => {
+describe("TAP Learning dialogue UI wiring", () => {
   it("question fills remaining space; no Helios avatar; wait + think helper", () => {
     const ui = read("components/thought-ui/ThoughtUi.tsx");
     expect(ui).toContain("resolveIleDialogueTurn");
@@ -125,7 +125,7 @@ describe("ILE dialogue UI wiring", () => {
       "ile-helios-dialogue-excerpts.txt",
       [
         "DialogueSplitIle: Helios-only, no avatar, question fills remaining space",
-        "no LearnerThoughtAvatar on ILE path",
+        "no LearnerThoughtAvatar on TAP Learning path",
         "TAP DialogueSplitComic still mounts both avatars",
         "Helios bubble: HeliosMarkdown + data-ile-helios-scroll overflow-y-auto",
         `ileAvatar=${ILE_DIALOGUE_AVATAR_SIZE_CLASS}`,

@@ -96,7 +96,7 @@ ${TIM_SYSTEM_ROLE}`),
 Feature envelope (schema_version ${features.schema_version}):
 ${JSON.stringify(compact, null, 2)}
 
-Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, fill evidence_appetite.want_more, or (for ILE chapter-complete events) grow the chapter map with chapter_map_expand.`),
+Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, fill evidence_appetite.want_more, or (for TAP Learning chapter-complete events) grow the chapter map with chapter_map_expand.`),
   ];
 }
 

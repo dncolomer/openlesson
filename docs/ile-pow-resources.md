@@ -1,6 +1,6 @@
-# ILE Proof of Work as a resource
+# TAP Learning Proof of Work as a resource
 
-ILE treats Proof of Work as one spendable pool. Typed artifacts (tools, screen, video, EEG) plus spoken thought traces add to the pool. Starting extra **Work** and **Gather resources** both consume from it.
+TAP Learning treats Proof of Work as one spendable pool. Typed artifacts (tools, screen, video, EEG) plus spoken thought traces add to the pool. Starting extra **Work** and **Gather resources** both consume from it.
 
 ## What counts
 

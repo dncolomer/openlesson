@@ -7,7 +7,7 @@
  * - Ground every item in workspace goal / subject / block materials when present.
  * - Thin/guest context still yields subject-matter items — never meta-learning fluff.
  * - No "out loud" / think-aloud stage directions.
- * - Exercises reuse the same quality helpers as TAPBench / TAP exercise / ILE Project.
+ * - Exercises reuse the same quality helpers as TAPBench / TAP exercise / TAP Learning Project.
  */
 
 import {
@@ -366,7 +366,7 @@ export function buildGroundedDialogueQuestion(
 }
 
 /**
- * Pure solo exercise (Drill / TAP exercise / ILE Project style).
+ * Pure solo exercise (Drill / TAP exercise / TAP Learning Project style).
  * Always returns a fixed, checkable problem — never "invent your own problem".
  * Index varies the concrete instance (seeded numbers / alternate templates).
  * Does not prefix raw `attachments: [external]…` inventory onto the exercise.

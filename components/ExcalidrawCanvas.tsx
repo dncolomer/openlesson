@@ -197,14 +197,14 @@ export interface ExcalidrawCanvasProps {
   }>;
   /** Resets the proof-of-work collector when the board changes. */
   boardId?: string | null;
-  /** Helios/XAI in-flight (TAP wait, ILE send) — same overlay chip as ask-about-selection. */
+  /** Helios/XAI in-flight (TAP wait, TAP Learning send) — same overlay chip as ask-about-selection. */
   heliosBusy?: boolean;
   /**
    * TAP purity clock. Canvas chunk load and an in-flight XAI reply are waits,
    * not learner silence. Omitted on surfaces that do not score silence.
    */
   onLearnerWaitChange?: (wait: { canvasLoading: boolean; waitingForXaiReply: boolean }) => void;
-  /** ILE: craft an insight linked to this chapter. */
+  /** TAP Learning: craft an insight linked to this chapter. */
   craftInsight?: IleCanvasCraftInsightConfig | null;
   /**
    * Live speech-bar text. Pass it (even when empty) to show Dictate.
@@ -239,7 +239,7 @@ function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any }
 }
 
 /**
- * Shared ILE + TAP Work board. Hosts must not fork this — both surfaces
+ * Shared TAP Learning + TAP Work board. Hosts must not fork this — both surfaces
  * mount `WorkCanvas` so Commands, the board prompt, thinking overlay,
  * XAI apply, and center-on-open stay one implementation.
  */
@@ -1902,7 +1902,7 @@ export function ExcalidrawCanvas({
 }
 
 /**
- * ILE and TAP Work board — same component, same features. Required props
+ * TAP Learning and TAP Work board — same component, same features. Required props
  * keep Commands, the board prompt, Helios thinking, and XAI apply on.
  */
 export type WorkCanvasProps = ExcalidrawCanvasProps & {

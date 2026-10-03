@@ -1,5 +1,5 @@
 /**
- * Query-param guest identity for TAP/ILE private links.
+ * Query-param guest identity for TAP/TAP Learning private links.
  * Same params (any order) → same guest; different values → different guests.
  */
 import { describe, expect, it } from "vitest";

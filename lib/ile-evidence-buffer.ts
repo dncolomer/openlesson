@@ -18,7 +18,7 @@ export const ILE_EVIDENCE_THRESHOLDS = {
   screenshotMinCount: 1,
 } as const;
 
-/** Live PoW buffers — last N so a long ILE session cannot unbounded-grow. */
+/** Live PoW buffers — last N so a long TAP Learning session cannot unbounded-grow. */
 export const ILE_LIVE_TOOL_EVENTS_MAX = 200;
 export const ILE_LIVE_EEG_CHUNKS_MAX = 12;
 export const ILE_LIVE_SCREENSHOTS_MAX = 8;

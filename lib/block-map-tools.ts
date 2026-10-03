@@ -710,7 +710,7 @@ export function resolveEmptyCellSelectionOnClick(input: {
 
 /**
  * Select/Move tool modes that edit the map: select blocks and drag-drop them
- * without opening TAP/ILE (or other) detail surfaces.
+ * without opening TAP/TAP Learning (or other) detail surfaces.
  */
 export function isBlockMapManipulationMode(
   activeTool: BlockMapModeTool,

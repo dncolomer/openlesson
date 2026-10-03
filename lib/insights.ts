@@ -28,7 +28,7 @@ function uuidOrNull(value: unknown): string | null {
 }
 
 /**
- * insights.block_id is uuid (workspace block). ILE docked chapters use
+ * insights.block_id is uuid (workspace block). TAP Learning docked chapters use
  * string step ids like `step_1_seed`, which must not be written there.
  */
 export function resolveInsightBlockAndChapterIds(input: {
@@ -91,7 +91,7 @@ export function buildInsightCreateInsert(input: {
 
 /**
  * Product surfaces that host Thought Memory and/or Insights.
- * Generation (suggest/create) is allowed in ILE and Knowledge only — never TAP.
+ * Generation (suggest/create) is allowed in TAP Learning and Knowledge only — never TAP.
  */
 export type InsightSurface = "tap" | "ile" | "knowledge";
 
@@ -131,7 +131,7 @@ export function insightsListUrl(workspaceId?: string | null): string {
   return "/api/insights";
 }
 
-/** Session-scoped list for the ILE session insights counter. */
+/** Session-scoped list for the TAP Learning session insights counter. */
 export function insightsSessionListUrl(sessionId: string): string {
   return `/api/insights?sessionId=${encodeURIComponent(sessionId)}`;
 }

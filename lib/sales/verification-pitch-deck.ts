@@ -25,8 +25,8 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
           body: "At screening or final interview, send a shareable Think Aloud Protocol link scoped to a role skill block. Candidates talk through real work on a clock. Scores and gap reports land back in the applicant record.",
         },
         {
-          label: "2 · ILE for senior depth",
-          body: "For staff and technical tracks, run coached ILE scenarios instead of one-shot take-homes. Same workspace markers; deeper multi-step judgment, debugging, or design tradeoffs.",
+          label: "2 · TAP Learning for senior depth",
+          body: "For staff and technical tracks, run the TAP Learning use case instead of one-shot take-homes. Same interface as Preparing, Drilling, and Validating; deeper multi-step judgment, debugging, or design tradeoffs.",
         },
         {
           label: "3 · PoW API in their stack",
@@ -88,8 +88,8 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
           body: "Hosted process. Live, time-framed verification links. Ideal for high-volume screening and interview stages without building your own UX.",
         },
         {
-          label: "02 · ILE (Integrated Learning Environment)",
-          body: "Hosted process. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
+          label: "02 · TAP Learning",
+          body: "The Learning use case of TAP. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
         },
         {
           label: "03 · PoW API (Proof-of-Work)",
@@ -145,7 +145,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Proof of work under probe, not a quiz pass rate",
         "Cannot be faked with polished deliverables or AI assist",
-        "Same workspace markers for TAP speed and ILE depth",
+        "Same workspace markers for TAP speed and TAP Learning depth",
         "Auditable gap reports for hiring, promotion, and certification",
       ],
     },
@@ -167,11 +167,11 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Verify skills before hire or certify.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
-        "Map TAP, ILE, and Proof-of-Work API tiers to your HR or recruitment product",
+        "Map TAP — Preparing, Learning, Drilling, and Validating — and Proof-of-Work API tiers to your HR or recruitment product",
         "Pilot one gate: screening, TAP-cha, or promotion",
         "Create a Workspace and score the first real scenario this week",
       ],
-      footnote: "uncertain.systems · Learning Verification · TAP · ILE · Proof-of-Work API",
+      footnote: "uncertain.systems · Learning Verification · TAP · TAP Learning · Proof-of-Work API",
     },
   ],
 };

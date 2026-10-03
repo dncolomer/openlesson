@@ -1,5 +1,5 @@
 /**
- * Canvas-first ILE session: chapter count, presets, cap, and the
+ * Canvas-first TAP Learning session: chapter count, presets, cap, and the
  * session-wide insight goal. Imports the shipped helpers.
  */
 import { describe, expect, it } from "vitest";
@@ -24,7 +24,7 @@ const SCRATCH =
   process.env.GROK_GOAL_SCRATCH ||
   "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-a4905160ec41/implementer";
 
-describe("ILE canvas session chapter count and insight goal", () => {
+describe("TAP Learning canvas session chapter count and insight goal", () => {
   it("clamps a manual count and every preset to 1–5 and does not select a map type", () => {
     const manual = [
       clampIleSessionChapterCount(1),

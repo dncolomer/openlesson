@@ -1,5 +1,5 @@
 /**
- * ILE Work chrome: no I'm done answering on chapter/PiP; session turn close;
+ * TAP Learning Work chrome: no I'm done answering on chapter/PiP; session turn close;
  * expense slider beside aesthetics/map type; Work/PoW visualization.
  */
 import { createElement } from "react";
@@ -147,7 +147,7 @@ describe("ileChapterAestheticIds", () => {
   });
 });
 
-describe("ILE tab unfocus PoW (shipped)", () => {
+describe("TAP Learning tab unfocus PoW (shipped)", () => {
   it("visibilitychange hidden and blur produce a stable tab_unfocus action", () => {
     const hidden = ileTabUnfocusPowFromFocusEvent({
       type: "visibilitychange",
@@ -176,7 +176,7 @@ describe("ILE tab unfocus PoW (shipped)", () => {
   });
 });
 
-describe("ILE Work / PoW chrome (shipped source)", () => {
+describe("TAP Learning Work / PoW chrome (shipped source)", () => {
   it("chapter widget and PiP omit I'm done answering; TAP keeps it; slider and Work bar ship", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");

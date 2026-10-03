@@ -1,5 +1,5 @@
 /**
- * Load workspace materials for TAP / ILE / TAPBench prompt assembly.
+ * Load workspace materials for TAP / TAP Learning / TAPBench prompt assembly.
  * Server-side helper used by mint + generate-exercise routes so every entry
  * path sees inventory, topology, notes, files, and block-local context.
  */

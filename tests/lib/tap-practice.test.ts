@@ -101,7 +101,7 @@ describe("tap-practice pure helpers", () => {
   });
 });
 
-describe("TAP client practice surface (not ILE)", () => {
+describe("TAP client practice surface (not TAP Learning)", () => {
   it("exposes Practice First as first 2×2 card, practice banner, done+restart, and live mechanics", () => {
     const client = readTapScoreSurface();
     const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
@@ -166,7 +166,7 @@ describe("TAP client practice surface (not ILE)", () => {
     }
   });
 
-  it("ILE SessionView does not gain Practice First", () => {
+  it("TAP Learning SessionView does not gain Practice First", () => {
     const ile = readSessionViewSurface();
     expect(ile).not.toContain("data-tap-practice-first");
     expect(ile).not.toContain("Practice First");

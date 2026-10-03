@@ -110,7 +110,7 @@ export default function DashboardPage() {
     /** Org partner billing = Stripe bypass; hide commercial billing UI. */
     billingMode?: "subscription" | "partner" | null;
     canUseAgentApi?: boolean;
-    /** External/API-direct PoW only (not TAP/ILE-generated PoW). */
+    /** External/API-direct PoW only (not TAP/TAP Learning-generated PoW). */
     apiPowCallsUsed?: number;
     tapSessionsUsed?: number;
     ileSessionsUsed?: number;

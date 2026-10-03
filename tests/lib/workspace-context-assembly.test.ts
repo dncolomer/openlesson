@@ -1,6 +1,6 @@
 import { readWorkspaceViewSurface, readSessionViewSurface } from "@/tests/helpers/surface-source";
 /**
- * Shared workspace-context assembly for TAP / ILE / TAPBench.
+ * Shared workspace-context assembly for TAP / TAP Learning / TAPBench.
  * Drives the real assembler + call-chain wiring (not a reimplementation).
  */
 import { describe, expect, it } from "vitest";
@@ -216,7 +216,7 @@ describe("global + local merge for focused block", () => {
   });
 });
 
-describe("TAP / ILE / TAPBench consume the shared assembler", () => {
+describe("TAP / TAP Learning / TAPBench consume the shared assembler", () => {
   it("exercise TAP framer receives inventory + local via shared path", () => {
     const input = {
       ...richFixture,
@@ -258,7 +258,7 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
     expect(exerciseSrc).toContain('from "@/lib/prompt-workspace-context"');
   });
 
-  it("ILE project framer uses chapter/explicit text only (context stays in prompts)", () => {
+  it("TAP Learning project framer uses chapter/explicit text only (context stays in prompts)", () => {
     const prompt = buildIleProjectChapterExercisePrompt({
       chapterDescription: richFixture.blockDescription,
       blockTitle: richFixture.blockTitle,
@@ -404,7 +404,7 @@ describe("TAP / ILE / TAPBench consume the shared assembler", () => {
 });
 
 describe("prompt impact layers for UI", () => {
-  it("exposes creator/consumer readable layers with TAP/ILE/TAPBench feeds", () => {
+  it("exposes creator/consumer readable layers with TAP/TAP Learning/TAPBench feeds", () => {
     const ctx = assemblePromptWorkspaceContext(richFixture);
     expect(ctx.promptImpactLayers.length).toBeGreaterThanOrEqual(6);
     const ids = ctx.promptImpactLayers.map((l) => l.id);
@@ -415,7 +415,7 @@ describe("prompt impact layers for UI", () => {
     expect(ids).toContain("surfaces");
     const local = ctx.promptImpactLayers.find((l) => l.id === "local_context");
     expect(local?.present).toBe(true);
-    expect(local?.feeds).toEqual(expect.arrayContaining(["TAP", "ILE", "TAPBench"]));
+    expect(local?.feeds).toEqual(expect.arrayContaining(["TAP", "TAP Learning", "TAPBench"]));
   });
 });
 
@@ -464,7 +464,7 @@ describe("structural artifacts", () => {
     expect(tapbenchGen).toContain("blockLocalContext");
     expect(tapbenchGen).toContain("unusableCells");
 
-    // ILE SessionView pure framer + generate-exercise body pass layers.
+    // TAP Learning SessionView pure framer + generate-exercise body pass layers.
     const sessionView = readSessionViewSurface();
     expect(sessionView).toContain("buildIleProjectChapterExercisePrompt");
     expect(sessionView).toContain("blocks: ilePromptMaterials?.blocks");

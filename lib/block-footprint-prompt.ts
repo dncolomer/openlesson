@@ -1,6 +1,6 @@
 /**
  * Prompt language for skill-grid footprint size.
- * Cell count relative to a 1×1 single block indicates ILE/TAP topical breadth.
+ * Cell count relative to a 1×1 single block indicates TAP Learning/TAP topical breadth.
  */
 
 import {
@@ -15,7 +15,7 @@ export function blockFootprintCellCount(spanW: number, spanH: number): number {
 }
 
 /**
- * Explain how large a footprint is vs a single ILE/TAP assessable unit (1×1).
+ * Explain how large a footprint is vs a single TAP Learning/TAP assessable unit (1×1).
  */
 export function describeBlockBreadthRelativeToSingle(spanW: number, spanH: number): string {
   const w = Math.max(1, Math.floor(Number(spanW) || 1));
@@ -24,12 +24,12 @@ export function describeBlockBreadthRelativeToSingle(spanW: number, spanH: numbe
   if (cells === 1) {
     return [
       `Footprint: 1×1 (1 single-block unit).`,
-      `ILE/TAP breadth: baseline — one focused assessable scope (a single coherent demonstration, practice slice, or verification surface).`,
+      `TAP Learning/TAP breadth: baseline — one focused assessable scope (a single coherent demonstration, practice slice, or verification surface).`,
     ].join(" ");
   }
   return [
     `Footprint: ${w}×${h} cells (${cells} single-block units).`,
-    `ILE/TAP breadth: ~${cells}× a baseline 1×1 block — proportionally broader competency coverage, deeper/longer proof-of-work, and a wider verification surface than a single-cell topic.`,
+    `TAP Learning/TAP breadth: ~${cells}× a baseline 1×1 block — proportionally broader competency coverage, deeper/longer proof-of-work, and a wider verification surface than a single-cell topic.`,
   ].join(" ");
 }
 
@@ -47,7 +47,7 @@ export function formatSourceBlockSizeLine(block: {
 }
 
 const SIZE_ONTOLOGY = `Size ontology (skill grid):
-- A 1×1 block is the baseline ILE / TAP unit: narrow, focused, one assessable learning/performance slice.
+- A 1×1 block is the baseline TAP Learning / TAP unit: narrow, focused, one assessable learning/performance slice.
 - Multi-cell blocks (W×H) are broader topics: their cell count ≈ relative breadth vs a single block (e.g. 2×2 ≈ four singles of scope).
 - Larger footprints should read as wider conversion/verification surfaces; smaller ones as tighter practice checkpoints.`;
 
@@ -79,7 +79,7 @@ export function composeMergeBlockUserPrompt(input: {
     sourceLines || "(none)",
     `Resulting merged footprint: ${input.resultSpanW}×${input.resultSpanH} (${resultCells} single-block units).`,
     describeBlockBreadthRelativeToSingle(input.resultSpanW, input.resultSpanH),
-    `Title/description must match that breadth: broader and more integrative than any single 1×1 source, suitable for a larger ILE/TAP session surface.`,
+    `Title/description must match that breadth: broader and more integrative than any single 1×1 source, suitable for a larger TAP Learning/TAP session surface.`,
     `User guidance: ${input.userGuidance.trim() || "Synthesize a broader topic that unifies these blocks."}`,
     `Return one block title and description for the merged topic.`,
   ];
@@ -90,7 +90,7 @@ export function composeMergeBlockUserPrompt(input: {
 export function composeMergeBlockSystemMessage(): string {
   return [
     "You merge learning blocks into one larger skill-grid topic.",
-    "Grid size encodes ILE/TAP breadth: multi-cell results are broader than 1×1 singles.",
+    "Grid size encodes TAP Learning/TAP breadth: multi-cell results are broader than 1×1 singles.",
     `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-16 words. Description: 2-4 sentences that reflect the broader merged scope.",
     composeBlockMapGlyphJsonInstruction(),
@@ -133,7 +133,7 @@ export function composeGenerateShapeBlockUserPrompt(input: {
       input.freeform ? Math.max(1, Math.ceil(cells / Math.max(1, Math.ceil(Math.sqrt(cells))))) : input.spanH,
     ),
     cells === 1
-      ? `Scope the topic as a baseline single ILE/TAP unit.`
+      ? `Scope the topic as a baseline single TAP Learning/TAP unit.`
       : `Scope the topic ~${cells}× broader than a single-cell block (${cells} single-block units of lecture breadth): wider competency cluster and richer proof-of-work expectations.`,
     `Nearby blocks:\n${input.neighborSummary.trim() || "none"}`,
     input.selectedMaterialsSnippet?.trim()
@@ -152,7 +152,7 @@ export function composeGenerateShapeBlockUserPrompt(input: {
 export function composeGenerateShapeBlockSystemMessage(): string {
   return [
     "You create a single learning block for a skill-grid region.",
-    "Footprint cell count vs 1×1 encodes ILE/TAP topical breadth — match title and description to that breadth.",
+    "Footprint cell count vs 1×1 encodes TAP Learning/TAP topical breadth — match title and description to that breadth.",
     `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-14 words. Description: 1-3 sentences.",
     composeBlockMapGlyphJsonInstruction(),
@@ -193,8 +193,8 @@ export function composeSuggestShapeBlockTitlesUserPrompt(input: {
     `Target region: anchor (${input.anchorRow},${input.anchorCol}) span ${w}×${h} (${cells} single-block units / selected empty cells ≈ ${cells}).`,
     describeBlockBreadthRelativeToSingle(w, h),
     cells === 1
-      ? `Scope as a baseline single ILE/TAP unit (focused title).`
-      : `Every option must read ~${cells}× broader than a 1×1 title — a wider competency cluster / richer ILE/TAP surface, not a narrow single-cell drill.`,
+      ? `Scope as a baseline single TAP Learning/TAP unit (focused title).`
+      : `Every option must read ~${cells}× broader than a 1×1 title — a wider competency cluster / richer TAP Learning/TAP surface, not a narrow single-cell drill.`,
     `Nearby ${input.entityLabel}s (distance-weighted — closer items should influence themes more):\n${input.neighborSummary.trim() || "none"}`,
     `Suggest exactly 3 distinct ${input.entityLabel} titles that fit this shape's breadth and complement existing items without duplicating them.`,
     `Keep each suggestion 4-14 words, specific and actionable as a title. Prefer themes whose scope matches the ${w}×${h} footprint.`,
@@ -206,7 +206,7 @@ export function composeSuggestShapeBlockTitlesUserPrompt(input: {
 export function composeSuggestShapeBlockTitlesSystemMessage(entityLabel: string): string {
   return [
     `You suggest ${entityLabel} titles for a multi-cell skill-grid region (generate-in-shape).`,
-    "Footprint cell count vs 1×1 encodes ILE/TAP topical breadth — every title must match that breadth.",
+    "Footprint cell count vs 1×1 encodes TAP Learning/TAP topical breadth — every title must match that breadth.",
     'Return JSON only: { "suggestions": ["...", "...", "..."] } with exactly 3 concise titles.',
   ].join(" ");
 }
@@ -233,7 +233,7 @@ export function composeSplitBlockUserPrompt(input: {
   const partLines = input.parts
     .map(
       (p) =>
-        `- index ${p.index}: cell (${p.position_y},${p.position_x}) → becomes a 1×1 baseline ILE/TAP unit`,
+        `- index ${p.index}: cell (${p.position_y},${p.position_x}) → becomes a 1×1 baseline TAP Learning/TAP unit`,
     )
     .join("\n");
 
@@ -249,7 +249,7 @@ export function composeSplitBlockUserPrompt(input: {
     input.userGuidance?.trim()
       ? `Creator guidance for how to split / name the focused pieces:\n${input.userGuidance.trim()}`
       : "",
-    `Each result is a 1×1 baseline unit — narrower than the source (~1/${sourceCells} of its ILE/TAP breadth). Titles must be distinct focused subtopics that together reconstruct the parent scope.`,
+    `Each result is a 1×1 baseline unit — narrower than the source (~1/${sourceCells} of its TAP Learning/TAP breadth). Titles must be distinct focused subtopics that together reconstruct the parent scope.`,
     `Parts to name:`,
     partLines,
     `Return JSON: { "parts": [ { "index": 0, "title": "...", "description": "...", "keyword": "..." }, ... ] } with one entry per part index.`,
@@ -260,7 +260,7 @@ export function composeSplitBlockUserPrompt(input: {
 
 export function composeSplitBlockSystemMessage(): string {
   return [
-    "You split a broad multi-cell learning block into focused 1×1 ILE/TAP units.",
+    "You split a broad multi-cell learning block into focused 1×1 TAP Learning/TAP units.",
     "Each part must be narrower than the parent; together they cover the parent scope.",
     'Return JSON only: { "parts": [ { "index": number, "title": string, "description": string, "keyword": string } ] }.',
     "Title: 3-12 words each. Description: 1-2 sentences each.",

@@ -1,5 +1,5 @@
 /**
- * Fog of war for workspace / ILE skill-grid empty cells.
+ * Fog of war for workspace / TAP Learning skill-grid empty cells.
  *
  * Occupied ("full") cells illuminate nearby empties: a fixed Chebyshev radius,
  * bumped slightly where occupied concentration is high, with a one-ring fade

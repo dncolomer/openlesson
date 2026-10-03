@@ -61,7 +61,7 @@ export async function createSession(
   planningPrompt?: string,
   tutoringLanguage?: string,
   workspaceId?: string,
-  /** Merged into session metadata (e.g. session_mode for ILE Project Mode). */
+  /** Merged into session metadata (e.g. session_mode for TAP Learning Project Mode). */
   extraMetadata?: Record<string, unknown>,
 ): Promise<Session> {
   const supabase = createClient();

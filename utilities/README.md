@@ -1,6 +1,6 @@
 # Operator utilities
 
-Private CLIs for operators. **Not product features** — they do not appear in TAP/ILE UI, MCP, REST catalogs, or `skill.md`.
+Private CLIs for operators. **Not product features** — they do not appear in TAP/TAP Learning UI, MCP, REST catalogs, or `skill.md`.
 
 Each utility is a folder. Pipeline code lives with the CLI so it is not mixed into `lib/` (product runtime). Tests live under `tests/utilities/`.
 
@@ -10,7 +10,7 @@ Each utility is a folder. Pipeline code lives with the CLI so it is not mixed in
 
 1. Add `utilities/<name>/` with a `main.ts` entry (vite-node + `vitest.config.ts` so `@/` resolves).
 2. Load `.env.local` via `scripts/db-connection.mjs` `loadEnvFile` when the tool talks to xAI or the DB.
-3. Reuse `lib/` product helpers (`uploadWorkspaceProofOfWork`, TAP/ILE trace builders, TAPBench stash). Do not fork persist paths.
+3. Reuse `lib/` product helpers (`uploadWorkspaceProofOfWork`, TAP/TAP Learning trace builders, TAPBench stash). Do not fork persist paths.
 4. Wire an npm script in `package.json`.
 5. Add a row to the table below and a short section in the root README if operators will run it.
 
@@ -20,11 +20,11 @@ Next likely occupant: TAPBench operator helpers (session bootstrap, stash/submit
 
 | Utility | npm script | What it does |
 |---|---|---|
-| [`import-think-aloud-pow`](import-think-aloud-pow/) | `npm run import:think-aloud-pow` | Video/audio think-aloud → ILE Explore Solo PoW |
+| [`import-think-aloud-pow`](import-think-aloud-pow/) | `npm run import:think-aloud-pow` | Video/audio think-aloud → TAP Learning Explore Solo PoW |
 
 ## `import-think-aloud-pow`
 
-Turns a think-aloud **video or audio** recording into **ILE Explore Solo** proof of work (`session_mode: project`). No TAP. No Helios chat. No review prompts.
+Turns a think-aloud **video or audio** recording into **TAP Learning Explore Solo** proof of work (`session_mode: project`). No TAP. No Helios chat. No review prompts.
 
 ```bash
 # persist (default)
@@ -42,7 +42,7 @@ npm run import:think-aloud-pow -- --transcript tests/fixtures/think-aloud-transc
 | `--media` | unless `--transcript` | Video or audio. xAI STT. |
 | `--workspace` | yes | Workspace UUID. |
 | `--transcript` | no | Word-level JSON (`words: [{ text, start, end }]` in seconds). |
-| `--session` | no | ILE session UUID (generated if omitted). |
+| `--session` | no | TAP Learning session UUID (generated if omitted). |
 | `--block` | no | Block UUID. |
 | `--dry-run` | no | Print timeline JSON; do not write PoW. |
 | `--help` | no | Usage. |

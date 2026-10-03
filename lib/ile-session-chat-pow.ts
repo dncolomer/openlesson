@@ -1,5 +1,5 @@
 /**
- * ILE session-chat PoW persist decision — used by /api/session-chat.
+ * TAP Learning session-chat PoW persist decision — used by /api/session-chat.
  */
 
 export function resolveIleSessionChatPowUpload(input: {

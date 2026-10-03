@@ -23,8 +23,8 @@ export type SessionOnboardingGuideProps = {
   onStart?: () => void;
   isStarting?: boolean;
   /**
-   * ILE Project Mode: use Project Mode copy (stash/solution in Thoughts tool,
-   * no Helios dialogue). Learning Mode keeps the default ILE strings.
+   * TAP Learning Project Mode: use Project Mode copy (stash/solution in Thoughts tool,
+   * no Helios dialogue). Learning Mode keeps the default TAP Learning strings.
    */
   projectMode?: boolean;
   /** TAP-only: replaces the default last-slide play button (e.g. topic cards). */
@@ -33,12 +33,12 @@ export type SessionOnboardingGuideProps = {
   hideStep3Quote?: boolean;
   /** Prepare and Drill: drop the first of the two welcome screens. */
   omitIntroSlide?: boolean;
-  /** Optional hero image for step 1 (TAP placeholder; overrides ILE video if set). */
+  /** Optional hero image for step 1 (TAP placeholder; overrides TAP Learning video if set). */
   stepImages?: [string | undefined, string | undefined];
-  /** Optional override for ILE step 1 grid-pan clip. */
+  /** Optional override for TAP Learning step 1 grid-pan clip. */
   step1VideoSrc?: string;
   /**
-   * ILE session goal: empty insight slots to fill. Comes from difficulty
+   * TAP Learning session goal: empty insight slots to fill. Comes from difficulty
    * `minInsightsPerChapter` (clamped 1–5). Ignored for TAP.
    */
   insightGoalCount?: number;

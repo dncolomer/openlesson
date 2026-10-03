@@ -1,5 +1,5 @@
 /**
- * TAP solo uses the same universal Stash Submit UI as ILE and TAP conversation.
+ * TAP solo uses the same universal Stash Submit UI as TAP Learning and TAP conversation.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -114,8 +114,8 @@ describe("TAP solo older-thoughts Thought Memory", () => {
       [
         "Thought Memory always on TAP solo (no See / Edit toggle)",
         "ThoughtMemoryPanel insightSurface=tap onEditThought/onDeleteThought",
-        `Submit Selection still ILE-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
-        `Edit Selection still ILE-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
+        `Submit Selection still TAP Learning-only in panel=${memory.includes(ILE_SUBMIT_SELECTION_LABEL)}`,
+        `Edit Selection still TAP Learning-only in panel=${memory.includes(ILE_EDIT_SELECTION_LABEL)}`,
         "TAP item edit=ThoughtEditPanel Save, no Helios submit",
       ].join("\n"),
     );
@@ -133,7 +133,7 @@ describe("Thought Memory is always on TAP solo chrome", () => {
   });
 });
 
-describe("universal Stash Submit labels across ILE + TAP", () => {
+describe("universal Stash Submit labels across TAP Learning + TAP", () => {
   it("all four surfaces contain the same English labels", () => {
     const ileHelios = read("components/SessionHeliosPanel.tsx");
     const ileMemory = read("components/thought-ui/ThoughtMemoryPanel.tsx");

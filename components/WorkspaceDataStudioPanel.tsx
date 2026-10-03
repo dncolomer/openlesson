@@ -232,7 +232,7 @@ export function WorkspaceDataStudioPanel({
         <h2 className="text-sm font-medium text-white">Data Studio</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Browse proof of work for this workspace. Expand a row to see full details and metadata.
-          Filter by user, TAP/ILE/TAPBench link, or search. Edit metadata and flag rows as{" "}
+          Filter by user, TAP/TAP Learning/TAPBench link, or search. Edit metadata and flag rows as{" "}
           <span className="text-neutral-300">invalidated</span> (metadata only — excluded from
           future snapshots).
         </p>
@@ -261,7 +261,7 @@ export function WorkspaceDataStudioPanel({
         />
         <input
           className="min-w-[12rem] flex-1 rounded-none border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200"
-          placeholder="Link / token (TAP, ILE, TAPBench)"
+          placeholder="Link / token (TAP, TAP Learning, TAPBench)"
           value={link}
           onChange={(e) => {
             setPage(1);

@@ -473,7 +473,7 @@ export function filterMapPlacementWorkspaces<
   );
 }
 
-/** Dot kind for map rendering: ILE = golden, TAP = standard. */
+/** Dot kind for map rendering: TAP Learning = golden, TAP = standard. */
 export function mapDotKindFromParticipant(
   kind: string | null | undefined,
 ): MapDotKind {
@@ -994,7 +994,7 @@ export interface GuestPlacementError {
 
 /**
  * Validate guest placement inputs against the public map catalog.
- * Pure — does not mint links; API uses this then calls TAP/ILE create.
+ * Pure — does not mint links; API uses this then calls TAP/TAP Learning create.
  */
 export function validateGuestPlacement(
   request: GuestPlacementRequest,

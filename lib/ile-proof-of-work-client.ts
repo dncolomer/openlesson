@@ -2,7 +2,7 @@ import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interr
 import type { IleBufferedScreenshot, IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 import type { WorkspaceProofOfWorkType } from "@/lib/pow-api/workspace-proof-of-work";
 
-/** ILE captures a subset of the shared stored types (no video). */
+/** TAP Learning captures a subset of the shared stored types (no video). */
 export type IleProofOfWorkCaptureType = Extract<WorkspaceProofOfWorkType, "tool" | "screen" | "eeg">;
 
 export interface UploadIleProofOfWorkInput {
@@ -19,7 +19,7 @@ export interface UploadIleProofOfWorkInput {
   band_powers?: Record<string, number> | null;
   device_name?: string | null;
   sample_count?: number | null;
-  /** Shareable ILE guest link token so unauthenticated guests can upload PoW. */
+  /** Shareable TAP Learning guest link token so unauthenticated guests can upload PoW. */
   ileToken?: string;
   /** Share URL query params for param-scoped guest identity. */
   entryQueryParams?: Record<string, string | string[]>;

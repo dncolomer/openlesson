@@ -1,5 +1,5 @@
 /**
- * Right-rail session chrome shared by ILE, TAP, and verification TAP.
+ * Right-rail session chrome shared by TAP Learning, TAP, and verification TAP.
  * Learn mounts it from session chrome. Prepare, Drill, conversational TAP,
  * and verification TAP mount it from SessionWorkSurface.
  */
@@ -31,7 +31,7 @@ export const SESSION_SIDEBAR_EXPANDED_REM = 20;
  */
 export const SESSION_SIDEBAR_COLLAPSED_REM = 6.5;
 
-/** This ILE version has no work-canvas countdown. TAP can still show a clock. */
+/** This TAP Learning version has no work-canvas countdown. TAP can still show a clock. */
 const ILE_SESSION_SIDEBAR_SECTIONS = [
   "insights",
   "chapters",
@@ -88,7 +88,7 @@ export function sessionSidebarHasSection(
 }
 
 /**
- * Signal tiles mounted in the ILE sidebar. Audio is always present; EEG,
+ * Signal tiles mounted in the TAP Learning sidebar. Audio is always present; EEG,
  * screen share, and webcam are added only while those captures are live.
  */
 export function ileSidebarSignalCount(input: {

@@ -151,9 +151,10 @@ export default function KnowledgeVerificationPage() {
               </p>
               <p>
                 Our hosted{" "}
-                <span className="text-zinc-200">Think Aloud Protocol (TAP)</span> runs live, time-framed
-                verification in parallel, without building your own UX. With our{" "}
-                <span className="text-zinc-200">Integrated Learning Environment (ILE)</span> we add open-ended
+                <span className="text-zinc-200">Think Aloud Protocol (TAP)</span> is one interface for
+                Preparing, Learning, Drilling, and Validating. TAP Validating runs live, time-framed
+                verification in parallel, without building your own UX.{" "}
+                <span className="text-zinc-200">TAP Learning</span> adds open-ended
                 assignment depth that stays practical as volume grows. We help you surface data that no
                 traditional tech can beat.
               </p>

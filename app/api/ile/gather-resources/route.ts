@@ -1,5 +1,5 @@
 /**
- * xAI-driven ILE gather: epistemic forage at the edge of current PoW,
+ * xAI-driven TAP Learning gather: epistemic forage at the edge of current PoW,
  * persist block-scoped planned resources.
  */
 import { NextRequest, NextResponse } from "next/server";

@@ -513,7 +513,7 @@ const ilePowContext = useMemo(
   () => ({
     workspaceId: getWorkspaceId() ?? undefined,
     sessionId: sessionId ?? null,
-    // Shareable ILE guests authenticate PoW routes with the private link token.
+    // Shareable TAP Learning guests authenticate PoW routes with the private link token.
     privateToken: ileToken || undefined,
     blockId: sessionBlockId,
     entryQueryParams,

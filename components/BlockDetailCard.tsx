@@ -46,12 +46,12 @@ type BlockDetailCardProps = {
    * Launch by product intent (Explore / Drill — always With AI).
    * Prefer this over the four technical callbacks.
    * Style buttons only select; Start triggers this.
-   * Drill always → TAP conversational; Explore always → ILE learning.
+   * Drill always → TAP conversational; Explore always → TAP Learning learning.
    */
   onLaunchIntent?: (target: ProductLaunchTarget, options?: ProductLaunchOptions) => void;
-  /** Explore → ILE learning (fallback if onLaunchIntent omitted). */
+  /** Explore → TAP Learning learning (fallback if onLaunchIntent omitted). */
   onStartIle?: () => void;
-  /** @deprecated New launches never use ILE project. Kept so stored tokens still compile. */
+  /** @deprecated New launches never use TAP Learning project. Kept so stored tokens still compile. */
   onStartIleProject?: () => void;
   /** Drill → TAP conversational */
   onStartEval?: (event: React.MouseEvent, minutes?: number) => void;
@@ -71,7 +71,7 @@ type BlockDetailCardProps = {
   promptSection?: ReactNode;
   highlighted?: boolean;
   highlightOpacity?: number;
-  /** ILE (non-TAP) Start label. TAP copy stays `Start · N min`. */
+  /** TAP Learning (non-TAP) Start label. TAP copy stays `Start · N min`. */
   ileStartLabel?: string;
   onSeePreviousSessions?: () => void;
   seePreviousSessionsLabel?: string;
@@ -318,7 +318,7 @@ export function BlockDetailCard({
         {PRODUCT_INTENT_LABELS.chooseStyle}
       </p>
 
-      {/* Select-only style tools — Explore = ILE, Drill = TAP; launch via Start */}
+      {/* Select-only style tools — Explore = TAP Learning, Drill = TAP; launch via Start */}
       <div
         className={`grid gap-2 ${
           practiceLimits.allowScout && practiceLimits.allowExplore && drillFamilyAllowed

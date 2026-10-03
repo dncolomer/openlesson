@@ -1,6 +1,6 @@
-# ILE TIM × chapter map interactions
+# TAP Learning TIM × chapter map interactions
 
-Chapter complete is Proof of Work (`session_plan` / `chapter_done` → TIM endpoint `upload_ile_chapter_done`). TIM reads LWM `evidence_appetite` and schedules `chapter_map_expand` with **1–3** `chapter_suggestions`. ILE applies that on a **map timer** (idle/speech PoW cannot supersede it) and places adjacent TIM-sourced chapters.
+Chapter complete is Proof of Work (`session_plan` / `chapter_done` → TIM endpoint `upload_ile_chapter_done`). TIM reads LWM `evidence_appetite` and schedules `chapter_map_expand` with **1–3** `chapter_suggestions`. TAP Learning applies that on a **map timer** (idle/speech PoW cannot supersede it) and places adjacent TIM-sourced chapters.
 
 Unopened TIM chapters use the explore/map icon (`tim-explore`). Accept switches them to the usual 3×3 blocky glyph; reject removes the tile so the cell is empty again.
 
@@ -10,9 +10,9 @@ Intervention **types** are a closed catalog (`TIM_INTERVENTION_TYPE_CATALOG`):
 
 `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`, `chapter_map_expand`.
 
-`consumer_action` is a free-form snake_case hint (not a closed enum). ILE currently keys map growth on `chapter_map_expand` / `expand_chapter_map`.
+`consumer_action` is a free-form snake_case hint (not a closed enum). TAP Learning currently keys map growth on `chapter_map_expand` / `expand_chapter_map`.
 
-## Follow-on ILE map actions
+## Follow-on TAP Learning map actions
 
 | id | status | TIM source | effect | summary |
 | --- | --- | --- | --- | --- |

@@ -125,7 +125,7 @@ describe("tap-session-purity helpers", () => {
   });
 });
 
-describe("TAP client wires purity UX (not ILE)", () => {
+describe("TAP client wires purity UX (not TAP Learning)", () => {
   it("TapScoreClient implements silence auto_stash and impure retry without HUD fade/dots", () => {
     const client = readTapScoreSurface();
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
@@ -212,7 +212,7 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(complete).toContain('sessionQuality === "impure"');
   });
 
-  it("ILE SessionView does not import session purity auto-stash", () => {
+  it("TAP Learning SessionView does not import session purity auto-stash", () => {
     const ile = readSessionViewSurface();
     expect(ile).not.toContain("tap-session-purity");
     expect(ile).not.toContain("TAP_SILENCE_AUTO_STASH_MS");

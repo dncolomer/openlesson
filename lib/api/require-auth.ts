@@ -207,7 +207,7 @@ export async function guardWorkspaceRoute(
     if ("error" in principal) {
       return {
         ok: false,
-        response: jsonError(500, "ILE guest participant is not provisioned", "guest_missing"),
+        response: jsonError(500, "TAP Learning guest participant is not provisioned", "guest_missing"),
       };
     }
     const ids = persistIds(principal);
@@ -316,7 +316,7 @@ export async function guardSessionRoute(
     if ("error" in principal) {
       return {
         ok: false,
-        response: jsonError(500, "ILE guest participant is not provisioned", "guest_missing"),
+        response: jsonError(500, "TAP Learning guest participant is not provisioned", "guest_missing"),
       };
     }
     const ids = persistIds(principal);

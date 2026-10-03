@@ -6,7 +6,7 @@ import { DialogFrame, type DialogSize } from "@/components/ui/DialogFrame";
 /**
  * ── ConfirmDialog ──────────────────────────────────────────────────────
  *
- * Confirm/acknowledge variant of DialogFrame. Every ILE "are you sure?"
+ * Confirm/acknowledge variant of DialogFrame. Every TAP Learning "are you sure?"
  * and form modal uses this chrome (icon, title, description, children,
  * primary/cancel/tertiary footer) so they share one visual language.
  *

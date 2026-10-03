@@ -1,5 +1,5 @@
 /**
- * ILE Work canvas: per-chapter Excalidraw scene serialize / apply / PoW.
+ * TAP Learning Work canvas: per-chapter Excalidraw scene serialize / apply / PoW.
  * Pure over scene JSON so tests can drive it without mounting Excalidraw.
  *
  * Element conversion follows Excalidraw's skeleton API
@@ -23,7 +23,7 @@ export const ILE_CHAPTER_SEED_CUSTOM_DATA_KEY = "ileChapterSeed" as const;
 export const ILE_COMPRESS_WORK_CUSTOM_DATA_KEY = "ileCompressWork" as const;
 export const ILE_XAI_LOADING_TEXT = "Thinking ...";
 
-/** Excalidraw drawing tools that map to ILE Work PoW. */
+/** Excalidraw drawing tools that map to TAP Learning Work PoW. */
 export const ILE_EXCALIDRAW_POW_TOOLS = [
   "text",
   "freedraw",
@@ -2413,7 +2413,7 @@ export function ileSessionChatCanvasReply(assistantText: string | null | undefin
 }
 
 /**
- * Canvas ask result from an ILE session-chat response.
+ * Canvas ask result from a TAP Learning session-chat response.
  * A layout-only assistant string stays in `raw`. An empty visible sentence does
  * not become the error string when that raw reply is present.
  */
@@ -2627,7 +2627,7 @@ const CANVAS_POW_ACTIONS = new Set([
 /**
  * Map Excalidraw's internal active tool / element kind onto shared canvas PoW
  * `tool_name` / `tool_action` (`canvas` + draw_text / move / …). Never emits
- * retired ILE tools. Selecting the selection tool is not work.
+ * retired TAP Learning tools. Selecting the selection tool is not work.
  */
 export function mapExcalidrawToolToIlePow(input: {
   activeTool?: string | null;

@@ -1,5 +1,5 @@
 /**
- * Client-side smartphone detection for TAP / ILE desktop-only gate.
+ * Client-side smartphone detection for TAP / TAP Learning desktop-only gate.
  * Pure helpers are unit-tested; browser checks use navigator + viewport.
  */
 

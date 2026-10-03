@@ -38,13 +38,13 @@ describe("plans pricing model", () => {
     expect(API_METERED_PLATFORM_FEE_CENTS).toBe(9900);
   });
 
-  it("formats api metered monthly price with usage rates (no TAP/ILE product brands)", () => {
+  it("formats api metered monthly price with usage rates (no TAP/TAP Learning product brands)", () => {
     const label = formatPlanMonthlyPrice("api_metered");
     expect(label).toContain("$99/month");
     expect(label).toMatch(/0\.05/);
     expect(label).toContain("$1/timed");
     expect(label).toContain("$10/open-ended");
-    expect(label).not.toMatch(/\$1\/TAP|\$10\/ILE|\bTAP\b|\bILE\b/);
+    expect(label).not.toMatch(/\$1\/TAP|\$10\/TAP Learning|\bTAP\b|\bILE\b/);
     const features = PLANS.api_metered.features.join(" ");
     expect(features).toContain("$1 per timed session");
     expect(features).toContain("$10 per open-ended session");
@@ -377,7 +377,7 @@ describe("api metered invoice estimate", () => {
     expect(isApiMeteredPlan("api_metered")).toBe(true);
   });
 
-  it("does not charge TAP/ILE-generated PoW as external API PoW", () => {
+  it("does not charge TAP/TAP Learning-generated PoW as external API PoW", () => {
     // Internal product PoW (no API key) → not billed at PoW rate; sessions are separate.
     expect(isExternalApiPowUsage(null)).toBe(false);
     expect(isExternalApiPowUsage(undefined)).toBe(false);

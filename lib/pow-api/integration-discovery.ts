@@ -165,7 +165,7 @@ export function buildContinuousEvaluationMcpPolicy(
         "LWM Snapshot (lwm_snapshot): one primary 0–100 score + GHC + spider + analysis + next actions. Sole product snapshot strategy.",
       when_to_call: [
         "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
-        "Call lwm_snapshot for LWM Snapshot (manual; not auto on TAP/ILE end)",
+        "Call lwm_snapshot for LWM Snapshot (manual; not auto on TAP/TAP Learning end)",
       ],
     },
     progress_snapshot: {

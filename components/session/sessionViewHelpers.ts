@@ -62,7 +62,7 @@ export const EEG_SAMPLE_RATE_HZ = 256;
 export const EEG_DISPLAY_MAX_SAMPLES = 512;
 export const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
 
-/** In-memory ILE session log ring — last 100 so the Logs tool stays light. */
+/** In-memory TAP Learning session log ring — last 100 so the Logs tool stays light. */
 export const SESSION_LOG_MAX_ENTRIES = 100;
 
 /** Return the newest `max` entries. Does not mutate the input. */

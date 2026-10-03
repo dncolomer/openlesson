@@ -1,5 +1,5 @@
 /**
- * Per-user “worked on at least once” marks for workspace blocks and ILE chapters.
+ * Per-user “worked on at least once” marks for workspace blocks and TAP Learning chapters.
  * Progress chrome (gear + fainter white) reads this set. Done is a separate status.
  */
 

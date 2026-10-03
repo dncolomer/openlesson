@@ -162,7 +162,7 @@ export function allowCookieWorkspacePerformance(input: {
   return false;
 }
 
-/** TAP / ILE / portal link mint: owner or org-admin of the workspace. */
+/** TAP / TAP Learning / portal link mint: owner or org-admin of the workspace. */
 export function allowProductWorkspaceLinkAccess(input: {
   isOwner: boolean;
   isOrgAdmin: boolean;

@@ -1,5 +1,5 @@
 /**
- * Shared ILE + TAP Work-canvas Proof of Work.
+ * Shared TAP Learning + TAP Work-canvas Proof of Work.
  * Pure scene-diff classifier + upload-item builder so hosts do not fork
  * `tool_name` / `tool_action` and tests do not mount Excalidraw.
  */
@@ -240,7 +240,7 @@ function isViewportOnlyAppStateChange(prev: IleWorkCanvasScene, next: IleWorkCan
 
 /**
  * Map Excalidraw's active tool / element kind / explicit action onto the
- * shared canvas PoW vocabulary. Retired ILE tools never emit.
+ * shared canvas PoW vocabulary. Retired TAP Learning tools never emit.
  */
 export function mapExcalidrawToolToCanvasPow(input: {
   activeTool?: string | null;

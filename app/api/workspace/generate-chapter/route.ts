@@ -20,7 +20,7 @@ interface GenerateChapterResponse {
 }
 
 /**
- * Author one ILE chapter (title + description + 1–2 word map keyword),
+ * Author one TAP Learning chapter (title + description + 1–2 word map keyword),
  * matching workspace add-block-at-slot generation.
  */
 export async function POST(req: NextRequest) {

@@ -26,7 +26,7 @@ const patches = {
       blockDetailGuideHint2:
         "Benutzerdefinierte Anweisungen: diesen Block auf Job, Prüfung oder Projekt ausrichten.",
       blockDetailGuideHint3:
-        "ILE, laut denken, Sprache in Gedanken kristallisieren und sie während der Arbeit an Helios senden.",
+        "TAP Learning, laut denken, Sprache in Gedanken kristallisieren und sie während der Arbeit an Helios senden.",
       blockDetailGuideHint4:
         "Arbeitsbereich-Editor: Blöcke hinzufügen oder umgestalten, wenn du Lücken im Plan entdeckst.",
       blockDetailGuideHint5:
@@ -117,7 +117,7 @@ const patches = {
       blockDetailGuideHint2:
         "Instrucciones personalizadas: orienta este bloque hacia tu trabajo, examen o proyecto.",
       blockDetailGuideHint3:
-        "ILE, piensa en voz alta, cristaliza el habla en pensamientos y envíalos a Helios mientras trabajas.",
+        "TAP Learning, piensa en voz alta, cristaliza el habla en pensamientos y envíalos a Helios mientras trabajas.",
       blockDetailGuideHint4:
         "Editor del espacio, añade o remodela bloques cuando descubras huecos en el plan.",
       blockDetailGuideHint5:
@@ -208,7 +208,7 @@ const patches = {
       blockDetailGuideHint2:
         "Instrukcje własne: ukierunkuj ten blok na pracę, egzamin lub projekt.",
       blockDetailGuideHint3:
-        "ILE, myśl na głos, krystalizuj mowę w myśli i wysyłaj je do Heliosa podczas pracy.",
+        "TAP Learning, myśl na głos, krystalizuj mowę w myśli i wysyłaj je do Heliosa podczas pracy.",
       blockDetailGuideHint4:
         "Edytor przestrzeni, dodawaj lub zmieniaj bloki, gdy odkryjesz luki w planie.",
       blockDetailGuideHint5:
@@ -296,7 +296,7 @@ const patches = {
       blockDetailGuideHintsTitle: "更好地使用 Uncertain Systems",
       blockDetailGuideHint1: "文件标签页，添加参考资料，使探测与你实际学习的内容一致。",
       blockDetailGuideHint2: "自定义说明，将此区块导向你的工作、考试或项目。",
-      blockDetailGuideHint3: "ILE，大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
+      blockDetailGuideHint3: "TAP Learning，大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
       blockDetailGuideHint4: "工作区构建器，发现计划中的缺口时添加或重塑区块。",
       blockDetailGuideHint5: "TAP，在你准备好展示技能时运行，而不是第一次尝试时。",
     },
@@ -381,7 +381,7 @@ const patches = {
       blockDetailGuideHint2:
         "Hướng dẫn tùy chỉnh: định hướng khối này theo công việc, kỳ thi hoặc dự án của bạn.",
       blockDetailGuideHint3:
-        "ILE, nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
+        "TAP Learning, nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
       blockDetailGuideHint4:
         "Trình tạo không gian, thêm hoặc điều chỉnh khối khi phát hiện khoảng trống trong kế hoạch.",
       blockDetailGuideHint5:

@@ -49,7 +49,7 @@ describe("isBillableTapSession (pure production predicate)", () => {
 });
 
 describe("isBillableIleSession (pure production predicate)", () => {
-  it("charges ordinary product ILE sessions (absent demo_integration key remains billable)", () => {
+  it("charges ordinary product TAP Learning sessions (absent demo_integration key remains billable)", () => {
     // SQL/PostgREST: metadata->>demo_integration IS NULL when key absent — must be billable
     expect(isBillableIleSession({ metadata: {} })).toBe(true);
     expect(isBillableIleSession({ metadata: { workspace_id: "w1", block_id: "b1" } })).toBe(true);
@@ -108,7 +108,7 @@ describe("applyBillable*Filters (query builders used by counters)", () => {
     expect(calls[0].args[1]).not.toContain("revoked");
   });
 
-  it("ILE filter excludes aycl_purchase_id and demo_integration=true without dropping null keys", () => {
+  it("TAP Learning filter excludes aycl_purchase_id and demo_integration=true without dropping null keys", () => {
     const calls: Array<{ method: string; args: unknown[] }> = [];
     const q = {
       is(col: string, val: null) {
@@ -234,7 +234,7 @@ describe("countTapSessions drives production TAP filters", () => {
   });
 });
 
-describe("countIleSessions drives production ILE filters", () => {
+describe("countIleSessions drives production TAP Learning filters", () => {
   it("excludes AYCL and demo sessions via metadata filters that keep null-key rows", async () => {
     const mock = makeCountMock({ table: "sessions", count: 1 });
     const n = await countIleSessions(mock.client, "user-1", new Date("2026-06-01T00:00:00.000Z"));
@@ -248,7 +248,7 @@ describe("countIleSessions drives production ILE filters", () => {
       method: "or",
       args: [ILE_BILLABLE_DEMO_INTEGRATION_OR],
     });
-    // Regression: bare not.eq.true would underbill ordinary ILE (null key)
+    // Regression: bare not.eq.true would underbill ordinary TAP Learning (null key)
     expect(
       mock.ops.find(
         (o) =>
@@ -281,11 +281,11 @@ describe("predicate ↔ filter consistency for billing", () => {
     }
   });
 
-  it("AYCL/demo ILE rows are not billable; null-key ordinary ILE is billable", () => {
+  it("AYCL/demo TAP Learning rows are not billable; null-key ordinary TAP Learning is billable", () => {
     // Rows that would be excluded by applyBillableIleSessionFilters must fail isBillableIleSession
     expect(isBillableIleSession({ metadata: { aycl_purchase_id: "x" } })).toBe(false);
     expect(isBillableIleSession({ metadata: { demo_integration: true } })).toBe(false);
-    // Ordinary product ILE (no demo_integration key) is billable under SQL null-safe OR filter
+    // Ordinary product TAP Learning (no demo_integration key) is billable under SQL null-safe OR filter
     expect(isBillableIleSession({ metadata: { workspace_id: "w" } })).toBe(true);
     expect(isBillableIleSession({ metadata: {} })).toBe(true);
     // Filter string must encode null-safe semantics (is.null in OR), not bare not.eq

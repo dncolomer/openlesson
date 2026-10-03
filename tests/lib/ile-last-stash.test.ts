@@ -1,5 +1,5 @@
 /**
- * ILE Learning Mode: last-stash compact Helios + Thought-tool multi-select send/edit.
+ * TAP Learning Mode: last-stash compact Helios + Thought-tool multi-select send/edit.
  * Drives shipped helpers (not a reimplementation) and checks live surfaces.
  */
 import { describe, expect, it } from "vitest";
@@ -220,7 +220,7 @@ describe("See Older Thoughts wiring (shipped)", () => {
   });
 });
 
-describe("ILE Helios last-stash surface (shipped source)", () => {
+describe("TAP Learning Helios last-stash surface (shipped source)", () => {
   it("has no last thought or Submit last Thought on Helios", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain(ILE_SUBMIT_LAST_THOUGHT_LABEL);
@@ -248,7 +248,7 @@ describe("ILE Helios last-stash surface (shipped source)", () => {
   });
 });
 
-describe("ILE Thought tool multi-select (shipped source)", () => {
+describe("TAP Learning Thought tool multi-select (shipped source)", () => {
   it("shows Submit Selection / Edit Selection and reuses thought-edit prompt", () => {
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");
     expect(memory).toContain(ILE_SUBMIT_SELECTION_LABEL);

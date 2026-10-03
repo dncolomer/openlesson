@@ -82,7 +82,7 @@ export type ProofOfWorkSchemaCheck =
     };
 
 /**
- * Sole write-time type / MIME / version gate for REST, MCP, stash, ILE, and TAP.
+ * Sole write-time type / MIME / version gate for REST, MCP, stash, TAP Learning, and TAP.
  * Required wire fields: type, mime_type, data. Aliases screenshot(s) → screen.
  */
 export function checkProofOfWorkSchema(input: {

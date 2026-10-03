@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { IleLeaveFocusReason } from "@/lib/ile-blur-screenshare";
 
 /**
- * Leave-tab notification for the ILE session.
+ * Leave-tab notification for the TAP Learning session.
  * It does not open a picture-in-picture window or a popup.
  */
 export function useIleBlurScreenshare(input: {

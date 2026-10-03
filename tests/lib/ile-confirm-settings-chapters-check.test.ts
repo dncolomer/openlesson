@@ -1,5 +1,5 @@
 /**
- * ILE welcome Confirm Settings stays blocked until the cheap
+ * TAP Learning welcome Confirm Settings stays blocked until the cheap
  * existing-chapters check finishes (chapterPlanStatus leaves "unknown").
  * Hydrate / objectives / planLoading must not keep it blocked.
  */
@@ -36,7 +36,7 @@ describe("isIleConfirmSettingsBlocked", () => {
   });
 });
 
-describe("ILE welcome modal wires Confirm Settings to the chapters check", () => {
+describe("TAP Learning welcome modal wires Confirm Settings to the chapters check", () => {
   it("disables the confirm button with the shipped blocker and guards the click", () => {
     const src = read("components/session-view/session-welcome-modal.tsx");
     expect(src).toContain('from "@/components/session-view/ile-confirm-settings"');

@@ -1,5 +1,5 @@
 /**
- * ILE solo + conversation share the conversation thought-stash process.
+ * TAP Learning solo + conversation share the conversation thought-stash process.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -51,7 +51,7 @@ const OLDEST_TO_NEWEST = [
   thought("t4", "newest thought"),
 ];
 
-describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
+describe("TAP Learning Helios thought chrome is shared (solo + conversation)", () => {
   it("Send/Stash/Edit and last-stash labels are not gated off for project/solo", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain('label="Send"');
@@ -84,7 +84,7 @@ describe("ILE Helios thought chrome is shared (solo + conversation)", () => {
   });
 });
 
-describe("ILE thought-history is Thought Memory in both modes", () => {
+describe("TAP Learning thought-history is Thought Memory in both modes", () => {
   it("does not mount dual-stack as the live Thoughts tool", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const memory = read("components/thought-ui/ThoughtMemoryPanel.tsx");

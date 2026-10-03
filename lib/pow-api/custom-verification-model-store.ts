@@ -759,7 +759,7 @@ export async function computeKnowledgeDistanceForSubject(
 }
 
 /**
- * Build id → share URL map for TAP / ILE / TAPBench links in a workspace.
+ * Build id → share URL map for TAP / TAP Learning / TAPBench links in a workspace.
  * Used so region-builder can filter by the same listable URLs operators copy.
  */
 export async function buildWorkspaceLinkUrlMap(
@@ -833,7 +833,7 @@ export async function listSubjectsWithKnowledgeConfig(
     /** human | tapbench — from associated PoW metadata when available. */
     pow_source: "human" | "tapbench";
     source_link_id: string | null;
-    /** Listable share URL for the source link (TAP / ILE / TAPBench). */
+    /** Listable share URL for the source link (TAP / TAP Learning / TAPBench). */
     source_link_url: string | null;
   }>
 > {

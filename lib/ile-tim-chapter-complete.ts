@@ -1,9 +1,9 @@
 /**
- * ILE TIM × chapter map — chapter-complete path.
+ * TAP Learning TIM × chapter map — chapter-complete path.
  *
  * Completing a chapter is Proof of Work (`session_plan` / `chapter_done`).
  * TIM reads that event plus LWM evidence appetite and schedules a
- * `chapter_map_expand` interruption. ILE applies it on a dedicated map
+ * `chapter_map_expand` interruption. TAP Learning applies it on a dedicated map
  * timer (not the Helios dialogue scheduler, so idle/speech PoW cannot
  * supersede it). The new tile uses a TIM-explore icon until the learner
  * accepts it (3×3 blocky glyph) or rejects it (tile cleared).
@@ -65,7 +65,7 @@ export type IleChapterSuggestionPayload = {
   source_step_id?: string | null;
 };
 
-/** Follow-on ILE map interactions. Only `chapter_complete_expand` is shipped. */
+/** Follow-on TAP Learning map interactions. Only `chapter_complete_expand` is shipped. */
 export type IleTimMapInteractionStatus = "shipped" | "planned";
 
 export type IleTimMapInteraction = {
@@ -435,7 +435,7 @@ export function buildChapterCompleteExpansionSuggestion(input: {
 }
 
 /**
- * Shipped TIM decision for ILE chapter-complete PoW.
+ * Shipped TIM decision for TAP Learning chapter-complete PoW.
  * Always recommends a map expansion; appetite biases the suggested chapter.
  */
 export function predictChapterCompleteMapExpansion(
@@ -480,7 +480,7 @@ export function predictChapterCompleteMapExpansion(
         type: CHAPTER_MAP_EXPAND_INTERVENTION,
         message,
         rationale: appetiteHint
-          ? `Chapter complete PoW plus evidence appetite want_more (${appetiteHint}) — grow the ILE chapter map with ${suggestions.length} adjacent chapters.`
+          ? `Chapter complete PoW plus evidence appetite want_more (${appetiteHint}) — grow the TAP Learning chapter map with ${suggestions.length} adjacent chapters.`
           : `Chapter complete is Proof of Work; TIM grows the chapter map with ${suggestions.length} adjacent chapters so the session stays spatially alive.`,
         consumer_action: EXPAND_CHAPTER_MAP_ACTION,
         block_id: features.event.block_id ?? null,
@@ -904,7 +904,7 @@ type SchedulerSlot = {
 };
 
 /**
- * Dedicated ILE map-expansion timer. Idle/speech TIM (Helios path) must not
+ * Dedicated TAP Learning map-expansion timer. Idle/speech TIM (Helios path) must not
  * supersede a pending chapter-complete map expansion. Concurrent Mark as Done
  * on two chapters each keep their own bar until that chapter's expansion fires.
  */

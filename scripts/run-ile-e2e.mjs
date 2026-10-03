@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Supplemental ILE E2E: workspace → session → session page → cookie PoW upload.
+ * Supplemental TAP Learning E2E: workspace → session → session page → cookie PoW upload.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { createServerClient } from "@supabase/ssr";
@@ -74,7 +74,7 @@ async function main() {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader(jar) },
     body: JSON.stringify({
-      topic: "[E2E-ILE] Integrated Learning Environment smoke test",
+      topic: "[E2E-TAP Learning] TAP Learning smoke test",
       days: 7,
     }),
   });
@@ -117,7 +117,7 @@ async function main() {
     .from("sessions")
     .insert({
       user_id: userId,
-      problem: block.title || "E2E ILE block",
+      problem: block.title || "E2E TAP Learning block",
       planning_prompt: "Explain your reasoning aloud.",
       status: "active",
       metadata: { workspace_id: workspaceId },
@@ -125,7 +125,7 @@ async function main() {
     .select("id")
     .single();
 
-  record("ILE session create (DB)", !sessionError && !!session?.id, session?.id || sessionError?.message);
+  record("TAP Learning session create (DB)", !sessionError && !!session?.id, session?.id || sessionError?.message);
   if (!session?.id) process.exit(1);
 
   await admin.from("blocks").update({ session_id: session.id, status: "in_progress" }).eq("id", block.id);
@@ -142,7 +142,7 @@ async function main() {
   });
   const pageText = await page.text();
   record(
-    "ILE session page renders",
+    "TAP Learning session page renders",
     page.ok && pageText.length > 5000,
     `HTTP ${page.status} len=${pageText.length}`,
   );
@@ -163,7 +163,7 @@ async function main() {
   });
   const powBody = await pow.json();
   record(
-    "ILE cookie PoW upload",
+    "TAP Learning cookie PoW upload",
     pow.status === 201 && !!powBody.proof_of_work,
     pow.status === 201 ? `id=${powBody.proof_of_work?.id}` : `${pow.status} ${JSON.stringify(powBody).slice(0, 120)}`,
   );
@@ -202,7 +202,7 @@ async function main() {
   );
 
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n=== ILE supplemental: ${results.length - failed.length}/${results.length} passed ===`);
+  console.log(`\n=== TAP Learning supplemental: ${results.length - failed.length}/${results.length} passed ===`);
   if (failed.length) process.exit(1);
 }
 

@@ -111,7 +111,7 @@ export interface Probe {
   planStepId?: string; // links to SessionPlanStep.id for step context
   archived?: boolean; // probe has been resolved/archived
   focused?: boolean; // user is focusing on this probe for analysis context
-  suggestedTools?: ToolName[]; // ILE tools that would help with this probe (ephemeral, not persisted)
+  suggestedTools?: ToolName[]; // TAP Learning tools that would help with this probe (ephemeral, not persisted)
 }
 
 // Session Plan types for the Session Planner feature
@@ -129,7 +129,7 @@ export interface SessionPlanStep {
   map_keyword?: string | null;
   /** 3×3 occupancy mark (`g{bits}`) or TIM-explore icon for unopened TIM chapters. */
   map_icon?: string | null;
-  /** Who placed this chapter on the ILE map. */
+  /** Who placed this chapter on the TAP Learning map. */
   source?: "plan" | "learner" | "tim_chapter_complete" | null;
   /** Completed chapter that spawned a TIM expansion. */
   source_step_id?: string | null;
@@ -203,7 +203,7 @@ export interface Session {
     tutoringLanguage?: string;
     autoAdvance?: boolean;
     workspace_id?: string;
-    /** ILE chapter / workspace block linked to this session (PoW context). */
+    /** TAP Learning chapter / workspace block linked to this session (PoW context). */
     block_id?: string;
     /** Learner-chosen name for Previous Sessions (blank → show session id). */
     session_name?: string;

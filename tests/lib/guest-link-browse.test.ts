@@ -96,7 +96,7 @@ function buildFixture(): GuestLinkBrowseRow[] {
 }
 
 describe("buildGuestLinkBrowseRows", () => {
-  it("merges TAP and ILE with kind labels, scope, and participant", () => {
+  it("merges TAP and TAP Learning with kind labels, scope, and participant", () => {
     const rows = buildFixture();
     expect(rows).toHaveLength(4);
     expect(rows.every((r) => r.kind === "tap" || r.kind === "ile")).toBe(true);
@@ -199,7 +199,7 @@ describe("filterGuestLinkBrowseRows", () => {
     expect(filtered).toHaveLength(2);
   });
 
-  it("kind filter keeps only ILE", () => {
+  it("kind filter keeps only TAP Learning", () => {
     const filtered = filterGuestLinkBrowseRows(rows, {
       query: "",
       kind: "ile",
@@ -220,7 +220,7 @@ describe("filterGuestLinkBrowseRows", () => {
   });
 
   it("combined query + kind + status intersects correctly", () => {
-    // Intro Block appears on TAP pending and ILE completed
+    // Intro Block appears on TAP pending and TAP Learning completed
     const byScope = filterGuestLinkBrowseRows(rows, {
       query: "Intro",
       kind: "all",
@@ -285,7 +285,7 @@ describe("collectGuestLinkBrowseStatuses", () => {
 });
 
 describe("WorkspaceGuestLinksPanel browse UI structure", () => {
-  it("exposes Create|Browse only, TAP/ILE filters, no TAPBench mint", () => {
+  it("exposes Create|Browse only, TAP/TAP Learning filters, no TAPBench mint", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("data-guest-links-inner-tabs");
     expect(panel).toContain('data-guest-links-inner-tab="create"');
@@ -303,7 +303,7 @@ describe("WorkspaceGuestLinksPanel browse UI structure", () => {
     expect(panel).not.toContain("tapbenchLinks");
   });
 
-  it("create is one primary TAP/ILE submit; browse keeps invalidate/copy", () => {
+  it("create is one primary TAP/TAP Learning submit; browse keeps invalidate/copy", () => {
     const panel = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(panel).toContain("createTapLink");
     expect(panel).toContain("createIleLink");

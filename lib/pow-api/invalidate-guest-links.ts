@@ -1,5 +1,5 @@
 /**
- * Invalidate (revoke) TAP / ILE guest share links so tokens stop granting access.
+ * Invalidate (revoke) TAP / TAP Learning guest share links so tokens stop granting access.
  * Pure helpers over a Supabase client — unit-testable without HTTP handlers.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,7 +10,7 @@ import { isUuid } from "./resolve-workspace-guest";
 export const GUEST_LINK_REVOKED_STATUS = "revoked" as const;
 
 export const TAP_LINK_REVOKED_MESSAGE = "This TAP link has been revoked";
-export const ILE_LINK_REVOKED_MESSAGE = "This ILE link has been revoked";
+export const ILE_LINK_REVOKED_MESSAGE = "This TAP Learning link has been revoked";
 
 export function isGuestLinkRevoked(status: string | null | undefined): boolean {
   return status === GUEST_LINK_REVOKED_STATUS;
@@ -182,7 +182,7 @@ export async function invalidateTapLinksAll(options: {
 }
 
 /**
- * Revoke a single ILE share link. Idempotent when already revoked.
+ * Revoke a single TAP Learning share link. Idempotent when already revoked.
  */
 export async function invalidateIleLinkOne(options: {
   supabase: SupabaseClient;
@@ -206,10 +206,10 @@ export async function invalidateIleLinkOne(options: {
 
   if (loadError) {
     console.error("[invalidate-ile-link] Load error:", loadError);
-    throw new InvalidateGuestLinkError("Failed to load ILE link", 500, "internal_error");
+    throw new InvalidateGuestLinkError("Failed to load TAP Learning link", 500, "internal_error");
   }
   if (!existing || (!existing.private_token_hash && !existing.public_token)) {
-    throw new InvalidateGuestLinkError("ILE link not found", 404, "not_found");
+    throw new InvalidateGuestLinkError("TAP Learning link not found", 404, "not_found");
   }
 
   if (isGuestLinkRevoked(existing.status as string)) {
@@ -230,7 +230,7 @@ export async function invalidateIleLinkOne(options: {
 
   if (error || !updated) {
     console.error("[invalidate-ile-link] Update error:", error);
-    throw new InvalidateGuestLinkError("Failed to invalidate ILE link", 500, "internal_error");
+    throw new InvalidateGuestLinkError("Failed to invalidate TAP Learning link", 500, "internal_error");
   }
 
   return {
@@ -241,7 +241,7 @@ export async function invalidateIleLinkOne(options: {
 }
 
 /**
- * Revoke every ILE share link in a workspace (not already revoked).
+ * Revoke every TAP Learning share link in a workspace (not already revoked).
  */
 export async function invalidateIleLinksAll(options: {
   supabase: SupabaseClient;
@@ -260,7 +260,7 @@ export async function invalidateIleLinksAll(options: {
 
   if (error) {
     console.error("[invalidate-ile-links-all] Update error:", error);
-    throw new InvalidateGuestLinkError("Failed to invalidate ILE links", 500, "internal_error");
+    throw new InvalidateGuestLinkError("Failed to invalidate TAP Learning links", 500, "internal_error");
   }
 
   const ids = ((rows || []) as { id: string }[]).map((r) => r.id);

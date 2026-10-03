@@ -76,7 +76,7 @@ export const AGENT_TOOL_SURFACE = [
     name: "lwm_snapshot",
     scope: "workspaces:read",
     summary:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; run via Knowledge UI or this Snapshot API/MCP tool (not auto on TAP/ILE end).",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; run via Knowledge UI or this Snapshot API/MCP tool (not auto on TAP/TAP Learning end).",
     rest: {
       method: "POST",
       path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,
@@ -208,7 +208,7 @@ export function agentToolNames(): AgentToolName[] {
   return AGENT_TOOL_SURFACE.map((t) => t.name);
 }
 
-/** TAP / ILE / TAPBench guest-link mint — omitted from Knowledge Region skill/MCP copy. */
+/** TAP / TAP Learning / TAPBench guest-link mint — omitted from Knowledge Region skill/MCP copy. */
 export const KNOWLEDGE_LINK_MINT_TOOL_NAMES = [
   "create_tap_link",
   "list_tap_links",

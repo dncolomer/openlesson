@@ -1,6 +1,6 @@
 /**
  * Knowledge Verification pricing: Deep Project vs light-weight, sales-led setup.
- * Rates match shipped TAP ($1 / run) and ILE ($10 / assessment) unit prices.
+ * Rates match shipped TAP ($1 / run) and TAP Learning ($10 / assessment) unit prices.
  */
 import {
   formatIleSessionPrice,

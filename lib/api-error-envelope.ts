@@ -1,5 +1,5 @@
 /**
- * One error envelope for agent v3 and product (workspace / TAP / ILE / session-chat).
+ * One error envelope for agent v3 and product (workspace / TAP / TAP Learning / session-chat).
  * Shape: `{ error: { code, message } }`.
  */
 

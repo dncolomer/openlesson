@@ -1,6 +1,6 @@
 /**
  * Pre-session settings for Prepare, Learn, Drill, and Verify use the TAP
- * briefing card. Learn does not render the three-tab ILE pregame as that screen.
+ * briefing card. Learn does not render the three-tab TAP Learning pregame as that screen.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";

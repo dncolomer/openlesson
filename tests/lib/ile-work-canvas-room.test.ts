@@ -14,7 +14,7 @@ function read(rel: string) {
   return readFileSync(path, "utf8");
 }
 
-describe("ILE Work canvas has no PiP peer channel", () => {
+describe("TAP Learning Work canvas has no PiP peer channel", () => {
   it("does not subscribe a second collaborator", () => {
     expect(existsSync(join(ROOT, "lib/ile-work-canvas-room.ts"))).toBe(false);
 

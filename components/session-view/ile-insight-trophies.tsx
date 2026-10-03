@@ -128,7 +128,7 @@ function IleWelcomeInsightPlaceholderCard({ variant }: { variant: number }) {
   );
 }
 
-/** Elaborate placeholder cards for the ILE start/help surface — count from difficulty. */
+/** Elaborate placeholder cards for the TAP Learning start/help surface — count from difficulty. */
 export function IleInsightEmptySlots({
   count,
   label,

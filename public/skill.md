@@ -368,7 +368,7 @@ Max **10 MB** per upload. Guest keys attach proof of work to their guest identit
 
 ### LWM Snapshot — `workspaces:read`
 
-Sole product score strategy (one primary 0–100 score per call + GHC secondary). Returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`). Run via Knowledge UI or Snapshot API/MCP (not auto on TAP/ILE end).
+Sole product score strategy (one primary 0–100 score per call + GHC secondary). Returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`). Run via Knowledge UI or Snapshot API/MCP (not auto on TAP/TAP Learning end).
 
 | Method | Path | MCP tool | Primary field |
 | :--- | :--- | :--- | :--- |

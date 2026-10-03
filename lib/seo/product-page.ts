@@ -52,7 +52,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     "TIM is not a product you buy on its own. It is the core model behind every Uncertain Systems surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
   metaDescription:
-    "TIM predicts optimal learning-path interruptions across TAP, ILE, Proof-of-Work API, and ALE. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
+    "TIM predicts optimal learning-path interruptions across TAP, TAP Learning, Proof-of-Work API, and ALE. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
   keywords: [
     "trace interruption model",
     "TIM",
@@ -75,7 +75,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
         "Live TAP sessions use TIM to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
     },
     {
-      title: "ILE coaching moments",
+      title: "TAP Learning coaching moments",
       description:
         "Practice blocks interrupt when the model predicts a gap is ripe for coaching — routing humans into depth at the moment understanding frays, not at arbitrary chapter ends.",
     },
@@ -97,7 +97,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
   ],
   highlights: [
     "Trained to predict when and how to interrupt — not just what happened last",
-    "Shared across Proof-of-Work API, TAP, ILE, and ALE on every workspace",
+    "Shared across Proof-of-Work API, TAP, TAP Learning, and ALE on every workspace",
     "Surfaces as interruption payloads with delay, confidence, and consumer obligations",
     "Foundation layer — not sold separately; powers the products you integrate",
   ],
@@ -105,7 +105,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       question: "Can I call TIM directly?",
       answer:
-        "No. TIM runs inside Uncertain Systems products. You experience it through TAP probes, ILE coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
+        "No. TIM runs inside Uncertain Systems products. You experience it through TAP probes, TAP Learning coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
     },
     {
       question: "How is this different from funnel analytics?",
@@ -200,9 +200,9 @@ export const POW_API_PAGE: SeoProductPageConfig = {
         "Artifacts and traces: documents, recordings, tool logs, session exports, screen captures — anything that proves work happened. The API scores, ranks gaps, and feeds the model that drives what gets asked for next.",
     },
     {
-      question: "How does this relate to TAP and ILE?",
+      question: "How does this relate to TAP and TAP Learning?",
       answer:
-        "TAP and ILE are hosted product experiences. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
+        "TAP and TAP Learning are hosted product experiences. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
     },
     {
       question: "Why call it self-evolving?",
@@ -281,21 +281,21 @@ export const TAP_PAGE: SeoProductPageConfig = {
 export const ILE_PAGE: SeoProductPageConfig = {
   slug: "integrated-learning-environment",
   path: "/products/integrated-learning-environment",
-  eyebrow: "Integrated Learning Environment",
+  eyebrow: "TAP Learning",
   h1: "Replace tests with cognitive analysis people actually learn from.",
   intro:
-    "ILE is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
-  metaTitle: "Integrated Learning Environment | Cognitive Analysis Beyond Tests",
+    "TAP Learning is the Learning use case of TAP, one interface for Preparing, Learning, Drilling, and Validating. It is a drop-in alternative to multiple-choice tests and take-home assignments when you care about complex cognition — how someone reasons, adapts, and improves under realistic conditions.",
+  metaTitle: "TAP Learning | Cognitive Analysis Beyond Tests",
   metaDescription:
     "Practice environment for complex skills: guided scenarios, coaching, and proof of progress — a replacement for tests and take-homes when depth matters.",
   keywords: [
-    "integrated learning environment",
+    "TAP Learning",
     "cognitive analysis",
     "take home assignment alternative",
     "skills practice",
     "workplace learning",
   ],
-  heroImageAlt: "Integrated Learning Environment product hero",
+  heroImageAlt: "TAP Learning product hero",
   useCases: [
     {
       title: "Take-home replacement",
@@ -325,19 +325,19 @@ export const ILE_PAGE: SeoProductPageConfig = {
   ],
   faqs: [
     {
-      question: "Is ILE an LMS?",
+      question: "Is TAP Learning an LMS?",
       answer:
-        "No. It is the improvement layer inside Uncertain Systems — practice targets what verification surfaced in your actual work context.",
+        "No. TAP Learning is the Learning use case of TAP — practice targets what verification surfaced in your actual work context.",
     },
     {
-      question: "Can I use ILE without TAP?",
+      question: "Is TAP Learning a separate product?",
       answer:
-        "Yes. Gaps from Proof-of-Work API or manual review can also route into practice blocks.",
+        "No. Preparing, Learning, Drilling, and Validating are use cases of one TAP interface. Gaps from Proof-of-Work API or manual review can route into TAP Learning.",
     },
   ],
   closingTitle: "Measure depth, not just delivery.",
   closingBody:
-    "Book a demo to see how ILE turns verification gaps into guided practice with proof of progress.",
+    "Book a demo to see how TAP Learning turns verification gaps into guided practice with proof of progress.",
 };
 
 export const ALE_PAGE: SeoProductPageConfig = {
@@ -384,7 +384,7 @@ export const ALE_PAGE: SeoProductPageConfig = {
   ],
   highlights: [
     "Skill evolution driven by proof of work, not one-shot prompt edits",
-    "Same workspace model as human verification and ILE",
+    "Same workspace model as human verification and TAP Learning",
     "Designed for data-boundary-conscious teams",
   ],
   faqs: [

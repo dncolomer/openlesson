@@ -1,5 +1,5 @@
 /**
- * Cheap ILE “do chapters already exist?” check.
+ * Cheap TAP Learning “do chapters already exist?” check.
  * Drives the shipped helper + the welcome load/confirm client entry.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -155,7 +155,7 @@ describe("sessionPlanChaptersStatus (shipped existence helper)", () => {
 });
 
 describe("lookupSessionPlanChaptersForRequest (guard / privileged client)", () => {
-  it("passes ILE tokens to guardSessionRoute and looks up on that supabase client", async () => {
+  it("passes TAP Learning tokens to guardSessionRoute and looks up on that supabase client", async () => {
     const privileged = createRecordingClient({
       data: { id: "plan-ile" },
       error: null,
@@ -264,7 +264,7 @@ describe("fetchSessionPlanChaptersStatus (welcome load/confirm entry)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("POSTs sessionId plus ILE/AYCL tokens create/translate use", async () => {
+  it("POSTs sessionId plus TAP Learning/AYCL tokens create/translate use", async () => {
     const posts: Array<{ url: string; body: Record<string, unknown> }> = [];
     vi.stubGlobal(
       "fetch",

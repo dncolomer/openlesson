@@ -24,7 +24,7 @@ import { DEFAULT_PROMPTS, ILE_CONTEXT, getPrompt } from "@/lib/prompts";
 import { buildTraceScoringInstructions } from "@/lib/tap-score-traces";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 
-/** Identity phrases that must not appear as positive framing on TAP/ILE surfaces. */
+/** Identity phrases that must not appear as positive framing on TAP/TAP Learning surfaces. */
 const SOCRATIC_IDENTITY =
   /Socratic companion|Socratic method|Socratic learning demonstration|Socratic tutor|Socratic style|Socratic essence|Socratic questioning|Socratic probe|Socratic exchange|Socratic opening/i;
 
@@ -136,7 +136,7 @@ describe("TAP prompt surface (shipped builders)", () => {
     const opening = suggestedOpeningSpeech(facilitator);
     expect(opening.length).toBeGreaterThan(20);
     expect(opening).toMatch(/checkable|intermediate result|concrete/i);
-    expect(opening).not.toMatch(/out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|ILE/i);
+    expect(opening).not.toMatch(/out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|TAP Learning/i);
 
     const runtimeOpening = suggestedOpeningSpeech(runtime);
     expect(runtimeOpening).toBe(opening);
@@ -217,13 +217,13 @@ describe("TAP prompt surface (shipped builders)", () => {
   });
 });
 
-describe("ILE prompt surface (shipped builders + registry)", () => {
+describe("TAP Learning prompt surface (shipped builders + registry)", () => {
   it("frames chapter-aware optimize/augment (not TAP dual-stream primary)", () => {
     expect(ILE_SURFACE).toMatch(/Optimize/i);
     expect(ILE_SURFACE).toMatch(/Augment/i);
     expect(ILE_SURFACE).toMatch(/current chapter/i);
     expect(ILE_SURFACE).toMatch(/chapter canvas|Work canvas|drawing tools|tools/i);
-    // Dual-stream must not be the primary ILE conversation goal.
+    // Dual-stream must not be the primary TAP Learning conversation goal.
     expect(ILE_SURFACE).toMatch(/NOT a TAP dual-stream|not TAP dual-stream|not optimize for System 1/i);
     expectNoSocraticIdentity(ILE_SURFACE, "ILE_SURFACE");
 
@@ -243,7 +243,7 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
     expect(ILE_CONTEXT_BODY).toMatch(/current.?chapter|Mark as Done|canvas/i);
   });
 
-  it("bans cringe out-loud stage directions and platform product talk in learner-visible ILE speech rules", () => {
+  it("bans cringe out-loud stage directions and platform product talk in learner-visible TAP Learning speech rules", () => {
     const chat = buildIleHeliosChatSystemPrompt();
     const welcome = buildIleWelcomeSystemPrompt();
 
@@ -266,7 +266,7 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
       expect(text, label).toMatch(
         /Never (?:mention|put)|NEVER mention|never mention|Mentions of Uncertain Systems/i,
       );
-      // No prescribed TAP-style dual-stream primary goal for ILE coaching speech.
+      // No prescribed TAP-style dual-stream primary goal for TAP Learning coaching speech.
       expect(text, label).not.toMatch(/"say the next sentence out loud"|Say the causal link out loud|Talk through what you learned here out loud/i);
     }
 
@@ -303,7 +303,7 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{max_steps}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{chapter_grain_rules}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{session_mode}");
-    expect(DEFAULT_PROMPTS.session_plan_create).not.toMatch(/ILE session planner for Uncertain Systems/);
+    expect(DEFAULT_PROMPTS.session_plan_create).not.toMatch(/TAP Learning session planner for Uncertain Systems/);
 
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/practice coach|Optimize|good enough|Mark as Done/i);
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/next or adjacent chapter|adjacent chapter|next chapter/i);

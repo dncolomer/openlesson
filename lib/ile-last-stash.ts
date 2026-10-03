@@ -1,5 +1,5 @@
 /**
- * ILE Learning Mode compact stash + Thought-tool multi-select send/edit.
+ * TAP Learning Mode compact stash + Thought-tool multi-select send/edit.
  * Lists are oldest → newest. Last stash is the newest remaining entry, never list[0].
  */
 

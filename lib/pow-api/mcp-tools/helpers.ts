@@ -124,7 +124,7 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
 4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_snapshot_history
 5. Re-fetch schema + regenerate skill as proof of work grows
-Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/ILE end. Workspace creation is UI-only.
+Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/TAP Learning end. Workspace creation is UI-only.
 
 REST mirror: /api/v3/pow (capture), /api/v3/snapshot (scores + LWM/knowledge), /api/v3/stash (TAP buffer + TAPBench sessions).
 
@@ -259,7 +259,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "lwm_snapshot",
     description:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Evaluated against a goal set: default = all workspace goals + PoW-related block goals; or adhoc_goal; or selected goal_ids. Returns evaluated_goals on the response. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/ILE end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Evaluated against a goal set: default = all workspace goals + PoW-related block goals; or adhoc_goal; or selected goal_ids. Returns evaluated_goals on the response. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/TAP Learning end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
     inputSchema: {
       type: "object",
       properties: {

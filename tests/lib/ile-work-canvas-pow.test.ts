@@ -1,5 +1,5 @@
 /**
- * Shared Work-canvas PoW: scene-diff classifier + ILE/TAP upload builders.
+ * Shared Work-canvas PoW: scene-diff classifier + TAP Learning/TAP upload builders.
  * Drives shipped classify / ask / collector / builder functions — no reimplementation.
  */
 import { describe, expect, it } from "vitest";
@@ -297,7 +297,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
     );
   });
 
-  it("ILE and TAP builders agree on the same classified events", () => {
+  it("TAP Learning and TAP builders agree on the same classified events", () => {
     const rect = el("rectangle", "shared");
     const events = classifyIleWorkCanvasSceneDiff(emptyIleWorkCanvasScene(), scene([rect]));
     expect(events).toHaveLength(1);
@@ -586,7 +586,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
 });
 
 describe("Work-canvas PoW host wiring (shipped)", () => {
-  it("ILE and TAP live canvases forward classified actions, not last-tool-type, and keep speech", () => {
+  it("TAP Learning and TAP live canvases forward classified actions, not last-tool-type, and keep speech", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     expect(canvas).toContain("onCanvasPowActions");
     expect(canvas).toContain("IleWorkCanvasPowCollector");

@@ -1,5 +1,5 @@
 /**
- * Resolve guest identity for a TAP/ILE link open based on URL query params.
+ * Resolve guest identity for a TAP/TAP Learning link open based on URL query params.
  *
  * - No params → use the link's provisioned guest_user_id (base guest).
  * - With params → same (link, param fingerprint) always maps to the same guest;

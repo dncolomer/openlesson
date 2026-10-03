@@ -28,7 +28,7 @@ describe("resolveScreenCaptureMediaDevices (shipped)", () => {
     expect(resolved.mediaDevices?.getDisplayMedia).toBe(openerGdm);
   });
 
-  it("uses the opener when the ILE tab is visible", () => {
+  it("uses the opener when the TAP Learning tab is visible", () => {
     const openerGdm = gdm();
     const resolved = resolveScreenCaptureMediaDevices({
       document: { visibilityState: "visible" },

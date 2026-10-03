@@ -1,5 +1,5 @@
 /**
- * Shared map cell chrome for workspace block maps and ILE chapter maps.
+ * Shared map cell chrome for workspace block maps and TAP Learning chapter maps.
  * Neutral palette always; selection = white highlight; status = gear/tick icons only.
  */
 
@@ -41,12 +41,12 @@ export const MAP_CELL_NEUTRAL_CLASS =
 export const MAP_CELL_PREVIOUS_SESSIONS_CLASS =
   "border-neutral-600/80 bg-neutral-800/80 text-neutral-100";
 
-/** Unopened TIM-sourced ILE chapter — explore tile, slight pulse so the map feels alive. */
+/** Unopened TIM-sourced TAP Learning chapter — explore tile, slight pulse so the map feels alive. */
 export const MAP_CELL_TIM_UNOPENED_CLASS =
   "border-white/35 bg-neutral-950/80 shadow-[0_0_10px_rgba(255,255,255,0.08)] animate-pulse";
 
 /**
- * Mark-as-Done tile (workspace + ILE chapter): white fill/border plus a tick.
+ * Mark-as-Done tile (workspace + TAP Learning chapter): white fill/border plus a tick.
  * Selection still adds the existing white-ring language on top.
  */
 export const MAP_CELL_CHAPTER_DONE_CLASS =
@@ -119,7 +119,7 @@ export function mapCellChromeClasses(input: {
    * "prereq" → mild white; "target" → full select chrome.
    */
   highlightRole?: "target" | "prereq" | "selected" | "locked" | "neutral" | null;
-  /** ILE chapter map vs workspace block map. */
+  /** TAP Learning chapter map vs workspace block map. */
   surface?: MapCellSurface;
   /** This user has worked on this tile at least once. */
   workedOn?: boolean;
@@ -172,7 +172,7 @@ export function mapCellChromeClasses(input: {
 }
 
 /**
- * Shipped occupied-tile mapper used by workspace block maps and ILE chapter maps.
+ * Shipped occupied-tile mapper used by workspace block maps and TAP Learning chapter maps.
  * Done → white + tick. Self-progress → fainter white + gear. Done wins.
  */
 export function resolveMapTileChrome(input: {
@@ -208,7 +208,7 @@ export function resolveMapTileChrome(input: {
 }
 
 /**
- * ILE chapter-map occupied-cell chrome. Same mapper BlockSkillGrid chapter
+ * TAP Learning chapter-map occupied-cell chrome. Same mapper BlockSkillGrid chapter
  * mode uses — white + tick when completed; self-progress is gear + fainter white.
  */
 export function ileChapterCellChrome(input: {

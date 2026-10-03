@@ -126,7 +126,7 @@ export async function resolveIleLinkAccess(
     assignedUserId,
   });
   if (!attribution.userId && !attribution.guestUserId) {
-    return { error: "ILE guest participant is not provisioned", status: 500 };
+    return { error: "TAP Learning guest participant is not provisioned", status: 500 };
   }
 
   return {
@@ -198,7 +198,7 @@ export async function resolveIleLinkSessionAccess(
 }
 
 /**
- * Ensure an ILE practice session exists for this link (create or resume).
+ * Ensure a TAP Learning practice session exists for this link (create or resume).
  * Sessions run as the workspace owner with guest attribution in metadata.
  *
  * Links are multi-use: after a run completes, reopening the same private URL
@@ -294,7 +294,7 @@ export async function ensureIleLinkSession(
 
   if (sessionError || !session) {
     console.error("[ile-link] Session create error:", sessionError);
-    return { error: "Failed to create ILE session", status: 500 };
+    return { error: "Failed to create TAP Learning session", status: 500 };
   }
 
   await supabase

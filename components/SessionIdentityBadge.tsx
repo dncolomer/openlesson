@@ -3,7 +3,7 @@
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 /**
- * Small chrome badge showing which subject this TAP/ILE session attributes PoW to.
+ * Small chrome badge showing which subject this TAP/TAP Learning session attributes PoW to.
  */
 export function SessionIdentityBadge({
   identity,

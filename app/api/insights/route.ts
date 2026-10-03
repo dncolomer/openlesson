@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   // Workspace Insights (Knowledge) = bookmarks originating from workspaces only.
   // Optional workspaceId scopes the list to a single workspace Knowledge view.
-  // Optional sessionId scopes to insights crafted in one ILE session.
+  // Optional sessionId scopes to insights crafted in one TAP Learning session.
   let query = supabase
     .from("insights")
     .select("id, title, summary, workspace_id, block_id, chapter_id, session_id, aesthetic_image, share_token, created_at")

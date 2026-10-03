@@ -82,7 +82,7 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
   });
 }
 
-/** Persist payload `updateSessionPlan` writes for ILE chapter add/load/edit. */
+/** Persist payload `updateSessionPlan` writes for TAP Learning chapter add/load/edit. */
 export function buildSessionPlanStepsUpdate(plan: SessionPlan): {
   steps: SessionPlanStep[];
   currentStepIndex: number;
@@ -93,7 +93,7 @@ export function buildSessionPlanStepsUpdate(plan: SessionPlan): {
   };
 }
 
-/** Append a newly created ILE chapter at a grid slot (no DAG wiring). */
+/** Append a newly created TAP Learning chapter at a grid slot (no DAG wiring). */
 export function appendIleChapterStep(
   plan: SessionPlan,
   input: {

@@ -21,7 +21,7 @@ export interface InterruptionChapterSuggestion {
   description: string;
   /** 1–2 word map-tile label generated with title/description. */
   keyword?: string;
-  /** ILE chapter that produced the chapter-complete PoW. */
+  /** TAP Learning chapter that produced the chapter-complete PoW. */
   source_step_id?: string | null;
 }
 

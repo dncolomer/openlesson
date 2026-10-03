@@ -12,7 +12,7 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("ILE mini first-ask is gone", () => {
+describe("TAP Learning mini first-ask is gone", () => {
   it("does not open a floating window on leave, blur, or an external tool", () => {
     for (const leaveReason of ["tab_hidden", "tab_blur", "grok", "grokipedia"] as const) {
       expect(

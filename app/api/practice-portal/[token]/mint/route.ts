@@ -25,7 +25,7 @@ function baseUrl(req: NextRequest) {
 
 /**
  * POST /api/practice-portal/[token]/mint
- * Public mint of a TAP/ILE guest session from a Practice Portal.
+ * Public mint of a TAP/TAP Learning guest session from a Practice Portal.
  * Enforces allowed products/timings; creates anonymous guest links via existing helpers.
  *
  * Body: { product_id, minutes?, block_id? }

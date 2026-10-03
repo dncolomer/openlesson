@@ -1,7 +1,7 @@
 /**
  * Author limits on which practice launches a block allows:
- * Work (ILE Explore) / Drill / Scout, plus allowed Drill (TAP) durations.
- * New launches are always With AI (ILE learning / TAP conversational).
+ * Work (TAP Learning Explore) / Drill / Scout, plus allowed Drill (TAP) durations.
+ * New launches are always With AI (TAP Learning learning / TAP conversational).
  * allowDialog / allowSolo remain in the stored payload for older rows but
  * are not a new-launch axis.
  *
@@ -30,7 +30,7 @@ export type BlockPracticeOptions = {
   allowSolo: boolean;
   /**
    * @deprecated Prefer allowDialog. Mirrored for older readers.
-   * open_ended historically meant ILE path; now maps to dialog.
+   * open_ended historically meant TAP Learning path; now maps to dialog.
    */
   allowOpenEnded: boolean;
   /**
@@ -184,7 +184,7 @@ export function parseBlockPracticeOptions(raw: unknown): BlockPracticeOptions {
   return defaultBlockPracticeOptions();
 }
 
-/** Force Explore (ILE) on, keeping other author limits. */
+/** Force Explore (TAP Learning) on, keeping other author limits. */
 export function withExplorePracticeEnabled(
   opts: BlockPracticeOptions | null | undefined,
 ): BlockPracticeOptions {

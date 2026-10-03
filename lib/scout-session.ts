@@ -1,7 +1,7 @@
 /**
  * Scout mode: TAP-shaped rabbit-hole mind map (no think-aloud).
  * Pure units — tree, question normalize, canvas seed/connect, thank-you CTAs,
- * prompt builder, and ILE context merge. Tests inject question arrays.
+ * prompt builder, and TAP Learning context merge. Tests inject question arrays.
  */
 
 import {

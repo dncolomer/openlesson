@@ -1,5 +1,5 @@
 /**
- * Dialog vs Project ILE chapter grain, Mark-as-Done policy, expansion, and PoW.
+ * Dialog vs Project TAP Learning chapter grain, Mark-as-Done policy, expansion, and PoW.
  * Drives shipped compose / Helios / persist-payload helpers — not a reimplementation.
  */
 import { describe, expect, it } from "vitest";
@@ -306,7 +306,7 @@ describe("chapter_suggest + chapter_add PoW persist payloads (shipped builders)"
   });
 });
 
-describe("shipped ILE planner / Helios text names the user's anti-patterns", () => {
+describe("shipped TAP Learning planner / Helios text names the user's anti-patterns", () => {
   it("static read of planner + Helios + surface", () => {
     const create = DEFAULT_PROMPTS.session_plan_create;
     const update = DEFAULT_PROMPTS.session_plan_update;

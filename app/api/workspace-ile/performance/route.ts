@@ -17,9 +17,9 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /**
- * Optional ILE-session helper to run LWM Snapshot for a participant.
+ * Optional TAP Learning-session helper to run LWM Snapshot for a participant.
  * Product snapshot generation is manual (Knowledge UI) or Snapshot API
- * POST .../lwm-snapshot / MCP lwm_snapshot — not invoked automatically on ILE end.
+ * POST .../lwm-snapshot / MCP lwm_snapshot — not invoked automatically on TAP Learning end.
  */
 export async function POST(req: NextRequest) {
   try {

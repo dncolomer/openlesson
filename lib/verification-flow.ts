@@ -391,7 +391,7 @@ export function buildVerificationFlowSkillMarkdown(input: {
     "",
     "Generate proof of work for this verification flow and store it on the flow.",
     "This skill is the flow's agent integration, in the same role as the workspace Settings → Integration skill.",
-    "Snapshot scoring and embedding geometry are unchanged. Do not mint TAP, ILE, or TAPBench knowledge links.",
+    "Snapshot scoring and embedding geometry are unchanged. Do not mint TAP, TAP Learning, or TAPBench knowledge links.",
     "",
     `Workspace: ${input.workspaceId}`,
     `Verification flow: ${input.flowId}`,

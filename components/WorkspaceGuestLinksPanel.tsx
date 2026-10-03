@@ -105,7 +105,7 @@ interface WorkspaceGuestLinksPanelProps {
 }
 
 /**
- * Owner settings: create and browse shareable TAP and ILE practice links.
+ * Owner settings: create and browse shareable TAP and TAP Learning practice links.
  * TAPBench keys are issued on /tapbench, not from this API or panel.
  */
 export function WorkspaceGuestLinksPanel({
@@ -144,7 +144,7 @@ export function WorkspaceGuestLinksPanel({
   const [browseKind, setBrowseKind] = useState<GuestLinkBrowseKindFilter>("all");
   const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
-  /** Drill and Prepare are timed TAP links; Learn is ILE and needs a block. */
+  /** Drill and Prepare are timed TAP links; Learn is TAP Learning and needs a block. */
   const isDrillProduct = createProduct === "drill_dialog";
   const isScoutProduct = createProduct === "scout_dialog";
   const isExploreProduct = createProduct === "explore_dialog";
@@ -417,7 +417,7 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           show_end_session: showEndSession,
           access_mode: "private",
-          // Explore always → ILE learning (With AI).
+          // Explore always → TAP Learning learning (With AI).
           session_mode: resolveProductIntent("explore", "dialog").session_mode,
           project: false,
         };
@@ -784,7 +784,7 @@ export function WorkspaceGuestLinksPanel({
             <div>
               <h3 className="text-sm font-medium text-white">Create knowledge link</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Pick a product, scope, and participant — one create action mints a TAP or ILE
+                Pick a product, scope, and participant — one create action mints a TAP or TAP Learning
                 share link.
               </p>
             </div>

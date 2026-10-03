@@ -1,5 +1,5 @@
 /**
- * ILE picture-in-picture is gone. Leave-tab does not open a floating window.
+ * TAP Learning picture-in-picture is gone. Leave-tab does not open a floating window.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,7 +21,7 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("ILE picture-in-picture is removed", () => {
+describe("TAP Learning picture-in-picture is removed", () => {
   it("leave-tab never asks for a floating window", () => {
     const away = {
       sessionActive: true,

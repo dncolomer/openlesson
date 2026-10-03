@@ -1,5 +1,5 @@
 /**
- * Learner-chosen ILE session name (Previous Sessions list).
+ * Learner-chosen TAP Learning session name (Previous Sessions list).
  * Blank keeps the session id as the display name.
  */
 export const ILE_SESSION_NAME_META_KEY = "session_name" as const;

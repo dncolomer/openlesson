@@ -150,7 +150,7 @@ export function useSessionMutate(input: SessionMutateInput) {
   >({});
   const followUpsFetchedRef = useRef<Set<string>>(new Set());
 
-/** Workspace materials for ILE Project framer + generate-exercise. */
+/** Workspace materials for TAP Learning Project framer + generate-exercise. */
 const [ilePromptMaterials, setIlePromptMaterials] = useState<IlePromptMaterials | null>(null);
 
 useEffect(() => {
@@ -299,7 +299,7 @@ const projectChapterExercisePrompt = useMemo(() => {
   if (!isProjectMode) return chapterDialoguePrompt;
   // Prefer the stored chapter text when it is already a real exercise (LLM-authored).
   // Thin topic wraps still go through the pure framer until upgraded async below.
-  // Pass notes/files/blocks/local/unusable when loaded so ILE uses the shared assembler layers.
+  // Pass notes/files/blocks/local/unusable when loaded so TAP Learning uses the shared assembler layers.
   return buildIleProjectChapterExercisePrompt({
     chapterDescription: activeStep?.description,
     blockTitle:

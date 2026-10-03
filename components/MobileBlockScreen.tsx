@@ -11,7 +11,7 @@ export function MobileBlockScreen({
 }: {
   /** Which product is blocked — copy stays desktop-first. */
   product?: MobileBlockProduct;
-  /** Hide dashboard CTA on guest TAP/ILE links. */
+  /** Hide dashboard CTA on guest TAP/TAP Learning links. */
   showDashboardLink?: boolean;
 }) {
   const { t } = useI18n();
@@ -19,7 +19,7 @@ export function MobileBlockScreen({
     product === "tap"
       ? "Think Aloud Protocol"
       : product === "ile"
-        ? "Integrated Learning Environment"
+        ? "TAP Learning"
         : "this experience";
 
   return (

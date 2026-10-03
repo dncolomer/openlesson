@@ -1,5 +1,5 @@
 /**
- * ILE live-session dead frontend: retired submit buttons, Thought Memory host,
+ * TAP Learning live-session dead frontend: retired submit buttons, Thought Memory host,
  * and empty Global-resources tools grid must stay gone. TAP keeps I'm done answering.
  */
 import { describe, expect, it } from "vitest";
@@ -22,8 +22,8 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ILE dead frontend is gone from the live session", () => {
-  it("does not mount retired ILE submit/thought hosts or an empty tools grid; TAP keeps I'm done answering", () => {
+describe("TAP Learning dead frontend is gone from the live session", () => {
+  it("does not mount retired TAP Learning submit/thought hosts or an empty tools grid; TAP keeps I'm done answering", () => {
     const panes = read("components/session-view/session-tool-panes.tsx");
     const chrome = read("components/session-view/session-chrome.tsx");
     const tools = read("components/ToolsPanel.tsx");
@@ -76,7 +76,7 @@ describe("ILE dead frontend is gone from the live session", () => {
     writeScratch(
       "ile-quality-dead-frontend.txt",
       [
-        "ILE panes: no NotebookSubmitButton, no ThoughtMemoryPanel, IleReviewWorkPanel",
+        "TAP Learning panes: no NotebookSubmitButton, no ThoughtMemoryPanel, IleReviewWorkPanel",
         "no ToolsPanel empty grid; sensors remain on data-ile-tools-widget",
         "session resources button is on the sidebar bar, not the chapter dock",
         "TAP: ImDoneAnsweringControl + ThoughtMemoryPanel kept",

@@ -120,7 +120,7 @@ export function shouldShowMapNotesPlaneToggle(noteCount: number): boolean {
   return Math.max(0, Math.floor(Number(noteCount) || 0)) > 0;
 }
 
-/** Personal learner notes: workspace + learner identity (or ILE chapter session). */
+/** Personal learner notes: workspace + learner identity (or TAP Learning chapter session). */
 export function learnerMapNotesStorageKey(input: MapOverlayPersistInput & {
   workspaceId?: string;
   learnerScopeId: string;
@@ -141,7 +141,7 @@ export function learnerMapNotesStorageKeyV1(input: MapOverlayPersistInput & {
   return `openlesson.learnerMapNotes.v1:${ws}:${who}`;
 }
 
-/** Creator-authored notes: workspace-scoped (or ILE chapter-session scoped). */
+/** Creator-authored notes: workspace-scoped (or TAP Learning chapter-session scoped). */
 export function creatorMapNotesStorageKey(input: MapOverlayPersistInput & {
   workspaceId?: string;
 }): string {

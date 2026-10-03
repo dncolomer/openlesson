@@ -1,5 +1,5 @@
 /**
- * ILE Work canvas: per-chapter isolation, XAI apply, session-chat scene,
+ * TAP Learning Work canvas: per-chapter isolation, XAI apply, session-chat scene,
  * Excalidraw-tool PoW, and prompt/chrome structural checks.
  */
 import { describe, expect, it } from "vitest";
@@ -218,7 +218,7 @@ function sceneWith(id: string, text = id): IleWorkCanvasScene {
   };
 }
 
-describe("ILE Work canvas grid default (shipped)", () => {
+describe("TAP Learning Work canvas grid default (shipped)", () => {
   it("starts with the grid off and zen mode on, and keeps an explicit choice", () => {
     const empty = emptyIleWorkCanvasScene();
     expect(empty.appState.gridModeEnabled).toBe(false);
@@ -268,7 +268,7 @@ describe("ILE Work canvas grid default (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas chapter isolation (shipped)", () => {
+describe("TAP Learning Work canvas chapter isolation (shipped)", () => {
   it("keeps two chapter keys on distinct scenes; completed chapter restores non-empty board", () => {
     const store = createIleWorkCanvasChapterStore();
     const sceneA = sceneWith("draw-chA", "chapter A notes");
@@ -295,7 +295,7 @@ describe("ILE Work canvas chapter isolation (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas chapter seed (shipped)", () => {
+describe("TAP Learning Work canvas chapter seed (shipped)", () => {
   it("places chapter text as a type:text element on an empty board and does not overwrite existing work", () => {
     const empty = serializeIleWorkCanvasScene(null);
     const seeded = seedIleChapterWorkCanvas(empty, {
@@ -343,7 +343,7 @@ describe("ILE Work canvas chapter seed (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas center on open (shipped)", () => {
+describe("TAP Learning Work canvas center on open (shipped)", () => {
   it("centers first-time XAI/chapter text in the viewport and scrolls once per board open", () => {
     const seeded = seedIleChapterWorkCanvas(null, {
       text: "Walk a case through just-war criteria",
@@ -385,7 +385,7 @@ describe("ILE Work canvas center on open (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas zoom at point (shipped)", () => {
+describe("TAP Learning Work canvas zoom at point (shipped)", () => {
   it("increases zoom for negative wheel delta and keeps the cursor scene point", () => {
     const before = { zoom: 1, scrollX: 40, scrollY: 20, offsetLeft: 0, offsetTop: 0 };
     const cursor = { viewportX: 200, viewportY: 150 };
@@ -406,7 +406,7 @@ describe("ILE Work canvas zoom at point (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
+describe("TAP Learning Work canvas ask-XAI on selection (shipped)", () => {
   it("places a loading text item then replaces it with the XAI reply", () => {
     const selected = convertToExcalidrawElements([
       { type: "text", text: "just-war criteria", x: 10, y: 20 },
@@ -686,7 +686,7 @@ describe("ILE Work canvas ask-XAI on selection (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas text wrap (shipped)", () => {
+describe("TAP Learning Work canvas text wrap (shipped)", () => {
   it("wraps long seed and XAI replies into a narrow box instead of one line", () => {
     const long =
       "When this chapter feels solid after a multi-turn guided conversation, invite Mark as Done and open the next adjacent chapter about just-war last resort.";
@@ -740,7 +740,7 @@ describe("ILE Work canvas text wrap (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas XAI apply (shipped convertToExcalidrawElements wrapper)", () => {
+describe("TAP Learning Work canvas XAI apply (shipped convertToExcalidrawElements wrapper)", () => {
   it("appends a real type:text element from the XAI response plus optional shapes", () => {
     const existing = sceneWith("user-1", "learner sketch");
     const next = applyIleXaiTurnToWorkCanvas(existing, {
@@ -825,7 +825,7 @@ describe("ILE Work canvas XAI apply (shipped convertToExcalidrawElements wrapper
   });
 });
 
-describe("ILE session-chat board context (shipped builder)", () => {
+describe("TAP Learning session-chat board context (shipped builder)", () => {
   it("sends the full current scene on a turn and a mutated scene on the next", () => {
     const first = sceneWith("el-1", "first board");
     first.appState = { zoom: { value: 1 }, collaborators: { skip: true } };
@@ -930,7 +930,7 @@ describe("ILE session-chat board context (shipped builder)", () => {
   });
 });
 
-describe("ILE Excalidraw-tool PoW (shipped)", () => {
+describe("TAP Learning Excalidraw-tool PoW (shipped)", () => {
   it("maps Excalidraw tools onto canvas actions and does not emit notebook / grokipedia / dantes", () => {
     expect(mapExcalidrawToolToIlePow({ activeTool: "text" })).toEqual({
       toolName: "canvas",
@@ -975,8 +975,8 @@ describe("ILE Excalidraw-tool PoW (shipped)", () => {
   });
 });
 
-describe("ILE prompts describe one chapter canvas (shipped)", () => {
-  it("drops Notebook / Grokipedia / Dantes as ILE tools", () => {
+describe("TAP Learning prompts describe one chapter canvas (shipped)", () => {
+  it("drops Notebook / Grokipedia / Dantes as TAP Learning tools", () => {
     const chat = buildIleHeliosChatSystemPrompt();
     for (const [label, text] of [
       ["ILE_SURFACE", ILE_SURFACE],
@@ -997,7 +997,7 @@ describe("ILE prompts describe one chapter canvas (shipped)", () => {
   });
 });
 
-describe("ILE Work chrome is canvas-only (shipped source)", () => {
+describe("TAP Learning Work chrome is canvas-only (shipped source)", () => {
   it("has no notebook / grokipedia / dantes Work tabs or panes", () => {
     const tabs = read("components/session-view/ile-chapter-tool-tabs.tsx");
     const panes = read("components/session-view/session-tool-panes.tsx");
@@ -1030,7 +1030,7 @@ describe("ILE Work chrome is canvas-only (shipped source)", () => {
   });
 });
 
-describe("ILE Work canvas XAI suggested origin (shipped parse+apply)", () => {
+describe("TAP Learning Work canvas XAI suggested origin (shipped parse+apply)", () => {
   it("places JSON origin when finite and falls back when missing or invalid", () => {
     const existing = sceneWith("user-1", "learner sketch");
     const parsed = parseIleXaiCanvasTurn(
@@ -1120,7 +1120,7 @@ describe("ILE Work canvas XAI suggested origin (shipped parse+apply)", () => {
   });
 });
 
-describe("ILE Work canvas thinking overlay box (shipped occupancy+style)", () => {
+describe("TAP Learning Work canvas thinking overlay box (shipped occupancy+style)", () => {
   it("uses a fixed square that rotating copy cannot resize", () => {
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBe(ILE_XAI_LOADING_BOX_HEIGHT);
     expect(ILE_XAI_LOADING_BOX_WIDTH).toBeGreaterThan(52);
@@ -1181,7 +1181,7 @@ describe("ILE Work canvas thinking overlay box (shipped occupancy+style)", () =>
   });
 });
 
-describe("ILE Work canvas parallel asks (shipped live merge)", () => {
+describe("TAP Learning Work canvas parallel asks (shipped live merge)", () => {
   it("keeps both replies when applying onto the live scene instead of a stale snapshot", () => {
     const start = sceneWith("user-1", "learner sketch");
     const first = applyIleXaiTurnToWorkCanvas(start, {
@@ -1226,7 +1226,7 @@ describe("ILE Work canvas parallel asks (shipped live merge)", () => {
   });
 });
 
-describe("ILE and TAP Work canvas share one component (shipped)", () => {
+describe("TAP Learning and TAP Work canvas share one component (shipped)", () => {
   it("both hosts mount WorkCanvas with the same board features", () => {
     const canvas = read("components/ExcalidrawCanvas.tsx");
     const ile = read("components/SessionView.tsx");
@@ -1261,7 +1261,7 @@ describe("ILE and TAP Work canvas share one component (shipped)", () => {
     writeScratch(
       "work-canvas-hosts.log",
       [
-        "ILE SessionView mounts WorkCanvas with onAskSelected, heliosBusy, onSceneChange, onCanvasPowActions",
+        "TAP Learning SessionView mounts WorkCanvas with onAskSelected, heliosBusy, onSceneChange, onCanvasPowActions",
         "TAP tap-score-phases mounts WorkCanvas with onAskSelected, heliosBusy, onSceneChange, onCanvasPowActions",
         "canvas module does not import SessionView, tap-score-phases, or session-chat-client",
       ].join("\n") + "\n",
@@ -1269,7 +1269,7 @@ describe("ILE and TAP Work canvas share one component (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas thinking occupancy (shipped)", () => {
+describe("TAP Learning Work canvas thinking occupancy (shipped)", () => {
   it("keeps one overlay id when heliosBusy overlaps an in-flight canvas ask", () => {
     expect(
       ileWorkCanvasThinkingOccupancy({
@@ -1296,7 +1296,7 @@ describe("ILE Work canvas thinking occupancy (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas Expand More unselect (shipped)", () => {
+describe("TAP Learning Work canvas Expand More unselect (shipped)", () => {
   it("hides Expand More on empty selection even while pointer-busy", () => {
     expect(
       ileLearnMoreVisiblePlacement({
@@ -1334,7 +1334,7 @@ describe("ILE Work canvas Expand More unselect (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas workspace+block prompt context (shipped)", () => {
+describe("TAP Learning Work canvas workspace+block prompt context (shipped)", () => {
   it("ask-user and turn-context include workspace, focused block, and stay-on-domain language", () => {
     const workspace = {
       workspaceTitle: "Just War Ethics",
@@ -1396,7 +1396,7 @@ describe("ILE Work canvas workspace+block prompt context (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
+describe("TAP Learning Work canvas split + Expand More quick actions (shipped)", () => {
   it("splits a text element into 2 or 3 live blocks and keeps icon-only quick actions", () => {
     const source =
       "First clause names the last-resort test. Second clause names discrimination. Third clause names proportionality of means.";
@@ -1506,7 +1506,7 @@ describe("ILE Work canvas split + Expand More quick actions (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas user delete stays empty (shipped)", () => {
+describe("TAP Learning Work canvas user delete stays empty (shipped)", () => {
   it("does not restore the previous scene after the learner deletes live elements", () => {
     expect(
       ileWorkCanvasShouldRestoreEmptyBoard({
@@ -1547,7 +1547,7 @@ describe("ILE Work canvas user delete stays empty (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas timer expiry (shipped)", () => {
+describe("TAP Learning Work canvas timer expiry (shipped)", () => {
   it("counts down a positive duration, then reseeds the initial chapter element while keeping insights", () => {
     expect(clampIleCanvasTimerSeconds(undefined)).toBe(ILE_CANVAS_TIMER_SECONDS_DEFAULT);
     expect(ILE_CANVAS_TIMER_SECONDS_MIN).toBe(10 * 60);
@@ -1698,7 +1698,7 @@ describe("ILE Work canvas timer expiry (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas compress work (shipped)", () => {
+describe("TAP Learning Work canvas compress work (shipped)", () => {
   it("replaces the board with one summary element and keeps the Compress work control next to the prompt bar", () => {
     expect(ILE_COMPRESS_WORK_LABEL).toBe("Compress work");
     expect(ILE_COMPRESS_WORK_LOADING_LABEL).not.toBe(ILE_COMPRESS_WORK_LABEL);
@@ -1765,7 +1765,7 @@ describe("ILE Work canvas compress work (shipped)", () => {
   });
 });
 
-describe("ILE Work canvas live geometry and non-overlapping drops (shipped)", () => {
+describe("TAP Learning Work canvas live geometry and non-overlapping drops (shipped)", () => {
   it("moves a real reply off a loading slot that only fits the square, keeps a free origin, and lists live geometry", () => {
     const long = "measure the wrapped reply ".repeat(40).trim();
     const wrapped = wrapIleWorkCanvasText(long);
@@ -2203,7 +2203,7 @@ function boxSeparation(
   return 0;
 }
 
-describe("ILE Work canvas selection commands (shipped)", () => {
+describe("TAP Learning Work canvas selection commands (shipped)", () => {
   it("compresses only the selection, refactors it, suggests an insight, clears overlaps, and highlights new marks", () => {
     const selected = convertToExcalidrawElements([
       { type: "text", text: "alpha claim about last resort", x: 0, y: 0, width: 200, height: 48 },

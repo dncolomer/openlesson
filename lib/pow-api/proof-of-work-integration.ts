@@ -259,12 +259,12 @@ Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document 
 LWM Snapshot contract (MUST appear in skill.md — sole product score strategy; one primary score + GHC secondary + spider + analysis + next actions):
 Endpoint: POST .../lwm-snapshot
 MCP tool: lwm_snapshot
-LWM Snapshot: manual Knowledge UI or POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/ILE end)
+LWM Snapshot: manual Knowledge UI or POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/TAP Learning end)
 Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "lwm_snapshot_score", "workspace_goal", "ghc_score", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
 primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer (lwm_snapshot_score / LWM Snapshot)
 workspace_goal: ${spec.performance_report_contract?.workspace_goal?.description || "inferred or owner-set workspace goal"}
 marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
-gap_analysis.gaps: required list of gaps (title, proof_of_work, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or ILE
+gap_analysis.gaps: required list of gaps (title, proof_of_work, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or TAP Learning
 gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
 Example LWM Snapshot score shape:
 ${JSON.stringify(

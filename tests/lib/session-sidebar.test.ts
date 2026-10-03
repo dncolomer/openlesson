@@ -95,7 +95,7 @@ function renderSidebar(mode: SessionSidebarMode, collapsed: boolean, remainingSe
 }
 
 describe("session sidebar mode configuration", () => {
-  it("keeps ILE, TAP, and verification TAP section sets", () => {
+  it("keeps TAP Learning, TAP, and verification TAP section sets", () => {
     expect(sessionSidebarSections("ile")).toEqual(ILE_SECTIONS);
     expect(sessionSidebarSections("tap")).toEqual(TAP_SECTIONS);
     expect(sessionSidebarSections("verification-tap")).toEqual(TAP_SECTIONS);
@@ -138,7 +138,7 @@ describe("session sidebar mode configuration", () => {
     expect(Number.parseFloat(collapsed.width)).toBeGreaterThan(0);
   });
 
-  it("renders the ILE sidebar beside a clock, widgets, and the live transcript", () => {
+  it("renders the TAP Learning sidebar beside a clock, widgets, and the live transcript", () => {
     const html = renderSidebar("ile", false, 65);
     expect(html).toContain('data-session-sidebar-mode="ile"');
     expect(html).toContain('data-session-sidebar-collapsed="false"');

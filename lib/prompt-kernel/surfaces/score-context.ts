@@ -14,7 +14,7 @@ You are scoring an LWM Snapshot from **proof-of-work (PoW) data only**.
 
 Allowed evidence (INPUT):
 - Attached PoW artifacts: tool traces, screen/screenshots, video, EEG, and any other uploaded proof-of-work files
-- TAP / ILE selective thought traces and transcripts when present as PoW — including the **actual text content** of stashed/submitted thoughts, chat exchanges, and exercise submissions
+- TAP / TAP Learning selective thought traces and transcripts when present as PoW — including the **actual text content** of stashed/submitted thoughts, chat exchanges, and exercise submissions
 - Temporally stamped events (timestamps, inter-event gaps, idle, dwell, bursts)
 - The workspace performance context JSON that catalogs those PoW refs, block scopes, and counts
 
@@ -28,20 +28,20 @@ Rules:
 1. Every primary score, marker score, strength, growth area, and gap must be grounded in concrete PoW you can point to (artifact type, tool event, **quoted or paraphrased trace/transcript text**, timestamp pattern, or explicit absence of PoW).
 2. When PoW is sparse or missing for a claim, lower scores and state the thin-signal honestly — never fabricate competency, readiness, or goal progress.
 3. Timestamps and event ordering are first-class: use them for temporal_summary and authenticity (GHC) when present.
-4. Remediation outputs (gap repairs, next_steps, suggestions) stay in domain/product/workflow language — never recommend TAP, ILE, block completion, or other Uncertain Systems platform mechanics as outputs. Those products may supply scoring INPUT only.
+4. Remediation outputs (gap repairs, next_steps, suggestions) stay in domain/product/workflow language — never recommend TAP, TAP Learning, block completion, or other Uncertain Systems platform mechanics as outputs. Those products may supply scoring INPUT only.
 5. Do not score "potential" or "intent" detached from observed PoW.
 6. Do not produce generic coaching essays; prefer short claims tied to evidence in the attached corpus.
 `.trim();
 
 /**
  * Verification-only overlay: mandatory submit vs stash (System 1 vs System 2) analysis
- * when TAP/ILE selective-thought PoW is present.
+ * when TAP/TAP Learning selective-thought PoW is present.
  */
 export const SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY = `
 VERIFICATION — SUBMIT / STASH ANALYSIS (System 1 vs System 2):
-LWM Snapshot (verification) scoring MUST perform an explicit submit/stash analysis when TAP or ILE selective-thought proof of work is present.
+LWM Snapshot (verification) scoring MUST perform an explicit submit/stash analysis when TAP or TAP Learning selective-thought proof of work is present.
 
-Definitions (aligned with TAP/ILE selective thought):
+Definitions (aligned with TAP/TAP Learning selective thought):
 - **System 1**: spontaneous crystallized speech, including **stashed / unsent** thoughts — raw cognition before polish
 - **System 2**: deliberate **send**, edit, skip, select/deselect, or **resend** into the dialogue — intentional selection and repair
 
@@ -51,7 +51,7 @@ Required analysis when selective-thought PoW exists:
 3. Weight natural temporal pacing, hesitation/repair patterns, and non-templated language for GHC authenticity.
 4. Prefer verification markers that reflect demonstrated knowledge coverage from these traces plus other PoW — not polish alone.
 
-When **no** TAP/ILE selective-thought PoW is present:
+When **no** TAP/TAP Learning selective-thought PoW is present:
 - Do **not** invent System 1 / System 2 dynamics or fake submit/stash pairs.
 - Set ghc_confidence to "none" or "low" and score verification from remaining tool/artifact PoW only, noting the missing selective-thought signal.
 `.trim();

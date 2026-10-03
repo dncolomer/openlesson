@@ -22,7 +22,7 @@ import {
 const FULL_ALLOWLIST = ["en", "vi", "zh", "es", "de", "pl", "ca"] as const;
 
 describe("spoken language allowlist", () => {
-  it("keeps full tutoring/spoken allowlist (en/vi/zh/es/de/pl/ca) for TAP and ILE", () => {
+  it("keeps full tutoring/spoken allowlist (en/vi/zh/es/de/pl/ca) for TAP and TAP Learning", () => {
     expect([...spokenLocales]).toEqual([...FULL_ALLOWLIST]);
     expect([...tutoringLocales]).toEqual([...FULL_ALLOWLIST]);
     for (const code of spokenLocales) {
@@ -150,7 +150,7 @@ describe("TAP speech language wiring", () => {
   });
 });
 
-describe("ILE Spoken Language wiring", () => {
+describe("TAP Learning Spoken Language wiring", () => {
   it("selector options come from full spoken allowlist", () => {
     const viewSrc = readSessionViewSurface();
     const briefing = readFileSync(
@@ -292,7 +292,7 @@ describe("conversation language instruction for Explore/Drill model replies", ()
     expect(domain).toContain("conversationLanguage");
   });
 
-  it("session-chat (ILE Explore) uses the same language instruction helper", () => {
+  it("session-chat (TAP Learning Explore) uses the same language instruction helper", () => {
     const sessionChat = readFileSync(
       path.join(process.cwd(), "app/api/session-chat/route.ts"),
       "utf8",

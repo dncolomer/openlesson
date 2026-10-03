@@ -4,7 +4,7 @@
  *
  * Teams (pro_teams): direct REST + MCP access — list/read workspaces, proof of work, scores, TAP links.
  * Workspace create is UI-only (POST /api/v3/pow/workspaces → 403) for all keys.
- * Individual (regular_2026): Proof-of-Work API gated (api_plan_required); proof of work via ILE/TAP web routes + Performance tab.
+ * Individual (regular_2026): Proof-of-Work API gated (api_plan_required); proof of work via TAP Learning/TAP web routes + Performance tab.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import crypto from "node:crypto";
@@ -464,13 +464,13 @@ async function runTeamsMcp(apiKey, workspaceId) {
 }
 
 async function runIndividualIndirect(admin, regularJar) {
-  console.log("\n== Individual — indirect ILE / TAP / Performance tab ==");
+  console.log("\n== Individual — indirect TAP Learning / TAP / Performance tab ==");
 
   const gen = await fetch(`${baseUrl}/api/workspace/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader(regularJar) },
     body: JSON.stringify({
-      topic: "[E2E-PoW-IND] Individual tier workspace for ILE/TAP indirect proof of work",
+      topic: "[E2E-PoW-IND] Individual tier workspace for TAP Learning/TAP indirect proof of work",
       days: 7,
     }),
   });
@@ -535,7 +535,7 @@ async function runIndividualIndirect(admin, regularJar) {
   const ileBody = await ilePow.json();
   record(
     "individual-indirect",
-    "ILE proof-of-work upload (cookie auth)",
+    "TAP Learning proof-of-work upload (cookie auth)",
     ilePow.status === 201 && !!ileBody.proof_of_work?.id,
     ilePow.status === 201 ? ileBody.proof_of_work.id : `${ilePow.status} ${JSON.stringify(ileBody).slice(0, 100)}`,
   );

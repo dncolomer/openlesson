@@ -78,7 +78,7 @@ export function MapRightStack({
   handleAnnotationLayerDelete: (layerId: string) => void;
   /** Sit at the top-right when the overlay minimap is hidden. */
   minimapHidden?: boolean;
-  /** ILE chapter map: show or hide the route overlay. Default is on. */
+  /** TAP Learning chapter map: show or hide the route overlay. Default is on. */
   pathOverlay?: { visible: boolean; onToggle: () => void } | null;
 }) {
   const toggleIds =

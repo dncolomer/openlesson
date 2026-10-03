@@ -81,7 +81,7 @@ export const SCORE_FIELD_DESCRIPTIONS = {
   workspace_goal:
     "Plain-language inferred (or owner-set) workspace goal defining success for this workspace.",
   ghc_score:
-    "0–100 Genuine Human Cognition score: how genuine/human the PoW source appears. Strongest with TAP/ILE selective thought (System 1 vs System 2) and natural temporal patterns; tool-only dumps yield low ghc_confidence. Secondary signal — not a second primary snapshot strategy.",
+    "0–100 Genuine Human Cognition score: how genuine/human the PoW source appears. Strongest with TAP/TAP Learning selective thought (System 1 vs System 2) and natural temporal patterns; tool-only dumps yield low ghc_confidence. Secondary signal — not a second primary snapshot strategy.",
   ghc_confidence:
     "none | low | medium | high — confidence in ghc_score given available signal quality.",
   temporal_summary:

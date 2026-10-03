@@ -47,7 +47,7 @@ export function MapToolRail({
   prereqEditActive: boolean;
   stagedPrereqCount: number;
   onToolClick: (tool: BlockMapToolId) => void;
-  /** Extra overlay anchor classes (e.g. ILE chapter maps sit below the PoW bar). */
+  /** Extra overlay anchor classes (e.g. TAP Learning chapter maps sit below the PoW bar). */
   overlayAnchorClass?: string;
   /** Hide the draw toolbox even while a layer is active. */
   hidden?: boolean;

@@ -1,5 +1,5 @@
 /**
- * ILE Gather resources: decide/consume/rate-limit, forage input, PoW record,
+ * TAP Learning Gather resources: decide/consume/rate-limit, forage input, PoW record,
  * under-layer progress, block-scoped planned resources, Chapter widget surface.
  */
 import { describe, expect, it } from "vitest";
@@ -82,7 +82,7 @@ function enoughArtifacts(): IlePowCounterArtifact[] {
   ];
 }
 
-describe("ILE gather resources", () => {
+describe("TAP Learning gather resources", () => {
   it("refuses insufficient PoW and rate-limit; consumes typed amounts when allowed", () => {
     const empty = decideIleGatherResources({ artifacts: [] });
     expect(empty.allowed).toBe(false);

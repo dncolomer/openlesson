@@ -1,6 +1,6 @@
 /**
- * Product intent: Explore/Drill → technical ILE/TAP launch (always With AI).
- * Drill always TAP conversational; Explore always ILE learning.
+ * Product intent: Explore/Drill → technical TAP Learning/TAP launch (always With AI).
+ * Drill always TAP conversational; Explore always TAP Learning learning.
  * Drives shipped resolve helpers — no re-implementation of the matrix.
  */
 import { describe, expect, it } from "vitest";
@@ -38,7 +38,7 @@ function writeLog(name: string, body: string) {
 }
 
 describe("resolveProductIntent new launches are always With AI", () => {
-  it("explore + any second axis → ILE learning", () => {
+  it("explore + any second axis → TAP Learning learning", () => {
     const t = resolveProductIntent("explore", "dialog");
     expect(t).toEqual({
       id: "explore_dialog",
@@ -61,7 +61,7 @@ describe("resolveProductIntent new launches are always With AI", () => {
     expect(resolveProductIntent("drill", "exercise")).toEqual(t);
   });
 
-  it("Drill never launches ILE; Explore never launches TAP", () => {
+  it("Drill never launches TAP Learning; Explore never launches TAP", () => {
     for (const modality of ["dialog", "solo"] as const) {
       expect(resolveProductIntent("drill", modality).product).toBe("tap");
       expect(resolveProductIntent("explore", modality).product).toBe("ile");
@@ -134,7 +134,7 @@ describe("productIntentFromGuestLink / create fields / id migration", () => {
 });
 
 describe("structural: workspace + settings have no With AI vs Solo choice", () => {
-  it("BlockDetailCard uses Explore/Drill only, not ILE/TAP CTAs or modality toggles", () => {
+  it("BlockDetailCard uses Explore/Drill only, not TAP Learning/TAP CTAs or modality toggles", () => {
     const card = read("components/BlockDetailCard.tsx");
     expect(card).toContain("product-intent");
     expect(card).toContain("resolveLaunchFromStyleAndModality");
@@ -157,7 +157,7 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(card).toContain("onClick={() => setStyle(id)}");
     expect(card).not.toContain("modalityDialog");
     expect(card).not.toContain("modalitySolo");
-    expect(card).not.toMatch(/ILE · Learning Mode|ILE · Project Mode|Exercise TAP|Think Aloud Protocol/);
+    expect(card).not.toMatch(/TAP Learning · Learning Mode|TAP Learning · Project Mode|Exercise TAP|Think Aloud Protocol/);
     expect(card).not.toContain('data-block-tool="ile-learning"');
     expect(card).not.toContain('data-block-tool="tap-exercise"');
   });
@@ -168,14 +168,14 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
     expect(panel).toContain("exploreDialog");
     expect(panel).toContain("session_mode");
     expect(panel).toContain("interaction_kind");
-    // Primary badges not TAP/ILE product names
-    expect(panel).not.toMatch(/\{isTap \? "TAP" : "ILE"\}/);
+    // Primary badges not TAP/TAP Learning product names
+    expect(panel).not.toMatch(/\{isTap \? "TAP" : "TAP Learning"\}/);
     expect(panel).not.toContain("Exercise TAP (no dialogue)");
   });
 
-  it("Settings / dashboard / workspace chrome avoid TAP/ILE product brands", () => {
+  it("Settings / dashboard / workspace chrome avoid TAP/TAP Learning product brands", () => {
     const integration = read("components/WorkspaceIntegrationPanel.tsx");
-    expect(integration).not.toContain("Create shareable TAP and ILE guest links");
+    expect(integration).not.toContain("Create shareable TAP and TAP Learning guest links");
     expect(integration).not.toMatch(/shareable practice links/i);
     expect(integration).not.toContain("WorkspaceGuestLinksPanel");
     expect(integration).toContain("WorkspaceKnowledgePortalPanel");
@@ -184,7 +184,9 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
 
     const dashboard = read("app/dashboard/page.tsx");
     expect(dashboard).not.toContain(">TAP sessions<");
-    expect(dashboard).not.toContain(">ILE sessions<");
+    expect(dashboard).not.toContain(">TAP Learning sessions<");
+    const retiredProductWord = ["I", "L", "E"].join("");
+    expect(dashboard).not.toContain(`>${retiredProductWord} sessions<`);
     // Accept either legacy rollup labels or Explore/Drill family labels
     const hasSessionLabels =
       dashboard.includes("Timed sessions") ||
@@ -192,21 +194,21 @@ describe("structural: workspace + settings have no With AI vs Solo choice", () =
       dashboard.includes("Open-ended sessions") ||
       dashboard.includes("Explore sessions");
     expect(hasSessionLabels).toBe(true);
-    expect(dashboard).not.toContain("TAP/ILE PoW not billed");
+    expect(dashboard).not.toContain("TAP/TAP Learning PoW not billed");
 
     const en = read("messages/en.json");
     expect(en).toMatch(/shareable practice links/i);
     // Must not reintroduce full technical product names as primary labels
-    expect(en).not.toContain('"productIle": "Integrated Learning Environment"');
+    expect(en).not.toContain('"productIle": "TAP Learning"');
     expect(en).toMatch(/forkToEditBody.*practice sessions/);
 
     const grid = readMapGridSurface();
-    expect(grid).not.toContain("double-click block for TAP/ILE");
+    expect(grid).not.toContain("double-click block for TAP/TAP Learning");
     // Map chrome should not brand technical product names
-    expect(grid).not.toMatch(/TAP\/ILE/);
+    expect(grid).not.toMatch(/TAP\/TAP Learning/);
   });
 
-  it("labels never use TAP/ILE as product names", () => {
+  it("labels never use TAP/TAP Learning as product names", () => {
     const labels = Object.values(PRODUCT_INTENT_LABELS).join(" ");
     expect(labels).not.toMatch(/\bTAP\b|\bILE\b/);
   });

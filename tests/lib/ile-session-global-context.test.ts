@@ -33,7 +33,7 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ILE chapter-scoped context store", () => {
+describe("TAP Learning chapter-scoped context store", () => {
   it("keeps chapter A notebook/canvas absent when reading chapter B", () => {
     const store = createIleSessionContextStore();
     store.focus("chapter-1");

@@ -1,5 +1,5 @@
 /**
- * ILE leftover chrome absence + Helios auto-trigger classifier
+ * TAP Learning leftover chrome absence + Helios auto-trigger classifier
  * (user-send vs idle/speech/interruption).
  */
 import { describe, expect, it } from "vitest";
@@ -46,8 +46,8 @@ const DELETED_LIVE = [
   "components/thought-ui/IleConceptMarkedText.tsx",
 ] as const;
 
-describe("ILE leftover chrome is gone from live sources", () => {
-  it("hunt pill, concept highlighter, and last-thought are unhooked on ILE compact/Helios", () => {
+describe("TAP Learning leftover chrome is gone from live sources", () => {
+  it("hunt pill, concept highlighter, and last-thought are unhooked on TAP Learning compact/Helios", () => {
     const lines: string[] = [];
 
     for (const rel of DELETED_LIVE) {
@@ -149,8 +149,8 @@ describe("classifyIleHeliosTrigger (shipped, from start)", () => {
   });
 });
 
-describe("ILE idle/speech apply uses the shipped classifier", () => {
-  it("wires applyIleHeliosAutoFire and idle/speech origins on the ILE path only", () => {
+describe("TAP Learning idle/speech apply uses the shipped classifier", () => {
+  it("wires applyIleHeliosAutoFire and idle/speech origins on the TAP Learning path only", () => {
     const idle = read("components/session-view/use-session-idle.ts");
     expect(idle).toContain("applyIleHeliosAutoFire");
     expect(idle).toContain("ileHeliosTriggerKindFromPowOrigin");
@@ -175,7 +175,7 @@ describe("ILE idle/speech apply uses the shipped classifier", () => {
       [
         "auto-fire origins: idle heartbeat (useTapIdleProofOfWork + origin idle), speech segment (useTapSpeechProofOfWork + origin speech), other PoW (screenshots/traces → interruption)",
         "user send: submitHeliosChatMessageNow / sendThought — classifyIleHeliosTrigger user_send showOnDialogue true",
-        "ILE apply: use-session-idle onIntervention → applyIleHeliosAutoFire; suppressed auto-fires do not append chat or set interruption mode",
+        "TAP Learning apply: use-session-idle onIntervention → applyIleHeliosAutoFire; suppressed auto-fires do not append chat or set interruption mode",
         "TAP TapScoreClient still appends interruption messages (unchanged)",
       ].join("\n"),
     );

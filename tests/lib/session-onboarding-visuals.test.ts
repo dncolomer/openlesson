@@ -1,5 +1,5 @@
 /**
- * TAP/ILE intro: two live slides (first + last). Thought-interface tutorial is gone.
+ * TAP/TAP Learning intro: two live slides (first + last). Thought-interface tutorial is gone.
  */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -67,7 +67,7 @@ function decodeHtml(html: string): string {
 }
 
 describe("session intro visuals", () => {
-  it("TAP is two slides; ILE is the last slide only; thought-interface tutorial is not rendered", () => {
+  it("TAP is two slides; TAP Learning is the last slide only; thought-interface tutorial is not rendered", () => {
     const en = JSON.parse(read("messages/en.json")) as EnOnboarding;
     const tapBody = en.onboardingGuide.tap.step1.body;
     const tapHighlight = en.onboardingGuide.tap.step1.highlight;

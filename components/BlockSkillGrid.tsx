@@ -227,7 +227,7 @@ export function BlockSkillGrid({
    * Map post-it notes (continuous plane):
    * - Creator notes: workspace-scoped, always visible in learner mode, not deletable by learners
    * - Learner notes: personal, learner mode only
-   * - ILE chapter maps: session-scoped (no workspace store)
+   * - TAP Learning chapter maps: session-scoped (no workspace store)
    * - Public view-only snapshots: existing notes/layers are shown (no authoring).
    */
   const overlayPersist = useMemo(

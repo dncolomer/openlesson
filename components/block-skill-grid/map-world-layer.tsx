@@ -336,7 +336,7 @@ export function MapWorldLayer({
   focusedNodeId?: string | null;
   displayNodes: SkillGridNode[];
   suggestMode: "block" | "chapter";
-  /** ILE chapter map only. Draws the DAG spine and its detours. */
+  /** TAP Learning chapter map only. Draws the DAG spine and its detours. */
   showPathOverlay?: boolean;
   previewTargetId: string | null;
   previewPrereqIds: string[];
@@ -1004,7 +1004,7 @@ export function MapWorldLayer({
                     lockedByPrereq ? 1 : 0,
                   )}
                   currentlyLocked={lockedByPrereq}
-                  // Red lock when currently locked (learner workspace or ILE chapter).
+                  // Red lock when currently locked (learner workspace or TAP Learning chapter).
                   learnerSpottable={learnerMode || suggestMode === "chapter"}
                 />
               ) : null;

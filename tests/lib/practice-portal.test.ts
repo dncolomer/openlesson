@@ -249,7 +249,7 @@ describe("validatePracticePortalMintRequest", () => {
     if (!timedDrill.ok) return;
     expect(timedDrill.block_id).toBeNull();
 
-    // Explore not mintable under workspace force (ILE requires a block)
+    // Explore not mintable under workspace force (TAP Learning requires a block)
     const openEnded = validatePracticePortalMintRequest(ws, {
       product_id: "explore_dialog",
       block_id: "b1",
@@ -334,7 +334,7 @@ describe("validatePracticePortalMintRequest", () => {
 });
 
 describe("practicePortalMintToCreateFields (create → mint shape)", () => {
-  it("maps timed explore/drill to TAP create body and explore to ILE", () => {
+  it("maps timed explore/drill to TAP create body and explore to TAP Learning", () => {
     const timedExplore = validatePracticePortalMintRequest(
       normalizePracticePortalConfig({
         allowed_products: ["drill_dialog"],
@@ -669,7 +669,7 @@ describe("Practice Portal structural wiring", () => {
     expect(landingClient).not.toMatch(/PRACTICE PORTAL/);
     expect(landingClient).toMatch(/fixedBlockId|data-practice-portal-block-fixed/);
 
-    // TAP/ILE learner chrome: live onboardingGuide + briefing (not dead session.* helpers)
+    // TAP/TAP Learning learner chrome: live onboardingGuide + briefing (not dead session.* helpers)
     const enCopy = JSON.parse(read("messages/en.json")) as {
       tap?: { briefing?: { intro?: string }; welcome?: { panelIntro?: string } };
       onboardingGuide?: {
@@ -690,14 +690,14 @@ describe("Practice Portal structural wiring", () => {
     expect(enCopy.onboardingGuide?.tap?.step1?.body).toMatch(/Stay speaking/i);
     expect(enCopy.onboardingGuide?.tap?.step1?.body).not.toMatch(/^Think out loud on a timer\./);
     expect((enCopy.onboardingGuide?.tap?.step1?.body || "").length).toBeGreaterThan(180);
-    // Live ILE welcome: session goal is craft X insights via map areas
+    // Live TAP Learning welcome: session goal is craft X insights via map areas
     expect(enCopy.onboardingGuide?.ile?.step3?.start).toMatch(/^Start$/);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/craft insights/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).toMatch(/canvas/i);
     expect(enCopy.onboardingGuide?.ile?.step3?.body).not.toMatch(/\bboard\b|end turn/i);
     expect((enCopy.onboardingGuide?.ile?.step3?.body || "").length).toBeLessThan(120);
     expect(enCopy.onboardingGuide?.ile?.step3?.highlight).toBe("");
-    // Welcome panel intros used by TutorWelcome on TAP/ILE (long instructional intros)
+    // Welcome panel intros used by TutorWelcome on TAP/TAP Learning (long instructional intros)
     expect(enCopy.tap?.welcome?.panelIntro).toMatch(/How it works:|Socratic follow-ups/i);
     expect(enCopy.welcome?.panelIntro).toMatch(/desktop-first workspace|comic-style dialogue/i);
 

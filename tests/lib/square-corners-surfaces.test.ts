@@ -1,5 +1,5 @@
 /**
- * Workspace / ILE / TAP box chrome uses 90° corners (no rounded-* box radii).
+ * Workspace / TAP Learning / TAP box chrome uses 90° corners (no rounded-* box radii).
  * Scans the shipped files those products actually import/mount.
  */
 import { describe, expect, it } from "vitest";
@@ -168,7 +168,7 @@ function scanLineHits(rel: string, line: string, lineNo: number): string[] {
   return hits;
 }
 
-describe("workspace / ILE / TAP square corners", () => {
+describe("workspace / TAP Learning / TAP square corners", () => {
   it("mounted product UI has no rounded-sm/md/lg/xl box radii", () => {
     const files = collectMountedSurfaceFiles();
     const rels = files.map((f) => relative(ROOT, f));

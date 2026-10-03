@@ -162,7 +162,7 @@ describe("TAP convo + exercise chrome for local thought memory", () => {
         `confirmTitle=${TAP_IM_DONE_CONFIRM_TITLE}`,
         "TAP convo+exercise: always-on Thought Memory, local edit/delete System 2 PoW",
         "TAP I'm done answering: UI confirm before close",
-        "ILE Helios: no TAP confirmClose / See-Edit label",
+        "TAP Learning Helios: no TAP confirmClose / See-Edit label",
       ].join("\n"),
     );
   });

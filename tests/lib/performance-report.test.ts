@@ -117,7 +117,7 @@ describe("buildVerticalScoreReportContract", () => {
     }
   });
 
-  it("LWM Snapshot contract is the TAP/ILE default path", () => {
+  it("LWM Snapshot contract is the TAP/TAP Learning default path", () => {
     const contract = buildVerticalScoreReportContract("verification", "https://uncertain.systems");
     expect(contract.endpoint_pattern).toContain("lwm-snapshot");
     expect(contract.mcp_tool).toBe("lwm_snapshot");

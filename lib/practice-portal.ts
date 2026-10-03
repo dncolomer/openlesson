@@ -2,11 +2,11 @@
  * Practice Portal — workspace-scoped guest mint desk.
  *
  * Owners configure which product intents and timings a shareable portal
- * may offer; visitors open the portal URL and mint a one-shot TAP/ILE
+ * may offer; visitors open the portal URL and mint a one-shot TAP/TAP Learning
  * guest link without needing the map catalog or public workspace.
  *
  * Product axes: Explore | Drill (always With AI).
- * - Explore → always ILE learning
+ * - Explore → always TAP Learning learning
  * - Drill → always TAP conversational
  * Stored solo/exercise/project portal ids still parse; new mints collapse to dialog.
  *
@@ -76,7 +76,7 @@ export const PRACTICE_PORTAL_DEFAULT_TIMED_DRILL_MINUTES =
   PRACTICE_PORTAL_DEFAULT_DRILL_SOLO_MINUTES;
 
 /**
- * Timings for Drill (TAP) products. Explore (ILE) products have no duration list.
+ * Timings for Drill (TAP) products. Explore (TAP Learning) products have no duration list.
  * Keys use both canonical and legacy aliases for storage compatibility.
  */
 export type PracticePortalTimings = {
@@ -109,7 +109,7 @@ export type PracticePortalConfig = {
   timings: PracticePortalTimings;
   /**
    * Optional fixed workspace block for this portal.
-   * When set (and scope_mode is fixed_block), Explore (ILE) mints use it without
+   * When set (and scope_mode is fixed_block), Explore (TAP Learning) mints use it without
    * a visitor block pick; Drill (TAP) mints also default to this block when provided.
    * Always null when scope_mode is workspace.
    */
@@ -205,7 +205,7 @@ function scoutTimingList(config: PracticePortalConfig): number[] {
   return uniqueSortedMinutes(config.timings.scout_dialog || []);
 }
 
-/** @deprecated Prefer isExploreProduct — Explore = ILE (no duration). */
+/** @deprecated Prefer isExploreProduct — Explore = TAP Learning (no duration). */
 function isOpenEndedProduct(id: PracticePortalProductId): boolean {
   return isExploreProduct(id);
 }
@@ -432,7 +432,7 @@ export function isPracticePortalWorkspaceScope(
 /**
  * Products that can actually mint under the portal's scope.
  * Workspace-level force only supports Drill (TAP) products that allow null block_id;
- * Explore (ILE) requires a concrete block and is excluded from the public desk.
+ * Explore (TAP Learning) requires a concrete block and is excluded from the public desk.
  */
 export function practicePortalProductsForScope(
   config: PracticePortalConfig,
@@ -488,7 +488,7 @@ export function isPracticePortalProductAllowed(
 
 /**
  * Whether a duration is allowed for a product.
- * Explore (ILE) products always pass (minutes ignored).
+ * Explore (TAP Learning) products always pass (minutes ignored).
  * Drill (TAP) products require minutes to be in the configured list.
  */
 export function isPracticePortalTimingAllowed(
@@ -542,7 +542,7 @@ export function validatePracticePortalMintRequest(
   const launch = launchTargetForPracticePortalProduct(productId);
   const block_id = resolvePracticePortalMintBlockId(config, body?.block_id);
 
-  // Workspace-forced portals cannot mint Explore (ILE requires a block).
+  // Workspace-forced portals cannot mint Explore (TAP Learning requires a block).
   if (config.scope_mode === "workspace" && isExploreProduct(productId)) {
     return {
       ok: false,

@@ -1,5 +1,5 @@
 /**
- * Session-level ILE turn close: run I'm-done-answering collect/send/flag
+ * Session-level TAP Learning turn close: run I'm-done-answering collect/send/flag
  * once per currently open Work. Chapter widgets do not mount this control.
  */
 import {

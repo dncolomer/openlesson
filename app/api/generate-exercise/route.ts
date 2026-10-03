@@ -1,9 +1,9 @@
 /**
- * LLM-author a concrete domain exercise for human TAP drills or ILE Project chapters.
+ * LLM-author a concrete domain exercise for human TAP drills or TAP Learning Project chapters.
  * Replaces pure topic-list template framing.
  *
  * When sessionId or workspaceId is provided, hydrates notes/files/blocks/local/unusable
- * from the DB so ILE SessionView and other thin clients still get full context.
+ * from the DB so TAP Learning SessionView and other thin clients still get full context.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     let supabase: SupabaseClient | null = null;
 
-    // Prefer session-scoped auth (ILE guest/owner); fall back to cookie user for workspace-only.
+    // Prefer session-scoped auth (TAP Learning guest/owner); fall back to cookie user for workspace-only.
     if (sessionId) {
       const auth = await guardSessionRoute(sessionId, {
         ayclToken: ayclTokenFromBody(body),

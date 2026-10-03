@@ -3,7 +3,7 @@
 **Product:** OpenLesson workspace (map-first course builder)  
 **Scope:** Tools available to course **authors** (owners / builders) as implemented in source today  
 **Sources of truth:** `lib/workspace-sections.ts`, `lib/block-map-tools.ts`, `lib/workspace-right-pane.ts`, `components/BlockSkillGrid.tsx`, block/combine/add panes, Simulation + Context + Settings mounts  
-**Not covered:** Learner runtime (TAP, ILE, Muse dialogue in-session), admin consoles, marketing surfaces — see [Exclusions](#exclusions)
+**Not covered:** Learner runtime (TAP, TAP Learning, Muse dialogue in-session), admin consoles, marketing surfaces — see [Exclusions](#exclusions)
 
 ---
 
@@ -243,7 +243,7 @@ Also related: **Access** copy/chrome on workspace shell for sharing posture.
 Not treated as **course map authoring** tools in this report (exist elsewhere in the product):
 
 - Learner TAP / TAPBench exercise runtime and stash flows  
-- ILE (in-lesson experience) guest sessions and realtime POW  
+- TAP Learning (in-lesson experience) guest sessions and realtime POW  
 - Muse / Helios voice dialogue during a live session  
 - Global admin, billing, org invite flows (except Settings access flags)  
 - Public marketing / pitch / demo landing pages  

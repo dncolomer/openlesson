@@ -168,14 +168,14 @@ describe("TAPBench exercise generator stays available without mint API", () => {
   });
 });
 
-describe("human TAP + ILE also use LLM domain exercise author", () => {
+describe("human TAP + TAP Learning also use LLM domain exercise author", () => {
   it("TAP start uses generateTapExercisePrompt for exercise kind", () => {
     const start = read("app/api/workspace-tap-score/start/route.ts");
     expect(start).toContain("generateTapExercisePrompt");
     expect(start).toContain("generateTapOpeningQuestion");
   });
 
-  it("ships generate-exercise API for ILE Project Mode", () => {
+  it("ships generate-exercise API for TAP Learning Project Mode", () => {
     expect(existsSync(join(ROOT, "app/api/generate-exercise/route.ts"))).toBe(true);
     const route = read("app/api/generate-exercise/route.ts");
     expect(route).toContain("generateDomainExercise");

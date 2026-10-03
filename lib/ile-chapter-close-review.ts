@@ -1,5 +1,5 @@
 /**
- * Mark-as-Done reviews session-global ILE Proof of Work (optionally in batches).
+ * Mark-as-Done reviews session-global TAP Learning Proof of Work (optionally in batches).
  * Close-override always forces close; later scoring of override is out of scope.
  */
 import {

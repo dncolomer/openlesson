@@ -1,5 +1,5 @@
 /**
- * ILE canvas session: chapter count, presets without a map type, the
+ * TAP Learning canvas session: chapter count, presets without a map type, the
  * available-chapter cap, and one session-wide insight goal.
  * Pure — no React. Crafting is never blocked by the goal.
  */

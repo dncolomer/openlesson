@@ -1,7 +1,7 @@
 import { readWorkspaceViewSurface } from "@/tests/helpers/surface-source";
 /**
  * Drives shipped tutoring, auth-policy, map-selection, product-intent,
- * ILE-mode, and error-envelope functions — no reimplementation.
+ * TAP Learning-mode, and error-envelope functions — no reimplementation.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -67,7 +67,7 @@ function walkRoutes(dir: string, acc: string[] = []): string[] {
 }
 
 describe("tutoring runtime (speech/idle/mutate)", () => {
-  it("one helper accepts ILE vs TAP vs AYCL auth and dialog vs solo with the same outcome shape", () => {
+  it("one helper accepts TAP Learning vs TAP vs AYCL auth and dialog vs solo with the same outcome shape", () => {
     const cases = [
       { product: "ile" as const, modality: "dialog" as const, authKind: "cookie" as const },
       { product: "ile" as const, modality: "solo" as const, authKind: "ile" as const },
@@ -448,7 +448,7 @@ describe("exclusive map selection + product intent", () => {
   });
 });
 
-describe("ILE mode write vs read", () => {
+describe("TAP Learning mode write vs read", () => {
   it("write accepts only learning|project; read still understands legacy aliases", () => {
     expect(parseIleSessionModeWrite("project")).toBe("project");
     expect(parseIleSessionModeWrite("learning")).toBe("learning");
@@ -470,7 +470,7 @@ describe("ILE mode write vs read", () => {
   });
 });
 
-describe("one ILE coaching constitution", () => {
+describe("one TAP Learning coaching constitution", () => {
   it("dashboard opening_probe is kernel surface plus overlay variables", () => {
     const prompts = read("lib/prompts.ts");
     expect(prompts).toContain("ILE_SURFACE");

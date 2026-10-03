@@ -261,7 +261,7 @@ export function SessionList({
   }, [nodes]);
 
   useEffect(() => {
-    // Owners edit the map with Select/drag tools — do not auto-open TAP/ILE detail.
+    // Owners edit the map with Select/drag tools — do not auto-open TAP/TAP Learning detail.
     if (isOwner) return;
     // Only auto-open once per mount. Re-running when expandedNodeId becomes null
     // after X would immediately re-select the first block and never restore notes/files.

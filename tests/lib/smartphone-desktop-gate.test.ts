@@ -1,5 +1,5 @@
 /**
- * TAP + ILE desktop gate: smartphone detection + MobileBlockScreen wiring.
+ * TAP + TAP Learning desktop gate: smartphone detection + MobileBlockScreen wiring.
  */
 import { describe, expect, it } from "vitest";
 import { readSessionViewSurface } from "@/tests/helpers/surface-source";
@@ -61,8 +61,8 @@ describe("isSmartphone pure helpers", () => {
   });
 });
 
-describe("TAP and ILE mount desktop-only smartphone gate", () => {
-  it("TapScoreClient and SessionView (ILE) show MobileBlockScreen on smartphone", () => {
+describe("TAP and TAP Learning mount desktop-only smartphone gate", () => {
+  it("TapScoreClient and SessionView (TAP Learning) show MobileBlockScreen on smartphone", () => {
     expect(existsSync(join(ROOT, "lib/is-smartphone.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "components/MobileBlockScreen.tsx"))).toBe(true);
 
@@ -80,7 +80,7 @@ describe("TAP and ILE mount desktop-only smartphone gate", () => {
     expect(session).toContain("MobileBlockScreen");
     expect(session).toContain('product={ileToken ? "ile" : "session"}');
 
-    // ILE guest path is SessionView
+    // TAP Learning guest path is SessionView
     expect(ile).toContain("SessionView");
     expect(ile).toContain("ileToken");
 

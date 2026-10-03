@@ -1,5 +1,5 @@
 /**
- * ILE insights: canvas craft (evaluate/persist), per-chapter quota for
+ * TAP Learning insights: canvas craft (evaluate/persist), per-chapter quota for
  * End turn, and trophy grouping. Unused-PoW slot math remains for economy
  * sliders; it no longer gates completing a turn.
  *

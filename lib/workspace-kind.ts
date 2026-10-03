@@ -22,7 +22,7 @@ export function isKnowledgeRegionWorkspace(value: unknown): boolean {
   return parseWorkspaceKind(value) === WORKSPACE_KIND_KNOWLEDGE_REGION;
 }
 
-/** TAP / ILE / TAPBench mint is only for standard (map) workspaces. */
+/** TAP / TAP Learning / TAPBench mint is only for standard (map) workspaces. */
 export function workspaceAllowsKnowledgeLinkMint(value: unknown): boolean {
   return !isKnowledgeRegionWorkspace(value);
 }

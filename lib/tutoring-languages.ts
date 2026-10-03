@@ -3,14 +3,14 @@
  * This is a SUPERSET of UI locales (which only have translation files).
  * Some languages here (e.g. Catalan) are tutoring-only with no UI translation.
  *
- * Spoken selectors (TAP / ILE) use the same full allowlist so conversational
- * TAP and ILE are not narrowed when Exercise TAP is present.
+ * Spoken selectors (TAP / TAP Learning) use the same full allowlist so conversational
+ * TAP and TAP Learning are not narrowed when Exercise TAP is present.
  */
 
 export const tutoringLocales = ["en", "vi", "zh", "es", "de", "pl", "ca"] as const;
 export type TutoringLocale = (typeof tutoringLocales)[number];
 
-/** Same allowlist as tutoringLocales — used by TAP/ILE spoken-language selectors. */
+/** Same allowlist as tutoringLocales — used by TAP/TAP Learning spoken-language selectors. */
 export const spokenLocales = tutoringLocales;
 export type SpokenLocale = TutoringLocale;
 

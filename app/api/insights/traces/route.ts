@@ -5,7 +5,7 @@ import { fetchWorkspaceInsightThoughts } from "@/lib/insights-traces";
 
 /**
  * GET /api/insights/traces?workspaceId=
- * Returns ILE thought traces for Knowledge Insights suggest/bookmark UI.
+ * Returns TAP Learning thought traces for Knowledge Insights suggest/bookmark UI.
  */
 export async function GET(req: NextRequest) {
   try {

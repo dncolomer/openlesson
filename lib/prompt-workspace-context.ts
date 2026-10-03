@@ -1,6 +1,6 @@
 /**
  * Shared workspace/block prompt context for TAP openings, starting topics,
- * Exercise TAP / ILE Project framing, and TAPBench exercises.
+ * Exercise TAP / TAP Learning Project framing, and TAPBench exercises.
  *
  * Pure assembly — callers load files/notes/goal/blocks from DB and pass them in.
  * Layers: workspace-global materials, map topology/inventory, focused block,
@@ -85,7 +85,7 @@ export interface PromptWorkspaceContextInput {
   notes?: string | null;
   blockTitle?: string | null;
   blockDescription?: string | null;
-  /** ILE chapter plan text / longer-horizon brief. */
+  /** TAP Learning chapter plan text / longer-horizon brief. */
   chapterDescription?: string | null;
   files?: WorkspaceFileContextItem[] | null;
   /**
@@ -105,7 +105,7 @@ export interface PromptWorkspaceContextInput {
   extra?: string | null;
   /**
    * Prior Scout session mind map (path + canvas text) for this block.
-   * Included in ILE/TAP context so a later Work session can use it.
+   * Included in TAP Learning/TAP context so a later Work session can use it.
    */
   scoutArtifacts?: {
     path?: readonly string[] | null;
@@ -157,7 +157,7 @@ export interface PromptImpactLayer {
   label: string;
   summary: string;
   /** Which product prompts this layer feeds. */
-  feeds: Array<"TAP" | "ILE" | "TAPBench">;
+  feeds: Array<"TAP" | "TAP Learning" | "TAPBench">;
   present: boolean;
 }
 
@@ -428,7 +428,7 @@ export function mergeGlobalAndLocalFiles(input: {
 }
 
 /**
- * Build the shared TAP/ILE/TAPBench prompt context object.
+ * Build the shared TAP/TAP Learning/TAPBench prompt context object.
  * Includes workspace notes/files, block inventory, layout/topology, and local materials.
  */
 export function assemblePromptWorkspaceContext(
@@ -719,7 +719,7 @@ export function buildPromptImpactLayers(input: {
       summary: identityBits.length
         ? identityBits.slice(0, 2).join(" · ")
         : "No workspace title or goal yet.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: identityBits.length > 0,
     },
     {
@@ -728,7 +728,7 @@ export function buildPromptImpactLayers(input: {
       summary: input.notes
         ? clip(input.notes, 140)
         : "No workspace notes attached.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: Boolean(input.notes),
     },
     {
@@ -738,7 +738,7 @@ export function buildPromptImpactLayers(input: {
         input.fileNames.length > 0
           ? `${input.fileNames.length} file${input.fileNames.length === 1 ? "" : "s"}: ${input.fileNames.slice(0, 4).join(", ")}${input.fileNames.length > 4 ? "…" : ""}${input.fileExcerpts.length ? ` (${input.fileExcerpts.length} with excerpts)` : ""}`
           : "No files attached.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: input.fileNames.length > 0,
     },
     {
@@ -748,7 +748,7 @@ export function buildPromptImpactLayers(input: {
         input.blockInventoryLines.length > 0
           ? `${input.blockInventoryLines.length} block${input.blockInventoryLines.length === 1 ? "" : "s"} listed with roles.`
           : "No block inventory yet.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: input.blockInventoryLines.length > 0,
     },
     {
@@ -758,7 +758,7 @@ export function buildPromptImpactLayers(input: {
         input.topologyLines.length > 0
           ? `${input.topologyLines.length} layout cue${input.topologyLines.length === 1 ? "" : "s"} (placement, links, locks, unusable ground).`
           : "No placement or link layout yet.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: input.topologyLines.length > 0,
     },
     {
@@ -767,7 +767,7 @@ export function buildPromptImpactLayers(input: {
       summary: input.blockTitle
         ? `${input.blockTitle}${input.blockDescription ? ` — ${clip(input.blockDescription, 100)}` : ""}`
         : "No block focused — prompts use the whole workspace.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: Boolean(input.blockTitle),
     },
     {
@@ -776,15 +776,15 @@ export function buildPromptImpactLayers(input: {
       summary: input.hasLocalContext
         ? clip(input.localContextLines.join(" · "), 160)
         : "No block-local files or notes. Only workspace-wide materials apply.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: input.hasLocalContext,
     },
     {
       id: "surfaces",
       label: "Where this shows up",
       summary:
-        "TAP dialogs & exercises, ILE learning/project chapters, and TAPBench agent exercises all read this same context.",
-      feeds: ["TAP", "ILE", "TAPBench"],
+        "TAP dialogs & exercises, TAP Learning learning/project chapters, and TAPBench agent exercises all read this same context.",
+      feeds: ["TAP", "TAP Learning", "TAPBench"],
       present: true,
     },
   ];

@@ -57,7 +57,7 @@ const DOMAINS = [
     id: "session-helios",
     label: "Session / Helios",
     description:
-      "ILE tutoring: session chat, welcome messages, feedback generation, and session performance chat.",
+      "TAP Learning tutoring: session chat, welcome messages, feedback generation, and session performance chat.",
     order: 2,
   },
   {
@@ -208,8 +208,8 @@ function buildRegistryEntries(promptsSrc) {
       file: "lib/prompts.ts",
       symbol: "ILE_CONTEXT",
       kind: "context",
-      label: "ILE Context",
-      description: "Shared Helios / ILE environment context appended to session prompts.",
+      label: "TAP Learning Context",
+      description: "Shared Helios / TAP Learning environment context appended to session prompts.",
       text: ile,
       charCount: ile.length,
     });

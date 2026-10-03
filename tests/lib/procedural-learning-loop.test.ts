@@ -75,7 +75,7 @@ describe("product-intent surfaces (Explore/Drill always With AI)", () => {
       else expect(t.interaction_kind).toBe(mode);
       lines.push(`${style}×${modality}→${t.id}/${t.product}`);
     }
-    // Drill never ILE; Explore never TAP
+    // Drill never TAP Learning; Explore never TAP
     expect(resolveProductIntent("drill", "dialog").product).toBe("tap");
     expect(resolveProductIntent("explore", "solo").product).toBe("ile");
     writeLog("product-intent-remap.log", lines.join("\n") + "\n");

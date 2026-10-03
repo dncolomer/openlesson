@@ -1,5 +1,5 @@
 /**
- * Occupied-block circular menu (ILE + Workspace learner). TAP is excluded.
+ * Occupied-block circular menu (TAP Learning + Workspace learner). TAP is excluded.
  * Pure — tests drive catalog, progress, unseen-dot, and resource scoping.
  */
 import { PREVIOUS_SESSIONS_DRAWER_ID } from "@/lib/block-previous-sessions";
@@ -43,7 +43,7 @@ export const ILE_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "edit", label: "Edit" },
 ] as const;
 
-/** Empty ILE cells: one action that opens the manual add-chapter form. */
+/** Empty TAP Learning cells: one action that opens the manual add-chapter form. */
 export const ILE_EMPTY_CIRCULAR_MENU_ACTIONS: readonly BlockCircularMenuAction[] = [
   { id: "add_chapter", label: "Add chapter" },
 ] as const;
@@ -101,7 +101,7 @@ export function blockCircularMenuDoubleClickIsNoop(
   return surface === "workspace-learner";
 }
 
-/** Single-click opens the circular menu on ILE and Workspace learner (not TAP). */
+/** Single-click opens the circular menu on TAP Learning and Workspace learner (not TAP). */
 export function blockCircularMenuOpensOnSelect(
   surface: BlockCircularMenuSurface | null | undefined,
   opts?: { exploreOpen?: boolean | null },
@@ -110,7 +110,7 @@ export function blockCircularMenuOpensOnSelect(
   return surface === "ile" || surface === "workspace-learner";
 }
 
-/** Empty ILE cells open a one-action Add chapter ring. Blocked ground does not. */
+/** Empty TAP Learning cells open a one-action Add chapter ring. Blocked ground does not. */
 export function blockCircularMenuOpensOnEmpty(
   surface: BlockCircularMenuSurface | null | undefined,
   opts?: { unusable?: boolean | null },
@@ -147,7 +147,7 @@ export function nextCircularMenuEmptyCellOnClick(input: {
 }
 
 /**
- * Click a selected ILE/workspace-learner block again to close the menu
+ * Click a selected TAP Learning/workspace-learner block again to close the menu
  * (unselect). Clicking a different block moves the menu there.
  */
 export function nextCircularMenuBlockIdOnClick(input: {
@@ -172,7 +172,7 @@ const ILE_COMPLETED_DISABLED_ACTIONS: ReadonlySet<IleCircularMenuActionId> = new
   "edit",
 ]);
 
-/** Completed ILE chapters keep Work enabled; every other circular action is off. */
+/** Completed TAP Learning chapters keep Work enabled; every other circular action is off. */
 export function ileCircularMenuDisabledActionIds(input: {
   completed?: boolean | null;
   allowGatherResources?: boolean | null;
@@ -281,7 +281,7 @@ export type BlockCircularMenuProgress = {
 };
 
 /**
- * Running ILE actions yield a fraction in (0, 1]. Idle / missing → 0.
+ * Running TAP Learning actions yield a fraction in (0, 1]. Idle / missing → 0.
  */
 export function blockCircularMenuProgressFraction(
   progress: BlockCircularMenuProgress | null | undefined,

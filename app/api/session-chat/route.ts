@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const { supabase } = auth;
 
     // Tutoring language from body or session metadata. Mode is the same
-    // durable source as the ILE shell (link/prop, then metadata).
+    // durable source as the TAP Learning shell (link/prop, then metadata).
     let tutoringLanguage = bodyLanguage;
     let sessionMeta: Record<string, unknown> | null = null;
     if (sessionId) {

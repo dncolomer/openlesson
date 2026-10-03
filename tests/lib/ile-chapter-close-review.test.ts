@@ -25,7 +25,7 @@ function writeScratch(name: string, body: string) {
 
 const chapter = { id: "ch-1", description: "Limits" };
 
-describe("ILE chapter-close review", () => {
+describe("TAP Learning chapter-close review", () => {
   it("concatenated PoW and batched PoW produce the same close decision", () => {
     const artifacts: IlePowCounterArtifact[] = [
       { type: "tool" },

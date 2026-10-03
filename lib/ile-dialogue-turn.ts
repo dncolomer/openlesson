@@ -1,5 +1,5 @@
 /**
- * ILE dialogue: Helios-only surface (no learner speaker).
+ * TAP Learning dialogue: Helios-only surface (no learner speaker).
  * TAP keeps both comic avatars.
  */
 
@@ -18,7 +18,7 @@ export type IleDialogueTurnVisibility = {
   showLearnerAvatar: false;
 };
 
-/** TAP comic circles (Tailwind). ILE no longer mounts a Helios mark. */
+/** TAP comic circles (Tailwind). TAP Learning no longer mounts a Helios mark. */
 export const TAP_DIALOGUE_AVATAR_SIZE_CLASS = "h-28 w-28";
 export const ILE_DIALOGUE_AVATAR_SIZE_CLASS = "h-10 w-10";
 
@@ -42,7 +42,7 @@ export function isIleHeliosWaitingTurn(input: {
   return false;
 }
 
-/** @deprecated Use isIleHeliosWaitingTurn — ILE no longer treats Helios as a second speaker. */
+/** @deprecated Use isIleHeliosWaitingTurn — TAP Learning no longer treats Helios as a second speaker. */
 export function isIleHeliosActiveTurn(input: {
   isSending?: boolean;
   heliosTurnMode?: HeliosTurnModeLike | null;
@@ -50,7 +50,7 @@ export function isIleHeliosActiveTurn(input: {
   return isIleHeliosWaitingTurn(input);
 }
 
-/** ILE surface is always Helios-only. Waiting = after submit, before reply. */
+/** TAP Learning surface is always Helios-only. Waiting = after submit, before reply. */
 export function resolveIleDialogueTurn(input: {
   isSending?: boolean;
   heliosTurnMode?: HeliosTurnModeLike | null;

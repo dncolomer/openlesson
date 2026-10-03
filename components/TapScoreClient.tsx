@@ -164,7 +164,7 @@ export function TapScoreClient({
   }, [entryQueryParams]);
   const router = useRouter();
   const { t } = useI18n();
-  // Smartphone → desktop-only gate (same product rule as ILE SessionView)
+  // Smartphone → desktop-only gate (same product rule as TAP Learning SessionView)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(isSmartphoneClient());

@@ -62,7 +62,7 @@ describe("admin tiers", () => {
     expect(warning).toContain("10");
   });
 
-  it("uses product-facing timed/open-ended wording (not TAP/ILE)", () => {
+  it("uses product-facing timed/open-ended wording (not TAP/TAP Learning)", () => {
     const apiOption = ADMIN_TIER_OPTIONS.find((t) => t.id === "api_metered");
     expect(apiOption?.description).toMatch(/timed session/i);
     expect(apiOption?.description).toMatch(/open-ended session/i);

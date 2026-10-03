@@ -1,5 +1,5 @@
 /**
- * ILE Chapter "Gather resources": eligibility, consume, rate-limit, forage
+ * TAP Learning Chapter "Gather resources": eligibility, consume, rate-limit, forage
  * input, job progress, and block-scoped planned-resource records.
  * Pure — tests drive these helpers with fixture PoW; no React/xAI client.
  */
@@ -464,7 +464,7 @@ export function ileGatherResourceBlockId(resource: {
 }
 
 /**
- * ILE planned-resources: only gather rows for this block.
+ * TAP Learning planned-resources: only gather rows for this block.
  * Workspace (no block id): all rows, including persisted gather results.
  */
 export function filterPlannedResourcesForIleBlock(

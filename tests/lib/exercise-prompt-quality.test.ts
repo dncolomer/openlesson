@@ -122,7 +122,7 @@ describe("TAP Exercise framing quality", () => {
   });
 });
 
-describe("ILE Project exercise framing quality", () => {
+describe("TAP Learning Project exercise framing quality", () => {
   it("chapter description becomes substantive exercise without out-loud directions", () => {
     const prompt = buildIleProjectChapterExercisePrompt({
       chapterDescription:

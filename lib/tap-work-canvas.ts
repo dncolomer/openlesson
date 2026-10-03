@@ -1,6 +1,6 @@
 /**
  * TAP conversational Work canvas: one session-scoped Excalidraw board.
- * Reuses ILE scene apply / pull / PoW units — TAP does not fork Excalidraw.
+ * Reuses TAP Learning scene apply / pull / PoW units — TAP does not fork Excalidraw.
  */
 import {
   applyIleXaiReplyToWorkCanvas,
@@ -61,7 +61,7 @@ export function tapWorkCanvasBoardId(sessionKey: string | null | undefined): str
   return `${TAP_WORK_CANVAS_BOARD_PREFIX}:${key}`;
 }
 
-/** Fancy ILE thinking chip — not a "Thinking ..." text element on the board. */
+/** Fancy TAP Learning thinking chip — not a "Thinking ..." text element on the board. */
 export function tapHeliosCanvasBusy(input: {
   isSending?: boolean;
   isStartingSession?: boolean;
@@ -81,7 +81,7 @@ export function tapWorkCanvasTurnContextMessage(
 
 /**
  * Drop a Helios/XAI reply onto a TAP session board from empty or existing work.
- * Uses the shipped ILE apply path (text + optional extra skeletons).
+ * Uses the shipped TAP Learning apply path (text + optional extra skeletons).
  */
 export function applyTapHeliosReplyToWorkCanvas(
   scene: IleWorkCanvasScene | null | undefined,
@@ -137,7 +137,7 @@ export function tapWorkCanvasShouldAcceptSceneUpdate(
 
 /**
  * Place a loading placeholder then replace it with a Helios reply.
- * Drives the same create/replace helpers ILE uses.
+ * Drives the same create/replace helpers TAP Learning uses.
  */
 export function placeThenReplaceTapXaiLoading(
   scene: IleWorkCanvasScene | null | undefined,
@@ -169,7 +169,7 @@ export function placeThenReplaceTapXaiLoading(
   };
 }
 
-/** Same Excalidraw-tool PoW builder ILE uses. */
+/** Same Excalidraw-tool PoW builder TAP Learning uses. */
 export function buildTapExcalidrawToolUploadItem(
   sessionId: string,
   input: {
@@ -183,7 +183,7 @@ export function buildTapExcalidrawToolUploadItem(
   return buildIleExcalidrawToolUploadItem(sessionId, input);
 }
 
-/** Same classified canvas-action builder ILE uses. */
+/** Same classified canvas-action builder TAP Learning uses. */
 export function buildTapWorkCanvasActionUploadItem(
   sessionId: string,
   event: IleWorkCanvasPowEvent | Parameters<typeof buildIleWorkCanvasActionUploadItem>[1],
@@ -199,7 +199,7 @@ export {
   ileWorkCanvasElementContentFingerprint as tapWorkCanvasElementContentFingerprint,
 };
 
-/** Same canvas-snapshot PoW builder ILE uses. */
+/** Same canvas-snapshot PoW builder TAP Learning uses. */
 export function buildTapCanvasSnapshotUploadItem(
   sessionId: string,
   data: string,

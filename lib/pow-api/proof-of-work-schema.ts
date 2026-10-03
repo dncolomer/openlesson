@@ -86,7 +86,7 @@ export interface ProofOfWorkEvalSchemaResult {
   uncertain_systems_scope?: Record<string, unknown>;
   integration_surfaces?: IntegrationSurfaceRef[];
   recommended_next_actions?: RecommendedIntegrationAction[];
-  /** Primary LWM Snapshot (verification) score contract (TAP/ILE / default). */
+  /** Primary LWM Snapshot (verification) score contract (TAP/TAP Learning / default). */
   performance_report_contract?: PerformanceReportContract;
   /** Snapshot score contracts — sole product strategy is LWM Snapshot (verification wire key). */
   vertical_score_contracts?: {
@@ -390,11 +390,11 @@ export function buildProofOfWorkSchemaInstructions(
 
 You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
 
-Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **on demand** — Knowledge UI Generate new snapshot or Snapshot API POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/ILE end).
+Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **on demand** — Knowledge UI Generate new snapshot or Snapshot API POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/TAP Learning end).
 
 Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../lwm-snapshot) or **MCP** (JSON-RPC tools upload_proof_of_work, lwm_snapshot, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
-Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other Uncertain Systems platform mechanics.
+Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and TAP Learning may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, TAP Learning, or other Uncertain Systems platform mechanics.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
 ${appetiteBlock}
@@ -416,14 +416,14 @@ Output rules:
    - proof_of_work_types: tool (${PROOF_OF_WORK_MIME_BY_TYPE.tool.join(", ")}), screen (${PROOF_OF_WORK_MIME_BY_TYPE.screen.join(", ")}), video (${PROOF_OF_WORK_MIME_BY_TYPE.video.join(", ")}), eeg (${PROOF_OF_WORK_MIME_BY_TYPE.eeg.join(", ")}) with when_to_use guidance. Stored types are ${WORKSPACE_PROOF_OF_WORK_TYPES.join(" | ")}. Model version ${POW_MODEL_VERSION}.
    - common_fields: type, mime_type, data, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata, pow_model_version
 5. Optimize payloads for the LWM Snapshot endpoint: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each snapshot call returns one primary score (0-100 lwm_snapshot_score), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
-6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/ILE end use this):
+6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/TAP Learning end use this):
    - endpoint_pattern: "POST /api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot"
    - response_mode: "score"
    - required_fields: score, lwm_snapshot_score, vertical, workspace_goal, marker_scores, gap_analysis, gap_analysis.gaps, gap_analysis.next_steps, summary, strengths, growth_areas, suggestions, confidence
    - score / lwm_snapshot_score: integer 0-100 LWM Snapshot
    - workspace_goal: inferred or owner-set success outcome for this workspace
    - marker_scores: 4-8 competency axes for spider/radar
-   - gap_analysis.next_steps: directions and events (product/workflow language only — never TAP, block completion, or ILE)
+   - gap_analysis.next_steps: directions and events (product/workflow language only — never TAP, block completion, or TAP Learning)
    Do not document other score endpoints — LWM Snapshot is the sole product strategy.
 7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves LWM Snapshot and GHC**. Encourage ongoing uploads, not one-time dumps. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
@@ -438,7 +438,7 @@ Output rules:
 11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
-   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot), chapter_map_expand (ILE chapter-complete → grow the chapter map).
+   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot), chapter_map_expand (TAP Learning chapter-complete → grow the chapter map).
    - Ground predictions in workspace blocks, eval definition, proof-of-work history, evidence appetite, and collection_guidance — not generic coaching.
    - The consumer schedules the intervention after delay_ms unless any later Proof-of-Work API response supersedes it.
 

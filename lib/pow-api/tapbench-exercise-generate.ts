@@ -2,7 +2,7 @@
  * Domain exercise authoring — LLM generates a real timed problem for:
  * - TAPBench (agents)
  * - Human TAP exercise/drill mode
- * - ILE Project Mode chapters
+ * - TAP Learning Project Mode chapters
  *
  * Server-only (imports xAI client). Pure quality helpers live in
  * tapbench-exercise-quality.ts for client-safe imports.
@@ -53,9 +53,9 @@ export interface GenerateDomainExerciseInput extends TapbenchExerciseContext {
    * so exercise authoring consults attached resources.
    */
   externalResources?: PromptExternalResourceItem[] | null;
-  /** ILE chapter plan text (Project Mode). */
+  /** TAP Learning chapter plan text (Project Mode). */
   chapterDescription?: string | null;
-  /** Map inventory + layout for shared assembler (TAP/ILE/TAPBench). */
+  /** Map inventory + layout for shared assembler (TAP/TAP Learning/TAPBench). */
   blocks?: PromptBlockInventoryItem[] | null;
   focusedBlockId?: string | null;
   blockLocalContext?: BlockLocalContextInput | null;
@@ -76,7 +76,7 @@ function surfaceLabel(surface: DomainExerciseSurface): string {
     case "tap_exercise":
       return "human TAP timed drill";
     case "ile_project":
-      return "ILE Explore Solo chapter exercise";
+      return "TAP Learning Explore Solo chapter exercise";
     default:
       return "TAPBench agent evaluation";
   }
@@ -150,7 +150,7 @@ export function buildDomainExerciseAuthorUserPrompt(
     lines.push("Local block context (focused block materials):");
     lines.push(...ctx.localContextLines);
   }
-  // Full shared context block so authors ground in the same layers TAP/ILE use.
+  // Full shared context block so authors ground in the same layers TAP/TAP Learning use.
   lines.push("");
   lines.push(ctx.contextBlock);
   lines.push("");
@@ -281,7 +281,7 @@ export async function generateTapExercisePrompt(
   return generateDomainExercise({ ...input, surface: "tap_exercise" });
 }
 
-/** ILE Project Mode chapter entry. */
+/** TAP Learning Project Mode chapter entry. */
 export async function generateIleProjectExercise(
   input: GenerateDomainExerciseInput,
 ): Promise<{ exercise: string; source: "explicit" | "llm" }> {

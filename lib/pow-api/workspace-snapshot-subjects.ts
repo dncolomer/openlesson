@@ -72,7 +72,7 @@ export function collectWorkspaceSnapshotSubjects(input: {
 
 /**
  * Load distinct workspace subjects that may receive an LWM Snapshot.
- * Owner always included; also anyone with PoW, TAP/ILE link guests,
+ * Owner always included; also anyone with PoW, TAP/TAP Learning link guests,
  * block_sessions, or prior knowledge configs.
  */
 export async function listWorkspaceSnapshotSubjects(

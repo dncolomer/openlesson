@@ -9,7 +9,7 @@ import {
 } from "@/lib/prompt-workspace-context";
 
 /**
- * Clear, non-jargon view of how assembled context feeds TAP / ILE / TAPBench.
+ * Clear, non-jargon view of how assembled context feeds TAP / TAP Learning / TAPBench.
  * Readable by builders (creators) and buyers (consumers).
  */
 export function WorkspacePromptImpactPanel({

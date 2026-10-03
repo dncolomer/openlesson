@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       .eq("id", workspaceId)
       .single();
 
-    // Optional map inventory for topology grounding (same layers as live TAP/ILE).
+    // Optional map inventory for topology grounding (same layers as live TAP/TAP Learning).
     const { data: siblingBlocks } = await supabase
       .from("blocks")
       .select(

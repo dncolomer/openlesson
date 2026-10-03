@@ -66,7 +66,7 @@ export function IleVoiceBarActions({
   onToolChange: (tool: Tool) => void;
   onBackToDashboard?: () => void;
   errorNotification?: boolean;
-  /** Section flags from `sessionSidebarHasSection`. ILE turns all three on. */
+  /** Section flags from `sessionSidebarHasSection`. TAP Learning turns all three on. */
   showData?: boolean;
   showLogs?: boolean;
   showSave?: boolean;

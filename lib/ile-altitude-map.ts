@@ -1,5 +1,5 @@
 /**
- * ILE altitude bands. The chapter DAG sets elevation: a chapter with no
+ * TAP Learning altitude bands. The chapter DAG sets elevation: a chapter with no
  * prerequisites is the high ground, and each step down (lock-until or
  * leads-to) is lower. Chapter squares at the same elevation that touch by a
  * full side share one contour. The line runs along the shared edge between

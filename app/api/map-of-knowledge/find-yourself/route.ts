@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ILE fallback
+    // TAP Learning fallback
     if (!session) {
       const { data: ileByPublic } = await supabase
         .from("workspace_ile_links")

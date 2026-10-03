@@ -89,8 +89,7 @@ const softwareSchema = {
   featureList: [
     "Workspaces",
     "Proof-of-Work API — headless efficiency scoring",
-    "Think Aloud Protocol — live human cognition",
-    "Integrated Learning Environment — human learning",
+    "Think Aloud Protocol (TAP) — one interface for Preparing, Learning, Drilling, and Validating",
     "Agentic Learning Environment — skill development for skill.md developers",
     "Continuous scoring and gap analysis",
     "Proof-of-Work API for LMS integration",

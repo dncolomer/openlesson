@@ -187,7 +187,7 @@ describe("pitch deck content (platform only)", () => {
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cardLayout).toBe("product-stack");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "ile",
+      "tap learning",
       "stash api",
       "pow api",
     ]);
@@ -212,7 +212,7 @@ describe("pitch deck content (platform only)", () => {
     expect(corpus).not.toMatch(/silence ratio/);
     expect(corpus).toMatch(/\bpow\b/);
     expect(corpus).toMatch(/\btap\b/);
-    expect(corpus).toMatch(/\bile\b/);
+    expect(corpus).toMatch(/tap learning/);
     const integrationHits = [
       /hire|hiring|résumé|resume/,
       /certif/,
@@ -309,7 +309,7 @@ describe("pitch deck content (platform only)", () => {
 
     const productsTitleIdx = dataTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
-    // Four-product layer stack: TAP|ILE top → Stash → PoW bottom (no integration examples)
+    // Four-product layer stack: TAP|TAP Learning top → Stash → PoW bottom (no integration examples)
     const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
@@ -317,7 +317,7 @@ describe("pitch deck content (platform only)", () => {
     expect(productsSlide?.cardLayout).toBe("product-stack");
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "ile",
+      "tap learning",
       "stash api",
       "pow api",
     ]);
@@ -336,7 +336,7 @@ describe("pitch deck content (platform only)", () => {
       .toLowerCase();
     expect(productsCorpus).toMatch(/pow api/);
     expect(productsCorpus).toMatch(/think aloud protocol/);
-    expect(productsCorpus).toMatch(/integrated learning environment/);
+    expect(productsCorpus).toMatch(/tap learning/);
     expect(productsCorpus).toMatch(/stash api/);
     expect(productsCorpus).toMatch(/buffer agent proof of work|stash \(system 1\)|submit \(system 2\)/);
     expect(productsCorpus).toMatch(/knowledge config|measurement/);
@@ -587,7 +587,7 @@ describe("pitch deck content (platform only)", () => {
       "proximity",
       "stash",
       "submit",
-      "ile",
+      "tap learning",
       "stash api",
       "pow api",
     ]) {

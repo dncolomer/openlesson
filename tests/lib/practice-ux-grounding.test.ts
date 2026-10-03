@@ -103,7 +103,7 @@ const sampleBrief: TapScoreBrief = {
 };
 
 describe("Explore/Drill × Dialog/Solo → dialogue vs exercise", () => {
-  it("maps four product intents: Explore→ILE, Drill→TAP; Dialog/Solo modes", () => {
+  it("maps four product intents: Explore→TAP Learning, Drill→TAP; Dialog/Solo modes", () => {
     const exploreDialog = resolveProductIntent("explore", "dialog");
     const exploreSolo = resolveProductIntent("explore", "solo");
     const drillDialog = resolveProductIntent("drill", "dialog");
@@ -510,12 +510,12 @@ describe("Simulation shares live practice builders", () => {
 });
 
 describe("LWM Snapshot conscious trigger only", () => {
-  it("full ontology matches compact: no auto snapshot on TAP/ILE end", () => {
+  it("full ontology matches compact: no auto snapshot on TAP/TAP Learning end", () => {
     expect(WORKSPACE_ONTOLOGY).toMatch(/conscious trigger|not auto-run|never auto-run/i);
     expect(WORKSPACE_ONTOLOGY).not.toMatch(
-      /Closing\/ending TAP or ILE always generates a snapshot/i,
+      /Closing\/ending TAP or TAP Learning always generates a snapshot/i,
     );
-    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/not auto-run on TAP\/ILE end/i);
+    expect(WORKSPACE_ONTOLOGY_COMPACT).toMatch(/not auto-run on TAP\/TAP Learning end/i);
 
     // Session complete must not invoke score builders
     const tapComplete = read("app/api/workspace-tap-score/complete/route.ts");
@@ -537,7 +537,7 @@ describe("LWM Snapshot conscious trigger only", () => {
           /conscious trigger|never auto-run/i.test(WORKSPACE_ONTOLOGY),
         "noAlwaysOnEnd=" +
           String(
-            !/Closing\/ending TAP or ILE always generates a snapshot/i.test(
+            !/Closing\/ending TAP or TAP Learning always generates a snapshot/i.test(
               WORKSPACE_ONTOLOGY,
             ),
           ),
@@ -578,7 +578,7 @@ describe("LWM PoW-only scoring (no fluff)", () => {
   });
 });
 
-describe("ILE registry opening stays subject-grounded", () => {
+describe("TAP Learning registry opening stays subject-grounded", () => {
   it("opening_probe bans meta icebreakers and out-loud", () => {
     const opening = getPrompt("opening_probe");
     expect(opening).toMatch(/already know|meta/i);

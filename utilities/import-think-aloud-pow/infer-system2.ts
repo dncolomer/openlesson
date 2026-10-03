@@ -32,7 +32,7 @@ export async function inferIleSoloSystem2(
     [
       {
         role: "system",
-        content: `You label System 2 actions for an ILE ${ILE_IMPORT_SESSION_MODE_LABEL} think-aloud.
+        content: `You label System 2 actions for a TAP Learning ${ILE_IMPORT_SESSION_MODE_LABEL} think-aloud.
 This is NOT TAP and NOT Helios chat. There are no dialogue sends.
 Every listed item is already a System 1 stash (thought memory).
 System 2 means: promote a stash onto the Solo solution stack (promotions → system2:send), and/or close with I'm-done answering (end_of_chain).

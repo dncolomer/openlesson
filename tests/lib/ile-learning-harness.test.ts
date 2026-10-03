@@ -1,5 +1,5 @@
 /**
- * ILE chapter-create + in-chapter coach: opinionated, topic-aware learning harness.
+ * TAP Learning chapter-create + in-chapter coach: opinionated, topic-aware learning harness.
  * Drives the shipped composers the live session fills — no model call.
  */
 import { describe, expect, it } from "vitest";

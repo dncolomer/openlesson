@@ -1,5 +1,5 @@
 /**
- * Shipped ILE turn-insight helpers: per-chapter End-turn quota, canvas
+ * Shipped TAP Learning turn-insight helpers: per-chapter End-turn quota, canvas
  * craft evaluate/persist, typed XAI verdict, trophy grouping.
  */
 import { describe, expect, it } from "vitest";

@@ -1,5 +1,5 @@
 /**
- * Structural checks: Knowledge Regions UI, TAP/ILE guest links, no alaTAP on touched paths.
+ * Structural checks: Knowledge Regions UI, TAP/TAP Learning guest links, no alaTAP on touched paths.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -18,7 +18,7 @@ function read(rel: string) {
   return readFileSync(join(ROOT, rel), "utf8");
 }
 
-describe("UI: Knowledge Regions builder; TAP/ILE mint only on Knowledge Links", () => {
+describe("UI: Knowledge Regions builder; TAP/TAP Learning mint only on Knowledge Links", () => {
   it("regions keep builder filters; TAPBench mint is not on workspace APIs or Knowledge Links", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
     expect(ui).not.toContain("Create from description or files");
@@ -104,7 +104,7 @@ describe("Always-visible guest links (listable share URLs)", () => {
     expect(guestUi).toContain("privateUrl");
   });
 
-  it("workspace TAPBench mint route is gone; TAP and ILE mint remain", () => {
+  it("workspace TAPBench mint route is gone; TAP and TAP Learning mint remain", () => {
     expect(existsSync(join(ROOT, "app/api/workspace/tapbench-links/route.ts"))).toBe(
       false,
     );

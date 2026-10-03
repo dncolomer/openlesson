@@ -1,9 +1,9 @@
 /**
  * Product intent framing for learner/owner surfaces.
- * Technical products remain ILE/TAP in code; UI speaks Work / Drill / Scout.
+ * Technical products remain TAP Learning/TAP in code; UI speaks Work / Drill / Scout.
  *
  * New launches are always the With AI path:
- * - Explore always → ILE learning
+ * - Explore always → TAP Learning learning
  * - Drill always → TAP conversational
  *
  * Solo / exercise / project second-axis tokens are accepted on read so stored
@@ -59,7 +59,7 @@ export type LegacyProductIntentId =
 
 export type ProductLaunchTarget = {
   product: TechnicalProductKind;
-  /** ILE only */
+  /** TAP Learning only */
   session_mode?: IleSessionModeTech;
   /** TAP only */
   interaction_kind?: TapInteractionKindTech;
@@ -156,7 +156,7 @@ export function legacyHorizonToModality(horizon: unknown): PracticeModality {
   return normalizePracticeModality(horizon);
 }
 
-/** New-launch Explore target (ILE learning). */
+/** New-launch Explore target (TAP Learning learning). */
 export function exploreLearningLaunchTarget(): ProductLaunchTarget {
   return {
     id: "explore_dialog",
@@ -184,7 +184,7 @@ export function scoutDialogLaunchTarget(): ProductLaunchTarget {
 }
 
 /**
- * Stored ILE project / TAP exercise targets — not offered as new launches.
+ * Stored TAP Learning project / TAP exercise targets — not offered as new launches.
  * Used only to classify already-issued guest tokens.
  */
 export function storedExploreProjectLaunchTarget(): ProductLaunchTarget {
@@ -206,7 +206,7 @@ export function storedDrillExerciseLaunchTarget(): ProductLaunchTarget {
 /**
  * Canonical resolve for NEW launches: Explore|Drill → technical launch.
  *
- * Drill always TAP conversational; Explore always ILE learning.
+ * Drill always TAP conversational; Explore always TAP Learning learning.
  * Second-arg tokens (solo|exercise|project|timed|dialog|…) are accepted so
  * callers keep compiling, but they no longer produce a distinct target.
  *
@@ -254,9 +254,9 @@ export function resolveLaunchFromStyleAndModality(
 
 /**
  * @deprecated Prefer resolveLaunchFromStyleAndModality.
- * timeboxEnabled true was timed (TAP); false was open-ended (ILE) — that product
+ * timeboxEnabled true was timed (TAP); false was open-ended (TAP Learning) — that product
  * matrix is retired. Maps true→solo, false→dialog under the new axes so callers
- * that still pass a "second axis boolean" keep compiling while Drill→TAP / Explore→ILE.
+ * that still pass a "second axis boolean" keep compiling while Drill→TAP / Explore→TAP Learning.
  */
 export function resolveLaunchFromStyleAndTimebox(
   style: unknown,
@@ -302,7 +302,7 @@ export function productIntentClusterHint(target: ProductLaunchTarget): string {
 
 /**
  * Infer intent cluster from guest-link row technical fields.
- * Used for browse badges without saying TAP/ILE.
+ * Used for browse badges without saying TAP/TAP Learning.
  * Classification is by technical product + mode (not stored horizon labels).
  */
 export function productIntentFromGuestLink(input: {

@@ -3,14 +3,14 @@ export const IMPORT_THINK_ALOUD_USAGE = `Usage:
   npm run import:think-aloud-pow -- --media <path> --workspace <id> --dry-run
   npm run import:think-aloud-pow -- --transcript <json> --workspace <id> --dry-run
 
-ILE Explore Solo only (project / Solo). Persist is the default path.
+TAP Learning Explore Solo only (project / Solo). Persist is the default path.
 --dry-run prints the event list and does not write PoW.
 
 Options:
   --media <path>         Video or audio file (xAI STT)
   --transcript <path>    Word-level JSON fixture (skips STT; for debug)
   --workspace <id>       Workspace UUID (required)
-  --session <id>         Optional ILE session UUID (generated if omitted)
+  --session <id>         Optional TAP Learning session UUID (generated if omitted)
   --block <id>           Optional block UUID
   --dry-run              Print timeline / mapped events; do not persist
   --help, -h             Show this help

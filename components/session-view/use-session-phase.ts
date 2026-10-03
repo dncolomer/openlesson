@@ -440,7 +440,7 @@ const stopRecording = async () => {
   }
 
   // LWM Snapshot is manual (Knowledge UI) or Snapshot API POST .../lwm-snapshot —
-  // not auto-run on ILE end. PoW is already flushed above.
+  // not auto-run on TAP Learning end. PoW is already flushed above.
 
   handleDisconnectMuse();
 
@@ -872,7 +872,7 @@ if (shouldReuseExisting) {
         newPlan = existingPlan;
       }
     }
-    // ILE/AYCL: skip browser SELECT; create with force:false returns the stored plan.
+    // TAP Learning/AYCL: skip browser SELECT; create with force:false returns the stored plan.
   } else {
     const translateRes = await fetch("/api/session-plan/translate", {
       method: "POST",

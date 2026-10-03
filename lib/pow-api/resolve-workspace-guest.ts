@@ -1,5 +1,5 @@
 /**
- * Resolve a guest_user_id that may be reused for a new TAP/ILE link so scoring
+ * Resolve a guest_user_id that may be reused for a new TAP/TAP Learning link so scoring
  * and knowledge-config embeddings stay on the same subject identity.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -26,7 +26,7 @@ export class ResolveWorkspaceGuestError extends Error {
  * Allow reusing a guest when:
  * - it is an active org guest in the caller's organization (admin path), or
  * - it already belongs to this workspace (workspace_id on guest row), or
- * - it already appears on a TAP/ILE link for this workspace (owner reuse path).
+ * - it already appears on a TAP/TAP Learning link for this workspace (owner reuse path).
  */
 export async function assertReusableWorkspaceGuest(
   supabase: SupabaseClient,

@@ -1,6 +1,6 @@
 /**
- * ILE per-word bounding boxes: split and drag-range selection.
- * Retired ILE tools (Grok / Dantes) are not opened from word boxes.
+ * TAP Learning per-word bounding boxes: split and drag-range selection.
+ * Retired TAP Learning tools (Grok / Dantes) are not opened from word boxes.
  * Not a concept highlighter — every word is selectable.
  */
 
@@ -74,7 +74,7 @@ export function ileWordBoxSelectionText(
 export function ileWordBoxMenuActions(selection: string | null | undefined): IleWordBoxMenuAction[] {
   const query = normalizeQuery(selection);
   if (!query) return [];
-  // ILE Work is canvas-only: no Open Grok / Open Dantes from word boxes.
+  // TAP Learning Work is canvas-only: no Open Grok / Open Dantes from word boxes.
   return [];
 }
 

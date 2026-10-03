@@ -88,7 +88,7 @@ describe("data studio browse helpers (pure)", () => {
 });
 
 describe("studio session link parse + PoW match (pure)", () => {
-  it("parseStudioSessionLinkInput extracts TAP/ILE tokens from URLs and bare tokens", () => {
+  it("parseStudioSessionLinkInput extracts TAP/TAP Learning tokens from URLs and bare tokens", () => {
     expect(parseStudioSessionLinkInput("")).toBeNull();
     expect(parseStudioSessionLinkInput("  ")).toBeNull();
 
@@ -463,7 +463,7 @@ describe("data studio structural wiring", () => {
     expect(existsSync(join(ROOT, "app/api/admin"))).toBe(false);
   });
 
-  it("workspace pow API resolves TAP/ILE/TAPBench link tokens and matches related PoW", () => {
+  it("workspace pow API resolves TAP/TAP Learning/TAPBench link tokens and matches related PoW", () => {
     const src = readFileSync(join(ROOT, "app/api/workspace/data-studio/pow/route.ts"), "utf8");
     expect(src).toContain("parseStudioSessionLinkInput");
     expect(src).toContain("hashPrivateToken");

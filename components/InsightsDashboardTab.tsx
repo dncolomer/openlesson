@@ -139,7 +139,7 @@ export function InsightsDashboardTab({
       const next = Array.isArray(data.suggestions) ? (data.suggestions as InsightSuggestion[]) : [];
       setSuggestions(next);
       if (next.length === 0) {
-        setActionError("No strong insight patterns found yet. Keep thinking aloud in an ILE session and try again.");
+        setActionError("No strong insight patterns found yet. Keep thinking aloud in a TAP Learning session and try again.");
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to suggest insights");
@@ -262,18 +262,18 @@ export function InsightsDashboardTab({
                 {loadingThoughts
                   ? "Scanning thought traces"
                   : thoughts.length === 0
-                    ? "No ILE traces yet"
+                    ? "No TAP Learning traces yet"
                     : `${thoughts.length} trace${thoughts.length === 1 ? "" : "s"} available`}
               </span>
             </div>
             {thoughts.length > 0 && thoughts.length < 2 ? (
               <p className="text-xs text-neutral-500">
-                Need at least two thought traces to suggest insights. Continue an ILE session and try again.
+                Need at least two thought traces to suggest insights. Continue a TAP Learning session and try again.
               </p>
             ) : null}
             {thoughts.length === 0 && !loadingThoughts ? (
               <p className="text-xs text-neutral-500">
-                Start an ILE session and think aloud — traces land here so you can generate and bookmark insights.
+                Start a TAP Learning session and think aloud — traces land here so you can generate and bookmark insights.
               </p>
             ) : null}
           </div>

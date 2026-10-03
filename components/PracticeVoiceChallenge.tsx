@@ -104,7 +104,7 @@ export function PracticeVoiceChallenge({
 }: {
   onPass: () => void;
   framing?: "start" | "rest";
-  /** ILE adds a sample card. Prepare and Drill add a second sentence about that flow. */
+  /** TAP Learning adds a sample card. Prepare and Drill add a second sentence about that flow. */
   variant?: VoiceChallengeVariant;
   /** BCP-47 tag. The rest screen must match the session recognizer it just released. */
   lang?: string | null;

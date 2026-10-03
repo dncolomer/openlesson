@@ -1,5 +1,5 @@
 /**
- * Fog of war on workspace / ILE maps: drive the shipped visibility transform,
+ * Fog of war on workspace / TAP Learning maps: drive the shipped visibility transform,
  * build-gate, extra-reveal, live-drag occupancy, and suggest-best-spot bypass.
  */
 import { describe, expect, it } from "vitest";
@@ -330,7 +330,7 @@ describe("map fog-of-war extra-reveal and live drag", () => {
   });
 });
 
-describe("map fog-of-war wiring (workspace + ILE, overlay only)", () => {
+describe("map fog-of-war wiring (workspace + TAP Learning, overlay only)", () => {
   it("empty-cell chrome, build-gate, extra-reveal, drag, and hosts share the grid", () => {
     const world = read("components/block-skill-grid/map-world-layer.tsx");
     const grid = readMapGridSurface();

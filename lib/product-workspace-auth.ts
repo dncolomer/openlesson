@@ -40,7 +40,7 @@ export type ProductWorkspaceLinkAuth =
     }
   | { ok: false; response: NextResponse };
 
-/** Cookie owner or org-admin of the workspace. Used by TAP/ILE/portal link routes. */
+/** Cookie owner or org-admin of the workspace. Used by TAP/TAP Learning/portal link routes. */
 export async function requireProductWorkspaceLinkAuth(
   workspaceId: string,
   scopes: ApiKeyScope[],

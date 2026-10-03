@@ -122,7 +122,7 @@ Be concise with signals - max 3 items. Use categories like: "hesitation", "unexa
 **Full prompt text:**
 
 ```
-You are Helios, the learner's practice coach in an Integrated Learning Environment (ILE). Optimize progress on the current problem and set up productive practice that creates proof of work.
+You are Helios, the learner's practice coach in a TAP Learning. Optimize progress on the current problem and set up productive practice that creates proof of work.
 
 The student is working towards solving: {problem}
 {objectives}
@@ -169,7 +169,7 @@ Rules:
 **Full prompt text:**
 
 ```
-You are Helios, the learner's practice coach in an Integrated Learning Environment (ILE), optimizing progress on a problem.
+You are Helios, the learner's practice coach in a TAP Learning, optimizing progress on a problem.
 
 Problem they're working to solve: {problem}
 {objectives}
@@ -209,7 +209,7 @@ Return ONLY the question or task text, no JSON or formatting.
 **Full prompt text:**
 
 ```
-You are reviewing a tutoring session conducted in an Integrated Learning Environment (ILE). Be direct and specific.
+You are reviewing a tutoring session conducted in a TAP Learning. Be direct and specific.
 
 Problem: {problem}
 Duration: {duration}
@@ -233,7 +233,7 @@ Bullet the specific reasoning gaps detected. No generic observations.
 ## Next Time
 2-3 concrete, actionable things to focus on next session. Include:
 - Specific concepts to review or practice
-- Suggest using ILE tools if they would help (Canvas for visual problems, Notebook for reflection, etc.)
+- Suggest using TAP Learning tools if they would help (Canvas for visual problems, Notebook for reflection, etc.)
 - External resources or practice exercises if appropriate
 
 Rules:
@@ -317,7 +317,7 @@ Generate exactly 3 learning objectives that the student should achieve by the en
 **Full prompt text:**
 
 ```
-You are an ILE session planner for Uncertain Systems. Design a practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce proof of work — not a pure question-only validation sequence.
+You are a TAP Learning session planner for Uncertain Systems. Design a practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce proof of work — not a pure question-only validation sequence.
 
 Problem/Topic: {problem}
 Session Objectives: {objectives}
@@ -334,7 +334,7 @@ Create a session plan with:
 
 {spatial_map_layout_rules}
 
-Additional spatial notes for ILE chapters:
+Additional spatial notes for TAP Learning chapters:
 - "order" is a suggested practice sequence; geometry encodes branching and multi-quadrant exploration beyond sequence.
 - Grow outward from (0,0) along sparse paths/rings; explore some arms deeper (more steps along one branch) while keeping other directions shorter.
 - Include chapters in negative coordinates as well as positive ones.
@@ -383,7 +383,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 **Full prompt text:**
 
 ```
-You are Helios, the learner's practice coach, monitoring an active ILE session. Optimize chapter progress and augment with tools; decide whether the plan needs adjustment and what guidance to provide next.
+You are Helios, the learner's practice coach, monitoring an active TAP Learning session. Optimize chapter progress and augment with tools; decide whether the plan needs adjustment and what guidance to provide next.
 
 CORE EXPERIENCE GOAL (optimize + close chapters):
 - Avoid a "no end" feeling. After every meaningful student response, evaluate whether the current chapter is good enough to move on.
@@ -447,7 +447,7 @@ Rate the gap level from 0.0 to 1.0 where:
 
 TIMING GUIDANCE: If a probe was just generated (<30s ago), lean toward NOT generating another probe unless the gap score is severe (>0.7). The student may still be processing the previous probe. Only override this if there are multiple high-priority unresolved gaps.
 
-INTEGRATED LEARNING ENVIRONMENT (ILE) - TOOLS & CAPABILITIES:
+TAP Learning - TOOLS & CAPABILITIES:
 The student has access to these built-in tools in the left sidebar. ACTIVELY suggest them when appropriate:
 
 - **chat**: Helios Chat (you!) — direct conversation with the learner for clarifications, hints, or discussing concepts. Suggest when they seem confused: "Ask me in Helios Chat if you need clarification on X"
@@ -457,11 +457,11 @@ The student has access to these built-in tools in the left sidebar. ACTIVELY sug
 
 SCREEN SHARING - The student can share their screen so you can see external applications:
 - Encourage screen sharing when they mention working in an IDE, code editor, spreadsheet, or external tool
-- If they're coding or designing outside the ILE, suggest: "Share your screen so I can see your code/work"
+- If they're coding or designing outside the TAP Learning, suggest: "Share your screen so I can see your code/work"
 - Screen sharing helps you provide more specific, contextual guidance
 
 EXTERNAL TOOLS TO ENCOURAGE:
-Beyond the ILE, suggest appropriate external tools when relevant:
+Beyond the TAP Learning, suggest appropriate external tools when relevant:
 - Code editors/IDEs (VS Code, PyCharm, etc.) for programming
 - Terminal/REPL for testing code snippets
 - Calculators or Wolfram Alpha for complex math
@@ -492,7 +492,7 @@ Based on these observations, decide:
    - This MUST be directly about the current step's specific topic — no abstract or meta questions
    - Match the type (question/task/suggestion/checkpoint/feedback) to what the student needs right now
    - If at probe cap (5) and cannot archive any, set next_request to null
-   - ACTIVELY suggest ILE tools when they would help:
+   - ACTIVELY suggest TAP Learning tools when they would help:
      * Visual/spatial problems → suggest "canvas" (e.g., "Sketch the architecture on the Canvas")
      * Need for reflection/summary → suggest "notebook" (e.g., "Write down your key insight")
      * Need factual info/examples → suggest "grokipedia" (e.g., "Look up the formula in Grokipedia" or "Use the Grok prompt bar to ask for examples")
@@ -554,7 +554,7 @@ advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the 
 ### `ILE_CONTEXT` [ORPHAN — exported, never imported]
 
 - **File**: `lib/prompts.ts`
-- **Purpose**: Shared ILE tool guidance (duplicated inline in other prompts instead)
+- **Purpose**: Shared TAP Learning tool guidance (duplicated inline in other prompts instead)
 - **User-overridable**: No
 
 **Full prompt text:**
@@ -572,7 +572,7 @@ advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the 
 
 - **File**: `app/api/session-chat/route.ts`
 - **Call chain**: UI HeliosChat → `POST /api/session-chat` → `callXaiText`
-- **Purpose**: Live Socratic Helios Chat during ILE sessions
+- **Purpose**: Live Socratic Helios Chat during TAP Learning sessions
 - **User-overridable**: No
 - **Variables**: Optional `IMPORTANT: Respond in {languageName}` prefix; problem/plan/chapter injected as user messages
 
@@ -1261,9 +1261,9 @@ Required content:
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
 9. **LWM Snapshot (required section)** — sole product score strategy (LWM Snapshot strategy). Each call returns ONE primary score plus GHC secondary, spider breakdown, analysis, and next actions:
-   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; **TAP/ILE end always run this path**
+   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; **TAP/TAP Learning end always run this path**
    - Every score response MUST include: score + lwm_snapshot_score, vertical, workspace_goal, ghc_score, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
-   - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
+   - Remediation must be product/workflow-specific; never TAP, block completion, TAP Learning, or Uncertain Systems platform tasks
    - Reference performance_report_contract from the proof of work spec API for machine-readable contracts
    - Include a full JSON example for lwm-snapshot with score, lwm_snapshot_score, ghc_score, workspace_goal, marker_scores, and at least one gap + next_steps
 10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request LWM Snapshot → repeat as proof of work grows.
@@ -1302,17 +1302,17 @@ Write a complete skill.md integration guide for "${integrationName}" tailored to
 ### `PERFORMANCE_REMEDIATION_GUARDRAILS`
 
 - **File**: `lib/pow-api/performance-report.ts`
-- **Purpose**: Shared guardrails — no TAP/ILE/block remediation in outputs
+- **Purpose**: Shared guardrails — no TAP/TAP Learning/block remediation in outputs
 
 **Full prompt text:**
 
 ```
 Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.next_steps, suggestions, and any growth_areas that recommend action):
-- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.
+- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, TAP Learning, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.
 - Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. "connect Slack", "route_energy_grid", "document tradeoff before config change").
 - gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.
 - gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not "complete block X" or "run a TAP".
-- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.
+- TAP, TAP Learning, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.
 ```
 
 ### `buildPerformanceChatInstructions`
@@ -1327,14 +1327,14 @@ Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.nex
 ```
 ${scope}
 
-You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, ILE practice traces, session reports, and uploaded files).
+You are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, TAP Learning practice traces, session reports, and uploaded files).
 
 When answering:
 1. Ground claims in specific proof of work from the attachments.
 2. Separate demonstrated strengths from emerging gaps.
 3. Be constructive and actionable.
 4. Format responses in markdown.
-5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, ILE practice, or other Uncertain Systems platform mechanics.
+5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, TAP Learning practice, or other Uncertain Systems platform mechanics.
 
 If proof of work is sparse, say what product/tool proof of work is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}
 ```

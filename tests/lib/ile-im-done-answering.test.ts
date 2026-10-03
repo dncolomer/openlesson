@@ -1,5 +1,5 @@
 /**
- * ILE "I'm done answering": shipped CoT close + Helios chrome.
+ * TAP Learning "I'm done answering": shipped CoT close + Helios chrome.
  * Drives closeIleImDoneAnswering (not a reimplementation).
  */
 import { describe, expect, it } from "vitest";
@@ -255,7 +255,7 @@ describe("TAP solo I'm-done leftover (shipped sendThought path)", () => {
   });
 });
 
-describe("ILE Helios I'm done answering chrome (shipped source)", () => {
+describe("TAP Learning Helios I'm done answering chrome (shipped source)", () => {
   it("is a standard white overlay outside the transcription box; TAP uses the same close", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     const button = read("components/thought-ui/ImDoneAnsweringButton.tsx");
@@ -345,9 +345,9 @@ describe("ILE Helios I'm done answering chrome (shipped source)", () => {
     writeScratch(
       "ile-im-done-answering-chrome.txt",
       [
-        "ILE: no End turn control; transcript bar has Data, Logs, and Save; chapter widget has no I'm done answering",
+        "TAP Learning: no End turn control; transcript bar has Data, Logs, and Save; chapter widget has no I'm done answering",
         "no SVG bump",
-        "no Submit last Thought on ILE or TAP spoken chrome",
+        "no Submit last Thought on TAP Learning or TAP spoken chrome",
         "TAP: I'm done answering between transcript container and Thought Memory",
       ].join("\n"),
     );

@@ -129,7 +129,8 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
                 appear.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                <span className="text-neutral-300">ILE</span> routes humans into targeted practice.{" "}
+                <span className="text-neutral-300">TAP</span> is one interface for Preparing, Learning,
+                Drilling, and Validating. TAP Learning routes humans into targeted practice.{" "}
                 <span className="text-neutral-300">ALE</span> helps skill developers iterate agent
                 skills. Verification findings drive what gets practiced next.
               </p>
@@ -137,10 +138,11 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
           </div>
           <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              Four tools. One knowledge workspace.
+              One TAP. One knowledge workspace.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Proof-of-Work API and Think Aloud Protocol verify learning. ILE and ALE augment it. All four
+              Proof-of-Work API verifies learning from artifacts. Think Aloud Protocol (TAP) is the session
+              interface for Preparing, Learning, Drilling, and Validating. ALE augments agent skills. They
               share the same workspace context, scoring model, and gap analysis.
             </p>
             <div className="mt-5">

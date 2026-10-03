@@ -49,11 +49,11 @@ export interface PerformanceMarkerScore {
 
 /** Shared guardrails for score-card remediation — import into other agent prompts. */
 export const PERFORMANCE_REMEDIATION_GUARDRAILS = `Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.next_steps, suggestions, and any growth_areas that recommend action):
-- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.
+- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, TAP Learning, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.
 - Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. "connect Slack", "route_energy_grid", "document tradeoff before config change").
 - gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.
 - gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not "complete block X" or "run a TAP".
-- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.`;
+- TAP, TAP Learning, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.`;
 
 const PLATFORM_REMEDIATION_PATTERN =
   /\b(tap|think\s+aloud(?:\s+protocol)?|ile|integrated\s+learning\s+environment|openlesson|uncertain\s+systems)\b|(?:complete|finish)\s+(?:the\s+)?(?:[\w-]+\s+)*(?:workspace\s+)?blocks?\b|block\s+completion|issue\s+(?:a\s+)?tap|run\s+(?:a\s+)?tap|schedule\s+(?:a\s+)?tap/i;
@@ -212,7 +212,7 @@ export const PERFORMANCE_NEXT_STEPS_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description:
-        "Granular observable product/tool actions or event verbs — never TAP sessions, block completion, or ILE",
+        "Granular observable product/tool actions or event verbs — never TAP sessions, block completion, or TAP Learning",
     },
   },
   required: ["directions", "events"],
@@ -228,7 +228,7 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
     suggested_repair: {
       type: "string",
       description:
-        "Product- or workflow-specific repair action — never TAP, block completion, ILE, or Uncertain Systems platform mechanics",
+        "Product- or workflow-specific repair action — never TAP, block completion, TAP Learning, or Uncertain Systems platform mechanics",
     },
   },
   required: ["title", "proof_of_work", "severity", "suggested_repair"],
@@ -904,7 +904,7 @@ export function recoverPerformanceReportFromModelText(
 
 /**
  * Wire key for session-adjacent snapshot helpers (same strategy as Snapshot API lwm-snapshot).
- * Snapshots are manual (Knowledge UI) or explicit API/MCP — not auto-run on TAP/ILE end.
+ * Snapshots are manual (Knowledge UI) or explicit API/MCP — not auto-run on TAP/TAP Learning end.
  */
 export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;
 /** @alias TAP_AUTO_SCORE_VERTICAL */

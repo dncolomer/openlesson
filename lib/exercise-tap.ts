@@ -112,7 +112,7 @@ export type BuildExercisePromptInput = {
   files?: WorkspaceFileContextItem[] | null;
   /** External links — JIT URL bias when framing exercises. */
   externalResources?: PromptExternalResourceItem[] | null;
-  /** Map inventory (roles/kinds + layout). Feeds TAP/ILE/TAPBench assembly. */
+  /** Map inventory (roles/kinds + layout). Feeds TAP/TAP Learning/TAPBench assembly. */
   blocks?: PromptBlockInventoryItem[] | null;
   focusedBlockId?: string | null;
   blockLocalContext?: BlockLocalContextInput | null;
@@ -122,7 +122,7 @@ export type BuildExercisePromptInput = {
 };
 
 /**
- * Build the shared PromptWorkspaceContext for exercise/ILE framing.
+ * Build the shared PromptWorkspaceContext for exercise/TAP Learning framing.
  * Includes inventory, topology, and local block materials when provided.
  * Tests and LLM author paths should drive this helper — not re-implement merge.
  */

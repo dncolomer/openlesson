@@ -173,7 +173,7 @@ describe("surfaces share the exported type list", () => {
     expect(typeSchema && "enum" in typeSchema ? typeSchema.enum : []).not.toContain("speech");
   });
 
-  it("ILE capture types are a subset of stored types", () => {
+  it("TAP Learning capture types are a subset of stored types", () => {
     const ile: IleProofOfWorkCaptureType[] = ["tool", "screen", "eeg"];
     for (const t of ile) {
       expect(WORKSPACE_PROOF_OF_WORK_TYPES).toContain(t);

@@ -1,5 +1,5 @@
 /**
- * ILE hunt-for-answers pill is gone from Helios; TAP never had it.
+ * TAP Learning hunt-for-answers pill is gone from Helios; TAP never had it.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -22,8 +22,8 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ILE hunt-for-answers pill (removed)", () => {
-  it("is not mounted on ILE Helios or TAP identity rows", () => {
+describe("TAP Learning hunt-for-answers pill (removed)", () => {
+  it("is not mounted on TAP Learning Helios or TAP identity rows", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     expect(helios).not.toContain("IleHuntAnswersPill");
     expect(helios).not.toContain("data-ile-hunt-answers-pill");
@@ -53,7 +53,7 @@ describe("ILE hunt-for-answers pill (removed)", () => {
     writeScratch(
       "ile-hunt-answers-pill.txt",
       [
-        "ILE Helios: no IleHuntAnswersPill",
+        "TAP Learning Helios: no IleHuntAnswersPill",
         "TAP convo + solo: no identity badge, no hunt pill",
         "component + copy helper deleted",
       ].join("\n"),

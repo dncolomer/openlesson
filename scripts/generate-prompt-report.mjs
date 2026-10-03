@@ -258,7 +258,7 @@ parts.push(
     "`ILE_CONTEXT` [ORPHAN — exported, never imported]",
     {
       File: "`lib/prompts.ts`",
-      Purpose: "Shared ILE tool guidance (duplicated inline in other prompts instead)",
+      Purpose: "Shared TAP Learning tool guidance (duplicated inline in other prompts instead)",
       "User-overridable": "No",
     },
     ileContext,
@@ -273,7 +273,7 @@ parts.push(
     {
       File: "`app/api/session-chat/route.ts`",
       "Call chain": "UI HeliosChat → `POST /api/session-chat` → `callXaiText`",
-      Purpose: "Live Socratic Helios Chat during ILE sessions",
+      Purpose: "Live Socratic Helios Chat during TAP Learning sessions",
       "User-overridable": "No",
       Variables: "Optional `IMPORTANT: Respond in {languageName}` prefix; problem/plan/chapter injected as user messages",
     },
@@ -715,7 +715,7 @@ parts.push(
     "`PERFORMANCE_REMEDIATION_GUARDRAILS`",
     {
       File: "`lib/pow-api/performance-report.ts`",
-      Purpose: "Shared guardrails — no TAP/ILE/block remediation in outputs",
+      Purpose: "Shared guardrails — no TAP/TAP Learning/block remediation in outputs",
     },
     extractConstTemplate(read("lib/pow-api/performance-report.ts"), "PERFORMANCE_REMEDIATION_GUARDRAILS"),
   ),

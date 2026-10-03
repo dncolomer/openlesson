@@ -1,5 +1,5 @@
 /**
- * ILE map-first overlay chrome tokens. Minimap stays at right-2 top-2.
+ * TAP Learning map-first overlay chrome tokens. Minimap stays at right-2 top-2.
  */
 import { MINIMAP_FRAME_HEIGHT, MINIMAP_FRAME_WIDTH } from "@/lib/map-minimap-frame";
 

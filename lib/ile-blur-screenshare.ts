@@ -1,5 +1,5 @@
 /**
- * ILE leave-tab policy. Losing focus does not open a floating session
+ * TAP Learning leave-tab policy. Losing focus does not open a floating session
  * window and does not auto-request screenshare.
  */
 
@@ -16,7 +16,7 @@ export type IleCompactWindowDecision = "show" | "hide";
 export type IleLeaveFocusPolicyInput = {
   isIleSession: boolean;
   sessionActive: boolean;
-  /** True when the Uncertain Systems ILE tab is visible and focused. */
+  /** True when the Uncertain Systems TAP Learning tab is visible and focused. */
   tabFocused: boolean;
   isScreenSharing: boolean;
   /** In-flight getDisplayMedia so we do not re-prompt. */
@@ -132,7 +132,7 @@ export function applyIleLeaveFocusPolicy(
   };
 }
 
-/** Live ILE-tab focus after a picker await (document.hidden + hasFocus). */
+/** Live TAP Learning-tab focus after a picker await (document.hidden + hasFocus). */
 export function readIleTabFocusedFromDocument(
   doc: { hidden?: boolean } = typeof document !== "undefined" ? document : {},
   win: { hasFocus?: () => boolean } = (typeof window !== "undefined"

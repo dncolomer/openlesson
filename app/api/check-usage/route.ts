@@ -170,7 +170,7 @@ export async function GET() {
           .select("id")
           .eq("organization_id", profile.organization_id);
         const memberIds = (orgMembers || []).map((m) => m.id);
-        // Sum external/API PoW across members (created_by_api_key_id set — not TAP/ILE internal PoW)
+        // Sum external/API PoW across members (created_by_api_key_id set — not TAP/TAP Learning internal PoW)
         for (const memberId of memberIds) {
           apiPowCallsUsed += await countPowApiSubmissions(admin, memberId, periodStart);
         }
@@ -196,7 +196,7 @@ export async function GET() {
       proofOfWorkLimit: result.limit,
       canSubmitProofOfWork: result.allowed,
       evidenceReason: result.reason,
-      /** External/API-direct PoW only (created_by_api_key_id); not TAP/ILE-generated PoW. */
+      /** External/API-direct PoW only (created_by_api_key_id); not TAP/TAP Learning-generated PoW. */
       apiPowCallsUsed,
       tapSessionsUsed,
       ileSessionsUsed,

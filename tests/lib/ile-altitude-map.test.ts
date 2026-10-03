@@ -1,5 +1,5 @@
 /**
- * ILE altitude groups come from the stored chapter DAG, not from step order.
+ * TAP Learning altitude groups come from the stored chapter DAG, not from step order.
  * Adjacent squares at one elevation share one outline. Manual empty-cell add is off.
  */
 import { describe, expect, it } from "vitest";
@@ -526,7 +526,7 @@ describe("ile altitude groups", () => {
   });
 });
 
-describe("ILE board opening camera", () => {
+describe("TAP Learning board opening camera", () => {
   function screenPoint(
     cam: { zoom: number; pan: { x: number; y: number } },
     x: number,

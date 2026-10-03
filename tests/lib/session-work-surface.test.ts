@@ -63,7 +63,7 @@ describe("shared live work surface", () => {
     }
   });
 
-  it("Learn live play stays on the ILE canvas sidebar without a visible countdown", () => {
+  it("Learn live play stays on the TAP Learning canvas sidebar without a visible countdown", () => {
     expect(learn).toContain("data-ile-canvas-sidebar-split");
     expect(learn).toContain("<SessionSidebar");
     expect(learn).toContain('mode="ile"');

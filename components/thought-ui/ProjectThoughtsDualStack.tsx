@@ -6,7 +6,7 @@ import { ExerciseSubmissionStack } from "@/components/exercise-tap/ExerciseSubmi
 
 /**
  * Project Mode Thoughts tool — one tool, two stacks (solution top, stash bottom).
- * Reuses Exercise TAP dual-list card components; remains the ILE Thoughts surface.
+ * Reuses Exercise TAP dual-list card components; remains the TAP Learning Thoughts surface.
  */
 export function ProjectThoughtsDualStack({
   stash,

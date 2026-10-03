@@ -20,7 +20,7 @@ interface WorkspacePerformancePanelProps {
   currentUserId: string | null;
   /** Group workspaces allow non-owners self-eval. */
   isGroup?: boolean;
-  /** @deprecated TAP/ILE guest links live in Settings; kept for call-site compat. */
+  /** @deprecated TAP/TAP Learning guest links live in Settings; kept for call-site compat. */
   hideTap?: boolean;
   ayclToken?: string;
   /** Verification Workspaces (knowledge_region) can filter Knowledge by flow. */

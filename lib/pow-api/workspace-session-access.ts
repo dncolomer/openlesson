@@ -196,12 +196,12 @@ export interface SessionWorkspaceProofOfWorkAccess {
   workspace: WorkspaceSessionPlan;
   auth: AuthContext;
   supabase: SupabaseClient;
-  /** When PoW is authorized via an ILE guest link token. */
+  /** When PoW is authorized via a TAP Learning guest link token. */
   ileLinkId?: string | null;
 }
 
 export type SessionWorkspaceProofOfWorkAccessOptions = {
-  /** Private token for shareable ILE guest links (`/ile/session/{token}`). */
+  /** Private token for shareable TAP Learning guest links (`/ile/session/{token}`). */
   ileToken?: string | null;
   /** AYCL purchase token — scores as the purchase subject, never the owner. */
   ayclToken?: string | null;
@@ -210,8 +210,8 @@ export type SessionWorkspaceProofOfWorkAccessOptions = {
 };
 
 /**
- * Access for ILE sessions uploading proof of work (no Teams gate).
- * Supports cookie-auth owners and shareable ILE private tokens.
+ * Access for TAP Learning sessions uploading proof of work (no Teams gate).
+ * Supports cookie-auth owners and shareable TAP Learning private tokens.
  */
 export async function requireSessionWorkspaceProofOfWorkAccess(
   workspaceId: string,
@@ -299,7 +299,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     const participantUserId = ile.assignedUserId;
     const participantGuestUserId = ile.assignedUserId ? null : ile.guestUserId;
     if (!participantUserId && !participantGuestUserId) {
-      return jsonError(500, "ILE guest participant is not provisioned", "guest_missing");
+      return jsonError(500, "TAP Learning guest participant is not provisioned", "guest_missing");
     }
 
     const auth: AuthContext = {
@@ -407,7 +407,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
   };
 }
 
-/** Extract ILE private token from a JSON body (ileToken, ile_token, or privateToken). */
+/** Extract TAP Learning private token from a JSON body (ileToken, ile_token, or privateToken). */
 export function ileTokenFromPowBody(body: Record<string, unknown>): string | null {
   const raw = body.ileToken ?? body.ile_token ?? body.privateToken ?? body.private_token;
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;

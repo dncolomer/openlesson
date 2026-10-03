@@ -1,5 +1,5 @@
 /**
- * ILE chapter-map notes + drawing layers persist (session scope)
+ * TAP Learning chapter-map notes + drawing layers persist (session scope)
  * and smaller minimap/notes/layers chrome.
  */
 import { describe, expect, it } from "vitest";
@@ -65,7 +65,7 @@ function memoryStore(): LearnerNotesStorage {
   };
 }
 
-describe("ILE chapter-map notes + layers persist (shipped helpers)", () => {
+describe("TAP Learning chapter-map notes + layers persist (shipped helpers)", () => {
   it("round-trips a chapter-map note and layer without colliding with workspace store", () => {
     const storage = memoryStore();
     const chapterScope = {
@@ -147,7 +147,7 @@ describe("ILE chapter-map notes + layers persist (shipped helpers)", () => {
   });
 });
 
-describe("ILE chapter-map chrome (shipped source + frame constants)", () => {
+describe("TAP Learning chapter-map chrome (shipped source + frame constants)", () => {
   it("chapter map mounts notes/layers without a workspace id", () => {
     const grid = readMapGridSurface();
     const chapter = read("components/ChapterMapPanel.tsx");

@@ -33,7 +33,7 @@ export const LEARNER_MAP_CELL_LOCKED_CLASS =
 export const LEARNER_MAP_CELL_DEP_HIGHLIGHT_CLASS =
   "border-white/55 bg-white/12 text-white shadow-[0_0_14px_rgba(255,255,255,0.16)] ring-1 ring-white/30";
 
-/** Done learner tile — same white + tick language as the ILE chapter map. */
+/** Done learner tile — same white + tick language as the TAP Learning chapter map. */
 export const LEARNER_MAP_CELL_DONE_CLASS = MAP_CELL_DONE_CLASS;
 
 /** Self-progress learner tile — fainter white than Done. */

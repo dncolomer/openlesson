@@ -125,7 +125,7 @@ describe("buildTapbenchSkillsMarkdown (shipped builder)", () => {
 });
 
 describe("Knowledge Links does not host TAPBench skills download", () => {
-  it("workspace TAPBench mint panel is gone; TAP/ILE Knowledge Links stay", () => {
+  it("workspace TAPBench mint panel is gone; TAP/TAP Learning Knowledge Links stay", () => {
     expect(existsSync(join(ROOT, "components/WorkspaceTapbenchLinksPanel.tsx"))).toBe(
       false,
     );

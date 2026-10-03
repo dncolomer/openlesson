@@ -7,7 +7,7 @@ async function ilePost<T>(token: string, action: string, payload: Record<string,
     body: JSON.stringify({ token, action, ...payload }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "ILE session request failed");
+  if (!res.ok) throw new Error(data.error || "TAP Learning session request failed");
   return data as T;
 }
 

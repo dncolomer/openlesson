@@ -435,10 +435,10 @@ describe("Stash API product surfaces", () => {
     );
     expect(productsSlide).toBeTruthy();
     expect(productsSlide?.cardLayout).toBe("product-stack");
-    // Top→bottom: TAP|ILE shared layer → Stash → PoW foundation
+    // Top→bottom: TAP|TAP Learning shared layer → Stash → PoW foundation
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "tap",
-      "ile",
+      "tap learning",
       "stash api",
       "pow api",
     ]);

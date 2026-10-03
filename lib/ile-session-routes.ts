@@ -1,5 +1,5 @@
 /**
- * ILE session map vs dedicated Welcome settings route.
+ * TAP Learning session map vs dedicated Welcome settings route.
  * Settings is a full-screen path, not a DialogFrame on the map.
  */
 

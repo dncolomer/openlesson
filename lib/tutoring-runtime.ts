@@ -1,5 +1,5 @@
 /**
- * One tutoring runtime for ILE / TAP / AYCL.
+ * One tutoring runtime for TAP Learning / TAP / AYCL.
  * Product + dialog|solo + auth kind parameterize speech, idle, mutate, and solo thought.
  */
 
@@ -288,7 +288,7 @@ export type TutoringMutateApplyResult =
   | { ok: true; action: "add_probe"; probe: Record<string, unknown> }
   | { ok: false; status: number; message: string };
 
-/** Shared ILE/AYCL session get/save/add_probe. TAP start/complete stays on TAP rows. */
+/** Shared TAP Learning/AYCL session get/save/add_probe. TAP start/complete stays on TAP rows. */
 export async function applyTutoringSessionMutate(
   db: TutoringDb,
   ctx: TutoringContext,
@@ -367,7 +367,7 @@ export async function applyTutoringSessionMutate(
   return { ok: false, status: 400, message: "Unknown action" };
 }
 
-/** ILE Project and TAP Exercise share this solo thought path. */
+/** TAP Learning Project and TAP Exercise share this solo thought path. */
 export function applySoloThoughtMutation(
   lists: ExerciseDualLists,
   chapterStatus: string | null | undefined,

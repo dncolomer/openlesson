@@ -80,7 +80,7 @@ export const SKILL_GRID_CELL_SIZE = 92;
 export const SKILL_GRID_GAP = 10;
 export const SKILL_GRID_PITCH = SKILL_GRID_CELL_SIZE + SKILL_GRID_GAP;
 
-/** ILE chapter board uses larger tiles than the workspace skill grid. */
+/** TAP Learning chapter board uses larger tiles than the workspace skill grid. */
 export const ILE_BOARD_CELL_SIZE = 128;
 export const ILE_BOARD_GAP = 16;
 export const ILE_BOARD_PITCH = ILE_BOARD_CELL_SIZE + ILE_BOARD_GAP;
@@ -104,7 +104,7 @@ export const SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE = 447.2;
 /** Shared default for workspace maps. */
 export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 0.7;
 /**
- * Fallback scale before an ILE board can be measured.
+ * Fallback scale before a TAP Learning board can be measured.
  * The live chapter board replaces this with a fit of the whole frame.
  */
 export const SKILL_GRID_ILE_DEFAULT_ZOOM_AT_REFERENCE = 0.7;

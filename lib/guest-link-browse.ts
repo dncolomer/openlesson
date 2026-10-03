@@ -1,5 +1,5 @@
 /**
- * Client-side browse/search/filter for workspace TAP + ILE + TAPBench links.
+ * Client-side browse/search/filter for workspace TAP + TAP Learning + TAPBench links.
  * Pure transforms so the Settings UI can filter large lists without new APIs.
  */
 
@@ -97,7 +97,7 @@ function blockTitle(
 }
 
 /**
- * Merge TAP + ILE (+ optional TAPBench) API rows into one browse list
+ * Merge TAP + TAP Learning (+ optional TAPBench) API rows into one browse list
  * (newest first by created_at).
  */
 export function buildGuestLinkBrowseRows(

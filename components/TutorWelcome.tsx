@@ -10,7 +10,7 @@ type TutorWelcomeVariant = "ile" | "tap";
 interface TutorWelcomeProps {
   /** Tutor display name (used for the avatar monogram & greeting). */
   tutorName: string;
-  /** ILE block welcome vs TAP demonstration welcome copy. */
+  /** TAP Learning block welcome vs TAP demonstration welcome copy. */
   variant?: TutorWelcomeVariant;
   /** Fired when the user clicks the Play button. */
   onPlay: () => void;

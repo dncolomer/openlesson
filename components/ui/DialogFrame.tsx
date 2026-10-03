@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 /**
  * Shared modal shell: portaled, screen-centered overlay + panel.
- * ConfirmDialog and ILE form/welcome dialogs all render through this so
+ * ConfirmDialog and TAP Learning form/welcome dialogs all render through this so
  * stacking, dismiss, and chrome stay one framework.
  */
 export type DialogSize = "md" | "lg" | "xl" | "full";

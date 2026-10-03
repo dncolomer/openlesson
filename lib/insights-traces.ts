@@ -68,7 +68,7 @@ export function extractInsightThoughtsFromPowRows(rows: PowTraceRow[]): Workspac
 }
 
 /**
- * Load ILE thought traces for a workspace from proof-of-work metadata.
+ * Load TAP Learning thought traces for a workspace from proof-of-work metadata.
  * Used by Knowledge Insights to suggest/bookmark without an active session.
  */
 export async function fetchWorkspaceInsightThoughts(

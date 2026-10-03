@@ -201,7 +201,7 @@ describe("TAP idle + interruption wiring (static)", () => {
     expect(client).toContain("clearPendingSilenceInterruption");
   });
 
-  it("ILE SessionView is not required to change for this TAP-only gate", () => {
+  it("TAP Learning SessionView is not required to change for this TAP-only gate", () => {
     const ile = readSessionViewSurface();
     expect(ile).not.toContain("tap-interruption-gate");
     expect(ile).not.toContain("shouldSkipSilenceInterruptionWhileFormingThought");

@@ -1,5 +1,5 @@
 /**
- * ILE modals share DialogFrame / ConfirmDialog: portaled, screen-centered,
+ * TAP Learning modals share DialogFrame / ConfirmDialog: portaled, screen-centered,
  * same overlay + panel chrome.
  */
 import { describe, expect, it } from "vitest";
@@ -26,7 +26,7 @@ function writeScratch(name: string, body: string) {
 const CUSTOM_CENTERED_OVERLAY =
   /className="fixed inset-0 z-\S+ flex items-center justify-center/;
 
-describe("ILE modals share DialogFrame / ConfirmDialog", () => {
+describe("TAP Learning modals share DialogFrame / ConfirmDialog", () => {
   it("DialogFrame is the portaled centered overlay; ConfirmDialog uses it", () => {
     const frame = read("components/ui/DialogFrame.tsx");
     const confirm = read("components/ui/ConfirmDialog.tsx");
@@ -50,7 +50,7 @@ describe("ILE modals share DialogFrame / ConfirmDialog", () => {
     expect(confirm).not.toMatch(CUSTOM_CENTERED_OVERLAY);
   });
 
-  it("ILE welcome, thought edit, chapter edit, and chrome confirms all use the shell", () => {
+  it("TAP Learning welcome, thought edit, chapter edit, and chrome confirms all use the shell", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     const thought = read("components/thought-ui/ThoughtEditPanel.tsx");
     const ring = read("components/block-skill-grid/block-circular-menu.tsx");

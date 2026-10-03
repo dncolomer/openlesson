@@ -1,5 +1,5 @@
 /**
- * Mode-aware ILE chapter grain, closure, and map-expansion instructions.
+ * Mode-aware TAP Learning chapter grain, closure, and map-expansion instructions.
  *
  * Dialog (Learning Mode) chapters are topic-horizon conversations.
  * Project (Solo / exercise) chapters stay standalone longer-horizon tasks.
@@ -51,8 +51,8 @@ IN-CHAPTER MOVES (how Helios guides the next turn):
 
 TOOL FIT (use when the topic earns it — never as ritual):
 - Chapter canvas drawing tools (text, freedraw, rectangle, arrow, image): diagrams, systems, geometry, notes, and your own reply text blocks.
-- Screen share / IDE: when the artifact lives outside ILE.
-- Do not name Notebook, Grok/Grokipedia, or Dantes — ILE Work is one canvas.`;
+- Screen share / IDE: when the artifact lives outside TAP Learning.
+- Do not name Notebook, Grok/Grokipedia, or Dantes — TAP Learning Work is one canvas.`;
 }
 
 export function ileChapterGrainRules(mode: IleSessionMode): string {

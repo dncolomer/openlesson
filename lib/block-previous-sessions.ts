@@ -1,5 +1,5 @@
 /**
- * Practice drawer: list this block’s past ILE sessions and continue by id.
+ * Practice drawer: list this block’s past TAP Learning sessions and continue by id.
  * Continue never inserts a new `sessions` row.
  */
 import {

@@ -5,8 +5,8 @@ export const runtime = "nodejs";
 
 /**
  * Group-workspace participant sessions are retired.
- * Use TAP / ILE guest links or own a workspace to start sessions.
+ * Use TAP / TAP Learning guest links or own a workspace to start sessions.
  */
 export async function POST() {
-  return jsonError(410, "Group workspace sessions are no longer available. Start a TAP or ILE session via a guest link, or use your own workspace.", "group_mode_removed",);
+  return jsonError(410, "Group workspace sessions are no longer available. Start a TAP or TAP Learning session via a guest link, or use your own workspace.", "group_mode_removed",);
 }

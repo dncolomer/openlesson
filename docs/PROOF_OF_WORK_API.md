@@ -96,7 +96,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | `lwm_snapshot` | LWM Snapshot score (0–100; sole strategy). Manual / explicit API (not auto on TAP/ILE end). |
+| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | `lwm_snapshot` | LWM Snapshot score (0–100; sole strategy). Manual / explicit API (not auto on TAP/TAP Learning end). |
 | `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | `get_world_model` | Durable learning world model for a subject. |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | `get_knowledge_config` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | `get_knowledge_config_trajectory` | Knowledge config trajectory + optional 2D projection. |
@@ -115,7 +115,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 ### TAPBench
 
-TAPBench keys and tasks are issued on `/tapbench`, not via TAP/ILE mint APIs. Agent APIs mint TAP (`create_tap_link`) and ILE sessions only. Existing timed session tokens still resolve at `GET /api/tapbench/{token}` / `/tapbench/{token}`; pass `session_token` as `X-Tapbench-Session` on Stash if you have one.
+TAPBench keys and tasks are issued on `/tapbench`, not via TAP/TAP Learning mint APIs. Agent APIs mint TAP (`create_tap_link`) and TAP Learning sessions only. Existing timed session tokens still resolve at `GET /api/tapbench/{token}` / `/tapbench/{token}`; pass `session_token` as `X-Tapbench-Session` on Stash if you have one.
 
 ## Predictive Interruptions (TIM)
 
@@ -153,7 +153,7 @@ Every Proof-of-Work API success response (REST and MCP) includes a top-level `in
 
 Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`, `chapter_map_expand`.
 
-ILE chapter-complete (`session_plan` / `chapter_done`) is Proof of Work on `upload_ile_chapter_done`. TIM predicts `chapter_map_expand` with 1–3 `chapter_suggestions` (biased by learning-world `evidence_appetite.want_more`). ILE applies that interruption on a dedicated map timer so idle/speech PoW cannot supersede it, and places adjacent TIM-sourced chapters (explore icon until accepted or rejected).
+TAP Learning chapter-complete (`session_plan` / `chapter_done`) is Proof of Work on `upload_ile_chapter_done`. TIM predicts `chapter_map_expand` with 1–3 `chapter_suggestions` (biased by learning-world `evidence_appetite.want_more`). TAP Learning applies that interruption on a dedicated map timer so idle/speech PoW cannot supersede it, and places adjacent TIM-sourced chapters (explore icon until accepted or rejected).
 
 Intervention **types** are a fixed catalog. `consumer_action` is a free-form integrator hint, not a closed enum.
 
@@ -286,7 +286,7 @@ Organization-owned workspaces are visible to all real users and guest users in t
 
 Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. LWM Snapshot is **not** auto-run on TAP end — generate via Knowledge UI **Generate new snapshot** or `POST .../lwm-snapshot` (MCP `lwm_snapshot`). Integrators can poll `GET .../tap-links` for link `status`, then call the Snapshot API when ready.
 
-**Reusable guest links:** TAP and ILE private URLs are multi-use. Reopening the same link starts another run while keeping `guest_user_id` stable (so embeddings / eval history stay on the same subject). Creating a new link with body `guest_user_id` reuses that guest when the caller owns the workspace or is an org admin for that guest.
+**Reusable guest links:** TAP and TAP Learning private URLs are multi-use. Reopening the same link starts another run while keeping `guest_user_id` stable (so embeddings / eval history stay on the same subject). Creating a new link with body `guest_user_id` reuses that guest when the caller owns the workspace or is an org admin for that guest.
 
 ## Removed From Proof-of-Work API
 

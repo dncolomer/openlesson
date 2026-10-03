@@ -1,5 +1,5 @@
 /**
- * ILE pre-game settings: named presets and slider knobs applied before
+ * TAP Learning pre-game settings: named presets and slider knobs applied before
  * Start Session. Pure — tests apply a preset and read the resulting knobs.
  */
 import {
@@ -157,7 +157,7 @@ export type IlePregameDifficulty = {
   allowGatherResources: boolean;
   minInsightsPerChapter: number;
   canvasTimerSeconds: number;
-  /** Positive minutes of silence before an ILE rest lock. Cannot be turned off. */
+  /** Positive minutes of silence before a TAP Learning rest lock. Cannot be turned off. */
   silenceLockMinutes: number;
 };
 

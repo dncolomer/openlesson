@@ -1,5 +1,5 @@
 /**
- * Prep Helios / ILE chat text for react-markdown + KaTeX.
+ * Prep Helios / TAP Learning chat text for react-markdown + KaTeX.
  * Strips leaked role tags and un-doubles LLM LaTeX backslashes.
  */
 export function processHeliosMarkdown(content: string): string {

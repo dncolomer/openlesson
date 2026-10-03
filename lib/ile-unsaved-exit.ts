@@ -1,5 +1,5 @@
 /**
- * Discard an ILE session on "Exit without saving".
+ * Discard a TAP Learning session on "Exit without saving".
  * Deletes the chapter map (`session_plans`) and stamps `unsaved_exit` so the
  * session disappears from Previous Sessions. Does not touch Proof of Work.
  */

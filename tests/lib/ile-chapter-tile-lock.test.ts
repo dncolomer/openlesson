@@ -1,5 +1,5 @@
 /**
- * ILE chapter tiles: DAG-lock badge only; selecting a locked chapter
+ * TAP Learning chapter tiles: DAG-lock badge only; selecting a locked chapter
  * highlights direct blocking prereqs (not the whole neighborhood).
  */
 import { describe, expect, it } from "vitest";
@@ -56,7 +56,7 @@ const chapters: LearnerLocalDagBlock[] = [
   },
 ];
 
-describe("ILE chapter tile badges", () => {
+describe("TAP Learning chapter tile badges", () => {
   it("chapter tiles drop workspace badges and the lock icon", () => {
     const loaded = resolveMapOccupiedTileBadges({
       surface: "chapter",
@@ -124,7 +124,7 @@ describe("ILE chapter tile badges", () => {
   });
 });
 
-describe("ILE chapter unlock highlight", () => {
+describe("TAP Learning chapter unlock highlight", () => {
   it("selecting a locked chapter highlights only incomplete direct prereqs", () => {
     expect(ileChapterUnlockHighlightIds("ch-b", chapters)).toEqual(["ch-a"]);
     expect(ileChapterUnlockHighlightIds("ch-c", chapters)).toEqual(["ch-b"]);

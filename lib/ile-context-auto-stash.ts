@@ -1,5 +1,5 @@
 /**
- * ILE context-capacity auto-stash apply path.
+ * TAP Learning context-capacity auto-stash apply path.
  * SessionHeliosPanel calls this when the forming-thought bar is full.
  * Distinct from TAP silence auto-stash (purity unchanged).
  */
@@ -60,7 +60,7 @@ export function buildIleThoughtMemoryRecord(
 }
 
 /**
- * Persist forming text when the ILE context bar is at capacity.
+ * Persist forming text when the TAP Learning context bar is at capacity.
  * Both Learning and Explore Solo write into thought-memory (conversation stash).
  * Always clears forming text on success. Locked Project chapters are a no-op.
  */

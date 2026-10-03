@@ -48,7 +48,7 @@ describe("thought-context-auto-stash helpers", () => {
   });
 });
 
-describe("TAP + ILE hide Auto-stash context bar HUD", () => {
+describe("TAP + TAP Learning hide Auto-stash context bar HUD", () => {
   it("surfaces keep context-full auto-stash without mounting the progress bar", () => {
     expect(AUTO_STASH_CONTEXT_LABEL).toBe("Auto-stash context");
 

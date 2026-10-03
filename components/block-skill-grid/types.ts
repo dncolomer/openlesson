@@ -34,7 +34,7 @@ export interface BlockSkillGridProps {
   onAbortExpandJob?: (jobId: string) => void;
   gatherJobs?: readonly IleGatherJob[] | null;
   onOpenGatherResources?: (opts?: { jobId?: string | null; tileId?: string | null }) => void;
-  /** Chapter ids currently in open Work (docked). ILE map tiles use matching aesthetic stills. */
+  /** Chapter ids currently in open Work (docked). TAP Learning map tiles use matching aesthetic stills. */
   openWorkIds?: readonly string[] | null;
   /** Session aesthetic stills — same pool as the Work dock chips. */
   aestheticImages?: readonly string[] | null;
@@ -112,9 +112,9 @@ export interface BlockSkillGridProps {
   locale?: string;
   recenterCell?: GridCell | null;
   followCell?: GridCell | null;
-  /** Override default camera zoom (workspace is closer; ILE starts further out). */
+  /** Override default camera zoom (workspace is closer; TAP Learning starts further out). */
   defaultZoomAtReference?: number;
-  /** Occupied-cell double-click. ILE maps skip peek (description lives in Work). */
+  /** Occupied-cell double-click. TAP Learning maps skip peek (description lives in Work). */
   onNodeDoubleClick?: (nodeId: string) => void;
   peekOnDoubleClick?: boolean;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;

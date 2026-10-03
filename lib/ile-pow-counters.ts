@@ -1,5 +1,5 @@
 /**
- * Session-global ILE Proof-of-Work type totals (RTS-style resource counters).
+ * Session-global TAP Learning Proof-of-Work type totals (RTS-style resource counters).
  * Counts are never partitioned by chapter id.
  */
 import {
@@ -128,7 +128,7 @@ function artifactType(item: IlePowCounterArtifact): IlePowCounterType | null {
 }
 
 /**
- * Live totals for the ILE resource bar. Chapter ids on artifacts are ignored
+ * Live totals for the TAP Learning resource bar. Chapter ids on artifacts are ignored
  * so switching the focused chapter does not split the session economy.
  */
 export function countIleSpokenThoughts(

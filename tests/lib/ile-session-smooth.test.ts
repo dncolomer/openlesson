@@ -1,5 +1,5 @@
 /**
- * ILE chapter Done chrome + context-full auto-stash + chapter-load timing.
+ * TAP Learning chapter Done chrome + context-full auto-stash + chapter-load timing.
  * Drives the shipped mappers/appliers BlockSkillGrid / SessionHeliosPanel call.
  */
 import { describe, expect, it } from "vitest";
@@ -38,7 +38,7 @@ function writeScratch(name: string, body: string) {
   writeFileSync(join(SCRATCH, name), body, "utf8");
 }
 
-describe("ileChapterCellChrome (shipped ILE chapter-map mapper)", () => {
+describe("ileChapterCellChrome (shipped TAP Learning chapter-map mapper)", () => {
   it("completed chapter is white fill + tick; pending has no tick", () => {
     const done = ileChapterCellChrome({
       status: "completed",
@@ -91,7 +91,7 @@ describe("ileChapterCellChrome (shipped ILE chapter-map mapper)", () => {
   });
 });
 
-describe("applyIleContextFullAutoStash (shipped ILE apply path)", () => {
+describe("applyIleContextFullAutoStash (shipped TAP Learning apply path)", () => {
   it("Learning Mode persists forming text to thought-memory and clears the bar", () => {
     const forming = "x".repeat(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
     const prior = buildIleThoughtMemoryRecord("earlier note", [], 1);
@@ -160,7 +160,7 @@ describe("applyIleContextFullAutoStash (shipped ILE apply path)", () => {
   });
 });
 
-describe("ILE slowness + wiring (shipped source)", () => {
+describe("TAP Learning slowness + wiring (shipped source)", () => {
   it("chapter-load delay is gone or ≤ 200ms; dead Project auto-stash effect is gone; live text is read from a ref", () => {
     expect(CHAPTER_LOAD_DURATION_MS).toBeLessThanOrEqual(200);
 

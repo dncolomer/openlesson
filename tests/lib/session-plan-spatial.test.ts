@@ -521,7 +521,7 @@ describe("chapter-map position honor path", () => {
 });
 
 describe("create surface wiring (structural)", () => {
-  it("ILE create API accepts initialChapters and preserves positions", () => {
+  it("TAP Learning create API accepts initialChapters and preserves positions", () => {
     const routeSrc = readFileSync(
       path.join(process.cwd(), "app/api/session-plan/create/route.ts"),
       "utf8",

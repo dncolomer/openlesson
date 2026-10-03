@@ -1,5 +1,5 @@
 /**
- * ILE per-word bounding boxes + Open Grok / Open Dantes prefill.
+ * TAP Learning per-word bounding boxes + Open Grok / Open Dantes prefill.
  * Drives shipped helpers (not a reimplementation). TAP must not mount this.
  */
 import { createElement } from "react";
@@ -47,7 +47,7 @@ function writeScratch(name: string, body: string) {
 }
 
 describe("ile word-box helpers (shipped)", () => {
-  it("splits every word, drag-range joins selection, menu does not open retired ILE tools, concept marks are gone", () => {
+  it("splits every word, drag-range joins selection, menu does not open retired TAP Learning tools, concept marks are gone", () => {
     const learningTurn = "Walk the recurrence relation with me.";
     const projectPrompt = "Implement binary search on a sorted array.";
 
@@ -260,7 +260,7 @@ describe("ile word-box helpers (shipped)", () => {
   });
 });
 
-describe("ILE word-box surfaces (shipped source)", () => {
+describe("TAP Learning word-box surfaces (shipped source)", () => {
   it("Learning and Project paint word boxes without Open Grok/Dantes; TAP overlay does not; concept highlighter is gone", () => {
     const helios = read("components/SessionHeliosPanel.tsx");
     const ui = read("components/thought-ui/ThoughtUi.tsx");
@@ -363,8 +363,8 @@ describe("ILE word-box surfaces (shipped source)", () => {
       [
         "Learning: DialogueSplitIle IleWordBoxText onOpenWordBoxTool",
         "Project: IleWordBoxText on data-ile-project-exercise-prompt",
-        "menu: no Open Grok / Open Dantes (ILE Work is canvas-only)",
-        "ILE session panes do not mount GrokGrokipediaTool / DantesTool",
+        "menu: no Open Grok / Open Dantes (TAP Learning Work is canvas-only)",
+        "TAP Learning session panes do not mount GrokGrokipediaTool / DantesTool",
         "TAP overlay: HeliosMarkdown, no word boxes",
         `conceptMarksGone=${!existsSync(join(ROOT, "lib/ile-concept-marks.ts"))}`,
         `promptHasEqualsWrap=${ileSurface.includes("==binary search==")}`,

@@ -1,5 +1,5 @@
 /**
- * Initial-chapters catalog for ILE session plans and workspace skill-grid
+ * Initial-chapters catalog for TAP Learning session plans and workspace skill-grid
  * block graphs. Chosen at session welcome / workspace create and accepted via
  * REST as `initial_chapters` (camelCase / legacy `map_size` aliases).
  *
@@ -618,7 +618,7 @@ export function formatBlockedChapterSlotsForPrompt(
 }
 
 /**
- * Shared spatial layout rules for ILE steps and workspace blocks.
+ * Shared spatial layout rules for TAP Learning steps and workspace blocks.
  * Origin start, signed multi-quadrant coords, sparse paths, branching arms.
  */
 export const SPATIAL_MAP_LAYOUT_RULES = `SPATIAL MAP DESIGN (critical — nodes live on a 2D skill grid, not a linear checklist or filled rectangle):

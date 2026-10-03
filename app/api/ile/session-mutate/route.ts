@@ -69,6 +69,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ success: true });
   } catch (error) {
     console.error("[ile/session-mutate]", error);
-    return jsonError(500, "Failed to mutate ILE session");
+    return jsonError(500, "Failed to mutate TAP Learning session");
   }
 }

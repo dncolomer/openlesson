@@ -75,7 +75,7 @@ export type PricingScenarioConfig = {
   mapping: ScenarioUnitMapping;
   /**
    * Human-readable assumptions shown next to the estimate.
-   * Must make trial vs metered and TAP/ILE vs external PoW clear.
+   * Must make trial vs metered and TAP/TAP Learning vs external PoW clear.
    */
   assumptions: string[];
 };
@@ -149,7 +149,7 @@ export const PRICING_SCENARIOS: readonly PricingScenarioConfig[] = [
         {
           key: "volume" as const,
           label: "Take-home candidates / month",
-          hint: "Each multi-block assignment maps to 1 ILE session ($10).",
+          hint: "Each multi-block assignment maps to 1 TAP Learning session ($10).",
           min: 1,
           max: 100,
           step: 1,
@@ -172,9 +172,9 @@ export const PRICING_SCENARIOS: readonly PricingScenarioConfig[] = [
       },
       assumptions: [
         "Illustrative API Metered estimate — not a live invoice or contract quote.",
-        "Each Self-Service Take-Home journey maps to 1 ILE session ($10 each).",
-        "Prior skill checks (if any) map to TAP sessions ($1 each), not extra ILE.",
-        "PoW generated inside ILE/TAP is not billed as external API PoW.",
+        "Each Self-Service Take-Home journey maps to 1 TAP Learning session ($10 each).",
+        "Prior skill checks (if any) map to TAP sessions ($1 each), not extra TAP Learning.",
+        "PoW generated inside TAP Learning/TAP is not billed as external API PoW.",
         "Platform access is $99/mo on API Metered; trial is separate one-time access.",
       ],
     };
@@ -196,8 +196,8 @@ export const PRICING_SCENARIOS: readonly PricingScenarioConfig[] = [
         },
         {
           key: "secondary" as const,
-          label: "Deeper ILE blocks / month",
-          hint: "Optional longer comprehension blocks billed as ILE ($10 each).",
+          label: "Deeper TAP Learning blocks / month",
+          hint: "Optional longer comprehension blocks billed as TAP Learning ($10 each).",
           min: 0,
           max: 50,
           step: 1,
@@ -207,14 +207,14 @@ export const PRICING_SCENARIOS: readonly PricingScenarioConfig[] = [
       mapping: {
         kind: "tap_per_unit" as const,
         tapPerUnit: 1,
-        // secondary is ILE for this scenario — handled in mapScenarioToBillableUnits
+        // secondary is TAP Learning for this scenario — handled in mapScenarioToBillableUnits
         secondaryTapPerUnit: 0,
       },
       assumptions: [
         "Illustrative API Metered estimate — not a live invoice or contract quote.",
         "Default learning checks map to TAP sessions ($1 each) — short pulse validation.",
-        "Optional deeper blocks map to ILE sessions ($10 each).",
-        "Internal product PoW from TAP/ILE is not charged as external API PoW.",
+        "Optional deeper blocks map to TAP Learning sessions ($10 each).",
+        "Internal product PoW from TAP/TAP Learning is not charged as external API PoW.",
         "Platform access is $99/mo on API Metered; 3-day trial is separate one-time access.",
       ],
     };
@@ -252,8 +252,8 @@ export const PRICING_SCENARIOS: readonly PricingScenarioConfig[] = [
       assumptions: [
         "Illustrative API Metered estimate — not a live invoice or contract quote.",
         "Each external/API-direct PoW submission is billed at the PoW rate (0.05¢ each).",
-        "Optional hosted TAP sessions are billed at $1 each; ILE at $10 if used.",
-        "PoW that only happens inside TAP/ILE product sessions is not billed as API PoW.",
+        "Optional hosted TAP sessions are billed at $1 each; TAP Learning at $10 if used.",
+        "PoW that only happens inside TAP/TAP Learning product sessions is not billed as API PoW.",
         "Platform access is $99/mo on API Metered; trial is separate one-time access.",
       ],
     };
@@ -303,7 +303,7 @@ export function mapScenarioToBillableUnits(
   const volume = resolved.volume;
   const secondary = resolved.secondary;
 
-  // Learning Loop: volume = TAP checks; secondary = ILE deeper blocks
+  // Learning Loop: volume = TAP checks; secondary = TAP Learning deeper blocks
   if (scenario.slug === "learning-loop") {
     return {
       externalPowCount: 0,

@@ -1,5 +1,5 @@
 /**
- * ILE session mode: Learning Mode (default Helios dialogue) vs Project Mode
+ * TAP Learning session mode: Learning Mode (default Helios dialogue) vs Project Mode
  * (Exercise-TAP-style solo exercises per chapter, dual-stack Thoughts, no bubbles).
  *
  * Dual-list stash ↔ solution mutations reuse Exercise TAP helpers so both products
@@ -19,7 +19,7 @@ import {
 
 export type { ExerciseDualLists, ExerciseThought };
 
-/** Named ILE modes — independent of TAP interaction_kind. */
+/** Named TAP Learning modes — independent of TAP interaction_kind. */
 export const ILE_SESSION_MODES = ["learning", "project"] as const;
 
 export type IleSessionMode = (typeof ILE_SESSION_MODES)[number];
@@ -35,7 +35,7 @@ export const ILE_SESSION_MODE_LABELS: Record<IleSessionMode, string> = {
 };
 
 /**
- * Normalize ILE session mode. Missing / legacy / invalid → Learning Mode.
+ * Normalize TAP Learning session mode. Missing / legacy / invalid → Learning Mode.
  * Accepts project aliases (exercise, solo) and learning aliases (conversational, dialogue).
  */
 export function parseIleSessionModeWrite(value: unknown): IleSessionMode | null {
@@ -188,7 +188,7 @@ export function resolveIleShellFromSession(
 }
 
 /**
- * Durable Learning vs Project mode — same order as the ILE shell:
+ * Durable Learning vs Project mode — same order as the TAP Learning shell:
  * explicit link/prop wins, then session metadata / link row, else learning.
  */
 export function resolveIleDurableSessionMode(input: {

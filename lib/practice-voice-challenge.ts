@@ -1,5 +1,5 @@
 /**
- * Speak-aloud gate for ILE and scored TAP / Prepare, plus the ILE silence lock.
+ * Speak-aloud gate for TAP Learning and scored TAP / Prepare, plus the TAP Learning silence lock.
  * Pure: the UI speaks the script, feeds transcripts here, and starts or unlocks
  * only when these functions allow it.
  */
@@ -12,7 +12,7 @@ export const TAP_VOICE_CHALLENGE_SENTENCE_TWO =
   "I will read each question aloud and press I am done answering when a chain of thought ends.";
 export const TAP_VOICE_CHALLENGE_SCRIPT = `${PRACTICE_VOICE_CHALLENGE_SCRIPT} ${TAP_VOICE_CHALLENGE_SENTENCE_TWO}`;
 
-/** ILE reads two sentences. The second is the session goal, with a sample card under it. */
+/** TAP Learning reads two sentences. The second is the session goal, with a sample card under it. */
 export const ILE_VOICE_CHALLENGE_SENTENCE_ONE =
   "I will now speak my thinking out loud the whole time, which gives a raw thinking signal and a baseline attention increase.";
 export const ILE_VOICE_CHALLENGE_SENTENCE_TWO =
@@ -102,7 +102,7 @@ export function practiceVoiceChallengeTranscriptPasses(transcript: string): bool
   return voiceChallengeSentencesPass(PRACTICE_VOICE_CHALLENGE_SCRIPT, transcript);
 }
 
-/** ILE also requires the second sentence about crafting insights. */
+/** TAP Learning also requires the second sentence about crafting insights. */
 export function ileVoiceChallengeTranscriptPasses(transcript: string): boolean {
   return voiceChallengeSentencesPass(ILE_VOICE_CHALLENGE_SCRIPT, transcript);
 }
@@ -347,7 +347,7 @@ export function ileSilenceSpeechMark(input: {
 }
 
 /**
- * One tick of the ILE silence clock.
+ * One tick of the TAP Learning silence clock.
  * A muted mic cannot be kept alive by leftover transcript text.
  * Loudness is not speech: only a changed transcript restarts the clock.
  */

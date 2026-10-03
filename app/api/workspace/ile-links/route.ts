@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
         .order("created_at", { ascending: false });
       if (legacy.error) {
         console.error("[workspace/ile-links] List error:", legacy.error);
-        return jsonError(500, "Failed to list ILE links");
+        return jsonError(500, "Failed to list TAP Learning links");
       }
       links = (legacy.data || []).map((row) => ({
         ...row,
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("[workspace/ile-links] List error:", error);
-    return jsonError(500, "Failed to list ILE links");
+    return jsonError(500, "Failed to list TAP Learning links");
   }
 
   const origin = baseUrl(req);
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!blockId) {
-      return jsonError(400, "blockId is required for ILE links");
+      return jsonError(400, "blockId is required for TAP Learning links");
     }
 
     const ileLink = await createWorkspaceIleLink({
@@ -190,6 +190,6 @@ export async function POST(req: NextRequest) {
       return jsonError(error.status, error.message, error.code);
     }
     console.error("[workspace/ile-links] Create error:", error);
-    return jsonError(500, "Failed to create ILE link");
+    return jsonError(500, "Failed to create TAP Learning link");
   }
 }

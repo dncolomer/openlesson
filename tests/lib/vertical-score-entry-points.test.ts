@@ -210,7 +210,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     }
   });
 
-  it("LWM Snapshot is manual UI or Snapshot API — not auto on TAP/ILE end", () => {
+  it("LWM Snapshot is manual UI or Snapshot API — not auto on TAP/TAP Learning end", () => {
     expect(TAP_AUTO_SCORE_VERTICAL).toBe("verification");
     const tapRoute = readFileSync(
       join(ROOT, "app/api/workspace-tap-score/performance/route.ts"),
@@ -236,7 +236,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
 
     const sessionView = readSessionViewSurface();
     expect(sessionView).not.toContain("ILE_POW_API_PATHS.performance");
-    expect(sessionView).toMatch(/not auto-run on ILE end|manual/);
+    expect(sessionView).toMatch(/not auto-run on TAP Learning end|manual/);
 
     const lwmRoute = readFileSync(
       join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts"),

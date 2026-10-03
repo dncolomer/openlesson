@@ -239,7 +239,7 @@ describe("TAPBench project landing", () => {
 });
 
 describe("TAPBench operator UI is the public /tapbench page", () => {
-  it("Knowledge Links mints TAP and ILE only — not TAPBench links", () => {
+  it("Knowledge Links mints TAP and TAP Learning only — not TAPBench links", () => {
     const guest = read("components/WorkspaceGuestLinksPanel.tsx");
     expect(guest).not.toContain('id: "tapbench" as const');
     expect(guest).not.toContain('data-guest-links-inner-tab="tapbench"');

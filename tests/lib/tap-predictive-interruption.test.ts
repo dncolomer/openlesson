@@ -173,7 +173,7 @@ describe("tap predictive interruptions (TIM provider)", () => {
     expect(interruption?.intervention.message).toContain("out loud");
   });
 
-  it("predicts ILE trace interruptions like TAP traces", async () => {
+  it("predicts TAP Learning trace interruptions like TAP traces", async () => {
     const interruption = await predictInterruption({
       endpoint: "upload_ile_trace",
       workspace_id: "ws-ile-1",

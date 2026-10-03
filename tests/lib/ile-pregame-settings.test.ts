@@ -1,5 +1,5 @@
 /**
- * ILE pre-game settings: named presets, extra sliders, Start Session copy,
+ * TAP Learning pre-game settings: named presets, extra sliders, Start Session copy,
  * fuller map-type explanation. Drives shipped helpers (no re-implementation).
  */
 import { describe, expect, it } from "vitest";
@@ -315,7 +315,7 @@ describe("Learn research presets", () => {
   });
 });
 
-describe("ILE pre-game settings surface", () => {
+describe("TAP Learning pre-game settings surface", () => {
   it("uses Welcome to your learning session, Start Session, presets, extra sliders, and full map copy", () => {
     const welcome = read("components/session-view/session-welcome-modal.tsx");
     const picker = read("components/InitialChaptersPicker.tsx");

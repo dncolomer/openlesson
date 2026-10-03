@@ -34,7 +34,7 @@ export function canAccessWorkspaceEval(options: {
 
 /**
  * After `canAccessWorkspaceEval`, web score/history routes must persist and list
- * learner rows with a privileged (service-role) client — same pattern as TAP/ILE
+ * learner rows with a privileged (service-role) client — same pattern as TAP/TAP Learning
  * link routes. Cookie JWT alone cannot:
  * - INSERT eval_run_history / knowledge_config_snapshots for group members
  *   until subject self-write RLS is applied

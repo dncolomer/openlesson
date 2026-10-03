@@ -56,13 +56,13 @@ interface ThoughtMemoryPanelProps<T extends ThoughtMemoryEntry = ThoughtMemoryEn
   emptyMessage?: string;
   /**
    * Product surface. Controls insight generation (suggest/create) and list UI.
-   * TAP: traces only. ILE/Knowledge: generation + list.
+   * TAP: traces only. TAP Learning/Knowledge: generation + list.
    * Prefer this over the raw allowInsightGeneration flag when known.
    */
   insightSurface?: InsightSurface;
   /** Explicit override; when omitted, derived from insightSurface (default ile). */
   allowInsightGeneration?: boolean;
-  /** Helios send path for selected thoughts (ILE Thought tool). */
+  /** Helios send path for selected thoughts (TAP Learning Thought tool). */
   onSendThought?: (text: string, thoughtIds: string[]) => void | Promise<void>;
   isSending?: boolean;
   /** TAP: save an individual thought locally (no Helios submit). Speech keeps running. */

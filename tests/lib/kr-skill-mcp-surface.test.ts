@@ -1,5 +1,5 @@
 /**
- * Knowledge Region skill/MCP surface: shipped builders omit TAP/ILE/TAPBench
+ * Knowledge Region skill/MCP surface: shipped builders omit TAP/TAP Learning/TAPBench
  * link mint and document PoW + Stash TAPBench. Standard workspaces keep mint.
  */
 import { describe, expect, it } from "vitest";

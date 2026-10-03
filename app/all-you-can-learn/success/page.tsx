@@ -100,7 +100,7 @@ function SuccessContent() {
           <p className="mb-6 max-w-lg text-sm leading-relaxed text-neutral-500">
             {wasUpgrade
               ? "Your private copy is the same — creation tools are now available on this access link. Open it to grow the map."
-              : "Save this link — it's your private lifetime access to your forked workspace. No account needed. ILE included."}
+              : "Save this link — it's your private lifetime access to your forked workspace. No account needed. TAP Learning included."}
           </p>
           {accessUrl ? (
             <div className="mb-6 w-full max-w-xl rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-3 text-left">

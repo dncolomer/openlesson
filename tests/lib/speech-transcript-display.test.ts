@@ -298,7 +298,7 @@ describe("live speech recognition helpers", () => {
   });
 });
 
-describe("ILE + TAP speech wiring (structural)", () => {
+describe("TAP Learning + TAP speech wiring (structural)", () => {
   it("SessionView enables speech via isIleSpeechCaptureEnabled and starts recording when welcome is skipped", () => {
     const viewSrc = readSessionViewSurface();
     expect(viewSrc).toContain("isIleSpeechCaptureEnabled");

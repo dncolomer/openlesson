@@ -1,5 +1,5 @@
 /**
- * ILE chapter-complete TIM → map expansion (shipped helpers + wiring).
+ * TAP Learning chapter-complete TIM → map expansion (shipped helpers + wiring).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -285,7 +285,7 @@ describe("predictChapterCompleteMapExpansion (shipped TIM)", () => {
     }
   });
 
-  it("default TIM provider still returns chapter_map_expand for ILE chapter complete", async () => {
+  it("default TIM provider still returns chapter_map_expand for TAP Learning chapter complete", async () => {
     setTimProviderForTests(null);
     const features = buildTimFeatureEnvelope({
       endpoint: "upload_ile_chapter_done",
@@ -459,7 +459,7 @@ describe("applyChapterCompleteTimExpansionToPlan + TIM explore icon (shipped)", 
   });
 });
 
-describe("ILE map interruption scheduler (shipped)", () => {
+describe("TAP Learning map interruption scheduler (shipped)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -561,7 +561,7 @@ describe("ILE map interruption scheduler (shipped)", () => {
   });
 });
 
-describe("ILE TIM map interactions catalog + wiring", () => {
+describe("TAP Learning TIM map interactions catalog + wiring", () => {
   it("ships chapter-complete expansion and lists idle negative effects as planned", () => {
     const shipped = ILE_TIM_MAP_INTERACTIONS.filter((item) => item.status === "shipped");
     expect(shipped.map((item) => item.id)).toEqual(["chapter_complete_expand"]);

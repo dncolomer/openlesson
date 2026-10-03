@@ -1,5 +1,5 @@
 /**
- * ILE Project Mode: mode normalize/resolve, dual-stack stash↔solution (shared Exercise TAP
+ * TAP Learning Project Mode: mode normalize/resolve, dual-stack stash↔solution (shared Exercise TAP
  * helpers), chapter Done lock, and structural wiring for Learning vs Project shells.
  */
 import { describe, expect, it } from "vitest";
@@ -91,7 +91,7 @@ describe("normalizeIleSessionMode / resolve", () => {
     ).toBe("learning");
   });
 
-  it("session-chat and ILE shell share resolveIleDurableSessionMode", () => {
+  it("session-chat and TAP Learning shell share resolveIleDurableSessionMode", () => {
     const fromMeta = resolveIleDurableSessionMode({
       metadata: { session_mode: "project" },
     });

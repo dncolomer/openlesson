@@ -1,5 +1,5 @@
 /**
- * Occupied-tile badge visibility for workspace block maps vs ILE chapter maps.
+ * Occupied-tile badge visibility for workspace block maps vs TAP Learning chapter maps.
  * Workspace tiles show keyword + Lucide icon only (no occupancy modifiers).
  * Chapter tiles keep no occupancy icons. Lock state stays in the DAG, not on the square.
  */

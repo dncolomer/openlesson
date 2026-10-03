@@ -13,18 +13,18 @@ import {
   formatSourceBlockSizeLine,
 } from "@/lib/block-footprint-prompt";
 
-describe("block-footprint-prompt (ILE/TAP size relative to singles)", () => {
+describe("block-footprint-prompt (TAP Learning/TAP size relative to singles)", () => {
   it("counts cells relative to a 1×1 single block", () => {
     expect(blockFootprintCellCount(1, 1)).toBe(1);
     expect(blockFootprintCellCount(2, 2)).toBe(4);
     expect(blockFootprintCellCount(3, 1)).toBe(3);
   });
 
-  it("describes baseline vs multi-cell ILE/TAP breadth", () => {
+  it("describes baseline vs multi-cell TAP Learning/TAP breadth", () => {
     const single = describeBlockBreadthRelativeToSingle(1, 1);
     expect(single).toMatch(/1×1/);
     expect(single).toMatch(/baseline/i);
-    expect(single).toMatch(/ILE\/TAP/);
+    expect(single).toMatch(/TAP Learning\/TAP/);
 
     const multi = describeBlockBreadthRelativeToSingle(2, 3);
     expect(multi).toMatch(/2×3/);
@@ -49,7 +49,7 @@ describe("block-footprint-prompt (ILE/TAP size relative to singles)", () => {
     expect(prompt).toMatch(/2×2.*4 single-block/i);
     expect(prompt).toMatch(/~4× a baseline 1×1/i);
     expect(prompt).toMatch(/Unify fundamentals/);
-    expect(prompt).toMatch(/ILE\/TAP/);
+    expect(prompt).toMatch(/TAP Learning\/TAP/);
     expect(composeMergeBlockSystemMessage()).toMatch(/broader than 1×1/i);
   });
 
@@ -117,6 +117,6 @@ describe("block-footprint-prompt (ILE/TAP size relative to singles)", () => {
     expect(prompt).toMatch(/index 0.*1×1/);
     expect(prompt).toMatch(/index 3/);
     expect(prompt).toMatch(/parts/i);
-    expect(composeSplitBlockSystemMessage()).toMatch(/1×1 ILE\/TAP/i);
+    expect(composeSplitBlockSystemMessage()).toMatch(/1×1 TAP Learning\/TAP/i);
   });
 });

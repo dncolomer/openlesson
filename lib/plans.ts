@@ -106,7 +106,7 @@ export const POW_API_CALL_PRICE_CENTS = 0.05;
 /** Per TAP session on API Metered (cents) — $1. */
 export const TAP_SESSION_PRICE_CENTS = 100;
 
-/** Per ILE session on API Metered (cents) — $10. */
+/** Per TAP Learning session on API Metered (cents) — $10. */
 export const ILE_SESSION_PRICE_CENTS = 1000;
 
 /**
@@ -376,7 +376,7 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
 
 /**
  * Check whether a user can submit another Proof-of-Work artifact this billing period.
- * TAP, ILE, and API uploads all meter against this allowance (unlimited on api_metered).
+ * TAP, TAP Learning, and API uploads all meter against this allowance (unlimited on api_metered).
  */
 export function canSubmitProofOfWork(
   profile: UserProfile,
@@ -476,7 +476,7 @@ export function formatHarnessTrialPrice(): string {
 /**
  * True when a PoW row should be billed at the external/API rate.
  * Shipped signal: created via API key (Bearer key or OAuth) → created_by_api_key_id set.
- * TAP/ILE product-generated PoW leaves this null and is billed via session rates instead.
+ * TAP/TAP Learning product-generated PoW leaves this null and is billed via session rates instead.
  */
 export function isExternalApiPowUsage(createdByApiKeyId: string | null | undefined): boolean {
   return createdByApiKeyId != null && createdByApiKeyId !== "";
@@ -500,7 +500,7 @@ export type ApiMeteredInvoiceEstimate = {
 
 /**
  * Estimate API Metered invoice from usage counts.
- * - externalPowCount: API-direct PoW only (not TAP/ILE-generated PoW)
+ * - externalPowCount: API-direct PoW only (not TAP/TAP Learning-generated PoW)
  * - tapSessionCount / ileSessionCount: session rates ($1 / $10)
  */
 export function estimateApiMeteredInvoice(

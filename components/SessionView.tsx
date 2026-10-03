@@ -184,11 +184,11 @@ export function SessionView({
   /** Opened from Previous Sessions — continue stored chapters, no density picker. */
   resumeSession?: boolean;
   ayclToken?: string;
-  /** Private token for guest ILE practice links (`/ile/session/{token}`). */
+  /** Private token for guest TAP Learning practice links (`/ile/session/{token}`). */
   ileToken?: string;
   /**
    * When false, hide End Session / stop-end chrome for this session
-   * (guest ILE links can configure this; default true).
+   * (guest TAP Learning links can configure this; default true).
    */
   showEndSession?: boolean;
   /** Share URL query params → param-scoped guest identity for PoW. */
@@ -196,7 +196,7 @@ export function SessionView({
   /** Server-resolved guest/assigned identity for share links. */
   participantIdentity?: PowParticipantIdentity | null;
   /**
-   * ILE shell mode from durable link/session. learning (default) | project.
+   * TAP Learning shell mode from durable link/session. learning (default) | project.
    * When omitted, resolved from session.metadata (legacy → Learning Mode).
    */
   sessionMode?: IleSessionMode | string;

@@ -17,7 +17,7 @@ export async function createAnonymousTapGuest(
     createdByApiKeyId?: string | null;
     /**
      * Defaults to anonymous TAP link guest.
-     * `anonymous_ile_link` for ILE; `anonymous_tapbench_link` for TAPBench agent sessions.
+     * `anonymous_ile_link` for TAP Learning; `anonymous_tapbench_link` for TAPBench agent sessions.
      */
     guestType?: "anonymous_tap_link" | "anonymous_ile_link" | "anonymous_tapbench_link";
   }

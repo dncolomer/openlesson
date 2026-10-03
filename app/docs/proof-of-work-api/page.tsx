@@ -67,7 +67,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     path: "/api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot",
     scope: "workspaces:read",
     summary:
-      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. Manual Knowledge UI or Snapshot API/MCP (not auto on TAP/ILE end).",
+      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. Manual Knowledge UI or Snapshot API/MCP (not auto on TAP/TAP Learning end).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
@@ -508,7 +508,7 @@ export default function AgenticV2DocsPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Full request and response specifications for every Proof-of-Work API endpoint: workspaces, proof-of-work schema
-            generation, integration skill generation, proof-of-work upload, performance analysis, TAP links, ILE practice, guest
+            generation, integration skill generation, proof-of-work upload, performance analysis, TAP links, TAP Learning practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v3/pow</code> and require active{" "}
             <code className="text-neutral-300">api_metered</code>.

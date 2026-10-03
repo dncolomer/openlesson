@@ -50,7 +50,7 @@ export async function createSessionPlan(
     userId = user.id;
   }
 
-  // Upsert on session_id: ILE/confirm can race (double-click, Strict Mode, or
+  // Upsert on session_id: TAP Learning/confirm can race (double-click, Strict Mode, or
   // force:true while an empty shell already exists) and hit
   // session_plans_session_id_key on a plain insert.
   const row = {

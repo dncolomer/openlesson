@@ -1,7 +1,7 @@
 /**
  * Timed TAPBench session helper (not a public mint API).
  *
- * TAP/ILE mint stay on workspace APIs. TAPBench keys/tasks mint on /tapbench.
+ * TAP/TAP Learning mint stay on workspace APIs. TAPBench keys/tasks mint on /tapbench.
  * This helper still persists/resolves existing timed session tokens.
  */
 

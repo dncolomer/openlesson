@@ -1,5 +1,5 @@
 /**
- * ILE / workspace blocked chapter slots from the initial-map catalog.
+ * TAP Learning / workspace blocked chapter slots from the initial-map catalog.
  * Pure — stamps unusable ground and relocates colliding tiles.
  */
 import { getCellKey } from "@/lib/block-skill-grid";

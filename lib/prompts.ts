@@ -19,7 +19,7 @@ import {
 } from "@/lib/prompt-kernel/surfaces/ile";
 
 // ============================================
-// ILE (INTEGRATED LEARNING ENVIRONMENT) CONTEXT
+// TAP Learning CONTEXT
 // Practice coach: chapter progress + tool-driven deeper work (model-private: PoW).
 // Canonical surface text also lives in lib/prompt-kernel/surfaces/ile.ts
 // ============================================
@@ -129,7 +129,7 @@ Generate ONE next move: a focused question, practice task, or tool suggestion th
 
 Return ONLY the question or task text, no JSON or formatting.`,
 
-  report_generation: `You are reviewing a tutoring session conducted in an Integrated Learning Environment (ILE). Be direct and specific.
+  report_generation: `You are reviewing a tutoring session conducted in a TAP Learning. Be direct and specific.
 
 Problem: {problem}
 Duration: {duration}
@@ -178,7 +178,7 @@ Generate exactly 3 learning objectives that the student should achieve by the en
   // SESSION PLANNER PROMPTS
   // ============================================
 
-  session_plan_create: `You are an ILE session planner. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not TAP dual-stream elicitation.
+  session_plan_create: `You are a TAP Learning session planner. Design a chapter-aware practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce durable practice artifacts (model-private: proof of work) — not a pure question-only validation sequence and not TAP dual-stream elicitation.
 
 Problem/Topic: {problem}
 Session Objectives: {objectives}
@@ -202,7 +202,7 @@ Create a session plan with:
 
 {spatial_map_layout_rules}
 
-Additional spatial notes for ILE chapters:
+Additional spatial notes for TAP Learning chapters:
 - "order" is a suggested practice sequence; geometry encodes branching and multi-quadrant exploration beyond sequence.
 - Grow outward from (0,0) along sparse paths/rings; explore some arms deeper (more steps along one branch) while keeping other directions shorter.
 - Include chapters in negative coordinates as well as positive ones.
@@ -244,7 +244,7 @@ Return ONLY valid JSON (no markdown, no explanation):
   ]
 }`,
 
-  session_plan_update: `You are the learner's practice coach, monitoring an active ILE session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is not TAP System 1/System 2 elicitation.
+  session_plan_update: `You are the learner's practice coach, monitoring an active TAP Learning session. Optimize **current-chapter** progress and augment with tools that trigger deeper work; decide whether the plan needs adjustment and what guidance to provide next. This is not TAP System 1/System 2 elicitation.
 
 SESSION MODE: {session_mode}
 
@@ -317,7 +317,7 @@ Rate the gap level from 0.0 to 1.0 where:
 
 TIMING GUIDANCE: If a probe was just generated (<30s ago), lean toward NOT generating another probe unless the gap score is severe (>0.7). The student may still be processing the previous probe. Only override this if there are multiple high-priority unresolved gaps.
 
-INTEGRATED LEARNING ENVIRONMENT (ILE) - CHAPTER CANVAS:
+TAP Learning - CHAPTER CANVAS:
 The student has one shared Work canvas per chapter (Excalidraw drawing tools). ACTIVELY suggest drawing tools when appropriate:
 
 - **text**: write a note or worked attempt on the chapter canvas
@@ -330,11 +330,11 @@ Do NOT name Notebook, Grok/Grokipedia, or Dantes. Do NOT default to "sketch this
 
 SCREEN SHARING - The student can share their screen so you can see external applications:
 - Encourage screen sharing when they mention working in an IDE, code editor, spreadsheet, or external tool
-- If they're coding or designing outside the ILE, suggest: "Share your screen so I can see your code/work"
+- If they're coding or designing outside the TAP Learning, suggest: "Share your screen so I can see your code/work"
 - Screen sharing helps you provide more specific, contextual guidance
 
 EXTERNAL TOOLS TO ENCOURAGE:
-Beyond the ILE, suggest appropriate external tools when relevant:
+Beyond the TAP Learning, suggest appropriate external tools when relevant:
 - Code editors/IDEs (VS Code, PyCharm, etc.) for programming
 - Terminal/REPL for testing code snippets
 - Calculators or Wolfram Alpha for complex math

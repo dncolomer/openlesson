@@ -1,6 +1,6 @@
 /**
  * TAP session Work canvas: apply Helios replies, pull-in selection, PoW builders.
- * Drives shipped ILE apply/PoW units via TAP wrappers — no reimplementation.
+ * Drives shipped TAP Learning apply/PoW units via TAP wrappers — no reimplementation.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -296,7 +296,7 @@ describe("TAP Work canvas live surface (shipped)", () => {
       [
         "left=ExcalidrawCanvas",
         "pane=data-tap-convo-work-canvas-pane",
-        "heliosBusy=ILE thinking chip not Thinking... text",
+        "heliosBusy=TAP Learning thinking chip not Thinking... text",
         "no TapSessionMap",
         "no tapConvoBlocksFromAssistantTurns",
         "right=ThoughtMemoryPanel+ImDoneAnsweringControl+stash+timer",
@@ -306,8 +306,8 @@ describe("TAP Work canvas live surface (shipped)", () => {
   });
 });
 
-describe("TAP Work canvas PoW (shipped ILE builders)", () => {
-  it("maps Excalidraw tools and canvas snapshots the same class as ILE; TAP live wires them", () => {
+describe("TAP Work canvas PoW (shipped TAP Learning builders)", () => {
+  it("maps Excalidraw tools and canvas snapshots the same class as TAP Learning; TAP live wires them", () => {
     expect(mapExcalidrawToolToIlePow({ activeTool: "text" })).toEqual({
       toolName: "canvas",
       toolAction: "draw_text",

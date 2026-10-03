@@ -46,7 +46,7 @@ describe("pricing scenarios catalog", () => {
       expect(scenario.context.length).toBeGreaterThan(20);
       expect(scenario.assumptions.length).toBeGreaterThanOrEqual(3);
       expect(scenario.sliders.length).toBeGreaterThanOrEqual(1);
-      // Assumptions must surface trial vs metered and TAP/ILE vs external PoW.
+      // Assumptions must surface trial vs metered and TAP/TAP Learning vs external PoW.
       const assumptionsBlob = scenario.assumptions.join(" ").toLowerCase();
       expect(assumptionsBlob).toMatch(/api metered|platform/);
       expect(assumptionsBlob).toMatch(/tap|ile|pow|external/);
@@ -74,7 +74,7 @@ describe("mapScenarioToBillableUnits", () => {
     });
   });
 
-  it("Take-Home: candidates → ILE, prior skill checks → TAP", () => {
+  it("Take-Home: candidates → TAP Learning, prior skill checks → TAP", () => {
     const scenario = getPricingScenario("self-service-take-home")!;
     const units = mapScenarioToBillableUnits(scenario, {
       volume: 10,
@@ -87,7 +87,7 @@ describe("mapScenarioToBillableUnits", () => {
     });
   });
 
-  it("Learning Loop: checks → TAP, deeper blocks → ILE", () => {
+  it("Learning Loop: checks → TAP, deeper blocks → TAP Learning", () => {
     const scenario = getPricingScenario("learning-loop")!;
     const units = mapScenarioToBillableUnits(scenario, {
       volume: 100,
@@ -185,13 +185,13 @@ describe("estimateScenarioMonthly uses real plan rates", () => {
     expect(result.totalUsd).toBe(149);
   });
 
-  it("Take-Home 10 ILE + 50 TAP = $99 + $100 + $50", () => {
+  it("Take-Home 10 TAP Learning + 50 TAP = $99 + $100 + $50", () => {
     const scenario = getPricingScenario("self-service-take-home")!;
     const result = estimateScenarioMonthly(scenario, {
       volume: 10,
       secondary: 50,
     });
-    // 10 * $10 ILE + 50 * $1 TAP = $150 usage + $99 = $249
+    // 10 * $10 TAP Learning + 50 * $1 TAP = $150 usage + $99 = $249
     expect(result.units.ileSessionCount).toBe(10);
     expect(result.units.tapSessionCount).toBe(50);
     expect(result.invoice.ileSessionCents).toBe(10_000);

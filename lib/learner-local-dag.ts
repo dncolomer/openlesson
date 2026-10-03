@@ -189,7 +189,7 @@ export function directBlockingPrerequisiteIds(
   return uniqIds(ids);
 }
 
-/** ILE chapter is locked when it has any incomplete direct DAG prereq. */
+/** TAP Learning chapter is locked when it has any incomplete direct DAG prereq. */
 export function isChapterMapTileLocked(
   chapter: LearnerLocalDagBlock,
   chapters: readonly LearnerLocalDagBlock[],
@@ -216,7 +216,7 @@ export function chapterHasDagLockChrome(
 }
 
 /**
- * Selecting a locked ILE chapter highlights only the incomplete direct prereqs
+ * Selecting a locked TAP Learning chapter highlights only the incomplete direct prereqs
  * that unblock it. Unlocked / available selection → empty set.
  */
 export function ileChapterUnlockHighlightIds(

@@ -1,5 +1,5 @@
 /**
- * Pure helpers for ILE session plan creation: prompt assembly and step
+ * Pure helpers for TAP Learning session plan creation: prompt assembly and step
  * normalization (including spatial grid coordinates).
  */
 

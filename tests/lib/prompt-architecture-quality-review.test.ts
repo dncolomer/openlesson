@@ -192,11 +192,11 @@ describe("prompt architecture: TAP call path (shipped builders)", () => {
   });
 });
 
-describe("prompt architecture: ILE call path (shipped builders + registry)", () => {
+describe("prompt architecture: TAP Learning call path (shipped builders + registry)", () => {
   it("Helios chat composes compact ontology + ILE_SURFACE with chapter optimize/augment", () => {
     const chat = buildIleHeliosChatSystemPrompt();
     expect(chat.indexOf(WORKSPACE_ONTOLOGY_COMPACT.slice(0, 30))).toBeLessThan(
-      chat.indexOf("PRODUCT SURFACE: Integrated Learning Environment"),
+      chat.indexOf("PRODUCT SURFACE: TAP Learning"),
     );
     expect(chat).toContain(ILE_SURFACE.slice(0, 40));
     expect(chat).toMatch(/Optimize|Augment|current chapter|Mark as Done/i);
@@ -206,11 +206,11 @@ describe("prompt architecture: ILE call path (shipped builders + registry)", () 
 
   it("welcome uses ILE_SURFACE without full ontology", () => {
     const welcome = buildIleWelcomeSystemPrompt();
-    expect(welcome).toContain("PRODUCT SURFACE: Integrated Learning Environment");
+    expect(welcome).toContain("PRODUCT SURFACE: TAP Learning");
     expect(welcome).not.toContain("TEMPORAL PROOF OF WORK");
   });
 
-  it("registry getPrompt path is overridable and chapter-aware for core ILE keys", () => {
+  it("registry getPrompt path is overridable and chapter-aware for core TAP Learning keys", () => {
     const keys: PromptKey[] = [
       "opening_probe",
       "probe_generation",
@@ -381,7 +381,7 @@ describe("analysis deliverable present", () => {
     );
     expect(doc).toMatch(/End-to-end prompt architecture|composePrompt/i);
     expect(doc).toMatch(/TAP dialog|System 1|System 2/i);
-    expect(doc).toMatch(/ILE dialog|Mark as Done|session_plan/i);
+    expect(doc).toMatch(/TAP Learning dialog|Mark as Done|session_plan/i);
     expect(doc).toMatch(/LWM Snapshot scoring|PRIMARY SCORE BANDS|score-derivation/i);
     expect(doc).toMatch(/buildVerticalScoreInstructions/);
     expect(doc).toMatch(/SCORE_POW_CONTEXT_LAYER|SUBMIT \/ STASH/i);

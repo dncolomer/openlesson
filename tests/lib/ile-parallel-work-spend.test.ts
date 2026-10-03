@@ -1,5 +1,5 @@
 /**
- * Unified ILE PoW spend: first Work free; extra Work gated by slider-scaled pool.
+ * Unified TAP Learning PoW spend: first Work free; extra Work gated by slider-scaled pool.
  * Drives shipped helpers — not a copy.
  */
 import { describe, expect, it } from "vitest";

@@ -111,7 +111,7 @@ describe("Review work chrome (shipped source)", () => {
     writeScratch(
       "ile-review-work.txt",
       [
-        "Review work has no ILE chrome button; panel remains as a buried overlay tool",
+        "Review work has no TAP Learning chrome button; panel remains as a buried overlay tool",
         "overlay tool=thought-history",
         "tabs=tool/screen/video/eeg/thoughts",
         "chapter widget has no Thoughts tab",

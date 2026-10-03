@@ -1,5 +1,5 @@
 /**
- * Generate a single ILE chapter the same way workspace blocks are authored:
+ * Generate a single TAP Learning chapter the same way workspace blocks are authored:
  * title + description + a 1–2 word map keyword (not a truncation of the title).
  */
 import {
@@ -25,7 +25,7 @@ export function composeIleChapterGenerateSystemMessage(
       ? "Description: a standalone longer-horizon exercise (1–3 sentences, self-contained). Do not script a conversation."
       : "Description: a topic-horizon conversation (1–2 sentences naming what they can do after a deep dialogue).";
   return [
-    "You create a single ILE chapter for a skill-grid slot.",
+    "You create a single TAP Learning chapter for a skill-grid slot.",
     `Return JSON only: ${BLOCK_MAP_GLYPH_JSON_SHAPE}.`,
     "Title: 4-14 words, specific and actionable.",
     grain,

@@ -1,7 +1,7 @@
-# Prompt architecture and quality review (TAP / ILE generation + LWM Snapshot scoring)
+# Prompt architecture and quality review (TAP / TAP Learning generation + LWM Snapshot scoring)
 
 **Date:** 2026-08-03  
-**Scope:** Shipped TypeScript under `lib/prompt-kernel/`, `lib/prompts.ts`, TAP/ILE generation consumers, and LWM Snapshot scoring builders.  
+**Scope:** Shipped TypeScript under `lib/prompt-kernel/`, `lib/prompts.ts`, TAP/TAP Learning generation consumers, and LWM Snapshot scoring builders.  
 **Non-goals:** No prompt rewrites in this document — recommendations only.
 
 ---
@@ -15,7 +15,7 @@ All kernel-era system prompts are assembled by `composePrompt` in `lib/prompt-ke
 | Layer | Name | Density / role |
 |---|---|---|
 | **L0** | Ontology | `WORKSPACE_ONTOLOGY` (full) or `WORKSPACE_ONTOLOGY_COMPACT` or omitted (`none`) |
-| **L1** | Surface | Product-specific language: TAP, ILE, or score-context |
+| **L1** | Surface | Product-specific language: TAP, TAP Learning, or score-context |
 | **L2** | Task | Per-call contract / instructions |
 | **Notes** | Context notes | Optional runtime notes (not file attachments themselves) |
 
@@ -50,7 +50,7 @@ composePrompt({ ontology, surface, task, contextNotes? })
 **Active registry keys (9):**  
 `gap_detection`, `opening_probe`, `probe_generation`, `report_generation`, `follow_up_sessions`, `generate_objectives`, `session_plan_create`, `session_plan_update`
 
-**Important architectural split:** registry prompts are **string templates** with `{placeholders}`. They **do not** go through `composePrompt` / L0 ontology. ILE practice-coach language is duplicated into those strings (and `ILE_CONTEXT` re-exports `ILE_CONTEXT_BODY` from the kernel for shared blurb use). Kernel builders (TAP facilitator, Helios chat system, LWM score instructions) **do** use `composePrompt`.
+**Important architectural split:** registry prompts are **string templates** with `{placeholders}`. They **do not** go through `composePrompt` / L0 ontology. TAP Learning practice-coach language is duplicated into those strings (and `ILE_CONTEXT` re-exports `ILE_CONTEXT_BODY` from the kernel for shared blurb use). Kernel builders (TAP facilitator, Helios chat system, LWM score instructions) **do** use `composePrompt`.
 
 ### 1.4 Major call paths
 
@@ -73,7 +73,7 @@ buildTapScoreInstructions + buildTapOpeningQuestionTask | buildTapPracticeOpenin
   → LLM  (fallback: buildTapOpeningQuestionFallback / StartingTopicsFallback)
 ```
 
-#### TAP / TAPBench / ILE Project exercises (domain exercise author)
+#### TAP / TAPBench / TAP Learning Project exercises (domain exercise author)
 
 ```
 generateDomainExercise (lib/pow-api/tapbench-exercise-generate.ts)
@@ -85,7 +85,7 @@ generateDomainExercise (lib/pow-api/tapbench-exercise-generate.ts)
 
 Exercise TAP shell (solo, no Helios dialogue) is framed in `lib/exercise-tap.ts` with out-loud stripping and thin-frame rejection; generation prefers `generateTapExercisePrompt`.
 
-#### ILE (Helios + probes + plans)
+#### TAP Learning (Helios + probes + plans)
 
 ```
 Helios live chat:
@@ -137,7 +137,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
               ┌──────────────┴──────────────┐
               ▼                             ▼
      Registry DEFAULT_PROMPTS        Domain exercise author
-     (ILE probes/plans;              (standalone system+user;
+     (TAP Learning probes/plans;              (standalone system+user;
       getPrompt + overrides;          quality helpers; no L0)
       no composePrompt)
 ```
@@ -163,7 +163,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
    `buildTapOpeningQuestionTask` rejects syllabus restatements, generic icebreakers, meta “approach” questions, and stage directions; if context is only a topic list, invent a small concrete problem. Starting topics require distinct domain angles and openingQuestions that yield System 1/2 traces.
 
 5. **Domain exercise author + quality gate**  
-   Shared author for TAPBench / human TAP drill / ILE Project Mode with hard bans on topic-list restatements and weak openers (“Using what you know about…”, “Demonstrate your understanding…”). `isLowQualityTapbenchExercise` + pure fallbacks prevent the worst “paste the syllabus” failures. Exercise TAP framing strips out-loud stage directions.
+   Shared author for TAPBench / human TAP drill / TAP Learning Project Mode with hard bans on topic-list restatements and weak openers (“Using what you know about…”, “Demonstrate your understanding…”). `isLowQualityTapbenchExercise` + pure fallbacks prevent the worst “paste the syllabus” failures. Exercise TAP framing strips out-loud stage directions.
 
 6. **Runtime workspace grounding**  
    `buildTapScoreInstructions` injects block inventory, files, sessions, and “never invent unrelated topics.” Marker axes for later scoring (Conceptual Clarity, Causal Reasoning, etc.) are named in the facilitator so elicitation can cover competency dimensions.
@@ -173,8 +173,8 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 1. **Suggested facilitator opening vs opening-task standard**  
    Facilitator suggests: *“What is the core idea you took away… first time?”* — a mild, generic knowledge-check. The dedicated opening task is stricter (concrete calculation, design choice, causal chain, misuse debug). Models often copy the suggested opening, undercutting the better opening-task contract. Fallbacks similarly lean on “core idea of {title}.”
 
-2. **Few GOOD/BAD exemplars on TAP (unlike ILE registry)**  
-   ILE `opening_probe` / `probe_generation` include concrete GOOD patterns and BAD bans. TAP surface lists abstract tactics only. Without few-shot domain-agnostic exemplars of *excellent* vs *thin* elicitation, models regress to safe, vague questions that yield thin PoW.
+2. **Few GOOD/BAD exemplars on TAP (unlike TAP Learning registry)**  
+   TAP Learning `opening_probe` / `probe_generation` include concrete GOOD patterns and BAD bans. TAP surface lists abstract tactics only. Without few-shot domain-agnostic exemplars of *excellent* vs *thin* elicitation, models regress to safe, vague questions that yield thin PoW.
 
 3. **No explicit “trace thickness” success criteria**  
    Private goal says “maximize genuine traces,” but prompts do not define what counts as *enough* for scoring (e.g. learner produces a definition + mechanism + example + failure mode). Facilitators may stop after one short exchange or over-interrogate without a coverage plan across the six TAP markers.
@@ -196,7 +196,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 | Priority | Opportunity | Placement |
 |---|---|---|
 | P0 | Align suggested opening + fallbacks with opening-task quality bar (concrete problem-in-context, not “core idea”) | `buildTapFacilitatorInstructions` suggested opening; `buildTapOpeningQuestionFallback` / topics fallbacks |
-| P0 | Add 4–6 GOOD / BAD elicitation exemplars (domain-agnostic shells) to `TAP_SURFACE` or selective overlay | Same pattern as ILE `opening_probe` |
+| P0 | Add 4–6 GOOD / BAD elicitation exemplars (domain-agnostic shells) to `TAP_SURFACE` or selective overlay | Same pattern as TAP Learning `opening_probe` |
 | P1 | Add private “trace thickness checklist” (definition → mechanism → example → edge/transfer → repair) and instruct covering markers over the session | Facilitator task goals |
 | P1 | Explicit System 1 invitation moves vs System 2 commitment moves (without learner-facing jargon) | `TAP_SELECTIVE_THOUGHT_OVERLAY` |
 | P2 | Optional LWM evidence_appetite / blind_spots injection into TAP chat system notes | `workspace-tap-score/chat` contextNotes |
@@ -204,7 +204,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 
 ---
 
-## 3. ILE dialog / probe / session-plan / chapter exercise — quality review
+## 3. TAP Learning dialog / probe / session-plan / chapter exercise — quality review
 
 **Product goal:** productive practice that produces durable PoW (artifacts + progress), not endless interrogation; chapter-completable sessions inside never-ending workspaces.
 
@@ -231,10 +231,10 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 ### 3.2 Gaps relative to durable PoW practice
 
 1. **Registry path lacks L0 ontology and can drift from kernel**  
-   Probes and plans are long free-standing strings. Product rules must be hand-duplicated. Today they are aligned, but `report_generation` still frames “tutoring session” and can recommend ILE tools in “Next Time,” which conflicts philosophically with LWM remediation guardrails (platform mechanics not as outputs — different surface, same brand risk).
+   Probes and plans are long free-standing strings. Product rules must be hand-duplicated. Today they are aligned, but `report_generation` still frames “tutoring session” and can recommend TAP Learning tools in “Next Time,” which conflicts philosophically with LWM remediation guardrails (platform mechanics not as outputs — different surface, same brand risk).
 
 2. **`gap_detection` optimizes for speech/reasoning gaps, not artifact progress**  
-   Gap scoring (0–1) listens for hesitation, circular thinking, etc. That is TAP-adjacent. For ILE, a learner may be productively silent while coding on a shared screen; pure audio gap detection can over-probe or under-score progress. Session update partly compensates with activity context, but the dedicated gap prompt does not mention tools/artifacts.
+   Gap scoring (0–1) listens for hesitation, circular thinking, etc. That is TAP-adjacent. For TAP Learning, a learner may be productively silent while coding on a shared screen; pure audio gap detection can over-probe or under-score progress. Session update partly compensates with activity context, but the dedicated gap prompt does not mention tools/artifacts.
 
 3. **25-word cap on opening/probe text**  
    Forces brevity (good for UX) but can produce under-specified tool tasks (“Sketch the architecture”) without success criteria, yielding thin PoW.
@@ -249,7 +249,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
    Plan steps do not declare expected PoW modality (canvas vs notebook vs speech). Scoring later must infer. Specifying intended evidence per chapter would improve both practice and LWM coverage scoring.
 
 7. **Opening probe still allows pure questions**  
-   Prefer tools, but a sharp question is allowed; without success criteria, ILE can still become Q&A theater.
+   Prefer tools, but a sharp question is allowed; without success criteria, TAP Learning can still become Q&A theater.
 
 ### 3.3 Concrete improvement opportunities
 
@@ -259,7 +259,7 @@ TAP complete scoring also appends buildTraceScoringInstructions (System1/2 count
 | P1 | Extend `gap_detection` with tool/artifact progress signals (or merge into session_plan_update-only gap logic) | `DEFAULT_PROMPTS.gap_detection` |
 | P1 | Per-step expected PoW modality in session_plan_create JSON | `session_plan_create` schema |
 | P2 | Route report_generation remediation language through same platform-ban spirit as LWM (domain next steps, tools OK as practice, not product sales) | `report_generation` |
-| P2 | Consider slim composePrompt wrapper for registry ILE prompts (compact ontology + ILE_SURFACE + task body) to stop dual-source drift | Future architecture |
+| P2 | Consider slim composePrompt wrapper for registry TAP Learning prompts (compact ontology + ILE_SURFACE + task body) to stop dual-source drift | Future architecture |
 
 ---
 
@@ -294,7 +294,7 @@ For product LWM Snapshot (`buildVerticalScoreInstructions("verification", …)`)
 | **GHC `ghc_score` / `ghc_confidence`** | 0–100 authenticity of human cognition; weight System 1 vs 2 and natural temporal pacing; tool-only dumps → low score + none/low confidence. Submit/stash overlay requires citing sent vs unsent when selective thought present. |
 | **`temporal_summary`** | Optional one sentence when timestamps inform scores. |
 | **`workspace_goal`** | Echo authoritative if provided; else infer and allow evolution. |
-| **Gaps / next_steps / suggestions** | Concrete deficiencies with PoW proof; next_steps split directions vs granular events; never TAP/ILE/blocks as remediation outputs. |
+| **Gaps / next_steps / suggestions** | Concrete deficiencies with PoW proof; next_steps split directions vs granular events; never TAP/TAP Learning/blocks as remediation outputs. |
 | **`world_model_delta`** | Optional partial LWM update (coverage, profile, appetite, scores_snapshot mirrors). |
 | **Thin PoW** | Lower scores honestly; empty gaps only when truly insufficient. |
 
@@ -407,7 +407,7 @@ When a marker list is provided in context, use those ids/labels for marker_score
 |---|---|
 | `composePrompt` order ontology → surface → task | `tests/lib/prompt-kernel.test.ts` |
 | TAP System 1/2 + no Socratic identity + out-loud bans | `tests/lib/tap-ile-prompt-surfaces.test.ts` |
-| ILE chapter-aware optimize/augment + registry path | same |
+| TAP Learning chapter-aware optimize/augment + registry path | same |
 | Score PoW-only + verification submit/stash layering | `tests/lib/score-prompt-layer.test.ts`, `tests/lib/performance-report.test.ts` |
 | Domain exercise surfaces + quality helpers | `tests/lib/tapbench-exercise-generate.test.ts` |
 | Architecture + quality review structural assertions | `tests/lib/prompt-architecture-quality-review.test.ts` |
@@ -418,7 +418,7 @@ When a marker list is provided in context, use those ids/labels for marker_score
 
 ## 6. Bottom line
 
-- **Architecture** is intentionally layered: kernel `composePrompt` for TAP/ILE chat systems and LWM scoring; a parallel **user-overridable registry** for ILE probes/plans; a **standalone domain-exercise author** for timed problems across TAP/ILE/TAPBench.
+- **Architecture** is intentionally layered: kernel `composePrompt` for TAP/TAP Learning chat systems and LWM scoring; a parallel **user-overridable registry** for TAP Learning probes/plans; a **standalone domain-exercise author** for timed problems across TAP/TAP Learning/TAPBench.
 - **TAP generation quality** is strong on authenticity hygiene (anti-stage-direction, dual-stream private goals) but weaker on *design excellence* of questions (generic openings, few exemplars, no trace-thickness / marker-coverage plan). That is the main risk to “good PoW data.”
-- **ILE generation quality** is strong on chapter closure and tool-routed practice; risks are thin success criteria on short probes, speech-centric gap detection, and registry/kernel dual maintenance.
+- **TAP Learning generation quality** is strong on chapter closure and tool-routed practice; risks are thin success criteria on short probes, speech-centric gap detection, and registry/kernel dual maintenance.
 - **LWM scoring** is well structured (ontology → PoW-only → submit/stash → task → schema → sanitize) but **under-specified on numeric derivation** (bands, marker–primary consistency, GHC anchors, thin-PoW floors). Adding the guidance in §4.4 would improve calibration without changing code contracts.

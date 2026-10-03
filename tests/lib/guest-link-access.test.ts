@@ -1,5 +1,5 @@
 /**
- * Guest TAP/ILE link access mode, entry query capture, PoW source-link stamping.
+ * Guest TAP/TAP Learning link access mode, entry query capture, PoW source-link stamping.
  * Drives real shipped helpers (lib/guest-link-access + create wrappers via pure helpers).
  */
 import { describe, expect, it, vi } from "vitest";
@@ -153,7 +153,7 @@ describe("PoW source link traceability", () => {
     expect(sourceLinkFromMetadata(meta)).toEqual({ kind: "tap", linkId: "tap-link-1" });
   });
 
-  it("stamps ILE PoW metadata with source_link_kind + source_link_id and ile_link_id", () => {
+  it("stamps TAP Learning PoW metadata with source_link_kind + source_link_id and ile_link_id", () => {
     const meta = stampSourceLinkMetadata(
       { source: "ile_session", tool: "canvas" },
       { kind: "ile", linkId: "ile-link-9" },
@@ -191,7 +191,7 @@ describe("PoW source link traceability", () => {
 });
 
 describe("session page wiring (static)", () => {
-  it("TAP and ILE session pages capture searchParams via collectEntryQueryParams", async () => {
+  it("TAP and TAP Learning session pages capture searchParams via collectEntryQueryParams", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
@@ -206,7 +206,7 @@ describe("session page wiring (static)", () => {
     expect(ile).toContain("searchParams");
   });
 
-  it("TAP and ILE PoW routes stamp source_link via stampSourceLinkMetadata", async () => {
+  it("TAP and TAP Learning PoW routes stamp source_link via stampSourceLinkMetadata", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const root = join(__dirname, "../..");
@@ -222,7 +222,7 @@ describe("session page wiring (static)", () => {
     ]) {
       const src = readFileSync(join(root, rel), "utf8");
       expect(src, rel).toContain("stampSourceLinkMetadata");
-      // Guest ILE paths must gate stamping on access.ileLinkId from ileToken auth
+      // Guest TAP Learning paths must gate stamping on access.ileLinkId from ileToken auth
       if (rel.includes("workspace-ile/")) {
         expect(src, rel).toContain("access.ileLinkId");
         expect(src, rel).toMatch(/stampSourceLinkMetadata\([\s\S]*kind:\s*["']ile["']/);
@@ -230,7 +230,7 @@ describe("session page wiring (static)", () => {
     }
   });
 
-  it("ILE speech/idle metadata builders stamp source_link when ileLinkId is present", () => {
+  it("TAP Learning speech/idle metadata builders stamp source_link when ileLinkId is present", () => {
     // Drive the same helper those routes call when access.ileLinkId is set
     const speechMeta = stampSourceLinkMetadata(
       {

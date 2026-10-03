@@ -11,7 +11,7 @@ function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");
 }
 
-describe("ILE chapter generate (title + description + keyword)", () => {
+describe("TAP Learning chapter generate (title + description + keyword)", () => {
   it("asks for keyword with title/description, not a truncated title", () => {
     const system = composeIleChapterGenerateSystemMessage("learning");
     expect(system).toContain("keyword");
@@ -53,7 +53,7 @@ describe("ILE chapter generate (title + description + keyword)", () => {
     expect(user).toContain("Balance a tree");
   });
 
-  it("ships generate-chapter API and ILE add uses it", () => {
+  it("ships generate-chapter API and TAP Learning add uses it", () => {
     const route = read("app/api/workspace/generate-chapter/route.ts");
     expect(route).toContain("composeIleChapterGenerateSystemMessage");
     expect(route).toContain("normalizeIleChapterGenerateResult");

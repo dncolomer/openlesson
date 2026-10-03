@@ -1,6 +1,6 @@
 /**
  * Neutral map cell chrome: white selection; Done = tick; self-progress = gear.
- * Drives shipped helpers used by workspace block maps and ILE chapter maps.
+ * Drives shipped helpers used by workspace block maps and TAP Learning chapter maps.
  */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -245,7 +245,7 @@ describe("structural: BlockSkillGrid title-only map tiles", () => {
     expect(MAP_CELL_PREREQ_CLASS).toMatch(/border-dashed/);
   });
 
-  it("ILE ChapterMapPanel and workspace SessionList use BlockSkillGrid", () => {
+  it("TAP Learning ChapterMapPanel and workspace SessionList use BlockSkillGrid", () => {
     const chapter = read("components/ChapterMapPanel.tsx");
     const list = read("components/SessionList.tsx");
     expect(chapter).toContain("BlockSkillGrid");

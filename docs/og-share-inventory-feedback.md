@@ -45,7 +45,7 @@ Source of truth: `lib/og/surfaces.ts`. Static routes use thin `app/**/opengraph-
 |-------|----------------|
 | **path** | `/` |
 | **title** | Learning efficiency for humans & agents |
-| **description** | Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud Protocol, ILE, and ALE on Workspaces. |
+| **description** | Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud Protocol, TAP Learning, and ALE on Workspaces. |
 | **eyebrow** | Learning efficiency |
 | **footerLabel** | LEARNING EFFICIENCY • HUMANS & AGENTS |
 | **brand** | Uncertain Systems |
@@ -60,7 +60,7 @@ Source of truth: `lib/og/surfaces.ts`. Static routes use thin `app/**/opengraph-
 | OG title | Uncertain Systems — Learning Efficiency for Humans & Agents |
 | OG description | Measure what learners actually absorb — not just completion. Four products on Workspaces. |
 | Twitter title | Uncertain Systems — Learning Efficiency Platform |
-| Twitter description | Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment. |
+| Twitter description | Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, TAP Learning, and Agentic Learning Environment. |
 
 **Feedback**
 
@@ -78,7 +78,7 @@ Notes:
 |-------|----------------|
 | **path** | `/pricing` |
 | **title** | Pricing — Proof-of-Work volume |
-| **description** | Meter proof-of-work artifacts across TAP, ILE, and the API. Plans scale with measurement and learning world model effort. |
+| **description** | Meter proof-of-work artifacts across TAP, TAP Learning, and the API. Plans scale with measurement and learning world model effort. |
 | **eyebrow** | Pricing |
 | **footerLabel** | Plans |
 | **brand** | Uncertain Systems |
@@ -163,7 +163,7 @@ Notes:
 |-------|----------------|
 | **path** | `/docs/proof-of-work-api` |
 | **title** | Proof-of-Work API specification |
-| **description** | Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol links, route ILE practice, and read learning efficiency results. |
+| **description** | Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol links, route TAP Learning practice, and read learning efficiency results. |
 | **eyebrow** | Docs |
 | **footerLabel** | API reference |
 | **brand** | Uncertain Systems |

@@ -133,12 +133,12 @@ describe("assertReusableWorkspaceGuest", () => {
   });
 });
 
-describe("TAP/ILE link reuse wiring", () => {
+describe("TAP/TAP Learning link reuse wiring", () => {
   const root = join(__dirname, "../..");
 
-  it("ILE ensureIleLinkSession no longer hard-blocks completed links", () => {
+  it("TAP Learning ensureIleLinkSession no longer hard-blocks completed links", () => {
     const src = readFileSync(join(root, "lib/ile-link-auth.ts"), "utf8");
-    expect(src).not.toContain("This ILE practice session is complete");
+    expect(src).not.toContain("This TAP Learning practice session is complete");
     expect(src).toContain("completed_at: null");
     expect(src).toContain("multi-use");
   });
@@ -149,14 +149,14 @@ describe("TAP/ILE link reuse wiring", () => {
     expect(src).toContain("guest_user_id");
   });
 
-  it("create TAP/ILE link paths accept guest_user_id reuse helper", () => {
+  it("create TAP/TAP Learning link paths accept guest_user_id reuse helper", () => {
     const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
     const ile = readFileSync(join(root, "lib/pow-api/create-ile-link.ts"), "utf8");
     expect(tap).toContain("assertReusableWorkspaceGuest");
     expect(ile).toContain("assertReusableWorkspaceGuest");
   });
 
-  it("TAP/ILE reissue rotates token on the same link card (keeps params)", () => {
+  it("TAP/TAP Learning reissue rotates token on the same link card (keeps params)", () => {
     const tap = readFileSync(join(root, "lib/pow-api/create-tap-link.ts"), "utf8");
     const ile = readFileSync(join(root, "lib/pow-api/create-ile-link.ts"), "utf8");
     const panel = readFileSync(join(root, "components/WorkspaceGuestLinksPanel.tsx"), "utf8");

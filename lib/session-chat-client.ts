@@ -1,5 +1,5 @@
 /**
- * One ILE session-chat POST used by send, Work canvas turns, and chapter reload.
+ * One TAP Learning session-chat POST used by send, Work canvas turns, and chapter reload.
  */
 
 import { errorMessageFromBody } from "@/lib/api-error-envelope";

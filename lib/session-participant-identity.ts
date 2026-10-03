@@ -1,5 +1,5 @@
 /**
- * Who writes PoW for a TAP/ILE session.
+ * Who writes PoW for a TAP/TAP Learning session.
  *
  * Guest share links → always guest_user_id (never owner, never the browser's
  * logged-in account unless the link is assigned to that member).
@@ -33,7 +33,7 @@ function shortId(id: string | null): string | null {
  * Never falls back to the workspace owner.
  */
 /**
- * ILE guest acting participant — assigned member or guest, never the owner
+ * TAP Learning guest acting participant — assigned member or guest, never the owner
  * unless that is the only remaining identity (cookie owner path).
  */
 export function resolveIleActingParticipantId(input: {

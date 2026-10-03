@@ -12,7 +12,7 @@
 
 ## Overview
 
-PoW is **evidence of process**, not a score. The stored type set is already `tool | screen | video | eeg`, but the *model* is unnamed: TAP traces skip the persist helper, ILE omits `video`, tests invent `speech`, schema/`spec_version` is confused with the evidence contract, and geometry silently bins unknown types as `other`.
+PoW is **evidence of process**, not a score. The stored type set is already `tool | screen | video | eeg`, but the *model* is unnamed: TAP traces skip the persist helper, TAP Learning omits `video`, tests invent `speech`, schema/`spec_version` is confused with the evidence contract, and geometry silently bins unknown types as `other`.
 
 This document freezes that contract as **`pow-model-v1`**, funnels every durable write through `uploadWorkspaceProofOfWork`, and versions the model so `pow-model-v2` can add types or encoding rules without rewriting persist or breaking v1 clients.
 
@@ -24,8 +24,8 @@ Quote these. They are the product contract.
 
 1. **Proof of work is evidence of process, not a score.** Sessions produce artifacts; LWM Snapshot is a separate, conscious trigger.
 2. **Workspaces never close.** PoW accumulates for the life of the workspace.
-3. **The PoW API is the primary workspace interface.** TAP, ILE, Stash, MCP, and REST are capture surfaces over one model.
-4. **Capture ≠ score.** Ending a TAP/ILE session must not auto-run LWM Snapshot.
+3. **The PoW API is the primary workspace interface.** TAP, TAP Learning, Stash, MCP, and REST are capture surfaces over one model.
+4. **Capture ≠ score.** Ending a TAP/TAP Learning session must not auto-run LWM Snapshot.
 5. **Timing is checkpoint-agnostic.** Every event carries `timestamp_ms`; gaps, idle, and dwell are signal.
 6. **Scope is block or workspace**, never implied by session end.
 7. **Tool usage is the core stored signal.** Screen, video, and EEG enrich it.
@@ -50,7 +50,7 @@ Quote these. They are the product contract.
 | DB | same | `workspace_evidence_evidence_type_check` on `workspace_proof_of_work` |
 | Schema gen | same | `recommended_proof_of_work_type` enum in `lib/pow-api/proof-of-work-schema.ts` |
 | Aliases | `screenshot` / `screenshots` → `screen` | `TYPE_ALIASES`; anything else → `null` (reject) |
-| Durable write | `uploadWorkspaceProofOfWork` | REST v3, MCP, Stash flush, ILE session, ILE speech/idle, TAP complete/speech/chat/idle |
+| Durable write | `uploadWorkspaceProofOfWork` | REST v3, MCP, Stash flush, TAP Learning session, TAP Learning speech/idle, TAP complete/speech/chat/idle |
 
 Ontology already states principles 1–7, 11 (`lib/prompt-kernel/ontology.ts`, `lib/pow-api/integration-skill.ts`). They are not written down as one model.
 
@@ -60,8 +60,8 @@ Ontology already states principles 1–7, 11 (`lib/prompt-kernel/ontology.ts`, `
 |---|---|---|
 | TAP traces bypass persist | `app/api/workspace-tap-score/trace/route.ts` is the remaining product `.insert`; siblings already use the helper | Copy speech/chat/idle template; usage + org collection apply; opaque lint stays off |
 | Thought as fifth type | Stored as `tool` with reserved `tool_name`s | Keep as `tool`; detector ≠ write-path flags |
-| ILE type fork | Client union is `tool \| screen \| eeg` | Capture **subset**, not a second algebra |
-| ILE EEG columns dropped | Client sends `band_powers` / `device_name` / `sample_count`; `app/api/workspace/proof-of-work/route.ts` never reads them | Forward those fields (same as REST v3) |
+| TAP Learning type fork | Client union is `tool \| screen \| eeg` | Capture **subset**, not a second algebra |
+| TAP Learning EEG columns dropped | Client sends `band_powers` / `device_name` / `sample_count`; `app/api/workspace/proof-of-work/route.ts` never reads them | Forward those fields (same as REST v3) |
 | Unofficial `speech` | Tests/synthetics; encoder dim 28 `other` | Invalid stored type. Write already rejects; rename dim 28 |
 | Schema vs wire | Spec `common_fields` lists `proof_of_work_type`; body uses `type` | Wire = `type`; DB = `proof_of_work_type` |
 | Three “versions” | Semantic spec `1.3`, opaque `1.5-opaque`, MCP server `1.3.0` | None of these is the evidence model |
@@ -88,8 +88,8 @@ Ontology already states principles 1–7, 11 (`lib/prompt-kernel/ontology.ts`, `
 - Making knowledge-config consume raw xAI bytes.
 - Dual-writing two PoW rows per event.
 - Forcing MCP JSON-RPC to HTTP 201.
-- Teaching ILE to capture video.
-- Moving `knowledgecfg-v1-d64` (no new dims; no TAP/ILE `system` flags on new writes).
+- Teaching TAP Learning to capture video.
+- Moving `knowledgecfg-v1-d64` (no new dims; no TAP/TAP Learning `system` flags on new writes).
 
 ---
 
@@ -117,7 +117,7 @@ A v2 PoW model may ship while spec stays `1.3` and geometry stays `knowledgecfg-
 | Encoding | *(speech)* | `tool` | — | tool MIME | Capture channel; not CHECK |
 | Invalid | anything else | **reject** | — | — | Never persist; dim 28 on read |
 
-Product clients may emit a **subset** (ILE today: tool/screen/eeg). They must import types from the model module, not fork the enum.
+Product clients may emit a **subset** (TAP Learning today: tool/screen/eeg). They must import types from the model module, not fork the enum.
 
 ### Persist contract
 
@@ -138,7 +138,7 @@ Only `uploadWorkspaceProofOfWork` may run that sequence on the product path.
 ```mermaid
 sequenceDiagram
   participant Client
-  participant Surface as REST / MCP / Stash / TAP / ILE
+  participant Surface as REST / MCP / Stash / TAP / TAP Learning
   participant Upload as uploadWorkspaceProofOfWork
   participant Model as PowModelSpec
   participant XAI as xAI Files
@@ -162,7 +162,7 @@ sequenceDiagram
 
 | Effect | After PR 2 |
 |---|---|
-| Usage (`assertCanSubmitProofOfWork`) | applies (402 on limited plans is intended; TAP traces count like ILE) |
+| Usage (`assertCanSubmitProofOfWork`) | applies (402 on limited plans is intended; TAP traces count like TAP Learning) |
 | Org xAI collection | applies when `organization_id` is present |
 | Opaque lint / metadata sanitize | **off** — same as TAP siblings today. Loading `evaluation_mode` would strip `tap_session_id` (`fetchTapSessionTraces`) and 400 payloads that mention `foo.json` |
 | TAP `complete` | already on the helper; CI grep fails only on `trace/route.ts` |
@@ -171,12 +171,12 @@ sequenceDiagram
 
 Thought is **not** a stored type. **Write-path convention ≠ read-path detector.** Encoding names are not CHECK-enforced.
 
-**New writes (do not add TAPBench-only flags to TAP/ILE — that would move dim 26):**
+**New writes (do not add TAPBench-only flags to TAP/TAP Learning — that would move dim 26):**
 
 | Surface | `tool_name` | `tool_action` | Metadata |
 |---|---|---|---|
 | Human TAP | `tap-thought-trace` | `{system1\|system2}:{action}` | `trace_type`, `action`, ids, `text` — **no** `system` / `selective_thought` |
-| ILE | `ile-thought-trace` | same | same as TAP |
+| TAP Learning | `ile-thought-trace` | same | same as TAP |
 | TAPBench / Stash | `stash_submit_api` | same | already sets `selective_thought`, `thought_trace`, `system`, `system_n`, `trace_type` — leave as-is |
 
 Payload MIME `application/json`; payload `type` is `uncertain_systems_tap_thought_trace` or `uncertain_systems_ile_thought_trace`.
@@ -191,7 +191,7 @@ isThoughtTrace(row) iff
   OR metadata.trace_type ∈ {system1, system2}
 ```
 
-Drop `name.includes("speech")` and `source` regex. Speech tool names are not thought. TAP/ILE keep counting via reserved `tool_name` + `trace_type`. `system1Share` (dim 26) stays TAPBench-only until an embedding bump.
+Drop `name.includes("speech")` and `source` regex. Speech tool names are not thought. TAP/TAP Learning keep counting via reserved `tool_name` + `trace_type`. `system1Share` (dim 26) stays TAPBench-only until an embedding bump.
 
 ### Speech rule
 
@@ -199,7 +199,7 @@ Speech is a **microphone channel**, not a CHECK value. `type: "speech"` is alrea
 
 | Capture | Stored as | `tool_name` | Notes |
 |---|---|---|---|
-| ILE start/stop | `tool` | `ile-speech-segment` | already via helper |
+| TAP Learning start/stop | `tool` | `ile-speech-segment` | already via helper |
 | TAP start/stop | `tool` | `tap-speech-segment` | `lib/tap-speech-proof-of-work.ts`; already via helper |
 | TAP session complete | `tool` | `tap-transcript` | End-of-session blob — **not** a speech segment |
 | Selective thought from speech | `tool` | `tap-thought-trace` / `ile-thought-trace` | thought-trace write path |
@@ -228,7 +228,7 @@ Experimental geometry dual-writes on score remain an **embedding** concern, not 
 flowchart LR
   subgraph capture [Capture]
     TAP
-    ILE
+    TAP Learning
     REST
     MCP
     Stash
@@ -243,7 +243,7 @@ flowchart LR
     TIM[TIM interruption]
   end
   TAP --> Upload
-  ILE --> Upload
+  TAP Learning --> Upload
   REST --> Upload
   MCP --> Upload
   Stash --> Upload
@@ -333,11 +333,11 @@ stateDiagram-v2
 
 Wire field remains `type`. Responses keep `type` as an alias of `proof_of_work_type`. Optional request `pow_model_id` (default resolved). Every persisted row/response includes `pow_model_id` once the column exists.
 
-| Field | REST v3 | MCP schema + dispatch today | ILE product route today | v1 target |
+| Field | REST v3 | MCP schema + dispatch today | TAP Learning product route today | v1 target |
 |---|---|---|---|---|
 | `type`, `mime_type`, `data`, `block_id`, `session_id`, `file_name`, `tool_name`, `tool_action`, `metadata`, `timestamp_ms` | yes | yes | yes | yes |
 | `band_powers`, `device_name`, `sample_count` | yes | **no** (schema *and* `dispatch.ts`) | client sends; **route drops** | **yes** on MCP helpers+dispatch **and** `app/api/workspace/proof-of-work/route.ts` |
-| `chunk_index` | yes | **no** | no | MCP yes; ILE optional |
+| `chunk_index` | yes | **no** | no | MCP yes; TAP Learning optional |
 | `pow_model_id` | no | no | no | optional, default v1 |
 | HTTP status | 201 | JSON-RPC **200** | 201 | keep transport difference |
 
@@ -363,7 +363,7 @@ Schema generator `common_fields` lists **`type`**, not `proof_of_work_type`. Spe
 | `pow_model_id` | Must be in `writable_models`; unknown or non-writable → **400** |
 | Until v2 | only `pow-model-v1` is accepted |
 
-ILE `UploadIleProofOfWorkInput.type` stays a capture subset; import `WorkspaceProofOfWorkType` from the model.
+TAP Learning `UploadIleProofOfWorkInput.type` stays a capture subset; import `WorkspaceProofOfWorkType` from the model.
 
 ---
 
@@ -399,7 +399,7 @@ ALTER TABLE public.workspaces
 |---|---|
 | **A. Freeze the type enum as the only identity** | Cannot add types or change thought-trace rules without breaking CHECK + clients. |
 | **B. Dual-write every event into v1 and v2 rows** | Doubles storage and TIM noise. Geometry dual-write is the analog for *embeddings*, not evidence. |
-| **C. Store thought / speech as fifth/sixth CHECK values** | Conflicts with frozen v1 algebra, existing rows, and TAP/ILE `tool_name`s. |
+| **C. Store thought / speech as fifth/sixth CHECK values** | Conflicts with frozen v1 algebra, existing rows, and TAP/TAP Learning `tool_name`s. |
 | **D. Reuse `spec_version` instead of `pow_model_id`** | `1.3` vs `1.5-opaque` vs MCP server `1.3.0` already collide; spec versions generated JSON, not the stored type algebra. |
 | **E. Leave encoder dim 28 named `other` until first v2 write** | Acceptable deferral of PR 1 encoder churn, but unofficial `speech` fixtures already hit the slot. Renaming the accumulator (same formula, same dim) is cheaper than teaching implementers that `other` is a stored type. |
 
@@ -437,7 +437,7 @@ Log / metric labels: `pow_model_id`, `proof_of_work_type`, `tool_name`, persist_
 1. Product default writable model = `pow-model-v1`. No pin required.
 2. Column DEFAULT backfills identity with zero client change.
 3. TAP `trace` cutover: usage + org collection; opaque lint **unchanged** (off).
-4. MCP extra fields are additive; old clients omit them. ILE EEG fields start persisting (additive columns).
+4. MCP extra fields are additive; old clients omit them. TAP Learning EEG fields start persisting (additive columns).
 5. Negotiation ships with only v1 writable. Pin via existing workspace PATCH; no UI required.
 6. Rollback: revert route/helper PRs independently. Do not drop `pow_model_id`.
 
@@ -447,9 +447,9 @@ Log / metric labels: `pow_model_id`, `proof_of_work_type`, `tool_name`, persist_
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| TAP traces count against usage (high-frequency crystallize/send/edit) | Medium | Intended; ILE already counts. Paid `api_metered` / `trial` unlimited; `TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25` and `inactive` are not. Document 402 in TAP PR |
+| TAP traces count against usage (high-frequency crystallize/send/edit) | Medium | Intended; TAP Learning already counts. Paid `api_metered` / `trial` unlimited; `TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25` and `inactive` are not. Document 402 in TAP PR |
 | Tightening thought detector drops speech-as-thought | Low | Speech should not have been thought. Snapshot encoder fixtures in PR 3b |
-| Adding `system` flags on TAP/ILE | High if done | **Do not** in this wave |
+| Adding `system` flags on TAP/TAP Learning | High if done | **Do not** in this wave |
 | Clients send `proof_of_work_type` in the body | Low | Accept as alias of `type` in the helper only |
 | Seed scripts omit `pow_model_id` | Low | Column DEFAULT |
 | Appetite still emits `speech` from Grok | Medium | Constrain prompt + post-filter (PR 3b) |
@@ -465,17 +465,17 @@ None. Appetite vocabulary, TAPBench identity, TAP opaque policy, and pin-vs-requ
 ## Key Decisions
 
 1. **Model id is `pow-model-v1`.** Independent of `spec_version` and MCP server version.
-2. **Four stored types; thought and speech encode as `tool`.** Matches DB CHECK and TAP/ILE `tool_name`s.
-3. **One persist helper.** Remaining bypass is TAP `trace/route.ts`. Copy speech/chat/idle (`authContextFromTapAccess(access, "tap-trace")`, no `evaluation_mode`). Usage + org collection apply; **opaque lint does not**. TAP traces count as PoW submissions like ILE (402 is intended).
+2. **Four stored types; thought and speech encode as `tool`.** Matches DB CHECK and TAP/TAP Learning `tool_name`s.
+3. **One persist helper.** Remaining bypass is TAP `trace/route.ts`. Copy speech/chat/idle (`authContextFromTapAccess(access, "tap-trace")`, no `evaluation_mode`). Usage + org collection apply; **opaque lint does not**. TAP traces count as PoW submissions like TAP Learning (402 is intended).
 4. **One row per event, stamped with `pow_model_id`.** Do not dual-write PoW rows.
 5. **Write default stays v1.** Request `pow_model_id` may only match the workspace pin (or omit). Unknown model/type → 400, never `other`.
 6. **Geometry dim 28 is renamed `unknown_to_model`**, same formula, no new dim, no `knowledgecfg-v1-d64` bump. Encoder view vs `row.pow_model_id` is PR 4.
 7. **Wire `type` / DB `proof_of_work_type`.** Schema follows the wire name.
-8. **MCP helpers *and* dispatch** gain EEG/chunk fields; ILE product route forwards the EEG fields it already receives. HTTP 200 remains JSON-RPC.
-9. **ILE missing `video` is a capture subset**, not a second type enum.
+8. **MCP helpers *and* dispatch** gain EEG/chunk fields; TAP Learning product route forwards the EEG fields it already receives. HTTP 200 remains JSON-RPC.
+9. **TAP Learning missing `video` is a capture subset**, not a second type enum.
 10. **Delete unused `AnalysisInput`, `AudioInput`, `ImageInput`, `TextInput`** in `lib/pow-api/types.ts` (`lib/xai-client.ts` has a different `ImageInput`).
 11. **TAPBench identity stays `stash_submit_api`** vs human `tap-thought-trace`; same payload/metadata shape.
-12. **TAP/ILE thought writes do not add `system` / `selective_thought`** in this wave (dim 26 freeze). Detector still counts them via `tool_name` + `trace_type`.
+12. **TAP/TAP Learning thought writes do not add `system` / `selective_thought`** in this wave (dim 26 freeze). Detector still counts them via `tool_name` + `trace_type`.
 13. **Appetite vocabulary is `tool\|screen\|video\|eeg\|thought`.** Never persist `speech`.
 14. **`validatePowAgainstModel` is type + MIME only.** Reserved thought/speech `tool_name`s are write-path conventions, not CHECK.
 15. **Pin via `PATCH /api/v3/pow/workspaces/{id}`** with today’s auth (`canAccessAgentWorkspace` + `workspaces:write` — owner, guest owner, or org member; not org-admin-only). Partial update of provided keys; unknown / non-writable `pow_model_id` → 400. No UI in this wave.
@@ -493,7 +493,7 @@ None. Appetite vocabulary, TAPBench identity, TAP opaque policy, and pin-vs-requ
 - `lib/admin/proof-of-work.ts` / `lib/pow-api/studio-pow-mutate.ts` — admin select / PATCH
 - `lib/tap-score-session-auth.ts` — `authContextFromTapAccess`
 - `lib/tap-speech-proof-of-work.ts` — `tap-speech-segment`
-- `lib/ile-proof-of-work-client.ts` / `app/api/workspace/proof-of-work/route.ts` — ILE capture + product persist
+- `lib/ile-proof-of-work-client.ts` / `app/api/workspace/proof-of-work/route.ts` — TAP Learning capture + product persist
 - `app/api/workspace-tap-score/trace/route.ts` — remaining bypass
 - `app/api/workspace-tap-score/{speech,chat,idle,complete}/route.ts` — persist template
 - `app/api/v3/pow/workspaces/[id]/route.ts` — workspace PATCH (pin)
@@ -521,12 +521,12 @@ Each PR is independently reviewable and mergeable. Versioning scaffolding is mix
 - **Files:** `app/api/workspace-tap-score/trace/route.ts`, tests (`tests/lib/p1-p10-helpers.test.ts` and TAP trace tests), CI grep
 - **Changes:** Copy `speech`/`chat`/`idle`: `authContextFromTapAccess(access, "tap-trace")`, workspace `id, user_id, organization_id`, helper with `type: "tool"`, `tool_name: tap-thought-trace`, existing metadata (`trace_type`, `action`, ids, `text`) — **do not** add `system` / `selective_thought`. Drop duplicate xAI+insert. Usage + org collection apply; opaque lint stays off. CI grep fails only on `trace/route.ts` until merged. Seeds keep SQL; DEFAULT covers `pow_model_id`.
 
-### PR 3a — Align schema, skill, MCP, ILE, docs
+### PR 3a — Align schema, skill, MCP, TAP Learning, docs
 
-- **Title:** `pow: align spec/MCP/ILE with pow-model-v1`
+- **Title:** `pow: align spec/MCP/TAP Learning with pow-model-v1`
 - **Depends on:** PR 1; parallel to PR 2
 - **Files:** `lib/pow-api/proof-of-work-schema.ts`, `proof-of-work-integration.ts`, `opaque-evaluation.ts`, `mcp-tools/helpers.ts`, **`mcp-tools/dispatch.ts`**, `integration-skill.ts`, `lib/ile-proof-of-work-client.ts`, **`app/api/workspace/proof-of-work/route.ts`**, `lib/pow-api/types.ts` (delete `AnalysisInput` + `AudioInput` / `ImageInput` / `TextInput`), `docs/PROOF_OF_WORK_API.md`, `public/skill.md`
-- **Changes:** Spec responses include `pow_model_id` distinct from `spec_version`. `common_fields` uses wire `type`. MCP schema **and** dispatch forward `band_powers`, `device_name`, `sample_count`, `chunk_index`, `pow_model_id`. ILE product route forwards EEG fields. ILE client imports model types (video unused is fine). Leftover analysis-input types removed. **No** encoder detector / appetite work.
+- **Changes:** Spec responses include `pow_model_id` distinct from `spec_version`. `common_fields` uses wire `type`. MCP schema **and** dispatch forward `band_powers`, `device_name`, `sample_count`, `chunk_index`, `pow_model_id`. TAP Learning product route forwards EEG fields. TAP Learning client imports model types (video unused is fine). Leftover analysis-input types removed. **No** encoder detector / appetite work.
 
 ### PR 3b — Thought detector + appetite vocabulary
 

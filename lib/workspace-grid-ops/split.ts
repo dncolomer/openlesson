@@ -226,7 +226,7 @@ export async function handle_split(ctx: GridOpContext): Promise<Response | null>
     return NextResponse.json({
       planModified: true,
       updatedNodes: updatedNodes || [],
-      explanation: `Split selection into single-square blocks (size-aware ILE/TAP scopes).`,
+      explanation: `Split selection into single-square blocks (size-aware TAP Learning/TAP scopes).`,
       appearSequentially: true,
     });
 

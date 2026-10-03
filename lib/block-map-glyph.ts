@@ -9,11 +9,11 @@ export const BLOCK_MAP_CELL_COUNT = BLOCK_MAP_GRID_SIZE * BLOCK_MAP_GRID_SIZE;
 /** Non-empty 3×3 occupancy masks: bits 1..511. */
 export const BLOCK_MAP_PATTERN_MAX = (1 << BLOCK_MAP_CELL_COUNT) - 1;
 
-/** TIM-sourced ILE chapter that has not been opened yet (explore/map glyph). */
+/** TIM-sourced TAP Learning chapter that has not been opened yet (explore/map glyph). */
 export const TIM_EXPLORE_MAP_ICON = "tim-explore" as const;
 export type TimExploreMapIcon = typeof TIM_EXPLORE_MAP_ICON;
 
-/** Display-only: completed ILE chapter (flag). Not persisted — storage keeps the 3×3. */
+/** Display-only: completed TAP Learning chapter (flag). Not persisted — storage keeps the 3×3. */
 export const CHAPTER_DONE_MAP_ICON = "chapter-done" as const;
 export type ChapterDoneMapIcon = typeof CHAPTER_DONE_MAP_ICON;
 
@@ -105,7 +105,7 @@ function catalogIndex(n: number): BlockMapIconName {
   return `g${bits}`;
 }
 
-/** Deterministic PRNG so TAP/ILE reconstructed tiles keep the same pattern. */
+/** Deterministic PRNG so TAP/TAP Learning reconstructed tiles keep the same pattern. */
 export function randFromSeed(seed: string): () => number {
   let t = 0;
   for (let i = 0; i < seed.length; i++) t = (Math.imul(t, 31) + seed.charCodeAt(i)) >>> 0;
@@ -119,7 +119,7 @@ export function randFromSeed(seed: string): () => number {
 
 /**
  * Two-word keyword from the label + a 3×3 pattern.
- * Pass `seed` (stable id) so reconstructed TAP/ILE tiles do not flicker.
+ * Pass `seed` (stable id) so reconstructed TAP/TAP Learning tiles do not flicker.
  */
 export function blockMapGlyphForLabel(
   label: string,
@@ -242,12 +242,12 @@ export function composeBlockMapGlyphJsonInstruction(): string {
     'Also return "keyword" (1 or 2 map words, 4–28 characters, no punctuation).',
     "Keyword is the 1–2 word tile label shown on the map instead of the full title.",
     "Suggest it with the title/description — do not truncate the title to its first words.",
-    "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (workspace: filled; TAP/ILE: outlines).",
+    "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (workspace: filled; TAP/TAP Learning: outlines).",
   ].join(" ");
 }
 
 /**
- * ILE chapters: each step must carry its own map keyword, same as workspace
+ * TAP Learning chapters: each step must carry its own map keyword, same as workspace
  * blocks. Generic "also return keyword" is easy to miss when the JSON example
  * is a plan with nested steps.
  */
@@ -256,7 +256,7 @@ export function composeChapterMapGlyphJsonInstruction(): string {
     'Each chapter/step must include "keyword" (1 or 2 map words, 4–28 characters, no punctuation).',
     "Keyword is suggested as part of title/description generation — the 1–2 word tile label shown on the map instead of the full chapter text.",
     "Do not copy the first words of the description. Invent a short map label (e.g. description 'Prove AVL rotate-left after insert' → keyword 'AVL Rotate').",
-    "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (TAP/ILE: outlines).",
+    "Do not pick an icon — the server assigns a random 3×3 rearrangement of squares (TAP/TAP Learning: outlines).",
   ].join(" ");
 }
 

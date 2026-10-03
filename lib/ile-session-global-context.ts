@@ -1,5 +1,5 @@
 /**
- * ILE per-chapter practice context: canvas, notebook, thoughts/chat.
+ * TAP Learning per-chapter practice context: canvas, notebook, thoughts/chat.
  * Focusing a different chapter swaps that chapter's workspace — notes from
  * chapter 1 do not appear on chapter 3.
  *

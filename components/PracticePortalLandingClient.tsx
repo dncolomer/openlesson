@@ -47,7 +47,7 @@ type MintResult = {
   minutes: number | null;
 };
 
-/** MoK-aligned accents: slate for explore (ILE), amber for drill (TAP). */
+/** MoK-aligned accents: slate for explore (TAP Learning), amber for drill (TAP). */
 function productAccent(id: PracticePortalProductId): "slate" | "amber" {
   return id.startsWith("drill_") || id.endsWith("_drill") ? "amber" : "slate";
 }
@@ -134,7 +134,7 @@ export function PracticePortalLandingClient({
           body.minutes = selectedMinutes[productId] ?? product.timings[0];
         }
         // Workspace-forced: never send block_id (server also ignores overrides).
-        // Explore (ILE) always needs a block; Drill (TAP) may use full workspace.
+        // Explore (TAP Learning) always needs a block; Drill (TAP) may use full workspace.
         if (!forceWorkspaceScope) {
           const isExplore =
             productId.startsWith("explore_") || productId.startsWith("open_ended_");

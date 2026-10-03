@@ -1,5 +1,5 @@
 /**
- * Session-level ILE turn close: shipped closeIleImDoneAnswering per open Work.
+ * Session-level TAP Learning turn close: shipped closeIleImDoneAnswering per open Work.
  */
 import { describe, expect, it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";

@@ -45,7 +45,7 @@ export function isBillableTapSession(row: TapSessionBillingRow): boolean {
 }
 
 /**
- * Pure: whether a sessions row is a billable ILE practice session ($10).
+ * Pure: whether a sessions row is a billable TAP Learning practice session ($10).
  * Excludes AYCL one-time product sessions and demo_integration sessions that share the table.
  */
 export function isBillableIleSession(row: IleSessionBillingRow): boolean {
@@ -78,13 +78,13 @@ export function applyBillableTapSessionFilters<T extends { in: (col: string, val
  * PostgREST filter fragment: demo_integration is not the string "true".
  * Must use OR (is.null | neq.true) — bare `not.eq.true` drops NULL keys under
  * SQL three-valued logic (NULL NOT EQ true → UNKNOWN → row excluded).
- * Ordinary product ILE rows omit the key and must remain billable.
+ * Ordinary product TAP Learning rows omit the key and must remain billable.
  */
 export const ILE_BILLABLE_DEMO_INTEGRATION_OR =
   "metadata->>demo_integration.is.null,metadata->>demo_integration.neq.true" as const;
 
 /**
- * Apply production ILE billing filters to a Supabase query builder.
+ * Apply production TAP Learning billing filters to a Supabase query builder.
  * Excludes rows whose metadata marks AYCL or demo sessions.
  * Absent demo_integration / aycl_purchase_id keys remain billable.
  */
@@ -205,7 +205,7 @@ async function countTableRows(
 }
 
 /**
- * Count billable ILE sessions attributed to the user (`sessions` table).
+ * Count billable TAP Learning sessions attributed to the user (`sessions` table).
  * Excludes AYCL (metadata.aycl_purchase_id) and demo (metadata.demo_integration) sessions.
  */
 export async function countIleSessions(
@@ -226,7 +226,7 @@ export async function countIleSessions(
 
   const { count, error } = await query;
   if (error) {
-    console.error("[usage-metrics] ILE session count failed:", error);
+    console.error("[usage-metrics] TAP Learning session count failed:", error);
     return 0;
   }
   return count ?? 0;
@@ -261,7 +261,7 @@ export async function countTapSessions(
 }
 
 /**
- * Count combined billable TAP + ILE sessions attributed to the user.
+ * Count combined billable TAP + TAP Learning sessions attributed to the user.
  */
 export async function countTapIleSessions(
   supabase: SupabaseClient,
@@ -327,7 +327,7 @@ export async function countOrgIleSessions(
 
   const { count, error } = await query;
   if (error) {
-    console.error("[usage-metrics] org ILE session count failed:", error);
+    console.error("[usage-metrics] org TAP Learning session count failed:", error);
     return 0;
   }
   return count ?? 0;

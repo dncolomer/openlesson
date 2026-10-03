@@ -1,5 +1,5 @@
 /**
- * ILE chapter add: persist payload includes the new step; grid mapper
+ * TAP Learning chapter add: persist payload includes the new step; grid mapper
  * does not synthesize a linear DAG from step order.
  */
 import { describe, expect, it } from "vitest";
@@ -118,7 +118,7 @@ describe("sessionStepsToSkillGridNodes (shipped)", () => {
     });
     const updated = appendIleChapterStep(plan([existing]), {
       id: "ch-new",
-      description: "New ILE chapter",
+      description: "New TAP Learning chapter",
       position: { row: 0, col: 1 },
     });
     const nodes = sessionStepsToSkillGridNodes(updated.steps);

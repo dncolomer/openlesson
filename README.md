@@ -14,8 +14,8 @@ Uncertain Systems is built by [Uncertain Systems](https://x.com/uncertainsys). T
 
 Workspaces come in two durable kinds:
 
-- **Standard (map)** — blocks on a knowledge map, TAP / ILE practice links, TAPBench agent sessions, and the full PoW → Snapshot loop.
-- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint TAP / ILE / TAPBench knowledge links.
+- **Standard (map)** — blocks on a knowledge map, TAP / TAP Learning practice links, TAPBench agent sessions, and the full PoW → Snapshot loop.
+- **Verification Workspace** (stored as `knowledge_region`) — Goals / Verification Flows / Context / Knowledge / Settings. Flows collect proof of work from a question pool and a per-flow agent skill. Context is the same notes, files, and links tab. This kind does not mint TAP / TAP Learning / TAPBench knowledge links.
 
 ## How It Works
 
@@ -24,7 +24,7 @@ Workspaces come in two durable kinds:
 3. **Snapshot** — call `lwm_snapshot` (REST `POST .../lwm-snapshot`) for a 0–100 LWM Snapshot + GHC, spider markers, gaps, and next actions. Optional world model, knowledge config, distance, and custom regions live under `/api/v3/snapshot`.
 4. **Repeat** — more proof of work improves evaluation. Re-fetch the PoW schema and regenerate the workspace `skill.md` as context grows.
 
-On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge links for human or agent sessions. **Verification Workspace** workspaces do not mint those links. Their human path is a verification flow; agents still use PoW capture plus TAPBench Stash, and each flow has its own skill.
+On **standard** workspaces you can also mint TAP / TAP Learning / TAPBench knowledge links for human or agent sessions. **Verification Workspace** workspaces do not mint those links. Their human path is a verification flow; agents still use PoW capture plus TAPBench Stash, and each flow has its own skill.
 
 ## Key Features
 
@@ -33,10 +33,10 @@ On **standard** workspaces you can also mint TAP / ILE / TAPBench knowledge link
 - **LWM Snapshot** — sole product score strategy (`lwm_snapshot` / `POST .../lwm-snapshot`); GHC is secondary on the same report
 - **Proof-of-Work API + MCP** — REST under `/api/v3/{pow,snapshot,stash}` with JSON-RPC at `/api/mcp` (Bearer or OAuth)
 - **TAPBench Stash** — `buffer_proof_of_work` / `stash_proof_of_work` / `submit_stashed_proof_of_work` for agent PoW
-- **Think Aloud Protocol (TAP) and ILE** — practice sessions on standard workspaces (knowledge-link mint)
+- **Think Aloud Protocol (TAP) and TAP Learning** — practice sessions on standard workspaces (knowledge-link mint)
 - **Knowledge map** — React Flow block graph, simulation, DAGs, learner mode
 - **Muse EEG and face tracking** — optional biosignals on session proof of work
-- **unsys** — practice dialogue in ILE session and workspace chat
+- **unsys** — practice dialogue in TAP Learning session and workspace chat
 
 ## Tech Stack
 
@@ -118,18 +118,18 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # REST/MCP routes (workspaces, TAP/ILE, PoW/Snapshot/Stash, admin)
+│   ├── api/              # REST/MCP routes (workspaces, TAP/TAP Learning, PoW/Snapshot/Stash, admin)
 │   ├── workspace/        # Workspace views; create at /workspace/new
-│   ├── session/          # ILE tutoring session pages
+│   ├── session/          # TAP Learning tutoring session pages
 │   ├── tap/              # Think Aloud Protocol sessions
 │   ├── tapbench/         # TAPBench agent sessions
 │   ├── dashboard/        # User dashboard & API key management
 │   └── docs/             # Interactive Proof-of-Work API reference
 ├── components/           # React components
-│   ├── SessionView.tsx   # ILE session UI
+│   ├── SessionView.tsx   # TAP Learning session UI
 │   ├── WorkspaceView.tsx # Workspace shell (map vs Verification Workspace)
 │   └── thought-ui/       # Shared dialogue / thought components
-├── lib/                  # Product runtime (PoW, TAP/ILE, xAI, maps, billing)
+├── lib/                  # Product runtime (PoW, TAP/TAP Learning, xAI, maps, billing)
 │   ├── pow-api/          # PoW / Snapshot / Stash / MCP
 │   ├── xai-client.ts     # xAI API client
 │   └── workspace-kind.ts # standard vs knowledge_region
@@ -146,11 +146,11 @@ The app will be available at `http://localhost:3000`.
 
 ## Operator utilities
 
-These are **not** TAP/ILE/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
+These are **not** TAP/TAP Learning/MCP features. Catalog and conventions: [`utilities/README.md`](utilities/README.md).
 
-### Import think-aloud PoW (ILE Explore Solo)
+### Import think-aloud PoW (TAP Learning Explore Solo)
 
-Turns a think-aloud video or audio file into ILE Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
+Turns a think-aloud video or audio file into TAP Learning Explore Solo proof of work. Persist is the default; `--dry-run` prints the event list.
 
 ```bash
 npm run import:think-aloud-pow -- --media recording.mp4 --workspace <workspace-id>

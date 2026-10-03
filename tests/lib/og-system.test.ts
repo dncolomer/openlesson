@@ -194,7 +194,7 @@ describe("Unsys standard share (LP-derived)", () => {
     expect(UNSYS_STANDARD_SHARE.title).not.toMatch(/Beyond benchmarks for AI/i);
     expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/Beyond benchmarks for AI/i);
     expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/four products/i);
-    expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/TAP \/ ILE \/ ALE/i);
+    expect(UNSYS_STANDARD_SHARE.description).not.toMatch(/TAP \/ TAP Learning \/ ALE/i);
 
     // Aesthetic file exists on disk
     const onDisk = path.join(

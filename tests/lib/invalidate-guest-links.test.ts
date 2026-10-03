@@ -308,7 +308,7 @@ describe("invalidateIleLinkOne", () => {
 });
 
 describe("invalidateIleLinksAll", () => {
-  it("revokes all non-revoked ILE links in the workspace", async () => {
+  it("revokes all non-revoked TAP Learning links in the workspace", async () => {
     const id1 = "33333333-3333-4333-8333-333333333333";
     const id2 = "44444444-4444-4444-8444-444444444444";
     const mock = createSupabaseMock({
@@ -545,7 +545,7 @@ describe("static wiring: migration, APIs, UI", () => {
     expect(page).toContain("This TAP link has been revoked");
   });
 
-  it("ILE access keeps revoked gate via isGuestLinkRevoked", () => {
+  it("TAP Learning access keeps revoked gate via isGuestLinkRevoked", () => {
     const auth = read("lib/ile-link-auth.ts");
     expect(auth).toContain("isGuestLinkRevoked");
     expect(auth).toContain("ILE_LINK_REVOKED_MESSAGE");

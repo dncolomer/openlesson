@@ -123,7 +123,7 @@ export function SessionHeliosPanel({
       })
     : String(workAestheticImage || "").trim();
 
-  // Thought context capacity auto-stash (ILE has no purity clock).
+  // Thought context capacity auto-stash (TAP Learning has no purity clock).
   // Reads live forming text (ref) so a full bar actually persists.
   useEffect(() => {
     if (replica) return;

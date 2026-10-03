@@ -1,6 +1,6 @@
 /**
  * Scout mode: author flags, Work launch label, pick → connected canvas node,
- * on-demand questions (never answers), thank-you CTA gating, ILE context.
+ * on-demand questions (never answers), thank-you CTA gating, TAP Learning context.
  * Drives shipped helpers — no reimplementation.
  */
 import { describe, expect, it } from "vitest";
@@ -177,7 +177,7 @@ describe("author Scout enable/disable + at least one of Work/Drill/Scout", () =>
   });
 });
 
-describe("Learn (not Explore/Work) is the ILE block-launch label", () => {
+describe("Learn (not Explore/Work) is the TAP Learning block-launch label", () => {
   it("product labels, circular menu, and card use Prepare / Learn / Drill", () => {
     expect(PRODUCT_INTENT_LABELS.styleScout).toBe("Prepare");
     expect(PRODUCT_INTENT_LABELS.styleExplore).toBe("Learn");
@@ -406,7 +406,7 @@ describe("thank-you CTA gating by allowed modes", () => {
   });
 });
 
-describe("Scout canvas/path in later Work/ILE context", () => {
+describe("Scout canvas/path in later Work/TAP Learning context", () => {
   it("assembly includes scout artifacts when present", () => {
     const artifacts = {
       path: ["Heaps", "What heap invariant fails first on a decrease-key?"],

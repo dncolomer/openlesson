@@ -54,7 +54,7 @@ function PortalErrorBody({
 
 /**
  * Public Practice Portal landing at `/portal/{token}` — unauthenticated.
- * Map-of-Knowledge aesthetics shell; visitors mint TAP/ILE guest links.
+ * Map-of-Knowledge aesthetics shell; visitors mint TAP/TAP Learning guest links.
  *
  * 404 only for missing/revoked tokens (and missing/archived workspace).
  * Query/storage failures render an error surface (non-404).

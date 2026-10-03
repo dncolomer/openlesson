@@ -1,5 +1,5 @@
 /**
- * ILE Explore Solo think-aloud importer — drives shipped timeline, S2 apply, persist-map.
+ * TAP Learning Explore Solo think-aloud importer — drives shipped timeline, S2 apply, persist-map.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -48,7 +48,7 @@ function thoughts(events: IleSoloTimelineEvent[]): IleSoloThoughtEvent[] {
 }
 
 describe("buildIleSoloTimeline (shipped)", () => {
-  it("emits ILE speech start/stop, System 1 per utterance, auto-stash, idle, media timestamps", () => {
+  it("emits TAP Learning speech start/stop, System 1 per utterance, auto-stash, idle, media timestamps", () => {
     const helloEnd = 0.2;
     const thereStart = helloEnd + (ILE_IMPORT_SPEECH_GAP_MS - 1) / 1000;
     const thereEnd = thereStart + 0.2;
@@ -161,7 +161,7 @@ describe("applySystem2Inference (shipped)", () => {
 });
 
 describe("mapIleSoloEventsToUploadInputs (shipped)", () => {
-  it("maps ILE tool payloads, stills as screen, never speech/TAP/Helios/snapshot", () => {
+  it("maps TAP Learning tool payloads, stills as screen, never speech/TAP/Helios/snapshot", () => {
     const events = applySystem2Inference(
       buildIleSoloTimeline({
         duration: 70,
@@ -237,7 +237,7 @@ describe("mapIleSoloEventsToUploadInputs (shipped)", () => {
 });
 
 describe("import-think-aloud-pow CLI", () => {
-  it("documents flags and dry-runs ILE Solo events from the transcript fixture", () => {
+  it("documents flags and dry-runs TAP Learning Solo events from the transcript fixture", () => {
     mkdirSync(SCRATCH, { recursive: true });
     const bin = join(ROOT, "node_modules/.bin/vite-node");
     const script = join(ROOT, "utilities/import-think-aloud-pow/main.ts");

@@ -4,13 +4,13 @@ import { TAP_SPEECH_SEGMENT_GAP_MS } from "@/lib/tap-speech-proof-of-work";
 import { TAP_SILENCE_AUTO_STASH_MS } from "@/lib/tap-session-purity";
 import { ILE_SESSION_MODE_LABELS } from "@/lib/ile-mode";
 
-/** Speech start/stop gap — same 2600ms the live ILE/TAP mic uses. */
+/** Speech start/stop gap — same 2600ms the live TAP Learning/TAP mic uses. */
 export const ILE_IMPORT_SPEECH_GAP_MS = TAP_SPEECH_SEGMENT_GAP_MS;
 
-/** Thought chain window — live ILE Explore Solo. */
+/** Thought chain window — live TAP Learning Explore Solo. */
 export const ILE_IMPORT_CHAIN_GAP_MS = ILE_THOUGHT_CHAIN_GAP_MS;
 
-/** Silence with forming text → `auto_stash` (live ILE uses TAP silence timing). */
+/** Silence with forming text → `auto_stash` (live TAP Learning uses TAP silence timing). */
 export const ILE_IMPORT_AUTO_STASH_MS = TAP_SILENCE_AUTO_STASH_MS;
 
 /** Idle heartbeat cadence. */

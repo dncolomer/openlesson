@@ -50,9 +50,13 @@ export const ILE_WORK_CANVAS_COMMAND_POW_IDS = [
 
 export type IleWorkCanvasCommandPowId = (typeof ILE_WORK_CANVAS_COMMAND_POW_IDS)[number];
 
+/** Speech written onto the board. Not draw_text and not a speech segment. */
+export const ILE_WORK_CANVAS_DICTATE_ACTION = "dictate" as const;
+
 export const ILE_WORK_CANVAS_POW_ACTIONS = [
   ...ILE_WORK_CANVAS_USE_AND_PROMPT_ACTIONS,
   ...ILE_WORK_CANVAS_COMMAND_POW_IDS,
+  ILE_WORK_CANVAS_DICTATE_ACTION,
 ] as const;
 
 export type IleWorkCanvasPowAction = (typeof ILE_WORK_CANVAS_POW_ACTIONS)[number];
@@ -446,6 +450,28 @@ export function buildIleWorkCanvasAskPowEvent(
  * One canvas command click. `tool_action` and `metadata.command_id` are the
  * command id (`selective-compression`, not a free-text `expand_more`).
  */
+/** One finished dictate. `metadata.prompt` is the transcript on the board. */
+export function buildIleWorkCanvasDictatePowEvent(input: {
+  text?: string | null;
+  elementId?: string | null;
+}): IleWorkCanvasPowEvent | null {
+  const prompt = canvasPowPromptText(input.text);
+  if (!prompt) return null;
+  const ids = input.elementId ? [input.elementId] : [];
+  return {
+    toolName: ILE_WORK_CANVAS_POW_TOOL_NAME,
+    toolAction: ILE_WORK_CANVAS_DICTATE_ACTION,
+    metadata: {
+      via: "excalidraw",
+      prompt,
+      element_ids: ids,
+      element_types: ids.length ? ["text"] : [],
+      count: ids.length,
+      multi: false,
+    },
+  };
+}
+
 export function buildIleWorkCanvasCommandPowEvent(
   commandId: string,
   input: {
@@ -644,6 +670,11 @@ export class IleWorkCanvasPowCollector {
     selectedElements?: readonly IleWorkCanvasElement[] | null;
   }): IleWorkCanvasPowEvent[] {
     const event = buildIleWorkCanvasAskPowEvent("board_prompt", input);
+    return event ? [event] : [];
+  }
+
+  dictate(input: { text?: string | null; elementId?: string | null }): IleWorkCanvasPowEvent[] {
+    const event = buildIleWorkCanvasDictatePowEvent(input);
     return event ? [event] : [];
   }
 

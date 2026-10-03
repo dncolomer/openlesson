@@ -41,6 +41,7 @@ export function ThoughtEditPanel({
       autoFocusConfirm={false}
       size="lg"
       testId="thought-edit-panel"
+      headerClose
     >
       <textarea
         data-thought-edit-panel

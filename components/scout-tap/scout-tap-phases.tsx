@@ -9,11 +9,14 @@ import {
   voiceChallengeStartSucceeded,
 } from "@/lib/practice-voice-challenge";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
+import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { SessionWorkSurface } from "@/components/session-view/session-work-surface";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
 import { TapThoughtButton } from "@/components/tap-score/tap-thought-button";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 import type { SpokenLocale } from "@/lib/tutoring-languages";
 import { coerceSpokenLocale } from "@/lib/tutoring-languages";
@@ -242,7 +245,11 @@ export function ScoutTapPhases(props: {
       data-scout-think-aloud={String(scoutThinkAloudEnabled())}
     >
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && prepareStep === "challenge" ? (
+        {phase === "briefing" && isStartingSession ? (
+          <SessionPageLoading message={t("session.startLoading")} />
+        ) : null}
+
+        {phase === "briefing" && !isStartingSession && prepareStep === "challenge" ? (
           <section
             className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
             data-scout-briefing
@@ -258,7 +265,7 @@ export function ScoutTapPhases(props: {
           </section>
         ) : null}
 
-        {phase === "briefing" && prepareStep === "confirm" && (
+        {phase === "briefing" && !isStartingSession && prepareStep === "confirm" && (
           <section className="relative flex min-h-0 flex-1" data-scout-briefing data-tap-briefing-layout="sections" data-prepare-briefing-step="confirm">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
@@ -313,14 +320,20 @@ export function ScoutTapPhases(props: {
                     waiting={clockPaused || questionsLoading}
                     listening={false}
                   />
-                  {showEndSession ? (
-                    <div className="flex shrink-0 items-center" data-scout-end-session>
-                      <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                        End session
-                      </TapThoughtButton>
-                    </div>
-                  ) : null}
                 </div>
+              }
+              actions={
+                showEndSession ? (
+                  <div className="flex w-full min-w-0" data-scout-end-session>
+                    <button
+                      type="button"
+                      onClick={() => void endSession()}
+                      className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full`}
+                    >
+                      End session
+                    </button>
+                  </div>
+                ) : null
               }
               chapters={
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-scout-questions-pane>
@@ -338,25 +351,17 @@ export function ScoutTapPhases(props: {
         )}
 
         {phase === "saving" ? (
-          <section className="flex flex-1 items-center justify-center">
-            <LoadingStatusMessage message={t("tap.postSession.savingAndReturning")} />
-          </section>
+          <SessionPageLoading message={t("tap.postSession.savingAndReturning")} />
         ) : null}
 
         {phase === "results" ? (
-          <section
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
-            data-scout-thank-you
-            data-tap-session-thank-you
-          >
-            <div className="shrink-0 border-b border-neutral-800/60 px-4 py-4 text-center">
-              <h1 className="text-2xl font-medium text-neutral-100">
-                {t("scout.thankYou.title")}
-              </h1>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-neutral-300">
-                {t("scout.thankYou.body")}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <SessionFinishedScreen
+            data-scout-thank-you=""
+            data-tap-session-thank-you=""
+            title={t("scout.thankYou.title")}
+            body={t("scout.thankYou.body")}
+            actions={
+              <>
                 <TapThoughtButton
                   size="md"
                   variant="primary"
@@ -382,20 +387,21 @@ export function ScoutTapPhases(props: {
                     {t("scout.thankYou.drill")}
                   </TapThoughtButton>
                 ) : null}
-              </div>
-            </div>
-            <div className="min-h-0 flex-1">{canvasPane}</div>
-          </section>
+              </>
+            }
+          />
         ) : null}
 
         {phase === "error" && (
-          <section className="flex flex-1 flex-col items-center justify-center text-center">
-            <h1 className="text-2xl font-medium">Could not end Scout session</h1>
-            <p className="mt-3 max-w-md text-sm text-red-300">{resultsError || error}</p>
-            <TapThoughtButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("briefing")}>
-              Try again
-            </TapThoughtButton>
-          </section>
+          <SessionFinishedScreen
+            title="Could not end Scout session"
+            body={resultsError || error}
+            actions={
+              <TapThoughtButton size="md" variant="primary" onClick={() => setPhase("briefing")}>
+                Try again
+              </TapThoughtButton>
+            }
+          />
         )}
       </div>
     </main>

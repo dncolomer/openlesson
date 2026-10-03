@@ -14,9 +14,8 @@ import { DialogFrame, type DialogSize } from "@/components/ui/DialogFrame";
  *   • fullscreen dark overlay with backdrop blur, click-to-dismiss
  *   • centered panel: `bg-neutral-900 border-neutral-800 rounded-none`
  *   • optional icon pill in the header (destructive/warning/info/success)
- *   • configurable footer: primary + cancel, with an optional tertiary
- *     action rendered full-width above the primary/cancel row (used by
- *     end-session for "Pause and leave")
+ *   • configurable footer: cancel, then confirm, then any tertiary
+ *     action (used by the save dialog for "discard")
  *
  * The component is purely presentational — parents own open state and
  * side effects. For a promise-based drop-in replacement of `confirm()`
@@ -36,7 +35,7 @@ interface ConfirmDialogProps {
   onCancel: () => void;
   /** Fired when the user confirms the primary action. */
   onConfirm: () => void;
-  /** Optional third action rendered full-width above the primary/cancel row. */
+  /** Optional third action rendered after cancel and confirm. */
   onTertiary?: () => void;
 
   title: ReactNode;
@@ -79,6 +78,8 @@ interface ConfirmDialogProps {
   confirmOnEnter?: boolean;
   testId?: string;
   panelClassName?: string;
+  /** Header ✕, in addition to cancel, overlay click, and Escape. */
+  headerClose?: boolean;
 }
 
 // ── Variant visuals ─────────────────────────────────────────────────────
@@ -185,6 +186,7 @@ export function ConfirmDialog({
   confirmOnEnter = true,
   testId,
   panelClassName,
+  headerClose = false,
 }: ConfirmDialogProps) {
   const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -227,6 +229,7 @@ export function ConfirmDialog({
       size={size}
       testId={testId}
       panelClassName={panelClassName}
+      headerClose={headerClose}
     >
       <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
         <div className="flex items-center gap-3">
@@ -250,18 +253,7 @@ export function ConfirmDialog({
         )}
       </div>
 
-      <div className="px-6 py-4 flex flex-col gap-2">
-        {onTertiary && tertiaryLabel && (
-          <button
-            type="button"
-            onClick={onTertiary}
-            data-testid={tertiaryTestId}
-            className={TERTIARY_TONE[tertiaryTone]}
-          >
-            {tertiaryIcon}
-            {tertiaryLabel}
-          </button>
-        )}
+      <div className="px-6 py-4 flex flex-col gap-2" data-confirm-dialog-actions="">
         <div className={hideCancel ? "flex" : "flex gap-2"}>
           {!hideCancel && (
             <button
@@ -283,6 +275,17 @@ export function ConfirmDialog({
             {confirmLabel}
           </button>
         </div>
+        {onTertiary && tertiaryLabel && (
+          <button
+            type="button"
+            onClick={onTertiary}
+            data-testid={tertiaryTestId}
+            className={TERTIARY_TONE[tertiaryTone]}
+          >
+            {tertiaryIcon}
+            {tertiaryLabel}
+          </button>
+        )}
       </div>
     </DialogFrame>
   );

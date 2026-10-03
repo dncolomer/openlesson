@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { IleCollapsibleOverlay } from "@/components/session-view/ile-collapsible-overlay";
 import { SessionSidebar } from "@/components/session-view/session-sidebar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DialogFrame } from "@/components/ui/DialogFrame";
 import {
   AudioMiniPreview,
   EegMiniPreview,
@@ -62,6 +63,8 @@ export type SessionChromeProps = {
   introWidget: ReactNode;
   onCloseSessionModal?: () => void;
   voiceBar: ReactNode;
+  /** Data, Logs, and Save. The sidebar renders this only while expanded. */
+  actions?: ReactNode;
   powCounts: IlePowDisplayCounts;
   unsubmittedPowCounts?: IlePowDisplayCounts;
   openWorkCount?: number;
@@ -136,6 +139,7 @@ export function SessionChrome({
   introWidget,
   onCloseSessionModal,
   voiceBar,
+  actions = null,
   powCounts,
   unsubmittedPowCounts = emptyIlePowDisplayCounts(),
   openWorkCount = 0,
@@ -169,6 +173,16 @@ export function SessionChrome({
   onDismissCloseReview,
 }: SessionChromeProps) {
   const overlayOpen = isIleMapOverlayTool(activeTool);
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onCloseToolOverlay();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCloseToolOverlay, overlayOpen]);
   const modalTool = introOpen
     ? "help"
     : isIleSessionModalTool(activeTool)
@@ -283,6 +297,7 @@ export function SessionChrome({
             </div>
           }
           transcript={voiceBar}
+          actions={actions}
         />
 
         {error && !showWelcomeModal ? (
@@ -293,18 +308,15 @@ export function SessionChrome({
         ) : null}
 
         {modalTool && modalTool !== "help" ? (
-          <div
-            data-ile-session-modal={modalTool}
-            className="pointer-events-auto absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+          <DialogFrame
+            open
+            onClose={() => onCloseSessionModal?.()}
+            size="xl"
+            panelClassName="max-w-[min(42rem,calc(100%-2rem))] bg-neutral-950 border-neutral-700"
           >
-            <button
-              type="button"
-              aria-label="Close"
-              className="absolute inset-0 cursor-default"
-              onClick={() => onCloseSessionModal?.()}
-            />
             <div
-              className={`relative z-10 flex max-h-[min(88vh,44rem)] w-[min(42rem,calc(100%-2rem))] flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-950 shadow-[0_28px_90px_rgba(0,0,0,0.65)] ${
+              data-ile-session-modal={modalTool}
+              className={`flex max-h-[min(88vh,44rem)] w-full flex-col overflow-hidden ${
                 modalTool === "logs" ? "h-[min(88vh,44rem)]" : ""
               }`}
             >
@@ -316,6 +328,7 @@ export function SessionChrome({
                   <button
                     type="button"
                     data-ile-session-modal-close
+                    aria-label="Close"
                     onClick={() => onCloseSessionModal?.()}
                     className="rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-900 hover:text-neutral-200"
                   >
@@ -333,9 +346,18 @@ export function SessionChrome({
                 )}
               </div>
             </div>
-          </div>
+          </DialogFrame>
         ) : null}
 
+        {overlayOpen ? (
+          <button
+            type="button"
+            aria-label="Close"
+            data-ile-tool-overlay-backdrop=""
+            className="absolute inset-0 z-[44] cursor-default"
+            onClick={onCloseToolOverlay}
+          />
+        ) : null}
         {overlayOpen ? (
           <div
             data-ile-tool-overlay

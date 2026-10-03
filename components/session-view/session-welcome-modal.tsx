@@ -3,6 +3,7 @@
 import { AestheticPicker } from "@/components/AestheticPicker";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { IleStartLoading } from "@/components/session-view/ile-start-loading";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import { isIleConfirmSettingsBlocked } from "@/components/session-view/ile-confirm-settings";
 import type { SessionWelcomeModalProps } from "@/components/session-view/types";
 import { TapAestheticSection } from "@/components/tap-score/tap-aesthetic-section";
@@ -99,14 +100,14 @@ export function SessionWelcomeModal({
 }: SessionWelcomeModalProps) {
   if (isPreparing) {
     return (
-      <div
+      <SessionPageLoading
         data-ile-session-settings
         data-session-welcome-modal=""
         data-ile-start-loading-page
-        className="flex h-screen min-h-0 w-full flex-col bg-[#0a0a0a]"
+        className="h-screen"
       >
         <IleStartLoading t={t} />
-      </div>
+      </SessionPageLoading>
     );
   }
 

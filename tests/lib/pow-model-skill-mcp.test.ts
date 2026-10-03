@@ -77,6 +77,7 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(contract).toContain("board_prompt");
     expect(contract).toContain("expand_more");
     expect(contract).toContain("metadata.command_id");
+    expect(contract).toContain("tool_action dictate");
     for (const id of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(contract).toContain(id);
     }
@@ -143,6 +144,7 @@ describe("pow-model-v1 agent contract on skill and MCP", () => {
     expect(section).toContain("system2:send");
     expect(section).toContain(TAP_SPEECH_TOOL_NAME);
     expect(section).toContain("speech_start");
+    expect(section).toContain("dictate. metadata.prompt is the transcript");
     for (const id of ILE_WORK_CANVAS_COMMAND_POW_IDS) {
       expect(section).toContain(id);
     }

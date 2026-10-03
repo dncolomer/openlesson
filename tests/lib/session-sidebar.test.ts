@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
+import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
 import {
   IleMapInsightsWidget,
   IleWorkCanvasTimer,
@@ -52,9 +52,12 @@ const TAP_SECTIONS: SessionSidebarSection[] = [
   "save",
 ];
 
-function voiceBar(mode: SessionSidebarMode) {
-  return createElement(IleVoiceBar, {
-    thought,
+function voiceBar() {
+  return createElement(IleVoiceBar, { thought });
+}
+
+function voiceActions(mode: SessionSidebarMode) {
+  return createElement(IleVoiceBarActions, {
     activeTool: "chapters",
     onToolChange: () => {},
     onBackToDashboard: () => {},
@@ -84,7 +87,8 @@ function renderSidebar(mode: SessionSidebarMode, collapsed: boolean, remainingSe
       }),
       chapters: createElement("div", { "data-slot": "chapters" }, "Chapters body"),
       signals: createElement("div", { "data-slot": "signals" }, "Signals body"),
-      transcript: voiceBar(mode),
+      transcript: voiceBar(),
+      actions: voiceActions(mode),
       counts: { insights: 4, chapters: 2, signals: 3 },
     }),
   );
@@ -158,9 +162,11 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain("Signals body");
     expect(html).toContain("live speech line");
     const transcriptAt = html.indexOf("data-ile-transcription-box");
+    const actionsRowAt = html.indexOf("data-session-sidebar-actions");
     const actionsAt = html.indexOf("data-ile-voice-bar-actions");
     expect(transcriptAt).toBeGreaterThan(-1);
-    expect(actionsAt).toBeGreaterThan(transcriptAt);
+    expect(actionsRowAt).toBeGreaterThan(transcriptAt);
+    expect(actionsAt).toBeGreaterThan(actionsRowAt);
     expect(html.indexOf("data-ile-bar-data")).toBeGreaterThan(actionsAt);
     expect(html.slice(transcriptAt, actionsAt)).not.toContain("data-ile-bar-data");
     expect(html).toContain("data-ile-bar-data");
@@ -200,6 +206,9 @@ describe("session sidebar mode configuration", () => {
     expect(html).toContain(">Signals<");
     expect(html).not.toContain("data-ile-map-insights-widget");
     expect(html).not.toContain("live speech line");
+    expect(html).not.toContain("data-session-sidebar-actions");
+    expect(html).not.toContain("data-ile-bar-save");
+    expect(html).not.toContain(">Save<");
     expect(html).not.toContain("display:none");
     expect(html).not.toContain("translate");
     expect(html).not.toContain("data-ile-global-resources");
@@ -214,7 +223,8 @@ describe("session sidebar mode configuration", () => {
         onOpenGlobalResources: open,
         globalResourcesOpen: true,
         chapters: createElement("div", null, "Chapters body"),
-        transcript: voiceBar("ile"),
+        transcript: voiceBar(),
+        actions: voiceActions("ile"),
       }),
     );
     expect(expanded).toContain("data-ile-global-resources");
@@ -245,7 +255,7 @@ describe("session sidebar mode configuration", () => {
     expect(collapsed).toContain('data-session-sidebar-count="insights"');
 
     expect(renderSidebar("ile", false, 65)).not.toContain("data-ile-global-resources");
-    expect(renderToStaticMarkup(voiceBar("ile"))).not.toContain("data-ile-global-resources");
+    expect(renderToStaticMarkup(voiceBar())).not.toContain("data-ile-global-resources");
   });
 
   it("drops insights and data-input channels for TAP and verification TAP", () => {
@@ -254,8 +264,11 @@ describe("session sidebar mode configuration", () => {
       expect(html).toContain(`data-session-sidebar-mode="${mode}"`);
       expect(html).toContain("Chapters body");
       expect(html).toContain("live speech line");
-      expect(html.indexOf("data-ile-voice-bar-actions")).toBeGreaterThan(
+      expect(html.indexOf("data-session-sidebar-actions")).toBeGreaterThan(
         html.indexOf("data-ile-transcription-box"),
+      );
+      expect(html.indexOf("data-ile-voice-bar-actions")).toBeGreaterThan(
+        html.indexOf("data-session-sidebar-actions"),
       );
       expect(html).toContain("data-ile-bar-logs");
       expect(html).toContain("data-ile-bar-save");
@@ -271,6 +284,8 @@ describe("session sidebar mode configuration", () => {
     expect(collapsedTap).toContain('data-session-sidebar-count-value="2"');
     expect(collapsedTap).not.toContain('data-session-sidebar-count="insights"');
     expect(collapsedTap).not.toContain('data-session-sidebar-count="signals"');
+    expect(collapsedTap).not.toContain("data-session-sidebar-actions");
+    expect(collapsedTap).not.toContain("data-ile-bar-save");
   });
 
   it("counts live signal tiles with audio always included", () => {

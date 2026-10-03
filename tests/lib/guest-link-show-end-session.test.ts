@@ -116,16 +116,21 @@ describe("ILE UI gate", () => {
     expect(guest).toContain("SessionView");
   });
 
-  it("SessionView and SessionControlBar hide end controls when showEndSession is false", () => {
+  it("SessionView and live TAP surfaces hide end controls when showEndSession is false", () => {
     const view = readSessionViewSurface();
     expect(view).toContain("showEndSession");
     expect(view).toContain("allowEndSession");
     expect(view).toMatch(/allowEndSession\s*\?\s*\([\s\S]*ConfirmDialog/);
     expect(view).toMatch(/allowEndSession\s*\?\s*t\(["']sessionEnd\.returnToWorkspace["']\)/);
 
-    const bar = read("components/SessionControlBar.tsx");
-    expect(bar).toContain("showEndSession");
-    expect(bar).toContain("data-session-end-control");
-    expect(bar).toMatch(/showEndSession\s*\?\s*\([\s\S]*sessionEnd\.endSession/);
+    const tap = readTapScoreSurface();
+    const prepare = read("components/scout-tap/scout-tap-phases.tsx");
+    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(tap).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
+    expect(prepare).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
+    expect(drill).toMatch(/showEndSession\s*\?\s*\([\s\S]*End session/);
+    expect(tap).not.toContain("data-session-end-control");
+    expect(prepare).not.toContain("data-session-end-control");
+    expect(drill).not.toContain("data-session-end-control");
   });
 });

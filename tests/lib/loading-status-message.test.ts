@@ -71,7 +71,9 @@ describe("Loading gate call sites use shared treatment", () => {
     const offenders: string[] = [];
     for (const file of GATE_FILES) {
       const source = readRepoFile(file);
-      if (!source.includes("LoadingStatusMessage")) offenders.push(file);
+      if (!source.includes("LoadingStatusMessage") && !source.includes("SessionPageLoading")) {
+        offenders.push(file);
+      }
     }
     expect(offenders).toEqual([]);
   });
@@ -96,7 +98,7 @@ describe("Loading gate call sites use shared treatment", () => {
         if (!entry.name.endsWith(".tsx")) continue;
         const source = readRepoFile(rel);
         if (!source.includes("min-h-screen")) continue;
-        if (source.includes("LoadingStatusMessage")) continue;
+        if (source.includes("LoadingStatusMessage") || source.includes("SessionPageLoading")) continue;
         if (spinnerOnlyGate.test(source) || bareLoadingGate.test(source)) {
           offenders.push(rel);
         }

@@ -13,7 +13,7 @@ import { useSessionSpeech } from "@/components/session-view/use-session-speech";
 import { useSessionIdle, type IlePowInterruptionHandler } from "@/components/session-view/use-session-idle";
 import { useSessionPhase } from "@/components/session-view/use-session-phase";
 import { useSessionHeliosPrep } from "@/components/session-view/use-session-helios-prep";
-import { LoadingStatusMessage } from "./LoadingStatusMessage";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
 import {
   buildPowParticipantIdentity,
   type PowParticipantIdentity,
@@ -84,7 +84,7 @@ import { SessionToolPanes } from "@/components/session-view/session-tool-panes";
 import { SessionThoughtPane } from "@/components/session-view/session-thought-pane";
 import { SessionChrome } from "@/components/session-view/session-chrome";
 import { WorkCanvas } from "@/components/ExcalidrawCanvas";
-import { IleVoiceBar } from "@/components/session-view/ile-voice-bar";
+import { IleVoiceBar, IleVoiceBarActions } from "@/components/session-view/ile-voice-bar";
 import { sessionSidebarHasSection } from "@/lib/session-sidebar";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
@@ -1972,11 +1972,10 @@ export function SessionView({
 
   if (!session || isSaving) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a]">
-        <LoadingStatusMessage
-          message={isSaving ? t("session.savingSession") : t("common.loading")}
-        />
-      </div>
+      <SessionPageLoading
+        className="min-h-screen"
+        message={isSaving ? t("session.savingSession") : t("common.loading")}
+      />
     );
   }
 
@@ -2203,9 +2202,9 @@ export function SessionView({
         toolOverlay={renderSessionToolPanes()}
         workCanvas={renderWorkCanvas()}
         heliosWidget={renderChapterThoughtPane(false)}
-        voiceBar={
-          <IleVoiceBar
-            thought={sessionThoughtInterface}
+        voiceBar={<IleVoiceBar thought={sessionThoughtInterface} />}
+        actions={
+          <IleVoiceBarActions
             activeTool={activeTool}
             onToolChange={handleIleSessionToolChange}
             onBackToDashboard={() => {

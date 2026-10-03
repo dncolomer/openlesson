@@ -1,6 +1,7 @@
 /**
- * Prompt-bar Dictate: record the live speech bar after the click, then drop
- * that text on the work canvas as one editable text element.
+ * Prompt-bar Dictate: speech that arrives after the click is written onto
+ * the work canvas as it is recognized, in one learner text element. Stop
+ * keeps that element and records it as canvas proof of work.
  */
 import {
   convertToExcalidrawElements,
@@ -94,6 +95,85 @@ export function noteIleDictateTranscript(
 
 export function ileDictateCaptureText(capture: IleDictateCapture): string {
   return joinDictate(capture.sealed, sliceAfterAnchor(capture.display, capture.anchor));
+}
+
+/** Advance one recognition update and return the text that should be on the board. */
+export function advanceIleDictateCapture(
+  capture: IleDictateCapture,
+  nextTranscript: string,
+): { capture: IleDictateCapture; text: string } {
+  const next = noteIleDictateTranscript(capture, nextTranscript);
+  return { capture: next, text: ileDictateCaptureText(next) };
+}
+
+function dictatedTextElement(
+  elements: readonly IleWorkCanvasElement[],
+  elementId: string | null | undefined,
+): IleWorkCanvasElement | null {
+  if (!elementId) return null;
+  return (
+    elements.find(
+      (el) => el.id === elementId && el.type === "text" && !el.isDeleted,
+    ) ?? null
+  );
+}
+
+/**
+ * Create or update the live dictate mark. The same element id grows with the
+ * transcript. An empty transcript removes a mark this dictate had started.
+ */
+export function syncIleDictatedTextOnWorkCanvas(
+  scene: IleWorkCanvasScene | null | undefined,
+  text: string,
+  elementId: string | null | undefined,
+): { scene: IleWorkCanvasScene; elementId: string | null; changed: boolean } {
+  const current = serializeIleWorkCanvasScene(scene);
+  const clean = normalizeDictateText(text);
+  const existing = dictatedTextElement(current.elements, elementId);
+  if (!clean) {
+    if (!existing) return { scene: current, elementId: null, changed: false };
+    return {
+      scene: {
+        elements: current.elements.filter((el) => el.id !== existing.id),
+        appState: current.appState,
+        files: current.files,
+      },
+      elementId: null,
+      changed: true,
+    };
+  }
+  const wrapped = wrapIleWorkCanvasText(clean);
+  if (existing) {
+    const sameText = normalizeDictateText(String(existing.originalText || existing.text || "")) === clean;
+    if (sameText && existing.width === wrapped.width && existing.height === wrapped.height) {
+      return { scene: current, elementId: existing.id, changed: false };
+    }
+    const nextElement: IleWorkCanvasElement = {
+      ...existing,
+      text: wrapped.text,
+      originalText: clean,
+      width: wrapped.width,
+      height: wrapped.height,
+      autoResize: false,
+      version: (Number(existing.version) || 1) + 1,
+      versionNonce: Math.floor(Math.random() * 2 ** 31),
+      updated: Date.now(),
+      customData: { ...(existing.customData ?? {}), author: ILE_CANVAS_DICTATE_AUTHOR },
+    };
+    return {
+      scene: {
+        elements: current.elements.map((el) => (el.id === existing.id ? nextElement : el)),
+        appState: current.appState,
+        files: current.files,
+      },
+      elementId: existing.id,
+      changed: true,
+    };
+  }
+  const placed = appendIleDictatedTextToWorkCanvas(current, clean);
+  const createdId = placed.appended[0]?.id ?? null;
+  if (!createdId) return { scene: current, elementId: null, changed: false };
+  return { scene: placed.scene, elementId: createdId, changed: true };
 }
 
 /** Place dictated speech as a learner text box beside existing marks. */

@@ -2621,6 +2621,7 @@ const CANVAS_POW_ACTIONS = new Set([
   "suggest-insight",
   "clear-overlaps",
   "join",
+  "dictate",
 ]);
 
 /**

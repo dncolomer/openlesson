@@ -27,6 +27,8 @@ export type DialogFrameProps = {
   panelClassName?: string;
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
+  /** Header ✕. Overlay click and Escape already dismiss through onClose. */
+  headerClose?: boolean;
   /** When false, render in-tree (needed for Document PiP). Default true. */
   portal?: boolean;
   /** Becomes `data-{testId}` on the dialog root. */
@@ -43,6 +45,7 @@ export function DialogFrame({
   panelClassName,
   closeOnOverlay = true,
   closeOnEscape = true,
+  headerClose = false,
   portal = true,
   testId,
 }: DialogFrameProps) {
@@ -76,6 +79,17 @@ export function DialogFrame({
       <div
         className={`relative z-10 w-full ${DIALOG_SIZE[size]} bg-neutral-900 border border-neutral-800 rounded-none shadow-2xl overflow-hidden ${panelClassName ?? ""}`}
       >
+        {headerClose ? (
+          <button
+            type="button"
+            data-dialog-header-close=""
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute right-3 top-3 z-20 rounded-none px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+          >
+            ✕
+          </button>
+        ) : null}
         {children}
       </div>
     </div>

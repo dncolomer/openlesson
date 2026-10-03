@@ -208,6 +208,7 @@ describe("Work-canvas scene-diff PoW (shipped classifier)", () => {
       "multi_select",
       "expand_more",
       "board_prompt",
+      "dictate",
       ...ILE_WORK_CANVAS_COMMAND_POW_IDS,
     ]);
     expect(distinct.size).toBe(ILE_WORK_CANVAS_POW_ACTIONS.length);

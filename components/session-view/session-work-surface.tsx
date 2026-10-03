@@ -15,6 +15,7 @@ export function SessionWorkSurface({
   clock = null,
   chapters = null,
   transcript = null,
+  actions = null,
   counts,
   sectionLabels,
 }: {
@@ -23,6 +24,8 @@ export function SessionWorkSurface({
   clock?: ReactNode;
   chapters?: ReactNode;
   transcript?: ReactNode;
+  /** Expanded-only bottom row. Leave/end controls go here, not in the clock. */
+  actions?: ReactNode;
   counts?: Partial<Record<SessionSidebarSection, number>>;
   sectionLabels?: Partial<Record<"insights" | "chapters" | "signals", string>>;
 }) {
@@ -40,6 +43,7 @@ export function SessionWorkSurface({
         clock={clock}
         chapters={chapters}
         transcript={transcript}
+        actions={actions}
         counts={counts}
         sectionLabels={sectionLabels}
       />

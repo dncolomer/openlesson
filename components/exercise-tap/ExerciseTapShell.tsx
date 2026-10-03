@@ -33,7 +33,8 @@ export function ExerciseTapShell({
   formingText = "",
   logEndOfChainOfThought,
   onClearForming,
-  controlStrip,
+  clock = null,
+  actions = null,
   identityBadge,
   problems,
   activeProblemId,
@@ -54,7 +55,9 @@ export function ExerciseTapShell({
   formingText?: string;
   logEndOfChainOfThought?: (event: IleEndOfChainOfThoughtEvent) => void;
   onClearForming?: () => void;
-  controlStrip?: ReactNode;
+  /** Sidebar header clock. The leave control is `actions`, not this strip. */
+  clock?: ReactNode;
+  actions?: ReactNode;
   identityBadge?: ReactNode;
   problems: TapSoloProblem[];
   activeProblemId: string | null;
@@ -97,7 +100,8 @@ export function ExerciseTapShell({
             />
           </div>
         }
-        clock={controlStrip}
+        clock={clock}
+        actions={actions}
         transcript={
           <div
             data-exercise-speech-panel

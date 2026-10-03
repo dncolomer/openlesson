@@ -104,6 +104,13 @@ export function ileSidebarSignalCount(input: {
   );
 }
 
+/**
+ * White primary control in the expanded sidebar actions row.
+ * Learn uses it for Save. TAP flows use it for End session.
+ */
+export const SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS =
+  "pointer-events-auto h-7 min-w-0 rounded-none border border-white bg-white px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-950 hover:bg-neutral-200";
+
 export function sessionSidebarWidthRem(collapsed: boolean): number {
   return collapsed ? SESSION_SIDEBAR_COLLAPSED_REM : SESSION_SIDEBAR_EXPANDED_REM;
 }

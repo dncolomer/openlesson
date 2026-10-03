@@ -22,7 +22,9 @@ import {
 } from "@/lib/practice-voice-challenge";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { TapBriefingConfig } from "@/components/TapBriefingConfig";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { TapLiveClock } from "@/components/tap-score/tap-live-clock";
@@ -435,7 +437,15 @@ export function TapScorePhases(props: {
   return (
     <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white selection:bg-zinc-700">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && briefingStep === "challenge" && pendingStart ? (
+        {phase === "briefing" && isStartingSession ? (
+          <SessionPageLoading
+            message={
+              isPracticeMode ? t("tap.practice.starting") : t("session.startLoading")
+            }
+          />
+        ) : null}
+
+        {phase === "briefing" && !isStartingSession && briefingStep === "challenge" && pendingStart ? (
           <section
             className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
             data-tap-voice-challenge=""
@@ -450,7 +460,7 @@ export function TapScorePhases(props: {
           </section>
         ) : null}
 
-        {phase === "briefing" && briefingStep === "pick" && (
+        {phase === "briefing" && !isStartingSession && briefingStep === "pick" && (
           <section className="relative flex min-h-0 flex-1" data-tap-briefing-layout="sections" data-tap-briefing-step="pick">
             <div className="grid h-full min-h-0 w-full flex-1 lg:grid-cols-2">
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0b0b0b] lg:border-r lg:border-neutral-800/60">
@@ -525,6 +535,7 @@ export function TapScorePhases(props: {
                     onSceneChange={handleSceneChange}
                     onCanvasPowActions={handleCanvasPowActions}
                     onAskSelected={handleAskSelected}
+                    dictateTranscript={crystallizableText}
                   />
                   {error ? (
                     <p className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-3 text-center text-xs text-red-300">
@@ -544,19 +555,25 @@ export function TapScorePhases(props: {
                     waiting={clockPaused}
                     listening={isListening}
                   />
-                  {showEndSession ? (
-                    <div className="flex shrink-0 items-center" data-tap-end-session>
-                      <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                        End session
-                      </TapThoughtButton>
-                    </div>
-                  ) : null}
                   {isPracticeMode ? (
                     <div className="flex shrink-0 items-center gap-2">
                       <TapPracticePill label={t("tap.practice.bannerKicker")} />
                     </div>
                   ) : null}
                 </div>
+              }
+              actions={
+                showEndSession ? (
+                  <div className="flex w-full min-w-0" data-tap-end-session>
+                    <button
+                      type="button"
+                      onClick={() => void endSession()}
+                      className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full`}
+                    >
+                      End session
+                    </button>
+                  </div>
+                ) : null
               }
               transcript={
                 <div
@@ -655,57 +672,41 @@ export function TapScorePhases(props: {
         )}
 
         {phase === "saving" && (
-          <section className="flex flex-1 items-center justify-center">
-            <LoadingStatusMessage
-              tone="muted"
-              message={
-                isPracticeMode
-                  ? t("tap.practice.saving")
-                  : t("tap.postSession.savingAndReturning")
-              }
-            />
-          </section>
+          <SessionPageLoading
+            message={
+              isPracticeMode
+                ? t("tap.practice.saving")
+                : t("tap.postSession.savingAndReturning")
+            }
+          />
         )}
         {phase === "practice_done" && !sessionEndedImpure ? (
-          <section
-            className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-            data-tap-practice-done
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
-              {t("tap.practice.doneKicker")}
-            </p>
-            <h1 className="mt-2 text-2xl font-medium text-neutral-100 sm:text-3xl">
-              {t("tap.practice.doneTitle")}
-            </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
-              {t("tap.practice.doneBody")}
-            </p>
-            <TapThoughtButton
-              size="md"
-              variant="primary"
-              className="mt-8"
-              data-tap-practice-restart
-              onClick={restartBriefingFlow}
-            >
-              {t("tap.practice.restart")}
-            </TapThoughtButton>
-          </section>
-        ) : null}
-        {(phase === "results" || phase === "practice_done") && sessionEndedImpure ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-impure
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.impureTitle")}
-              </h1>
-              <p className="mt-4 max-w-lg whitespace-pre-line text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.impureBody")}
-              </p>
+          <SessionFinishedScreen
+            data-tap-practice-done=""
+            kicker={t("tap.practice.doneKicker")}
+            title={t("tap.practice.doneTitle")}
+            body={t("tap.practice.doneBody")}
+            actions={
               <TapThoughtButton
                 size="md"
                 variant="primary"
-                className="mt-8"
+                data-tap-practice-restart
+                onClick={restartBriefingFlow}
+              >
+                {t("tap.practice.restart")}
+              </TapThoughtButton>
+            }
+          />
+        ) : null}
+        {(phase === "results" || phase === "practice_done") && sessionEndedImpure ? (
+          <SessionFinishedScreen
+            data-tap-session-impure=""
+            title={t("tap.postSession.impureTitle")}
+            body={t("tap.postSession.impureBody")}
+            actions={
+              <TapThoughtButton
+                size="md"
+                variant="primary"
                 data-tap-impure-retry
                 onClick={
                   phase === "practice_done"
@@ -715,33 +716,32 @@ export function TapScorePhases(props: {
               >
                 {t("tap.postSession.impureTryAgain")}
               </TapThoughtButton>
-            </section>
+            }
+          />
         ) : phase === "results" ? (
           privateToken || localOpening ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-thank-you
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.thankYouTitle")}
-              </h1>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.thankYouBody")}
-              </p>
-              <a
-                href="/"
-                data-tap-explore-uncertain-systems
-                className="mt-8 inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-              >
-                {t("tap.postSession.exploreUncertainSystems")}
-              </a>
-            </section>
+            <SessionFinishedScreen
+              data-tap-session-thank-you=""
+              title={t("tap.postSession.thankYouTitle")}
+              body={t("tap.postSession.thankYouBody")}
+              actions={
+                <a
+                  href="/"
+                  data-tap-explore-uncertain-systems
+                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  {t("tap.postSession.exploreUncertainSystems")}
+                </a>
+              }
+            />
           ) : (
-            <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
-              <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
+            <SessionFinishedScreen
+              wide
+              title={t("tap.postSession.resultsTitle")}
+              body={t("tap.postSession.resultsHint")}
+            >
               {performanceReport ? (
-                <div className="mt-6 min-h-0 flex-1 rounded-none border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
+                <div className="mt-6 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-none border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
                   <PerformanceReportCard
                     report={performanceReport}
                     layout="spacious"
@@ -750,17 +750,19 @@ export function TapScorePhases(props: {
                   />
                 </div>
               ) : null}
-            </section>
+            </SessionFinishedScreen>
           )
         ) : null}
         {phase === "error" && (
-          <section className="flex flex-1 flex-col items-center justify-center text-center">
-            <h1 className="text-2xl font-medium">Could not end TAP session</h1>
-            <p className="mt-3 max-w-md text-sm text-red-300">{resultsError || error}</p>
-            <TapThoughtButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("briefing")}>
-              Try again
-            </TapThoughtButton>
-          </section>
+          <SessionFinishedScreen
+            title="Could not end TAP session"
+            body={resultsError || error}
+            actions={
+              <TapThoughtButton size="md" variant="primary" onClick={() => setPhase("briefing")}>
+                Try again
+              </TapThoughtButton>
+            }
+          />
         )}
       </div>
 

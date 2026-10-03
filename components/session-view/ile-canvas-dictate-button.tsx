@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ILE_CANVAS_DICTATE_LABEL,
   ILE_CANVAS_DICTATE_STOP_LABEL,
+  advanceIleDictateCapture,
   ileDictateCaptureText,
   noteIleDictateTranscript,
   startIleDictateCapture,
@@ -12,17 +13,25 @@ import {
 
 export function IleCanvasDictateButton({
   transcript,
+  onLiveText,
   onCommit,
 }: {
   transcript: string;
+  /** Writes the transcript onto the canvas as recognition updates. */
+  onLiveText: (text: string) => void;
+  /** Stop. The canvas records the finished transcript as proof of work. */
   onCommit: (text: string) => void;
 }) {
   const [dictating, setDictating] = useState(false);
   const captureRef = useRef<IleDictateCapture | null>(null);
+  const onLiveTextRef = useRef(onLiveText);
+  onLiveTextRef.current = onLiveText;
 
   useEffect(() => {
     if (!captureRef.current) return;
-    captureRef.current = noteIleDictateTranscript(captureRef.current, transcript);
+    const advanced = advanceIleDictateCapture(captureRef.current, transcript);
+    captureRef.current = advanced.capture;
+    onLiveTextRef.current(advanced.text);
   }, [transcript]);
 
   return (
@@ -42,6 +51,7 @@ export function IleCanvasDictateButton({
         captureRef.current = null;
         setDictating(false);
         if (text) onCommit(text);
+        else onLiveText(text);
       }}
       className="pointer-events-auto shrink-0 rounded-none border border-white bg-neutral-950 px-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-white shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:bg-neutral-800 aria-pressed:bg-white aria-pressed:text-neutral-950"
     >

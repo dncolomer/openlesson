@@ -28,6 +28,7 @@ export type ToolAction =
   | "multi_select"
   | "expand_more"
   | "board_prompt"
+  | "dictate"
   | "rephrase"
   | "split"
   | "elaborate"

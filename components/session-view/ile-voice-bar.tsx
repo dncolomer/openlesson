@@ -6,33 +6,14 @@ import {
   ILE_SESSION_CHROME_ABOVE_WORK_Z_CLASS,
   ILE_VOICE_BAR_HEIGHT_CLASS,
 } from "@/lib/ile-map-chrome";
+import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { formatSpeechTranscriptDisplay } from "@/lib/useSessionThoughtInterface";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 
-export function IleVoiceBar({
-  thought,
-  activeTool,
-  onToolChange,
-  onBackToDashboard,
-  errorNotification = false,
-  showData = true,
-  showLogs = true,
-  showSave = true,
-}: {
-  thought: SessionThoughtInterface;
-  activeTool: Tool;
-  onToolChange: (tool: Tool) => void;
-  onBackToDashboard?: () => void;
-  errorNotification?: boolean;
-  /** Section flags from `sessionSidebarHasSection`. ILE turns all three on. */
-  showData?: boolean;
-  showLogs?: boolean;
-  showSave?: boolean;
-}) {
-  const buttonClass =
-    "pointer-events-auto h-7 min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-100 hover:border-white hover:text-white";
-  const showActions = showData || showLogs || (showSave && onBackToDashboard != null);
+const SECONDARY_BUTTON_CLASS =
+  "pointer-events-auto h-7 min-w-0 flex-1 rounded-none border border-neutral-600 bg-neutral-900 px-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-neutral-100 hover:border-white hover:text-white";
 
+export function IleVoiceBar({ thought }: { thought: SessionThoughtInterface }) {
   return (
     <div
       data-ile-voice-bar
@@ -67,45 +48,69 @@ export function IleVoiceBar({
           </button>
         ) : null}
       </div>
-      {showActions ? (
-        <div data-ile-voice-bar-actions className="flex w-full min-w-0 items-center gap-1">
-          {showData ? (
-            <button
-              type="button"
-              data-ile-bar-data
-              aria-pressed={activeTool === "data-input"}
-              onClick={() => onToolChange("data-input")}
-              className={buttonClass}
-            >
-              Data
-            </button>
+    </div>
+  );
+}
+
+/** Data, Logs, and Save. Mounted in the sidebar actions row, under the transcript. */
+export function IleVoiceBarActions({
+  activeTool,
+  onToolChange,
+  onBackToDashboard,
+  errorNotification = false,
+  showData = true,
+  showLogs = true,
+  showSave = true,
+}: {
+  activeTool: Tool;
+  onToolChange: (tool: Tool) => void;
+  onBackToDashboard?: () => void;
+  errorNotification?: boolean;
+  /** Section flags from `sessionSidebarHasSection`. ILE turns all three on. */
+  showData?: boolean;
+  showLogs?: boolean;
+  showSave?: boolean;
+}) {
+  const showActions = showData || showLogs || (showSave && onBackToDashboard != null);
+  if (!showActions) return null;
+
+  return (
+    <div data-ile-voice-bar-actions className="flex w-full min-w-0 items-center gap-1">
+      {showData ? (
+        <button
+          type="button"
+          data-ile-bar-data
+          aria-pressed={activeTool === "data-input"}
+          onClick={() => onToolChange("data-input")}
+          className={SECONDARY_BUTTON_CLASS}
+        >
+          Data
+        </button>
+      ) : null}
+      {showLogs ? (
+        <button
+          type="button"
+          data-ile-bar-logs
+          aria-pressed={activeTool === "logs"}
+          onClick={() => onToolChange("logs")}
+          className={SECONDARY_BUTTON_CLASS}
+        >
+          Logs
+          {errorNotification ? (
+            <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
           ) : null}
-          {showLogs ? (
-            <button
-              type="button"
-              data-ile-bar-logs
-              aria-pressed={activeTool === "logs"}
-              onClick={() => onToolChange("logs")}
-              className={buttonClass}
-            >
-              Logs
-              {errorNotification ? (
-                <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-              ) : null}
-            </button>
-          ) : null}
-          {showSave && onBackToDashboard ? (
-            <button
-              type="button"
-              data-ile-bar-save
-              data-save-and-exit
-              onClick={onBackToDashboard}
-              className={`${buttonClass} border-white bg-white text-neutral-950 hover:bg-neutral-200`}
-            >
-              Save
-            </button>
-          ) : null}
-        </div>
+        </button>
+      ) : null}
+      {showSave && onBackToDashboard ? (
+        <button
+          type="button"
+          data-ile-bar-save
+          data-save-and-exit
+          onClick={onBackToDashboard}
+          className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} flex-1`}
+        >
+          Save
+        </button>
       ) : null}
     </div>
   );

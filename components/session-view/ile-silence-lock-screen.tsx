@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
+import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 import {
   ILE_SESSION_IMPURITY_BODY,
   ILE_SESSION_IMPURITY_KICKER,
@@ -34,26 +35,14 @@ export function IleSilenceRestScreen({
   speechLang?: string | null;
 }) {
   return (
-    <div
+    <SessionFinishedScreen
+      overlay
       data-ile-silence-rest=""
       data-ile-silence-lock-count={lockCount}
-      className="fixed inset-0 z-[180] flex flex-col items-center justify-center bg-neutral-950 px-6 text-white"
-    >
-      <div className="w-full max-w-xl">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-          {ILE_SILENCE_REST_TITLE}
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{ILE_SILENCE_REST_TITLE}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-300">{ILE_SILENCE_REST_BODY}</p>
-        <PracticeVoiceChallenge
-          variant="ile"
-          framing="rest"
-          lang={speechLang}
-          onPass={() => {
-            if (ileRestUnlock({ challengePassed: true, lockCount }).locked) return;
-            onUnlock();
-          }}
-        />
+      kicker={ILE_SILENCE_REST_TITLE}
+      title={ILE_SILENCE_REST_TITLE}
+      body={ILE_SILENCE_REST_BODY}
+      actions={
         <button
           type="button"
           data-ile-silence-save-and-leave=""
@@ -62,12 +51,22 @@ export function IleSilenceRestScreen({
             if (!plan.persistSession || !plan.leave) return;
             onSaveAndLeave();
           }}
-          className="mt-4 inline-flex w-full items-center justify-center border border-white/20 px-4 py-3 text-sm font-semibold text-white"
+          className="inline-flex w-full items-center justify-center border border-white/20 px-4 py-3 text-sm font-semibold text-white"
         >
           {ILE_SILENCE_REST_SAVE_AND_LEAVE}
         </button>
-      </div>
-    </div>
+      }
+    >
+      <PracticeVoiceChallenge
+        variant="ile"
+        framing="rest"
+        lang={speechLang}
+        onPass={() => {
+          if (ileRestUnlock({ challengePassed: true, lockCount }).locked) return;
+          onUnlock();
+        }}
+      />
+    </SessionFinishedScreen>
   );
 }
 
@@ -81,18 +80,15 @@ export function IleSessionImpurityScreen({
   onLogOff: () => void;
 }) {
   return (
-    <div
+    <SessionFinishedScreen
+      overlay
       data-ile-session-impurity=""
       data-ile-silence-lock-count={lockCount}
-      className="fixed inset-0 z-[180] flex flex-col items-center justify-center bg-neutral-950 px-6 text-white"
-    >
-      <div className="w-full max-w-xl">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-          {ILE_SESSION_IMPURITY_KICKER}
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">{ILE_SESSION_IMPURITY_TITLE}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-300">{ILE_SESSION_IMPURITY_BODY}</p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+      kicker={ILE_SESSION_IMPURITY_KICKER}
+      title={ILE_SESSION_IMPURITY_TITLE}
+      body={ILE_SESSION_IMPURITY_BODY}
+      actions={
+        <>
           <button
             type="button"
             data-ile-impurity-save=""
@@ -101,7 +97,7 @@ export function IleSessionImpurityScreen({
               if (!plan.persistSession) return;
               onSave();
             }}
-            className="inline-flex flex-1 items-center justify-center bg-white px-4 py-3 text-sm font-semibold text-neutral-950"
+            className="inline-flex items-center justify-center bg-white px-4 py-3 text-sm font-semibold text-neutral-950"
           >
             {ILE_SESSION_IMPURITY_SAVE}
           </button>
@@ -113,12 +109,12 @@ export function IleSessionImpurityScreen({
               if (!plan.leave) return;
               onLogOff();
             }}
-            className="inline-flex flex-1 items-center justify-center border border-white/20 px-4 py-3 text-sm font-semibold text-white"
+            className="inline-flex items-center justify-center border border-white/20 px-4 py-3 text-sm font-semibold text-white"
           >
             {ILE_SESSION_IMPURITY_LOG_OFF}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

@@ -24,6 +24,7 @@ export function SessionSidebar({
   chapters = null,
   signals = null,
   transcript = null,
+  actions = null,
   counts = {},
   sectionLabels,
   onOpenGlobalResources,
@@ -36,6 +37,8 @@ export function SessionSidebar({
   chapters?: ReactNode;
   signals?: ReactNode;
   transcript?: ReactNode;
+  /** Bottom row. Rendered only while the rail is expanded, same slot as Learn's Save. */
+  actions?: ReactNode;
   /** Shown on the collapsed rail in place of the section body. */
   counts?: Partial<Record<SessionSidebarSection, number>>;
   /** Replaces the collapsed-rail label for a scroll section. */
@@ -139,6 +142,14 @@ export function SessionSidebar({
           {sections.includes("transcript") && transcript != null ? (
             <div data-session-sidebar-section="transcript" className="shrink-0">
               {transcript}
+            </div>
+          ) : null}
+          {actions != null ? (
+            <div
+              data-session-sidebar-actions
+              className="shrink-0 border-t border-neutral-800 bg-black px-1.5 py-1.5"
+            >
+              <div className="flex w-full min-w-0 items-center gap-1">{actions}</div>
             </div>
           ) : null}
         </div>

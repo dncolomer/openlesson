@@ -2,9 +2,12 @@
  * Live Prepare, Learn, Drill, and Verify mount the canvas-plus-sidebar
  * work surface. The old 70/30 and 50/50 splits must stay unmounted.
  */
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
 
 const ROOT = join(__dirname, "../..");
 
@@ -113,5 +116,187 @@ describe("shared live work surface", () => {
       expect(tap, marker).not.toContain(marker);
       expect(verify, marker).not.toContain(marker);
     }
+  });
+
+  it("puts leave and end controls in the sidebar actions row, not the clock", () => {
+    expect(host).toContain("actions={actions}");
+    expect(read("components/session-view/session-sidebar.tsx")).toContain(
+      "data-session-sidebar-actions",
+    );
+    const collapsedBranch = read("components/session-view/session-sidebar.tsx");
+    const collapsedAt = collapsedBranch.indexOf("data-session-sidebar-counts");
+    const actionsAt = collapsedBranch.indexOf("data-session-sidebar-actions");
+    expect(collapsedAt).toBeGreaterThan(-1);
+    expect(actionsAt).toBeGreaterThan(collapsedAt);
+
+    const prepareClock = prepare.slice(prepare.indexOf("clock={"), prepare.indexOf("actions={"));
+    expect(prepareClock).toContain("data-scout-live-control-strip");
+    expect(prepareClock).toContain("<TapLiveClock");
+    expect(prepareClock).not.toContain("data-scout-end-session");
+    const prepareActions = prepare.slice(prepare.indexOf("actions={"), prepare.indexOf("chapters={"));
+    expect(prepareActions).toContain("showEndSession");
+    expect(prepareActions).toContain("data-scout-end-session");
+    expect(prepareActions).toContain("End session");
+    expect(prepareActions).toContain("SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS");
+
+    const tapClock = tap.slice(tap.indexOf("clock={"), tap.indexOf("actions={"));
+    expect(tapClock).toContain("data-tap-live-control-strip");
+    expect(tapClock).not.toContain("data-tap-end-session");
+    const tapActions = tap.slice(tap.indexOf("actions={"), tap.indexOf("transcript={"));
+    expect(tapActions).toContain("showEndSession");
+    expect(tapActions).toContain("data-tap-end-session");
+    expect(tapActions).toContain("End session");
+
+    const drillPhases = read("components/exercise-tap/exercise-tap-phases.tsx");
+    const drillShell = read("components/exercise-tap/ExerciseTapShell.tsx");
+    expect(drillPhases).not.toContain("data-exercise-live-control-strip");
+    expect(drillShell).toContain("clock={clock}");
+    expect(drillShell).toContain("actions={actions}");
+    expect(drillShell).not.toContain("controlStrip");
+    const drillClock = drillPhases.slice(drillPhases.indexOf("clock={"), drillPhases.indexOf("actions={"));
+    expect(drillClock).toContain("<TapLiveClock");
+    expect(drillClock).not.toContain("data-tap-end-session");
+    const drillActions = drillPhases.slice(
+      drillPhases.indexOf("actions={"),
+      drillPhases.indexOf("speechBar={"),
+    );
+    expect(drillActions).toContain("showEndSession");
+    expect(drillActions).toContain("data-tap-end-session");
+    expect(drillActions).toContain("End session");
+
+    const voice = read("components/session-view/ile-voice-bar.tsx");
+    expect(voice).toContain("data-ile-bar-save");
+    expect(voice).toContain("data-save-and-exit");
+    expect(voice).toMatch(/data-ile-bar-save[\s\S]{0,400}\n\s*Save/);
+    expect(learn).toContain("actions={actions}");
+    expect(learn).toContain("transcript={voiceBar}");
+    expect(read("components/SessionView.tsx")).toContain("<IleVoiceBarActions");
+    expect(read("components/SessionView.tsx")).not.toContain("IleWorkCanvasTimer");
+  });
+
+  it("renders finished sessions, waits, and confirms through the shared chrome", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        SessionFinishedScreen,
+        {
+          kicker: "Kicker",
+          title: "Finished title",
+          body: "Finished body",
+          actions: createElement("button", { "data-finished-action": "go" }, "Go"),
+        },
+        createElement("div", { "data-finished-content": "report" }, "Report"),
+      ),
+    );
+    const kickerAt = html.indexOf("Kicker");
+    const titleAt = html.indexOf("Finished title");
+    const bodyAt = html.indexOf("Finished body");
+    const contentAt = html.indexOf("data-finished-content");
+    const actionAt = html.indexOf("data-finished-action");
+    expect(kickerAt).toBeGreaterThan(-1);
+    expect(titleAt).toBeGreaterThan(kickerAt);
+    expect(bodyAt).toBeGreaterThan(titleAt);
+    expect(contentAt).toBeGreaterThan(bodyAt);
+    expect(actionAt).toBeGreaterThan(contentAt);
+    expect(html).toContain('data-session-finished-screen=""');
+    expect(html).toContain("my-auto");
+    const sectionClass = html.slice(html.indexOf('class="'), html.indexOf('">'));
+    expect(sectionClass).not.toContain("justify-center");
+    expect(sectionClass).toContain("overflow-y-auto");
+
+    const wideHtml = renderToStaticMarkup(
+      createElement(
+        SessionFinishedScreen,
+        { wide: true, title: "Report title", body: "Report hint" },
+        createElement("div", { "data-finished-report": "card" }, "Card"),
+      ),
+    );
+    expect(wideHtml).toContain('data-session-finished-fill="true"');
+    const wideSectionClass = wideHtml.slice(wideHtml.indexOf('class="'), wideHtml.indexOf('">'));
+    expect(wideSectionClass).toContain("overflow-hidden");
+    expect(wideSectionClass).not.toContain("overflow-y-auto");
+    expect(wideSectionClass).not.toContain("justify-center");
+    expect(wideHtml).toContain("min-h-0");
+    expect(wideHtml).toContain("flex-1");
+    expect(wideHtml).not.toContain("my-auto");
+    const reportAt = tap.indexOf("<PerformanceReportCard");
+    const reportWrapper = tap.slice(Math.max(0, reportAt - 350), reportAt);
+    expect(reportWrapper).toContain("min-h-0");
+    expect(reportWrapper).toContain("flex-1");
+    expect(reportWrapper).toContain("flex-col");
+    expect(reportWrapper).toContain("overflow-hidden");
+    expect(read("components/PerformanceReportCard.tsx")).toMatch(
+      /fillHeight \? "min-h-0 flex-1 overflow-hidden"/,
+    );
+
+    const finished = [
+      prepare,
+      tap,
+      read("components/exercise-tap/exercise-tap-phases.tsx"),
+      read("components/session-view/ile-silence-lock-screen.tsx"),
+    ];
+    for (const src of finished) {
+      expect(src).toContain("<SessionFinishedScreen");
+    }
+    expect(prepare).toContain("data-scout-thank-you");
+    expect(prepare).toContain("data-tap-session-thank-you");
+    expect(prepare).toContain("data-scout-restart");
+    expect(prepare).toContain("data-scout-workspace");
+    expect(prepare).toContain("data-scout-jump-work");
+    expect(prepare).toContain("data-scout-jump-drill");
+    expect(tap).toContain("data-tap-session-thank-you");
+    expect(tap).toContain("data-tap-session-impure");
+    expect(tap).toContain("data-tap-practice-done");
+    expect(tap).toContain("Could not end TAP session");
+    expect(tap).toContain("<PerformanceReportCard");
+    const drill = read("components/exercise-tap/exercise-tap-phases.tsx");
+    expect(drill).toContain("data-tap-practice-done");
+    expect(drill).toContain("data-exercise-practice-retry");
+    expect(drill).toContain("data-tap-session-impure");
+    expect(drill).toContain("data-exercise-session-impure");
+    expect(drill).toContain("data-tap-session-thank-you");
+    expect(drill).toContain("data-exercise-session-thank-you");
+    expect(drill).toContain("Exercise TAP complete");
+    const silence = read("components/session-view/ile-silence-lock-screen.tsx");
+    expect(silence).toContain("data-ile-silence-rest");
+    expect(silence).toContain("data-ile-session-impurity");
+    expect(silence).toContain("PracticeVoiceChallenge");
+    expect(silence).toContain("data-ile-impurity-save");
+    expect(silence).toContain("data-ile-impurity-logoff");
+
+    for (const src of [
+      prepare,
+      tap,
+      drill,
+      read("components/SessionView.tsx"),
+      read("components/session-view/session-welcome-modal.tsx"),
+    ]) {
+      expect(src).toContain("<SessionPageLoading");
+    }
+    expect(read("components/session-view/session-welcome-modal.tsx")).toContain(
+      "data-ile-start-loading-page",
+    );
+    expect(read("components/session-view/ile-start-loading.tsx")).toContain("data-ile-start-loading");
+    expect(read("components/session-view/session-page-loading.tsx")).toContain(
+      "data-session-page-loading",
+    );
+
+    const confirm = read("components/ui/ConfirmDialog.tsx");
+    expect(confirm).toContain("<DialogFrame");
+    const cancelAt = confirm.indexOf("onClick={onCancel}");
+    const confirmAt = confirm.indexOf("onClick={onConfirm}");
+    const tertiaryAt = confirm.indexOf("onClick={onTertiary}");
+    expect(cancelAt).toBeGreaterThan(-1);
+    expect(confirmAt).toBeGreaterThan(cancelAt);
+    expect(tertiaryAt).toBeGreaterThan(confirmAt);
+    expect(learn).toContain("<ConfirmDialog");
+    expect(learn).toContain("<DialogFrame");
+    expect(learn).toContain("data-ile-session-modal-close");
+    expect(learn).toContain("data-ile-tool-overlay-close");
+    expect(learn).toContain("data-ile-tool-overlay-backdrop");
+    expect(read("components/ui/DialogFrame.tsx")).toContain('event.key !== "Escape"');
+    expect(read("components/ui/DialogFrame.tsx")).toContain("onClick={closeOnOverlay ? onClose : undefined}");
+    expect(read("components/ui/DialogFrame.tsx")).toContain("data-dialog-header-close");
+    expect(read("components/thought-ui/ThoughtEditPanel.tsx")).toContain("headerClose");
+    expect(read("components/thought-ui/ThoughtEditPanel.tsx")).toContain("<ConfirmDialog");
   });
 });

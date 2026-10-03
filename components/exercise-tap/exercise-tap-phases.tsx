@@ -3,7 +3,9 @@
 import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { SessionFinishedScreen } from "@/components/session-view/session-finished-screen";
+import { SessionPageLoading } from "@/components/session-view/session-page-loading";
+import { SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS } from "@/lib/session-sidebar";
 import { TapPracticePill } from "@/components/tap-score/tap-practice-pill";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
@@ -20,10 +22,8 @@ import type { ExerciseThought } from "@/lib/exercise-tap";
 import type { TapSoloProblem } from "@/lib/tap-session-map";
 import {
   type Phase,
-  thoughtButtonClasses,
   normalize,
 } from "@/lib/tap-score-client-helpers";
-import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 import { PracticeVoiceChallenge } from "@/components/PracticeVoiceChallenge";
 import {
@@ -211,7 +211,15 @@ export function ExerciseTapPhases(props: {
   return (
     <div data-exercise-tap-client className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0b0b0b] text-white">
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        {phase === "briefing" && briefingStep === "challenge" && pendingStart ? (
+        {phase === "briefing" && isStartingSession ? (
+          <SessionPageLoading
+            message={
+              isPracticeMode ? t("tap.practice.starting") : t("session.startLoading")
+            }
+          />
+        ) : null}
+
+        {phase === "briefing" && !isStartingSession && briefingStep === "challenge" && pendingStart ? (
           <section
             className="relative flex min-h-0 flex-1 items-center justify-center bg-[#0b0b0b] px-6"
             data-exercise-voice-challenge=""
@@ -228,7 +236,7 @@ export function ExerciseTapPhases(props: {
           </section>
         ) : null}
 
-        {phase === "briefing" && briefingStep === "pick" && (
+        {phase === "briefing" && !isStartingSession && briefingStep === "pick" && (
           <section
             className="relative flex min-h-0 flex-1"
             data-exercise-briefing
@@ -321,32 +329,33 @@ export function ExerciseTapPhases(props: {
             workspaceId={workspaceId}
             blockId={blockId}
             sessionId={sessionId}
-            controlStrip={
-              <div
-                className="flex w-full shrink-0 items-center gap-3 border-b border-neutral-800/60 bg-black/35 px-3 py-2"
-                data-exercise-live-control-strip
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <TapLiveClock
-                    label="Time"
-                    remainingSeconds={remainingSeconds}
-                    waiting={isSending}
-                    listening={isListening}
-                  />
-                  {showEndSession ? (
-                    <div className="flex shrink-0 items-center" data-tap-end-session>
-                      <TapThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
-                        End session
-                      </TapThoughtButton>
-                    </div>
-                  ) : null}
-                </div>
+            clock={
+              <div className="flex w-full min-w-0 flex-col gap-2 px-1 py-1">
+                <TapLiveClock
+                  label="Time"
+                  remainingSeconds={remainingSeconds}
+                  waiting={isSending}
+                  listening={isListening}
+                />
                 {isPracticeMode ? (
-                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <TapPracticePill label={t("tap.practice.bannerKicker")} />
                   </div>
                 ) : null}
               </div>
+            }
+            actions={
+              showEndSession ? (
+                <div className="flex w-full min-w-0" data-tap-end-session>
+                  <button
+                    type="button"
+                    onClick={() => void endSession()}
+                    className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} w-full`}
+                  >
+                    End session
+                  </button>
+                </div>
+              ) : null
             }
             speechBar={
               <>
@@ -388,55 +397,44 @@ export function ExerciseTapPhases(props: {
         )}
 
         {phase === "saving" && (
-          <section className="flex flex-1 items-center justify-center">
-            <LoadingStatusMessage
-              tone="muted"
-              message={
-                isPracticeMode
-                  ? t("tap.practice.saving")
-                  : t("tap.postSession.savingAndReturning")
-              }
-            />
-          </section>
+          <SessionPageLoading
+            message={
+              isPracticeMode
+                ? t("tap.practice.saving")
+                : t("tap.postSession.savingAndReturning")
+            }
+          />
         )}
 
         {phase === "practice_done" && !sessionEndedImpure && (
-          <section
-            className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-            data-tap-practice-done
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
-              {t("tap.practice.doneKicker")}
-            </p>
-            <h2 className="mt-2 text-2xl font-medium text-white">{t("tap.practice.doneTitle")}</h2>
-            <p className="mt-3 text-sm text-neutral-400">{t("tap.practice.doneBody")}</p>
-            <button
-              type="button"
-              className={cn(thoughtButtonClasses({ size: "md", variant: "primary" }), "mt-8")}
-              data-exercise-practice-retry
-              onClick={restartPractice}
-            >
-              {t("tap.practice.restart")}
-            </button>
-          </section>
+          <SessionFinishedScreen
+            data-tap-practice-done=""
+            kicker={t("tap.practice.doneKicker")}
+            title={t("tap.practice.doneTitle")}
+            body={t("tap.practice.doneBody")}
+            actions={
+              <button
+                type="button"
+                data-exercise-practice-retry
+                onClick={restartPractice}
+                className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} h-9 px-4 text-sm normal-case tracking-normal`}
+              >
+                {t("tap.practice.restart")}
+              </button>
+            }
+          />
         )}
 
         {(phase === "results" || phase === "practice_done") && sessionEndedImpure ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-impure
-              data-exercise-session-impure
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.impureTitle")}
-              </h1>
-              <p className="mt-4 max-w-lg whitespace-pre-line text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.impureBody")}
-              </p>
+          <SessionFinishedScreen
+            data-tap-session-impure=""
+            data-exercise-session-impure=""
+            title={t("tap.postSession.impureTitle")}
+            body={t("tap.postSession.impureBody")}
+            actions={
               <TapThoughtButton
                 size="md"
                 variant="primary"
-                className="mt-8"
                 data-tap-impure-retry
                 onClick={
                   phase === "practice_done"
@@ -446,57 +444,53 @@ export function ExerciseTapPhases(props: {
               >
                 {t("tap.postSession.impureTryAgain")}
               </TapThoughtButton>
-            </section>
+            }
+          />
         ) : phase === "results" ? (
           privateToken ? (
-            <section
-              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
-              data-tap-session-thank-you
-              data-exercise-session-thank-you
-            >
-              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
-                {t("tap.postSession.thankYouTitle")}
-              </h1>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
-                {t("tap.postSession.thankYouBody")}
-              </p>
-              <a
-                href="/"
-                data-tap-explore-uncertain-systems
-                className="mt-8 inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
-              >
-                {t("tap.postSession.exploreUncertainSystems")}
-              </a>
-            </section>
+            <SessionFinishedScreen
+              data-tap-session-thank-you=""
+              data-exercise-session-thank-you=""
+              title={t("tap.postSession.thankYouTitle")}
+              body={t("tap.postSession.thankYouBody")}
+              actions={
+                <a
+                  href="/"
+                  data-tap-explore-uncertain-systems
+                  className="inline-flex items-center justify-center rounded-none bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  {t("tap.postSession.exploreUncertainSystems")}
+                </a>
+              }
+            />
           ) : (
-            <section className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-300/80">
-                Exercise TAP complete
-              </p>
-              <h2 className="mt-2 text-2xl font-medium text-white">
-                {t("tap.postSession.resultsTitle")}
-              </h2>
-              <p className="mt-3 text-sm text-neutral-400">
-                Your spoken exercise and submitted thoughts were recorded as proof of work.
-              </p>
-              <button
-                type="button"
-                className={cn(thoughtButtonClasses({ size: "md", variant: "primary" }), "mt-8")}
-                onClick={onDone}
-              >
-                Done
-              </button>
-            </section>
+            <SessionFinishedScreen
+              kicker="Exercise TAP complete"
+              title={t("tap.postSession.resultsTitle")}
+              body="Your spoken exercise and submitted thoughts were recorded as proof of work."
+              actions={
+                <button
+                  type="button"
+                  onClick={onDone}
+                  className={`${SESSION_SIDEBAR_PRIMARY_BUTTON_CLASS} h-9 px-4 text-sm normal-case tracking-normal`}
+                >
+                  Done
+                </button>
+              }
+            />
           )
         ) : null}
 
         {phase === "error" && (
-          <section className="flex flex-1 flex-col items-center justify-center gap-3">
-            <p className="text-sm text-red-300">{error || "Something went wrong"}</p>
-            <TapThoughtButton size="md" variant="primary" onClick={backToBriefing}>
-              Back
-            </TapThoughtButton>
-          </section>
+          <SessionFinishedScreen
+            title="Something went wrong"
+            body={error || undefined}
+            actions={
+              <TapThoughtButton size="md" variant="primary" onClick={backToBriefing}>
+                Back
+              </TapThoughtButton>
+            }
+          />
         )}
       </div>
 

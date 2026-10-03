@@ -34,6 +34,19 @@ const RETIRED = ["I", "L", "E"].join("");
 const RETIRED_PHRASE = ["Integrated Learning", " Environment"].join("");
 const RETIRED_WORD = new RegExp(`(?<![A-Za-z0-9_])${RETIRED}(?![A-Za-z0-9_])`);
 const RETIRED_PHRASE_RE = new RegExp(RETIRED_PHRASE, "i");
+const RETIRED_AGENT = ["A", "L", "E"].join("");
+const RETIRED_AGENT_PHRASE = ["Agentic Learning", " Environment"].join("");
+const RETIRED_AGENT_WORD = new RegExp(`(?<![A-Za-z0-9_])${RETIRED_AGENT}(?![A-Za-z0-9_])`);
+const RETIRED_AGENT_PHRASE_RE = new RegExp(RETIRED_AGENT_PHRASE, "i");
+
+function namesRetiredProduct(text: string) {
+  return (
+    RETIRED_WORD.test(text) ||
+    RETIRED_PHRASE_RE.test(text) ||
+    RETIRED_AGENT_WORD.test(text) ||
+    RETIRED_AGENT_PHRASE_RE.test(text)
+  );
+}
 
 const FORMER_PRODUCT_SLOTS = [
   "app/layout.tsx",
@@ -73,9 +86,9 @@ describe("retired product language is gone from shipped prose", () => {
         ext === ".md" || ext === ".mdx" || ext === ".json" || ext === ".html" || ext === ".txt"
           ? text
           : text;
-      if (RETIRED_WORD.test(prose) || RETIRED_PHRASE_RE.test(prose)) {
+      if (namesRetiredProduct(prose)) {
         const rel = path.slice(ROOT.length + 1);
-        const line = prose.split("\n").findIndex((row) => RETIRED_WORD.test(row) || RETIRED_PHRASE_RE.test(row));
+        const line = prose.split("\n").findIndex((row) => namesRetiredProduct(row));
         hits.push(`${rel}:${line + 1}`);
       }
     }
@@ -93,15 +106,14 @@ describe("retired product language is gone from shipped prose", () => {
     }
   });
 
-  it("keeps Agentic Learning Environment and the stored route, meter, and proof id", () => {
-    expect(read("app/layout.tsx")).toContain("Agentic Learning Environment");
+  it("keeps the stored route, meter, and proof id", () => {
     expect(read("lib/ile-tim-chapter-complete.ts")).toContain("upload_ile_chapter_done");
     expect(read("app/ile/session/[token]/page.tsx")).toContain("/ile/session/");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("ileSessions");
     expect(read("app/api/stripe/webhook/route.ts")).toContain("TAP Learning session");
   });
 
-  it("translated locales drop the retired environment name and keep the agent one", () => {
+  it("translated locales drop the retired environment names", () => {
     const retiredEnvironmentNames = [
       "Integrierte Lernumgebung",
       "Integrierten Lernumgebung",
@@ -114,20 +126,17 @@ describe("retired product language is gone from shipped prose", () => {
       "Môi trường Học tập Tích hợp",
       "集成学习环境",
       "综合学习环境",
+      "Agentische Lernumgebung",
+      "Entorno de Aprendizaje Agéntico",
+      "Agentowe Środowisko Nauki",
+      "Môi trường Học tập Tác nhân",
+      "智能体学习环境",
     ];
-    const agentNames: Record<string, string> = {
-      de: "Agentische Lernumgebung",
-      es: "Entorno de Aprendizaje Agéntico",
-      pl: "Agentowe Środowisko Nauki",
-      vi: "Môi trường Học tập Tác nhân",
-      zh: "智能体学习环境",
-    };
-    for (const code of Object.keys(agentNames)) {
+    for (const code of ["de", "es", "pl", "vi", "zh"]) {
       const text = read(`messages/${code}.json`);
       for (const name of retiredEnvironmentNames) {
         expect(text, `${code} still names ${name}`).not.toContain(name);
       }
-      expect(text, code).toContain(agentNames[code]);
     }
   });
 

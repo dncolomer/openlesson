@@ -164,12 +164,11 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
     "Turn verification findings into learning that shows up downstream — adoption, deployment, and real use. Optimize onboarding and agent skills with loops that close gaps instead of checking boxes.",
   metaTitle: "Learning Optimization | Dynamic Onboarding & Agentic Skill Tuning",
   metaDescription:
-    "Dynamic onboarding flows and Agentic Learning Environment (ALE) skill optimization. Close verified gaps until learning converts to adoption and deploy readiness.",
+    "Dynamic onboarding flows and agent skill optimization. Close verified gaps until learning converts to adoption and deploy readiness.",
   keywords: [
     "learning optimization",
     "dynamic onboarding",
     "agentic onboarding",
-    "ALE",
     "agent skill optimization",
     "learning to conversion",
   ],
@@ -185,9 +184,9 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
         "Diagnose which concepts block conversion after signup. Rank gaps by severity so enablement teaches what actually stops users from succeeding.",
     },
     {
-      title: "Agentic skill optimization (ALE)",
+      title: "Agent skill optimization",
       description:
-        "Evolve agent skill.md files from real runs. ALE iterates capabilities until learning efficiency clears your deploy and adoption bar — because agents are not born with skills.",
+        "Evolve agent skill.md files from real runs. Proof-of-Work scoring iterates capabilities until learning efficiency clears your deploy and adoption bar — because agents are not born with skills.",
     },
     {
       title: "Post-hire ramp & role transitions",
@@ -207,7 +206,7 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
   ],
   highlights: [
     "Verification findings drive what gets practiced next",
-    "TAP Learning for humans, ALE for agents — same workspace context",
+    "TAP Learning for humans, Proof-of-Work scoring for agents — same workspace context",
     "Tie every intervention to adoption, deploy, and conversion metrics",
   ],
   faqs: [
@@ -217,14 +216,14 @@ export const LEARNING_OPTIMIZATION_PAGE: SeoUseCasePageConfig = {
         "Verification tells you whether someone can perform today. Optimization routes them — or your agents — into practice and skill iteration until scores move and outcomes improve.",
     },
     {
-      question: "When is ALE available?",
+      question: "How do agent skills improve after a score?",
       answer:
-        "ALE is rolling out for teams that already use Workspaces and Proof-of-Work scoring. Book a demo to join early access for agentic skill optimization.",
+        "Proof-of-Work scoring on workspace runs shows which capabilities are short. Teams iterate skill.md against those gaps until deploy readiness clears.",
     },
   ],
   closingTitle: "Make learning convert — not just complete.",
   closingBody:
-    "Book a demo to see dynamic onboarding and ALE skill loops wired to your verification signals.",
+    "Book a demo to see dynamic onboarding and agent skill loops wired to your verification signals.",
 };
 
 export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {

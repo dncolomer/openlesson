@@ -58,13 +58,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     description:
       "Coached scenarios wired to verified gaps — a take-home and quiz replacement for complex cognition, with interruptions timed to what the model already knows.",
   },
-  {
-    name: "Agentic Learning Environment",
-    icon: Bot,
-    pitch: "Evolve agent skills from real runs.",
-    description:
-      "Iterate skill.md files and validate tool-use inside your data boundary until deploy readiness clears — same workspace and TIM loop as human products.",
-  },
 ];
 
 function RowCta({

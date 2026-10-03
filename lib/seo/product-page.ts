@@ -52,7 +52,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     "TIM is not a product you buy on its own. It is the core model behind every Uncertain Systems surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
   metaDescription:
-    "TIM predicts optimal learning-path interruptions across TAP, TAP Learning, Proof-of-Work API, and ALE. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
+    "TIM predicts optimal learning-path interruptions across TAP, TAP Learning, and Proof-of-Work API. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
   keywords: [
     "trace interruption model",
     "TIM",
@@ -97,7 +97,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
   ],
   highlights: [
     "Trained to predict when and how to interrupt — not just what happened last",
-    "Shared across Proof-of-Work API, TAP, TAP Learning, and ALE on every workspace",
+    "Shared across Proof-of-Work API, TAP, and TAP Learning on every workspace",
     "Surfaces as interruption payloads with delay, confidence, and consumer obligations",
     "Foundation layer — not sold separately; powers the products you integrate",
   ],
@@ -340,70 +340,6 @@ export const ILE_PAGE: SeoProductPageConfig = {
     "Book a demo to see how TAP Learning turns verification gaps into guided practice with proof of progress.",
 };
 
-export const ALE_PAGE: SeoProductPageConfig = {
-  slug: "agentic-learning-environment",
-  path: "/products/agentic-learning-environment",
-  eyebrow: "Agentic Learning Environment",
-  h1: "Train and validate agents without leaking corporate data.",
-  intro:
-    "ALE is a private learning environment for evolving agent skills against real scenarios. Practice, score, and iterate on skill definitions inside your boundary — so validation runs on sensitive workflows without exposing them to public models or shared sandboxes.",
-  metaTitle: "Agentic Learning Environment | Private Agent Skill Training",
-  metaDescription:
-    "Private environment to train agents, evolve skill files, and validate capabilities with proof of work — without leaking sensitive corporate data.",
-  keywords: [
-    "agentic learning environment",
-    "agent training",
-    "skill.md",
-    "private AI sandbox",
-    "agent validation",
-  ],
-  heroImageAlt: "Agentic Learning Environment product hero",
-  heroVideoSrc: "/animations/labi.mp4",
-  heroVideoPosition: "center 68%",
-  useCases: [
-    {
-      title: "Private skill evolution",
-      description:
-        "Iterate skill.md files from real workspace runs. Close gaps until Proof-of-Work API scores clear your deploy bar.",
-    },
-    {
-      title: "Sensitive workflow validation",
-      description:
-        "Run agents against realistic internal scenarios without shipping data to external eval vendors or public chat UIs.",
-    },
-    {
-      title: "Pre-production agent gates",
-      description:
-        "Sandbox tool-use traces and reasoning patterns before agents touch customer systems or regulated data.",
-    },
-    {
-      title: "Enterprise agent programs",
-      description:
-        "Give platform teams a controlled loop: verify, practice, re-score — with audit trails suitable for compliance review.",
-    },
-  ],
-  highlights: [
-    "Skill evolution driven by proof of work, not one-shot prompt edits",
-    "Same workspace model as human verification and TAP Learning",
-    "Designed for data-boundary-conscious teams",
-  ],
-  faqs: [
-    {
-      question: "How is ALE different from generic agent evals?",
-      answer:
-        "ALE evolves skills inside your workspace context with proof-of-work scoring — not isolated benchmark prompts that ignore your tools and policies.",
-    },
-    {
-      question: "Can humans and agents share a workspace?",
-      answer:
-        "Yes. Uncertain Systems is built for mixed teams — verification and practice use the same graph and gap model.",
-    },
-  ],
-  closingTitle: "Validate agents on your terms.",
-  closingBody:
-    "Book a demo to see private agent skill training, scoring, and iteration inside the Uncertain Systems workspace.",
-};
-
 export const STASH_API_PAGE: SeoProductPageConfig = {
   slug: "stash-api",
   path: "/products/stash-api",
@@ -475,4 +411,4 @@ export const STASH_API_PAGE: SeoProductPageConfig = {
     "Book a demo to see Stash API buffer → stash/submit → PoW scoring for agent workflows on the Uncertain Systems stack.",
 };
 
-export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, STASH_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;
+export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, STASH_API_PAGE, TAP_PAGE, ILE_PAGE] as const;

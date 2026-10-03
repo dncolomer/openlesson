@@ -29,8 +29,8 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
           body: "Only the failed skill blocks trigger TAP Learning practice or in-app coaching. High scorers skip ahead. Learning-to-conversion replaces fixed module checklists for every cohort.",
         },
         {
-          label: "3 · Agent skill loops (ALE)",
-          body: "The same workspace scores agent tool traces in CI. ALE iterates skill.md until deploy readiness clears. Human onboarding and agent eval share one model.",
+          label: "3 · Agent skill loops",
+          body: "The same workspace scores agent tool traces in CI. Proof-of-Work scoring iterates skill.md until deploy readiness clears. Human onboarding and agent eval share one model.",
         },
       ],
     },
@@ -64,13 +64,13 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "Verification findings drive what gets practiced next.",
       subtitle:
-        "Optimization is the second vertical: route humans into TAP Learning, the Learning use case, and agents into ALE skill iteration until scores move and outcomes improve.",
+        "Optimization is the second vertical: route humans into TAP Learning, the Learning use case, and agents through Proof-of-Work scoring until scores move and outcomes improve.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("optimization"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
       bullets: [
         "Dynamic onboarding flows triggered by proof-of-work severity",
-        "Agentic skill optimization (ALE) until learning efficiency clears the deploy bar",
+        "Agent skill optimization until learning efficiency clears the deploy bar",
         "Same workspace context as verification",
         "Tie every intervention to adoption, deploy, and conversion metrics",
       ],
@@ -90,7 +90,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         ],
       },
       right: {
-        label: "Agents · ALE",
+        label: "Agents · Proof of work",
         items: [
           "Evolve skill.md files from real runs",
           "Validate tool use inside your data boundary",
@@ -145,7 +145,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
         "Embed scoring in agent pipelines. Compare runs over time and prove skill movement with auditable reports.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
-        "ALE iterates capabilities until learning efficiency clears your bar",
+        "Proof-of-Work scores iterate capabilities until learning efficiency clears your bar",
         "Agents are not born with skills",
         "Same TIM loop as human optimization, shared workspace blocks",
         "Vendor and internal agents judged on deploy readiness, not demos",
@@ -158,7 +158,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       backgroundImage: PITCH_ASSETS.aesthetics.optimization,
       bullets: [
         "Customer success & expansion plays",
-        "Agentic skill optimization (ALE) until adoption and deploy readiness clear",
+        "Agent skill optimization until adoption and deploy readiness clear",
         "Post-hire ramp & role transitions with targeted practice blocks",
         "Enablement that teaches blockers to conversion, not the full catalog",
       ],
@@ -169,11 +169,11 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Close the gaps until learning converts.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
-        "Wire dynamic onboarding and ALE skill loops to your verification signals",
+        "Wire dynamic onboarding and agent skill loops to your verification signals",
         "Pilot one adoption, coaching, or agent eval motion",
         "Create a Workspace and measure score movement on a live cohort",
       ],
-      footnote: "uncertain.systems · Learning Optimization · TAP Learning · ALE · Trace Interruption Model",
+      footnote: "uncertain.systems · Learning Optimization · TAP Learning · Proof of work · Trace Interruption Model",
     },
   ],
 };

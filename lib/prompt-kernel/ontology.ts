@@ -4,7 +4,7 @@
  */
 export const WORKSPACE_ONTOLOGY = `
 WORKSPACE ONTOLOGY (Uncertain Systems):
-- Workspaces are the encapsulating unit across all products (TAP for Preparing, Learning, Drilling, and Validating, PoW API, future ALE, All-You-Can-Learn). They never end and never close; they grow infinitely with the learner as proof of work accumulates.
+- Workspaces are the encapsulating unit across all products (TAP for Preparing, Learning, Drilling, and Validating, PoW API, All-You-Can-Learn). They never end and never close; they grow infinitely with the learner as proof of work accumulates.
 - Blocks are assessable units inside a workspace. Completing a block or session does not close the workspace.
 - The primary interface to a workspace is the Proof-of-Work (PoW) API. Integrators and products submit temporally stamped proof of work (tool traces, screen, video, EEG, selective thought traces). As more data arrives, the interface evolves: schemas, skills, scores, and interruption bias update.
 - All PoW is stored with xAI file references plus workspace / block / session / TAP / TAP Learning scope refs so evaluation can be full-workspace or scoped.

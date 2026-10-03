@@ -22,7 +22,7 @@ export const TIM_FOUNDATION = {
   summary:
     "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
   bullets: [
-    "Same model across Proof-of-Work API, Stash API, TAP (Preparing, Learning, Drilling, and Validating), and ALE",
+    "Same model across Proof-of-Work API, Stash API, and TAP (Preparing, Learning, Drilling, and Validating)",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -96,19 +96,6 @@ export const PRODUCTS: ProductDefinition[] = [
       bullets: [
         "Depth over checkbox completion",
         "Progress tracked in the same workspace",
-      ],
-    },
-  },
-  {
-    id: "ale",
-    eyebrow: "Skill evolution",
-    title: "Agentic Learning Environment",
-    forAgent: {
-      summary:
-        "Private environment to train agents and validate skills on sensitive workflows — evolve skill.md files without leaking corporate data to public sandboxes.",
-      bullets: [
-        "Skill evolution driven by proof of work, not one-shot prompt edits",
-        "Validate before deploy inside your data boundary",
       ],
     },
   },

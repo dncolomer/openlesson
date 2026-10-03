@@ -130,9 +130,8 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
                 <span className="text-neutral-300">TAP</span> is one interface for Preparing, Learning,
-                Drilling, and Validating. TAP Learning routes humans into targeted practice.{" "}
-                <span className="text-neutral-300">ALE</span> helps skill developers iterate agent
-                skills. Verification findings drive what gets practiced next.
+                Drilling, and Validating. TAP Learning routes humans into targeted practice.
+                Verification findings drive what gets practiced next.
               </p>
             </div>
           </div>
@@ -142,8 +141,8 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
               Proof-of-Work API verifies learning from artifacts. Think Aloud Protocol (TAP) is the session
-              interface for Preparing, Learning, Drilling, and Validating. ALE augments agent skills. They
-              share the same workspace context, scoring model, and gap analysis.
+              interface for Preparing, Learning, Drilling, and Validating. They share the same workspace
+              context, scoring model, and gap analysis.
             </p>
             <div className="mt-5">
               <ProductStack variant="compact" showFoundation={false} />

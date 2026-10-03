@@ -78,18 +78,6 @@ export function WorkspaceMobilePlanAside({
                 <span className="block text-xs font-medium text-white">{t("planView.productIle")}</span>
                 <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productIleHint")}</span>
               </button>
-              <div
-                className="w-full rounded-none border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-left opacity-80"
-                aria-disabled="true"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-neutral-400">{t("planView.productAle")}</span>
-                  <span className="rounded-none border border-neutral-500/20 bg-neutral-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-neutral-300/90">
-                    {t("planView.productUpcoming")}
-                  </span>
-                </div>
-                <span className="mt-0.5 block text-[10px] text-neutral-600">{t("planView.productAleHint")}</span>
-              </div>
             </div>
           </div>
 

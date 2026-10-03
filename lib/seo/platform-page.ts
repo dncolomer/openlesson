@@ -45,7 +45,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     "Uncertain Systems is a knowledge workspace with software tools that verify learning through proof of work, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; Uncertain Systems scores whether they actually learned, and routes gaps into improvement loops.",
   metaTitle: "Knowledge Workspace: Learning Efficiency for Humans & Agents",
   metaDescription:
-    "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, Think Aloud Protocol (TAP) for Preparing, Learning, Drilling, and Validating, and ALE for agents.",
+    "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, and Think Aloud Protocol (TAP) for Preparing, Learning, Drilling, and Validating.",
   keywords: [
     "knowledge workspace",
     "learning efficiency",
@@ -53,7 +53,6 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     "Proof-of-Work API",
     "think aloud protocol",
     "TAP Learning",
-    "agentic learning environment",
     "proof of work",
     "cognitive analysis",
     "skills gap analysis",
@@ -88,16 +87,9 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
       ],
     },
     {
-      title: "Augment: Agentic Learning Environment",
-      paragraphs: [
-        "The Agentic Learning Environment (ALE) is where skill.md developers test and evolve agent skills against workspace scenarios. Run agents, inspect tool-use traces, and iterate on skill definitions until Proof-of-Work API scores clear your deploy bar.",
-        "ALE mirrors the TAP Learning loop for the agentic side. TAP stays the human interface. Verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until learning proof of work supports production deployment.",
-      ],
-    },
-    {
       title: "The verify-and-augment loop",
       paragraphs: [
-        "Pipe artifacts into Proof-of-Work API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route human gaps into TAP Learning. Evolve agent skills in ALE against the same workspace.",
+        "Pipe artifacts into Proof-of-Work API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route gaps into TAP Learning in the same workspace.",
         "All tools share one knowledge graph, one scoring model, and one gap analysis. Verify learning, augment where it falls short, and prove improvement with auditable proof of work at every step.",
       ],
     },
@@ -118,7 +110,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "What software tools run in the workspace?",
       answer:
-        "Proof-of-Work API (headless verification from artifacts), Think Aloud Protocol (TAP) — one interface for Preparing, Learning, Drilling, and Validating — and the Agentic Learning Environment (agent skill iteration for skill.md developers).",
+        "Proof-of-Work API (headless verification from artifacts) and Think Aloud Protocol (TAP) — one interface for Preparing, Learning, Drilling, and Validating.",
     },
     {
       question: "When should I use Proof-of-Work API vs. Think Aloud Protocol?",
@@ -128,7 +120,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "How does augmentation connect to verification?",
       answer:
-        "Gap findings from Proof-of-Work API or Think Aloud Protocol route directly into TAP Learning, the Learning use case, or into ALE skill iterations. Augmentation targets specific failures verification surfaced — not generic content libraries.",
+        "Gap findings from Proof-of-Work API or Think Aloud Protocol route directly into TAP Learning, the Learning use case. Augmentation targets specific failures verification surfaced — not generic content libraries.",
     },
     {
       question: "What proof of work can a workspace accumulate?",

@@ -45,7 +45,7 @@ Source of truth: `lib/og/surfaces.ts`. Static routes use thin `app/**/opengraph-
 |-------|----------------|
 | **path** | `/` |
 | **title** | Learning efficiency for humans & agents |
-| **description** | Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud Protocol, TAP Learning, and ALE on Workspaces. |
+| **description** | Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud Protocol, and TAP Learning on Workspaces. |
 | **eyebrow** | Learning efficiency |
 | **footerLabel** | LEARNING EFFICIENCY • HUMANS & AGENTS |
 | **brand** | Uncertain Systems |
@@ -60,7 +60,7 @@ Source of truth: `lib/og/surfaces.ts`. Static routes use thin `app/**/opengraph-
 | OG title | Uncertain Systems — Learning Efficiency for Humans & Agents |
 | OG description | Measure what learners actually absorb — not just completion. Four products on Workspaces. |
 | Twitter title | Uncertain Systems — Learning Efficiency Platform |
-| Twitter description | Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, TAP Learning, and Agentic Learning Environment. |
+| Twitter description | Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, and TAP Learning. |
 
 **Feedback**
 
